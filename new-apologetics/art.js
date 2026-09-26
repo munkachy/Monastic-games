@@ -353,8 +353,9 @@ const Art = (() => {
       for (let y = 24; y < 32; y++) for (let x = 2; x < 10; x++) g.put(x, y, x === 9 ? "#f4efe0" : s.bookColor || "#6b1e22");
       for (let x = 4; x < 8; x++) g.put(x, 26, "#e2c46a");
     } else if (s.prop === "mic") {
-      for (let y = 23; y < 32; y++) g.put(27, y, "#2b2b33");
-      for (let y = 18; y < 23; y++) for (let x = 26; x < 29; x++) g.put(x, y, (x + y) % 2 ? "#6f7380" : "#454954");
+      // Off to the side, clear of the face: on a stand at the right edge.
+      for (let y = 26; y < 32; y++) g.put(30, y, "#2b2b33");
+      for (let y = 21; y < 26; y++) for (let x = 29; x < 32; x++) g.put(x, y, (x + y) % 2 ? "#6f7380" : "#454954");
     } else if (s.prop === "headphones") {
       for (let x = 7; x < 25; x++) if (inEllipse(x, 0, 16, 9, 9.2, 9.2) && !inEllipse(x, 0, 16, 9, 8, 8)) g.put(x, 0, "#1d1d24");
       for (let y = 1; y < 9; y++) { g.put(5, y, "#1d1d24"); g.put(26, y, "#1d1d24"); }
