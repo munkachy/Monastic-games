@@ -189,7 +189,7 @@ const Art = (() => {
       for (let y = 1; y < 12; y++) for (let x = 6; x < 26; x++) {
         if (!inEllipse(x, y, 16, 12.5, 8.3, 10.6)) continue;
         if (x <= 8 || x >= 23) g.put(x, y, hair);
-        else if (y < 6 && !(y > 3 && (x < 11 || x > 20)) && (x + y) % 2 === 0) g.put(x, y, hair);
+        else if (y < 6 && !(y > 3 && (x < 11 || x > 20))) g.put(x, y, s.stubble || hair);
       }
     } else if (style === "receding") {
       for (let y = 2; y < 12; y++) {
@@ -539,7 +539,7 @@ const Art = (() => {
     barron: { skin: "#efc3a3", shade: "#cf9a7c", hair: "#c9c6c0", style: "zucchetto", cap: "#b0205e", brow: "#9a958e", glasses: "#1d1d24", outfit: "choir", clothes: "#b0205e", cape: "#9a1a52", prop: "cross", cord: "#2f7a4a", smile: true },
     spitzer: { skin: "#efc6ac", shade: "#cf9e86", hair: "#d8d6d0", hairLight: "#f0efec", style: "side", brow: "#b8b4ac", glasses: "#1d1d24", lens: "#d98a3a", outfit: "clerical", clothes: "#1b1b22", smile: true },
     hicks: { skin: "#eec4a6", shade: "#cd9b7e", hair: "#3a2a1e", style: "crew", beard: "long", beardColor: "#4a3526", beardLight: "#6a5040", beardTaper: 0.3, brow: "#3a2a1e", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", smile: true },
-    pine: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#8a6a4e", style: "receding", buzz: true, faceW: 7, beard: "short", beardColor: "#6a4a32", brow: "#6a4a32", outfit: "dominican", clothes: "#f2efe6", trim: "#d8d3c6", grin: true },
+    pine: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#8a6a4e", stubble: "#c9a488", style: "receding", buzz: true, faceW: 7, beard: "short", beardColor: "#6a4a32", brow: "#6a4a32", outfit: "dominican", clothes: "#f2efe6", trim: "#d8d3c6", grin: true },
     marygrace: { skin: "#f2cdb2", shade: "#d3a68a", hair: "#5a3c26", style: "veil", veil: "#f7f5ee", veilTrim: "#1f2f66", browThin: true, mouth: "#b45a5a", outfit: "sisters", clothes: "#1f2f66", trim: "#f7f5ee", smile: true },
     rose: { skin: "#f0caae", shade: "#d2a08a", hair: "#141018", hairLight: "#2a2230", style: "long", part: true, browThin: true, brow: "#2a1e1a", mouth: "#c06070", outfit: "blouse", clothes: "#1a1a24", skirt: "#1a1a24", prop: "pendant", smile: true },
     holdsworth: { skin: "#f0c6a8", shade: "#cf9d82", hair: "#8a3e1e", hairLight: "#a8542a", style: "long", beard: "full", beardColor: "#9a4a24", brow: "#8a3e1e", outfit: "shirt", clothes: "#9a8a6a", trim: "#7a6a4e" },
