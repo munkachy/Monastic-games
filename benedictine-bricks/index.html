@@ -194,6 +194,24 @@
     text-shadow: 2px 2px 0 var(--maroon);
   }
   .sound-toggle.off { opacity: 0.55; }
+  .music-chip {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-height: 32px;
+    padding: 4px 12px;
+    font-size: 9px;
+    white-space: nowrap;
+    background: var(--purple);
+    border: 3px solid var(--maroon);
+    border-radius: 16px;
+    text-shadow: 1px 1px 0 var(--maroon);
+  }
+  .music-chip.off { opacity: 0.8; }
+  .music-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .music-modes .chunky { height: 44px; padding: 0 8px; font-size: 9px; }
+  .music-modes .chunky.current { background: var(--purple); box-shadow: inset 0 -5px 0 #5a3490; }
   .title-top { display: flex; gap: 8px; align-items: stretch; }
   .title-top .ribbon { flex: 1; }
   .title-top .sound-toggle { width: 64px; height: auto; font-size: 16px; border: 3px solid var(--maroon); }
@@ -474,13 +492,13 @@
       <div class="topbar">
         <div class="banner left">
           <button id="btn-pause" aria-label="Pause">II</button>
-          <button class="sound-toggle" aria-label="Turn sound off">♪</button>
           <span id="height">0.0</span><small>cubits</small>
         </div>
         <div class="banner right">
           <span id="earned">0</span><canvas data-sprite="coin"></canvas>
         </div>
       </div>
+      <button id="music-chip" class="sound-toggle music-chip" aria-label="Change the music">♪ Chant + Techno</button>
       <div class="diamond next-box" aria-label="Next stone"><canvas id="next"></canvas></div>
       <div class="diamond prayer-box" aria-label="Prayer"><span id="prayer">0</span></div>
       <div class="prayer-label">PRAYER</div>

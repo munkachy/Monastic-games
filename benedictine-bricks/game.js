@@ -699,6 +699,7 @@ function togglePause() {
   if (mode === "play") {
     mode = "paused";
     showOverlay("Pausa", "The work waits for you.", ["Resume", () => { mode = "play"; hideScreens(); }]);
+    renderMusicChoices();
   } else if (mode === "paused") {
     mode = "play";
     hideScreens();
@@ -1839,7 +1840,7 @@ const MUSIC_MARKS = { both: "♪✠", chant: "✠", techno: "♪", off: "–" };
 
 function paintSoundButtons() {
   for (const el of document.querySelectorAll(".sound-toggle")) {
-    el.textContent = MUSIC_MARKS[save.music];
+    el.textContent = el.id === "music-chip" ? "♪ " + MUSIC_NAMES[save.music] : MUSIC_MARKS[save.music];
     el.setAttribute("aria-label", "Music: " + MUSIC_NAMES[save.music] + ". Tap to change.");
     el.classList.toggle("off", save.music === "off");
   }
@@ -1848,16 +1849,41 @@ function paintSoundButtons() {
 }
 
 function toggleSound() {
-  Sound.unlock();
   const modes = Sound.MODES;
-  save.music = modes[(modes.indexOf(save.music) + 1) % modes.length];
+  setMusic(modes[(modes.indexOf(save.music) + 1) % modes.length]);
+}
+
+// Change the music at once, even in the middle of a tower.
+function setMusic(choice) {
+  Sound.unlock();
+  save.music = choice;
   writeSave();
   Sound.setMode(save.music);
   if (mode === "play" || mode === "paused") {
     Sound.startMusic(HOURS[hourIndex].chant);
-    flashBanner("Music: " + MUSIC_NAMES[save.music]);
+    if (mode === "play") flashBanner("Music: " + MUSIC_NAMES[save.music]);
   }
   paintSoundButtons();
+  if (mode === "paused") renderMusicChoices();
+}
+
+// In the pause menu: the four kinds of music, to choose from directly.
+function renderMusicChoices() {
+  const box = $("overlay-extra");
+  box.textContent = "";
+  const grid = document.createElement("div");
+  grid.className = "music-modes";
+  for (const m of Sound.MODES) {
+    const b = document.createElement("button");
+    b.className = "chunky" + (m === save.music ? " current" : "");
+    b.textContent = MUSIC_NAMES[m];
+    b.addEventListener("click", () => setMusic(m));
+    grid.append(b);
+  }
+  const label = document.createElement("p");
+  label.className = "missions-title";
+  label.textContent = "Music";
+  box.append(label, grid);
 }
 
 for (const el of document.querySelectorAll(".sound-toggle")) bindButton(el, toggleSound);
