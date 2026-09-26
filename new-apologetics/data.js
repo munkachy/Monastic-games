@@ -10,7 +10,7 @@
 //   vs: [status, multiplier] hits harder against a status (or "guarded")
 //   conv: change in Conviction, chance: how likely
 //   status: dumbfounded, doubting, muted, examined, called; turns
-//   buff: r, l, c (Charity), crit; amt (+0.5 is 50% up); turns
+//   buff: r, l, c (Poise), crit; amt (+0.5 is 50% up); turns
 //   heal: share of full Composure (revives the Discouraged)
 //   cleanse, purge (remove buffs: a number or "all"), shield, citation
 //   taunt: the targets must answer the one who used it
@@ -192,38 +192,38 @@ const GameData = (() => {
 
   const CAMPAIGN = [
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
-      { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -7 },
+      { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3 },
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"] },
     { id: "atheists", title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Signs and Wonders", foes: ["skeptic2", "skeptic", "skeptic2"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
-    ], scenes: { before: 0, mid: 1, after: 2 }, unlocks: ["pine", "spitzer", "hicks", "hahn"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"] },
     { id: "evangelicals", title: "Are You a Good Person?", group: "Evangelicals", missions: [
       { name: "The City Square", foes: ["preacher", "preacher2"] },
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
-    ], scenes: { before: 0, mid: 1, after: 2 }, unlocks: ["heschmeyer", "holdsworth", "barron"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"] },
     { id: "lds", title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
-    ], scenes: { before: 0, mid: 1, after: 2 }, unlocks: ["marygrace", "rose", "jurado"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"] },
     { id: "islam", title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
-    ], scenes: { before: 0, mid: 1, after: 2 }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     { id: "reformed", title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
       { name: "The Dividing Line", foes: ["seminarian", "white", "seminarian2"], boss: "white" },
-    ], scenes: { before: 0, mid: 1, after: 2 }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
 

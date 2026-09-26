@@ -83,12 +83,6 @@
   .chip { font: 600 12px/1 var(--display); padding: 5px 8px; border-radius: 3px; background: var(--panel-2); color: var(--muted); letter-spacing: 0.04em; }
   .chip.role { color: var(--night); background: var(--gold); }
   .chip.boss { color: #fff; background: var(--crimson); }
-  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .stat { display: grid; gap: 4px; }
-  .stat span { font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
-  .stat i { display: block; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
-  .stat i b { display: block; height: 100%; background: var(--marian); }
-  .stat small { font: 600 10px/1 var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
   .passive { font-size: 14px; color: var(--muted); }
   .passive b { color: var(--text); font-weight: 600; }
   .skills { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
@@ -178,7 +172,6 @@
   .sources { font-size: 14px; color: var(--muted); display: grid; gap: 6px; margin: 0; padding-left: 20px; }
 
   @media (max-width: 640px) {
-    .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .card-head { grid-template-columns: 72px 1fr; }
     .card-head canvas { width: 72px; height: 72px; }
     .chapters li { grid-template-columns: 1fr; }
@@ -193,8 +186,8 @@
     <div class="hero-top">
       <span class="label">A game in progress</span>
       <h1>New Apologetics</h1>
-      <p>A turn-based team battler where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
-      <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The four stats of the game come from this verse.</p>
+      <p>A new era in Catholic apologetics has begun, and this is a turn-based team battler about the apologists leading the way. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
+      <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The whole game grows out of this verse.</p>
     </div>
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
@@ -215,7 +208,7 @@
     <div class="lede">
       <span class="label">The rules</span>
       <h2>A battle, turned into a debate</h2>
-      <p>Teams of four take turns in order of Readiness. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Nobody is ever hurt: the numbers measure composure and conviction.</p>
+      <p>Teams of four take turns, the readiest first. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. The player sees only two things about each debater: Composure and Conviction.</p>
     </div>
     <div class="scroll">
       <table>
@@ -223,17 +216,15 @@
         <tbody>
           <tr><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back.</td></tr>
           <tr><td><strong>Conviction</strong></td><td>Four pips. When an opponent loses all four, he is converted: he flickers and goes to OCIA.</td></tr>
-          <tr><td><strong>Rhetoric</strong></td><td>The strength of arguments from wit and persuasion.</td></tr>
-          <tr><td><strong>Learning</strong></td><td>The strength of arguments from Scripture, history and philosophy.</td></tr>
-          <tr><td><strong>Charity</strong></td><td>Gentleness and respect. It softens every blow taken.</td></tr>
-          <tr><td><strong>Readiness</strong></td><td>“Always be ready.” Sets the turn order.</td></tr>
+          <tr><td><strong>Level</strong></td><td>Every hero starts at level 1 and grows with each debate, win or lose. A hero who joins the roster later starts level with the rest of the team.</td></tr>
+          <tr><td><strong>Hidden strengths</strong></td><td>Some heroes argue best from wit, some from Scripture and history, some keep their poise under pressure, some are always ready first. The game never shows these numbers. You learn each hero's gifts by playing them.</td></tr>
           <tr><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
           <tr><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
           <tr><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
           <tr><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
           <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
           <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
-          <tr><td><strong>Citation · Charity Shield</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
+          <tr><td><strong>Citation · Shield of Faith</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
           <tr><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
         </tbody>
       </table>
@@ -248,7 +239,7 @@
     <div class="lede">
       <span class="label">The roster</span>
       <h2>Seventeen heroes, each with a style of their own</h2>
-      <p>Every hero has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Their numbers are balanced against one another, and each hero's moves come from what that apologist is known for.</p>
+      <p>Every hero has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Each hero's moves come from what that apologist is known for. Their strengths stay out of sight: play them and find out.</p>
     </div>
     <div class="roster" id="roster"></div>
   </section>
@@ -288,7 +279,7 @@
     <div class="lede">
       <span class="label">The story</span>
       <h2>Five mysteries, told in cut scenes</h2>
-      <p>Each chapter sets the team a mystery: a question they can't answer at first. Short scenes between battles move the story along. When the team gets stuck, anyone on the roster can walk on and pitch in, even someone who wasn't in the last battle. Scott Hahn has a habit of arriving at exactly that moment. Tap the scene to read on.</p>
+      <p>Each chapter sets the team a mystery: a question they can't answer at first. A short scene after every battle moves the story along, one clue at a time, and the answer comes out only in the boss debate. When the team gets stuck, anyone on the roster can walk on and pitch in, even someone who wasn't in the last battle. Scott Hahn has a habit of arriving at exactly that moment. Tap the scene to read on.</p>
     </div>
     <div class="stage"><canvas id="story" width="640" height="360" tabindex="0" aria-label="A cut scene. Tap or press Enter to continue."></canvas></div>
     <p class="story-line" id="story-line" aria-live="polite"></p>
@@ -347,7 +338,6 @@
   const HEROES = [
     {
       id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Scholar",
-      stats: [225, 70, 90, 25, 58],
       passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
       skills: [
         ["Precise Distinction", "1 foe", "0", "100% Learning."],
@@ -359,7 +349,6 @@
     },
     {
       id: "muse", name: "Ethan Muse", tag: "Philosopher and debater", role: "Defender",
-      stats: [288, 76, 45, 18, 88],
       passive: ["Doctoral Rigor", "+5% Rhetoric to every Catholic ally."],
       skills: [
         ["Pointed Question", "1 foe", "0", "125% Rhetoric. 50% chance to leave him Doubting."],
@@ -372,67 +361,61 @@
     },
     {
       id: "schmitz", name: "Fr. Mike Schmitz", tag: "Ascension Presents · The Bible in a Year", role: "Leader",
-      stats: [250, 58, 105, 12, 125],
       passive: ["Please Pray for Me", "+5% Resolve to every ally."],
       skills: [
         ["Two-Minute Homily", "1 foe", "0", "150% Rhetoric."],
         ["I'm Praying for You", "1 ally", "3", "Major Rhetoric Up and Crit Chance Up for 3 turns. His sign-off, turned into a blessing."],
-        ["The Bible in a Year", "All allies", "3 (starts 1)", "+1 Conviction on each, and Charity Up for 3 turns. Day by day, the whole team grows steadier."],
-        ["The Catechism in a Year", "All allies", "4 (starts 2)", "Examen, a Charity Shield and Learning Up for 3 turns.", true],
+        ["The Bible in a Year", "All allies", "3 (starts 1)", "+1 Conviction on each, and Poise Up for 3 turns. Day by day, the whole team grows steadier."],
+        ["The Catechism in a Year", "All allies", "4 (starts 2)", "Examen, a Shield of Faith and Learning Up for 3 turns.", true],
       ],
       flavor: "He isn't built for scoring points. His calm voice makes everyone around him better.",
     },
     {
       id: "bertuzzi", name: "Cameron Bertuzzi", tag: "Host, Capturing Christianity", role: "Leader",
-      stats: [238, 79, 60, 14, 118],
-      passive: ["Follow the Evidence", "+5% Charity to every ally."],
+      passive: ["Follow the Evidence", "+5% Poise to every ally."],
       skills: [
         ["Clarifying Questions", "1 foe", "0", "Three quick questions at 45% Rhetoric each."],
         ["Time's Up", "1 foe", "3", "250% Rhetoric, and Major Rhetoric Down for 3 turns. The moderator ends a filibuster."],
         ["Point of Order", "All foes", "3 (starts 1)", "−1 Conviction on each, and a guaranteed Fact-Check."],
-        ["Bayesian Update", "All allies", "4 (starts 2)", "A major encouragement for everyone, Examen, and Major Charity Up for 3 turns. Each piece of evidence shifts the odds.", true],
+        ["Bayesian Update", "All allies", "4 (starts 2)", "A major encouragement for everyone, Examen, and Major Poise Up for 3 turns. Each piece of evidence shifts the odds.", true],
       ],
       flavor: "A moderator. He keeps the debate fair more than he wins it, and he came into the Church by following the evidence himself.",
     },
     {
       id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Leader",
-      stats: [250, 82, 15, 15, 140],
       passive: ["The Council of Trent", "+5% Rhetoric to Catholic Answers allies. With Jimmy Akin or Joe Heschmeyer on the team, they all get it."],
       skills: [
         ["Deadpan", "1 foe", "0", "150% Rhetoric, and a 50% chance of Rhetoric Down for 1 turn. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
-        ["Free-for-All Friday", "All allies", "3", "+1 Conviction on each, and each ally gets a different lift, the way the listener questions come in: Rhetoric Up, Crit Chance Up, a Charity Shield or an encouragement."],
+        ["Free-for-All Friday", "All allies", "3", "+1 Conviction on each, and each ally gets a different lift, the way the listener questions come in: Rhetoric Up, Crit Chance Up, a Shield of Faith or an encouragement."],
         ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks every foe and −1 Conviction on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
-        ["The Case for Catholicism", "All foes", "4 (starts 2)", "300% Rhetoric to each (450% against a Citation or Charity Shield).", true],
+        ["The Case for Catholicism", "All foes", "4 (starts 2)", "300% Rhetoric to each (450% against a Citation or Shield of Faith).", true],
       ],
       flavor: "The fastest man in the game, with the driest sense of humor. His moves come from his books, his podcast and his favorite question: where does the Bible actually say that?",
     },
     {
       id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Encourager",
-      stats: [225, 61, 105, 14, 125],
       passive: ["She'll Be Right", "+10% resistance to Doubting."],
       skills: [
         ["Cheeky Question", "1 foe", "0", "150% Rhetoric."],
         ["Pints with Aquinas", "1 ally", "3", "A major encouragement: restores most of his Composure, with a 50% chance of +2 Conviction. A Discouraged ally comes back into the fight."],
         ["Australian Charm", "1 ally", "3", "Major Rhetoric Up for 3 turns and +2 Conviction. Nobody can stay tense around him."],
-        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Charity Up, and immunity to Doubting for 3 turns.", true],
+        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Poise Up, and immunity to Doubting for 3 turns.", true],
       ],
       flavor: "The healer. He hosted Cameron Bertuzzi's debates while Cameron was still a Protestant, so he knows how to keep a hard conversation friendly.",
     },
     {
       id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Builder", guest: true,
-      stats: [163, 61, 135, 15, 125],
       passive: ["Smooth", "+3% Learning."],
       skills: [
         ["Smooth Question", "1 foe", "0", "100% Learning. 10% chance of Learning Down."],
         ["Smooth Pivot", "1 ally", "3", "Gives a Citation and Learning Up."],
-        ["Stay Smooth", "All allies", "3", "A major Charity Shield for 3 turns and +1 Conviction on each."],
+        ["Stay Smooth", "All allies", "3", "A major Shield of Faith for 3 turns and +1 Conviction on each."],
         ["Common Ground", "All foes", "4", "Removes every buff and gives Major Learning Down for 3 turns. −1 Conviction on any foe from the Islam storyline.", true],
       ],
       flavor: "Shields with a smooth delivery. His great move works best in his own field: dialogue with Muslims.",
     },
     {
       id: "barron", name: "Bishop Robert Barron", tag: "Word on Fire", role: "Leader",
-      stats: [262, 82, 60, 11, 110],
       passive: ["Media Veteran", "+3% Composure."],
       skills: [
         ["Sunday Sermon", "1 foe", "0", "125% Rhetoric. 50% chance of Rhetoric Down for 1 turn."],
@@ -444,7 +427,6 @@
     },
     {
       id: "hicks", name: "Fr. Boniface Hicks, OSB", tag: "Monk of Saint Vincent Archabbey · spiritual director", role: "Scholar",
-      stats: [200, 64, 128, 14, 110],
       passive: ["Stability", "+10% resistance to Fact-Check. The Benedictine vow."],
       skills: [
         ["Gentle Correction", "1 foe", "0", "125% Learning. 25% chance of Rhetoric Down for 1 turn."],
@@ -456,31 +438,28 @@
     },
     {
       id: "pine", name: "Fr. Gregory Pine, OP", tag: "Godsplaining · Thomistic Institute", role: "Leader",
-      stats: [213, 53, 88, 14, 118],
       passive: ["Order of Preachers", "+3% Learning."],
       skills: [
         ["Distinguo", "2 random foes", "0", "75% Learning to each. “I distinguish the major premise…”"],
         ["Sed Contra", "All allies", "3", "Major Crit Chance Up, and no ally can lose Conviction for 3 turns."],
-        ["The Five Ways", "All foes", "3 (starts 1)", "250% Learning to each, and Charity Down for 3 turns."],
+        ["The Five Ways", "All foes", "3 (starts 1)", "250% Learning to each, and Poise Down for 3 turns."],
         ["Respondeo", "1 foe", "4 (starts 2)", "Three hits of 150% Learning, then +2 Conviction on every ally.", true],
       ],
       flavor: "Every move is set out in the order of an article of the Summa: the objection, the Sed contra, and the answer.",
     },
     {
       id: "marygrace", name: "Sr. Mary Grace, SV", tag: "Sisters of Life · Let Love podcast", role: "Scholar",
-      stats: [213, 64, 75, 10, 170],
       passive: ["Consecrated", "+10% resistance to Cross-Examined."],
       skills: [
         ["A Word of Truth", "1 foe", "0", "150% Learning."],
-        ["Let Love", "All allies", "3", "Major Charity Up and +1 Conviction on each."],
+        ["Let Love", "All allies", "3", "Major Poise Up and +1 Conviction on each."],
         ["Every Life Is Good", "All foes", "3 (starts 1)", "Rhetoric Down and Learning Down for 3 turns. She speaks so that anyone can hear."],
       ],
       flavor: "One of the fastest heroes in the game. She has three skills, not four, and she almost always acts first.",
     },
     {
       id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Scholar",
-      stats: [200, 60, 100, 15, 120],
-      passive: ["Empathy", "+5% Charity to every ally."],
+      passive: ["Empathy", "+5% Poise to every ally."],
       skills: [
         ["Every Life", "1 foe", "0", "125% Learning."],
         ["Sense Deception", "1 foe", "3", "Cross-Examined, and a 50% chance of a Fact-Check. She can tell when an argument is hiding something."],
@@ -491,23 +470,21 @@
     },
     {
       id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Encourager",
-      stats: [200, 58, 135, 12, 125],
       passive: ["Domestic Church", "+3% Composure. A father of seven knows patience."],
       skills: [
         ["Ten-Minute Essay", "1 foe", "0", "150% Learning."],
         ["Beauty Will Save the World", "All allies", "3", "An encouragement for every ally."],
-        ["Cultural Diagnosis", "1 foe", "3 (starts 1)", "Cross-Examined, and Major Charity Down for 3 turns."],
-        ["Authentic Catholic Culture", "All allies", "4 (starts 2)", "Examen, a major Charity Shield, and +1 Conviction on each. For 3 turns no ally can lose Conviction.", true],
+        ["Cultural Diagnosis", "1 foe", "3 (starts 1)", "Cross-Examined, and Major Poise Down for 3 turns."],
+        ["Authentic Catholic Culture", "All allies", "4 (starts 2)", "Examen, a major Shield of Faith, and +1 Conviction on each. For 3 turns no ally can lose Conviction.", true],
       ],
       flavor: "The healer who looks after the whole team at once, where Matt Fradd looks after one friend at a time.",
     },
     {
       id: "jurado", name: "Alex Jurado", tag: "Voice of Reason · Byzantine Catholic", role: "Leader",
-      stats: [288, 100, 30, 15, 88],
       passive: ["Byzantine Rite", "+3% Rhetoric."],
       skills: [
         ["One-Two", "1 foe", "0", "Two hits of 50% Rhetoric."],
-        ["Deep Cut", "1 foe", "3", "Doubting, Major Charity Down, and −1 Conviction."],
+        ["Deep Cut", "1 foe", "3", "Doubting, Major Poise Down, and −1 Conviction."],
         ["Stallone Voice", "1 foe", "3 (starts 1)", "250% Rhetoric, with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
         ["Voice of Reason", "All foes", "4 (starts 2)", "Fact-Checks every foe, and −2 Conviction on each.", true],
       ],
@@ -515,11 +492,10 @@
     },
     {
       id: "spitzer", name: "Fr. Robert Spitzer, SJ", tag: "Magis Center · physicist-philosopher", role: "Builder",
-      stats: [188, 70, 135, 18, 73],
       passive: ["Magis", "+3% Learning."],
       skills: [
         ["Fine-Tuning", "1 foe", "0", "Two hits of 60% Learning: the constants of nature, set on a knife's edge. 25% chance of a Fact-Check."],
-        ["The Four Levels of Happiness", "All allies", "3", "Examen and a Charity Shield for everyone. From pleasure, to achievement, to love, to the transcendent."],
+        ["The Four Levels of Happiness", "All allies", "3", "Examen and a Shield of Faith for everyone. From pleasure, to achievement, to love, to the transcendent."],
         ["Borde–Guth–Vilenkin", "1 foe", "4 (starts 2)", "250% Learning, and Muted for 3 turns, with a smaller blow to the others. An expanding universe cannot be past-eternal.", true],
       ],
       duo: ["Vindicatory Miracles", "with Ethan Muse", "All foes", "The duo great move he shares with Ethan Muse: the miracles that confirm specifically Catholic teaching, one after another. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
@@ -527,7 +503,6 @@
     },
     {
       id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Leader",
-      stats: [275, 72, 110, 22, 95],
       passive: ["Rome Sweet Home", "At the start of each battle, every convert on the team gains +1 Conviction: Scott Hahn, Jimmy Akin, Cameron Bertuzzi and Brian Holdsworth."],
       skills: [
         ["Covenant Is Family", "1 foe", "0", "125% Learning. Passes through Faith Alone."],
@@ -539,7 +514,6 @@
     },
     {
       id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
-      stats: [188, 30, 88, 10, 170],
       passive: ["The Early Church Was the Catholic Church", "+5% Learning to Catholic Answers allies."],
       skills: [
         ["Ignatius of Antioch", "1 foe", "0", "Two quotations at 65% Learning each. 50% chance to leave him Doubting."],
@@ -559,7 +533,7 @@
         ["Within Reason", "1 foe", "0", "125% Learning."],
         ["The Fawn in the Forest", "All foes", "3", "Doubting on each, and −1 Conviction. A fawn burns to death in a forest fire, alone. What was the point?"],
         ["Euthyphro", "1 foe", "3 (starts 1)", "Dumbfounded for 2 turns. Is a thing good because God wills it, or does God will it because it is good? Fr. Pine's Distinguo cancels it: God's own nature is the Good."],
-        ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Charity Up.", true],
+        ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Poise Up.", true],
       ],
     },
     {
@@ -576,11 +550,11 @@
     {
       id: "hansen", name: "Jacob Hansen", tag: "Latter-day Saint apologist · Thoughtful Faith", faction: "Latter-day Saints",
       grunts: ["elder"],
-      blurb: "The boss of Chapter 3, The Restoration. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Charity.",
+      blurb: "The boss of Chapter 3, The Restoration. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Poise.",
       skills: [
         ["Scholarly Citation", "1 foe", "0", "125% Learning."],
         ["Great Apostasy", "All foes", "3", "−1 Conviction on each, and Learning Down. The claim that true authority left the earth after the apostles."],
-        ["Burning in the Bosom", "Self", "3", "Recovers Composure, and arguments from Learning do nothing to him for 2 turns. A personal testimony is not argued away, but Charity and Rhetoric still reach him."],
+        ["Burning in the Bosom", "Self", "3", "Recovers Composure, and arguments from Learning do nothing to him for 2 turns. A personal testimony is not argued away, but Poise and Rhetoric still reach him."],
         ["Eternal Progression", "Self", "4 (starts 2)", "Rhetoric Up that grows each turn, up to three times.", true],
       ],
     },
@@ -648,9 +622,6 @@
     return c;
   }
 
-  const STAT_NAMES = ["Composure", "Rhetoric", "Learning", "Charity", "Readiness"];
-  const STAT_MAX = [300, 100, 140, 30, 170];
-
   function skillList(skills) {
     const ul = document.createElement("ul");
     ul.className = "skills";
@@ -687,15 +658,6 @@
     }
     head.append(pic, who);
 
-    const stats = document.createElement("div");
-    stats.className = "stats";
-    h.stats.forEach((v, i) => {
-      const s = document.createElement("div");
-      s.className = "stat";
-      s.innerHTML = `<span>${v}</span><i><b style="width:${Math.min(100, (v / STAT_MAX[i]) * 100).toFixed(0)}%"></b></i><small>${STAT_NAMES[i]}</small>`;
-      stats.append(s);
-    });
-
     const passive = document.createElement("p");
     passive.className = "passive";
     passive.innerHTML = `<b></b> · <span></span>`;
@@ -705,7 +667,7 @@
     const flavor = document.createElement("p");
     flavor.className = "flavor";
     flavor.textContent = h.flavor;
-    card.append(head, stats, passive, skillList(h.skills));
+    card.append(head, passive, skillList(h.skills));
     if (h.duo) {
       const d = document.createElement("div");
       d.className = "duo";
