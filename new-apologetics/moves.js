@@ -108,8 +108,8 @@ const Theater = (() => {
     shield(ctx, x, y, t) { ctx.strokeStyle = "rgba(126,164,230,0.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 48, 44, 58, 0, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "rgba(126,164,230,0.14)"; ctx.fill(); px(ctx, x - 28, y + 14 + Math.sin(t * 3) * 3, 4, "#dbe8ff"); },
     up(ctx, x, y, t) { const b = (t * 30) % 10; outlinedText(ctx, "↑", x + 24, y + 26 - b, 18, "#74c07a"); },
     hearts(ctx, x, y, t) { for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; const cx = x - 18 + i * 18 + Math.sin(k * 6 + i) * 4; const cy = y + 50 - k * 70; ctx.globalAlpha = 1 - k; heart(ctx, cx, cy, 2, "#ff7a9a"); ctx.globalAlpha = 1; } },
-    pipDown(ctx, x, y, t, k) { ctx.globalAlpha = 1 - k; outlinedText(ctx, "▼ MORALE", x, y - 16 - k * 20, 13, "#e25a50"); ctx.globalAlpha = 1; },
-    pipUp(ctx, x, y, t, k) { ctx.globalAlpha = 1 - k; outlinedText(ctx, "▲ MORALE", x, y - 16 - k * 20, 13, "#7ea4e6"); ctx.globalAlpha = 1; },
+    pipDown(ctx, x, y, t, k) { ctx.globalAlpha = 1 - k; outlinedText(ctx, "▼ ZEAL", x, y - 16 - k * 20, 13, "#e25a50"); ctx.globalAlpha = 1; },
+    pipUp(ctx, x, y, t, k) { ctx.globalAlpha = 1 - k; outlinedText(ctx, "▲ ZEAL", x, y - 16 - k * 20, 13, "#7ea4e6"); ctx.globalAlpha = 1; },
     crit(ctx, x, y, t) { for (let i = 0; i < 6; i++) { const a = i * 1.05 + t * 2; const r = 30 + Math.sin(t * 6 + i) * 6; px(ctx, x + Math.cos(a) * r, y + 40 + Math.sin(a) * r * 1.3, 4, "#ffd84a"); } },
   };
 
