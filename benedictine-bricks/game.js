@@ -1,5 +1,5 @@
 // Benedictine Bricks — a stacking game in the style of 99 Bricks Wizard Academy.
-// Build the tower as high as you can. Drop three stones and the tower is finished.
+// Build the tower as high as you can. When your candles are out, the tower is finished.
 // Physics by Matter.js (lib/matter.min.js). Art in art.js.
 
 const { Engine, Bodies, Body, Composite, Events, Sleeping } = Matter;
@@ -8,21 +8,21 @@ const { Engine, Bodies, Body, Composite, Events, Sleeping } = Matter;
 // Tuning. Most of the "feel" of the game lives in these numbers.
 // ---------------------------------------------------------------------------
 
-const VIEW_W = 576;          // logical screen width, in world pixels
-const MIN_VIEW_H = 864;      // taller screens show more sky above
+const VIEW_W = 720;          // logical screen width, in world pixels (30 stones)
+const MIN_VIEW_H = 1000;     // taller screens show more sky above
 let VIEW_H = MIN_VIEW_H;
-const PX = 2;                // one art pixel = 2 world pixels
+const PX = 2;                // one art pixel = 2 world pixels, for stones and scenery
+const FIGURE_PX = 3;         // the monk and the demon are drawn a little larger
 const TILE = 12 * PX;        // one stone square; also one cubit of height
-const FOUND_Y = 744;         // top of the rock foundation
-const TOWER_VIEW = 500;      // how much of the tower stays in view below its top
+const FOUND_Y = MIN_VIEW_H - 120;  // top of the rock foundation
+const TOWER_TOP_AT = 0.55;   // where the top of the tower sits on screen (0 top, 1 bottom)
 
-const LOSSES_ALLOWED = 3;    // drop this many stones and the tower is finished
 const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
 const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
 const MAX_DROP_SPEED = 5;
-const LANDING_DAMPING = 0.3;  // share of speed a stone keeps when it lands
+const LANDING_DAMPING = 0.3; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
 const PRAYER_PER_TIER = 3;
@@ -60,57 +60,77 @@ const SHAPES = [
   { tex: "stone_brick",     cells: [[-1, -0.5], [0, -0.5], [0, 0.5], [1, 0.5]] }, // Z
 ];
 
-// Upgrades bought between towers with the coins you earn.
-const SHOP = [
-  {
-    id: "rosary",
-    tiers: [
-      { name: "Boxwood rosary", price: 0, text: "Holds 10 prayer.", prayer: 10, spells: [] },
-      { name: "Olive-wood rosary", price: 200, text: "Holds 12 prayer. Every tower starts with Mortar.", prayer: 12, spells: ["mortar"] },
-      { name: "Silver rosary", price: 600, text: "Holds 15 prayer. Starts with Mortar and Scaffold.", prayer: 15, spells: ["mortar", "scaffold"] },
-      { name: "Gold rosary", price: 1500, text: "Holds 20 prayer. Starts with every spell.", prayer: 20, spells: ["mortar", "scaffold", "gild"] },
-    ],
-  },
-  {
-    id: "foundation",
-    tiers: [
-      { name: "Bare rock", price: 0, text: "A foundation 7 stones wide.", width: 7 },
-      { name: "Cloister foundation", price: 300, text: "A foundation 9 stones wide.", width: 9 },
-      { name: "Monte Cassino", price: 900, text: "A foundation 11 stones wide.", width: 11 },
-    ],
-  },
-  {
-    id: "medal",
-    tiers: [
-      { name: "No medal", price: 0, text: "The demon visits often.", demonAway: 1 },
-      { name: "St. Benedict medal", price: 400, text: "The demon comes half as often.", demonAway: 2 },
-    ],
-  },
+// ---------------------------------------------------------------------------
+// The shop: upgrades with levels, rosaries (each starts a tower with a spell),
+// and habits.
+// ---------------------------------------------------------------------------
+
+const PRAYER_BY_LEVEL = [10, 13, 16, 20];
+const FOUNDATION_BY_LEVEL = [7, 9, 11];
+const MORTAR_COST_BY_LEVEL = [3, 2, 1];
+
+const UPGRADES = [
+  { id: "prayerLevel", name: "Deeper prayer", icon: "beads", now: (l) => "You hold " + PRAYER_BY_LEVEL[l] + " prayer.",
+    levels: [
+      { price: 150, text: "Hold 13 prayer." },
+      { price: 350, text: "Hold 16 prayer." },
+      { price: 700, text: "Hold 20 prayer." },
+    ] },
+  { id: "candle", name: "A fourth candle", icon: "candle_lit", now: (l) => "You have " + (3 + l) + " candles.",
+    levels: [{ price: 500, text: "Drop four stones before the tower is finished, instead of three." }] },
+  { id: "trowel", name: "Mason's trowel", icon: "mortar", now: (l) => "Mortar costs " + MORTAR_COST_BY_LEVEL[l] + " prayer.",
+    levels: [
+      { price: 250, text: "Mortar costs 2 prayer." },
+      { price: 600, text: "Mortar costs 1 prayer." },
+    ] },
+  { id: "foundation", name: "Wider foundation", icon: "stone_granite", now: (l) => "Your foundation is " + FOUNDATION_BY_LEVEL[l] + " stones wide.",
+    levels: [
+      { price: 300, text: "The cloister foundation, 9 stones wide." },
+      { price: 900, text: "Monte Cassino, 11 stones wide." },
+    ] },
+  { id: "medal", name: "St. Benedict medal", icon: "medal", now: (l) => (l ? "The demon comes half as often." : "The demon visits often."),
+    levels: [{ price: 400, text: "The demon comes half as often. Vade retro, Satana." }] },
+];
+
+const ROSARIES = [
+  { id: "boxwood", name: "Boxwood rosary", price: 0, beads: "#d8b878", spell: null, text: "A plain rosary. Your towers start with no spell." },
+  { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: "mortar", text: "Every tower starts with Mortar." },
+  { id: "silver", name: "Silver rosary", price: 450, beads: "#c8d0d8", spell: "scaffold", text: "Every tower starts with Scaffold." },
+  { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: "gild", text: "Every tower starts with Gild." },
+];
+
+const HABITS = [
+  { id: "black", name: "Benedictine black", price: 0, colors: {}, text: "The black habit of the Order of St. Benedict." },
+  { id: "white", name: "Olivetan white", price: 150, colors: { K: "#e9e6dc", k: "#bdb8aa" }, text: "The white habit of the Olivetan Benedictines." },
+  { id: "blue", name: "Sylvestrine blue", price: 150, colors: { K: "#1f2f5a", k: "#3a4f86" }, text: "The blue habit of the Sylvestrine Benedictines." },
 ];
 
 // ---------------------------------------------------------------------------
-// Saved progress (coins, best height, upgrades). Stored on this device only.
+// Saved progress (coins, best height, what you own). Stored on this device only.
 // ---------------------------------------------------------------------------
 
 const SAVE_KEY = "benedictine-bricks";
 const save = loadSave();
 
 function loadSave() {
-  const fresh = { coins: 0, best: 0, rosary: 0, foundation: 0, medal: 0 };
-  try {
-    return Object.assign(fresh, JSON.parse(localStorage.getItem(SAVE_KEY)) || {});
-  } catch (e) {
-    return fresh;
+  const fresh = {
+    coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
+    rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
+  };
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { /* no storage */ }
+  // An earlier version kept one rosary tier as a number.
+  if (typeof stored.rosary === "number") {
+    const tier = stored.rosary;
+    stored.prayerLevel = tier;
+    stored.rosaries = ROSARIES.slice(0, tier + 1).map((r) => r.id);
+    stored.rosary = stored.rosaries[stored.rosaries.length - 1];
   }
+  return Object.assign(fresh, stored);
 }
 
 function writeSave() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* no storage */ }
-}
-
-function upgrade(id) {
-  const item = SHOP.find((s) => s.id === id);
-  return item.tiers[save[id]];
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +140,7 @@ function upgrade(id) {
 let images;
 let engine;
 let foundTiles = 7;
+let lives = 3;
 let active = null;        // the stone being steered or dropped
 let steering = false;     // true while the player controls the falling stone
 let activeSpeed = FALL_SPEED;
@@ -141,6 +162,7 @@ let endTimer = 0;
 let bubbleTimer = 0;
 let bubble = null;
 let banner = null;
+let tierPopup = null;
 let camY = 0;
 let towerTop = FOUND_Y;
 let mode = "title";       // title | play | paused | over | shop
@@ -150,8 +172,8 @@ let effects = [];
 
 const demon = {
   present: false,
-  fleeing: 0,             // > 0 while flying off
-  timer: 0,               // time until he arrives, or until he gives up and leaves
+  fleeing: 0,             // > 0 while flying off; 99 while the holy water is on its way
+  timer: 0,
   curses: 0,
   x: VIEW_W / 2,
   y: 0,
@@ -166,6 +188,10 @@ function rand(min, max) {
   return min + Math.random() * (max - min);
 }
 
+function spellCost(name) {
+  return name === "mortar" ? MORTAR_COST_BY_LEVEL[save.trowel] : SPELLS[name].cost;
+}
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
@@ -175,7 +201,7 @@ function newTower() {
   engine.positionIterations = 12;
   engine.velocityIterations = 8;
 
-  foundTiles = upgrade("foundation").width;
+  foundTiles = FOUNDATION_BY_LEVEL[save.foundation];
   const foundation = Bodies.rectangle(VIEW_W / 2, FOUND_Y + 200, foundTiles * TILE, 400, {
     isStatic: true,
     friction: 1,
@@ -196,15 +222,18 @@ function newTower() {
     }
   });
 
+  paintMonk();
   active = null;
   steering = false;
   landed = [];
   planks = [];
   pending = null;
   lost = 0;
+  lives = 3 + save.candle;
   prayer = 0;
-  prayerMax = upgrade("rosary").prayer;
-  known = new Set(upgrade("rosary").spells);
+  prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
+  const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
+  known = new Set(rosary.spell ? [rosary.spell] : []);
   tier = 0;
   multiplier = 1;
   earned = 0;
@@ -214,6 +243,7 @@ function newTower() {
   bubbleTimer = rand(8, 14);
   bubble = null;
   banner = null;
+  tierPopup = null;
   towerTop = FOUND_Y;
   camY = cameraTarget();
   effects = [];
@@ -222,8 +252,18 @@ function newTower() {
   demon.timer = 0;
   nextShape = randomShape();
   mode = "play";
-  hideOverlay();
+  hideScreens();
+  buildCandles();
+  drawNextPreview();
   updateHud();
+}
+
+// Paint the monk in the habit he wears.
+function paintMonk() {
+  const habit = HABITS.find((h) => h.id === save.habit) || HABITS[0];
+  for (const pose of ["monk_idle", "monk_bless"]) {
+    images[pose] = renderSprite({ grid: ART[pose].grid, colors: { ...ART[pose].colors, ...habit.colors } });
+  }
 }
 
 function randomShape() {
@@ -233,6 +273,7 @@ function randomShape() {
 function spawn() {
   const shape = nextShape;
   nextShape = randomShape();
+  drawNextPreview();
 
   // The demon may curse this stone.
   let curse = null;
@@ -244,7 +285,7 @@ function spawn() {
   const tile = curse === "huge" ? TILE * HUGE_FACTOR : TILE;
   const x = VIEW_W / 2;
   // Start well above the tower, but not so far that the wait is tedious.
-  const y = Math.max(camY + 50, towerTop - 340);
+  const y = Math.max(camY + VIEW_H * 0.12, towerTop - 380);
   const material = curse === "ice" ? ICE : STONE;
   const parts = shape.cells.map(([cx, cy]) =>
     Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
@@ -328,7 +369,7 @@ function drop() {
 }
 
 function canCast(name) {
-  if (mode !== "play" || prayer < SPELLS[name].cost) return false;
+  if (mode !== "play" || prayer < spellCost(name)) return false;
   if (name === "repel") return demon.present && !demon.fleeing;
   if (name === "zap") return !!lastLaid();
   return known.has(name);
@@ -336,20 +377,20 @@ function canCast(name) {
 
 function cast(name) {
   if (!canCast(name)) return;
-  prayer -= SPELLS[name].cost;
+  prayer -= spellCost(name);
   if (name === "repel") repel();
   else if (name === "zap") zap();
   else if (name === "scaffold") scaffold();
   else if (active && steering && !active.plugin.mortar && !active.plugin.gold) enchant(active, name);
   else pending = name;
+  drawNextPreview();
   updateHud();
 }
 
 // Holy water: the monk sprinkles the demon and he flees for a while.
 function repel() {
-  const hands = monkHands();
-  demon.fleeing = 99; // hit when the spray arrives; see updateEffects
-  effects.push({ kind: "spray", from: hands, t: 0, duration: 0.45 });
+  demon.fleeing = 99; // he is hit when the spray arrives; see updateEffects
+  effects.push({ kind: "spray", from: monkHands(), t: 0, duration: 0.45 });
   blessAnim = 1;
 }
 
@@ -399,10 +440,10 @@ function lastLaid() {
 function togglePause() {
   if (mode === "play") {
     mode = "paused";
-    showOverlay("Pausa", "The work waits for you.", ["Resume", () => { mode = "play"; hideOverlay(); }]);
+    showOverlay("Pausa", "The work waits for you.", ["Resume", () => { mode = "play"; hideScreens(); }]);
   } else if (mode === "paused") {
     mode = "play";
-    hideOverlay();
+    hideScreens();
   }
 }
 
@@ -411,8 +452,8 @@ function tapAt(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const x = (clientX - rect.left) / scale;
   const y = (clientY - rect.top) / scale + camY;
-  if (bubble && Math.hypot(x - bubble.x, y - bubble.y) < 34) return catchBubble();
-  if (demon.present && !demon.fleeing && Math.hypot(x - demon.x, y - demon.y) < 36) {
+  if (bubble && Math.hypot(x - bubble.x, y - bubble.y) < 56) return catchBubble();
+  if (demon.present && !demon.fleeing && Math.hypot(x - demon.x, y - demon.y) < 56) {
     if (canCast("repel")) cast("repel");
     else flashBanner("Not enough prayer");
     return;
@@ -475,8 +516,9 @@ function physicsStep() {
 function gameLogic(dt) {
   if (blessAnim > 0) blessAnim -= dt;
   if (banner && (banner.t -= dt) <= 0) banner = null;
+  if (tierPopup && (tierPopup.t -= dt) <= 0) tierPopup = null;
 
-  // Stones that fall off the tower are lost.
+  // Stones that fall off the tower are lost, and a candle goes out.
   const screenBottom = camY + VIEW_H;
   for (const body of Composite.allBodies(engine.world)) {
     if (body.plugin.kind !== "stone" || body.isStatic) continue;
@@ -491,6 +533,7 @@ function gameLogic(dt) {
       spawnTimer = 0.35;
     }
     lost++;
+    updateCandles();
     updateHud();
   }
 
@@ -514,13 +557,13 @@ function gameLogic(dt) {
       }
     }
     prayer = Math.min(prayerMax, prayer + PRAYER_PER_TIER);
-    flashBanner("Gradus " + roman(tier + 1) + " · coins ×" + multiplier + " · faster", 2.4);
+    tierPopup = { level: tier + 1, t: 2.6, y: towerTop - 40 };
   }
 
   updateDemon(dt);
   updateBubble(dt);
 
-  if (lost >= LOSSES_ALLOWED) {
+  if (lost >= lives) {
     endTimer += dt;
     if (endTimer > 1.2) return finish();
   } else if (!active) {
@@ -535,11 +578,11 @@ function gameLogic(dt) {
 function updateDemon(dt) {
   if (demon.fleeing > 0 && demon.fleeing < 99) {
     demon.fleeing -= dt;
-    demon.y -= 260 * dt;
+    demon.y -= 300 * dt;
     if (demon.fleeing <= 0) {
       demon.present = false;
       demon.fleeing = 0;
-      demon.timer = rand(DEMON_AWAY[0], DEMON_AWAY[1]) * upgrade("medal").demonAway;
+      demon.timer = rand(DEMON_AWAY[0], DEMON_AWAY[1]) * (save.medal ? 2 : 1);
     }
     return;
   }
@@ -558,16 +601,16 @@ function updateDemon(dt) {
     // He leaves once his curses are spent, or when he grows bored.
     if ((demon.curses === 0 && !active) || demon.timer <= 0) demon.fleeing = 1.2;
   }
-  // Hover back and forth near the top of the screen.
-  demon.x = VIEW_W / 2 + Math.sin(time * 0.9) * (VIEW_W / 2 - 80);
-  demon.y = camY + 110 + Math.sin(time * 2.3) * 10;
+  // Hover back and forth above the building site.
+  demon.x = VIEW_W / 2 + Math.sin(time * 0.9) * (VIEW_W / 2 - 110);
+  demon.y = Math.max(camY + VIEW_H * 0.1, towerTop - 520) + Math.sin(time * 2.3) * 12;
 }
 
 function updateBubble(dt) {
   if (bubble) {
     bubble.x += bubble.vx * dt;
-    bubble.y = camY + bubble.screenY + Math.sin(time * 2) * 8;
-    if (bubble.x < -60 || bubble.x > VIEW_W + 60) bubble = null;
+    bubble.y = camY + bubble.screenY + Math.sin(time * 2) * 10;
+    if (bubble.x < -80 || bubble.x > VIEW_W + 80) bubble = null;
     return;
   }
   bubbleTimer -= dt;
@@ -578,9 +621,9 @@ function updateBubble(dt) {
   const fromLeft = Math.random() < 0.5;
   bubble = {
     spell,
-    x: fromLeft ? -40 : VIEW_W + 40,
-    vx: fromLeft ? 55 : -55,
-    screenY: rand(160, Math.max(200, VIEW_H * 0.45)),
+    x: fromLeft ? -60 : VIEW_W + 60,
+    vx: fromLeft ? 70 : -70,
+    screenY: rand(VIEW_H * 0.2, VIEW_H * 0.45),
   };
   bubble.y = camY + bubble.screenY;
 }
@@ -610,10 +653,10 @@ function updateEffects(dt) {
 // A jagged lightning bolt between two points.
 function makeBolt(x1, y1, x2, y2, color, core) {
   const points = [];
-  const steps = 9;
+  const steps = 10;
   for (let i = 0; i <= steps; i++) {
     const f = i / steps;
-    const jitter = i === 0 || i === steps ? 0 : rand(-14, 14);
+    const jitter = i === 0 || i === steps ? 0 : rand(-18, 18);
     points.push({ x: x1 + (x2 - x1) * f + jitter, y: y1 + (y2 - y1) * f });
   }
   return { kind: "bolt", points, color, core, t: 0.4 };
@@ -622,6 +665,8 @@ function makeBolt(x1, y1, x2, y2, color, core) {
 function flashBanner(text, seconds) {
   banner = { text, t: seconds || 1.6 };
 }
+
+let reopenOverlay = null;   // redraws the screen the shop was opened from
 
 function finish() {
   mode = "over";
@@ -642,10 +687,10 @@ function finish() {
 }
 
 // Keep the foundation near the bottom of the screen until the tower grows,
-// then keep the top of the tower in comfortable view.
+// then keep the top of the tower a little below the middle of the screen.
 function cameraTarget() {
   const rest = MIN_VIEW_H - VIEW_H;
-  return Math.min(rest, towerTop - (VIEW_H - TOWER_VIEW));
+  return Math.min(rest, towerTop - VIEW_H * TOWER_TOP_AT);
 }
 
 // How far the camera has climbed above its resting place (zero or negative).
@@ -657,13 +702,13 @@ function cameraRise() {
 // Drawing
 // ---------------------------------------------------------------------------
 
-function artSize(img) {
-  return [(img.artWidth || img.width) * PX, (img.artHeight || img.height) * PX];
+function artSize(img, px) {
+  return [(img.artWidth || img.width) * px, (img.artHeight || img.height) * px];
 }
 
-function drawSprite(name, x, y) {
+function drawSprite(name, x, y, px) {
   const img = images[name];
-  const [w, h] = artSize(img);
+  const [w, h] = artSize(img, px || PX);
   ctx.drawImage(img, x, y, w, h);
 }
 
@@ -677,21 +722,21 @@ function mixColor(a, b, t) {
 
 // Sky colors from the ground (index 0) up into the night.
 const SKY = [
-  ["#8fd3ff", "#e8f6ff"],
-  ["#5aa0e0", "#bfe4ff"],
-  ["#3a5aa8", "#f0a878"],
-  ["#1a1f4a", "#6a4a8a"],
+  ["#7fd0f5", "#d8f2ff"],
+  ["#62c8d8", "#b8f0e0"],
+  ["#5aa0e0", "#f0c8a0"],
+  ["#2a2f6a", "#8a5a9a"],
   ["#070a1e", "#1a1f4a"],
 ];
 
 function drawSky() {
-  const t = Math.min(SKY.length - 1.001, Math.max(0, -cameraRise() / 600));
+  const t = Math.min(SKY.length - 1.001, Math.max(0, -cameraRise() / 800));
   const i = Math.floor(t);
   const f = t - i;
   const top = mixColor(SKY[i][0], SKY[i + 1][0], f);
   const bottom = mixColor(SKY[i][1], SKY[i + 1][1], f);
   // Banded gradient, for a pixel look.
-  const bands = 16;
+  const bands = 18;
   for (let b = 0; b < bands; b++) {
     ctx.fillStyle = mixColor(top, bottom, b / (bands - 1));
     ctx.fillRect(0, Math.floor((b * VIEW_H) / bands), VIEW_W, Math.ceil(VIEW_H / bands) + 1);
@@ -699,10 +744,10 @@ function drawSky() {
   if (t > 2.5) {
     ctx.globalAlpha = Math.min(1, t - 2.5);
     ctx.fillStyle = "#fff";
-    for (let s = 0; s < 80; s++) {
+    for (let s = 0; s < 110; s++) {
       const sx = (s * 97) % VIEW_W;
       const sy = (s * 57) % VIEW_H;
-      const twinkle = Math.sin(time * 2 + s) > 0.6 ? 2 : 1;
+      const twinkle = Math.sin(time * 2 + s) > 0.6 ? 3 : 2;
       ctx.fillRect(sx, sy, twinkle, twinkle);
     }
     ctx.globalAlpha = 1;
@@ -711,46 +756,55 @@ function drawSky() {
 
 function drawScenery() {
   // Clouds drift slowly and scroll at half the camera's speed.
-  for (let c = 0; c < 14; c++) {
-    const speed = 4 + (c % 5) * 2;
-    const x = ((c * 151 + time * speed) % (VIEW_W + 80)) - 60;
-    const y = 100 - c * 240 + MIN_VIEW_H - VIEW_H + cameraRise() * 0.5;
+  for (let c = 0; c < 18; c++) {
+    const speed = 5 + (c % 5) * 2;
+    const x = ((c * 173 + time * speed) % (VIEW_W + 120)) - 90;
+    const y = 120 - c * 260 + MIN_VIEW_H - VIEW_H + cameraRise() * 0.5;
     ctx.globalAlpha = 0.85;
-    drawSprite("cloud", Math.round(x), Math.round(y));
+    drawSprite("cloud", Math.round(x), Math.round(y), 3);
     ctx.globalAlpha = 1;
   }
-  // Distant hills, with a slower scroll.
-  const hillY = FOUND_Y + 40 + cameraRise() * 0.7;
-  ctx.fillStyle = "#6b8fa8";
+  // Distant mountains, then nearer hills, each scrolling more slowly than the tower.
+  const farY = FOUND_Y + 30 + cameraRise() * 0.8;
+  ctx.fillStyle = "#7aa6c0";
   for (let x = 0; x < VIEW_W; x += 4) {
-    const h = 60 + Math.sin(x * 0.018) * 22 + Math.sin(x * 0.047 + 1) * 12;
-    ctx.fillRect(x, Math.round(hillY - h), 4, 500);
+    const h = 150 - Math.abs(((x + 120) % 360) - 180) * 0.8 + Math.sin(x * 0.05) * 6;
+    ctx.fillRect(x, Math.round(farY - h), 4, 600);
   }
-  ctx.fillStyle = "#4f7a5a";
+  const hillY = FOUND_Y + 60 + cameraRise() * 0.7;
+  ctx.fillStyle = "#4f8a6a";
   for (let x = 0; x < VIEW_W; x += 4) {
-    const h = 22 + Math.sin(x * 0.027 + 2) * 10;
-    ctx.fillRect(x, Math.round(hillY + 40 - h), 4, 500);
+    const h = 60 + Math.sin(x * 0.012 + 1) * 24 + Math.sin(x * 0.041) * 8;
+    ctx.fillRect(x, Math.round(hillY - h), 4, 600);
+  }
+  ctx.fillStyle = "#3a6e50";
+  for (let x = 0; x < VIEW_W; x += 4) {
+    const h = 26 + Math.sin(x * 0.03 + 2) * 10;
+    ctx.fillRect(x, Math.round(hillY + 50 - h), 4, 600);
   }
 }
 
-function drawHeightMarks() {
-  ctx.font = "8px 'Press Start 2P', monospace";
-  for (let c = 5; ; c += 5) {
-    const y = FOUND_Y - c * TILE;
-    if (y < camY - 20) break;
-    const isTier = c % TIER_CUBITS === 0;
-    ctx.fillStyle = isTier ? "rgba(255,226,106,0.5)" : "rgba(255,255,255,0.22)";
-    for (let x = 0; x < VIEW_W; x += 16) ctx.fillRect(x, y, isTier ? 8 : 6, isTier ? 2 : 1);
-    ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.fillText(c + (isTier ? "  ×" + (c / TIER_CUBITS + 1) : ""), 4, y - 4);
+function drawMarks() {
+  // The next tier is a row of diamonds across the sky.
+  const y = Math.round(FOUND_Y - (tier + 1) * TIER_CUBITS * TILE);
+  ctx.fillStyle = "rgba(230,255,220,0.85)";
+  for (let x = 120; x < VIEW_W - 120; x += 26) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - 9);
+    ctx.lineTo(x + 9, y);
+    ctx.lineTo(x, y + 9);
+    ctx.lineTo(x - 9, y);
+    ctx.closePath();
+    ctx.fill();
   }
+  // Your best height, in gold.
   if (save.best > 0) {
-    const y = Math.round(FOUND_Y - save.best * TILE);
+    const by = Math.round(FOUND_Y - save.best * TILE);
     ctx.fillStyle = "#ffd84a";
-    for (let x = 0; x < VIEW_W; x += 12) ctx.fillRect(x, y, 7, 2);
-    ctx.textAlign = "right";
-    ctx.fillText("BEST", VIEW_W - 64, y - 4);
+    for (let x = 0; x < VIEW_W; x += 16) ctx.fillRect(x, by, 9, 3);
+    ctx.font = "16px 'Press Start 2P', monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("BEST", 100, by - 8);
   }
 }
 
@@ -759,17 +813,17 @@ function foundationLeft() {
 }
 
 function ledge() {
-  return { x: foundationLeft() - 3 * TILE, y: FOUND_Y + 3 * TILE };
+  return { x: foundationLeft() - 5 * TILE, y: FOUND_Y + 3 * TILE };
 }
 
 // The monk climbs his scaffold so he stays on screen as the tower rises.
 function monkFeetY() {
-  return Math.min(ledge().y, camY + VIEW_H - 24);
+  return Math.min(ledge().y, camY + VIEW_H - 40);
 }
 
 function monkHands() {
   const l = ledge();
-  return { x: l.x + 32, y: monkFeetY() - 40 };
+  return { x: l.x + 48, y: monkFeetY() - 60 };
 }
 
 function drawFoundation() {
@@ -791,19 +845,20 @@ function drawFoundation() {
 
   // The ledge, the scaffold above it, and the monk.
   const l = ledge();
-  for (let i = 0; i < 3; i++) ctx.drawImage(tex, l.x + i * TILE, l.y, TILE, TILE);
+  const w = 4 * TILE;
+  for (let i = 0; i < 4; i++) ctx.drawImage(tex, l.x + i * TILE, l.y, TILE, TILE);
   const feet = monkFeetY();
   if (feet < l.y) {
     ctx.fillStyle = "#6a4424";
-    ctx.fillRect(l.x + 4, feet, 4, l.y - feet);
-    ctx.fillRect(l.x + 3 * TILE - 8, feet, 4, l.y - feet);
+    ctx.fillRect(l.x + 6, feet, 5, l.y - feet);
+    ctx.fillRect(l.x + w - 11, feet, 5, l.y - feet);
     ctx.fillStyle = "#8a5a2a";
-    for (let y = feet + 24; y < l.y; y += 24) ctx.fillRect(l.x + 4, y, 3 * TILE - 8, 3);
-    ctx.drawImage(images.stone_wood, l.x, feet, 3 * TILE, TILE / 2);
+    for (let y = feet + 30; y < l.y; y += 30) ctx.fillRect(l.x + 6, y, w - 12, 4);
+    for (let i = 0; i < 4; i++) ctx.drawImage(images.stone_wood, l.x + i * TILE, feet, TILE, TILE / 2);
   }
   const monk = blessAnim > 0 ? "monk_bless" : "monk_idle";
-  const [, mh] = artSize(images[monk]);
-  drawSprite(monk, l.x + 20, feet - mh);
+  const [mw, mh] = artSize(images[monk], FIGURE_PX);
+  drawSprite(monk, l.x + (w - mw) / 2, feet - mh, FIGURE_PX);
 }
 
 function drawStone(body) {
@@ -827,7 +882,7 @@ function drawStone(body) {
   }
   if (body === active && body.plugin.curse === "haste") {
     ctx.fillStyle = "rgba(220,40,40,0.6)";
-    for (let i = -1; i <= 1; i++) ctx.fillRect(body.position.x + i * 14, body.bounds.min.y - 26, 2, 18);
+    for (let i = -1; i <= 1; i++) ctx.fillRect(body.position.x + i * 16, body.bounds.min.y - 30, 3, 22);
   }
 }
 
@@ -841,7 +896,7 @@ function drawPlank(plank) {
   }
 }
 
-// A faint column of light shows where the falling stone will land.
+// A column of light, from the top of the screen down to where the stone will land.
 function drawDropGuide() {
   if (!active || !steering) return;
   const minX = active.bounds.min.x;
@@ -854,17 +909,17 @@ function drawDropGuide() {
       surface = Math.min(surface, b.bounds.min.y);
     }
   }
-  ctx.fillStyle = "rgba(255,255,230,0.13)";
-  ctx.fillRect(minX, top, maxX - minX, Math.max(0, surface - top));
+  ctx.fillStyle = "rgba(255,255,240,0.16)";
+  ctx.fillRect(minX, camY, maxX - minX, Math.max(0, surface - camY));
 }
 
 function drawDemon() {
   if (!demon.present) return;
   const frameName = Math.floor(time * 6) % 2 ? "demon_a" : "demon_b";
-  const [w, h] = artSize(images[frameName]);
+  const [w, h] = artSize(images[frameName], FIGURE_PX);
   const fading = demon.fleeing > 0 && demon.fleeing < 99;
   if (fading) ctx.globalAlpha = Math.max(0, demon.fleeing / 1.2);
-  drawSprite(frameName, Math.round(demon.x - w / 2), Math.round(demon.y - h / 2));
+  drawSprite(frameName, Math.round(demon.x - w / 2), Math.round(demon.y - h / 2), FIGURE_PX);
   ctx.globalAlpha = 1;
 }
 
@@ -872,15 +927,15 @@ function drawBubble() {
   if (!bubble) return;
   ctx.fillStyle = "rgba(200,235,255,0.35)";
   ctx.beginPath();
-  ctx.arc(bubble.x, bubble.y, 24, 0, Math.PI * 2);
+  ctx.arc(bubble.x, bubble.y, 38, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.9)";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillRect(bubble.x - 14, bubble.y - 14, 4, 4);
-  const icon = bubble.spell === "prayer" ? "medal" : SPELLS[bubble.spell].icon;
-  ctx.drawImage(images[icon], bubble.x - 12, bubble.y - 12, 24, 24);
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillRect(bubble.x - 22, bubble.y - 22, 6, 6);
+  const icon = bubble.spell === "prayer" ? "beads" : SPELLS[bubble.spell].icon;
+  ctx.drawImage(images[icon], bubble.x - 18, bubble.y - 18, 36, 36);
 }
 
 function drawEffects() {
@@ -888,11 +943,11 @@ function drawEffects() {
     if (e.kind === "flash") {
       ctx.globalAlpha = Math.max(0, e.t);
       ctx.fillStyle = e.color;
-      const r = (1 - e.t) * 60 + 12;
+      const r = (1 - e.t) * 80 + 14;
       ctx.fillRect(e.x - r / 2, e.y - r / 2, r, r);
     } else if (e.kind === "bolt") {
       ctx.globalAlpha = Math.max(0, e.t * 2.5);
-      for (const [color, size] of [[e.color, 7], [e.core, 3]]) {
+      for (const [color, size] of [[e.color, 8], [e.core, 3]]) {
         ctx.fillStyle = color;
         for (let i = 0; i < e.points.length - 1; i++) {
           const a = e.points[i];
@@ -909,42 +964,53 @@ function drawEffects() {
       // Drops of holy water arcing from the monk's hands to the demon.
       const p = Math.min(1, e.t / e.duration);
       ctx.fillStyle = "#9fe0ff";
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 12; i++) {
         const f = Math.max(0, p - i * 0.04);
-        const x = e.from.x + (demon.x - e.from.x) * f + Math.sin(i * 7) * 6;
-        const y = e.from.y + (demon.y - e.from.y) * f - Math.sin(f * Math.PI) * 80 + Math.cos(i * 5) * 6;
-        ctx.fillRect(Math.round(x), Math.round(y), 4, 4);
+        const x = e.from.x + (demon.x - e.from.x) * f + Math.sin(i * 7) * 8;
+        const y = e.from.y + (demon.y - e.from.y) * f - Math.sin(f * Math.PI) * 120 + Math.cos(i * 5) * 8;
+        ctx.fillRect(Math.round(x), Math.round(y), 6, 6);
       }
     } else if (e.kind === "chip") {
       ctx.globalAlpha = Math.max(0, e.t);
-      ctx.drawImage(images[e.tex], 3, 3, 6, 6, e.x, e.y, 6, 6);
+      ctx.drawImage(images[e.tex], 3, 3, 6, 6, e.x, e.y, 8, 8);
     }
     ctx.globalAlpha = 1;
   }
 }
 
-function drawNextPreview() {
-  const size = 10;
-  const x0 = 26;
-  const y0 = 24;
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.fillRect(x0 - 22, y0 - 18, 48, 36);
-  const tex = pending === "mortar" ? "stone_mortar" : pending === "gild" ? "stone_gold" : nextShape.tex;
-  for (const [cx, cy] of nextShape.cells) {
-    ctx.drawImage(images[tex], x0 + cx * size - size / 2 + 2, y0 + cy * size - size / 2, size, size);
-  }
+// "Tower level II!" rises from the top of the tower when a new tier is reached.
+function drawTierPopup() {
+  if (!tierPopup) return;
+  const age = 2.6 - tierPopup.t;
+  const y = tierPopup.y - age * 30;
+  const x = VIEW_W / 2;
+  ctx.globalAlpha = Math.min(1, tierPopup.t * 1.5);
+  ctx.textAlign = "center";
+  const shadowed = (text, font, color, dy) => {
+    ctx.font = font;
+    ctx.fillStyle = "#3a1a2a";
+    ctx.fillText(text, x + 3, y + dy + 3);
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y + dy);
+  };
+  shadowed("Tower level", "22px 'Press Start 2P', monospace", "#ffffff", 0);
+  shadowed(roman(tierPopup.level) + "!", "36px 'Press Start 2P', monospace", "#e8467a", 44);
+  shadowed("coins ×" + tierPopup.level + " · faster", "16px 'Press Start 2P', monospace", "#ffe26a", 80);
+  ctx.globalAlpha = 1;
 }
 
 function drawBanner() {
   if (!banner) return;
   ctx.globalAlpha = Math.min(1, banner.t * 2);
-  ctx.font = "12px 'Press Start 2P', monospace";
+  ctx.font = "20px 'Press Start 2P', monospace";
   ctx.textAlign = "center";
-  const y = VIEW_H * 0.3;
-  const w = ctx.measureText(banner.text).width + 24;
-  ctx.fillStyle = "rgba(18,18,28,0.75)";
-  ctx.fillRect(VIEW_W / 2 - w / 2, y - 20, w, 30);
-  ctx.fillStyle = "#ffe26a";
+  const y = VIEW_H * 0.24;
+  const w = ctx.measureText(banner.text).width + 36;
+  ctx.fillStyle = "#5a1e1e";
+  ctx.fillRect(VIEW_W / 2 - w / 2 - 3, y - 33, w + 6, 50);
+  ctx.fillStyle = "#e8672a";
+  ctx.fillRect(VIEW_W / 2 - w / 2, y - 30, w, 44);
+  ctx.fillStyle = "#ffffff";
   ctx.fillText(banner.text, VIEW_W / 2, y);
   ctx.globalAlpha = 1;
 }
@@ -958,9 +1024,9 @@ function draw() {
   ctx.save();
   ctx.translate(0, -Math.round(camY));
   drawScenery();
-  drawFoundation();
-  drawHeightMarks();
   drawDropGuide();
+  drawFoundation();
+  drawMarks();
   for (const plank of planks) drawPlank(plank);
   for (const body of Composite.allBodies(engine.world)) {
     if (body.plugin.kind === "stone") drawStone(body);
@@ -968,13 +1034,13 @@ function draw() {
   drawDemon();
   drawBubble();
   drawEffects();
+  drawTierPopup();
   ctx.restore();
-  drawNextPreview();
   drawBanner();
 }
 
 // ---------------------------------------------------------------------------
-// HUD, overlays and the shop
+// Heads-up display
 // ---------------------------------------------------------------------------
 
 function roman(n) {
@@ -987,17 +1053,57 @@ function roman(n) {
 function updateHud() {
   $("height").textContent = height.toFixed(1);
   $("earned").textContent = earned;
-  $("lost").textContent = lost + "/" + LOSSES_ALLOWED;
-  $("prayer-fill").style.width = (prayer / prayerMax) * 100 + "%";
-  $("prayer-count").textContent = prayer + "/" + prayerMax;
+  $("prayer").textContent = prayer;
   for (const name of Object.keys(SPELLS)) {
     const el = $("spell-" + name);
-    const learned = name === "repel" || name === "zap" || known.has(name);
-    el.classList.toggle("locked", !learned);
+    el.hidden = !(name === "repel" || name === "zap" || known.has(name));
     el.disabled = !canCast(name);
     el.classList.toggle("armed", pending === name);
+    el.querySelector(".cost").textContent = spellCost(name);
   }
 }
+
+function paintIcon(el, name) {
+  const src = images[name];
+  el.width = src.width;
+  el.height = src.height;
+  const c = el.getContext("2d");
+  c.imageSmoothingEnabled = false;
+  c.drawImage(src, 0, 0);
+}
+
+function buildCandles() {
+  const box = $("candles");
+  box.textContent = "";
+  for (let i = 0; i < lives; i++) box.append(document.createElement("canvas"));
+  updateCandles();
+}
+
+function updateCandles() {
+  const candles = $("candles").children;
+  // The top candle goes out first.
+  for (let i = 0; i < candles.length; i++) paintIcon(candles[i], i < lost ? "candle_out" : "candle_lit");
+}
+
+// The next stone, drawn in the diamond at the top left.
+function drawNextPreview() {
+  const el = $("next");
+  const size = 12;
+  el.width = 60;
+  el.height = 60;
+  const c = el.getContext("2d");
+  c.imageSmoothingEnabled = false;
+  c.clearRect(0, 0, 60, 60);
+  if (!nextShape) return;
+  const tex = pending === "mortar" ? "stone_mortar" : pending === "gild" ? "stone_gold" : nextShape.tex;
+  for (const [cx, cy] of nextShape.cells) {
+    c.drawImage(images[tex], 30 + cx * size - size / 2, 30 + cy * size - size / 2, size, size);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Title, results and pause screens
+// ---------------------------------------------------------------------------
 
 let overlayActions = [];
 
@@ -1009,6 +1115,7 @@ function showOverlay(title, text, ...buttons) {
   overlayActions = buttons;
   for (const [label, action] of buttons) {
     const b = document.createElement("button");
+    b.className = "chunky";
     b.textContent = label;
     b.addEventListener("click", action);
     row.append(b);
@@ -1017,54 +1124,28 @@ function showOverlay(title, text, ...buttons) {
   $("overlay").hidden = false;
 }
 
-function hideOverlay() {
+function hideScreens() {
   $("overlay").hidden = true;
+  $("shop").hidden = true;
 }
 
+// ---------------------------------------------------------------------------
+// The shop
+// ---------------------------------------------------------------------------
+
 let modeBeforeShop = "title";
-let reopenOverlay = null;   // redraws the screen the shop was opened from
+let shopTab = "upgrades";
+let shopPick = null;
+
+const SHOP_WELCOME = "Pax, brother. Ut in omnibus glorificetur Deus: that in all things God may be glorified. Spend your coins wisely.";
 
 function openShop() {
   modeBeforeShop = mode;
   mode = "shop";
+  shopPick = null;
   $("overlay").hidden = true;
   renderShop();
   $("shop").hidden = false;
-}
-
-function renderShop() {
-  $("shop-coins").textContent = save.coins;
-  const list = $("shop-list");
-  list.textContent = "";
-  for (const item of SHOP) {
-    const owned = save[item.id];
-    const current = item.tiers[owned];
-    const next = item.tiers[owned + 1];
-    const row = document.createElement("div");
-    row.className = "shop-item";
-    const info = document.createElement("div");
-    const name = document.createElement("strong");
-    name.textContent = next ? next.name : current.name;
-    const text = document.createElement("span");
-    text.textContent = next ? next.text : current.text + " (Yours.)";
-    info.append(name, text);
-    row.append(info);
-    if (next) {
-      const buy = document.createElement("button");
-      buy.textContent = next.price;
-      buy.disabled = save.coins < next.price;
-      buy.setAttribute("aria-label", "Buy " + next.name + " for " + next.price + " coins");
-      buy.addEventListener("click", () => {
-        if (save.coins < next.price) return;
-        save.coins -= next.price;
-        save[item.id] = owned + 1;
-        writeSave();
-        renderShop();
-      });
-      row.append(buy);
-    }
-    list.append(row);
-  }
 }
 
 function closeShop() {
@@ -1073,7 +1154,96 @@ function closeShop() {
   if (reopenOverlay) reopenOverlay();
 }
 
-$("shop-back").addEventListener("click", newTower);
+// Every item on a shop tab as { key, name, icon, pips, state, price, text, act }.
+function shopItems(tab) {
+  if (tab === "upgrades") {
+    return UPGRADES.map((u) => {
+      const level = save[u.id];
+      const next = u.levels[level];
+      return {
+        key: u.id, name: u.name, icon: u.icon, pips: [level, u.levels.length],
+        price: next ? next.price : null,
+        state: next ? "buy" : "done",
+        text: u.now(level) + (next ? " Next: " + next.text : " Fully upgraded."),
+        act: () => { save.coins -= next.price; save[u.id] = level + 1; },
+      };
+    });
+  }
+  const list = tab === "rosaries" ? ROSARIES : HABITS;
+  const owned = tab === "rosaries" ? save.rosaries : save.habits;
+  const worn = tab === "rosaries" ? save.rosary : save.habit;
+  return list.map((item) => {
+    const has = owned.includes(item.id);
+    return {
+      key: item.id, name: item.name, icon: (tab === "rosaries" ? "beads_" : "habit_") + item.id,
+      price: has ? null : item.price,
+      state: item.id === worn ? "worn" : has ? "own" : "buy",
+      text: item.text,
+      act: () => {
+        if (!has) { save.coins -= item.price; owned.push(item.id); }
+        if (tab === "rosaries") save.rosary = item.id;
+        else save.habit = item.id;
+      },
+    };
+  });
+}
+
+function renderShop() {
+  $("shop-coins").textContent = save.coins;
+  for (const tab of document.querySelectorAll(".tab")) {
+    tab.classList.toggle("current", tab.dataset.tab === shopTab);
+  }
+  const grid = $("shop-grid");
+  grid.textContent = "";
+  const items = shopItems(shopTab);
+  for (const item of items) {
+    const card = document.createElement("button");
+    card.className = "card-item " + item.state + (shopPick === item.key ? " picked" : "");
+    card.setAttribute("aria-label", item.name);
+    const icon = document.createElement("canvas");
+    paintIcon(icon, item.icon);
+    const label = document.createElement("span");
+    label.className = "card-label";
+    if (item.pips) {
+      label.textContent = "◆".repeat(item.pips[0]) + "◇".repeat(item.pips[1] - item.pips[0]);
+    } else {
+      label.textContent = item.state === "worn" ? "In use" : item.state === "own" ? "Owned" : item.price;
+    }
+    card.append(icon, label);
+    card.addEventListener("click", () => { shopPick = item.key; renderShop(); });
+    grid.append(card);
+  }
+
+  // The novice master describes the chosen item.
+  const pick = items.find((i) => i.key === shopPick);
+  const action = $("shop-action");
+  if (!pick) {
+    $("shop-say-title").textContent = "Welcome to the shop";
+    $("shop-say").textContent = SHOP_WELCOME;
+    action.hidden = true;
+    return;
+  }
+  $("shop-say-title").textContent = pick.name;
+  $("shop-say").textContent = pick.text;
+  action.hidden = pick.state === "done" || pick.state === "worn";
+  if (pick.state === "buy") {
+    action.textContent = "Buy · " + pick.price;
+    action.disabled = save.coins < pick.price;
+  } else {
+    action.textContent = shopTab === "rosaries" ? "Use it" : "Wear it";
+    action.disabled = false;
+  }
+  action.onclick = () => {
+    if (pick.state === "buy" && save.coins < pick.price) return;
+    pick.act();
+    writeSave();
+    renderShop();
+  };
+}
+
+for (const tab of document.querySelectorAll(".tab")) {
+  tab.addEventListener("click", () => { shopTab = tab.dataset.tab; shopPick = null; renderShop(); });
+}
 $("shop-close").addEventListener("click", closeShop);
 
 // ---------------------------------------------------------------------------
@@ -1103,29 +1273,19 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// On-screen buttons. Arrow buttons repeat while held.
-function bindButton(el, action, repeat) {
-  let timer = null;
-  const stop = () => { clearInterval(timer); timer = null; };
+function bindButton(el, action) {
   el.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     action();
-    if (repeat) { stop(); timer = setInterval(action, 110); }
   });
-  el.addEventListener("pointerup", stop);
-  el.addEventListener("pointerleave", stop);
-  el.addEventListener("pointercancel", stop);
 }
 
-bindButton($("btn-left"), () => move(-1), true);
-bindButton($("btn-right"), () => move(1), true);
-bindButton($("btn-rotate"), rotate, false);
-bindButton($("btn-drop"), drop, false);
-bindButton($("btn-pause"), togglePause, false);
-for (const name of Object.keys(SPELLS)) bindButton($("spell-" + name), () => cast(name), false);
+bindButton($("btn-pause"), togglePause);
+for (const name of Object.keys(SPELLS)) bindButton($("spell-" + name), () => cast(name));
 
 // Touch on the play area: drag sideways to steer, tap to turn (or to catch a
-// bubble, or to sprinkle the demon), flick down to drop.
+// bubble, or to sprinkle the demon), swipe down to drop.
 let touch = null;
 canvas.addEventListener("pointerdown", (e) => {
   touch = { x: e.clientX, y: e.clientY, x0: e.clientX, t: performance.now(), moved: 0, carry: 0 };
@@ -1145,7 +1305,7 @@ canvas.addEventListener("pointerup", (e) => {
   if (!touch) return;
   const dt = performance.now() - touch.t;
   const dy = e.clientY - touch.y;
-  if (dy > 50 && dt < 400) drop();
+  if (dy > 40 && dt < 400 && touch.moved < dy) drop();
   else if (touch.moved < 8 && Math.abs(dy) < 8 && dt < 300 && mode === "play") tapAt(touch.x0, touch.y);
   touch = null;
 });
@@ -1175,21 +1335,22 @@ window.addEventListener("resize", resize);
 
 loadArt((loaded) => {
   images = loaded;
-  // Paint the button icons from the same art.
-  for (const el of document.querySelectorAll("[data-sprite]")) {
-    const src = images[el.dataset.sprite];
-    el.width = src.width;
-    el.height = src.height;
-    el.getContext("2d").drawImage(src, 0, 0);
+  // Shop icons: rosaries in their own wood or metal, and the monk in each habit.
+  for (const r of ROSARIES) {
+    images["beads_" + r.id] = renderSprite({ grid: ART.beads.grid, colors: { ...ART.beads.colors, b: r.beads } });
   }
+  for (const h of HABITS) {
+    images["habit_" + h.id] = renderSprite({ grid: ART.monk_idle.grid, colors: { ...ART.monk_idle.colors, ...h.colors } });
+  }
+  for (const el of document.querySelectorAll("[data-sprite]")) paintIcon(el, el.dataset.sprite);
   resize();
   newTower();
   mode = "title";
   reopenOverlay = () => showOverlay(
     "Benedictine Bricks",
-    "Build the abbey tower as high as you can. Drop three stones and the tower is finished. " +
-      "Drag or use the arrows to steer, tap to turn, flick down to drop. " +
-      "Every stone you lay adds prayer. Spend it on the spells at the side: holy water drives off the demon, " +
+    "Build the abbey tower as high as you can. Each stone you drop puts out a candle; when they are all out, the tower is finished. " +
+      "Drag to steer, tap to turn, swipe down to drop. " +
+      "Each stone you lay adds prayer. Spend it on the spells at the right: holy water drives off the demon, " +
       "the bolt breaks your last stone. Tap the bubbles that float past to learn new spells.",
     ["Begin", newTower],
     ["Shop", openShop]

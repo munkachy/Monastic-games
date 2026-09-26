@@ -10,22 +10,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
   :root {
-    color-scheme: dark;
-    --bg: #12121c;
-    --panel: #1f1f2e;
-    --ink: #f3ead3;
-    --muted: #b9b09a;
-    --gold: #e0b030;
-    --button: #2e2e44;
-    --button-down: #45456a;
-    background: var(--bg);
+    color-scheme: light;
+    --sky: #7fd0f5;
+    --tan: #e6a95c;
+    --tan-light: #f3c885;
+    --tan-dark: #b8783a;
+    --maroon: #5a1e2a;
+    --parchment: #f7deaf;
+    --orange: #e8672a;
+    --purple: #7d4cc0;
+    --rose: #c7406a;
+    --gem: #5ab8e8;
+    --gold: #f0c030;
+    --ink: #3a1420;
+    background: var(--sky);
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body {
     margin: 0;
     height: 100%;
-    background: var(--bg);
+    background: var(--sky);
     color: var(--ink);
     font-family: "Press Start 2P", ui-monospace, monospace;
     overflow: hidden;
@@ -34,209 +39,356 @@
     -webkit-touch-callout: none;
   }
   #app {
-    display: flex;
-    flex-direction: column;
     height: 100%;
     padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   }
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 12px;
-    font-size: 10px;
-    background: var(--panel);
-    font-variant-numeric: tabular-nums;
-  }
-  header .stat { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-  header .coins { color: var(--gold); }
-  header canvas { width: 14px; height: 14px; image-rendering: pixelated; }
   #stage {
-    flex: 1;
-    min-height: 0;
+    position: relative;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
+    overflow: hidden;
   }
-  canvas#game {
-    display: block;
-    touch-action: none;
-    image-rendering: pixelated;
-  }
-  #spells {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .spell {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    padding: 0;
-    background: rgba(31, 31, 46, 0.85);
-  }
-  .spell canvas { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; }
-  .spell .cost {
-    position: absolute;
-    bottom: 3px;
-    right: 4px;
-    font-size: 8px;
-    color: var(--gold);
-  }
-  .spell.locked canvas { opacity: 0.15; }
-  .spell.locked::after {
-    content: "?";
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: 14px;
-    color: var(--muted);
-  }
-  .spell.armed { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
-  #prayer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px 0;
-    font-size: 9px;
-    background: var(--panel);
-    font-variant-numeric: tabular-nums;
-  }
-  #prayer .bar { flex: 1; height: 10px; background: #0006; border: 2px solid #0008; }
-  #prayer-fill {
-    height: 100%;
-    width: 0;
-    background: repeating-linear-gradient(90deg, var(--gold) 0 8px, #b8861c 8px 10px);
-    transition: width 0.2s;
-  }
-  #controls {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    padding: 8px 12px 12px;
-    background: var(--panel);
-  }
+  canvas#game { display: block; touch-action: none; image-rendering: pixelated; }
+  canvas { image-rendering: pixelated; }
   button {
     font-family: inherit;
-    font-size: 16px;
-    color: var(--ink);
-    background: var(--button);
-    border: 2px solid #0008;
-    border-bottom-width: 4px;
-    border-radius: 6px;
-    height: 54px;
+    color: var(--maroon);
     touch-action: manipulation;
     cursor: pointer;
   }
-  button:active { background: var(--button-down); border-bottom-width: 2px; }
-  button:disabled { opacity: 0.4; }
-  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-  #btn-pause { height: auto; font-size: 10px; padding: 6px 10px; border-bottom-width: 2px; }
+  button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+  /* ---- Heads-up display ---- */
+  #hud { position: absolute; inset: 0; pointer-events: none; }
+  #hud button { pointer-events: auto; }
+  .topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 14px;
+    background: var(--tan);
+    border: 3px solid var(--maroon);
+    border-top: none;
+    box-shadow: inset 0 -5px 0 var(--tan-dark);
+    color: #fff;
+    font-size: 15px;
+    text-shadow: 2px 2px 0 var(--maroon);
+    font-variant-numeric: tabular-nums;
+  }
+  .banner.left { border-left: none; border-bottom-right-radius: 10px; }
+  .banner.right { border-right: none; border-bottom-left-radius: 10px; }
+  .banner small { font-size: 8px; text-shadow: 1px 1px 0 var(--maroon); }
+  .banner canvas { width: 22px; height: 22px; }
+  #btn-pause {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 14px;
+    text-shadow: 2px 2px 0 var(--maroon);
+  }
+  .diamond {
+    position: absolute;
+    width: 62px;
+    height: 62px;
+    transform: rotate(45deg);
+    border: 4px solid var(--rose);
+    box-shadow: 0 0 0 3px var(--maroon);
+    display: grid;
+    place-items: center;
+  }
+  .diamond > * { transform: rotate(-45deg); }
+  .next-box { top: 66px; left: 18px; background: var(--tan-light); }
+  .next-box canvas { width: 60px; height: 60px; }
+  .prayer-box {
+    top: 66px;
+    right: 18px;
+    background: var(--purple);
+    color: #fff;
+    font-size: 20px;
+    text-shadow: 2px 2px 0 var(--maroon);
+  }
+  .prayer-label {
+    position: absolute;
+    top: 148px;
+    right: 8px;
+    width: 84px;
+    text-align: center;
+    font-size: 7px;
+    color: #fff;
+    text-shadow: 1px 1px 0 var(--maroon);
+  }
+  #spells {
+    position: absolute;
+    top: 168px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .spell {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    display: grid;
+    place-items: center;
+  }
+  .spell .gem {
+    width: 48px;
+    height: 48px;
+    transform: rotate(45deg);
+    background: linear-gradient(135deg, #8ad8ff, var(--gem));
+    border: 4px solid var(--maroon);
+    display: grid;
+    place-items: center;
+  }
+  .spell .gem canvas { width: 34px; height: 34px; transform: rotate(-45deg); }
+  .spell .cost {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    min-width: 20px;
+    padding: 3px 4px;
+    border-radius: 10px;
+    background: var(--purple);
+    border: 2px solid var(--maroon);
+    color: #fff;
+    font-size: 8px;
+  }
+  .spell:disabled { cursor: default; }
+  .spell:disabled .gem { filter: grayscale(0.8) brightness(0.8); opacity: 0.6; }
+  .spell.armed .gem { border-color: var(--gold); box-shadow: 0 0 0 3px var(--maroon), 0 0 12px var(--gold); }
+  #candles {
+    position: absolute;
+    left: 12px;
+    bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 8px;
+    background: rgba(90, 30, 42, 0.25);
+    border-radius: 10px;
+  }
+  #candles canvas { width: 20px; height: 40px; }
+
+  /* ---- Title, results and pause ---- */
   .screen {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(8, 8, 16, 0.6);
     padding: 16px;
+    background: rgba(40, 20, 50, 0.45);
   }
   .card {
     width: 100%;
-    max-width: 360px;
+    max-width: 380px;
     max-height: 100%;
     overflow-y: auto;
-    background: var(--panel);
-    border: 3px solid var(--gold);
-    border-radius: 4px;
-    padding: 20px 18px;
+    background: var(--parchment);
+    border: 4px solid var(--maroon);
+    border-radius: 6px;
+    box-shadow: 0 8px 0 rgba(58, 20, 32, 0.5);
+  }
+  .ribbon {
+    margin: 0;
+    padding: 14px 12px;
+    background: var(--orange);
+    border-bottom: 4px solid var(--maroon);
+    color: #fff;
+    font-size: 15px;
+    line-height: 1.4;
     text-align: center;
-    box-shadow: 0 6px 0 #0008;
+    text-shadow: 2px 2px 0 var(--maroon);
+    text-wrap: balance;
   }
-  .card h1 { font-size: 15px; line-height: 1.5; color: var(--gold); margin: 0 0 14px; text-wrap: balance; }
-  .card p { font-size: 9px; line-height: 1.9; margin: 0 0 18px; }
-  .card .motto { color: var(--muted); font-size: 8px; margin-top: -8px; }
+  .card-body { padding: 16px 18px 20px; text-align: center; }
+  .motto { margin: 0 0 12px; font-size: 8px; color: var(--rose); }
+  .card-body p { font-size: 9px; line-height: 1.9; margin: 0 0 18px; color: var(--ink); }
   .buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-  .buttons button, #shop-back { height: 46px; padding: 0 18px; font-size: 11px; }
-  .shop-card { position: relative; }
-  .close {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    font-size: 14px;
-    border-bottom-width: 2px;
+  .chunky {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 12px;
+    color: #fff;
+    text-shadow: 1px 1px 0 var(--maroon);
+    background: var(--tan);
+    border: 3px solid var(--maroon);
+    border-radius: 6px;
+    box-shadow: inset 0 -5px 0 var(--tan-dark);
   }
-  .shop-coins { font-size: 10px; color: var(--gold); margin-bottom: 14px; }
-  #shop-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; text-align: left; }
-  .shop-item {
+  .chunky:active { box-shadow: inset 0 -2px 0 var(--tan-dark); transform: translateY(2px); }
+  .chunky:disabled { filter: grayscale(0.7); opacity: 0.6; }
+
+  /* ---- Shop ---- */
+  .shop-panel {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--tan);
+    border: 4px solid var(--maroon);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .shop-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 4px solid var(--maroon);
+    box-shadow: inset 0 -5px 0 var(--tan-dark);
+  }
+  .shop-top .coins {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
+    color: #fff;
+    font-size: 14px;
+    text-shadow: 2px 2px 0 var(--maroon);
+  }
+  .shop-top .coins canvas { width: 22px; height: 22px; }
+  #shop-close { height: 40px; font-size: 10px; padding: 0 12px; }
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 4px solid var(--maroon); }
+  .tab {
+    height: 44px;
+    font-size: 9px;
+    color: #fff;
+    text-shadow: 1px 1px 0 var(--maroon);
+    border: none;
+    border-right: 3px solid var(--maroon);
+    opacity: 0.75;
+  }
+  .tab:last-child { border-right: none; }
+  .tab[data-tab="upgrades"] { background: #3d7fd8; }
+  .tab[data-tab="rosaries"] { background: #d8405a; }
+  .tab[data-tab="habits"] { background: #2eb86a; }
+  .tab.current { opacity: 1; box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.25); }
+  #shop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
+    padding: 12px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 6px 10px;
+    background: var(--tan-light);
+    border: 3px solid var(--maroon);
+    border-radius: 4px;
+    box-shadow: inset 0 -4px 0 var(--tan-dark);
+  }
+  .card-item canvas { width: 44px; height: 44px; object-fit: contain; }
+  .card-label { font-size: 8px; color: var(--maroon); min-height: 10px; }
+  .card-item.buy { background: #c9a6d8; }
+  .card-item.worn { background: #b8f0c8; }
+  .card-item.picked { outline: 4px solid #fff; outline-offset: -2px; }
+  .mentor {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    padding: 12px;
+    border-top: 4px solid var(--maroon);
+    background: var(--orange);
+  }
+  .mentor > canvas { width: 48px; height: 63px; flex-shrink: 0; }
+  .say {
+    flex: 1;
     padding: 10px;
-    background: #0003;
+    background: var(--parchment);
+    border: 3px solid var(--maroon);
     border-radius: 4px;
   }
-  .shop-item strong { display: block; font-size: 9px; color: var(--ink); margin-bottom: 6px; }
-  .shop-item span { display: block; font-size: 8px; line-height: 1.7; color: var(--muted); }
-  .shop-item button { height: 40px; min-width: 64px; font-size: 10px; color: var(--gold); flex-shrink: 0; }
+  .say h2 { margin: 0 0 8px; font-size: 10px; color: var(--rose); }
+  .say p { margin: 0 0 8px; font-size: 8px; line-height: 1.8; color: var(--ink); }
+  #shop-action { height: 40px; font-size: 10px; }
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <span class="stat">Height <span id="height">0.0</span></span>
-    <span class="stat coins"><canvas data-sprite="coin"></canvas><span id="earned">0</span></span>
-    <span class="stat">Lost <span id="lost">0/3</span></span>
-    <button id="btn-pause" aria-label="Pause">II</button>
-  </header>
   <div id="stage">
     <canvas id="game"></canvas>
-    <div id="spells">
-      <button id="spell-repel" class="spell" aria-label="Holy water: drive off the demon"><canvas data-sprite="aspergillum"></canvas><span class="cost">4</span></button>
-      <button id="spell-zap" class="spell" aria-label="Zap: break the last stone"><canvas data-sprite="bolt"></canvas><span class="cost">3</span></button>
-      <button id="spell-mortar" class="spell" aria-label="Mortar: the stone sets fast"><canvas data-sprite="mortar"></canvas><span class="cost">3</span></button>
-      <button id="spell-scaffold" class="spell" aria-label="Scaffold: a platform in mid-air"><canvas data-sprite="scaffold"></canvas><span class="cost">5</span></button>
-      <button id="spell-gild" class="spell" aria-label="Gild: a stone worth extra coins"><canvas data-sprite="coin"></canvas><span class="cost">2</span></button>
+
+    <div id="hud">
+      <div class="topbar">
+        <div class="banner left">
+          <button id="btn-pause" aria-label="Pause">II</button>
+          <span id="height">0.0</span><small>cubits</small>
+        </div>
+        <div class="banner right">
+          <span id="earned">0</span><canvas data-sprite="coin"></canvas>
+        </div>
+      </div>
+      <div class="diamond next-box" aria-label="Next stone"><canvas id="next"></canvas></div>
+      <div class="diamond prayer-box" aria-label="Prayer"><span id="prayer">0</span></div>
+      <div class="prayer-label">PRAYER</div>
+      <div id="spells">
+        <button id="spell-repel" class="spell" aria-label="Holy water: drive off the demon"><span class="gem"><canvas data-sprite="aspergillum"></canvas></span><span class="cost">4</span></button>
+        <button id="spell-zap" class="spell" aria-label="Zap: break the last stone"><span class="gem"><canvas data-sprite="bolt"></canvas></span><span class="cost">3</span></button>
+        <button id="spell-mortar" class="spell" aria-label="Mortar: the stone sets fast"><span class="gem"><canvas data-sprite="mortar"></canvas></span><span class="cost">3</span></button>
+        <button id="spell-scaffold" class="spell" aria-label="Scaffold: a platform level with the tower top"><span class="gem"><canvas data-sprite="scaffold"></canvas></span><span class="cost">5</span></button>
+        <button id="spell-gild" class="spell" aria-label="Gild: a stone worth extra coins"><span class="gem"><canvas data-sprite="coin"></canvas></span><span class="cost">2</span></button>
+      </div>
+      <div id="candles" aria-label="Candles left"></div>
     </div>
+
     <div id="overlay" class="screen" hidden>
       <div class="card">
-        <h1 id="overlay-title"></h1>
-        <p class="motto">Nisi Dominus aedificaverit domum</p>
-        <p id="overlay-text"></p>
-        <div class="buttons" id="overlay-buttons"></div>
+        <h1 class="ribbon" id="overlay-title"></h1>
+        <div class="card-body">
+          <p class="motto">Nisi Dominus aedificaverit domum</p>
+          <p id="overlay-text"></p>
+          <div class="buttons chunky-row" id="overlay-buttons"></div>
+        </div>
       </div>
     </div>
+
     <div id="shop" class="screen" hidden>
-      <div class="card shop-card">
-        <button id="shop-close" class="close" aria-label="Close the shop">&#10005;</button>
-        <h1>Shop</h1>
-        <div class="shop-coins">Coins: <span id="shop-coins">0</span></div>
-        <div id="shop-list"></div>
-        <button id="shop-back">Build a tower</button>
+      <div class="shop-panel">
+        <div class="shop-top">
+          <button id="shop-close" class="chunky" aria-label="Close the shop">&#10005; Back</button>
+          <span class="coins"><span id="shop-coins">0</span><canvas data-sprite="coin"></canvas></span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" data-tab="upgrades" role="tab">Upgrades</button>
+          <button class="tab" data-tab="rosaries" role="tab">Rosaries</button>
+          <button class="tab" data-tab="habits" role="tab">Habits</button>
+        </div>
+        <div id="shop-grid"></div>
+        <div class="mentor">
+          <canvas data-sprite="novice_master" aria-hidden="true"></canvas>
+          <div class="say">
+            <h2 id="shop-say-title">Welcome to the shop</h2>
+            <p id="shop-say"></p>
+            <button id="shop-action" class="chunky" hidden></button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-  <div id="prayer">
-    <span>Prayer</span>
-    <div class="bar"><div id="prayer-fill"></div></div>
-    <span id="prayer-count">0/10</span>
-  </div>
-  <div id="controls">
-    <button id="btn-left" aria-label="Move left">&#9664;</button>
-    <button id="btn-rotate" aria-label="Turn">&#8635;</button>
-    <button id="btn-right" aria-label="Move right">&#9654;</button>
-    <button id="btn-drop" aria-label="Drop">&#9660;</button>
   </div>
 </div>
 <script src="lib/matter.min.js"></script>

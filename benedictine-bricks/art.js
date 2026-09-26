@@ -318,6 +318,105 @@ ART.coin = {
   colors: { o: "#7a5410", Y: "#f0c030", y: "#fff4b0", d: "#c08a18" },
 };
 
+// The novice master, who keeps the shop. White beard, pectoral cross.
+ART.novice_master = {
+  grid: [
+    "......ssss......",
+    ".....hssssh.....",
+    ".....sesses.....",
+    ".....ssSSss.....",
+    ".....bbbbbb.....",
+    "....KbbbbbbK....",
+    "...KKKbbbbKKK...",
+    "...KKKKbbKKKK...",
+    "..KKKKKgKKKKKK..",
+    "..KKKKgggKKKKK..",
+    "..KKKKKgKKKKKK..",
+    "..KKKBBBBBBKKK..",
+    "..KKKKKkKKKKKK..",
+    "..KKKKKkKKKKKK..",
+    "..KKKKKkKKKKKK..",
+    ".KKKKKKkKKKKKKK.",
+    ".KKKKKKkKKKKKKK.",
+    ".KKKKKKkKKKKKKK.",
+    "KKKKKKKkKKKKKKKK",
+    "KKKKKKKkKKKKKKKK",
+    "...ffff..ffff...",
+  ],
+  colors: {
+    K: "#1b1b24", k: "#3a3a4a", s: "#eab98f", S: "#c48a5e", e: "#2a1a10",
+    h: "#d8d8d8", b: "#f2f2f2", g: "#e0b030", B: "#0b0b10", f: "#7a5230",
+  },
+};
+
+// Lives: a candle for each stone you may drop. Lit, and snuffed out.
+const CANDLE_COLORS = {
+  y: "#ffe070", o: "#ff8a2a", k: "#3a2a1a", w: "#f4ead0", W: "#ffffff", b: "#b08a3a", s: "#9a9aa8",
+};
+
+ART.candle_lit = {
+  grid: [
+    "...yy...",
+    "..yyyy..",
+    "..yooy..",
+    "...oo...",
+    "...kk...",
+    ".wwwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    "bbbbbbbb",
+    ".bbbbbb.",
+  ],
+  colors: CANDLE_COLORS,
+};
+
+ART.candle_out = {
+  grid: [
+    "....s...",
+    "...s....",
+    "....s...",
+    "...s....",
+    "...kk...",
+    ".wwwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    ".wWwwww.",
+    "bbbbbbbb",
+    ".bbbbbb.",
+  ],
+  colors: CANDLE_COLORS,
+};
+
+// A rosary. The shop paints the beads in wood, silver or gold.
+ART.beads = {
+  grid: [
+    "...b.b.b....",
+    ".b.......b..",
+    "b.........b.",
+    "............",
+    "b.........b.",
+    ".b.......b..",
+    "...b.g.b....",
+    ".....g......",
+    "....ggg.....",
+    ".....g......",
+    ".....g......",
+    "............",
+  ],
+  colors: { b: "#8a5a2a", g: "#e0b030" },
+};
+
 // ---------------------------------------------------------------------------
 // Optional: replace any sprite above with your own PNG. Put the file in
 // benedictine-bricks/img/ and add a line such as
