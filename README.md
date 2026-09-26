@@ -6,7 +6,7 @@ serve the whole repo as-is.
 
 | Game | Folder | What it is |
 | --- | --- | --- |
-| Nisi Dominus | `nisi-dominus/` | Build as high as you can with 99 stones, in the style of 99 Bricks |
+| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy |
 
 ## Playing locally
 
@@ -18,12 +18,12 @@ Settings → Pages → Build and deployment → Source: *Deploy from a branch*,
 branch `main`, folder `/ (root)`. The games then appear at
 `https://<your-username>.github.io/Monastic-games/`.
 
-## Nisi Dominus: changing the art
+## Benedictine Bricks: changing the art
 
-All art is in `nisi-dominus/art.js`, drawn as grids of characters. Open
-`nisi-dominus/art.html` to see every sprite enlarged. To use a PNG in place of a
-sprite, put it in `nisi-dominus/img/` and list it in `IMAGE_OVERRIDES` at the
+All art is in `benedictine-bricks/art.js`, drawn as grids of characters. Open
+`benedictine-bricks/art.html` to see every sprite enlarged. To use a PNG in place of a
+sprite, put it in `benedictine-bricks/img/` and list it in `IMAGE_OVERRIDES` at the
 end of `art.js`.
 
 The physics engine is [Matter.js](https://github.com/liabru/matter-js)
-(MIT license), included in `nisi-dominus/lib/`.
+(MIT license), included in `benedictine-bricks/lib/`.

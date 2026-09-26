@@ -1,4 +1,4 @@
-// Nisi Dominus — pixel art.
+// Benedictine Bricks — pixel art.
 //
 // Every sprite is a grid of characters. Each character is one pixel, and the
 // sprite's `colors` table says what color that character means. A "." is
@@ -38,6 +38,9 @@ const STONE_RAMPS = {
   marble:    ["#ffffff", "#f3f0f1", "#ddd8db", "#b9b2b8", "#6f666e"],
   mossy:     ["#dde9ae", "#b6c97a", "#8fa455", "#66773a", "#36401c"],
   ice:       ["#f4fdff", "#cdeefa", "#a3dcf0", "#6fb4d4", "#2f6f8f"],
+  mortar:    ["#f2f0ec", "#d6d3cd", "#b8b5ae", "#918e88", "#57544f"],
+  gold:      ["#fff6c0", "#ffd84a", "#e0a820", "#a87410", "#5a3a08"],
+  wood:      ["#f0c890", "#d09a58", "#a8733a", "#7a5024", "#452c12"],
 };
 
 for (const [name, ramp] of Object.entries(STONE_RAMPS)) {
@@ -47,7 +50,7 @@ for (const [name, ramp] of Object.entries(STONE_RAMPS)) {
   };
 }
 
-// Drawn over a blessed cornerstone: a gold rim and a small cross.
+// Drawn over a mortared stone: a gold rim and a small cross.
 ART.blessed = {
   grid: [
     "yyyyyyyyyyyy",
@@ -220,7 +223,7 @@ ART.medal = {
   colors: { g: "#7a5410", G: "#d9a520", y: "#fff2a8" },
 };
 
-// The aspergillum, for holy water: dissolves the last stone you laid.
+// The aspergillum, for holy water: drives the demon away.
 ART.aspergillum = {
   grid: [
     "......gggg..",
@@ -239,9 +242,85 @@ ART.aspergillum = {
   colors: { g: "#5a6068", G: "#c8d0d8", y: "#ffffff", h: "#7a5230", d: "#7fd0ff" },
 };
 
+// Spell icons.
+
+// Mortar: the next stone sets fast wherever it touches.
+ART.mortar = {
+  grid: [
+    "wwwwwwwwwwww",
+    "wGGGGwGGGGGw",
+    "wggggwgggggw",
+    "wwwwwwwwwwww",
+    "wGGwGGGGGwGw",
+    "wggwgggggwgw",
+    "wwwwwwwwwwww",
+    "wGGGGwGGGGGw",
+    "wggggwgggggw",
+    "wwwwwwwwwwww",
+  ],
+  colors: { w: "#ece8df", G: "#a0a4aa", g: "#7a7e86" },
+};
+
+// Zap: a bolt that breaks the last stone you laid.
+ART.bolt = {
+  grid: [
+    "......yyyy..",
+    ".....yyyy...",
+    "....yyyy....",
+    "...yyyy.....",
+    "..yyyyyyyy..",
+    ".....yyyy...",
+    "....yyyy....",
+    "...yyy......",
+    "..yyy.......",
+    "..yy........",
+    ".y..........",
+    "............",
+  ],
+  colors: { y: "#ffe45a" },
+};
+
+// Scaffold: a wooden platform in mid-air.
+ART.scaffold = {
+  grid: [
+    ".p........p.",
+    ".p........p.",
+    "WWWWWWWWWWWW",
+    "wwwwwwwwwwww",
+    ".p........p.",
+    ".p........p.",
+    ".p........p.",
+    "WWWWWWWWWWWW",
+    "wwwwwwwwwwww",
+    ".p........p.",
+    ".p........p.",
+    ".p........p.",
+  ],
+  colors: { W: "#d8a868", w: "#8a5a2a", p: "#6a4424" },
+};
+
+// A coin, for gilding and for money.
+ART.coin = {
+  grid: [
+    "....oooo....",
+    "..ooYYYYoo..",
+    ".oYYyyYYYYo.",
+    ".oYyyYYYYYo.",
+    "oYYyYYYYYYYo",
+    "oYYYYYYYYYYo",
+    "oYYYYYYYYYYo",
+    "oYYYYYYYYYdo",
+    ".oYYYYYYYdo.",
+    ".oYYYYYYddo.",
+    "..ooddddoo..",
+    "....oooo....",
+  ],
+  colors: { o: "#7a5410", Y: "#f0c030", y: "#fff4b0", d: "#c08a18" },
+};
+
 // ---------------------------------------------------------------------------
 // Optional: replace any sprite above with your own PNG. Put the file in
-// nisi-dominus/img/ and add a line such as
+// benedictine-bricks/img/ and add a line such as
 //     monk_idle: "img/monk.png",
 // The PNG is drawn at the same size on screen as the sprite it replaces,
 // so draw it at the same proportions (or send it to Claude to resize).

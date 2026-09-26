@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Benedictine Bricks</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #12121c;
+    --panel: #1f1f2e;
+    --ink: #f3ead3;
+    --muted: #b9b09a;
+    --gold: #e0b030;
+    --button: #2e2e44;
+    --button-down: #45456a;
+    background: var(--bg);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 10px;
+    background: var(--panel);
+    font-variant-numeric: tabular-nums;
+  }
+  header .stat { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  header .coins { color: var(--gold); }
+  header canvas { width: 14px; height: 14px; image-rendering: pixelated; }
+  #stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  canvas#game {
+    display: block;
+    touch-action: none;
+    image-rendering: pixelated;
+  }
+  #spells {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .spell {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    background: rgba(31, 31, 46, 0.85);
+  }
+  .spell canvas { width: 28px; height: 28px; image-rendering: pixelated; vertical-align: middle; }
+  .spell .cost {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    font-size: 8px;
+    color: var(--gold);
+  }
+  .spell.locked canvas { opacity: 0.15; }
+  .spell.locked::after {
+    content: "?";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .spell.armed { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+  #prayer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 0;
+    font-size: 9px;
+    background: var(--panel);
+    font-variant-numeric: tabular-nums;
+  }
+  #prayer .bar { flex: 1; height: 10px; background: #0006; border: 2px solid #0008; }
+  #prayer-fill {
+    height: 100%;
+    width: 0;
+    background: repeating-linear-gradient(90deg, var(--gold) 0 8px, #b8861c 8px 10px);
+    transition: width 0.2s;
+  }
+  #controls {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 8px 12px 12px;
+    background: var(--panel);
+  }
+  button {
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--button);
+    border: 2px solid #0008;
+    border-bottom-width: 4px;
+    border-radius: 6px;
+    height: 54px;
+    touch-action: manipulation;
+    cursor: pointer;
+  }
+  button:active { background: var(--button-down); border-bottom-width: 2px; }
+  button:disabled { opacity: 0.4; }
+  button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  #btn-pause { height: auto; font-size: 10px; padding: 6px 10px; border-bottom-width: 2px; }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 8, 16, 0.6);
+    padding: 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 360px;
+    max-height: 100%;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 3px solid var(--gold);
+    border-radius: 4px;
+    padding: 20px 18px;
+    text-align: center;
+    box-shadow: 0 6px 0 #0008;
+  }
+  .card h1 { font-size: 15px; line-height: 1.5; color: var(--gold); margin: 0 0 14px; text-wrap: balance; }
+  .card p { font-size: 9px; line-height: 1.9; margin: 0 0 18px; }
+  .card .motto { color: var(--muted); font-size: 8px; margin-top: -8px; }
+  .buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .buttons button, #shop-back { height: 46px; padding: 0 18px; font-size: 11px; }
+  .shop-coins { font-size: 10px; color: var(--gold); margin-bottom: 14px; }
+  #shop-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; text-align: left; }
+  .shop-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    background: #0003;
+    border-radius: 4px;
+  }
+  .shop-item strong { display: block; font-size: 9px; color: var(--ink); margin-bottom: 6px; }
+  .shop-item span { display: block; font-size: 8px; line-height: 1.7; color: var(--muted); }
+  .shop-item button { height: 40px; min-width: 64px; font-size: 10px; color: var(--gold); flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="stat">Height <span id="height">0.0</span></span>
+    <span class="stat coins"><canvas data-sprite="coin"></canvas><span id="earned">0</span></span>
+    <span class="stat">Lost <span id="lost">0/3</span></span>
+    <button id="btn-pause" aria-label="Pause">II</button>
+  </header>
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="spells">
+      <button id="spell-repel" class="spell" aria-label="Holy water: drive off the demon"><canvas data-sprite="aspergillum"></canvas><span class="cost">4</span></button>
+      <button id="spell-zap" class="spell" aria-label="Zap: break the last stone"><canvas data-sprite="bolt"></canvas><span class="cost">3</span></button>
+      <button id="spell-mortar" class="spell" aria-label="Mortar: the stone sets fast"><canvas data-sprite="mortar"></canvas><span class="cost">3</span></button>
+      <button id="spell-scaffold" class="spell" aria-label="Scaffold: a platform in mid-air"><canvas data-sprite="scaffold"></canvas><span class="cost">5</span></button>
+      <button id="spell-gild" class="spell" aria-label="Gild: a stone worth extra coins"><canvas data-sprite="coin"></canvas><span class="cost">2</span></button>
+    </div>
+    <div id="overlay" class="screen" hidden>
+      <div class="card">
+        <h1 id="overlay-title"></h1>
+        <p class="motto">Nisi Dominus aedificaverit domum</p>
+        <p id="overlay-text"></p>
+        <div class="buttons" id="overlay-buttons"></div>
+      </div>
+    </div>
+    <div id="shop" class="screen" hidden>
+      <div class="card">
+        <h1>Shop</h1>
+        <div class="shop-coins">Coins: <span id="shop-coins">0</span></div>
+        <div id="shop-list"></div>
+        <button id="shop-back">Build a tower</button>
+      </div>
+    </div>
+  </div>
+  <div id="prayer">
+    <span>Prayer</span>
+    <div class="bar"><div id="prayer-fill"></div></div>
+    <span id="prayer-count">0/10</span>
+  </div>
+  <div id="controls">
+    <button id="btn-left" aria-label="Move left">&#9664;</button>
+    <button id="btn-rotate" aria-label="Turn">&#8635;</button>
+    <button id="btn-right" aria-label="Move right">&#9654;</button>
+    <button id="btn-drop" aria-label="Drop">&#9660;</button>
+  </div>
+</div>
+<script src="lib/matter.min.js"></script>
+<script src="art.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
