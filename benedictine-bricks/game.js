@@ -19,7 +19,7 @@ const FOUND_Y = MIN_VIEW_H - 330;  // top of the monastery, where you build
 const GROUND_Y = FOUND_Y + 12.5 * TILE;  // the ground the monastery stands on
 const TOWER_TOP_AT = 0.55;   // where the top of the tower sits on screen (0 top, 1 bottom)
 
-const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
+const TIER_CUBITS = 10;      // every 10 cubits coins count for more and stones fall faster
 const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
@@ -27,7 +27,8 @@ const MAX_DROP_SPEED = 6;
 // Every square is exactly one stone wide. A falling stone this close to
 // lining up with an edge below snaps to it.
 const INSET = 0;
-const MAGNET = 6;
+const MAGNET = 3;
+const DRAG_PER_STEP = 20;     // screen pixels of finger travel to move half a stone
 const LANDING_DAMPING = 0.12; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
@@ -51,10 +52,15 @@ const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
-// Box2D units: one stone square is one metre. Stone is heavy and grips.
-const GRAVITY = 30;           // metres (stone squares) per second squared
-const STONE = { density: 1, friction: 0.8, restitution: 0, linearDamping: 0.05, angularDamping: 0.1 };
-const ICE = { density: 1, friction: 0.03, restitution: 0, linearDamping: 0.05, angularDamping: 0.1 };
+// Box2D units: one stone square is one metre. Gravity, density and the
+// solver iterations follow Byron Knoll's planck.js stacking game "Stacking
+// Things" (gravity 20, density 1, 10 and 8 iterations, no linear damping).
+// Friction follows Stacktris, a Box2D tetromino stacker (0.99 there), so
+// stones grip as they do in 99 Bricks; a little angular damping stops a
+// square stone rolling like a wheel. No bounce.
+const GRAVITY = 20;           // metres (stone squares) per second squared
+const STONE = { density: 1, friction: 0.95, restitution: 0, linearDamping: 0, angularDamping: 0.3 };
+const ICE = { density: 1, friction: 0.03, restitution: 0, linearDamping: 0, angularDamping: 0.3 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -331,7 +337,7 @@ function spellCost(name) {
 
 function newTower() {
   engine = Engine.create({ enableSleeping: true });
-  engine.velocityIterations = 12;
+  engine.velocityIterations = 10;
   engine.positionIterations = 8;
   engine.gravity.y = GRAVITY;
 
@@ -810,7 +816,11 @@ function gameLogic(dt) {
   // The tower's height counts only stones that are standing still.
   towerTop = FOUND_Y;
   for (const body of landed) {
-    const still = body.isStatic || body.isSleeping || body.speed < 0.3;
+    // Only stones at rest count: asleep, or barely moving for a third of a
+    // second, never one pausing for an instant in mid-air as it falls.
+    const calm = body.speed < 0.08 && Math.abs(body.angularVelocity) < 0.004;
+    body.plugin.stillFor = calm ? (body.plugin.stillFor || 0) + dt : 0;
+    const still = body.isStatic || body.isSleeping || body.plugin.stillFor > 0.33;
     if (still && body.bounds.min.y < towerTop) towerTop = body.bounds.min.y;
   }
   height = Math.max(0, (FOUND_Y - towerTop) / TILE);
@@ -820,17 +830,12 @@ function gameLogic(dt) {
   if (stats.spellsUsed === 0) stats.heightNoPrayer = Math.max(stats.heightNoPrayer, height);
   checkMissions();
 
-  // Every tier of height, the tower below sets solid and coins count for more.
+  // Every tier of height, coins count for more and stones fall a little
+  // faster. The stones stay loose: they can still knock into one another.
   const reached = Math.floor(height / TIER_CUBITS);
   if (reached > tier) {
     tier = reached;
     multiplier = tier + 1;
-    for (const body of landed) {
-      if (!body.isStatic && (body.isSleeping || body.speed < 0.3)) {
-        Body.setStatic(body, true);
-        body.plugin.frozen = true;
-      }
-    }
     prayer = Math.min(prayerMax, prayer + PRAYER_PER_TIER);
     tierPopup = { level: tier + 1, t: 2.6, y: towerTop - 40 };
     Sound.play("tier");
@@ -1905,8 +1910,8 @@ canvas.addEventListener("pointermove", (e) => {
   const dx = e.clientX - touch.x;
   touch.x = e.clientX;
   touch.moved += Math.abs(dx);
-  touch.carry += dx / scale;
-  const step = TILE / 2;
+  touch.carry += dx;
+  const step = DRAG_PER_STEP;
   while (touch.carry >= step) { move(1); touch.carry -= step; }
   while (touch.carry <= -step) { move(-1); touch.carry += step; }
 });
