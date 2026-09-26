@@ -1,7 +1,7 @@
 // New Apologetics — every move, animated.
 //
-// Ordinary moves share a handful of animations, the way every phaser shot
-// in Star Trek: Legends looks alike: a volley of words, a walk across the
+// Ordinary moves share a handful of animations, as in most battle games:
+// a volley of words, a walk across the
 // floor to hand someone something, an aura over the team, a hex over the
 // other side. Each hero fills them with their own words and things.
 // Every hero's great move has its own full-screen cinematic instead.
@@ -389,7 +389,7 @@ const Theater = (() => {
             const slide = ease(span(k, 0, 0.35));
             if (m.closeUp !== false) {
               const g = m.face ? m.face(k) : Art.bust(Art.CAST[api.hero.id]);
-              const sc = m.face ? 5 : 7;
+              const sc = m.faceScale || (m.face ? 5 : 7);
               const size = g.w * sc;
               Art.paint(ctx, g, Math.round(lerp(-size, m.faceX === undefined ? 24 : m.faceX, slide)), H - g.h * sc + (m.faceDrop || 0), sc);
             }
@@ -728,7 +728,7 @@ const Theater = (() => {
       { name: "Pointed Question", kind: volley, glyphs: ["?"], color: "#de5e55", mark: "doubting" },
       { name: "Open Challenge", kind: hex, to: "all", pose: "raise", say: "I'll debate any of you. Right now.", mark: ["called", "pipDown"], fx: (ctx, api, h, targets, t, k) => waves(ctx, api, h, targets, t, k, "#de5e55") },
       { name: "Steelman Stance", kind: aura, to: "self", mark: ["shield", "up"], say: "Let me put your case better.", color: "#cfd6dc" },
-      { name: "Camera Mog", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 170, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
+      { name: "Camera Mog", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 136, faceScale: 7, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
       { name: "Vindicatory Miracles", duo: "spitzer", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
     ],
     schmitz: [

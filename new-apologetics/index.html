@@ -62,10 +62,10 @@
 
   /* Rulebook table */
   .scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; min-width: 420px; font-size: 15px; }
   th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font: 600 12px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-  td:first-child { color: var(--muted); white-space: nowrap; }
+  td:first-child { white-space: nowrap; }
   td strong { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--text); }
 
   .rule { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; display: grid; gap: 8px; }
@@ -99,6 +99,10 @@
   .duo b { font: 600 17px/1.2 var(--display); color: #c9b4ff; }
   .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
   .open-slot { border-style: dashed; background: transparent; }
+
+  /* Camera Mog spotlight */
+  .spotlight { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: center; gap: 24px; }
+  .spotlight h2 { color: var(--crimson); font-size: clamp(32px, 5vw, 48px); }
 
   /* Move theater */
   .theater-ui { display: grid; gap: 14px; }
@@ -163,6 +167,7 @@
     .card-head { grid-template-columns: 72px 1fr; }
     .card-head canvas { width: 72px; height: 72px; }
     .chapters li { grid-template-columns: 1fr; }
+    .spotlight { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -173,51 +178,60 @@
     <div class="hero-top">
       <span class="label">Game design · concept draft</span>
       <h1>New Apologetics</h1>
-      <p>A turn-based team battler in the style of <i>Star Trek: Legends</i>, where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
+      <p>A turn-based team battler where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
       <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The four stats of the game come from this verse.</p>
     </div>
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
   </header>
 
+  <section class="spotlight">
+    <div class="stage"><canvas id="spotlight" width="640" height="360" aria-label="Ethan Muse's Camera Mog: he tips his head toward the lens and looks up over his glasses."></canvas></div>
+    <div class="lede">
+      <span class="label">Great move spotlight</span>
+      <h2>Camera Mog</h2>
+      <p>Ethan Muse tips his head toward the lens, lets his glasses slide down his nose, and looks up at you over the top of them. The battle stops for the close-up. It is the hardest-hitting single move any Defender has: 400% Rhetoric, 600% if the opponent is already Doubting. If it breaks the opponent's conviction, Ethan gains a pip of his own. Drawn from the real thing.</p>
+    </div>
+  </section>
+
   <section>
     <div class="lede">
       <span class="label">The rules</span>
-      <h2>A Legends battle, turned into a debate</h2>
-      <p>Everything keeps the shape of <i>Star Trek: Legends</i>, so its balance carries over: teams of four, turn order by speed, one basic move with no cooldown, two skills on a 3-turn cooldown, and one great skill on a 4-turn cooldown that starts partly charged. Only the meaning changes.</p>
+      <h2>A battle, turned into a debate</h2>
+      <p>Teams of four take turns in order of Readiness. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Nobody is ever hurt: the numbers measure composure and conviction.</p>
     </div>
     <div class="scroll">
       <table>
-        <thead><tr><th>In Legends</th><th>In New Apologetics</th><th>What it means</th></tr></thead>
+        <thead><tr><th>Stat or status</th><th>What it means</th></tr></thead>
         <tbody>
-          <tr><td>Health</td><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back.</td></tr>
-          <tr><td>Morale</td><td><strong>Conviction</strong></td><td>Four pips. When an opponent loses all four, he is converted: he flickers and goes to OCIA.</td></tr>
-          <tr><td>Attack</td><td><strong>Rhetoric</strong></td><td>The strength of arguments from wit and persuasion.</td></tr>
-          <tr><td>Tech</td><td><strong>Learning</strong></td><td>The strength of arguments from Scripture, history and philosophy.</td></tr>
-          <tr><td>Defense</td><td><strong>Charity</strong></td><td>Gentleness and respect. It softens every blow taken.</td></tr>
-          <tr><td>Speed</td><td><strong>Readiness</strong></td><td>“Always be ready.” Sets the turn order.</td></tr>
-          <tr><td>Stun</td><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
-          <tr><td>Taunt</td><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
-          <tr><td>Wound</td><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
-          <tr><td>Scan</td><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
-          <tr><td>Purge</td><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
-          <tr><td>Cleanse</td><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
-          <tr><td>Cover · Shield</td><td><strong>Citation · Charity Shield</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
-          <tr><td>Skill lock · Counter</td><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
+          <tr><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back.</td></tr>
+          <tr><td><strong>Conviction</strong></td><td>Four pips. When an opponent loses all four, he is converted: he flickers and goes to OCIA.</td></tr>
+          <tr><td><strong>Rhetoric</strong></td><td>The strength of arguments from wit and persuasion.</td></tr>
+          <tr><td><strong>Learning</strong></td><td>The strength of arguments from Scripture, history and philosophy.</td></tr>
+          <tr><td><strong>Charity</strong></td><td>Gentleness and respect. It softens every blow taken.</td></tr>
+          <tr><td><strong>Readiness</strong></td><td>“Always be ready.” Sets the turn order.</td></tr>
+          <tr><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
+          <tr><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
+          <tr><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
+          <tr><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
+          <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
+          <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
+          <tr><td><strong>Citation · Charity Shield</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
+          <tr><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
         </tbody>
       </table>
     </div>
     <div class="rule">
       <h3>Win the man, not the argument</h3>
-      <p>Legends has two ways to beat an enemy: take all his health or break his morale. This game keeps both, but they are not equal. Break an opponent's <b>Conviction</b> and he converts: full reward, and sometimes he joins your roster. Run his <b>Composure</b> to zero first and he storms off embarrassed: small reward, no conversion. Players learn to lower Conviction with patient, charitable arguments instead of just scoring points. This mirrors how conversion really happens. Newman called it the convergence of many probabilities, a cumulative case, not one knockout blow. Cameron Bertuzzi's own Bayesian approach is the same idea in numbers.</p>
+      <p>An opponent can be beaten two ways, and they are not equal. Break his <b>Conviction</b> and he converts: full reward, and sometimes he joins your roster. Run his <b>Composure</b> to zero first and he storms off embarrassed: small reward, no conversion. Players learn to lower Conviction with patient, charitable arguments instead of just scoring points. This mirrors how conversion really happens. Newman called it the convergence of many probabilities, a cumulative case, not one knockout blow. Cameron Bertuzzi's own Bayesian approach is the same idea in numbers.</p>
     </div>
   </section>
 
   <section>
     <div class="lede">
       <span class="label">The roster</span>
-      <h2>Each apologist plays like a Legends hero</h2>
-      <p>Sixteen heroes. Each uses a Legends hero's kit: the same targets, cooldowns and percentages, and starting stats scaled from that hero's rank-one numbers. The balance is borrowed, and the personality is each one's own.</p>
+      <h2>Sixteen heroes, each with a style of their own</h2>
+      <p>Every hero has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Their numbers are balanced against one another, and each hero's moves come from what that apologist is known for.</p>
     </div>
     <div class="roster" id="roster"></div>
   </section>
@@ -226,7 +240,7 @@
     <div class="lede">
       <span class="label">Every move, animated</span>
       <h2>The move theater</h2>
-      <p>Ordinary moves share a few animations, the way every phaser shot in Legends looks alike. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Two heroes also share a duo great move: Ethan Muse and Fr. Spitzer's Vindicatory Miracles. Pick a hero, then a move.</p>
+      <p>Ordinary moves share a few animations, as in most battle games. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Two heroes also share a duo great move: Ethan Muse and Fr. Spitzer's Vindicatory Miracles. Pick a hero, then a move.</p>
     </div>
     <div class="stage"><canvas id="theater" width="640" height="360" aria-label="The move theater: the chosen hero performs the chosen move against three opponents."></canvas></div>
     <div class="theater-ui">
@@ -257,7 +271,7 @@
     <div class="lede">
       <span class="label">The story</span>
       <h2>Eight chapters, each ending in a teaching card</h2>
-      <p>Legends tells its story in eight chapters of six missions each. This game does the same, and each chapter ends by unlocking a teaching card. Every card is graded by its theological weight, so a player learns to tell a dogma from a pious opinion.</p>
+      <p>The story runs in eight chapters of six missions each, and each chapter ends by unlocking a teaching card. Every card is graded by its theological weight, so a player learns to tell a dogma from a pious opinion.</p>
       <div class="legend">
         <span class="grade g-dogma">Dogma</span> defined, to be believed with divine faith
         <span class="grade g-doctrine">Doctrine</span> taught with authority, not defined
@@ -285,8 +299,6 @@
   <section>
     <span class="label">Sources</span>
     <ul class="sources">
-      <li>Legends hero kits (skills, cooldowns, base stats): <a href="https://legends.datacore.app/character/Data">Data</a>, <a href="https://legends.datacore.app/character/Worf">Worf</a>, <a href="https://legends.datacore.app/character/Picard">Picard</a>, <a href="https://legends.datacore.app/character/Kirk">Kirk</a>, <a href="https://legends.datacore.app/character/McCoy">McCoy</a>, <a href="https://legends.datacore.app/character/Geordi">Geordi</a>, <a href="https://legends.datacore.app/character/Riker">Riker</a>, <a href="https://legends.datacore.app/character/Spock">Spock</a>, <a href="https://legends.datacore.app/character/Sisko">Sisko</a>, <a href="https://legends.datacore.app/character/Janeway">Janeway</a>, <a href="https://legends.datacore.app/character/Uhura">Uhura</a>, <a href="https://legends.datacore.app/character/Crusher">Crusher</a>, <a href="https://legends.datacore.app/character/Sulu">Sulu</a>, <a href="https://legends.datacore.app/character/Khan">Khan</a> (legends.datacore.app)</li>
-      <li>Roles, morale and retreat: <a href="https://biggestinjapan.com/index.php/2021/04/12/10-tips-tricks-for-starting-star-trek-legends/">Biggest in Japan, “10 Tips &amp; Tricks for Starting Star Trek: Legends”</a>; <a href="https://startreklegends.fandom.com/wiki/Morale_System">Star Trek Legends Wiki, Morale System</a>; <a href="https://www.gamesasylum.com/2025/01/15/star-trek-legends-review/">Games Asylum review</a></li>
       <li>The apologists: <a href="https://en.wikipedia.org/wiki/Jimmy_Akin">Jimmy Akin</a>; <a href="https://en.wikipedia.org/wiki/Trent_Horn">Trent Horn</a>; <a href="https://www.wordonfire.org/articles/contributors/apologetics-isnt-dead-cameron-bertuzzis-conversion-to-catholicism/">Cameron Bertuzzi's conversion (Word on Fire)</a>; <a href="https://mileskdonahue.substack.com/p/90-a-heated-debate-on-hell-catholicism">Ethan Muse</a>; <a href="https://www.catholic.com/audio/cot/godlogic-vs-muslims-jws-and-orthobros">GodLogic on the Council of Trent podcast</a>; <a href="https://www.fatherboniface.org/wordpresshome/">Fr. Boniface Hicks</a>; <a href="https://opeast.org/godsplaining/">Godsplaining</a>; <a href="https://www.catholic.com/profile/joe-heschmeyer">Joe Heschmeyer</a>; <a href="https://brianholdsworth.ca/about-me">Brian Holdsworth</a>; <a href="https://sistersoflife.org/resources/a-habit-for-life/">the Sisters of Life habit</a></li>
     </ul>
   </section>
@@ -303,7 +315,7 @@
 
   const HEROES = [
     {
-      id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Science", like: "Data",
+      id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Scholar",
       stats: [225, 70, 90, 25, 58],
       passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
       skills: [
@@ -312,10 +324,10 @@
         ["Logical Paradox", "All foes", "3", "Minor Rhetoric Down for 3 turns. 50% chance of −1 Conviction on each."],
         ["Mysterious World", "2 random foes", "3", "Cross-Examined, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
       ],
-      flavor: "Data's kit, almost move for move. The android who reasons without heat becomes the apologist who does the same.",
+      flavor: "The coolest head in any debate. He weighs every claim without heat, and his distinctions leave an opponent nothing to push against.",
     },
     {
-      id: "muse", name: "Ethan Muse", tag: "Philosopher and debater", role: "Security", like: "Worf",
+      id: "muse", name: "Ethan Muse", tag: "Philosopher and debater", role: "Defender",
       stats: [288, 76, 45, 18, 88],
       passive: ["Doctoral Rigor", "+5% Rhetoric to every Catholic ally."],
       skills: [
@@ -324,11 +336,11 @@
         ["Steelman Stance", "Self", "3 (starts 1)", "Rebuttal, and Major Rhetoric Up for 3 turns. He states your case better than you did, then answers it."],
         ["Camera Mog", "1 foe", "4 (starts 2)", "400% Rhetoric, 600% if the target is Doubting. If this breaks the target's conviction, Ethan gains +1 Conviction.", true],
       ],
-      duo: ["Vindicatory Miracles", "with Fr. Spitzer", "All foes", "A duo great move, like Legends' team-up attacks. Fatima, Lanciano, Guadalupe and Lourdes appear one by one, each stamped VINDICATED: miracles that confirm specifically Catholic teaching. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
+      duo: ["Vindicatory Miracles", "with Fr. Spitzer", "All foes", "A duo great move, unlocked when both men are on the team. Fatima, Lanciano, Guadalupe and Lourdes appear one by one, each stamped VINDICATED: miracles that confirm specifically Catholic teaching. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
       flavor: "The tank. Open Challenge draws every argument onto him, so the healer can keep one man standing.",
     },
     {
-      id: "schmitz", name: "Fr. Mike Schmitz", tag: "Ascension Presents · The Bible in a Year", role: "Command", like: "Picard",
+      id: "schmitz", name: "Fr. Mike Schmitz", tag: "Ascension Presents · The Bible in a Year", role: "Leader",
       stats: [250, 58, 105, 12, 125],
       passive: ["Please Pray for Me", "+5% Resolve to every ally."],
       skills: [
@@ -337,10 +349,10 @@
         ["The Bible in a Year", "All allies", "3 (starts 1)", "+1 Conviction on each, and Charity Up for 3 turns. Day by day, the whole team grows steadier."],
         ["The Catechism in a Year", "All allies", "4 (starts 2)", "Examen, a Charity Shield and Learning Up for 3 turns.", true],
       ],
-      flavor: "Picard's kit belongs to the captain whose calm voice leads the whole crew. It isn't built for scoring points; it makes everyone around him better.",
+      flavor: "He isn't built for scoring points. His calm voice makes everyone around him better.",
     },
     {
-      id: "bertuzzi", name: "Cameron Bertuzzi", tag: "Host, Capturing Christianity", role: "Command", like: "Sisko",
+      id: "bertuzzi", name: "Cameron Bertuzzi", tag: "Host, Capturing Christianity", role: "Leader",
       stats: [238, 79, 60, 14, 118],
       passive: ["Follow the Evidence", "+5% Charity to every ally."],
       skills: [
@@ -349,10 +361,10 @@
         ["Point of Order", "All foes", "3 (starts 1)", "−1 Conviction on each, and a guaranteed Fact-Check."],
         ["Bayesian Update", "All allies", "4 (starts 2)", "A major encouragement for everyone, Examen, and Major Charity Up for 3 turns. Each piece of evidence shifts the odds.", true],
       ],
-      flavor: "A moderator's kit, borrowed from Sisko. He keeps the debate fair more than he wins it, and he came into the Church by following the evidence himself.",
+      flavor: "A moderator. He keeps the debate fair more than he wins it, and he came into the Church by following the evidence himself.",
     },
     {
-      id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Command", like: "Kirk",
+      id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Leader",
       stats: [250, 82, 15, 15, 140],
       passive: ["The Council of Trent", "+5% Rhetoric to Catholic Answers allies. With Jimmy Akin in the team, both get the bonus."],
       skills: [
@@ -364,7 +376,7 @@
       flavor: "The fastest man in the game, named for the fastest mind on the radio. Three of his skills are the titles of his books.",
     },
     {
-      id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Medical", like: "McCoy",
+      id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Encourager",
       stats: [225, 61, 105, 14, 125],
       passive: ["She'll Be Right", "+10% resistance to Doubting."],
       skills: [
@@ -376,7 +388,7 @@
       flavor: "The healer. He hosted Cameron Bertuzzi's debates while Cameron was still a Protestant, so he knows how to keep a hard conversation friendly.",
     },
     {
-      id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Engineering", like: "Geordi", guest: true,
+      id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Builder", guest: true,
       stats: [163, 61, 135, 15, 125],
       passive: ["Smooth", "+3% Learning."],
       skills: [
@@ -385,22 +397,22 @@
         ["Stay Smooth", "All allies", "3", "A major Charity Shield for 3 turns and +1 Conviction on each."],
         ["Common Ground", "All foes", "4", "Removes every buff and gives Major Learning Down for 3 turns. −1 Conviction on any foe from the Islam storyline.", true],
       ],
-      flavor: "Geordi's shields, with a smooth delivery. Like Geordi's pulse against machines, his ultimate works best in his own field: dialogue with Muslims.",
+      flavor: "Shields with a smooth delivery. His great move works best in his own field: dialogue with Muslims.",
     },
     {
-      id: "barron", name: "Bishop Robert Barron", tag: "Word on Fire", role: "Command", like: "Riker",
+      id: "barron", name: "Bishop Robert Barron", tag: "Word on Fire", role: "Leader",
       stats: [262, 82, 60, 11, 110],
       passive: ["Media Veteran", "+3% Composure."],
       skills: [
         ["Sunday Sermon", "1 foe", "0", "125% Rhetoric. 50% chance of Rhetoric Down for 1 turn."],
-        ["Word on Fire", "All foes", "3", "250% Rhetoric to every foe at once. Riker's covering fire becomes one broadcast that reaches everybody."],
+        ["Word on Fire", "All foes", "3", "250% Rhetoric to every foe at once. One broadcast that reaches everybody."],
         ["The Way of Beauty", "Self", "3 (starts 1)", "Calls out every foe to answer him, gains a Citation, and Rhetoric Up for 3 turns. Beauty first, then goodness, then truth."],
         ["No Beige Catholicism", "1 foe", "4 (starts 2)", "Muted for 3 turns, Rhetoric Down, and −1 Conviction.", true],
       ],
-      flavor: "Riker's kit: a bold leader with the one attack that hits the whole room. It suits the man who built a media apostolate that reaches millions.",
+      flavor: "A bold leader with the one attack that reaches the whole room, from the man who built a media apostolate that reaches millions.",
     },
     {
-      id: "hicks", name: "Fr. Boniface Hicks, OSB", tag: "Monk of Saint Vincent Archabbey · spiritual director", role: "Science", like: "Spock",
+      id: "hicks", name: "Fr. Boniface Hicks, OSB", tag: "Monk of Saint Vincent Archabbey · spiritual director", role: "Scholar",
       stats: [200, 64, 128, 14, 110],
       passive: ["Stability", "+10% resistance to Fact-Check. The Benedictine vow."],
       skills: [
@@ -409,10 +421,10 @@
         ["Obsculta", "1 foe", "3 (starts 1)", "Dumbfounded for 3 turns, even through a Citation, and −2 Conviction. “Listen”: the first word of the Rule."],
         ["Spiritual Direction", "1 foe", "4 (starts 2)", "−2 Conviction on the foe and +2 on Fr. Boniface. Two souls come to understand each other.", true],
       ],
-      flavor: "Spock's kit, with the mind meld made into spiritual direction. Before he was ordained, he also earned a PhD in computer science.",
+      flavor: "Quiet and steady. His great move turns a debate into spiritual direction. Before he was ordained, he also earned a PhD in computer science.",
     },
     {
-      id: "pine", name: "Fr. Gregory Pine, OP", tag: "Godsplaining · Thomistic Institute", role: "Command", like: "Janeway",
+      id: "pine", name: "Fr. Gregory Pine, OP", tag: "Godsplaining · Thomistic Institute", role: "Leader",
       stats: [213, 53, 88, 14, 118],
       passive: ["Order of Preachers", "+3% Learning."],
       skills: [
@@ -421,33 +433,33 @@
         ["The Five Ways", "All foes", "3 (starts 1)", "250% Learning to each, and Charity Down for 3 turns."],
         ["Respondeo", "1 foe", "4 (starts 2)", "Three hits of 150% Learning, then +2 Conviction on every ally.", true],
       ],
-      flavor: "Janeway's kit, set out in the order of an article of the Summa: the objection, the Sed contra, and the answer.",
+      flavor: "Every move is set out in the order of an article of the Summa: the objection, the Sed contra, and the answer.",
     },
     {
-      id: "marygrace", name: "Sr. Mary Grace, SV", tag: "Sisters of Life · Let Love podcast", role: "Science", like: "Uhura",
+      id: "marygrace", name: "Sr. Mary Grace, SV", tag: "Sisters of Life · Let Love podcast", role: "Scholar",
       stats: [213, 64, 75, 10, 170],
       passive: ["Consecrated", "+10% resistance to Cross-Examined."],
       skills: [
         ["A Word of Truth", "1 foe", "0", "150% Learning."],
         ["Let Love", "All allies", "3", "Major Charity Up and +1 Conviction on each."],
-        ["Every Life Is Good", "All foes", "3 (starts 1)", "Rhetoric Down and Learning Down for 3 turns. Uhura's universal translator: she speaks so that anyone can hear."],
+        ["Every Life Is Good", "All foes", "3 (starts 1)", "Rhetoric Down and Learning Down for 3 turns. She speaks so that anyone can hear."],
       ],
-      flavor: "Uhura, the communications officer, is one of the fastest heroes in the game. Like Uhura, she has three skills, not four, and she almost always acts first.",
+      flavor: "One of the fastest heroes in the game. She has three skills, not four, and she almost always acts first.",
     },
     {
-      id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Science", like: "Troi",
+      id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Scholar",
       stats: [200, 60, 100, 15, 120],
       passive: ["Empathy", "+5% Charity to every ally."],
       skills: [
         ["Every Life", "1 foe", "0", "125% Learning."],
-        ["Sense Deception", "1 foe", "3", "Cross-Examined, and a 50% chance of a Fact-Check. Like Troi, she can tell when an argument is hiding something."],
+        ["Sense Deception", "1 foe", "3", "Cross-Examined, and a 50% chance of a Fact-Check. She can tell when an argument is hiding something."],
         ["Counsel", "1 ally", "3", "Examen and +2 Conviction."],
         ["Live Action", "All foes", "4 (starts 2)", "Rhetoric Down for 3 turns and −1 Conviction on each foe. +1 Conviction on each ally.", true],
       ],
-      flavor: "A counselor's kit. Troi's numbers aren't in the Legends database, so this kit follows the game's usual pattern and a Science hero's numbers.",
+      flavor: "A counselor. She reads the room, draws out what is hidden, and steadies her friends.",
     },
     {
-      id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Medical", like: "Crusher",
+      id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Encourager",
       stats: [200, 58, 135, 12, 125],
       passive: ["Domestic Church", "+3% Composure. A father of seven knows patience."],
       skills: [
@@ -456,10 +468,10 @@
         ["Cultural Diagnosis", "1 foe", "3 (starts 1)", "Cross-Examined, and Major Charity Down for 3 turns."],
         ["Authentic Catholic Culture", "All allies", "4 (starts 2)", "Examen, a major Charity Shield, and +1 Conviction on each. For 3 turns no ally can lose Conviction.", true],
       ],
-      flavor: "Crusher's kit: the healer who looks after the whole team at once, where Matt Fradd looks after one friend at a time.",
+      flavor: "The healer who looks after the whole team at once, where Matt Fradd looks after one friend at a time.",
     },
     {
-      id: "jurado", name: "Alex Jurado", tag: "Voice of Reason · Byzantine Catholic", role: "Command", like: "Khan",
+      id: "jurado", name: "Alex Jurado", tag: "Voice of Reason · Byzantine Catholic", role: "Leader",
       stats: [288, 100, 30, 15, 88],
       passive: ["Byzantine Rite", "+3% Rhetoric."],
       skills: [
@@ -468,10 +480,10 @@
         ["Stallone Voice", "1 foe", "3 (starts 1)", "250% Rhetoric, with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
         ["Voice of Reason", "All foes", "4 (starts 2)", "Fact-Checks every foe, and −2 Conviction on each.", true],
       ],
-      flavor: "Khan's kit belongs to Legends' rarest and hardest-hitting hero. It suits the biggest voice in the game.",
+      flavor: "The hardest single hitter in the game, with the biggest voice to match.",
     },
     {
-      id: "spitzer", name: "Fr. Robert Spitzer, SJ", tag: "Magis Center · physicist-philosopher", role: "Engineering", like: "Seven of Nine",
+      id: "spitzer", name: "Fr. Robert Spitzer, SJ", tag: "Magis Center · physicist-philosopher", role: "Builder",
       stats: [188, 70, 135, 18, 73],
       passive: ["Magis", "+3% Learning."],
       skills: [
@@ -480,10 +492,10 @@
         ["Borde–Guth–Vilenkin", "1 foe", "4 (starts 2)", "250% Learning, and Muted for 3 turns, with a smaller blow to the others. An expanding universe cannot be past-eternal.", true],
       ],
       duo: ["Vindicatory Miracles", "with Ethan Muse", "All foes", "The duo great move he shares with Ethan Muse: the miracles that confirm specifically Catholic teaching, one after another. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
-      flavor: "Seven of Nine's kit: the scientist whose finisher locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
+      flavor: "A scientist whose great move locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
     },
     {
-      id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Command", like: "Sulu",
+      id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
       stats: [188, 30, 88, 10, 170],
       passive: ["The Early Church Was the Catholic Church", "+5% Learning to Catholic Answers allies."],
       skills: [
@@ -491,7 +503,7 @@
         ["Former Litigator", "Self", "3", "Rebuttal, and Major Crit Chance Up for all allies for 3 turns."],
         ["Shameless Popery", "1 foe", "3 (starts 1)", "Three hits of 150% Learning, and −1 Conviction."],
       ],
-      flavor: "Sulu the fencer, one of the fastest heroes: quick thrusts, a parry, then a flurry. Instead of Sulu's blade he wields the Church Fathers. He is also the third Catholic Answers apologist, which opens a team bonus.",
+      flavor: "A fencer: quick thrusts, a parry, then a flurry, and his blade is the Church Fathers. He is also the third Catholic Answers apologist, which opens a team bonus.",
     },
   ];
 
@@ -587,11 +599,10 @@
     pic.setAttribute("aria-label", "Pixel portrait of " + h.name);
     const who = document.createElement("div");
     who.className = "who";
-    who.innerHTML = `<h3></h3><span class="passive"></span><div class="chips"><span class="chip role"></span><span class="chip"></span></div>`;
+    who.innerHTML = `<h3></h3><span class="passive"></span><div class="chips"><span class="chip role"></span></div>`;
     who.querySelector("h3").textContent = h.name;
     who.querySelector(".passive").textContent = h.tag;
     who.querySelector(".chip.role").textContent = h.role;
-    who.querySelector(".chip:not(.role)").textContent = "plays like " + h.like;
     if (h.guest) {
       const g = document.createElement("span");
       g.className = "chip"; g.textContent = "guest ally";
@@ -794,6 +805,20 @@
     if (last && caption.textContent !== last.caption) caption.textContent = last.caption;
   }
 
+  // ---- The Camera Mog spotlight ---------------------------------------------------------
+
+  const spot = Theater.create(document.getElementById("spotlight"));
+  spot.setTeam(["muse", "akin", "fradd", "bertuzzi"]);
+  let spotNext = still ? null : 0.4;
+  spot.onDone(() => { spotNext = clockSpot + 1.2; });
+  let clockSpot = 0;
+  function drawSpot(t) {
+    clockSpot = t;
+    if (spotNext !== null && t >= spotNext) { spot.play("muse", Theater.MOVES.muse.findIndex((m) => m.great), t); spotNext = null; }
+    spot.frame(t);
+  }
+  document.getElementById("spotlight").addEventListener("click", () => { if (!spot.busy) spotNext = clockSpot; });
+
   // ---- The move theater ------------------------------------------------------------
 
   const theater = Theater.create(document.getElementById("theater"));
@@ -907,8 +932,8 @@
 
   if (still) {
     drawBattle(9.2); drawOcia(3.2);
-    // With reduced motion the theater only moves when asked.
-    const loop = (now) => { drawTheater(now / 1000); requestAnimationFrame(loop); };
+    // With reduced motion the theater and the spotlight only move when asked.
+    const loop = (now) => { drawTheater(now / 1000); drawSpot(now / 1000); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
     return;
   }
@@ -917,10 +942,11 @@
     const t = (now - t0) / 1000;
     drawBattle(t % LOOP);
     drawTheater(t);
+    drawSpot(t);
     drawOcia(t);
     requestAnimationFrame(frame);
   }
-  drawBattle(0.6); drawTheater(0); drawOcia(0);
+  drawBattle(0.6); drawTheater(0); drawSpot(0); drawOcia(0);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 })();
 </script>

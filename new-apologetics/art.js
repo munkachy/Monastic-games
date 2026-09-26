@@ -73,6 +73,13 @@ const Art = (() => {
       g.put(13, 23, s.trim || "#e9e2d0"); g.put(12, 24, s.trim || "#e9e2d0");
       g.put(18, 23, s.trim || "#e9e2d0"); g.put(19, 24, s.trim || "#e9e2d0");
       for (let y = 25; y < 32; y += 2) g.put(16, y, s.trim || "#e9e2d0");
+    } else if (s.outfit === "gingham") {
+      for (let y = 23; y < 32; y++) {
+        const half = Math.min(15, 7 + (y - 23) * 1.4);
+        for (let x = Math.floor(16 - half); x < Math.ceil(16 + half); x++) if (x % 3 === 0 || y % 3 === 0) g.put(x, y, s.trim);
+      }
+      for (const [x, y] of [[12, 23], [13, 24], [14, 25], [19, 23], [18, 24], [17, 25]]) g.put(x, y, s.clothes);
+      for (let y = 24; y < 32; y++) g.put(16, y, s.trim);
     } else if (s.outfit === "clerical") {
       g.put(15, 23, "#f7f5ee"); g.put(16, 23, "#f7f5ee");
     } else if (s.outfit === "habit" || s.outfit === "dominican") {
@@ -115,7 +122,8 @@ const Art = (() => {
     }
 
     // Head, ears and a little shading on the far cheek.
-    const face = (x, y) => s.jaw === "square"
+    const rx = s.faceW || 7.6;
+    const face = (x, y) => s.faceW ? inEllipse(x, y, 16, 12.5, rx, 9.8) : s.jaw === "square"
       ? (y >= 12 ? Math.abs(x + 0.5 - 16) <= 7.6 - (y > 19 ? (y - 19) * 1.2 : 0) && y < 22 : inEllipse(x, y, 16, 12.5, 7.6, 9.6))
       : inEllipse(x, y, 16, 12.5, 7.6, 9.6);
     for (let y = 2; y < 23; y++) {
@@ -160,6 +168,11 @@ const Art = (() => {
     } else if (style === "bald") {
       for (const [x, y] of [[12, 4], [13, 4], [12, 5], [11, 6]]) g.put(x, y, s.shine || "#fff1e0");
       for (let y = 9; y < 13; y++) { g.put(8, y, s.shade); g.put(23, y, s.shade); }
+    } else if (style === "shaggy") {
+      // A mop of hair with a jagged fringe that hangs to the brows.
+      for (let y = 0; y < 10; y++) for (let x = 5; x < 27; x++) if (inEllipse(x, y, 16, 12.5, 9, 11.4)) g.put(x, y, (x * 7 + y * 3) % 11 === 0 ? (s.hairLight || hair) : hair);
+      for (const x of [9, 10, 12, 13, 14, 17, 18, 20, 21, 22]) g.put(x, 10, hair);
+      for (let y = 8; y < 15; y++) { g.put(7, y, hair); g.put(24, y, hair); g.put(6, y - 2, hair); g.put(25, y - 2, hair); }
     } else if (style === "cowboy") {
       for (let y = 7; y < 12; y++) { g.put(8, y, hair); g.put(23, y, hair); }
       const hat = s.hat || "#efe6d2";
@@ -309,6 +322,7 @@ const Art = (() => {
     const robeColor = s.outfit === "blouse" ? (s.skirt || "#5b4a66") : s.outfit === "sisters" ? "#f7f5ee" : clothes;
     for (let y = 31; y < 39; y++) for (let x = 4; x < 28; x++) g.put(X + x, y, clothes);
     if (s.outfit === "sisters") for (let y = 31; y < 49; y++) for (let x = 12; x < 20; x++) g.put(X + x, y, "#1f2f66");
+    if (s.outfit === "gingham") for (let y = 31; y < 39; y++) for (let x = 4; x < 28; x++) if (x % 3 === 0 || y % 3 === 0) g.put(X + x, y, s.trim);
     if (s.outfit === "suit" || s.outfit === "clerical" || s.outfit === "whiteshirt") for (let y = 31; y < 39; y++) { g.put(X + 15, y, s.tie || dark); }
     // Arms at the sides: sleeves, then hands.
     const armL = pose === "raise" ? null : [[1, 3]];
@@ -363,51 +377,69 @@ const Art = (() => {
   // The debater leans right into the lens and peers over the top of his
   // glasses. `t` runs 0 → 1 as the glasses slide down and the brows go up.
   function mog(s, t) {
+    // Drawn from Ethan Muse's own Camera Mog: the head tipped down toward the
+    // lens, a shaggy fringe hanging over the forehead, heavy brows, and eyes
+    // looking up over glasses that have slid down the nose.
     const g = grid(48, 48);
     const hair = s.hair;
+    const hairLight = s.hairLight || hair;
+    const dark = "#221a22";
+    // A wide face, so close to the camera it fills the frame.
     for (let y = 0; y < 48; y++) {
       for (let x = 0; x < 48; x++) {
-        const inside = s.jaw === "square" ? (y < 28 ? inEllipse(x, y, 24, 30, 21, 26) : Math.abs(x + 0.5 - 24) <= 21 - Math.max(0, y - 40) * 1.5) : inEllipse(x, y, 24, 30, 21, 26);
-        if (!inside) continue;
-        const rim = ((x + 0.5 - 24) / 21) ** 2 + ((y + 0.5 - 30) / 26) ** 2;
-        g.put(x, y, rim > 0.7 && x > 28 ? s.shade : s.skin);
+        if (!inEllipse(x, y, 24, 27, 22.5, 27)) continue;
+        const rim = ((x + 0.5 - 24) / 22.5) ** 2 + ((y + 0.5 - 27) / 27) ** 2;
+        g.put(x, y, rim > 0.72 ? s.shade : s.skin);
       }
     }
-    for (let y = 0; y < 13; y++) for (let x = 0; x < 48; x++) if (inEllipse(x, y, 24, 30, 22, 27.5)) g.put(x, y, hair);
-    for (let y = 13; y < 22; y++) { g.put(3, y, hair); g.put(4, y, hair); g.put(43, y, hair); g.put(44, y, hair); }
-    for (let x = 6; x < 22; x++) g.put(x, 13, hair);
-
-    const lift = Math.round(t * 3);
-    for (const [x0, dir] of [[10, 1], [27, -1]]) {
-      for (let i = 0; i < 10; i++) {
-        const arch = Math.round(Math.sin((i / 9) * Math.PI) * (1 + lift * 0.6));
-        g.put(x0 + i, 20 - arch - lift, s.brow || hair);
-        g.put(x0 + i, 21 - arch - lift, s.brow || hair);
+    // The checked shirt at the bottom corners.
+    for (let y = 36; y < 48; y++) for (let x = 0; x < 48; x++) {
+      if (g.get(x, y) && inEllipse(x, y, 24, 27, 21.5 - (y - 36) * 0.9, 27)) continue;
+      g.put(x, y, x % 3 === 0 || y % 3 === 0 ? (s.trim || "#3a5aa0") : (s.clothes || "#eef2f8"));
+    }
+    // The shaggy mop: a mass on top, a jagged fringe, strands at the sides.
+    const fringe = [16, 17, 19, 18, 20, 19, 21, 20, 19, 21, 20, 18, 19, 20, 18, 17];
+    for (let x = 0; x < 48; x++) {
+      const bottom = x < 6 || x > 41 ? 30 - Math.abs(x < 6 ? x : 47 - x) : fringe[Math.floor(x / 3) % fringe.length] - (x > 34 ? 2 : 0);
+      for (let y = 0; y < bottom; y++) g.put(x, y, (x * 13 + y * 7 + x * y) % 17 === 0 ? hairLight : hair);
+    }
+    for (const [x, y] of [[9, 20], [14, 21], [22, 22], [27, 21], [31, 20]]) { g.put(x, y, hair); g.put(x, y + 1, hair); }
+    // Heavy brows, drawn down toward the middle: a scowl that deepens.
+    const scowl = Math.round(t * 2);
+    for (const [x0, dir] of [[8, 1], [27, -1]]) {
+      for (let i = 0; i < 13; i++) {
+        const x = dir > 0 ? x0 + i : x0 + 12 - i;
+        const drop = Math.round((i / 12) * (1 + scowl));
+        g.put(x, 22 + drop, s.brow || dark);
+        g.put(x, 23 + drop, s.brow || dark);
       }
     }
-    // Eyes looking up and straight at you.
-    for (const x0 of [12, 29]) {
-      for (let y = 23; y < 28; y++) for (let x = x0; x < x0 + 7; x++) g.put(x, y, "#fdfaf2");
-      for (let y = 23; y < 27; y++) for (let x = x0 + 2; x < x0 + 5; x++) g.put(x, y, "#221a22");
-      g.put(x0 + 2, 23, "#ffffff");
+    // Eyes peering up from under the brows.
+    const eyeTop = 25 + scowl;
+    for (const x0 of [11, 29]) {
+      for (let y = eyeTop; y < eyeTop + 4; y++) for (let x = x0; x < x0 + 8; x++) g.put(x, y, "#f4eee4");
+      for (let y = eyeTop; y < eyeTop + 3; y++) for (let x = x0 + 3; x < x0 + 6; x++) g.put(x, y, dark);
+      g.put(x0 + 3, eyeTop, "#6a4a36");
+      for (let x = x0; x < x0 + 8; x++) g.put(x, eyeTop - 1, s.shade);
     }
-    // Nose and a flat, unimpressed mouth.
-    for (let y = 28; y < 35; y++) g.put(24, y, s.shade);
-    for (let x = 21; x < 27; x++) g.put(x, 35, s.shade);
-    for (let x = 18; x < 31; x++) g.put(x, 40, s.mouth || "#8e4a40");
-    if (s.beard === "stubble") for (let y = 37; y < 48; y++) for (let x = 8; x < 40; x++) if ((x + y) % 2 === 0 && g.get(x, y) === s.skin && y !== 40) g.put(x, y, s.beardColor);
-
+    // A broad nose and a small, pressed mouth.
+    for (let y = 31; y < 39; y++) { g.put(23, y, s.shade); if (y > 34) g.put(25, y, s.shade); }
+    for (let x = 20; x < 29; x++) g.put(x, 39, s.shade);
+    g.put(21, 38, dark); g.put(27, 38, dark);
+    for (let x = 19; x < 30; x++) g.put(x, 43, s.mouth || "#8e4a40");
+    g.put(18, 44, s.mouth || "#8e4a40"); g.put(30, 44, s.mouth || "#8e4a40");
     // The glasses slide from the eyes to the end of the nose.
-    const gy = 22 + Math.round(t * 9);
+    const gy = 24 + Math.round(t * 8);
     const c = s.glasses || "#1d1d24";
-    for (const x0 of [9, 27]) {
-      for (let x = x0; x < x0 + 12; x++) { g.put(x, gy, c); g.put(x, gy + 1, c); g.put(x, gy + 6, c); }
-      for (let y = gy; y < gy + 7; y++) { g.put(x0, y, c); g.put(x0 + 11, y, c); }
-      if (t > 0.5) for (let x = x0 + 1; x < x0 + 11; x += 3) g.put(x, gy + 3, "#bfe0ff");
+    for (const x0 of [7, 26]) {
+      for (let x = x0; x < x0 + 15; x++) { g.put(x, gy, c); g.put(x, gy + 1, c); g.put(x, gy + 6, c); }
+      for (let y = gy; y < gy + 7; y++) { g.put(x0, y, c); g.put(x0 + 14, y, c); }
+      for (let x = x0 + 2; x < x0 + 13; x += 4) g.put(x, gy + 3, "#c8e0f0");
+      g.put(x0 + 2, gy + 2, "#e8f4ff");
     }
     for (let x = 21; x < 27; x++) g.put(x, gy + 1, c);
-    for (let x = 2; x < 9; x++) g.put(x, gy + 1, c);
-    for (let x = 39; x < 46; x++) g.put(x, gy + 1, c);
+    for (let x = 0; x < 7; x++) g.put(x, gy + 1, c);
+    for (let x = 41; x < 48; x++) g.put(x, gy + 1, c);
     return g;
   }
 
@@ -429,7 +461,7 @@ const Art = (() => {
 
   const CAST = {
     akin: { skin: "#efc2a4", shade: "#d09c80", hair: "#c4562a", style: "cowboy", hat: "#efe6d2", hatShade: "#d6cbb2", beard: "long", beardColor: "#c4562a", beardLight: "#e07a44", brow: "#b04a24", outfit: "shirt", clothes: "#f4f1ea", trim: "#c9c3b4", pants: "#3a4a6a" },
-    muse: { skin: "#efc6a8", shade: "#cf9c7e", hair: "#3a2618", hairLight: "#5a3d28", style: "side", jaw: "square", glasses: "#1d1d24", outfit: "sweater", clothes: "#1f3b5c", trim: "#e9e2d0" },
+    muse: { skin: "#f0c4a6", shade: "#d09c80", hair: "#5a3e2c", hairLight: "#7a5a44", style: "shaggy", faceW: 8.4, brow: "#3a2618", browY: 11, glasses: "#1d1d24", outfit: "gingham", clothes: "#eef2f8", trim: "#4a6ab0", pants: "#3a3f4f" },
     bertuzzi: { skin: "#e8b99a", shade: "#c8957a", hair: "#221812", hairLight: "#3a2a20", style: "side", beard: "goatee", beardColor: "#5a4232", outfit: "suit", clothes: "#243a66", lapel: "#1a2a4c", shirt: "#1d1d22", prop: "mic", smile: true },
     horn: { skin: "#e6b692", shade: "#c69272", hair: "#16100c", style: "curly", brow: "#16100c", outfit: "suit", clothes: "#6a6d74", lapel: "#55585e", shirt: "#f2efe6", smile: true },
     fradd: { skin: "#efc3a4", shade: "#cf9c80", hair: "#8a6a4a", hairLight: "#a8845c", style: "side", beard: "short", beardColor: "#9a6a44", outfit: "suit", clothes: "#243452", lapel: "#1a2640", shirt: "#f7f5ee", prop: "pint", smile: true },
