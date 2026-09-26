@@ -15,12 +15,16 @@ const Battle = (() => {
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
 
+  // A hero's level raises Composure and the strength of his arguments; each
+  // chapter's opponents grow tougher to match.
+  const HERO_GROWTH = 0.07;
+  const FOE_GROWTH = 0.12;
+
   function makeUnit(id, side, slot, def, level) {
     const hero = side === "hero";
     const kind = hero ? "hero" : def.boss ? "boss" : "grunt";
-    // Each chapter's opponents are a little tougher than the last.
-    const grow = hero ? 1 : 1 + 0.05 * (level || 0);
-    const punch = hero ? 1 : FOE_PUNCH * grow * (def.boss ? 1.3 : 1);
+    const grow = hero ? 1 + HERO_GROWTH * Math.max(0, (level || 1) - 1) : 1 + FOE_GROWTH * (level || 0);
+    const punch = hero ? grow : FOE_PUNCH * grow * (def.boss ? 1.3 : 1);
     const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow);
     return {
       id, side, key: (hero ? "h" : "f") + slot, slot, def, kind,
@@ -40,7 +44,8 @@ const Battle = (() => {
     const H = GameData.HEROES;
     const F = GameData.FOES;
     const rnd = opts.random || Math.random;
-    const units = opts.team.map((id, i) => makeUnit(id, "hero", i, H[id]))
+    const levels = opts.levels || {};
+    const units = opts.team.map((id, i) => Object.assign(makeUnit(id, "hero", i, H[id], levels[id] || 1), { level: levels[id] || 1 }))
       .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level)));
     let queue = [];
     let round = 0;
@@ -189,7 +194,7 @@ const Battle = (() => {
           if (e.heal) heal(t, e.heal, events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(t.maxHp * e.shield), n: e.turns + 1 }; events.push({ key: t.key, text: "Charity Shield", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(t.maxHp * e.shield), n: e.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
           if (e.citation) { t.citation = true; events.push({ key: t.key, text: "Citation", color: "#7ea4e6" }); }
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
@@ -201,7 +206,7 @@ const Battle = (() => {
             const lifts = [{ buff: "r", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.25, turns: 3 }, { heal: 0.2 }];
             const l = lifts[Math.floor(rnd() * lifts.length)];
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
-            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Charity Shield", color: "#7ea4e6" }); }
+            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -298,7 +303,7 @@ const Battle = (() => {
 
   const LABELS = { dumbfounded: "Dumbfounded", doubting: "Doubting", muted: "Muted", examined: "Cross-Examined", called: "Called Out" };
   const label = (s) => LABELS[s] || s;
-  const statName = (s) => ({ r: "Rhetoric", l: "Learning", c: "Charity", crit: "Crit" }[s] || s);
+  const statName = (s) => ({ r: "Rhetoric", l: "Learning", c: "Poise", crit: "Crit" }[s] || s);
   const immuneName = (k) => ({ conviction: "Steadfast", learning: "Testimony", faith: "Faith Alone", security: "Eternal Security" }[k] || k);
 
   // Fight to the end. `choose(u)` returns a promise of { i, target } for a hero
@@ -327,7 +332,11 @@ const Battle = (() => {
     }
   }
 
-  return { create, label, run };
+  // Experience: level L needs 50·L·(L−1) points (100 for level 2, 300 for 3, …).
+  const levelOf = (xp) => { let L = 1; while (50 * (L + 1) * L <= (xp || 0)) L++; return L; };
+  const xpFor = (L) => 50 * L * (L - 1);
+
+  return { create, label, run, levelOf, xpFor };
 })();
 
 // ---- The stage --------------------------------------------------------------------------

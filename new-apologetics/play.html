@@ -112,7 +112,7 @@
     <span class="label">A team battler</span>
     <h1>New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
-    <p>Lead a team of Catholic apologists through five chapters of debates. Nobody gets hurt. When an opponent's conviction finally gives way, he flickers, and then he signs up for OCIA.</p>
+    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. When an opponent's conviction finally gives way, he signs up for OCIA.</p>
     <div class="row">
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
@@ -198,9 +198,10 @@
   const SAVE_KEY = "new-apologetics-save";
   function load() {
     try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.stars) return s; } catch (e) { /* no storage */ }
-    return { stars: {}, seen: {}, team: [] };
+    return { stars: {}, seen: {}, team: [], xp: {} };
   }
   let save = load();
+  if (!save.xp) save.xp = {};
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* no storage */ } }
 
   const mkey = (ci, mi) => C[ci].id + ":" + mi;
@@ -216,6 +217,16 @@
     C.forEach((ch, ci) => { if (chapterDone(ci)) ch.unlocks.forEach((h) => r.add(h)); });
     return [...r];
   }
+
+  // ---- Levels: every hero starts at level 1 and grows by debating --------------------------
+  // A hero who joins late (or a guest) starts at the team's average, so nobody lags behind.
+
+  function xpOf(id) {
+    if (save.xp[id] !== undefined) return save.xp[id];
+    const known = roster().filter((h) => save.xp[h] !== undefined).map((h) => save.xp[h]);
+    return known.length ? Math.round(known.reduce((a, b) => a + b, 0) / known.length) : 0;
+  }
+  const levelOfHero = (id) => Battle.levelOf(xpOf(id));
 
   // ---- Screens and the clock -----------------------------------------------------------
 
@@ -367,7 +378,7 @@
       b.disabled = fixed.includes(id);
       b.append(portrait(id, 2));
       const n = document.createElement("span"); n.textContent = HEROES[id].name.replace(/^(Fr\.|Sr\.|Bishop) /, "");
-      const r = document.createElement("small"); r.textContent = HEROES[id].guest ? "Guest" : ROLES[id];
+      const r = document.createElement("small"); r.textContent = "Lv " + levelOfHero(id) + " · " + (HEROES[id].guest ? "Guest" : ROLES[id]);
       b.append(n, r);
       b.addEventListener("click", () => {
         if (picked.includes(id)) picked = picked.filter((x) => x !== id);
@@ -474,7 +485,9 @@
 
   async function fight(ci, mi, team) {
     const m = C[ci].missions[mi];
-    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci });
+    const levels = {};
+    for (const id of team) levels[id] = levelOfHero(id);
+    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels });
     view = BattleView.create($("battle"), b);
     stopped = false;
     $("log").textContent = "";
@@ -484,7 +497,7 @@
       choose: (u) => playerChoose(b, u),
       stopped: () => stopped,
       onAction: (u, s) => {
-        $("turn").textContent = u.name + "'s turn";
+        $("turn").textContent = u.name + (u.level ? " · Lv " + u.level : "") + "'s turn";
         $("round").textContent = "Round " + b.round;
         $("log").textContent = u.name + " uses " + s.name + ".";
         $("panel").textContent = "";
@@ -495,7 +508,17 @@
     const walked = foes.filter((u) => u.state === "walked");
     let st = 0;
     if (out === "win") st = converted.length === foes.length ? 3 : converted.length * 2 >= foes.length ? 2 : 1;
-    return { out, converted, walked, stars: st };
+    // Experience: a win teaches more than a loss, a boss most of all. Leaving early earns nothing.
+    const gain = out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : out === "lose" ? 40 : 0;
+    const grew = [];
+    const start = team.map(xpOf);
+    if (gain) team.forEach((id, i) => {
+      save.xp[id] = start[i] + gain;
+      const after = Battle.levelOf(save.xp[id]);
+      if (after > Battle.levelOf(start[i])) grew.push(HEROES[id].name + " reached level " + after);
+    });
+    store();
+    return { out, converted, walked, stars: st, gain, grew };
   }
 
   function showResult(ci, mi, r) {
@@ -513,9 +536,12 @@
       ? (r.converted.length ? "Converted: " + names(r.converted) + ". " : "") + (r.walked.length ? "Walked off, unconvinced: " + names(r.walked) + ". " : "") + (r.stars < 3 ? "Convert every opponent for three stars." : "Every opponent converted.")
       : "Your whole team was discouraged. Try a different team, or lean on your Encouragers.";
     if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
+    const xp = document.createElement("p");
+    xp.className = "label";
+    xp.textContent = r.gain ? "+" + r.gain + " experience for each debater" + (r.grew.length ? ". " + r.grew.join(". ") + "!" : ".") : "";
     const row = document.createElement("div");
     row.className = "row";
-    box.append(h, s, p, row);
+    box.append(h, s, p, xp, row);
     show("s-result");
     return new Promise((res) => {
       const go = document.createElement("button");
@@ -575,16 +601,19 @@
       if (r.out === "win") { save.stars[mkey(ci, mi)] = Math.max(stars(ci, mi), r.stars); store(); }
       const next = await showResult(ci, mi, r);
       if (next === "retry") continue;
-      if (next === "map" || r.out !== "win") return showMap();
+      if (r.out !== "win") return showMap();
       break;
     }
-    if (mi === 2 && ch.scenes.mid !== undefined && !save.seen[ch.id + ":mid"]) {
-      await playScene(ch.id, ch.scenes.mid);
-      save.seen[ch.id + ":mid"] = true; store();
+    // The story moves on a little after every battle won, the first time it is won.
+    const beat = ch.scenes.after ? ch.scenes.after[mi] : undefined;
+    const key = ch.id + ":after" + mi;
+    if (beat !== undefined && !save.seen[key]) {
+      await playScene(ch.id, beat);
+      save.seen[key] = true; store();
     }
-    if (mi === last) {
-      if (ch.scenes.after !== undefined) await playScene(ch.id, ch.scenes.after);
+    if (mi === last && !save.seen[ch.id + ":cards"]) {
       await showCards(ch.id);
+      save.seen[ch.id + ":cards"] = true; store();
     }
     showMap();
   }
@@ -595,7 +624,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [] }; store();
+    save = { stars: {}, seen: {}, team: [], xp: {} }; store();
     resetArmed = false; $("reset").textContent = "Progress erased";
   });
   if (Object.keys(save.stars).length) $("play").textContent = "Continue";
