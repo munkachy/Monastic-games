@@ -71,10 +71,46 @@ const Art = (() => {
       g.put(13, 23, s.trim || "#e9e2d0"); g.put(12, 24, s.trim || "#e9e2d0");
       g.put(18, 23, s.trim || "#e9e2d0"); g.put(19, 24, s.trim || "#e9e2d0");
       for (let y = 25; y < 32; y += 2) g.put(16, y, s.trim || "#e9e2d0");
+    } else if (s.outfit === "clerical") {
+      g.put(15, 23, "#f7f5ee"); g.put(16, 23, "#f7f5ee");
+    } else if (s.outfit === "habit" || s.outfit === "dominican") {
+      // A monk's hood lies in folds around the neck.
+      for (let y = 21; y < 27; y++) { g.put(9, y, s.trim); g.put(10, y, s.trim); g.put(21, y, s.trim); g.put(22, y, s.trim); }
+      for (let x = 11; x < 21; x++) g.put(x, 26, s.trim);
+      if (s.outfit === "dominican") {
+        // The black cappa over the white habit.
+        for (let y = 25; y < 32; y++) {
+          const half = Math.min(15, 7 + (y - 23) * 1.4);
+          for (let x = Math.floor(16 - half); x < Math.ceil(16 + half); x++) if (x < 8 || x > 23) g.put(x, y, "#1d1d24");
+        }
+      }
+    } else if (s.outfit === "sisters") {
+      // A white habit under a dark blue scapular.
+      for (let y = 23; y < 32; y++) for (let x = 12; x < 20; x++) g.put(x, y, s.trim);
+    } else if (s.outfit === "blouse") {
+      for (let y = 23; y < 26; y++) for (let x = 14 - (y - 23); x < 18 + (y - 23); x++) g.put(x, y, s.skin);
     } else if (s.outfit === "thobe") {
       for (let y = 23; y < 32; y++) g.put(16, y, s.trim);
     }
+    if (s.prop === "cross") {
+      for (let y = 25; y < 31; y++) g.put(16, y, "#e8b94a");
+      for (let x = 14; x < 19; x++) g.put(x, 27, "#e8b94a");
+    }
     if (s.prop === "nametag") for (let x = 18; x < 22; x++) { g.put(x, 26, "#15151a"); g.put(x, 27, "#15151a"); }
+
+    // Long hair or a veil falls behind the head and over the shoulders.
+    const style = s.style || "short";
+    if (style === "long" || style === "veil") {
+      const c = style === "veil" ? s.veil : s.hair;
+      for (let y = 2; y < (style === "veil" ? 29 : 28); y++) {
+        for (let x = 5; x < 27; x++) {
+          const w = y < 12 ? 9.4 : 9.4 + (y - 12) * 0.12;
+          if (y >= 19 && x > 10 && x < 21) continue;   // the face and neck stay clear
+          if (Math.abs(x + 0.5 - 16) <= w && inEllipse(x, Math.min(y, 13), 16, 12.5, 9.6, 11)) g.put(x, y, c);
+        }
+      }
+      if (style === "veil") for (let y = 20; y < 29; y++) { g.put(6, y, s.veilTrim); g.put(25, y, s.veilTrim); }
+    }
 
     // Head, ears and a little shading on the far cheek.
     for (let y = 2; y < 23; y++) {
@@ -88,8 +124,7 @@ const Art = (() => {
     g.put(7, 12, s.shade);
 
     // Hair.
-    const style = s.style || "short";
-    if (style === "short" || style === "side" || style === "crew" || style === "curly") {
+    if (style === "short" || style === "long" || style === "side" || style === "crew" || style === "curly") {
       const top = style === "crew" ? 5 : style === "curly" ? 7 : 6;
       for (let y = 1; y <= top; y++) {
         for (let x = 6; x < 26; x++) {
@@ -97,6 +132,7 @@ const Art = (() => {
         }
       }
       for (let y = top + 1; y < 11; y++) { g.put(8, y, hair); g.put(23, y, hair); }
+      if (style === "long") { for (let x = 9; x < 15; x++) g.put(x, 7, hair); g.put(9, 8, hair); }
       if (style === "side") {
         for (let x = 9; x < 18; x++) g.put(x, 7, hair);
         g.put(9, 8, hair); g.put(10, 8, hair);
@@ -118,6 +154,18 @@ const Art = (() => {
     } else if (style === "bald") {
       for (const [x, y] of [[12, 4], [13, 4], [12, 5], [11, 6]]) g.put(x, y, s.shine || "#fff1e0");
       for (let y = 9; y < 13; y++) { g.put(8, y, s.shade); g.put(23, y, s.shade); }
+    } else if (style === "veil") {
+      // The veil covers the hair; a band crosses the forehead.
+      for (let y = 1; y < 7; y++) {
+        for (let x = 6; x < 26; x++) if (inEllipse(x, y, 16, 12.5, 8.8, 11.4)) g.put(x, y, s.veil);
+      }
+      for (let x = 8; x < 24; x++) g.put(x, 6, s.veilTrim);
+      for (let y = 7; y < 20; y++) { g.put(7, y, s.veil); g.put(8, y, s.veilTrim); g.put(23, y, s.veilTrim); g.put(24, y, s.veil); }
+    } else if (style === "zucchetto") {
+      for (let y = 9; y < 13; y++) { g.put(8, y, s.hair); g.put(23, y, s.hair); }
+      for (let y = 1; y < 4; y++) for (let x = 11; x < 21; x++) if (inEllipse(x, y, 16, 4, 5.2, 3.2)) g.put(x, y, s.cap);
+      g.put(16, 0, s.cap);
+      for (const [x, y] of [[11, 6], [12, 6], [11, 7]]) g.put(x, y, s.shine || "#fff1e0");
     } else if (style === "kufi") {
       for (let y = 1; y < 6; y++) {
         for (let x = 6; x < 26; x++) if (inEllipse(x, y, 16, 12.5, 8.1, 10.6)) g.put(x, y, s.cap);
@@ -127,7 +175,7 @@ const Art = (() => {
 
     // Brows and eyes.
     const browY = s.browY || 10;
-    for (const x of [11, 12, 13, 18, 19, 20]) g.put(x, browY, s.brow || hair);
+    for (const x of s.browThin ? [12, 13, 18, 19] : [11, 12, 13, 18, 19, 20]) g.put(x, browY, s.brow || hair);
     for (const x of [12, 13, 18, 19]) g.put(x, 12, "#221a22");
     g.put(12, 12, "#fdfaf2"); g.put(19, 12, "#fdfaf2");
 
@@ -285,6 +333,15 @@ const Art = (() => {
     godlogic: { skin: "#7a4e33", shade: "#5e3b26", hair: "#16100c", style: "crew", beard: "short", beardColor: "#16100c", brow: "#16100c", mouth: "#4a2a22", shine: "#9a6a4a", outfit: "hoodie", clothes: "#8a2d3b", trim: "#6a1f2b", prop: "headset", smile: true },
     white: { skin: "#f0c6aa", shade: "#cf9e84", hair: "#dedad3", style: "receding", beard: "goatee", beardColor: "#e2ded8", brow: "#bdb8b0", outfit: "suit", clothes: "#26272e", lapel: "#15161b", tie: "#5a6f8c", prop: "book", bookColor: "#1f2d4f" },
     hansen: { skin: "#f2c9a9", shade: "#d3a283", hair: "#5a3a22", style: "short", beard: "short", beardColor: "#5a3a22", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#2c4a7a", smile: true },
+    schmitz: { skin: "#f1c6a6", shade: "#d19d7f", hair: "#5a3c26", hairLight: "#7a5438", style: "side", outfit: "clerical", clothes: "#1b1b22", smile: true },
+    barron: { skin: "#efc3a3", shade: "#cf9a7c", hair: "#9a8f84", style: "zucchetto", cap: "#9b1f5a", brow: "#8a8076", outfit: "clerical", clothes: "#1b1b22", prop: "cross", smile: true },
+    hicks: { skin: "#eec4a6", shade: "#cd9b7e", hair: "#6f5a48", style: "short", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", smile: true },
+    pine: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#3b2a1e", style: "short", beard: "short", beardColor: "#3b2a1e", outfit: "dominican", clothes: "#f2efe6", trim: "#d8d3c6" },
+    marygrace: { skin: "#f2cdb2", shade: "#d3a68a", hair: "#5a3c26", style: "veil", veil: "#f7f5ee", veilTrim: "#1f2f66", browThin: true, mouth: "#b45a5a", outfit: "sisters", clothes: "#1f2f66", trim: "#f7f5ee", smile: true },
+    rose: { skin: "#f3d0b6", shade: "#d6a98c", hair: "#4a2e1c", hairLight: "#6a4630", style: "long", browThin: true, mouth: "#b8505a", outfit: "blouse", clothes: "#e9dccb", smile: true },
+    holdsworth: { skin: "#eec2a2", shade: "#cd9a7c", hair: "#3e2b1e", style: "short", beard: "full", beardColor: "#4a3222", outfit: "sweater", clothes: "#6b5a44", trim: "#e0d6c2" },
+    jurado: { skin: "#dcae8c", shade: "#bb8b6a", hair: "#1e1612", style: "short", beard: "short", beardColor: "#1e1612", brow: "#1e1612", outfit: "shirt", clothes: "#1f1f26", trim: "#3a3a44", prop: "mic" },
+    heschmeyer: { skin: "#f0c6a8", shade: "#cf9d80", hair: "#4a3526", style: "side", beard: "short", beardColor: "#4a3526", glasses: "#2a2a33", outfit: "suit", clothes: "#3a4356", lapel: "#262c3b", tie: "#6b2d3a", smile: true },
     // Rank-and-file opponents, invented for the game.
     elder: { skin: "#f4d0b3", shade: "#d7a98a", hair: "#d9b25a", hairLight: "#f0cf7a", style: "side", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#243a66", prop: "nametag", smile: true },
     preacher: { skin: "#e9b896", shade: "#c78f70", hair: "#6b4a2f", style: "short", beard: "chin", beardColor: "#6b4a2f", outfit: "shirt", clothes: "#7a6a4f", trim: "#e9e2d0", prop: "sign" },
