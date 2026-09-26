@@ -80,6 +80,14 @@ const Art = (() => {
       }
       for (const [x, y] of [[12, 23], [13, 24], [14, 25], [19, 23], [18, 24], [17, 25]]) g.put(x, y, s.clothes);
       for (let y = 24; y < 32; y++) g.put(16, y, s.trim);
+    } else if (s.outfit === "choir") {
+      for (let y = 23; y < 29; y++) {
+        const half = Math.min(15, 7 + (y - 23) * 1.4) + 1;
+        for (let x = Math.floor(16 - half); x < Math.ceil(16 + half); x++) g.put(x, y, s.cape || shadeOf(s.clothes));
+      }
+      for (let x = 2; x < 30; x++) if (g.get(x, 28)) g.put(x, 28, "#c8243a");
+      g.put(15, 23, "#f7f5ee"); g.put(16, 23, "#f7f5ee");
+      for (let y = 24; y < 32; y += 2) g.put(16, y, "#c8243a");
     } else if (s.outfit === "clerical") {
       g.put(15, 23, "#f7f5ee"); g.put(16, 23, "#f7f5ee");
     } else if (s.outfit === "habit" || s.outfit === "dominican") {
@@ -100,6 +108,9 @@ const Art = (() => {
       for (let y = 23; y < 26; y++) for (let x = 14 - (y - 23); x < 18 + (y - 23); x++) g.put(x, y, s.skin);
     } else if (s.outfit === "thobe") {
       for (let y = 23; y < 32; y++) g.put(16, y, s.trim);
+    }
+    if (s.prop === "cross" && s.cord) {
+      for (let i = 0; i < 4; i++) { g.put(12 + i, 23 + i, i % 2 ? s.cord : "#e8b94a"); g.put(20 - i, 23 + i, i % 2 ? s.cord : "#e8b94a"); }
     }
     if (s.prop === "cross") {
       for (let y = 25; y < 31; y++) g.put(16, y, "#e8b94a");
@@ -123,7 +134,9 @@ const Art = (() => {
 
     // Head, ears and a little shading on the far cheek.
     const rx = s.faceW || 7.6;
-    const face = (x, y) => s.faceW ? inEllipse(x, y, 16, 12.5, rx, 9.8) : s.jaw === "square"
+    const face = (x, y) => s.jaw === "chiseled"
+      ? (y >= 14 ? Math.abs(x + 0.5 - 16) <= Math.max(3, rx - (y - 14) * 0.62) && y < 23 : inEllipse(x, y, 16, 12.5, rx, 9.6))
+      : s.faceW ? inEllipse(x, y, 16, 12.5, rx, 9.8) : s.jaw === "square"
       ? (y >= 12 ? Math.abs(x + 0.5 - 16) <= 7.6 - (y > 19 ? (y - 19) * 1.2 : 0) && y < 22 : inEllipse(x, y, 16, 12.5, 7.6, 9.6))
       : inEllipse(x, y, 16, 12.5, 7.6, 9.6);
     for (let y = 2; y < 23; y++) {
@@ -145,7 +158,9 @@ const Art = (() => {
         }
       }
       for (let y = top + 1; y < 11; y++) { g.put(8, y, hair); g.put(23, y, hair); }
-      if (style === "long") { for (let x = 9; x < 15; x++) g.put(x, 7, hair); g.put(9, 8, hair); }
+      if (style === "long" && s.part) { for (let y = 1; y < 5; y++) g.put(16, y, s.shade); for (let x = 9; x < 13; x++) g.put(x, 7, hair); for (let x = 20; x < 24; x++) g.put(x, 7, hair); }
+      else if (style === "long") { for (let x = 9; x < 15; x++) g.put(x, 7, hair); g.put(9, 8, hair); }
+      if (s.lock) { g.put(13, 7, hair); g.put(14, 8, hair); g.put(13, 9, hair); }
       if (style === "side") {
         for (let x = 9; x < 18; x++) g.put(x, 7, hair);
         g.put(9, 8, hair); g.put(10, 8, hair);
@@ -157,6 +172,25 @@ const Art = (() => {
         for (const [x, y] of [[11, 3], [15, 2], [19, 3], [13, 5], [17, 5], [21, 6], [9, 6]]) g.put(x, y, s.hairLight || shadeOf(hair));
       }
       if (s.hairLight) for (const [x, y] of [[13, 2], [14, 2], [15, 3]]) g.put(x, y, s.hairLight);
+    } else if (style === "bowl") {
+      // Straight, full hair with a fringe cut straight across, covering the ears.
+      for (let y = 0; y < 9; y++) for (let x = 5; x < 27; x++) if (inEllipse(x, y, 16, 12.5, 9.4, 12.6)) g.put(x, y, (x * 7 + y * 13) % 29 === 0 ? (s.hairLight || hair) : hair);
+      for (let x = 8; x < 24; x++) g.put(x, 9, hair);
+      for (let y = 9; y < 15; y++) { g.put(6, y, hair); g.put(7, y, hair); g.put(24, y, hair); g.put(25, y, hair); }
+    } else if (style === "fauxhawk") {
+      // Short faded sides, and a tall swept ridge down the middle.
+      for (let y = 4; y < 10; y++) { g.put(8, y, s.hairFade || shadeOf(s.skin)); g.put(23, y, s.hairFade || shadeOf(s.skin)); }
+      for (let y = 2; y < 7; y++) for (let x = 9; x < 23; x++) if (inEllipse(x, y, 16, 12.5, 7.8, 10.4)) g.put(x, y, s.hairFade || shadeOf(s.skin));
+      for (let y = 0; y < 6; y++) for (let x = 11; x < 21; x++) if (y > 0 || (x > 12 && x < 19)) g.put(x, y, hair);
+      for (const [x, y] of [[14, 0], [15, 0], [17, 0], [12, 1], [19, 1]]) g.put(x, y, s.hairLight || hair);
+      g.put(12, 6, hair); g.put(13, 6, hair); g.put(19, 6, hair);
+    } else if (style === "receding" && s.buzz) {
+      // A close buzz cut: the sides dark, the top a light stubble, receding at the temples.
+      for (let y = 1; y < 12; y++) for (let x = 6; x < 26; x++) {
+        if (!inEllipse(x, y, 16, 12.5, 8.3, 10.6)) continue;
+        if (x <= 8 || x >= 23) g.put(x, y, hair);
+        else if (y < 6 && !(y > 3 && (x < 11 || x > 20)) && (x + y) % 2 === 0) g.put(x, y, hair);
+      }
     } else if (style === "receding") {
       for (let y = 2; y < 12; y++) {
         for (let x = 6; x < 26; x++) {
@@ -207,7 +241,8 @@ const Art = (() => {
     if (s.wideEyes) {
       // Big, delighted eyes: white all round, the pupil in the middle.
       for (const x0 of [11, 18]) for (let x = x0; x < x0 + 3; x++) for (const y of [11, 12, 13]) g.put(x, y, "#fdfaf2");
-      g.put(12, 12, "#221a22"); g.put(19, 12, "#221a22");
+      g.put(12, 12, s.eyeColor || "#221a22"); g.put(19, 12, s.eyeColor || "#221a22");
+      if (s.eyeColor) { g.put(12, 11, "#221a22"); g.put(19, 11, "#221a22"); }
     } else {
       for (const x of [12, 13, 18, 19]) g.put(x, 12, "#221a22");
       g.put(12, 12, "#fdfaf2"); g.put(19, 12, "#fdfaf2");
@@ -265,8 +300,19 @@ const Art = (() => {
     }
 
     // Mouth.
-    for (let x = 14; x < 18; x++) g.put(x, 18, s.mouth || "#8e4a40");
-    if (s.smile) { g.put(13, 17, s.mouth || "#8e4a40"); g.put(18, 17, s.mouth || "#8e4a40"); }
+    if (s.cheeks) for (const [x, y] of [[10, 14], [11, 15], [21, 14], [20, 15]]) g.put(x, y, s.shade);
+    if (s.grin) {
+      for (let x = 13; x < 19; x++) { g.put(x, 18, s.mouth || "#8e4a40"); g.put(x, 19, x > 13 && x < 18 ? "#fdfaf2" : s.mouth || "#8e4a40"); }
+      g.put(12, 17, s.mouth || "#8e4a40"); g.put(19, 17, s.mouth || "#8e4a40");
+    } else if (s.smirk) {
+      // Flat on one side, turned up on the other.
+      for (let x = 14; x < 18; x++) g.put(x, 18, s.mouth || "#8e4a40");
+      g.put(18, 17, s.mouth || "#8e4a40"); g.put(19, 16, s.mouth || "#8e4a40");
+      g.put(19, 10, s.brow || hair); g.put(20, 9, s.brow || hair);
+    } else {
+      for (let x = 14; x < 18; x++) g.put(x, 18, s.mouth || "#8e4a40");
+      if (s.smile) { g.put(13, 17, s.mouth || "#8e4a40"); g.put(18, 17, s.mouth || "#8e4a40"); }
+    }
 
     // Glasses.
     if (s.glasses) {
@@ -292,6 +338,15 @@ const Art = (() => {
     } else if (s.prop === "mic") {
       for (let y = 23; y < 32; y++) g.put(27, y, "#2b2b33");
       for (let y = 18; y < 23; y++) for (let x = 26; x < 29; x++) g.put(x, y, (x + y) % 2 ? "#6f7380" : "#454954");
+    } else if (s.prop === "headphones") {
+      for (let x = 7; x < 25; x++) if (inEllipse(x, 0, 16, 9, 9.2, 9.2) && !inEllipse(x, 0, 16, 9, 8, 8)) g.put(x, 0, "#1d1d24");
+      for (let y = 1; y < 9; y++) { g.put(5, y, "#1d1d24"); g.put(26, y, "#1d1d24"); }
+      for (let y = 9; y < 16; y++) for (const x of [4, 5, 26, 27]) g.put(x, y, "#2b2b33");
+    } else if (s.prop === "chain") {
+      for (let i = 0; i < 4; i++) { g.put(13 + i, 23 + i, "#e8b94a"); g.put(19 - i, 23 + i, "#e8b94a"); }
+    } else if (s.prop === "pendant") {
+      for (let i = 0; i < 4; i++) { g.put(12 + i, 23 + i, "#cfd6dc"); g.put(20 - i, 23 + i, "#cfd6dc"); }
+      g.put(16, 27, "#f4f8ff"); g.put(16, 28, "#f4f8ff"); g.put(15, 27, "#dbe4ec");
     } else if (s.prop === "headset") {
       for (let x = 8; x < 24; x++) if (inEllipse(x, 1, 16, 9, 8.8, 8.6) && !inEllipse(x, 1, 16, 9, 7.6, 7.6)) g.put(x, 1, "#2b2b33");
       for (let y = 2; y < 13; y++) { g.put(7, y + 0, y > 9 ? "#2b2b33" : g.get(7, y)); }
@@ -312,7 +367,7 @@ const Art = (() => {
   // "walkB" (the two steps of a walk), "reach" (the near arm held out, to
   // hand something over or rest a hand on a shoulder) and "raise" (the arm
   // lifted, for a toast, a blessing or a point of order).
-  const ROBES = { habit: 1, dominican: 1, sisters: 1, blouse: 1 };
+  const ROBES = { habit: 1, dominican: 1, sisters: 1, blouse: 1, choir: 1 };
   const PANTS = { suit: null, whiteshirt: "#23252e", clerical: "#1b1b22", sweater: "#34405a", hoodie: "#34405a", shirt: "#3a3f4f", thobe: null };
   const figures = new Map();
 
@@ -327,7 +382,7 @@ const Art = (() => {
     const clothes = s.clothes;
     const dark = shadeOf(clothes);
     const robe = ROBES[s.outfit] || s.style === "veil";
-    const robeColor = s.outfit === "blouse" ? (s.skirt || "#5b4a66") : s.outfit === "sisters" ? "#f7f5ee" : clothes;
+    const robeColor = s.outfit === "choir" ? "#f7f5ee" : s.outfit === "blouse" ? (s.skirt || "#5b4a66") : s.outfit === "sisters" ? "#f7f5ee" : clothes;
     for (let y = 31; y < 39; y++) for (let x = 4; x < 28; x++) g.put(X + x, y, clothes);
     if (s.outfit === "sisters") for (let y = 31; y < 49; y++) for (let x = 12; x < 20; x++) g.put(X + x, y, "#1f2f66");
     if (s.outfit === "gingham") for (let y = 31; y < 39; y++) for (let x = 4; x < 28; x++) if (x % 3 === 0 || y % 3 === 0) g.put(X + x, y, s.trim);
@@ -355,6 +410,10 @@ const Art = (() => {
         for (let x = 16 - half; x < 16 + half; x++) g.put(X + x, y, robeColor);
       }
       if (s.outfit === "sisters") for (let y = 39; y < 49; y++) for (let x = 12; x < 20; x++) g.put(X + x, y, "#1f2f66");
+      if (s.outfit === "choir") {
+        // Lace at the rochet's hem, and the magenta cassock beneath it.
+        for (let y = 45; y < 50; y++) { const half = 11 + Math.floor((y - 39) / 4); for (let x = 16 - half; x < 16 + half; x++) g.put(X + x, y, y === 45 ? ((x % 2) ? "#e2ddd2" : "#f7f5ee") : clothes); }
+      }
       for (let x = 5; x < 27; x += 4) g.put(X + x, 47, shadeOf(robeColor));
       for (const [x0, dx] of [[10, stepL], [18, stepR]]) for (let x = x0; x < x0 + 5; x++) { g.put(X + x + dx, 50, "#231c1c"); g.put(X + x + dx, 51, "#231c1c"); }
     } else {
@@ -470,25 +529,25 @@ const Art = (() => {
   const CAST = {
     akin: { skin: "#efc2a4", shade: "#d09c80", hair: "#c4562a", style: "cowboy", hat: "#efe6d2", hatShade: "#d6cbb2", beard: "long", beardColor: "#c4562a", beardLight: "#e07a44", brow: "#b04a24", outfit: "shirt", clothes: "#f4f1ea", trim: "#c9c3b4", pants: "#3a4a6a" },
     muse: { skin: "#f0c4a6", shade: "#d09c80", hair: "#5a3e2c", hairLight: "#7a5a44", style: "shaggy", faceW: 8.4, brow: "#3a2618", browY: 11, glasses: "#1d1d24", outfit: "gingham", clothes: "#eef2f8", trim: "#4a6ab0", pants: "#3a3f4f" },
-    bertuzzi: { skin: "#e8b99a", shade: "#c8957a", hair: "#221812", hairLight: "#3a2a20", style: "side", beard: "goatee", beardColor: "#5a4232", outfit: "suit", clothes: "#243a66", lapel: "#1a2a4c", shirt: "#1d1d22", prop: "mic", smile: true },
-    horn: { skin: "#e6b692", shade: "#c69272", hair: "#16100c", style: "curly", brow: "#16100c", outfit: "suit", clothes: "#6a6d74", lapel: "#55585e", shirt: "#f2efe6", smile: true },
+    bertuzzi: { skin: "#e8b99a", shade: "#c8957a", hair: "#1c1410", hairLight: "#3a2a20", hairFade: "#6a5446", style: "fauxhawk", beard: "goatee", beardColor: "#5a4232", outfit: "suit", clothes: "#243a66", lapel: "#1a2a4c", shirt: "#1d1d22", prop: "mic", smile: true },
+    horn: { skin: "#e6b692", shade: "#c69272", hair: "#16100c", style: "curly", brow: "#16100c", outfit: "suit", clothes: "#6a6d74", lapel: "#55585e", shirt: "#f2efe6", smirk: true },
     fradd: { skin: "#efc3a4", shade: "#cf9c80", hair: "#8a6a4a", hairLight: "#a8845c", style: "side", beard: "short", beardColor: "#9a6a44", outfit: "suit", clothes: "#243452", lapel: "#1a2640", shirt: "#f7f5ee", prop: "pint", smile: true },
     godlogic: { skin: "#6a4228", shade: "#52321e", hair: "#120c08", style: "curly", beard: "goatee", beardColor: "#120c08", brow: "#120c08", mouth: "#3e2218", shine: "#8a5a3a", outfit: "sweater", clothes: "#16161a", trim: "#2a2a30" },
     white: { skin: "#f0c6aa", shade: "#cf9e84", hair: "#c8c2b8", style: "bald", beard: "short", beardColor: "#e4e0da", brow: "#bdb8b0", glasses: "#6a6a72", outfit: "suit", clothes: "#26272e", lapel: "#15161b", tie: "#2a2a30", prop: "book", bookColor: "#1f2d4f" },
     hansen: { skin: "#f2c9a9", shade: "#d3a283", hair: "#5a3a22", style: "short", beard: "short", beardColor: "#5a3a22", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#2c4a7a", smile: true },
-    schmitz: { skin: "#eec2a2", shade: "#ce9a7c", hair: "#241a14", hairLight: "#3a2a20", style: "side", jaw: "square", outfit: "clerical", clothes: "#1b1b22", smile: true },
-    barron: { skin: "#efc3a3", shade: "#cf9a7c", hair: "#c9c6c0", hairLight: "#e2e0dc", style: "side", brow: "#9a958e", glasses: "#1d1d24", outfit: "clerical", clothes: "#1b1b22", prop: "cross", smile: true },
+    schmitz: { skin: "#ecc0a0", shade: "#cc9678", hair: "#1c1410", hairLight: "#3a2a20", style: "side", lock: true, jaw: "chiseled", faceW: 7.4, outfit: "clerical", clothes: "#1b1b22", smile: true },
+    barron: { skin: "#efc3a3", shade: "#cf9a7c", hair: "#c9c6c0", style: "zucchetto", cap: "#b0205e", brow: "#9a958e", glasses: "#1d1d24", outfit: "choir", clothes: "#b0205e", cape: "#9a1a52", prop: "cross", cord: "#2f7a4a", smile: true },
     spitzer: { skin: "#efc6ac", shade: "#cf9e86", hair: "#d8d6d0", hairLight: "#f0efec", style: "side", brow: "#b8b4ac", glasses: "#1d1d24", lens: "#d98a3a", outfit: "clerical", clothes: "#1b1b22", smile: true },
     hicks: { skin: "#eec4a6", shade: "#cd9b7e", hair: "#3a2a1e", style: "crew", beard: "long", beardColor: "#4a3526", beardLight: "#6a5040", beardTaper: 0.3, brow: "#3a2a1e", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", smile: true },
-    pine: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#3b2a1e", style: "short", glasses: "#1d1d24", outfit: "dominican", clothes: "#f2efe6", trim: "#d8d3c6", smile: true },
+    pine: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#8a6a4e", style: "receding", buzz: true, faceW: 7, beard: "short", beardColor: "#6a4a32", brow: "#6a4a32", outfit: "dominican", clothes: "#f2efe6", trim: "#d8d3c6", grin: true },
     marygrace: { skin: "#f2cdb2", shade: "#d3a68a", hair: "#5a3c26", style: "veil", veil: "#f7f5ee", veilTrim: "#1f2f66", browThin: true, mouth: "#b45a5a", outfit: "sisters", clothes: "#1f2f66", trim: "#f7f5ee", smile: true },
-    rose: { skin: "#f3d0b6", shade: "#d6a98c", hair: "#3a2216", hairLight: "#5a3a26", style: "long", browThin: true, mouth: "#b8505a", outfit: "blouse", clothes: "#1d1d22", skirt: "#1d1d22", smile: true },
+    rose: { skin: "#f0caae", shade: "#d2a08a", hair: "#141018", hairLight: "#2a2230", style: "long", part: true, browThin: true, brow: "#2a1e1a", mouth: "#c06070", outfit: "blouse", clothes: "#1a1a24", skirt: "#1a1a24", prop: "pendant", smile: true },
     holdsworth: { skin: "#f0c6a8", shade: "#cf9d82", hair: "#8a3e1e", hairLight: "#a8542a", style: "long", beard: "full", beardColor: "#9a4a24", brow: "#8a3e1e", outfit: "shirt", clothes: "#9a8a6a", trim: "#7a6a4e" },
-    jurado: { skin: "#dcae8c", shade: "#bb8b6a", hair: "#1e1612", style: "short", beard: "short", beardColor: "#1e1612", brow: "#1e1612", outfit: "shirt", clothes: "#1f1f26", trim: "#3a3a44", prop: "mic" },
+    jurado: { skin: "#d8a482", shade: "#b27e5e", hair: "#1c1410", hairLight: "#3a2a20", style: "side", beard: "goatee", beardColor: "#241a14", brow: "#1c1410", cheeks: true, outfit: "suit", clothes: "#6e6c6c", lapel: "#5a5858", shirt: "#26262c", prop: "chain" },
     heschmeyer: { skin: "#f0c6a8", shade: "#cf9d80", hair: "#3a2618", style: "side", beard: "full", beardColor: "#3a2618", outfit: "suit", clothes: "#2a4a8a", lapel: "#1e3a6e", shirt: "#cfe0f2", tie: "#3a5a9a", smile: true },
     hahn: { skin: "#e8b596", shade: "#c89276", hair: "#8e887e", hairLight: "#b8b2a8", style: "side", beard: "short", beardColor: "#dcd8d0", brow: "#6a645c", browY: 9, wideEyes: true, outfit: "suit", clothes: "#26293a", lapel: "#1a1c28", shirt: "#b8cce4", smile: true },
     oconnor: { skin: "#f2d0ba", shade: "#d4a88e", hair: "#2a1c14", hairLight: "#4a3424", style: "side", beard: "mustache", beardColor: "#6a5040", mouth: "#c47e70", outfit: "suit", clothes: "#5a5d66", lapel: "#474a52", shirt: "#f7f5ee", tie: "#7a2a34" },
-    ryan: { skin: "#e9bf9e", shade: "#c9977a", hair: "#3a2618", hairLight: "#5a3d28", style: "short", outfit: "shirt", clothes: "#2a4a7a", trim: "#dfe6f2", smile: true },
+    ryan: { skin: "#f0c4a8", shade: "#d09c84", hair: "#6a3a26", hairLight: "#8a5236", style: "bowl", brow: "#5a3222", wideEyes: true, eyeColor: "#5aa0e0", outfit: "shirt", clothes: "#1c2440", trim: "#e9e2d0", prop: "headphones", smile: true },
     seminarian: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#6a4a2f", style: "side", glasses: "#2a2a33", outfit: "suit", clothes: "#3a3f4a", lapel: "#2a2f3a", tie: "#5a2a2a", prop: "book", bookColor: "#1f2d4f" },
     // Rank-and-file opponents, invented for the game.
     elder: { skin: "#f4d0b3", shade: "#d7a98a", hair: "#d9b25a", hairLight: "#f0cf7a", style: "side", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#243a66", prop: "nametag", smile: true },
