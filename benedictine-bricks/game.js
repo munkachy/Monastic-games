@@ -1235,16 +1235,24 @@ function drawSky() {
   const cycle = (dayClock / (HOUR_SECONDS * HOURS.length)) % 1;
   const dayPart = cycle < 0.5 ? cycle / 0.5 : (cycle - 0.5) / 0.5;
   const x = VIEW_W * (0.08 + dayPart * 0.84);
-  const y = VIEW_H * (0.5 - Math.sin(dayPart * Math.PI) * 0.38);
+  // It rises from behind the hills and sets behind them again, so it never
+  // hangs beside the tower looking like a button.
+  const y = VIEW_H * (0.78 - Math.sin(dayPart * Math.PI) * 0.62);
   if (cycle < 0.5) {
-    ctx.fillStyle = "rgba(255,230,150,0.25)";
-    ctx.beginPath();
-    ctx.arc(x, y, 58, 0, Math.PI * 2);
-    ctx.fill();
+    // A pixel sun: a stepped disc with eight short rays that turn slowly.
+    const px = 6;
+    ctx.fillStyle = "#ffcf5a";
+    for (let r = 0; r < 8; r++) {
+      const a = r * Math.PI / 4 + time * 0.15;
+      for (const d of [34, 40]) {
+        ctx.fillRect(Math.round((x + Math.cos(a) * d) / px) * px - px / 2, Math.round((y + Math.sin(a) * d) / px) * px - px / 2, px, px);
+      }
+    }
     ctx.fillStyle = "#ffe28a";
-    ctx.beginPath();
-    ctx.arc(x, y, 34, 0, Math.PI * 2);
-    ctx.fill();
+    for (let dy = -4; dy <= 4; dy++) {
+      const half = Math.round(Math.sqrt(20.25 - dy * dy));
+      ctx.fillRect(Math.round(x / px) * px - half * px, Math.round(y / px) * px + dy * px - px / 2, half * 2 * px, px);
+    }
   } else {
     ctx.fillStyle = "#f2f0e0";
     ctx.beginPath();
@@ -1263,16 +1271,6 @@ function drawNightTint() {
   if (dark <= 0.01) return;
   ctx.fillStyle = "rgba(12,16,52," + (dark * 0.6).toFixed(3) + ")";
   ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-}
-
-// The Latin being sung, faintly at the foot of the screen.
-function drawLyric() {
-  const text = Sound.lyric();
-  if (!text || mode !== "play") return;
-  ctx.font = "16px 'Press Start 2P', monospace";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.fillText(text, VIEW_W / 2, VIEW_H - 22);
 }
 
 function drawScenery() {
@@ -1476,6 +1474,17 @@ function drawBubble() {
   ctx.fillRect(bubble.x - 22, bubble.y - 22, 6, 6);
   const icon = bubble.spell === "prayer" ? "beads" : SPELLS[bubble.spell].icon;
   ctx.drawImage(images[icon], bubble.x - 18, bubble.y - 18, 36, 36);
+  // Say plainly what a tap on it gives.
+  const label = bubble.spell === "prayer" ? "TAP: +" + PRAYER_FROM_BUBBLE + " PRAYER"
+    : bubble.spell === "mortar" ? "TAP: MORTAR ×" + MORTAR_PER_BUBBLE
+    : "TAP: LEARN " + SPELLS[bubble.spell].name.toUpperCase();
+  ctx.font = "11px 'Press Start 2P', monospace";
+  ctx.textAlign = "center";
+  const w = ctx.measureText(label).width + 12;
+  ctx.fillStyle = "rgba(60,20,40,0.8)";
+  ctx.fillRect(Math.round(bubble.x - w / 2), Math.round(bubble.y + 46), Math.round(w), 20);
+  ctx.fillStyle = "#fff";
+  ctx.fillText(label, bubble.x, bubble.y + 61);
 }
 
 function drawEffects() {
@@ -1584,7 +1593,6 @@ function draw() {
   drawRoof();
   ctx.restore();
   drawNightTint();
-  drawLyric();
   drawBanner();
 }
 
@@ -1840,8 +1848,14 @@ bindButton($("btn-pause"), togglePause);
 // The music button cycles through chant with techno, chant alone, techno
 // alone, and silence. Browsers allow sound only after a tap, so any tap on the
 // page also wakes the sound system.
-const MUSIC_NAMES = { both: "Chant + Techno", chant: "Chant", techno: "Techno", off: "Silence" };
-const MUSIC_MARKS = { both: "♪✠", chant: "✠", techno: "♪", off: "–" };
+const MUSIC_NAMES = {
+  both: "Chant + Techno", "dubstep-chant": "Chant + Dubstep", "electro-chant": "Chant + Electro",
+  chant: "Chant", techno: "Techno", dubstep: "Dubstep", electro: "Electro", off: "Silence",
+};
+const MUSIC_MARKS = {
+  both: "♪✠", "dubstep-chant": "♪✠", "electro-chant": "♪✠",
+  chant: "✠", techno: "♪", dubstep: "♪", electro: "♪", off: "–",
+};
 
 function paintSoundButtons() {
   for (const el of document.querySelectorAll(".sound-toggle")) {

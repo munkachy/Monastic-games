@@ -1,13 +1,17 @@
 // Benedictine Bricks — music and sound, made in the browser with Web Audio.
 //
-// Four kinds of music, chosen with the music button:
-//   "both"   Gregorian chant over a techno beat, locked together: every chant
-//            note starts on a beat.
-//   "chant"  chant alone over its drone, sung freely at a schola's pace.
-//   "techno" the beat alone, with a bass line and an arpeggio built from the
+// Music is chosen with the music button. Three beats — techno, dubstep and
+// electro — each come with the chant or without it:
+//   "both", "dubstep-chant", "electro-chant"
+//            Gregorian chant over the beat, locked together: every chant note
+//            starts on a beat.
+//   "techno", "dubstep", "electro"
+//            the beat alone, with a bass line and a melody built from the
 //            chant's own notes.
+//   "chant"  chant alone over its drone, sung freely at a schola's pace.
 //   "off"    silence.
-// In both "both" and "techno", the beat builds as the tower rises.
+// All three beats share one tempo and one bar, so the music can change from
+// one to another without losing its place. The beat builds as the tower rises.
 
 const Sound = (() => {
   const BPM = 112;
@@ -16,7 +20,12 @@ const Sound = (() => {
   const FREE_PULSE = 0.45;        // one chant pulse when sung freely
   const FREE_REST = [0, 0.25, 0.5, 1.25, 1.5];   // rests at bars, in pulses
   const LOCKED_REST = [0, 0, 1, 1, 2];            // the same, in whole beats
-  const MODES = ["both", "chant", "techno", "off"];
+  const MODES = ["both", "dubstep-chant", "electro-chant", "chant", "techno", "dubstep", "electro", "off"];
+  const BEATS = {
+    both: "techno", "dubstep-chant": "dubstep", "electro-chant": "electro",
+    techno: "techno", dubstep: "dubstep", electro: "electro",
+  };
+  const sings = (m) => m === "chant" || m === "both" || m.endsWith("-chant");
 
   let ac = null;
   let master, musicGain, sfxGain, reverbSend;
@@ -35,7 +44,6 @@ const Sound = (() => {
   let chantTime = 0;              // time of the next chant note
   let intensity = 0;              // how far the beat has built: 0, 1, 2
   let drone = null;
-  let lyrics = [];
   let finalPitch = 55;
   let arpNotes = [55, 59, 62];
 
@@ -190,6 +198,104 @@ const Sound = (() => {
     o.stop(t + length);
   }
 
+  // A dubstep "wobble": a growling bass whose filter opens and shuts
+  // `wobbles` times over its length, with a clean sub-bass beneath.
+  function wobble(midi, t, length, wobbles) {
+    const out = ac.createGain();
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(0.17, t + 0.01);
+    out.gain.setValueAtTime(0.17, t + length - 0.03);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + length);
+    const filt = ac.createBiquadFilter();
+    filt.type = "lowpass";
+    filt.Q.value = 9;
+    const cycle = length / wobbles;
+    filt.frequency.setValueAtTime(120, t);
+    for (let i = 0; i < wobbles; i++) {
+      filt.frequency.exponentialRampToValueAtTime(1800, t + cycle * (i + 0.45));
+      filt.frequency.exponentialRampToValueAtTime(120, t + cycle * (i + 1));
+    }
+    filt.connect(out).connect(musicGain);
+    for (const [type, detune] of [["sawtooth", -9], ["square", 9]]) {
+      const o = ac.createOscillator();
+      o.type = type;
+      o.frequency.value = mtof(midi);
+      o.detune.value = detune;
+      o.connect(filt);
+      o.start(t);
+      o.stop(t + length + 0.02);
+    }
+    const sub = ac.createOscillator();
+    sub.frequency.value = mtof(midi - 12);
+    const sg = ac.createGain();
+    sg.gain.setValueAtTime(0.15, t);
+    sg.gain.setValueAtTime(0.15, t + length - 0.03);
+    sg.gain.linearRampToValueAtTime(0, t + length);
+    sub.connect(sg).connect(musicGain);
+    sub.start(t);
+    sub.stop(t + length + 0.02);
+  }
+
+  // The deep, long kick of an 808 drum machine, for electro.
+  function kick808(t) {
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.frequency.setValueAtTime(110, t);
+    o.frequency.exponentialRampToValueAtTime(48, t + 0.08);
+    g.gain.setValueAtTime(0.95, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(g).connect(musicGain);
+    o.start(t);
+    o.stop(t + 0.65);
+  }
+
+  // A hand clap: three quick bursts of noise, then a short tail.
+  function clap(t, level) {
+    for (let i = 0; i < 3; i++) noiseHit(t + i * 0.011, "bandpass", 1300, level, 0.02);
+    noiseHit(t + 0.033, "bandpass", 1100, level * 0.8, 0.16);
+  }
+
+  // An electro bass: a square wave that slides from note to note.
+  function robotBass(midi, from, t, length) {
+    const o = ac.createOscillator();
+    o.type = "square";
+    o.frequency.setValueAtTime(mtof(from), t);
+    o.frequency.exponentialRampToValueAtTime(mtof(midi), t + 0.04);
+    const filt = ac.createBiquadFilter();
+    filt.type = "lowpass";
+    filt.Q.value = 12;
+    filt.frequency.setValueAtTime(2200, t);
+    filt.frequency.exponentialRampToValueAtTime(260, t + length);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.16, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + length);
+    o.connect(filt).connect(g).connect(musicGain);
+    o.start(t);
+    o.stop(t + length + 0.02);
+  }
+
+  // A short, bright synth stab, for the electro melody and dubstep's lead.
+  function stab(midi, t, length, level) {
+    const g = ac.createGain();
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + length);
+    const filt = ac.createBiquadFilter();
+    filt.type = "bandpass";
+    filt.frequency.value = mtof(midi) * 3;
+    filt.Q.value = 1.5;
+    for (const detune of [-12, 12]) {
+      const o = ac.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = mtof(midi);
+      o.detune.value = detune;
+      o.connect(filt);
+      o.start(t);
+      o.stop(t + length + 0.02);
+    }
+    filt.connect(g).connect(musicGain);
+    g.connect(reverbSend);
+  }
+
   // A plucked arpeggio note, with an echo on the dotted eighth.
   function pluck(midi, t) {
     const o = ac.createOscillator();
@@ -296,37 +402,91 @@ const Sound = (() => {
     return origin + Math.ceil((time - origin - 0.001) / barLength) * barLength;
   }
 
+  // Four on the floor: kick on every beat, open hats between, a clap on two
+  // and four, a pumping bass, and (without the chant) an arpeggio on top.
+  function technoStep(t, s, level, lead) {
+    if (level >= 1) {
+      if (s % 4 === 0) kick(t);
+      if (s % 4 === 2) noiseHit(t, "highpass", 8000, 0.12, 0.05);
+      if (s === 4 || s === 12) noiseHit(t, "bandpass", 1500, 0.25, 0.18);
+    }
+    if (level >= 2 && s % 2 === 0) {
+      const pattern = [0, 0, 12, 0, 0, 12, 7, 12];
+      bass(finalPitch - 24 + pattern[(s / 2) % 8], t, SIXTEENTH * 2);
+    }
+    if (lead && level >= 3 && s % 2 === 1) pluck(arpNotes[(step >> 1) % arpNotes.length] + 12, t);
+  }
+
+  // Dubstep's half-time: one kick at the top of the bar, a heavy snare on
+  // the third beat, and the wobble bass, whose speed changes from beat to beat.
+  function dubstepStep(t, s, level, lead) {
+    const bar = (step >> 4) % 4;
+    if (level >= 1) {
+      if (s === 0 || (s === 10 && bar % 2 === 1)) kick(t);
+      if (s === 8) {
+        noiseHit(t, "bandpass", 1800, 0.4, 0.3);
+        noiseHit(t, "lowpass", 250, 0.3, 0.12);
+      }
+      if (s % 4 === 2) noiseHit(t, "highpass", 9000, 0.07, 0.04);
+    }
+    if (level >= 2 && s % 4 === 0) {
+      const beat = s / 4;
+      const wobbles = [[2, 2, 3, 4], [1, 2, 4, 6], [2, 3, 2, 8], [4, 2, 6, 3]][bar][beat];
+      const pattern = [0, 0, 3, 5];
+      const root = arpNotes[pattern[beat] % arpNotes.length] - 24;
+      wobble(root, t, BEAT * 0.96, wobbles);
+    }
+    if (lead && level >= 3 && (s === 14 || s === 6) && bar % 2 === 1) {
+      stab(arpNotes[(bar + s) % arpNotes.length] + 12, t, 0.35, 0.09);
+    }
+  }
+
+  // Electro, after the drum machines of the early '80s: a syncopated 808
+  // kick, claps on two and four, ticking sixteenth hats, a sliding bass, and
+  // (without the chant) a robotic melody of short stabs.
+  function electroStep(t, s, level, lead) {
+    if (level >= 1) {
+      if (s === 0 || s === 6 || s === 10) kick808(t);
+      if (s === 4 || s === 12) clap(t, 0.3);
+      noiseHit(t, "highpass", 10000, s % 4 === 2 ? 0.1 : 0.04, 0.03);
+    }
+    if (level >= 2) {
+      const hits = { 0: 0, 3: 0, 6: 2, 8: 0, 11: 1, 14: 3 };
+      if (s in hits) {
+        const note = arpNotes[hits[s] % arpNotes.length] - 24;
+        robotBass(note, lastBass, t, SIXTEENTH * 2.5);
+        lastBass = note;
+      }
+    }
+    if (lead && level >= 3 && [0, 3, 6, 10, 13].includes(s)) {
+      const i = ((step >> 4) + [0, 2, 1, 3, 2][[0, 3, 6, 10, 13].indexOf(s)]) % arpNotes.length;
+      stab(arpNotes[i] + 12, t, 0.12, 0.08);
+    }
+  }
+  let lastBass = 43;
+
   function schedule() {
     const horizon = ac.currentTime + 0.15;
-    const beat = mode === "both" || mode === "techno";
+    const style = BEATS[mode];
 
-    // The beat, one sixteenth at a time.
+    // The beat, one sixteenth at a time. Chant over techno starts with the
+    // chant alone and lets the beat come in as the tower rises; every other
+    // beat is heard from the start.
     while (gridTime < horizon) {
       const t = gridTime;
       const s = step % 16;
-      if (beat) {
-        const level = mode === "techno" ? intensity + 1 : intensity;
-        if (level >= 1) {
-          if (s % 4 === 0) kick(t);
-          if (s % 4 === 2) noiseHit(t, "highpass", 8000, 0.12, 0.05);
-          if (s === 4 || s === 12) noiseHit(t, "bandpass", 1500, 0.25, 0.18);
-        }
-        if (level >= 2 && s % 2 === 0) {
-          const pattern = [0, 0, 12, 0, 0, 12, 7, 12];
-          bass(finalPitch - 24 + pattern[(s / 2) % 8], t, SIXTEENTH * 2);
-        }
-        if (mode === "techno" && level >= 3 && s % 2 === 1) {
-          pluck(arpNotes[(step >> 1) % arpNotes.length] + 12, t);
-        }
-      }
+      const level = mode === "both" ? intensity : intensity + 1;
+      if (style === "techno") technoStep(t, s, level, !sings(mode));
+      else if (style === "dubstep") dubstepStep(t, s, level, !sings(mode));
+      else if (style === "electro") electroStep(t, s, level, !sings(mode));
       gridTime += SIXTEENTH;
       step++;
     }
 
-    if (mode === "techno" || mode === "off") return;
+    if (!sings(mode)) return;
 
     // The chant, one note at a time.
-    const locked = mode === "both";
+    const locked = mode !== "chant";
     const pulse = locked ? BEAT : FREE_PULSE;
     while (chantTime < horizon) {
       if (noteIndex >= chant.notes.length) {
@@ -345,13 +505,10 @@ const Sound = (() => {
       // Locked to the beat, a note is held for a whole number of beats.
       const beats = locked ? (dur >= 1.9 ? Math.round(dur) : 1) : dur;
       const length = beats * pulse;
-      const word = chant.words.find(([i]) => i === noteIndex);
-      if (word) lyrics.push([chantTime, word[1]]);
       voice(pitch, chantTime, endsSyllable ? length * 0.86 : length * 0.99, musicGain, 0.2);
       chantTime += length;
       noteIndex++;
     }
-    if (lyrics.length > 40) lyrics = lyrics.slice(-20);
   }
 
   function startMusic(key) {
@@ -374,13 +531,12 @@ const Sound = (() => {
     playing = false;
     clearInterval(timer);
     stopDrone();
-    lyrics = [];
   }
 
   // Change to another chant when the one being sung comes to its end.
   function setChant(key) {
     if (!playing) return;
-    if (mode === "techno") { if (key !== chantKey) loadChant(key); return; }
+    if (!sings(mode)) { if (key !== chantKey) loadChant(key); return; }
     if (key !== chantKey) pendingKey = key;
   }
 
@@ -388,18 +544,10 @@ const Sound = (() => {
     intensity = n;
   }
 
-  // The syllable being sung now, for showing on screen.
-  function lyric() {
-    if (!ac || !playing || mode === "techno") return "";
-    let text = "";
-    for (const [t, s] of lyrics) if (t <= ac.currentTime) text = s;
-    return text;
-  }
-
   // Short effects start on the next sixteenth of the beat, as in Lumines.
   function onBeat() {
     const now = ac.currentTime;
-    if (!playing || mode === "chant") return now;
+    if (!playing || !BEATS[mode]) return now;
     const since = now - (gridTime - SIXTEENTH * 2);
     return now + (SIXTEENTH - (since % SIXTEENTH)) % SIXTEENTH;
   }
@@ -455,7 +603,7 @@ const Sound = (() => {
   }
 
   return {
-    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, lyric, play,
+    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play,
     get mode() { return mode; },
     get playing() { return playing; },
   };
