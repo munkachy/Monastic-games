@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>New Apologetics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* A single deliberate look: a late-night livestream studio lit by altar gold. */
+  :root {
+    color-scheme: dark;
+    --night: #14172a;
+    --panel: #1d2140;
+    --panel-2: #252a50;
+    --line: #363d6a;
+    --text: #ece4d0;
+    --muted: #a9a6bd;
+    --gold: #e8b94a;
+    --marian: #7ea4e6;
+    --crimson: #de5e55;
+    --green: #74c07a;
+    --display: "Pixelify Sans", "Courier New", monospace;
+    --body: "Literata", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--text);
+    font: 16px/1.6 var(--body);
+    padding-inline: 16px;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px; display: grid; gap: 64px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+  h1 { font-size: clamp(40px, 8vw, 76px); line-height: 1; color: var(--gold); }
+  h2 { font-size: clamp(26px, 4vw, 36px); line-height: 1.1; }
+  h3 { font-size: 22px; line-height: 1.15; }
+  p { margin: 0; max-width: 66ch; }
+  a { color: var(--marian); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .label {
+    font: 600 12px/1 var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  section { display: grid; gap: 20px; }
+  .lede { display: grid; gap: 12px; }
+
+  /* Hero */
+  .hero { display: grid; gap: 20px; }
+  .hero-top { display: grid; gap: 14px; }
+  .verse { font-style: italic; color: var(--muted); max-width: 60ch; }
+  .verse b { font-style: normal; color: var(--gold); font-weight: 600; }
+  .stage { border: 3px solid var(--line); background: #0e1122; border-radius: 6px; overflow: hidden; }
+  .stage canvas { width: 100%; height: auto; }
+  .status { font-size: 13px; color: var(--muted); }
+
+  /* Rulebook table */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  td:first-child { color: var(--muted); white-space: nowrap; }
+  td strong { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--text); }
+
+  .rule { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; display: grid; gap: 8px; }
+  .rule h3 { color: var(--gold); }
+
+  /* Roster */
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 470px), 1fr)); gap: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 14px; align-content: start; }
+  .card-head { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; }
+  .card-head canvas { width: 96px; height: 96px; background: var(--panel-2); border-radius: 4px; }
+  .card-head .who { display: grid; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 600 12px/1 var(--display); padding: 5px 8px; border-radius: 3px; background: var(--panel-2); color: var(--muted); letter-spacing: 0.04em; }
+  .chip.role { color: var(--night); background: var(--gold); }
+  .chip.boss { color: #fff; background: var(--crimson); }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .stat { display: grid; gap: 4px; }
+  .stat span { font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .stat i { display: block; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .stat i b { display: block; height: 100%; background: var(--marian); }
+  .stat small { font: 600 10px/1 var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .passive { font-size: 14px; color: var(--muted); }
+  .passive b { color: var(--text); font-weight: 600; }
+  .skills { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .skills li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; background: var(--panel-2); border-radius: 4px; }
+  .skills .name { font: 600 16px/1.2 var(--display); }
+  .skills .meta { font: 500 12px/1.4 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
+  .skills .fx { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  .skills .ult .name { color: var(--gold); }
+  .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
+  .open-slot { border-style: dashed; background: transparent; }
+
+  /* Camera Mog */
+  .mog { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 24px; align-items: center; }
+  .mog canvas { width: 100%; max-width: 300px; aspect-ratio: 1; background: #0e1122; border: 3px solid var(--line); border-radius: 6px; }
+  .mog .lede p { font-size: 17px; }
+
+  /* Factions */
+  .factions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 18px; }
+  .faction { display: grid; gap: 12px; align-content: start; border-top: 3px solid var(--crimson); padding-top: 14px; }
+  .faction .grunts { display: flex; gap: 8px; }
+  .faction .grunts canvas { width: 64px; height: 64px; background: var(--panel); border-radius: 4px; }
+  .faction p { font-size: 15px; }
+
+  /* OCIA */
+  .ocia { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+  .ocia figure { margin: 0; display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+  .ocia canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; background: #0e1122; border-radius: 4px; }
+  .ocia figcaption { font-size: 14px; color: var(--muted); }
+  .ocia figcaption b { color: var(--text); }
+
+  /* Chapters */
+  .chapters { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: ch -1; }
+  .chapters li { display: grid; grid-template-columns: 64px 1fr; gap: 16px; padding: 16px; background: var(--panel); border-radius: 6px; border: 1px solid var(--line); counter-increment: ch; }
+  .chapters li::before { content: counter(ch); font: 700 36px/1 var(--display); color: var(--gold); }
+  .chapters li:first-child::before { content: "P"; }
+  .chapters li:last-child::before { content: "E"; }
+  .chapters .body { display: grid; gap: 8px; }
+  .chapters .card-note { display: grid; gap: 4px; padding: 10px 12px; border-left: 3px solid var(--marian); background: var(--panel-2); font-size: 14px; }
+  .grade { font: 600 11px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 6px; border-radius: 3px; justify-self: start; }
+  .g-dogma { background: var(--gold); color: var(--night); }
+  .g-doctrine { background: var(--marian); color: var(--night); }
+  .g-opinion { background: var(--green); color: var(--night); }
+  .g-private { background: #c69ae8; color: var(--night); }
+  .g-argument { background: var(--line); color: var(--text); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; color: var(--muted); }
+
+  .notes { display: grid; gap: 10px; margin: 0; padding-left: 20px; }
+  .notes li { max-width: 70ch; }
+  .sources { font-size: 14px; color: var(--muted); display: grid; gap: 6px; margin: 0; padding-left: 20px; }
+
+  @media (max-width: 640px) {
+    .mog { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .card-head { grid-template-columns: 72px 1fr; }
+    .card-head canvas { width: 72px; height: 72px; }
+    .chapters li { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <header class="hero">
+    <div class="hero-top">
+      <span class="label">Game design · concept draft</span>
+      <h1>New Apologetics</h1>
+      <p>A turn-based team battler in the style of <i>Star Trek: Legends</i>, where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
+      <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The four stats of the game come from this verse.</p>
+    </div>
+    <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
+    <p class="status" id="battle-caption">A turn in progress.</p>
+  </header>
+
+  <section>
+    <div class="lede">
+      <span class="label">The rules</span>
+      <h2>A Legends battle, turned into a debate</h2>
+      <p>Everything keeps the shape of <i>Star Trek: Legends</i>, so its balance carries over: teams of four, turn order by speed, one basic move with no cooldown, two skills on a 3-turn cooldown, and one great skill on a 4-turn cooldown that starts partly charged. Only the meaning changes.</p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>In Legends</th><th>In New Apologetics</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td>Health</td><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back.</td></tr>
+          <tr><td>Morale</td><td><strong>Conviction</strong></td><td>Four pips. When an opponent loses all four, he is converted: he flickers and goes to OCIA.</td></tr>
+          <tr><td>Attack</td><td><strong>Rhetoric</strong></td><td>The strength of arguments from wit and persuasion.</td></tr>
+          <tr><td>Tech</td><td><strong>Learning</strong></td><td>The strength of arguments from Scripture, history and philosophy.</td></tr>
+          <tr><td>Defense</td><td><strong>Charity</strong></td><td>Gentleness and respect. It softens every blow taken.</td></tr>
+          <tr><td>Speed</td><td><strong>Readiness</strong></td><td>“Always be ready.” Sets the turn order.</td></tr>
+          <tr><td>Stun</td><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
+          <tr><td>Taunt</td><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
+          <tr><td>Wound</td><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
+          <tr><td>Scan</td><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
+          <tr><td>Purge</td><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
+          <tr><td>Cleanse</td><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
+          <tr><td>Cover · Shield</td><td><strong>Citation · Charity Shield</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
+          <tr><td>Skill lock · Counter</td><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="rule">
+      <h3>Win the man, not the argument</h3>
+      <p>Legends has two ways to beat an enemy: take all his health or break his morale. This game keeps both, but they are not equal. Break an opponent's <b>Conviction</b> and he converts: full reward, and sometimes he joins your roster. Run his <b>Composure</b> to zero first and he storms off embarrassed: small reward, no conversion. Players learn to lower Conviction with patient, charitable arguments instead of just scoring points. This mirrors how conversion really happens. Newman called it the convergence of many probabilities, a cumulative case, not one knockout blow. Cameron Bertuzzi's own Bayesian approach is the same idea in numbers.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The roster</span>
+      <h2>Each apologist plays like a Legends hero</h2>
+      <p>Each apologist uses a Legends hero's kit: the same targets, cooldowns and percentages, and starting stats scaled from that hero's rank-one numbers. The balance is borrowed, and the personality is his own.</p>
+    </div>
+    <div class="roster" id="roster"></div>
+  </section>
+
+  <section class="mog">
+    <canvas id="mog" width="288" height="288" aria-label="Ethan Muse leans into the camera and peers over his glasses."></canvas>
+    <div class="lede">
+      <span class="label">Signature move</span>
+      <h2>Camera Mog</h2>
+      <p>Ethan Muse leans right into the lens, slides his glasses down, and looks over the top of them. The battle pauses for a close-up. It is Worf's Klingon Fury in the kit: a boss-breaking 400%, raised to 600% if the target is already Doubting. If it breaks the target's conviction, Ethan gains a pip of his own.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The opposition</span>
+      <h2>Three storylines, three traditions</h2>
+      <p>Each tradition has its own set of rank-and-file debaters and a boss. The rank and file are invented characters. The bosses are real people, so they appear only with their permission.</p>
+    </div>
+    <div class="factions" id="factions"></div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">Instead of defeat</span>
+      <h2>The OCIA flicker</h2>
+      <p>A converted opponent flickers, fades, and leaves behind a sign for the parish OCIA class. The caption is theologically exact for each tradition, so even the victory screen teaches something.</p>
+    </div>
+    <div class="ocia" id="ocia"></div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The story</span>
+      <h2>Eight chapters, each ending in a teaching card</h2>
+      <p>Legends tells its story in eight chapters of six missions each. This game does the same, and each chapter ends by unlocking a teaching card. Every card is graded by its theological weight, so a player learns to tell a dogma from a pious opinion.</p>
+      <div class="legend">
+        <span class="grade g-dogma">Dogma</span> defined, to be believed with divine faith
+        <span class="grade g-doctrine">Doctrine</span> taught with authority, not defined
+        <span class="grade g-private">Private revelation</span> approved, never binding
+        <span class="grade g-opinion">Opinion</span> open question
+        <span class="grade g-argument">Argument</span> an apologetic case, not Church teaching
+      </div>
+    </div>
+    <ol class="chapters" id="chapters"></ol>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">Before release</span>
+      <h2>Open questions</h2>
+    </div>
+    <ul class="notes">
+      <li><b>Permission from everyone depicted, including the bosses.</b> A boss who converts is the joke of the game, and it is also the part most likely to hurt. James White and Jacob Hansen should see their kits and their OCIA scenes before release. Without their yes, their places go to invented characters.</li>
+      <li><b>The Islam storyline needs a boss.</b> Until one is chosen and agrees, an invented character, the Speakers' Corner Champion, fills the place.</li>
+      <li><b>GodLogic is a mere-Christian apologist, not a Catholic one.</b> He fits best as a guest ally in the Islam storyline, where Catholics and Protestants make common cause, and that is a good lesson in itself.</li>
+      <li><b>One roster slot is open.</b> It uses Riker's kit: a bold damage-dealer with a taunt and a bluff.</li>
+      <li><b>The likenesses are first drafts.</b> They are built from each man's best-known look and will be redrawn from photographs.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="label">Sources</span>
+    <ul class="sources">
+      <li>Legends hero kits (skills, cooldowns, base stats): <a href="https://legends.datacore.app/character/Data">Data</a>, <a href="https://legends.datacore.app/character/Worf">Worf</a>, <a href="https://legends.datacore.app/character/Picard">Picard</a>, <a href="https://legends.datacore.app/character/Kirk">Kirk</a>, <a href="https://legends.datacore.app/character/McCoy">McCoy</a>, <a href="https://legends.datacore.app/character/Geordi">Geordi</a>, <a href="https://legends.datacore.app/character/Riker">Riker</a>, <a href="https://legends.datacore.app/character/Spock">Spock</a> (legends.datacore.app)</li>
+      <li>Roles, morale and retreat: <a href="https://biggestinjapan.com/index.php/2021/04/12/10-tips-tricks-for-starting-star-trek-legends/">Biggest in Japan, “10 Tips &amp; Tricks for Starting Star Trek: Legends”</a>; <a href="https://startreklegends.fandom.com/wiki/Morale_System">Star Trek Legends Wiki, Morale System</a>; <a href="https://www.gamesasylum.com/2025/01/15/star-trek-legends-review/">Games Asylum review</a></li>
+      <li>The apologists: <a href="https://en.wikipedia.org/wiki/Jimmy_Akin">Jimmy Akin</a>; <a href="https://en.wikipedia.org/wiki/Trent_Horn">Trent Horn</a>; <a href="https://www.wordonfire.org/articles/contributors/apologetics-isnt-dead-cameron-bertuzzis-conversion-to-catholicism/">Cameron Bertuzzi's conversion (Word on Fire)</a>; <a href="https://mileskdonahue.substack.com/p/90-a-heated-debate-on-hell-catholicism">Ethan Muse</a>; <a href="https://www.catholic.com/audio/cot/godlogic-vs-muslims-jws-and-orthobros">GodLogic on the Council of Trent podcast</a></li>
+    </ul>
+  </section>
+</main>
+
+<script src="art.js"></script>
+<script>
+(() => {
+  const C = Art.CAST;
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- Data ---------------------------------------------------------------------
+
+  const HEROES = [
+    {
+      id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Science", like: "Data",
+      stats: [225, 70, 90, 25, 58],
+      passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
+      skills: [
+        ["Precise Distinction", "1 foe", "0", "100% Learning."],
+        ["Senior Apologist", "1 foe", "3", "150% Rhetoric (225% against a Citation). 25% chance to leave him Dumbfounded for 3 turns. “Well, actually, there are three views on that…”"],
+        ["Logical Paradox", "All foes", "3", "Minor Rhetoric Down for 3 turns. 50% chance of −1 Conviction on each."],
+        ["Mysterious World", "2 random foes", "3", "Cross-Examined, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
+      ],
+      flavor: "Data's kit, almost move for move. The android who reasons without heat becomes the apologist who does the same.",
+    },
+    {
+      id: "muse", name: "Ethan Muse", tag: "Philosopher and debater", role: "Security", like: "Worf",
+      stats: [288, 76, 45, 18, 88],
+      passive: ["Doctoral Rigor", "+5% Rhetoric to every Catholic ally."],
+      skills: [
+        ["Pointed Question", "1 foe", "0", "125% Rhetoric. 50% chance to leave him Doubting."],
+        ["Open Challenge", "All foes", "3", "Every foe is Called Out for 3 turns and must answer Ethan. −1 Conviction on each. “I'll debate any of you. Right now.”"],
+        ["Steelman Stance", "Self", "3 (starts 1)", "Rebuttal, and Major Rhetoric Up for 3 turns. He states your case better than you did, then answers it."],
+        ["Camera Mog", "1 foe", "4 (starts 2)", "400% Rhetoric, 600% if the target is Doubting. If this breaks the target's conviction, Ethan gains +1 Conviction.", true],
+      ],
+      flavor: "The tank. Open Challenge draws every argument onto him, so the healer can keep one man standing.",
+    },
+    {
+      id: "bertuzzi", name: "Cameron Bertuzzi", tag: "Host, Capturing Christianity", role: "Command", like: "Picard",
+      stats: [250, 58, 105, 12, 125],
+      passive: ["Follow the Evidence", "+5% Resolve to every ally."],
+      skills: [
+        ["Clarifying Question", "1 foe", "0", "150% Rhetoric."],
+        ["Let Him Finish", "1 ally", "3", "Major Rhetoric Up and Crit Chance Up for 3 turns."],
+        ["Mute Button", "1 foe", "3 (starts 1)", "Muted for 2 turns, and Rhetoric Down. The moderator's privilege."],
+        ["Bayesian Update", "All allies", "4 (starts 2)", "Examen, a Charity Shield and Learning Up for 3 turns. Every new piece of evidence shifts the odds."],
+      ],
+      flavor: "A moderator's kit. He shapes the debate more than he wins it, and he came into the Church by following the evidence himself.",
+    },
+    {
+      id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Command", like: "Kirk",
+      stats: [250, 82, 15, 15, 140],
+      passive: ["The Council of Trent", "+5% Rhetoric to Catholic Answers allies. With Jimmy Akin in the team, both get the bonus."],
+      skills: [
+        ["Rapid Response", "1 foe", "0", "150% Rhetoric."],
+        ["Why We're Catholic", "All allies", "3", "Rhetoric Up for 3 turns and +1 Conviction on each."],
+        ["Hard Sayings", "All foes", "3 (starts 1)", "Rhetoric Down for 3 turns and −1 Conviction on each. Passes through Eternal Security."],
+        ["The Case for Catholicism", "All foes", "4 (starts 2)", "300% Rhetoric to each (450% against a Citation or Charity Shield).", true],
+      ],
+      flavor: "The fastest man in the game, named for the fastest mind on the radio. Three of his skills are the titles of his books.",
+    },
+    {
+      id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Medical", like: "McCoy",
+      stats: [225, 61, 105, 14, 125],
+      passive: ["She'll Be Right", "+10% resistance to Doubting."],
+      skills: [
+        ["Cheeky Question", "1 foe", "0", "150% Rhetoric."],
+        ["Pints with Aquinas", "1 ally", "3", "A major encouragement: restores most of his Composure, with a 50% chance of +2 Conviction. A Discouraged ally comes back into the fight."],
+        ["Australian Charm", "1 ally", "3", "Major Rhetoric Up for 3 turns and +2 Conviction. Nobody can stay tense around him."],
+        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Charity Up, and immunity to Doubting for 3 turns.", true],
+      ],
+      flavor: "The healer. He hosted Cameron Bertuzzi's debates while Cameron was still a Protestant, so he knows how to keep a hard conversation friendly.",
+    },
+    {
+      id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Engineering", like: "Geordi", guest: true,
+      stats: [163, 61, 135, 15, 125],
+      passive: ["Smooth", "+3% Learning."],
+      skills: [
+        ["Smooth Question", "1 foe", "0", "100% Learning. 10% chance of Learning Down."],
+        ["Smooth Pivot", "1 ally", "3", "Gives a Citation and Learning Up."],
+        ["Stay Smooth", "All allies", "3", "A major Charity Shield for 3 turns and +1 Conviction on each."],
+        ["Common Ground", "All foes", "4", "Removes every buff and gives Major Learning Down for 3 turns. −1 Conviction on any foe from the Islam storyline.", true],
+      ],
+      flavor: "Geordi's shields, with a smooth delivery. Like Geordi's pulse against machines, his ultimate works best in his own field: dialogue with Muslims.",
+    },
+  ];
+
+  const BOSSES = [
+    {
+      id: "white", name: "James White", tag: "Alpha and Omega Ministries · The Dividing Line", faction: "Protestant",
+      grunts: ["preacher"],
+      blurb: "The boss of the Protestant storyline, fought twice: over the canon in Chapter 7 and over assurance in Chapter 8. Rank and file: Street Preachers, Seminarians, Reformed Podcasters.",
+      skills: [
+        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Doubting."],
+        ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Learning Down for 2 turns. Only Scripture counts."],
+        ["Eternal Security", "Self", "4", "His Conviction cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Hard Sayings passes through it."],
+        ["Debate Challenge", "All foes", "4 (starts 2)", "250% Rhetoric to each, and +1 Conviction to himself.", true],
+      ],
+    },
+    {
+      id: "hansen", name: "Jacob Hansen", tag: "Latter-day Saint apologist · Thoughtful Faith", faction: "Latter-day Saint",
+      grunts: ["elder"],
+      blurb: "The boss of the Latter-day Saint storyline, in Chapter 3. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Charity.",
+      skills: [
+        ["Scholarly Citation", "1 foe", "0", "125% Learning."],
+        ["Great Apostasy", "All foes", "3", "−1 Conviction on each, and Learning Down. The claim that true authority left the earth after the apostles."],
+        ["Burning in the Bosom", "Self", "3", "Recovers Composure, and arguments from Learning do nothing to him for 2 turns. A personal testimony is not argued away, but Charity and Rhetoric still reach him."],
+        ["Eternal Progression", "Self", "4 (starts 2)", "Rhetoric Up that grows each turn, up to three times.", true],
+      ],
+    },
+    {
+      id: "speaker", name: "Speakers' Corner Champion", tag: "Invented until a real boss agrees", faction: "Islam",
+      grunts: ["speaker", "skeptic"],
+      blurb: "The boss of the Islam storyline, in Chapter 6, where GodLogic joins as a guest. Rank and file: street debaters from Speakers' Corner and comment-section brothers. The same chapter has skeptic streamers too.",
+      skills: [
+        ["Crowd Question", "1 foe", "0", "125% Rhetoric."],
+        ["Tahrif", "All foes", "3", "Fact-Checks buffs that came from Scripture. The claim that the Bible was corrupted."],
+        ["Tawhid", "Self", "4", "Resists arguments about the Trinity for 2 turns. The absolute oneness of God."],
+        ["The Crowd Gathers", "Summon", "4 (starts 2)", "Calls two more debaters from the crowd.", true],
+      ],
+    },
+  ];
+
+  const OCIA = [
+    { id: "preacher", faction: "Protestant", line: "Received into full communion", text: "His baptism was already valid, so he is not baptized again. He makes a profession of faith and is confirmed. Tuesdays, 7 pm, parish hall." },
+    { id: "elder", faction: "Latter-day Saint", line: "Baptism at the Easter Vigil", text: "The Church does not recognize Latter-day Saint baptism as valid (CDF, 2001), so he is baptized, confirmed and receives First Communion at the Vigil." },
+    { id: "speaker", faction: "Islam", line: "Catechumen", text: "He enters the catechumenate, and at the Easter Vigil he is baptized, confirmed and receives his First Communion. His conversion must be free: no one may be forced to believe (Dignitatis Humanae 2)." },
+  ];
+
+  const CHAPTERS = [
+    ["The Comment Section", "The tutorial. A viral clip, a flood of replies, and the first two recruits from Catholic Answers: Trent Horn and Jimmy Akin.", "1 Peter 3:15: apologetics is a defense given with gentleness and respect, never an attack.", "Scripture", "g-doctrine", "Doctrine"],
+    ["Upon This Rock", "A Protestant podcaster is weighing the evidence for the papacy, as Cameron Bertuzzi once did. Help him follow it all the way. Cameron joins the team.", "The primacy and infallible teaching office of the Pope. Vatican I, Pastor Aeternus (1870).", "", "g-dogma", "Dogma"],
+    ["Pints and Paradoxes", "Matt Fradd opens the pub for a night of debates with skeptic streamers. Can reason reach God at all?", "God can be known with certainty by the natural light of reason. Vatican I, Dei Filius, canon 2.1.", "", "g-dogma", "Dogma"],
+    ["The Restoration", "Two missionaries knock on the door, and the trail leads to Jacob Hansen. Can the Church Christ founded fall away?", "The Church cannot fail: “the gates of hell shall not prevail” (Mt 16:18; Lumen Gentium 8). God is utterly simple, not an exalted man (Lateran IV, 1215).", "", "g-dogma", "Dogma"],
+    ["Signs and Wonders", "Ethan Muse takes on the skeptics over Fatima and the Eucharistic miracle of Lanciano, and teaches you to argue a miracle without overclaiming it.", "Approved apparitions are private revelation. They are not part of the deposit of faith, and no Catholic is bound to believe them (CCC 67).", "", "g-private", "Private revelation"],
+    ["Mysterious World", "Jimmy Akin investigates a UFO sect with a message from the stars. Discernment, not ridicule.", "Whether intelligent life exists on other worlds is an open question. The Church has taught nothing on it.", "", "g-opinion", "Opinion"],
+    ["People of the Book", "At Speakers' Corner, GodLogic joins as a guest. Catholics and Protestants stand together on the Trinity and the Cross.", "“Let the People of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact in Muhammad's day, what corrupted it afterward? Beside it: Muslims “together with us adore the one, merciful God” (CCC 841).", "", "g-argument", "Argument"],
+    ["Scripture Alone?", "First battle with James White. Which books belong in the Bible, and who decided?", "The canon of Scripture, defined at Trent, Session IV (1546). The same list was received at Rome (382) and Hippo (393).", "", "g-dogma", "Dogma"],
+    ["Once Saved?", "The rematch. James White raises Eternal Security, and Trent's Hard Sayings answer it.", "Without a special revelation, no one can know with absolute certainty that he will persevere to the end (Trent, Session VI, canon 16). What we have instead is hope, a theological virtue (CCC 1817).", "", "g-dogma", "Dogma"],
+    ["One Fold", "The epilogue. Every opponent you converted comes back for the Easter Vigil.", "“There shall be one fold and one shepherd” (John 10:16).", "", "g-doctrine", "Scripture"],
+  ];
+
+  // ---- Roster, factions, chapters ------------------------------------------
+
+  function portrait(id, size) {
+    const c = document.createElement("canvas");
+    c.width = 32 * (size || 3); c.height = 32 * (size || 3);
+    Art.paint(c.getContext("2d"), Art.bust(C[id]), 0, 0, size || 3);
+    return c;
+  }
+
+  const STAT_NAMES = ["Composure", "Rhetoric", "Learning", "Charity", "Readiness"];
+  const STAT_MAX = [300, 90, 140, 30, 140];
+
+  function skillList(skills) {
+    const ul = document.createElement("ul");
+    ul.className = "skills";
+    skills.forEach(([name, target, cd, fx, ult], i) => {
+      const li = document.createElement("li");
+      if (ult || i === 3) li.className = "ult";
+      li.innerHTML = `<span class="name"></span><span class="meta"></span><span class="fx"></span>`;
+      li.querySelector(".name").textContent = name;
+      li.querySelector(".meta").textContent = target + " · cd " + cd;
+      li.querySelector(".fx").textContent = fx;
+      ul.append(li);
+    });
+    return ul;
+  }
+
+  const roster = document.getElementById("roster");
+  for (const h of HEROES) {
+    const card = document.createElement("article");
+    card.className = "card";
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const pic = portrait(h.id, 3);
+    pic.setAttribute("aria-label", "Pixel portrait of " + h.name);
+    const who = document.createElement("div");
+    who.className = "who";
+    who.innerHTML = `<h3></h3><span class="passive"></span><div class="chips"><span class="chip role"></span><span class="chip"></span></div>`;
+    who.querySelector("h3").textContent = h.name;
+    who.querySelector(".passive").textContent = h.tag;
+    who.querySelector(".chip.role").textContent = h.role;
+    who.querySelector(".chip:not(.role)").textContent = "plays like " + h.like;
+    if (h.guest) {
+      const g = document.createElement("span");
+      g.className = "chip"; g.textContent = "guest ally";
+      who.querySelector(".chips").append(g);
+    }
+    head.append(pic, who);
+
+    const stats = document.createElement("div");
+    stats.className = "stats";
+    h.stats.forEach((v, i) => {
+      const s = document.createElement("div");
+      s.className = "stat";
+      s.innerHTML = `<span>${v}</span><i><b style="width:${Math.min(100, (v / STAT_MAX[i]) * 100).toFixed(0)}%"></b></i><small>${STAT_NAMES[i]}</small>`;
+      stats.append(s);
+    });
+
+    const passive = document.createElement("p");
+    passive.className = "passive";
+    passive.innerHTML = `<b></b> · <span></span>`;
+    passive.querySelector("b").textContent = "Passive: " + h.passive[0];
+    passive.querySelector("span").textContent = h.passive[1];
+
+    const flavor = document.createElement("p");
+    flavor.className = "flavor";
+    flavor.textContent = h.flavor;
+    card.append(head, stats, passive, skillList(h.skills), flavor);
+    roster.append(card);
+  }
+  const open = document.createElement("article");
+  open.className = "card open-slot";
+  open.innerHTML = `<h3>Open slot</h3><p class="passive">Command · plays like Riker. A bold damage-dealer: an attack on every foe, a self-taunt with Citation, and a Bluff that mutes one opponent. To be filled.</p>`;
+  roster.append(open);
+
+  const factions = document.getElementById("factions");
+  for (const b of BOSSES) {
+    const f = document.createElement("article");
+    f.className = "faction";
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const who = document.createElement("div");
+    who.className = "who";
+    who.innerHTML = `<span class="label"></span><h3></h3><span class="passive"></span>`;
+    who.querySelector(".label").textContent = b.faction;
+    who.querySelector("h3").textContent = b.name;
+    who.querySelector(".passive").textContent = b.tag;
+    const pic = portrait(b.id, 3);
+    pic.setAttribute("aria-label", "Pixel portrait of " + b.name);
+    head.append(pic, who);
+    const grunts = document.createElement("div");
+    grunts.className = "grunts";
+    for (const g of b.grunts) grunts.append(portrait(g, 2));
+    const p = document.createElement("p");
+    p.textContent = b.blurb;
+    const chip = document.createElement("div");
+    chip.className = "chips";
+    chip.innerHTML = `<span class="chip boss">Boss</span>`;
+    f.append(head, chip, p, grunts, skillList(b.skills));
+    factions.append(f);
+  }
+
+  const chapters = document.getElementById("chapters");
+  for (const [title, story, card, , cls, grade] of CHAPTERS) {
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="body"><h3></h3><p></p><div class="card-note"><span class="grade"></span><span></span></div></div>`;
+    li.querySelector("h3").textContent = title;
+    li.querySelector("p").textContent = story;
+    const g = li.querySelector(".grade");
+    g.className = "grade " + cls;
+    g.textContent = grade;
+    li.querySelector(".card-note span:last-child").textContent = card;
+    chapters.append(li);
+  }
+
+  // ---- The battle demo ---------------------------------------------------------
+
+  const busts = {};
+  for (const k of Object.keys(C)) busts[k] = Art.bust(C[k]);
+
+  const battle = document.getElementById("battle");
+  const bx = battle.getContext("2d");
+  const caption = document.getElementById("battle-caption");
+  const HERO_POS = [["akin", 40, 18], ["muse", 118, 104], ["fradd", 40, 190], ["bertuzzi", 118, 276]];
+  const FOE_POS = [["elder", 456, 40], ["preacher", 536, 138], ["skeptic", 456, 236]];
+  const LOOP = 17;
+
+  // What has happened by time t: each event changes conviction or composure.
+  const EVENTS = [
+    { t: 0.4, who: "akin", say: "Jimmy Akin · Logical Paradox", caption: "Logical Paradox: every foe's Rhetoric falls, and two of them lose a pip of Conviction.", fx: { elder: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"] },
+    { t: 3.2, who: "muse", say: "Ethan Muse · Open Challenge", caption: "Open Challenge: all three are Called Out and must answer Ethan. Each loses a pip.", fx: { elder: [-1, 0], preacher: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"], called: true },
+    { t: 6.0, who: "preacher", say: "Street Preacher · Turn or Burn", caption: "Called Out, the preacher has to aim at Ethan, who is the tank.", fx: { muse: [0, -0.45] }, flash: ["muse"] },
+    { t: 8.2, who: "muse", say: "Ethan Muse · Camera Mog", caption: "Camera Mog: the elder's last two pips go at once.", fx: { elder: [-2, -0.3] }, mog: true, flash: ["elder"] },
+    { t: 11.4, who: "elder", say: "Elder Missionary · converted", caption: "His conviction is gone, so he flickers, and then he signs up for OCIA.", ocia: "elder" },
+    { t: 14.2, who: "fradd", say: "Matt Fradd · Pints with Aquinas", caption: "Pints with Aquinas: Ethan gets his Composure back.", fx: { muse: [0, 0.45] }, flash: ["muse"] },
+  ];
+
+  function stateAt(t) {
+    const s = {};
+    for (const [id] of HERO_POS.concat(FOE_POS)) s[id] = { pips: 4, comp: 1 };
+    let last = null;
+    for (const e of EVENTS) {
+      if (e.t > t) break;
+      last = e;
+      for (const [id, [dp, dc]] of Object.entries(e.fx || {})) {
+        s[id].pips = Math.max(0, s[id].pips + dp);
+        s[id].comp = Math.max(0.05, Math.min(1, s[id].comp + dc));
+      }
+    }
+    return { s, last };
+  }
+
+  function drawBars(x, y, st, foe) {
+    bx.fillStyle = "#2a2f55"; bx.fillRect(x, y, 64, 6);
+    bx.fillStyle = "#74c07a"; bx.fillRect(x, y, Math.round(64 * st.comp), 6);
+    for (let i = 0; i < 4; i++) {
+      bx.fillStyle = i < st.pips ? "#7ea4e6" : (foe ? "#5a2a36" : "#3a2a36");
+      bx.fillRect(x + i * 17, y + 10, 13, 6);
+    }
+  }
+
+  function drawSign(x, y, a) {
+    bx.globalAlpha = a;
+    bx.fillStyle = "#8a5a2b"; bx.fillRect(x + 29, y + 36, 6, 30);
+    bx.fillStyle = "#f7f1de"; bx.fillRect(x - 4, y + 4, 72, 36);
+    bx.strokeStyle = "#1a1326"; bx.lineWidth = 3; bx.strokeRect(x - 4, y + 4, 72, 36);
+    bx.fillStyle = "#b3261e"; bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+    bx.fillText("OCIA", x + 32, y + 26);
+    bx.fillStyle = "#1a1326"; bx.font = "600 10px 'Pixelify Sans', monospace";
+    bx.fillText("TUES · 7 PM", x + 32, y + 37);
+    bx.globalAlpha = 1;
+  }
+
+  function drawBattle(t) {
+    const { s, last } = stateAt(t);
+    bx.fillStyle = "#0e1122"; bx.fillRect(0, 0, 640, 360);
+    // A studio floor and two lecterns of light.
+    bx.fillStyle = "#171b36"; bx.fillRect(0, 300, 640, 60);
+    for (let x = 0; x < 640; x += 32) { bx.fillStyle = x % 64 ? "#1b2040" : "#161a33"; bx.fillRect(x, 300, 32, 60); }
+    bx.fillStyle = "rgba(232,185,74,0.05)"; bx.fillRect(20, 0, 200, 360); bx.fillRect(430, 0, 200, 360);
+
+    const since = last ? t - last.t : 99;
+    for (const [id, x, y] of HERO_POS) {
+      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
+      const active = last && last.who === id && since < 2.2;
+      if (active) { bx.fillStyle = "rgba(232,185,74,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
+      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2);
+      drawBars(x, y + 68, s[id], false);
+    }
+    for (const [id, x, y] of FOE_POS) {
+      const conv = last && last.ocia === id ? since : (s[id].pips === 0 && t >= 11.4 ? 99 : -1);
+      if (conv >= 0 && conv > 1.6) { drawSign(x, y, Math.min(1, (conv - 1.6) * 2)); continue; }
+      if (conv >= 0 && Math.floor(conv * 12) % 2 === 1) {
+        bx.fillStyle = "rgba(255,255,255,0.8)"; bx.fillRect(x + 8, y + 4, 48, 60);
+        continue;
+      }
+      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
+      const active = last && last.who === id && since < 2.2;
+      if (active) { bx.fillStyle = "rgba(222,94,85,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
+      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2, true);
+      drawBars(x, y + 68, s[id], true);
+      const called = EVENTS.find((e) => e.called);
+      if (called && t >= called.t && t < 11) {
+        bx.fillStyle = "#de5e55"; bx.font = "600 11px 'Pixelify Sans', monospace"; bx.textAlign = "left";
+        bx.fillText("CALLED OUT", x - 2, y - 6);
+      }
+    }
+    // Pips lost float up from the target.
+    if (last && last.fx && since < 1.2) {
+      for (const [id, [dp, dc]] of Object.entries(last.fx)) {
+        const pos = HERO_POS.concat(FOE_POS).find((p) => p[0] === id);
+        bx.fillStyle = dp < 0 ? "#7ea4e6" : dc < 0 ? "#de5e55" : "#74c07a";
+        bx.font = "700 16px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+        const text = dp < 0 ? dp + " CONVICTION" : dc < 0 ? "−COMPOSURE" : "+COMPOSURE";
+        bx.fillText(text, pos[1] + 32, pos[2] - 10 - since * 18);
+      }
+    }
+    // The move's name.
+    if (last && since < 2.6) {
+      bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+      const w = bx.measureText(last.say).width + 28;
+      bx.fillStyle = "rgba(20,23,42,0.92)"; bx.fillRect(320 - w / 2, 10, w, 34);
+      bx.strokeStyle = "#e8b94a"; bx.lineWidth = 2; bx.strokeRect(320 - w / 2, 10, w, 34);
+      bx.fillStyle = "#ece4d0"; bx.fillText(last.say, 320, 34);
+    }
+    // The Camera Mog close-up.
+    if (last && last.mog && since < 2.6) {
+      const k = Math.min(1, since / 0.35);
+      bx.fillStyle = `rgba(8,9,20,${0.85 * k})`; bx.fillRect(0, 0, 640, 360);
+      const scale = 6;
+      const lean = Math.min(1, Math.max(0, (since - 0.3) / 0.9));
+      Art.paint(bx, Art.mog(C.muse, lean), 320 - 24 * scale, 360 - 48 * scale + Math.round((1 - k) * 60), scale);
+      bx.fillStyle = "#e8b94a"; bx.font = "700 28px 'Pixelify Sans', monospace"; bx.textAlign = "left";
+      bx.fillText("CAMERA", 24, 60); bx.fillText("MOG", 24, 92);
+    }
+    if (last && caption.textContent !== last.caption) caption.textContent = last.caption;
+  }
+
+  // ---- Camera Mog showcase -------------------------------------------------------
+
+  const mogCanvas = document.getElementById("mog");
+  const mx = mogCanvas.getContext("2d");
+  function drawMog(t) {
+    const phase = (t % 4) / 4;
+    const lean = phase < 0.25 ? 0 : phase < 0.45 ? (phase - 0.25) / 0.2 : phase < 0.85 ? 1 : 1 - (phase - 0.85) / 0.15;
+    mx.fillStyle = "#0e1122"; mx.fillRect(0, 0, 288, 288);
+    // A camera's recording frame.
+    mx.fillStyle = "#de5e55"; mx.fillRect(16, 16, 10, 10);
+    mx.fillStyle = "#ece4d0"; mx.font = "600 14px 'Pixelify Sans', monospace"; mx.textAlign = "left"; mx.fillText("REC", 32, 26);
+    Art.paint(mx, Art.mog(C.muse, lean), 0, 0, 6);
+  }
+
+  // ---- OCIA flicker -----------------------------------------------------------------
+
+  const oBox = document.getElementById("ocia");
+  const oCanvases = OCIA.map((o) => {
+    const fig = document.createElement("figure");
+    const c = document.createElement("canvas");
+    c.width = 200; c.height = 100;
+    c.setAttribute("aria-label", "A converted " + o.faction + " opponent flickers and becomes an OCIA sign.");
+    const cap = document.createElement("figcaption");
+    cap.innerHTML = `<span class="label"></span><br><b></b>. <span></span>`;
+    cap.querySelector(".label").textContent = o.faction;
+    cap.querySelector("b").textContent = o.line;
+    cap.querySelector("span:last-child").textContent = o.text;
+    fig.append(c, cap);
+    oBox.append(fig);
+    return { c, ctx: c.getContext("2d"), o };
+  });
+  function drawOcia(t) {
+    oCanvases.forEach(({ ctx, o }, i) => {
+      const p = (t + i * 0.7) % 5;
+      ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, 200, 100);
+      if (p < 1.4) { Art.paint(ctx, busts[o.id], 68, 18, 2); return; }
+      if (p < 2.6) {
+        if (Math.floor(p * 12) % 2) { ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(76, 22, 48, 60); }
+        else Art.paint(ctx, busts[o.id], 68, 18, 2);
+        for (let k = 0; k < 6; k++) {
+          const a = k + p * 3;
+          ctx.fillStyle = "#e8b94a";
+          ctx.fillRect(100 + Math.cos(a) * 46 - 2, 50 + Math.sin(a) * 34 - 2, 4, 4);
+        }
+        return;
+      }
+      ctx.fillStyle = "#8a5a2b"; ctx.fillRect(97, 62, 6, 34);
+      ctx.fillStyle = "#f7f1de"; ctx.fillRect(58, 18, 84, 46);
+      ctx.strokeStyle = "#1a1326"; ctx.lineWidth = 3; ctx.strokeRect(58, 18, 84, 46);
+      ctx.fillStyle = "#b3261e"; ctx.font = "700 22px 'Pixelify Sans', monospace"; ctx.textAlign = "center";
+      ctx.fillText("OCIA", 100, 44);
+      ctx.fillStyle = "#1a1326"; ctx.font = "600 10px 'Pixelify Sans', monospace";
+      ctx.fillText("ALL WELCOME", 100, 57);
+    });
+  }
+
+  // ---- Run ----------------------------------------------------------------------
+
+  if (still) {
+    drawBattle(9.2); drawMog(2); drawOcia(3.2);
+    return;
+  }
+  const t0 = performance.now();
+  function frame(now) {
+    const t = (now - t0) / 1000;
+    drawBattle(t % LOOP);
+    drawMog(t);
+    drawOcia(t);
+    requestAnimationFrame(frame);
+  }
+  drawBattle(0.6); drawMog(0); drawOcia(0);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
+})();
+</script>
+</body>
+</html>
