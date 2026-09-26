@@ -131,7 +131,7 @@
     <span class="label">A team battler</span>
     <h1>New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
-    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Morale and he's out of the debate. Conversions are rare, and they're worth watching for.</p>
+    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Conversions are rare, and they're worth watching for.</p>
     <div class="row">
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
@@ -189,13 +189,13 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926f"></script>
-<script src="audio.js?v=20260926f"></script>
-<script src="art.js?v=20260926f"></script>
-<script src="moves.js?v=20260926f"></script>
-<script src="story.js?v=20260926f"></script>
-<script src="data.js?v=20260926f"></script>
-<script src="battle.js?v=20260926f"></script>
+<script src="chants.js?v=20260926g"></script>
+<script src="audio.js?v=20260926g"></script>
+<script src="art.js?v=20260926g"></script>
+<script src="moves.js?v=20260926g"></script>
+<script src="story.js?v=20260926g"></script>
+<script src="data.js?v=20260926g"></script>
+<script src="battle.js?v=20260926g"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -636,11 +636,11 @@
   function coachTurn(b, u) {
     coachStep++;
     const name = u.name;
-    const convMove = u.def.skills.find((sk, i) => !(u.locked && u.locked[i]) && sk.effects.some((e) => e.morale < 0));
+    const convMove = u.def.skills.find((sk, i) => !(u.locked && u.locked[i]) && sk.effects.some((e) => e.zeal < 0));
     const great = u.def.skills.findIndex((sk, i) => isGreat(u.def, i));
     const tips = [
       "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it.",
-      "<b>Step 4 of 4 · Composure and Morale.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Morale</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Morale all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Morale, so try it now. " : "") + "Keep your own team's Morale up: at 0 or higher, teammates jump in to back each other up.",
+      "<b>Step 4 of 4 · Composure and Zeal.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Zeal</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Zeal all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Zeal, so try it now. " : "") + "Keep your own team's Zeal up: at 0 or higher, teammates jump in to back each other up.",
       "<b>Tip.</b> A move that says “ready in 2” is recharging: it comes back in two turns. Until then, the basic move is always there.",
       "<b>Tip.</b> The gold-edged move, <b>" + (great >= 0 ? u.def.skills[great].name : "the great move") + "</b>, is locked until level " + (great >= 0 ? Battle.unlockLevel(u.def, great) : 4) + ". Every debate earns experience, and each level opens new moves.",
       "<b>Tip.</b> <b>Auto</b> lets your team play by itself, and <b>Speed</b> makes everything faster. You're on your own now. Good luck!",
@@ -691,7 +691,7 @@
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");
     const left = foes.filter((u) => u.state === "left");
-    // Stars, as in Legends: for how well the team held together.
+    // Stars: for how well the team held together.
     const downs = b.heroes().reduce((n, u) => n + u.downs, 0);
     let st = 0;
     if (out === "win") st = downs === 0 ? 3 : downs === 1 ? 2 : 1;
@@ -730,7 +730,7 @@
     p.textContent = win
       ? (r.walked.length ? "Conceded the debate: " + names(r.walked) + ". " : "") + (r.left.length ? "Left the debate: " + names(r.left) + ". " : "") +
         (r.stars < 3 ? "Win without anyone on your team getting Discouraged for three stars." : "Nobody on your team was ever Discouraged.")
-      : "Your whole team was Discouraged. Try a different team, raise your Morale, or lean on your Encouragers.";
+      : "Your whole team was Discouraged. Try a different team, raise your Zeal, or lean on your Encouragers.";
     if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
     const xp = document.createElement("p");
     xp.className = "label";
@@ -744,8 +744,8 @@
       c.className = "coach";
       c.innerHTML = "<b>" + u.name + " has come home.</b> ";
       c.append(u.def.sign && u.def.sign[0] === "CONFESSION"
-        ? "Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. Conversions are rare. A few opponents can be won over when their Morale gives way, and you just found one."
-        : "Conversions are rare. A few opponents can be won over when their Morale gives way, and you just found one.");
+        ? "Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one."
+        : "Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one.");
       box.append(c);
     }
     for (const g of r.grew) {

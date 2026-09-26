@@ -1,26 +1,26 @@
 // New Apologetics — the battle: rules (Battle) and the stage (BattleView).
 //
 // Battle knows nothing about drawing. Each fighter takes turns in order of
-// Readiness. Every fighter has two things to lose, as in Star Trek: Legends:
-// Composure (health) and Morale. Morale starts at 0 and runs from +3 down to
+// Speed. Every fighter has two things to lose:
+// Composure (health) and Zeal. Zeal starts at 0 and runs from +3 down to
 // a floor. Anyone at 0 or above may back up a teammate: when a friend argues,
-// they can jump in with their basic move, more often the higher their Morale.
-// Out of Composure, an opponent concedes; at the Morale floor, he leaves the
+// they can jump in with their basic move, more often the higher their Zeal.
+// Out of Composure, an opponent concedes; at the Zeal floor, he leaves the
 // debate. Either way he is out. A few opponents (a secret the player finds by
-// playing) convert instead when their Morale bottoms out. A hero out of
-// Composure or Morale is Discouraged until a friend encourages him.
+// playing) convert instead when their Zeal bottoms out. A hero out of
+// Composure or Zeal is Discouraged until a friend encourages him.
 
 const Battle = (() => {
-  const MORALE_MAX = 3;
-  const HERO_FLOOR = -4;     // how far Morale can fall before a fighter is out
-  const GRUNT_FLOOR = -4;
+  const ZEAL_MAX = 3;
+  const HERO_FLOOR = -4;     // how far Zeal can fall before a fighter is out
+  const GRUNT_FLOOR = -5;
   const BOSS_FLOOR = -6;
-  const BACKUP = [0.1, 0.2, 0.3, 0.4];   // chance to back up a friend, by Morale 0..3
+  const BACKUP = [0.1, 0.2, 0.3, 0.4];   // chance to back up a friend, by Zeal 0..3
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
   const FOE_PUNCH = 2.4;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
-  const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : GRUNT_FLOOR);
+  const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
 
   // A hero's level raises Composure and the strength of his arguments; each
   // chapter's opponents grow tougher to match.
@@ -37,9 +37,9 @@ const Battle = (() => {
       id, side, key: (hero ? "h" : "f") + slot, slot, def, kind,
       name: def.name, faction: def.faction || "catholic",
       maxHp, hp: maxHp,
-      base: { r: def.stats[1] * punch, l: def.stats[2] * punch, c: def.stats[3], spd: def.stats[4] },
-      bonus: { r: 0, l: 0, c: 0 },
-      morale: 0, floor: floorOf(def, hero), downs: 0,
+      base: { atk: def.stats[1] * punch, def: def.stats[2], spd: def.stats[3] },
+      bonus: { atk: 0, def: 0 },
+      zeal: 0, floor: floorOf(def, hero), downs: 0,
       cd: def.skills.map((s) => s.start || 0),
       statuses: {}, called: null, buffs: [], shield: null, citation: false, counter: 0, immune: {},
       state: "in", since: 0,
@@ -77,9 +77,9 @@ const Battle = (() => {
       if (!p) continue;
       for (const f of heroes()) {
         if (p.allies) for (const k of Object.keys(p.allies)) f.bonus[k] += p.allies[k];
-        if (p.group && p.group.includes(f.id)) for (const k of ["r", "l", "c"]) if (p[k]) f.bonus[k] += p[k];
+        if (p.group && p.group.includes(f.id)) for (const k of ["atk", "def"]) if (p[k]) f.bonus[k] += p[k];
         // Scott Hahn's passive: fellow converts to the Church start fired up.
-        if (p.converts && p.converts.includes(f.id)) f.morale = Math.min(MORALE_MAX, f.morale + 1);
+        if (p.converts && p.converts.includes(f.id)) f.zeal = Math.min(ZEAL_MAX, f.zeal + 1);
       }
     }
 
@@ -159,7 +159,7 @@ const Battle = (() => {
       let target = null;
       const c = choices(u, i);
       if (s.target === "foe" && c.length) {
-        target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp + (a.morale - a.floor - (b.morale - b.floor)) * 0.1)[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
+        target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp + (a.zeal - a.floor - (b.zeal - b.floor)) * 0.1)[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
       } else if (s.target === "ally" && c.length) {
         target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       }
@@ -199,10 +199,10 @@ const Battle = (() => {
             if (e.splash) for (const o of others(u).filter((x) => inPlay(x) && x !== t)) hit(u, o, { ...e, dmg: e.dmg * 0.4 }, s, events, true);
             if (s.target === "foe" && t.counter > 0 && inPlay(t) && inPlay(u)) {
               events.push({ key: t.key, text: "Rebuttal!", color: "#e8b94a" });
-              hit(t, u, { dmg: 0.6, stat: "r" }, t.def.skills[0], events, true);
+              hit(t, u, { dmg: 0.6 }, t.def.skills[0], events, true);
             }
           }
-          if (e.morale) { if (morale(t, e.morale, s, events)) broke = true; }
+          if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
           if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" }); }
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
@@ -215,11 +215,11 @@ const Battle = (() => {
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
           if (e.immune) { t.immune[e.immune] = e.turns + 1; events.push({ key: t.key, text: immuneName(e.immune), color: "#7ea4e6" }); }
-          if (e.selfMorale && !done.has("selfMorale")) { done.add("selfMorale"); morale(u, e.selfMorale, s, events); }
-          if (e.allyMorale && !done.has("allyMorale")) { done.add("allyMorale"); for (const f of friends(u).filter(inPlay)) morale(f, e.allyMorale, s, events); }
+          if (e.selfZeal && !done.has("selfZeal")) { done.add("selfZeal"); zeal(u, e.selfZeal, s, events); }
+          if (e.allyZeal && !done.has("allyZeal")) { done.add("allyZeal"); for (const f of friends(u).filter(inPlay)) zeal(f, e.allyZeal, s, events); }
           if (e.friendsCleanse && !done.has("fc")) { done.add("fc"); for (const f of friends(u)) f.statuses[e.friendsCleanse] = 0; }
           if (e.randomLift) {
-            const lifts = [{ buff: "r", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.25, turns: 3 }, { heal: 0.2 }];
+            const lifts = [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.25, turns: 3 }, { heal: 0.2 }];
             const l = lifts[Math.floor(rnd() * lifts.length)];
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
             if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
@@ -238,32 +238,32 @@ const Battle = (() => {
         }
       }
       for (const t of targets) if (!inPlay(t) && t.side !== u.side) broke = true;
-      for (const e of s.effects) if (e.onBreak && broke) morale(u, e.onBreak, s, events);
+      for (const e of s.effects) if (e.onBreak && broke) zeal(u, e.onBreak, s, events);
       return { skill: s, targets, events };
     }
 
-    // After an argument against the other side, one friend with Morale 0 or
+    // After an argument against the other side, one friend with Zeal 0 or
     // more may jump in with a basic move on the same opponent.
     function backup(u, i, targets) {
       const s = u.def.skills[i];
-      const offensive = s.effects.some((e) => e.dmg || e.morale < 0 || e.status);
+      const offensive = s.effects.some((e) => e.dmg || e.zeal < 0 || e.status);
       const target = targets.find((t) => t.side !== u.side && inPlay(t));
       if (!offensive || !target || !inPlay(u)) return null;
-      const helpers = friends(u).filter((f) => f !== u && inPlay(f) && f.morale >= 0 && !(f.statuses.dumbfounded > 0)).sort(() => rnd() - 0.5);
-      for (const f of helpers) if (rnd() < BACKUP[Math.min(MORALE_MAX, f.morale)]) return { ally: f, target };
+      const helpers = friends(u).filter((f) => f !== u && inPlay(f) && f.zeal >= 0 && !(f.statuses.dumbfounded > 0)).sort(() => rnd() - 0.5);
+      for (const f of helpers) if (rnd() < BACKUP[Math.min(ZEAL_MAX, f.zeal)]) return { ally: f, target };
       return null;
     }
 
     function hit(u, t, e, s, events, quiet) {
       if (!inPlay(t)) return;
-      let d = stat(u, e.stat) * e.dmg * (0.92 + rnd() * 0.16);
+      let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16);
       if (e.vs) {
         const [what, mult] = e.vs;
         if (what === "guarded" ? t.shield || t.citation : t.statuses[what] > 0) d *= mult;
       }
       if (t.statuses.examined > 0) d *= 1.3;
-      if (t.immune.learning > 0) d *= 0.5;
-      d *= 1 - Math.min(60, stat(t, "c")) / 100;
+      if (t.immune.testimony > 0) d *= 0.5;
+      d *= 1 - Math.min(60, stat(t, "def")) / 100;
       const crit = rnd() < critChance(u);
       if (crit) d *= 1.5;
       if (t.citation) { d *= 0.3; t.citation = false; }
@@ -271,23 +271,23 @@ const Battle = (() => {
       if (t.shield) { const a = Math.min(t.shield.amt, d); t.shield.amt -= a; d -= a; if (t.shield.amt <= 0) t.shield = null; }
       t.hp = Math.max(0, t.hp - d);
       events.push({ key: t.key, text: (crit ? "Crit! " : "") + "−" + d, color: crit ? "#ffd84a" : "#ece4d0" });
-      if (crit) morale(t, -1, s, events);
+      if (crit) zeal(t, -1, s, events);
       checkOut(t, events);
     }
 
     // Returns true if the change puts the fighter out.
-    function morale(t, n, s, events) {
+    function zeal(t, n, s, events) {
       if (!inPlay(t)) return false;
       const pierce = (s && s.pierce) || [];
       if (n < 0) {
-        const held = t.immune.conviction > 0 || (t.immune.security > 0 && !pierce.includes("security")) || (t.immune.faith > 0 && !pierce.includes("faith"));
+        const held = t.immune.steadfast > 0 || (t.immune.security > 0 && !pierce.includes("security")) || (t.immune.faith > 0 && !pierce.includes("faith"));
         if (held) { events.push({ key: t.key, text: "Holds firm", color: "#a9a6bd" }); return false; }
       }
-      const before = t.morale;
-      t.morale = Math.max(t.floor, Math.min(MORALE_MAX, t.morale + n));
-      const d = t.morale - before;
-      if (d) events.push({ key: t.key, text: (d > 0 ? "▲".repeat(d) : "▼".repeat(-d)) + " Morale", color: d > 0 ? "#7ea4e6" : "#de5e55" });
-      if (t.morale > t.floor) return false;
+      const before = t.zeal;
+      t.zeal = Math.max(t.floor, Math.min(ZEAL_MAX, t.zeal + n));
+      const d = t.zeal - before;
+      if (d) events.push({ key: t.key, text: (d > 0 ? "▲".repeat(d) : "▼".repeat(-d)) + " Zeal", color: d > 0 ? "#7ea4e6" : "#de5e55" });
+      if (t.zeal > t.floor) return false;
       if (t.side === "foe" && t.def.secretConvert) {
         t.state = "converted"; t.since = 0;
         events.push({ key: t.key, text: "Converted!", color: "#e8b94a", out: "converted" });
@@ -304,7 +304,7 @@ const Battle = (() => {
     function heal(t, frac, events) {
       const a = Math.round(t.maxHp * frac);
       if (t.state === "discouraged") {
-        t.state = "in"; t.morale = Math.max(t.morale, 0); t.hp = Math.max(t.hp, 1);
+        t.state = "in"; t.zeal = Math.max(t.zeal, 0); t.hp = Math.max(t.hp, 1);
         events.push({ key: t.key, text: "Encouraged!", color: "#74c07a", back: true });
       }
       if (t.state !== "in") return;
@@ -344,10 +344,8 @@ const Battle = (() => {
   // An apologist under pressure is flustered, not doubting his faith: the same
   // status (it wears on Composure) takes a different name on the heroes' side.
   const label = (s, u) => (s === "doubting" && u && u.side === "hero" ? "Flustered" : LABELS[s] || s);
-  // The player sees only Attack and Defense; which kind of argument a hero is
-  // best at stays hidden.
-  const statName = (s) => ({ r: "Attack", l: "Attack", c: "Defense", crit: "Crit" }[s] || s);
-  const immuneName = (k) => ({ conviction: "Steadfast", learning: "Testimony", faith: "Faith Alone", security: "Eternal Security" }[k] || k);
+  const statName = (s) => ({ atk: "Attack", def: "Defense", crit: "Crit" }[s] || s);
+  const immuneName = (k) => ({ steadfast: "Steadfast", testimony: "Testimony", faith: "Faith Alone", security: "Eternal Security" }[k] || k);
 
   // Fight to the end. `choose(u)` returns a promise of { i, target } for a hero
   // the player controls; without it, everyone plays themselves.
@@ -372,7 +370,7 @@ const Battle = (() => {
       const r = b.use(u, pick.i, pick.target, targets);
       view.show(r.events);
       await view.sleep(r.events.some((e) => e.out) ? 2.0 : 0.9);
-      // A friend with good Morale may jump in.
+      // A friend with good Zeal may jump in.
       const bk = b.outcome() ? null : b.backup(u, pick.i, targets);
       if (bk) {
         const bt = b.aim(bk.ally, 0, bk.target);
@@ -398,7 +396,7 @@ const Battle = (() => {
     return i === great ? 4 : i <= 1 ? 1 : 2;
   }
 
-  // A move in plain words, for the player: hits on Composure, Morale up or
+  // A move in plain words, for the player: hits on Composure, Zeal up or
   // down, and the statuses. No hidden numbers.
   function describe(sk) {
     const out = [];
@@ -413,7 +411,7 @@ const Battle = (() => {
         if (e.splash) t += ", with some for everyone else";
         out.push(t);
       }
-      if (e.morale) out.push(pct(e) + (e.morale < 0 ? "Morale down " + -e.morale : "Morale up " + e.morale) + (e.faction ? " (" + e.faction + " only)" : ""));
+      if (e.zeal) out.push(pct(e) + (e.zeal < 0 ? "Zeal down " + -e.zeal : "Zeal up " + e.zeal) + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.status) out.push(pct(e) + STATUS[e.status]);
       if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
@@ -423,10 +421,10 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.citation) out.push("Citation: blocks most of the next hit");
       if (e.counter || e.selfCounter) out.push("Rebuttal: answers back when addressed");
-      if (e.immune) out.push({ conviction: "Steadfast: no Morale loss", learning: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
-      if (e.selfMorale) out.push("Morale up " + e.selfMorale + " for this hero");
-      if (e.allyMorale) out.push("Morale up " + e.allyMorale + " for the whole team");
-      if (e.onBreak) out.push("Morale up if it puts someone out");
+      if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
+      if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
+      if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
+      if (e.onBreak) out.push("Zeal up if it puts someone out");
       if (e.randomLift) out.push("A random lift for each");
       if (e.friendsCleanse) out.push("Frees friends from " + e.friendsCleanse);
       if (e.summon) out.push("Calls in help");
@@ -483,11 +481,11 @@ const BattleView = (() => {
           ctx.fillStyle = "#2a2f55"; ctx.fillRect(x, y, 60, 5);
           ctx.fillStyle = u.hp / u.maxHp > 0.3 ? "#74c07a" : "#de8a4a"; ctx.fillRect(x, y, Math.round(60 * u.hp / u.maxHp), 5);
           if (u.shield) { ctx.fillStyle = "#7ea4e6"; ctx.fillRect(x, y - 3, Math.min(60, Math.round(60 * u.shield.amt / u.maxHp)), 2); }
-          // Morale: blue arrows up when it is good; red arrows down when it
+          // Zeal: blue arrows up when it is good; red arrows down when it
           // falls, with dim ones showing how far until the floor.
           const step = Math.min(14, Math.floor(62 / Math.max(3, -u.floor)));
-          if (u.morale > 0) for (let i = 0; i < u.morale; i++) arrow(ctx, x + 5 + i * 14, y + 9, true, "#7ea4e6");
-          else if (u.morale < 0) for (let i = 0; i < -u.floor; i++) arrow(ctx, x + 5 + i * step, y + 9, false, i < -u.morale ? "#ff5a4e" : "#4a3040");
+          if (u.zeal > 0) for (let i = 0; i < u.zeal; i++) arrow(ctx, x + 5 + i * 14, y + 9, true, "#7ea4e6");
+          else if (u.zeal < 0) for (let i = 0; i < -u.floor; i++) arrow(ctx, x + 5 + i * step, y + 9, false, i < -u.zeal ? "#ff5a4e" : "#4a3040");
           else { ctx.fillStyle = "#8a8aa8"; ctx.fillRect(x, y + 12, 12, 3); }
           // Statuses, as small letters.
           const tags = [];
