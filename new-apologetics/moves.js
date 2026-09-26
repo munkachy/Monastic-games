@@ -204,6 +204,7 @@ const Theater = (() => {
       if (!team.includes(hero)) team = [hero, ...team.filter((h) => h !== hero)].slice(0, 4);
       else team = [hero, ...team.filter((h) => h !== hero)];
       const move = MOVES[hero][index];
+      if (move.duo && !team.includes(move.duo)) team = [hero, move.duo, ...team.filter((h) => h !== hero && h !== move.duo)].slice(0, 4);
       current = { hero, move: build(move, hero), start: now, index };
     }
 
@@ -656,6 +657,47 @@ const Theater = (() => {
       // The keys of Peter, crossed.
       if (k > 1.6) { ctx.fillStyle = "#e8b94a"; ctx.save(); ctx.translate(470, 330); ctx.rotate(0.6); ctx.fillRect(-40, -3, 80, 6); ctx.restore(); ctx.save(); ctx.translate(470, 330); ctx.rotate(-0.6); ctx.fillStyle = "#cfd6dc"; ctx.fillRect(-40, -3, 80, 6); ctx.restore(); }
     },
+    // Fr. Spitzer: the universe expands from a single point. It had a beginning.
+    bigbang(ctx, k) {
+      ctx.fillStyle = "#04050e"; ctx.fillRect(0, 0, W, H);
+      const cx = 470; const cy = 190;
+      const r = ease(span(k, 0.15, 1.6)) * 330;
+      for (let i = 0; i < 140; i++) {
+        const a = i * 2.39996; const d = ((i * 37) % 100) / 100;
+        const x = cx + Math.cos(a) * d * r; const y = cy + Math.sin(a) * d * r * 0.8;
+        px(ctx, x, y, i % 7 ? 2 : 3, i % 3 ? "#cfd8ff" : i % 3 === 1 ? "#ffd8a0" : "#ffffff");
+      }
+      if (k < 0.5) { ctx.fillStyle = `rgba(255,255,255,${1 - k * 2})`; ctx.beginPath(); ctx.arc(cx, cy, 10 + k * 80, 0, Math.PI * 2); ctx.fill(); }
+      if (k > 0.9) text(ctx, "H(avg) > 0  ⇒  past-incomplete", cx, 318, 15, "#9fd0ff");
+      if (k > 1.3) outlinedText(ctx, "THE UNIVERSE BEGAN", cx, 128, 24, "#ffe07a");
+    },
+    // Ethan Muse and Fr. Spitzer together: the miracles that point to one Church.
+    miracles(ctx, k) {
+      ctx.fillStyle = "#1a1530"; ctx.fillRect(0, 0, W, H);
+      const cards = [
+        ["FATIMA", "1917", (x, y, q) => { for (let i = 0; i < 12; i++) { const a = i * 0.52 + q * 6; ctx.fillStyle = i % 2 ? "#ffd84a" : "#ff9a3a"; ctx.fillRect(x + Math.cos(a) * 26 - 3, y + Math.sin(a) * 26 - 3, 6, 6); } ctx.fillStyle = "#fff2a8"; ctx.beginPath(); ctx.arc(x + Math.sin(q * 9) * 6, y, 16, 0, Math.PI * 2); ctx.fill(); }],
+        ["LANCIANO", "8TH C.", (x, y) => { ctx.fillStyle = "#f3ead2"; ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#b8322a"; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 2, y - 30, 4, 10); }],
+        ["GUADALUPE", "1531", (x, y) => { ctx.fillStyle = "#2f8a7a"; ctx.beginPath(); ctx.moveTo(x, y - 26); ctx.lineTo(x + 16, y + 24); ctx.lineTo(x - 16, y + 24); ctx.fill(); ctx.fillStyle = "#f1c6a6"; ctx.fillRect(x - 4, y - 22, 8, 8); for (let i = 0; i < 10; i++) { ctx.fillStyle = "#ffd84a"; ctx.fillRect(x - 22 + (i % 2) * 44, y - 20 + i * 4, 3, 3); } }],
+        ["LOURDES", "1858", (x, y, q) => { ctx.fillStyle = "#6a6a72"; ctx.beginPath(); ctx.arc(x, y + 8, 26, Math.PI, 0); ctx.fill(); ctx.fillStyle = "#f7f5ee"; ctx.fillRect(x - 4, y - 12, 8, 16); ctx.fillStyle = "#6fb4d4"; for (let i = 0; i < 4; i++) ctx.fillRect(x - 12 + i * 8, y + 12 + ((q * 60 + i * 5) % 12), 3, 5); }],
+      ];
+      cards.forEach(([name, year, draw], i) => {
+        const x = 110 + (i % 2) * 150 + 160; const y = 130 + Math.floor(i / 2) * 116;
+        const q = ease(span(k, 0.15 + i * 0.3, 0.45 + i * 0.3));
+        if (q <= 0) return;
+        ctx.globalAlpha = q;
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 66, y - 50, 132, 100); ctx.fillStyle = "#2a2450"; ctx.fillRect(x - 62, y - 46, 124, 92);
+        draw(x, y - 6, k);
+        text(ctx, name, x, y + 38, 12, "#fdfaf2"); text(ctx, year, x, y - 32, 10, "#a9a6bd");
+        ctx.globalAlpha = 1;
+        if (k > 0.55 + i * 0.3) { ctx.save(); ctx.translate(x, y + 4); ctx.rotate(-0.25); ctx.strokeStyle = "#e8b94a"; ctx.lineWidth = 3; ctx.strokeRect(-56, -12, 112, 22); text(ctx, "VINDICATED", 0, 5, 13, "#e8b94a"); ctx.restore(); }
+      });
+    },
+    miraclesFront(ctx, k) {
+      // Both apologists, one on each side.
+      const slide = ease(span(k, 0, 0.35));
+      Art.paint(ctx, Art.bust(Art.CAST.muse), Math.round(lerp(-200, 0, slide)), H - 32 * 5, 5);
+      Art.paint(ctx, Art.bust(Art.CAST.spitzer), Math.round(lerp(W + 40, W - 160, slide)), H - 32 * 5, 5, true);
+    },
     // Ethan Muse's Camera Mog: a recording frame, and the lean-in.
     mog(ctx, k) {
       ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, W, H);
@@ -687,6 +729,7 @@ const Theater = (() => {
       { name: "Open Challenge", kind: hex, to: "all", pose: "raise", say: "I'll debate any of you. Right now.", mark: ["called", "pipDown"], fx: (ctx, api, h, targets, t, k) => waves(ctx, api, h, targets, t, k, "#de5e55") },
       { name: "Steelman Stance", kind: aura, to: "self", mark: ["shield", "up"], say: "Let me put your case better.", color: "#cfd6dc" },
       { name: "Camera Mog", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 170, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
+      { name: "Vindicatory Miracles", duo: "spitzer", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
     ],
     schmitz: [
       { name: "Two-Minute Homily", kind: volley, glyphs: ["Here's the thing…"], color: "#e8b94a" },
@@ -759,12 +802,23 @@ const Theater = (() => {
       { name: "Stallone Voice", kind: hex, to: "one", say: "Let me tell you something…", mark: "dumbfounded", fx: (ctx, api, h, targets, t, k) => { waves(ctx, api, h, targets, t, k, "#e8b94a"); if (k > 0.5 && t < 1.4) { ctx.fillStyle = "rgba(232,185,74,0.12)"; ctx.fillRect(0, 0, 640, 360); } } },
       { name: "Voice of Reason", kind: cinematic, who: "Alex Jurado", color: "#8a6a1a", scene: SCENES.voice, to: "all", mark: ["factcheck", "pipDown"], impact: impactOn("#e8b94a") },
     ],
+    spitzer: [
+      { name: "Fine-Tuning", kind: volley, glyphs: ["Λ", "G"], color: "#9fd0ff", mark: "factcheck" },
+      { name: "The Four Levels of Happiness", kind: aura, to: "allies", mark: ["shield", "up"], say: "Level four: the transcendent.", color: "#ffe07a", backdrop: (ctx, h, t) => { const q = span(t, 0.1, 0.8); for (let i = 0; i < 4; i++) { if (q * 4 < i) break; ctx.fillStyle = ["#6a6a72", "#7ea4e6", "#74c07a", "#e8b94a"][i]; ctx.fillRect(h.x + 44 + i * 16, h.y - 24 - i * 16, 16, 24 + i * 16); } } },
+      { name: "Borde–Guth–Vilenkin", kind: cinematic, who: "Fr. Robert Spitzer, SJ", color: "#23305a", scene: SCENES.bigbang, to: "all", mark: ["muted", "pipDown"], impact: impactOn("#ffe07a") },
+      { name: "Vindicatory Miracles", duo: "muse", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
+    ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
       { name: "Former Litigator", kind: aura, to: "allies", mark: "crit", say: "Objection!", color: "#e8b94a" },
       { name: "Shameless Popery", kind: cinematic, who: "Joe Heschmeyer", color: "#3a4356", scene: SCENES.fathers, to: "one", mark: ["pipDown", "doubting"], impact: impactOn("#e8b94a") },
     ],
   };
+
+  for (const list of Object.values(MOVES)) {
+    const solo = list.filter((m) => !m.duo);
+    solo[solo.length - 1].great = true;
+  }
 
   function build(m, hero) {
     const move = m.kind(m);

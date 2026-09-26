@@ -95,6 +95,8 @@
   .skills .meta { font: 500 12px/1.4 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
   .skills .fx { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
   .skills .ult .name { color: var(--gold); }
+  .duo { display: grid; gap: 4px; padding: 10px 12px; border: 2px solid #8a6ad8; border-radius: 4px; font-size: 14px; color: var(--muted); }
+  .duo b { font: 600 17px/1.2 var(--display); color: #c9b4ff; }
   .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
   .open-slot { border-style: dashed; background: transparent; }
 
@@ -117,6 +119,8 @@
   .movebar button small { font: 600 10px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
   .movebar button.great { border-color: var(--gold); }
   .movebar button.great small { color: var(--gold); }
+  .movebar button.duo-move { border-color: #8a6ad8; }
+  .movebar button.duo-move small { color: #c9b4ff; }
   .movebar button:hover, .picker button:hover { border-color: var(--marian); }
   .autoplay { margin-left: auto; font: 600 12px/1 var(--display); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; cursor: pointer; }
 
@@ -213,7 +217,7 @@
     <div class="lede">
       <span class="label">The roster</span>
       <h2>Each apologist plays like a Legends hero</h2>
-      <p>Fifteen heroes. Each uses a Legends hero's kit: the same targets, cooldowns and percentages, and starting stats scaled from that hero's rank-one numbers. The balance is borrowed, and the personality is each one's own.</p>
+      <p>Sixteen heroes. Each uses a Legends hero's kit: the same targets, cooldowns and percentages, and starting stats scaled from that hero's rank-one numbers. The balance is borrowed, and the personality is each one's own.</p>
     </div>
     <div class="roster" id="roster"></div>
   </section>
@@ -222,7 +226,7 @@
     <div class="lede">
       <span class="label">Every move, animated</span>
       <h2>The move theater</h2>
-      <p>Ordinary moves share a few animations, the way every phaser shot in Legends looks alike. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Pick a hero, then a move.</p>
+      <p>Ordinary moves share a few animations, the way every phaser shot in Legends looks alike. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Two heroes also share a duo great move: Ethan Muse and Fr. Spitzer's Vindicatory Miracles. Pick a hero, then a move.</p>
     </div>
     <div class="stage"><canvas id="theater" width="640" height="360" aria-label="The move theater: the chosen hero performs the chosen move against three opponents."></canvas></div>
     <div class="theater-ui">
@@ -320,6 +324,7 @@
         ["Steelman Stance", "Self", "3 (starts 1)", "Rebuttal, and Major Rhetoric Up for 3 turns. He states your case better than you did, then answers it."],
         ["Camera Mog", "1 foe", "4 (starts 2)", "400% Rhetoric, 600% if the target is Doubting. If this breaks the target's conviction, Ethan gains +1 Conviction.", true],
       ],
+      duo: ["Vindicatory Miracles", "with Fr. Spitzer", "All foes", "A duo great move, like Legends' team-up attacks. Fatima, Lanciano, Guadalupe and Lourdes appear one by one, each stamped VINDICATED: miracles that confirm specifically Catholic teaching. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
       flavor: "The tank. Open Challenge draws every argument onto him, so the healer can keep one man standing.",
     },
     {
@@ -466,6 +471,18 @@
       flavor: "Khan's kit belongs to Legends' rarest and hardest-hitting hero. It suits the biggest voice in the game.",
     },
     {
+      id: "spitzer", name: "Fr. Robert Spitzer, SJ", tag: "Magis Center · physicist-philosopher", role: "Engineering", like: "Seven of Nine",
+      stats: [188, 70, 135, 18, 73],
+      passive: ["Magis", "+3% Learning."],
+      skills: [
+        ["Fine-Tuning", "1 foe", "0", "Two hits of 60% Learning: the constants of nature, set on a knife's edge. 25% chance of a Fact-Check."],
+        ["The Four Levels of Happiness", "All allies", "3", "Examen and a Charity Shield for everyone. From pleasure, to achievement, to love, to the transcendent."],
+        ["Borde–Guth–Vilenkin", "1 foe", "4 (starts 2)", "250% Learning, and Muted for 3 turns, with a smaller blow to the others. An expanding universe cannot be past-eternal.", true],
+      ],
+      duo: ["Vindicatory Miracles", "with Ethan Muse", "All foes", "The duo great move he shares with Ethan Muse: the miracles that confirm specifically Catholic teaching, one after another. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
+      flavor: "Seven of Nine's kit: the scientist whose finisher locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
+    },
+    {
       id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Command", like: "Sulu",
       stats: [188, 30, 88, 10, 170],
       passive: ["The Early Church Was the Catholic Church", "+5% Learning to Catholic Answers allies."],
@@ -525,7 +542,7 @@
     ["Upon This Rock", "A Protestant podcaster is weighing the evidence for the papacy, as Cameron Bertuzzi once did. Help him follow it all the way. Cameron joins the team.", "The primacy and infallible teaching office of the Pope. Vatican I, Pastor Aeternus (1870).", "", "g-dogma", "Dogma"],
     ["Pints and Paradoxes", "Matt Fradd opens the pub for a night of debates with skeptic streamers. Can reason reach God at all?", "God can be known with certainty by the natural light of reason. Vatican I, Dei Filius, canon 2.1.", "", "g-dogma", "Dogma"],
     ["The Restoration", "Two missionaries knock on the door, and the trail leads to Jacob Hansen. Can the Church Christ founded fall away?", "The Church cannot fail: “the gates of hell shall not prevail” (Mt 16:18; Lumen Gentium 8). God is utterly simple, not an exalted man (Lateran IV, 1215).", "", "g-dogma", "Dogma"],
-    ["Signs and Wonders", "Ethan Muse takes on the skeptics over Fatima and the Eucharistic miracle of Lanciano, and teaches you to argue a miracle without overclaiming it.", "Approved apparitions are private revelation. They are not part of the deposit of faith, and no Catholic is bound to believe them (CCC 67).", "", "g-private", "Private revelation"],
+    ["Signs and Wonders", "Ethan Muse and Fr. Spitzer take on the skeptics over Fatima, Lanciano and the Shroud, and unlock Vindicatory Miracles together. You learn to argue a miracle without overclaiming it.", "That miracles happen and can be known with certainty, as signs that revelation is from God, is defined (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is another matter: approved apparitions are private revelation, and no Catholic is bound to believe them (CCC 67).", "", "g-dogma", "Dogma"],
     ["Mysterious World", "Jimmy Akin investigates a UFO sect with a message from the stars. Discernment, not ridicule.", "Whether intelligent life exists on other worlds is an open question. The Church has taught nothing on it.", "", "g-opinion", "Opinion"],
     ["People of the Book", "At Speakers' Corner, GodLogic joins as a guest. Catholics and Protestants stand together on the Trinity and the Cross.", "“Let the People of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact in Muhammad's day, what corrupted it afterward? Beside it: Muslims “together with us adore the one, merciful God” (CCC 841).", "", "g-argument", "Argument"],
     ["Scripture Alone?", "First battle with James White. Which books belong in the Bible, and who decided?", "The canon of Scripture, defined at Trent, Session IV (1546). The same list was received at Rome (382) and Hippo (393).", "", "g-dogma", "Dogma"],
@@ -600,7 +617,17 @@
     const flavor = document.createElement("p");
     flavor.className = "flavor";
     flavor.textContent = h.flavor;
-    card.append(head, stats, passive, skillList(h.skills), flavor);
+    card.append(head, stats, passive, skillList(h.skills));
+    if (h.duo) {
+      const d = document.createElement("div");
+      d.className = "duo";
+      d.innerHTML = `<span class="label"></span><b></b><span></span>`;
+      d.querySelector(".label").textContent = "Duo great move · " + h.duo[1];
+      d.querySelector("b").textContent = h.duo[0];
+      d.querySelector("span:last-child").textContent = h.duo[3];
+      card.append(d);
+    }
+    card.append(flavor);
     roster.append(card);
   }
 
@@ -778,16 +805,17 @@
   let autoplay = !still;
   let clock = 0;
   let queued = null;
+  const greatIndex = (id) => Theater.MOVES[id].findIndex((m) => m.great);
 
   function renderMoves() {
     movebar.textContent = "";
     const moves = Theater.MOVES[chosen];
     moves.forEach((m, i) => {
       const b = document.createElement("button");
-      const great = i === moves.length - 1;
-      b.className = great ? "great" : "";
+      const great = !!m.great;
+      b.className = great ? "great" : m.duo ? "great duo-move" : "";
       b.innerHTML = "<small></small><span></span>";
-      b.querySelector("small").textContent = great ? "Great move" : i === 0 ? "Basic" : "Skill";
+      b.querySelector("small").textContent = m.duo ? "Duo great move" : great ? "Great move" : i === 0 ? "Basic" : "Skill";
       b.querySelector("span").textContent = m.name;
       b.addEventListener("click", () => { autoplay = false; paintAuto(); queued = [chosen, i]; });
       movebar.append(b);
@@ -815,7 +843,7 @@
     const name = document.createElement("span");
     name.textContent = NAMES[id].replace(/^(Fr\.|Sr\.|Bishop) /, "").split(",")[0];
     b.append(name);
-    b.addEventListener("click", () => { autoplay = false; choose(id); queued = [id, Theater.MOVES[id].length - 1]; });
+    b.addEventListener("click", () => { autoplay = false; choose(id); queued = [id, greatIndex(id)]; });
     picker.append(b);
   }
   choose(chosen);
@@ -824,7 +852,7 @@
     // Autoplay walks through every hero's great move in turn.
     const next = ORDER[(ORDER.indexOf(chosen) + 1) % ORDER.length];
     choose(next);
-    queued = [next, Theater.MOVES[next].length - 1];
+    queued = [next, greatIndex(next)];
   });
   function drawTheater(t) {
     clock = t;
