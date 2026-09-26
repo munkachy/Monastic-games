@@ -46,6 +46,21 @@
   .note { font-size: 14px; color: var(--muted); }
   .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
+  .bar .music { margin-left: auto; }
+  .bar .music + button { margin-left: 0; }
+  .bar .music.off { color: var(--muted); }
+  .bar .test-tag { font: 600 11px/1 var(--display); color: var(--night); background: var(--green); padding: 4px 6px; border-radius: 3px; }
+  .coach { margin: 0; padding: 12px 14px; background: #2e2a18; border: 2px solid var(--gold); border-radius: 6px; font-size: 15px; }
+  .coach b { font-family: var(--display); color: var(--gold); font-weight: 600; }
+  .hero-info { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
+  .hero-info h3 { font-size: 17px; }
+  .hero-info ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+  .hero-info li.locked { color: var(--muted); }
+  .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
+  .music-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .music-modes button { min-height: 40px; padding: 6px 10px; font-size: 13px; }
+  .music-modes button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+
   /* Title */
   .title-card { display: grid; gap: 16px; justify-items: start; padding-block: 24px; }
   .title-card h1 { font-size: clamp(44px, 10vw, 80px); line-height: 1; color: var(--gold); }
@@ -80,6 +95,7 @@
   .moves button small { font: 600 10px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
   .moves button.great { border-color: var(--gold); }
   .moves button.duo { border-color: #8a6ad8; }
+  .moves button.locked { border-style: dashed; }
   .targets { display: flex; gap: 8px; flex-wrap: wrap; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; }
   .controls button { min-height: 36px; padding: 6px 12px; font-size: 13px; }
@@ -105,6 +121,8 @@
 <header class="bar">
   <a class="home" href="./">New Apologetics</a>
   <span class="wip">Work in progress · under review</span>
+  <span class="test-tag" id="test-tag" hidden>Testing mode</span>
+  <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
 </header>
 
 <section id="s-title" class="screen">
@@ -117,6 +135,11 @@
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
     </div>
+    <div style="justify-self:stretch">
+      <span class="label">Music</span>
+      <div class="music-modes" id="music-modes" style="margin-top:8px"></div>
+    </div>
+    <button id="test-mode" aria-pressed="false">Testing mode: off</button>
     <p class="note">This game is still under review. The likenesses, the lines and the moves are drafts and may change. <a href="./">About the game</a></p>
   </div>
 </section>
@@ -126,6 +149,7 @@
     <span class="label">Chapters</span>
     <h2>Choose a mission</h2>
   </div>
+  <p class="coach" id="map-coach" hidden></p>
   <div id="chapters" class="screen" style="padding:0"></div>
 </section>
 
@@ -142,7 +166,9 @@
   </div>
   <div><span class="label">Opponents</span><div class="foes" id="team-foes"></div></div>
   <div><span class="label" id="team-count"></span><div class="picked" id="team-picked"></div></div>
+  <p class="coach" id="team-coach" hidden></p>
   <div class="roster" id="roster"></div>
+  <div class="hero-info" id="hero-info" hidden></div>
   <div class="row"><button class="primary" id="begin" disabled>Begin</button><button id="team-back">Back</button></div>
 </section>
 
@@ -150,6 +176,7 @@
   <div class="hud"><span id="turn"></span><span class="label" id="round"></span></div>
   <canvas id="battle" width="640" height="360" aria-label="The battle. Tap an opponent or a friend to choose a target."></canvas>
   <p id="log" aria-live="polite"></p>
+  <p class="coach" id="battle-coach" hidden></p>
   <div id="panel" style="display:grid;gap:10px"></div>
   <div class="controls">
     <button id="speed" aria-pressed="false">Speed ×1</button>
@@ -161,11 +188,13 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="art.js"></script>
-<script src="moves.js"></script>
-<script src="story.js"></script>
-<script src="data.js"></script>
-<script src="battle.js"></script>
+<script src="chants.js?v=20260926b"></script>
+<script src="audio.js?v=20260926b"></script>
+<script src="art.js?v=20260926b"></script>
+<script src="moves.js?v=20260926b"></script>
+<script src="story.js?v=20260926b"></script>
+<script src="data.js?v=20260926b"></script>
+<script src="battle.js?v=20260926b"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -210,9 +239,11 @@
     const ch = C[ci];
     return ch.missions.length ? stars(ci, ch.missions.length - 1) > 0 : !!save.seen[ch.id + ":before"];
   }
-  const chapterOpen = (ci) => ci === 0 || chapterDone(ci - 1);
-  const missionOpen = (ci, mi) => chapterOpen(ci) && (mi === 0 || stars(ci, mi - 1) > 0);
+  // Testing mode opens every chapter, hero and move, for trying things out.
+  const chapterOpen = (ci) => save.test || ci === 0 || chapterDone(ci - 1);
+  const missionOpen = (ci, mi) => chapterOpen(ci) && (save.test || mi === 0 || stars(ci, mi - 1) > 0);
   function roster() {
+    if (save.test) return Object.keys(HEROES).filter((h) => !HEROES[h].guest);
     const r = new Set(GameData.START);
     C.forEach((ch, ci) => { if (chapterDone(ci)) ch.unlocks.forEach((h) => r.add(h)); });
     return [...r];
@@ -227,6 +258,71 @@
     return known.length ? Math.round(known.reduce((a, b) => a + b, 0) / known.length) : 0;
   }
   const levelOfHero = (id) => Battle.levelOf(xpOf(id));
+  const isGreat = (def, i) => !def.skills[i].duo && i === def.skills.filter((x) => !x.duo).length - 1;
+  // The moves a hero gains in going from one level to another.
+  const unlockedBetween = (id, from, to) => HEROES[id].skills.filter((sk, i) => {
+    const at = Battle.unlockLevel(HEROES[id], i);
+    return at > from && at <= to;
+  }).map((sk) => sk.name);
+
+  // ---- Coaching: step-by-step help in the tutorial and the first real mission ------------
+
+  function coach(id, html) {
+    const el = $(id);
+    el.hidden = !html;
+    el.innerHTML = html || "";
+  }
+  let tutorial = false;
+  let coachStep = 0;
+
+  // ---- Music ------------------------------------------------------------------------------
+
+  const MUSIC_NAMES = {
+    both: "Chant + Techno", "dubstep-chant": "Chant + Dubstep", "electro-chant": "Chant + Electro",
+    chant: "Chant", techno: "Techno", dubstep: "Dubstep", electro: "Electro", off: "Silence",
+  };
+  if (!save.music || !Sound.MODES.includes(save.music)) save.music = "both";
+  Sound.setMode(save.music);
+  let tune = { chant: "vespers", intensity: 0 };
+  // Each part of the game has its chant: Ave Maris Stella on the map, the Te Deum
+  // in debates, Rector potens against a boss. The beat grows with the stakes.
+  function music(chant, intensity) {
+    tune = { chant, intensity };
+    Sound.setIntensity(intensity);
+    if (Sound.playing) Sound.setChant(chant); else Sound.startMusic(chant);
+  }
+  function setMusic(m) {
+    Sound.unlock();
+    save.music = m; store();
+    Sound.setMode(m);
+    if (m !== "off") Sound.startMusic(tune.chant); else Sound.stopMusic();
+    paintMusic();
+  }
+  function paintMusic() {
+    $("music").textContent = "♪ " + MUSIC_NAMES[save.music];
+    $("music").classList.toggle("off", save.music === "off");
+    const box = $("music-modes");
+    box.textContent = "";
+    for (const m of Sound.MODES) {
+      const b = document.createElement("button");
+      b.textContent = MUSIC_NAMES[m];
+      b.setAttribute("aria-pressed", String(m === save.music));
+      b.addEventListener("click", () => setMusic(m));
+      box.append(b);
+    }
+  }
+  $("music").addEventListener("click", () => setMusic(Sound.MODES[(Sound.MODES.indexOf(save.music) + 1) % Sound.MODES.length]));
+  // Browsers allow sound only after a tap, so the first tap anywhere starts it.
+  document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
+  paintMusic();
+
+  function paintTest() {
+    $("test-mode").textContent = "Testing mode: " + (save.test ? "on · every chapter, hero and move open" : "off");
+    $("test-mode").setAttribute("aria-pressed", String(!!save.test));
+    $("test-tag").hidden = !save.test;
+  }
+  $("test-mode").addEventListener("click", () => { save.test = !save.test; store(); paintTest(); });
+  paintTest();
 
   // ---- Screens and the clock -----------------------------------------------------------
 
@@ -318,6 +414,13 @@
       }
       box.append(el);
     });
+    const played = Object.keys(save.stars).length;
+    coach("map-coach", save.test ? "" : !played
+      ? "<b>Start here.</b> Tap <b>Tutorial</b> in the Prologue below. It walks you through your first debate, one step at a time."
+      : played === 1 && !stars(1, 0)
+        ? "<b>Well done!</b> New heroes have joined your roster. Tap <b>Mission 1</b> of Chapter 1 to begin the story."
+        : "");
+    music("vespers", 0);
     show("s-map");
   }
 
@@ -326,6 +429,7 @@
   let sceneDone = null;
   function playScene(id, index) {
     story.open(id, index, true);
+    music("vespers", 0);
     show("s-scene");
     paintLine();
     $("scene").focus({ preventScroll: true });
@@ -355,6 +459,34 @@
     const available = m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : []);
     let picked = fixed.slice();
     for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
+    tutorial = !!m.team && ci === 0;
+    coach("team-coach", tutorial
+      ? "<b>Step 1 of 4 · Your team.</b> For the tutorial, Trent Horn and Jimmy Akin are already on your team: you can see them under “Your team” above. Tap either one below to see his moves. Then tap <b>Begin</b>."
+      : !save.stars[mkey(ci, mi)] && ci === 1 && mi === 0
+        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath. When your team is full, tap <b>Begin</b>."
+        : "");
+    const info = $("hero-info");
+    info.hidden = true;
+    function showInfo(id) {
+      const lv = levelOfHero(id);
+      info.textContent = "";
+      const h = document.createElement("h3");
+      h.textContent = HEROES[id].name + " · Level " + lv;
+      const ul = document.createElement("ul");
+      HEROES[id].skills.forEach((sk, i) => {
+        const at = Battle.unlockLevel(HEROES[id], i);
+        const open = save.test || at <= Math.max(lv, m.movesAt || 0);
+        const li = document.createElement("li");
+        li.className = open ? "" : "locked";
+        li.textContent = (open ? "✓ " : "🔒 ") + sk.name;
+        const tag = document.createElement("small");
+        tag.textContent = (i === 0 ? "basic" : sk.duo ? "duo move" : isGreat(HEROES[id], i) ? "great move" : "skill") + (open ? "" : " · unlocks at level " + at);
+        li.append(tag);
+        ul.append(li);
+      });
+      info.append(h, ul);
+      info.hidden = false;
+    }
 
     $("team-chapter").textContent = ch.title + " · " + ch.group;
     $("team-mission").textContent = m.name;
@@ -375,12 +507,14 @@
     for (const id of available) {
       const b = document.createElement("button");
       b.dataset.id = id;
-      b.disabled = fixed.includes(id);
+      if (fixed.includes(id)) b.title = "Always on the team for this mission";
       b.append(portrait(id, 2));
       const n = document.createElement("span"); n.textContent = HEROES[id].name.replace(/^(Fr\.|Sr\.|Bishop) /, "");
       const r = document.createElement("small"); r.textContent = "Lv " + levelOfHero(id) + " · " + (HEROES[id].guest ? "Guest" : ROLES[id]);
       b.append(n, r);
       b.addEventListener("click", () => {
+        showInfo(id);
+        if (fixed.includes(id)) return;
         if (picked.includes(id)) picked = picked.filter((x) => x !== id);
         else if (picked.length < size) picked.push(id);
         paint();
@@ -432,16 +566,18 @@
       if (s.duo && !b.units.some((x) => x.side === "hero" && x.id === s.duo && x.state === "in")) return;
       const btn = document.createElement("button");
       const great = i === u.def.skills.filter((x) => !x.duo).length - 1 && !s.duo;
-      btn.className = s.duo ? "duo" : great ? "great" : "";
+      const locked = u.locked && u.locked[i];
+      btn.className = (s.duo ? "duo" : great ? "great" : "") + (locked ? " locked" : "");
       btn.disabled = !ready.includes(i);
       btn.innerHTML = "<span></span><small></small>";
       btn.querySelector("span").textContent = s.name;
-      const wait = u.cd[i] > 0 ? " · ready in " + u.cd[i] : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
+      const wait = locked ? " · 🔒 level " + Battle.unlockLevel(u.def, i) : u.cd[i] > 0 ? " · ready in " + u.cd[i] : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
       btn.querySelector("small").textContent = (s.duo ? "Duo · " : great ? "Great move · " : i === 0 ? "Basic · " : "") + TARGET_WORDS[s.target] + wait;
       btn.addEventListener("click", () => pickMove(b, u, i));
       grid.append(btn);
     });
     panel.append(grid);
+    if (tutorial) coachTurn(b, u);
   }
 
   function pickMove(b, u, i) {
@@ -453,6 +589,7 @@
     const p = document.createElement("p");
     p.className = "note"; p.style.margin = "0";
     p.textContent = s.name + ": " + (s.target === "foe" ? "tap the opponent to answer." : "tap the friend to help.");
+    if (tutorial && coachStep <= 1) coach("battle-coach", "<b>Step 3 of 4 · Choose who to answer.</b> Tap an opponent on the stage above, or tap his name below.");
     const list = document.createElement("div");
     list.className = "targets";
     for (const t of options) {
@@ -470,6 +607,22 @@
     targeting = { options, i };
   }
   let targeting = null;
+
+  // The tutorial's running commentary, one step per turn.
+  function coachTurn(b, u) {
+    coachStep++;
+    const name = u.name;
+    const convMove = u.def.skills.find((sk, i) => !(u.locked && u.locked[i]) && sk.effects.some((e) => e.conv < 0));
+    const great = u.def.skills.findIndex((sk, i) => isGreat(u.def, i));
+    const tips = [
+      "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it.",
+      "<b>Step 4 of 4 · Win the man, not the argument.</b> Under each opponent is a green bar and small blue blocks. The green bar is <b>Composure</b>: if it runs out, he walks off unconvinced. The blue blocks are <b>Conviction</b>: bring them to zero and he converts. " + (convMove ? "<b>" + convMove.name + "</b> lowers Conviction, so try it now." : "Moves that lower Conviction are the ones that convert."),
+      "<b>Tip.</b> A move that says “ready in 2” is recharging: it comes back in two turns. Until then, the basic move is always there.",
+      "<b>Tip.</b> The gold-edged move, <b>" + (great >= 0 ? u.def.skills[great].name : "the great move") + "</b>, is locked until level " + (great >= 0 ? Battle.unlockLevel(u.def, great) : 4) + ". Every debate earns experience, and each level opens new moves.",
+      "<b>Tip.</b> <b>Auto</b> lets your team play by itself, and <b>Speed</b> makes everything faster. You're on your own now. Good luck!",
+    ];
+    coach("battle-coach", tips[Math.min(coachStep, tips.length) - 1]);
+  }
   function finish(choice) {
     targeting = null;
     view.setTargets([]);
@@ -487,7 +640,10 @@
     const m = C[ci].missions[mi];
     const levels = {};
     for (const id of team) levels[id] = levelOfHero(id);
-    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels });
+    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test });
+    music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
+    coachStep = 0;
+    coach("battle-coach", "");
     view = BattleView.create($("battle"), b);
     stopped = false;
     $("log").textContent = "";
@@ -515,9 +671,15 @@
     if (gain) team.forEach((id, i) => {
       save.xp[id] = start[i] + gain;
       const after = Battle.levelOf(save.xp[id]);
-      if (after > Battle.levelOf(start[i])) grew.push(HEROES[id].name + " reached level " + after);
+      if (after > Battle.levelOf(start[i])) {
+        const opened = unlockedBetween(id, Math.max(Battle.levelOf(start[i]), m.movesAt || 0), after);
+        grew.push(HEROES[id].name + " reached level " + after + (opened.length ? " and unlocked " + opened.join(" and ") : ""));
+      }
     });
     store();
+    coach("battle-coach", "");
+    Sound.play(out === "win" ? "star" : out === "lose" ? "lost" : "hour");
+    if (grew.length) setTimeout(() => Sound.play("tier"), 1600);
     return { out, converted, walked, stars: st, gain, grew };
   }
 
@@ -538,10 +700,17 @@
     if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
     const xp = document.createElement("p");
     xp.className = "label";
-    xp.textContent = r.gain ? "+" + r.gain + " experience for each debater" + (r.grew.length ? ". " + r.grew.join(". ") + "!" : ".") : "";
+    xp.textContent = r.gain ? "+" + r.gain + " experience for each debater." : "";
     const row = document.createElement("div");
     row.className = "row";
-    box.append(h, s, p, xp, row);
+    box.append(h, s, p, xp);
+    for (const g of r.grew) {
+      const line = document.createElement("p");
+      line.className = "coach";
+      line.textContent = "▲ " + g;
+      box.append(line);
+    }
+    box.append(row);
     show("s-result");
     return new Promise((res) => {
       const go = document.createElement("button");
@@ -624,7 +793,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [], xp: {} }; store();
+    save = { stars: {}, seen: {}, team: [], xp: {}, music: save.music }; store(); paintTest();
     resetArmed = false; $("reset").textContent = "Progress erased";
   });
   if (Object.keys(save.stars).length) $("play").textContent = "Continue";

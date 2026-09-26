@@ -45,7 +45,16 @@ const Battle = (() => {
     const F = GameData.FOES;
     const rnd = opts.random || Math.random;
     const levels = opts.levels || {};
-    const units = opts.team.map((id, i) => Object.assign(makeUnit(id, "hero", i, H[id], levels[id] || 1), { level: levels[id] || 1 }))
+    // Moves unlock as a hero levels up. Without levels (the design page) or in
+    // testing mode, every move is open.
+    const gated = !!opts.levels && !opts.unlockAll;
+    const units = opts.team.map((id, i) => {
+      const level = levels[id] || 1;
+      const u = makeUnit(id, "hero", i, H[id], level);
+      u.level = level;
+      u.locked = H[id].skills.map((s, k) => gated && unlockLevel(H[id], k) > Math.max(level, opts.movesAt || 0));
+      return u;
+    })
       .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level)));
     let queue = [];
     let round = 0;
@@ -120,7 +129,7 @@ const Battle = (() => {
     }
     function usable(u) {
       return u.def.skills.map((s, i) => ({ s, i })).filter(({ s, i }) =>
-        u.cd[i] === 0 && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s)).map(({ i }) => i);
+        u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s)).map(({ i }) => i);
     }
     // Who can be picked for a move that asks for one target.
     function choices(u, i) {
@@ -335,8 +344,16 @@ const Battle = (() => {
   // Experience: level L needs 50·L·(L−1) points (100 for level 2, 300 for 3, …).
   const levelOf = (xp) => { let L = 1; while (50 * (L + 1) * L <= (xp || 0)) L++; return L; };
   const xpFor = (L) => 50 * L * (L - 1);
+  // The level at which a hero's move opens: the basic move and the first skill
+  // from the start, the second skill at 2, the great move at 4, a duo move at 6.
+  function unlockLevel(def, i) {
+    const s = def.skills[i];
+    if (s.duo) return 6;
+    const great = def.skills.filter((x) => !x.duo).length - 1;
+    return i === great ? 4 : i <= 1 ? 1 : 2;
+  }
 
-  return { create, label, run, levelOf, xpFor };
+  return { create, label, run, levelOf, xpFor, unlockLevel };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
