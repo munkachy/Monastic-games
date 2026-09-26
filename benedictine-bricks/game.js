@@ -23,7 +23,7 @@ const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
 const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
-const MAX_DROP_SPEED = 4;
+const MAX_DROP_SPEED = 6;
 const LANDING_DAMPING = 0.12; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
@@ -47,8 +47,11 @@ const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
-const STONE = { density: 0.002, friction: 0.9, frictionStatic: 1.6, frictionAir: 0.03, restitution: 0, slop: 0.02 };
-const ICE = { density: 0.002, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.03, restitution: 0, slop: 0.02 };
+// Stone is heavy: strong gravity and almost no air drag, so a stone that
+// tips falls hard instead of drifting down like foam.
+const GRAVITY = 2.4;
+const STONE = { density: 0.004, friction: 0.9, frictionStatic: 1.6, frictionAir: 0.004, restitution: 0, slop: 0.02 };
+const ICE = { density: 0.004, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.004, restitution: 0, slop: 0.02 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -235,7 +238,7 @@ function loadSave() {
   const fresh = {
     coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
     rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
-    missions: {}, active: {}, world: "stbernard", bests: {}, sound: true,
+    missions: {}, active: {}, world: "stbernard", bests: {}, music: "both",
   };
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { /* no storage */ }
@@ -327,6 +330,7 @@ function newTower() {
   engine = Engine.create({ enableSleeping: true });
   engine.positionIterations = 20;
   engine.velocityIterations = 14;
+  engine.gravity.y = GRAVITY;
 
   world = WORLDS.find((w) => w.id === save.world) || WORLDS[0];
   missionsNow = currentMissions(world);
@@ -381,7 +385,7 @@ function newTower() {
   zoom = 1;
   dayClock = 0;
   hourIndex = 0;
-  if (save.sound) Sound.startMusic(HOURS[0].chant);
+  Sound.startMusic(HOURS[0].chant);
   Sound.setChant(HOURS[0].chant);
   Sound.setIntensity(0);
   tier = 0;
@@ -517,18 +521,37 @@ function land() {
 function move(dir) {
   if (mode !== "play" || !active || !steering) return;
   const half = TILE / 2;
+  const before = { x: active.position.x, y: active.position.y };
   const x = Math.max(half, Math.min(VIEW_W - half, active.position.x + dir * half));
   Body.setPosition(active, { x, y: active.position.y });
   snapToSupport();
+  // Stones are solid: a steered stone cannot be pushed into the tower, which
+  // would fling the stones it overlaps.
+  if (overlapsTower()) Body.setPosition(active, before);
 }
 
 function rotate() {
   if (mode !== "play" || !active || !steering) return;
+  const before = { x: active.position.x, y: active.position.y };
   targetAngle += Math.PI / 2;
   Body.setAngle(active, targetAngle);
-  stats.rotations++;
   snapToSupport();
+  if (overlapsTower()) {
+    targetAngle -= Math.PI / 2;
+    Body.setAngle(active, targetAngle);
+    Body.setPosition(active, before);
+    return;
+  }
+  stats.rotations++;
   Sound.play("rotate");
+}
+
+// Test each square of the steered stone, not its outline, so an L can tuck
+// under an overhang.
+function overlapsTower() {
+  const others = Composite.allBodies(engine.world).filter((b) => b !== active);
+  const squares = active.parts.length > 1 ? active.parts.slice(1) : [active];
+  return squares.some((sq) => Matter.Query.collides(sq, others).some((c) => (c.collided !== false) && c.depth > 1));
 }
 
 // Line the falling stone up with whatever it would land on: its edges sit
@@ -1785,28 +1808,39 @@ function bindButton(el, action) {
 
 bindButton($("btn-pause"), togglePause);
 
-// Sound on and off. Browsers allow sound only after a tap, so any tap on the
+// The music button cycles through chant with techno, chant alone, techno
+// alone, and silence. Browsers allow sound only after a tap, so any tap on the
 // page also wakes the sound system.
+const MUSIC_NAMES = { both: "Chant + Techno", chant: "Chant", techno: "Techno", off: "Silence" };
+const MUSIC_MARKS = { both: "♪✠", chant: "✠", techno: "♪", off: "–" };
+
 function paintSoundButtons() {
   for (const el of document.querySelectorAll(".sound-toggle")) {
-    el.textContent = save.sound ? "♪" : "♪̸";
-    el.setAttribute("aria-label", save.sound ? "Turn sound off" : "Turn sound on");
-    el.classList.toggle("off", !save.sound);
+    el.textContent = MUSIC_MARKS[save.music];
+    el.setAttribute("aria-label", "Music: " + MUSIC_NAMES[save.music] + ". Tap to change.");
+    el.classList.toggle("off", save.music === "off");
   }
+  const label = $("music-name");
+  if (label) label.textContent = MUSIC_NAMES[save.music];
 }
 
 function toggleSound() {
   Sound.unlock();
-  save.sound = !save.sound;
+  const modes = Sound.MODES;
+  save.music = modes[(modes.indexOf(save.music) + 1) % modes.length];
   writeSave();
-  Sound.setEnabled(save.sound);
-  if (save.sound && (mode === "play" || mode === "paused")) Sound.startMusic(HOURS[hourIndex].chant);
+  Sound.setMode(save.music);
+  if (mode === "play" || mode === "paused") {
+    Sound.startMusic(HOURS[hourIndex].chant);
+    flashBanner("Music: " + MUSIC_NAMES[save.music]);
+  }
   paintSoundButtons();
 }
 
 for (const el of document.querySelectorAll(".sound-toggle")) bindButton(el, toggleSound);
 document.addEventListener("pointerdown", () => Sound.unlock(), { capture: true });
-Sound.setEnabled(save.sound);
+if (typeof save.sound === "boolean") save.music = save.sound ? "both" : "off";
+Sound.setMode(save.music);
 paintSoundButtons();
 for (const name of Object.keys(SPELLS)) bindButton($("spell-" + name), () => cast(name));
 

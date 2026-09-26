@@ -1,32 +1,43 @@
 // Benedictine Bricks — music and sound, made in the browser with Web Audio.
 //
-// The music is Gregorian chant (from chants.js) sung by a synthesized choir
-// over a drone on the chant's final, with a techno beat that builds as the
-// tower rises: first the chant alone, then drums, then a bass line.
-// Sound effects land on the beat, and a few of them sing chant openings.
+// Four kinds of music, chosen with the music button:
+//   "both"   Gregorian chant over a techno beat, locked together: every chant
+//            note starts on a beat.
+//   "chant"  chant alone over its drone, sung freely at a schola's pace.
+//   "techno" the beat alone, with a bass line and an arpeggio built from the
+//            chant's own notes.
+//   "off"    silence.
+// In both "both" and "techno", the beat builds as the tower rises.
 
 const Sound = (() => {
   const BPM = 112;
-  const EIGHTH = 60 / BPM / 2;
+  const BEAT = 60 / BPM;          // one chant pulse when locked to the beat
+  const SIXTEENTH = BEAT / 4;
+  const FREE_PULSE = 0.45;        // one chant pulse when sung freely
+  const FREE_REST = [0, 0.25, 0.5, 1.25, 1.5];   // rests at bars, in pulses
+  const LOCKED_REST = [0, 0, 1, 1, 2];            // the same, in whole beats
+  const MODES = ["both", "chant", "techno", "off"];
+
   let ac = null;
   let master, musicGain, sfxGain, reverbSend;
-  let enabled = true;
+  let mode = "both";
   let noise = null;
+  const waves = {};
 
-  // Music state
   let playing = false;
   let timer = null;
-  let gridTime = 0;        // time of the next eighth-note step
-  let step = 0;
+  let gridTime = 0;               // time of the next sixteenth
+  let step = 0;                   // sixteenths since the music began
   let chant = null;
   let chantKey = null;
   let pendingKey = null;
   let noteIndex = 0;
-  let chantTime = 0;       // time of the next chant note
-  let intensity = 0;       // 0 chant and drone, 1 with drums, 2 with bass
+  let chantTime = 0;              // time of the next chant note
+  let intensity = 0;              // how far the beat has built: 0, 1, 2
   let drone = null;
-  let lyrics = [];         // [time, syllable] for the words being sung
+  let lyrics = [];
   let finalPitch = 55;
+  let arpNotes = [55, 59, 62];
 
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -36,7 +47,7 @@ const Sound = (() => {
     if (!Ctx) return;
     ac = new Ctx();
     master = ac.createGain();
-    master.gain.value = enabled ? 0.8 : 0;
+    master.gain.value = mode === "off" ? 0 : 0.8;
     master.connect(ac.destination);
     musicGain = ac.createGain();
     musicGain.gain.value = 0.6;
@@ -47,15 +58,15 @@ const Sound = (() => {
 
     // A stone church: a long, soft reverb made from decaying noise.
     const reverb = ac.createConvolver();
-    const len = ac.sampleRate * 3;
+    const len = ac.sampleRate * 3.2;
     const impulse = ac.createBuffer(2, len, ac.sampleRate);
     for (let ch = 0; ch < 2; ch++) {
       const data = impulse.getChannelData(ch);
-      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5);
     }
     reverb.buffer = impulse;
     reverbSend = ac.createGain();
-    reverbSend.gain.value = 0.45;
+    reverbSend.gain.value = 0.5;
     reverbSend.connect(reverb);
     reverb.connect(master);
 
@@ -70,56 +81,68 @@ const Sound = (() => {
     if (ac && ac.state === "suspended") ac.resume();
   }
 
-  function setEnabled(on) {
-    enabled = on;
-    if (master) master.gain.setTargetAtTime(on ? 0.8 : 0, ac.currentTime, 0.05);
+  function setMode(m) {
+    mode = MODES.includes(m) ? m : "both";
+    if (master) master.gain.setTargetAtTime(mode === "off" ? 0 : 0.8, ac.currentTime, 0.05);
+    if (playing) {
+      // Start the chant again from the next bar, in the new manner.
+      const key = chantKey;
+      stopMusic();
+      startMusic(key);
+    }
   }
 
   // ---- Instruments ------------------------------------------------------------
 
-  // A sung note: detuned saws through two vowel formants ("ah"), with a
-  // quieter voice an octave below, as in a choir of men.
+  // A smooth sung "ah": each harmonic of the note is shaped by the formants of
+  // the vowel, so the tone is round, not buzzy. One wave for each pitch.
+  function vowelWave(midi) {
+    if (waves[midi]) return waves[midi];
+    const f0 = mtof(midi);
+    const n = 24;
+    const real = new Float32Array(n + 1);
+    const imag = new Float32Array(n + 1);
+    const formants = [[700, 130, 1], [1150, 160, 0.5], [2600, 260, 0.12]];
+    for (let h = 1; h <= n; h++) {
+      const f = h * f0;
+      let a = 0;
+      for (const [fc, bw, amp] of formants) a += amp * Math.exp(-0.5 * Math.pow((f - fc) / bw, 2));
+      imag[h] = (a + 0.35 / h) / Math.sqrt(h);
+    }
+    waves[midi] = ac.createPeriodicWave(real, imag);
+    return waves[midi];
+  }
+
+  // A sung note: three voices a few cents apart, each with its own slow
+  // vibrato, and a quieter voice an octave below, as in a choir of men.
   function voice(midi, t, dur, out, level) {
-    const f = mtof(midi);
     const g = ac.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(level, t + 0.06);
-    g.gain.setValueAtTime(level, t + Math.max(0.07, dur - 0.05));
-    g.gain.linearRampToValueAtTime(0, t + dur + 0.12);
-    const f1 = ac.createBiquadFilter();
-    f1.type = "bandpass";
-    f1.frequency.value = 750;
-    f1.Q.value = 5;
-    const f2 = ac.createBiquadFilter();
-    f2.type = "bandpass";
-    f2.frequency.value = 1150;
-    f2.Q.value = 7;
-    const body = ac.createBiquadFilter();
-    body.type = "lowpass";
-    body.frequency.value = 1800;
-    const mix = ac.createGain();
-    mix.gain.value = 1;
-    for (const [freq, detune, amp] of [[f, -6, 0.5], [f, 6, 0.5], [f / 2, 0, 0.35]]) {
+    g.gain.linearRampToValueAtTime(level, t + 0.09);
+    g.gain.setValueAtTime(level, t + Math.max(0.1, dur - 0.06));
+    g.gain.linearRampToValueAtTime(0, t + dur + 0.14);
+    const soft = ac.createBiquadFilter();
+    soft.type = "lowpass";
+    soft.frequency.value = 2400;
+    soft.connect(g);
+    for (const [pitch, detune, amp, rate] of [[midi, -7, 0.36, 4.6], [midi, 0, 0.36, 5.2], [midi, 7, 0.36, 5.7], [midi - 12, 0, 0.3, 4.9]]) {
       const o = ac.createOscillator();
-      o.type = "sawtooth";
-      o.frequency.setValueAtTime(freq, t);
+      o.setPeriodicWave(vowelWave(pitch));
+      o.frequency.value = mtof(pitch);
       o.detune.value = detune;
       const vib = ac.createOscillator();
       const vibAmt = ac.createGain();
-      vib.frequency.value = 5;
-      vibAmt.gain.value = 4;
+      vib.frequency.value = rate;
+      vibAmt.gain.value = 5;
       vib.connect(vibAmt).connect(o.detune);
       const a = ac.createGain();
       a.gain.value = amp;
-      o.connect(a).connect(mix);
+      o.connect(a).connect(soft);
       o.start(t);
       vib.start(t);
       o.stop(t + dur + 0.2);
       vib.stop(t + dur + 0.2);
     }
-    mix.connect(f1).connect(g);
-    mix.connect(f2).connect(g);
-    mix.connect(body).connect(g);
     g.connect(out);
     g.connect(reverbSend);
   }
@@ -150,21 +173,39 @@ const Sound = (() => {
     src.stop(t + length + 0.02);
   }
 
-  function bass(midi, t) {
+  function bass(midi, t, length) {
     const o = ac.createOscillator();
     o.type = "sawtooth";
     o.frequency.value = mtof(midi);
     const filt = ac.createBiquadFilter();
     filt.type = "lowpass";
     filt.frequency.setValueAtTime(900, t);
-    filt.frequency.exponentialRampToValueAtTime(180, t + EIGHTH);
+    filt.frequency.exponentialRampToValueAtTime(180, t + length);
     filt.Q.value = 6;
     const g = ac.createGain();
-    g.gain.setValueAtTime(0.28, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + EIGHTH * 0.95);
+    g.gain.setValueAtTime(0.26, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + length * 0.95);
     o.connect(filt).connect(g).connect(musicGain);
     o.start(t);
-    o.stop(t + EIGHTH);
+    o.stop(t + length);
+  }
+
+  // A plucked arpeggio note, with an echo on the dotted eighth.
+  function pluck(midi, t) {
+    const o = ac.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = mtof(midi);
+    const filt = ac.createBiquadFilter();
+    filt.type = "lowpass";
+    filt.frequency.setValueAtTime(3000, t);
+    filt.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(filt).connect(g).connect(musicGain);
+    g.connect(reverbSend);
+    o.start(t);
+    o.stop(t + 0.3);
   }
 
   // A church bell: partials in the proportions of a real bell's hum, prime,
@@ -241,52 +282,87 @@ const Sound = (() => {
     noteIndex = 0;
     const pitched = chant.notes.filter(([p]) => p);
     finalPitch = pitched[pitched.length - 1][0];
+    // The arpeggio uses the chant's own notes: its final, and the notes above.
+    const set = [...new Set(pitched.map(([p]) => p))].sort((a, b) => a - b);
+    const above = set.filter((p) => p > finalPitch).slice(0, 4);
+    arpNotes = [finalPitch, ...above];
     retuneDrone();
+  }
+
+  // The time of the first sixteenth of the next bar.
+  function nextBar(time) {
+    const barLength = SIXTEENTH * 16;
+    const origin = gridTime - step * SIXTEENTH;
+    return origin + Math.ceil((time - origin - 0.001) / barLength) * barLength;
   }
 
   function schedule() {
     const horizon = ac.currentTime + 0.15;
-    // The beat.
+    const beat = mode === "both" || mode === "techno";
+
+    // The beat, one sixteenth at a time.
     while (gridTime < horizon) {
       const t = gridTime;
-      if (intensity >= 1) {
-        if (step % 2 === 0) kick(t);
-        if (step % 2 === 1) noiseHit(t, "highpass", 8000, 0.12, 0.05);
-        if (step % 8 === 4) noiseHit(t, "bandpass", 1500, 0.25, 0.18);
+      const s = step % 16;
+      if (beat) {
+        const level = mode === "techno" ? intensity + 1 : intensity;
+        if (level >= 1) {
+          if (s % 4 === 0) kick(t);
+          if (s % 4 === 2) noiseHit(t, "highpass", 8000, 0.12, 0.05);
+          if (s === 4 || s === 12) noiseHit(t, "bandpass", 1500, 0.25, 0.18);
+        }
+        if (level >= 2 && s % 2 === 0) {
+          const pattern = [0, 0, 12, 0, 0, 12, 7, 12];
+          bass(finalPitch - 24 + pattern[(s / 2) % 8], t, SIXTEENTH * 2);
+        }
+        if (mode === "techno" && level >= 3 && s % 2 === 1) {
+          pluck(arpNotes[(step >> 1) % arpNotes.length] + 12, t);
+        }
       }
-      if (intensity >= 2) {
-        const pattern = [0, 0, 12, 0, 0, 12, 7, 12];
-        bass(finalPitch - 24 + pattern[step % 8], t);
-      }
-      gridTime += EIGHTH;
+      gridTime += SIXTEENTH;
       step++;
     }
-    // The chant, one note at a time; a breath between each pass through it.
+
+    if (mode === "techno" || mode === "off") return;
+
+    // The chant, one note at a time.
+    const locked = mode === "both";
+    const pulse = locked ? BEAT : FREE_PULSE;
     while (chantTime < horizon) {
       if (noteIndex >= chant.notes.length) {
         if (pendingKey) { loadChant(pendingKey); pendingKey = null; }
         noteIndex = 0;
-        chantTime += EIGHTH * 4;
+        // A breath, then begin again (on the next bar, when locked to the beat).
+        chantTime = locked ? nextBar(chantTime + BEAT * 2) : chantTime + FREE_PULSE * 4;
         continue;
       }
-      const [pitch, dur] = chant.notes[noteIndex];
+      const [pitch, dur, endsSyllable] = chant.notes[noteIndex];
+      if (!pitch) {
+        chantTime += (locked ? LOCKED_REST[dur] : FREE_REST[dur]) * pulse;
+        noteIndex++;
+        continue;
+      }
+      // Locked to the beat, a note is held for a whole number of beats.
+      const beats = locked ? (dur >= 1.9 ? Math.round(dur) : 1) : dur;
+      const length = beats * pulse;
       const word = chant.words.find(([i]) => i === noteIndex);
       if (word) lyrics.push([chantTime, word[1]]);
-      if (pitch) voice(pitch, chantTime, dur * EIGHTH * 0.98, musicGain, 0.16);
-      chantTime += dur * EIGHTH;
+      voice(pitch, chantTime, endsSyllable ? length * 0.86 : length * 0.99, musicGain, 0.2);
+      chantTime += length;
       noteIndex++;
     }
     if (lyrics.length > 40) lyrics = lyrics.slice(-20);
   }
 
   function startMusic(key) {
-    if (!ac) return;
+    if (!ac || mode === "off") return;
     if (!playing) {
       playing = true;
       loadChant(key);
       startDrone();
-      gridTime = chantTime = ac.currentTime + 0.1;
+      gridTime = ac.currentTime + 0.1;
       step = 0;
+      chantTime = gridTime;
       timer = setInterval(schedule, 25);
     } else if (key !== chantKey) {
       pendingKey = key;
@@ -303,7 +379,9 @@ const Sound = (() => {
 
   // Change to another chant when the one being sung comes to its end.
   function setChant(key) {
-    if (playing && key !== chantKey) pendingKey = key;
+    if (!playing) return;
+    if (mode === "techno") { if (key !== chantKey) loadChant(key); return; }
+    if (key !== chantKey) pendingKey = key;
   }
 
   function setIntensity(n) {
@@ -312,7 +390,7 @@ const Sound = (() => {
 
   // The syllable being sung now, for showing on screen.
   function lyric() {
-    if (!ac || !playing) return "";
+    if (!ac || !playing || mode === "techno") return "";
     let text = "";
     for (const [t, s] of lyrics) if (t <= ac.currentTime) text = s;
     return text;
@@ -321,10 +399,9 @@ const Sound = (() => {
   // Short effects start on the next sixteenth of the beat, as in Lumines.
   function onBeat() {
     const now = ac.currentTime;
-    if (!playing) return now;
-    const sixteenth = EIGHTH / 2;
-    const since = now - (gridTime - EIGHTH * 2);
-    return now + (sixteenth - (since % sixteenth)) % sixteenth;
+    if (!playing || mode === "chant") return now;
+    const since = now - (gridTime - SIXTEENTH * 2);
+    return now + (SIXTEENTH - (since % SIXTEENTH)) % SIXTEENTH;
   }
 
   // A few notes of a chant's opening, sung as a sound effect.
@@ -332,7 +409,7 @@ const Sound = (() => {
     const notes = CHANTS[key].notes.filter(([p]) => p).slice(0, count);
     let t = ac.currentTime + 0.02;
     for (const [p] of notes) {
-      voice(p, t, speed * 0.95, sfxGain, 0.22);
+      voice(p, t, speed * 0.95, sfxGain, 0.26);
       t += speed;
     }
   }
@@ -340,7 +417,7 @@ const Sound = (() => {
   // ---- Effects ------------------------------------------------------------------
 
   function play(name, size) {
-    if (!ac || !enabled) return;
+    if (!ac || mode === "off") return;
     const now = ac.currentTime;
     switch (name) {
       case "rotate": tone(onBeat(), 1400, "sine", 0.08, 0.05); break;
@@ -364,10 +441,10 @@ const Sound = (() => {
         [1318, 1568, 1760, 2093, 2637].forEach((f, i) => tone(now + i * 0.06, f, "sine", 0.12, 0.3));
         break;
       case "bubble": tone(now, 880, "sine", 0.18, 0.6); tone(now + 0.08, 1320, "sine", 0.12, 0.6); break;
-      case "star": bell(now, 660, 0.12); incipit("salve", 5, 0.17); break;       // Salve Regina
-      case "tier": bell(now, 330, 0.2); incipit("vigils", 6, 0.2); break;         // Te Deum laudamus
+      case "star": bell(now, 660, 0.12); incipit("salve", 5, 0.3); break;       // Salve Regina
+      case "tier": bell(now, 330, 0.2); incipit("vigils", 6, 0.32); break;      // Te Deum laudamus
       case "lost": bell(now, 110, 0.14); noiseHit(now, "lowpass", 400, 0.2, 0.4, sfxGain); break;
-      case "hour": bell(now, 220, 0.18); bell(now + 1.4, 220, 0.14); break;       // the bell rings for the Office
+      case "hour": bell(now, 220, 0.18); bell(now + 1.4, 220, 0.14); break;     // the bell rings for the Office
       case "demon":
         noiseHit(now, "lowpass", 180, 0.4, 1.2, sfxGain);
         tone(now, 98, "sawtooth", 0.1, 1.2, 70);
@@ -378,7 +455,8 @@ const Sound = (() => {
   }
 
   return {
-    unlock, setEnabled, startMusic, stopMusic, setChant, setIntensity, lyric, play,
-    get enabled() { return enabled; },
+    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, lyric, play,
+    get mode() { return mode; },
+    get playing() { return playing; },
   };
 })();

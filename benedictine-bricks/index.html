@@ -184,7 +184,7 @@
   }
   .spell:disabled { cursor: default; }
   .sound-toggle {
-    width: 30px;
+    min-width: 30px;
     height: 30px;
     padding: 0;
     border: none;
@@ -196,7 +196,7 @@
   .sound-toggle.off { opacity: 0.55; }
   .title-top { display: flex; gap: 8px; align-items: stretch; }
   .title-top .ribbon { flex: 1; }
-  .title-top .sound-toggle { width: 56px; height: auto; font-size: 20px; border: 3px solid var(--maroon); }
+  .title-top .sound-toggle { width: 64px; height: auto; font-size: 16px; border: 3px solid var(--maroon); }
   .spell:disabled .gem { filter: grayscale(0.8) brightness(0.8); opacity: 0.6; }
   .spell.armed .gem { border-color: var(--gold); box-shadow: 0 0 0 3px var(--maroon), 0 0 12px var(--gold); }
   #candles {
@@ -531,6 +531,7 @@
           <button id="title-start" class="chunky start">Start</button>
         </div>
         <p class="help">Drag to steer · tap to turn · swipe down to drop</p>
+        <p class="help">Music: <span id="music-name">Chant + Techno</span> · tap the music button to change</p>
       </div>
     </div>
 
