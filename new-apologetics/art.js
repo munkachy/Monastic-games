@@ -172,6 +172,10 @@ const Art = (() => {
         for (const [x, y] of [[11, 3], [15, 2], [19, 3], [13, 5], [17, 5], [21, 6], [9, 6]]) g.put(x, y, s.hairLight || shadeOf(hair));
       }
       if (s.hairLight) for (const [x, y] of [[13, 2], [14, 2], [15, 3]]) g.put(x, y, s.hairLight);
+    } else if (style === "lineup") {
+      for (let y = 1; y < 7; y++) for (let x = 7; x < 25; x++) if (inEllipse(x, y, 16, 12.5, 8.4, 11.4)) g.put(x, y, (x * 3 + y * 5) % 7 === 0 ? (s.hairLight || hair) : hair);
+      for (let x = 9; x < 23; x++) g.put(x, 6, hair);
+      for (let y = 6; y < 11; y++) { g.put(8, y, hair); g.put(23, y, hair); }
     } else if (style === "bowl") {
       // Straight, full hair with a fringe cut straight across, covering the ears.
       for (let y = 0; y < 9; y++) for (let x = 5; x < 27; x++) if (inEllipse(x, y, 16, 12.5, 9.4, 12.6)) g.put(x, y, (x * 7 + y * 13) % 29 === 0 ? (s.hairLight || hair) : hair);
@@ -198,7 +202,13 @@ const Art = (() => {
           if (x <= 9 || x >= 22 || y <= 2) g.put(x, y, hair);
         }
       }
-      for (const [x, y] of [[13, 4], [14, 4]]) g.put(x, y, s.shine || "#fff1e0");
+      if (s.quiff) {
+        for (let y = 0; y < 5; y++) for (let x = 10; x < 22; x++) {
+          if (y === 0 && (x < 13 || x > 19)) continue;
+          if (y === 4 && (x < 12 || x > 19)) continue;
+          g.put(x, y, (x * 3 + y * 7) % 11 === 0 ? (s.hairLight || hair) : hair);
+        }
+      } else for (const [x, y] of [[13, 4], [14, 4]]) g.put(x, y, s.shine || "#fff1e0");
     } else if (style === "bald") {
       for (const [x, y] of [[12, 4], [13, 4], [12, 5], [11, 6]]) g.put(x, y, s.shine || "#fff1e0");
       for (let y = 9; y < 13; y++) { g.put(8, y, s.shade); g.put(23, y, s.shade); }
@@ -276,6 +286,13 @@ const Art = (() => {
       }
       for (let y = 11; y < 16; y++) { g.put(8, y, beard); g.put(23, y, beard); }
       for (let x = 12; x < 20; x++) g.put(x, 17, beard);
+    } else if (b === "chinstrap") {
+      for (let y = 14; y < 22; y++) {
+        const hw = Math.sqrt(Math.max(0, 1 - ((y + 0.5 - 12.5) / 9.6) ** 2)) * 7.6;
+        g.put(Math.round(16 - hw), y, beard); g.put(Math.round(16 + hw) - 1, y, beard);
+      }
+      for (let x = 14; x < 18; x++) g.put(x, 17, beard);
+      for (let y = 19; y < 23; y++) for (let x = 13; x < 19; x++) if (!(y === 22 && (x === 13 || x === 18))) g.put(x, y, beard);
     } else if (b === "mustache") {
       for (let x = 14; x < 18; x++) g.put(x, 17, beard);
     } else if (b === "goatee") {
@@ -529,13 +546,13 @@ const Art = (() => {
   const CAST = {
     akin: { skin: "#efc2a4", shade: "#d09c80", hair: "#c4562a", style: "cowboy", hat: "#efe6d2", hatShade: "#d6cbb2", beard: "long", beardColor: "#c4562a", beardLight: "#e07a44", brow: "#b04a24", outfit: "shirt", clothes: "#f4f1ea", trim: "#c9c3b4", pants: "#3a4a6a" },
     muse: { skin: "#f0c4a6", shade: "#d09c80", hair: "#5a3e2c", hairLight: "#7a5a44", style: "shaggy", faceW: 8.4, brow: "#3a2618", browY: 11, glasses: "#1d1d24", outfit: "gingham", clothes: "#eef2f8", trim: "#4a6ab0", pants: "#3a3f4f" },
-    bertuzzi: { skin: "#e8b99a", shade: "#c8957a", hair: "#1c1410", hairLight: "#3a2a20", hairFade: "#6a5446", style: "fauxhawk", beard: "goatee", beardColor: "#5a4232", outfit: "suit", clothes: "#243a66", lapel: "#1a2a4c", shirt: "#1d1d22", prop: "mic", smile: true },
+    bertuzzi: { skin: "#e8b99a", shade: "#c8957a", hair: "#1c1410", hairLight: "#3a2a20", hairFade: "#6a5446", style: "fauxhawk", beard: "stubble", beardColor: "#a08470", glasses: "#8a5a2a", outfit: "sweater", clothes: "#e4ece6", trim: "#c8d2cc", prop: "mic", grin: true },
     horn: { skin: "#e6b692", shade: "#c69272", hair: "#16100c", style: "curly", brow: "#16100c", outfit: "suit", clothes: "#6a6d74", lapel: "#55585e", shirt: "#f2efe6", smirk: true },
-    fradd: { skin: "#efc3a4", shade: "#cf9c80", hair: "#8a6a4a", hairLight: "#a8845c", style: "side", beard: "short", beardColor: "#9a6a44", outfit: "suit", clothes: "#243452", lapel: "#1a2640", shirt: "#f7f5ee", prop: "pint", smile: true },
-    godlogic: { skin: "#6a4228", shade: "#52321e", hair: "#120c08", style: "curly", beard: "goatee", beardColor: "#120c08", brow: "#120c08", mouth: "#3e2218", shine: "#8a5a3a", outfit: "sweater", clothes: "#16161a", trim: "#2a2a30" },
+    fradd: { skin: "#efc3a4", shade: "#cf9c80", hair: "#6a5440", hairLight: "#8a7a6a", style: "receding", quiff: true, beard: "stubble", beardColor: "#b8a08c", brow: "#6a5440", eyeColor: "#4a7ab0", outfit: "sweater", clothes: "#1a1a1e", trim: "#2a2a30", prop: "pint", smile: true },
+    godlogic: { skin: "#6a4228", shade: "#52321e", hair: "#100a06", hairLight: "#2a1e16", style: "lineup", beard: "chinstrap", beardColor: "#120c08", brow: "#120c08", mouth: "#4a2a22", outfit: "sweater", clothes: "#141418", trim: "#26262c" },
     white: { skin: "#f0c6aa", shade: "#cf9e84", hair: "#c8c2b8", style: "bald", beard: "short", beardColor: "#e4e0da", brow: "#bdb8b0", glasses: "#6a6a72", outfit: "suit", clothes: "#26272e", lapel: "#15161b", tie: "#2a2a30", prop: "book", bookColor: "#1f2d4f" },
     hansen: { skin: "#f2c9a9", shade: "#d3a283", hair: "#5a3a22", style: "short", beard: "short", beardColor: "#5a3a22", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#2c4a7a", smile: true },
-    schmitz: { skin: "#ecc0a0", shade: "#cc9678", hair: "#1c1410", hairLight: "#3a2a20", style: "side", lock: true, jaw: "chiseled", faceW: 7.4, outfit: "clerical", clothes: "#1b1b22", smile: true },
+    schmitz: { skin: "#d8a07a", shade: "#b8805c", hair: "#241a14", hairLight: "#3e2e24", style: "side", jaw: "chiseled", faceW: 7.4, outfit: "clerical", clothes: "#1b1b22", grin: true },
     barron: { skin: "#efc3a3", shade: "#cf9a7c", hair: "#c9c6c0", style: "zucchetto", cap: "#b0205e", brow: "#9a958e", glasses: "#1d1d24", outfit: "choir", clothes: "#b0205e", cape: "#9a1a52", prop: "cross", cord: "#2f7a4a", smile: true },
     spitzer: { skin: "#efc6ac", shade: "#cf9e86", hair: "#d8d6d0", hairLight: "#f0efec", style: "side", brow: "#b8b4ac", glasses: "#1d1d24", lens: "#d98a3a", outfit: "clerical", clothes: "#1b1b22", smile: true },
     hicks: { skin: "#eec4a6", shade: "#cd9b7e", hair: "#3a2a1e", style: "crew", beard: "long", beardColor: "#4a3526", beardLight: "#6a5040", beardTaper: 0.3, brow: "#3a2a1e", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", smile: true },
