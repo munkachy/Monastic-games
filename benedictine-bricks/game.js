@@ -40,10 +40,18 @@ const SPELLS = {
   zap:      { icon: "bolt",        cost: 3, name: "Zap",        key: "z" },
   mortar:   { icon: "mortar",      cost: 3, name: "Mortar",     key: "c" },
   scaffold: { icon: "scaffold",    cost: 5, name: "Scaffold",   key: "s" },
-  gild:     { icon: "coin",        cost: 2, name: "Gild",       key: "g" },
+  gild:     { icon: "stone_gold",  cost: 2, name: "Gild",       key: "g" },
 };
 const BUBBLE_EVERY = [16, 28];     // seconds between bubbles (min, max)
 const GOLD_BONUS = 10;             // coins for a gilded stone
+// What each power does, shown when a bubble teaches it.
+const SPELL_HELP = {
+  repel: "drives off the demon",
+  zap: "breaks the last stone",
+  mortar: "the stone sets solid",
+  scaffold: "a platform at the top",
+  gild: "gold stone, +" + GOLD_BONUS + " coins",
+};
 
 const DEMON_FIRST_AT = 5;          // cubits of height before his first visit
 const DEMON_AWAY = [18, 32];       // seconds between visits (min, max)
@@ -645,6 +653,7 @@ function cast(name) {
   else if (name === "scaffold") scaffold();
   else if (active && steering && !active.plugin.mortar && !active.plugin.gold) enchant(active, name);
   else pending = name;
+  if (name === "gild") flashBanner("Gold stone: +" + GOLD_BONUS + " coins when it lands");
   drawNextPreview();
   updateHud();
 }
@@ -739,7 +748,7 @@ function catchBubble() {
     flashBanner("Mortar +" + MORTAR_PER_BUBBLE);
   } else {
     known.add(spell);
-    flashBanner(SPELLS[spell].name + " learned");
+    flashBanner(SPELLS[spell].name + ": " + SPELL_HELP[spell]);
   }
   stats.bubbles++;
   bubble = null;
@@ -1474,17 +1483,6 @@ function drawBubble() {
   ctx.fillRect(bubble.x - 22, bubble.y - 22, 6, 6);
   const icon = bubble.spell === "prayer" ? "beads" : SPELLS[bubble.spell].icon;
   ctx.drawImage(images[icon], bubble.x - 18, bubble.y - 18, 36, 36);
-  // Say plainly what a tap on it gives.
-  const label = bubble.spell === "prayer" ? "TAP: +" + PRAYER_FROM_BUBBLE + " PRAYER"
-    : bubble.spell === "mortar" ? "TAP: MORTAR ×" + MORTAR_PER_BUBBLE
-    : "TAP: LEARN " + SPELLS[bubble.spell].name.toUpperCase();
-  ctx.font = "11px 'Press Start 2P', monospace";
-  ctx.textAlign = "center";
-  const w = ctx.measureText(label).width + 12;
-  ctx.fillStyle = "rgba(60,20,40,0.8)";
-  ctx.fillRect(Math.round(bubble.x - w / 2), Math.round(bubble.y + 46), Math.round(w), 20);
-  ctx.fillStyle = "#fff";
-  ctx.fillText(label, bubble.x, bubble.y + 61);
 }
 
 function drawEffects() {
