@@ -6,7 +6,7 @@ serve the whole repo as-is.
 
 | Game | Folder | What it is |
 | --- | --- | --- |
-| Nisi Dominus | `nisi-dominus/` | Physics stacking game in the style of 99 Bricks |
+| Nisi Dominus | `nisi-dominus/` | Build as high as you can with 99 stones, in the style of 99 Bricks |
 
 ## Playing locally
 

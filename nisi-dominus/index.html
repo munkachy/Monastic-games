@@ -64,9 +64,9 @@
   }
   #controls {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    padding: 10px 12px 12px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    padding: 6px 10px 12px;
     background: var(--panel);
   }
   button {
@@ -84,14 +84,35 @@
   button:active { background: var(--button-down); border-bottom-width: 2px; }
   button:disabled { opacity: 0.4; }
   #btn-pause { height: auto; font-size: 11px; padding: 6px 10px; border-bottom-width: 2px; }
-  #btn-bless { position: relative; }
-  #btn-bless canvas { width: 30px; height: 30px; image-rendering: pixelated; vertical-align: middle; }
-  #bless-count {
+  button { padding: 0; }
+  .spell { position: relative; }
+  .spell canvas { width: 30px; height: 30px; image-rendering: pixelated; vertical-align: middle; }
+  .spell .cost {
     position: absolute;
-    top: 4px;
-    right: 6px;
-    font-size: 9px;
+    top: 3px;
+    right: 4px;
+    font-size: 8px;
     color: var(--gold);
+  }
+  #prayer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px 0;
+    font-size: 9px;
+    background: var(--panel);
+  }
+  #prayer .bar {
+    flex: 1;
+    height: 10px;
+    background: #0006;
+    border: 2px solid #0008;
+  }
+  #prayer-fill {
+    height: 100%;
+    width: 0;
+    background: repeating-linear-gradient(90deg, var(--gold) 0 8px, #b8861c 8px 10px);
+    transition: width 0.2s;
   }
   #overlay {
     position: absolute;
@@ -120,8 +141,8 @@
 <body>
 <div id="app">
   <header>
-    <span id="level">Gradus I</span>
-    <span class="stat stones">Stones <span id="stones">0</span></span>
+    <span class="stat">Height <span id="height">0.0</span></span>
+    <span class="stat stones">Stones <span id="stones">99</span></span>
     <button id="btn-pause" aria-label="Pause">II</button>
   </header>
   <div id="stage">
@@ -134,12 +155,18 @@
       </div>
     </div>
   </div>
+  <div id="prayer">
+    <span>Prayer</span>
+    <div class="bar"><div id="prayer-fill"></div></div>
+    <span id="prayer-count">0</span>
+  </div>
   <div id="controls">
     <button id="btn-left" aria-label="Move left">&#9664;</button>
     <button id="btn-rotate" aria-label="Turn">&#8635;</button>
     <button id="btn-right" aria-label="Move right">&#9654;</button>
     <button id="btn-drop" aria-label="Drop">&#9660;</button>
-    <button id="btn-bless" aria-label="Bless"><canvas data-sprite="medal"></canvas><span id="bless-count">1</span></button>
+    <button id="btn-banish" class="spell" aria-label="Medal: drive off the demon"><canvas data-sprite="medal"></canvas><span class="cost">5</span></button>
+    <button id="btn-dissolve" class="spell" aria-label="Holy water: dissolve the last stone"><canvas data-sprite="aspergillum"></canvas><span class="cost">3</span></button>
   </div>
 </div>
 <script src="lib/matter.min.js"></script>

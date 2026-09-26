@@ -37,6 +37,7 @@ const STONE_RAMPS = {
   slate:     ["#b4cadb", "#7f9bb3", "#5f7a93", "#445a70", "#232f3d"],
   marble:    ["#ffffff", "#f3f0f1", "#ddd8db", "#b9b2b8", "#6f666e"],
   mossy:     ["#dde9ae", "#b6c97a", "#8fa455", "#66773a", "#36401c"],
+  ice:       ["#f4fdff", "#cdeefa", "#a3dcf0", "#6fb4d4", "#2f6f8f"],
 };
 
 for (const [name, ramp] of Object.entries(STONE_RAMPS)) {
@@ -46,7 +47,7 @@ for (const [name, ramp] of Object.entries(STONE_RAMPS)) {
   };
 }
 
-// Drawn over a stone once it has been blessed: a gold rim and a small cross.
+// Drawn over a blessed cornerstone: a gold rim and a small cross.
 ART.blessed = {
   grid: [
     "yyyyyyyyyyyy",
@@ -136,10 +137,13 @@ ART.monk_bless = {
 };
 
 // ---------------------------------------------------------------------------
-// The imp who sits on a stone and makes it heavy (Gregory, Dialogues II.9).
+// The demon who hovers over the building site and curses your stones.
+// Two frames: wings up, wings down.
 // ---------------------------------------------------------------------------
 
-const IMP_COLORS = {
+const DEMON_COLORS = {
+  m: "#3a0a14", // wing edge
+  M: "#6a1a2a", // wing membrane
   o: "#2a0808", // horns and claws
   r: "#c2362b", // body edge
   R: "#8a1c1c", // body
@@ -147,36 +151,38 @@ const IMP_COLORS = {
   w: "#f5f5f5", // teeth
 };
 
-ART.imp_a = {
+ART.demon_a = {
   grid: [
-    "o..........o",
-    "ro........ro",
-    ".rr......rr.",
-    "..rRRRRRRr..",
-    ".rRyoRRyoRr.",
-    ".rRRRRRRRRr.",
-    ".rRowowowRr.",
-    "..rRRRRRRr..",
-    ".r.rRRRRr.r.",
-    "...rr..rr...",
+    "m..................m",
+    "mm......o..o......mm",
+    "mMm.....rrrr.....mMm",
+    "mMMm...rRRRRr...mMMm",
+    ".mMMm..RyRRyR..mMMm.",
+    "..mMMmmRRRRRRmmMMm..",
+    "...mMMMRowowRMMMm...",
+    ".....mmmRRRRmmm.....",
+    ".......rRRRRr.......",
+    ".......r.RR.r.......",
+    "......oo....oo......",
   ],
-  colors: IMP_COLORS,
+  colors: DEMON_COLORS,
 };
 
-ART.imp_b = {
+ART.demon_b = {
   grid: [
-    "o..........o",
-    "ro........ro",
-    ".rr......rr.",
-    "..rRRRRRRr..",
-    ".rRoyRRoyRr.",
-    ".rRRRRRRRRr.",
-    ".rRRowowRRr.",
-    "r.rRRRRRRr.r",
-    "...rRRRRr...",
-    "...rr..rr...",
+    "....................",
+    "........o..o........",
+    "........rrrr........",
+    ".......rRRRRr.......",
+    ".......RyRRyR.......",
+    "..mmmmmRRRRRRmmmmm..",
+    ".mMMMMMRowowRMMMMMm.",
+    "mMMMMm..RRRR..mMMMMm",
+    "mMMm...rRRRRr...mMMm",
+    "mm.....r.RR.r.....mm",
+    "......oo....oo......",
   ],
-  colors: IMP_COLORS,
+  colors: DEMON_COLORS,
 };
 
 // ---------------------------------------------------------------------------
@@ -214,21 +220,23 @@ ART.medal = {
   colors: { g: "#7a5410", G: "#d9a520", y: "#fff2a8" },
 };
 
-// A small bell, shown while the tower is being held at the goal.
-ART.bell = {
+// The aspergillum, for holy water: dissolves the last stone you laid.
+ART.aspergillum = {
   grid: [
-    ".....oo.....",
-    "....oGGo....",
-    "...oGGGGo...",
-    "..oGGyGGGo..",
-    "..oGGyGGGo..",
-    "..oGGGGGGo..",
-    ".oGGGGGGGGo.",
-    ".oGGGGGGGGo.",
-    "oooooooooooo",
-    ".....oo.....",
+    "......gggg..",
+    ".....gGyGGg.",
+    "..d..gGGGGg.",
+    ".....gGGyGg.",
+    "d.....gggg..",
+    ".....hh.....",
+    "....hh...d..",
+    "...hh.......",
+    "..hh....d...",
+    ".hh.........",
+    "hh.....d....",
+    "h...........",
   ],
-  colors: { o: "#5a3a08", G: "#e0b030", y: "#fff2a8" },
+  colors: { g: "#5a6068", G: "#c8d0d8", y: "#ffffff", h: "#7a5230", d: "#7fd0ff" },
 };
 
 // ---------------------------------------------------------------------------
