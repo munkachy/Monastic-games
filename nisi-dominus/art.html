@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nisi Dominus Art Sheet</title>
+<style>
+  body { margin: 0; padding: 16px; background: #2a2a3a; color: #f3ead3; font: 14px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: #c9c0a8; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  figure { margin: 0; padding: 12px; background: #3a3a50; border-radius: 6px; text-align: center; }
+  figure canvas { image-rendering: pixelated; background: repeating-conic-gradient(#4a4a60 0 25%, #42425a 0 50%) 0 0 / 16px 16px; }
+  figcaption { font: 12px monospace; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h1>Nisi Dominus: art sheet</h1>
+<p>Every sprite in art.js, enlarged 8×. The name under each is what to use in IMAGE_OVERRIDES.</p>
+<div class="grid" id="grid"></div>
+<script src="art.js"></script>
+<script>
+  loadArt((images) => {
+    const grid = document.getElementById("grid");
+    for (const [name, img] of Object.entries(images)) {
+      const fig = document.createElement("figure");
+      const c = document.createElement("canvas");
+      const w = img.artWidth || img.width, h = img.artHeight || img.height;
+      c.width = w * 8; c.height = h * 8;
+      const ctx = c.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const cap = document.createElement("figcaption");
+      cap.textContent = name;
+      fig.append(c, cap);
+      grid.append(fig);
+    }
+  });
+</script>
+</body>
+</html>
