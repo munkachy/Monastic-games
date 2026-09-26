@@ -26,6 +26,7 @@ from that hero's rank-one base stats (× 10).
 | Alex Jurado | Leader | Khan | 288 | 100 | 30 | 15 | 88 |
 | Fr. Robert Spitzer | Builder | Seven of Nine | 188 | 70 | 135 | 18 | 73 |
 | Joe Heschmeyer | Leader | Sulu (Attack and Tech swapped) | 188 | 30 | 88 | 10 | 170 |
+| Scott Hahn | Leader | Gowron in character (no Legends numbers found; built on the Leader pattern, slower and sturdier) | 275 | 72 | 110 | 22 | 95 |
 
 The duo great move, Vindicatory Miracles (Ethan Muse and Fr. Spitzer), is
 modelled on Legends' morale combos and team-up attacks.
@@ -40,3 +41,10 @@ Sources for the kits: legends.datacore.app (Data, Worf, Picard, Kirk,
 McCoy, Geordi, Riker, Spock, Sisko, Janeway, Uhura, Crusher, Sulu, Khan,
 Seven of Nine); the Star Trek Legends Wiki (Morale System); Biggest in
 Japan, "10 Tips & Tricks for Starting Star Trek: Legends".
+
+Bosses have no Legends model. Their kits follow the same shape (a basic
+move, two 3-turn skills, one 4-turn great move) with a counter built in
+that a particular hero can answer: Fr. Pine's Distinguo cancels
+O'Connor's Euthyphro; Hahn's Covenant Is Family passes through Ryan's
+Faith Alone; Trent Horn's Hard Sayings passes through White's Eternal
+Security.

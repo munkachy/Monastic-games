@@ -698,6 +698,32 @@ const Theater = (() => {
       Art.paint(ctx, Art.bust(Art.CAST.muse), Math.round(lerp(-200, 0, slide)), H - 32 * 5, 5);
       Art.paint(ctx, Art.bust(Art.CAST.spitzer), Math.round(lerp(W + 40, W - 160, slide)), H - 32 * 5, 5, true);
     },
+    // Scott Hahn: the road from a little white meeting house to St. Peter's dome.
+    romehome(ctx, k) {
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#f6c98a"); sky.addColorStop(1, "#f3e3c0");
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#ffe7a0"; ctx.beginPath(); ctx.arc(540, 250, 70 + Math.sin(k * 2) * 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#8aa860"; ctx.fillRect(0, 290, W, 70);
+      // The road, drawn from left to right.
+      const q = ease(span(k, 0.2, 1.5));
+      ctx.fillStyle = "#d8c49a"; ctx.beginPath(); ctx.moveTo(330, 360); ctx.lineTo(330 + q * 220, 300); ctx.lineTo(330 + q * 240, 300); ctx.lineTo(380, 360); ctx.fill();
+      // A small white church with a steeple.
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(338, 232, 64, 60); ctx.fillStyle = "#fdfaf2"; ctx.fillRect(340, 234, 60, 58);
+      ctx.fillStyle = "#fdfaf2"; ctx.fillRect(362, 196, 16, 40); ctx.fillStyle = "#1a1326"; ctx.fillRect(366, 256, 8, 36);
+      ctx.fillStyle = "#6a4a2a"; ctx.beginPath(); ctx.moveTo(356, 198); ctx.lineTo(370, 172); ctx.lineTo(384, 198); ctx.fill();
+      // St. Peter's dome rises in the distance.
+      const r = ease(span(k, 0.6, 1.6));
+      if (r > 0) {
+        const cx = 560; const base = 296;
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(496, base - 36 * r, 128, 36 * r);
+        ctx.fillStyle = "#e9e1cf"; ctx.fillRect(498, base - 34 * r, 124, 34 * r);
+        ctx.fillStyle = "#d6cdb8"; ctx.beginPath(); ctx.arc(cx, base - 34 * r, 44 * r, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = "#e9e1cf"; ctx.fillRect(cx - 5, base - 34 * r - 58 * r, 10, 16 * r);
+        ctx.fillStyle = "#e8b94a"; ctx.fillRect(cx - 2, base - 34 * r - 70 * r, 4, 12 * r); ctx.fillRect(cx - 5, base - 34 * r - 66 * r, 10, 3 * r);
+      }
+      if (k > 1.4) outlinedText(ctx, "ROME SWEET HOME", 470, 140, 26, "#fdfaf2", "#7a4a1a");
+    },
     // Ethan Muse's Camera Mog: a recording frame, and the lean-in.
     mog(ctx, k) {
       ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, W, H);
@@ -807,6 +833,12 @@ const Theater = (() => {
       { name: "The Four Levels of Happiness", kind: aura, to: "allies", mark: ["shield", "up"], say: "Level four: the transcendent.", color: "#ffe07a", backdrop: (ctx, h, t) => { const q = span(t, 0.1, 0.8); for (let i = 0; i < 4; i++) { if (q * 4 < i) break; ctx.fillStyle = ["#6a6a72", "#7ea4e6", "#74c07a", "#e8b94a"][i]; ctx.fillRect(h.x + 44 + i * 16, h.y - 24 - i * 16, 16, 24 + i * 16); } } },
       { name: "Borde–Guth–Vilenkin", kind: cinematic, who: "Fr. Robert Spitzer, SJ", color: "#23305a", scene: SCENES.bigbang, to: "all", mark: ["muted", "pipDown"], impact: impactOn("#ffe07a") },
       { name: "Vindicatory Miracles", duo: "muse", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
+    ],
+    hahn: [
+      { name: "Covenant Is Family", kind: volley, glyphs: ["Abba!", "Family!"], color: "#e8b94a" },
+      { name: "Wide-Eyed Wonder", kind: hex, to: "one", say: "Isn't that amazing?!", mark: ["dumbfounded", "down"], fx: (ctx, api, h, targets, t, k) => { if (t < 0.2 || t > 1.8) return; const s = 1 + Math.sin(t * 10) * 0.08; const x = h.x + 70; const y = h.y - 170; for (const dx of [-26, 26]) { ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx, y, 22 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x + dx, y, 19 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4a6a8a"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 4, 0, Math.PI * 2); ctx.fill(); } } },
+      { name: "The Lamb's Supper", kind: aura, to: "allies", mark: ["heal", "pipUp"], say: "This is the wedding feast of the Lamb!", backdrop: (ctx, h, t) => { if (t > 0.2 && t < 1.9) { const x = h.x + 44; const y = h.y - 160; ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 12, y - 2, 24, 30); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 10, y, 20, 12); ctx.fillRect(x - 3, y + 12, 6, 10); ctx.fillRect(x - 9, y + 22, 18, 4); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x, y - 12, 10, 0, Math.PI * 2); ctx.fill(); } } },
+      { name: "Rome Sweet Home", kind: cinematic, who: "Scott Hahn", color: "#8a5a1a", scene: SCENES.romehome, to: "all", mark: ["pipDown", "factcheck"], impact: impactOn("#e8b94a") },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },

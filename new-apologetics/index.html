@@ -142,6 +142,19 @@
   .ocia figcaption { font-size: 14px; color: var(--muted); }
   .ocia figcaption b { color: var(--text); }
 
+  /* Story */
+  .story-ui { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  .story-ui .status { max-width: 70ch; }
+  .next { flex-shrink: 0; min-height: 44px; padding: 8px 16px; background: var(--gold); color: var(--night); border: none; border-radius: 4px; font: 700 16px/1 var(--display); cursor: pointer; }
+  .story-tabs button { width: auto; padding: 8px 12px; text-align: left; justify-items: start; }
+  .story-tabs button small { font: 600 10px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .story-tabs button span { font-size: 14px; color: var(--text); }
+  #story { cursor: pointer; }
+  .story-line { display: none; font-size: 16px; }
+  .story-line b { font-family: var(--display); color: var(--gold); }
+  @media (max-width: 640px) { .story-line { display: block; } }
+  .chapters .body .label { color: var(--crimson); }
+
   /* Chapters */
   .chapters { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: ch -1; }
   .chapters li { display: grid; grid-template-columns: 64px 1fr; gap: 16px; padding: 16px; background: var(--panel); border-radius: 6px; border: 1px solid var(--line); counter-increment: ch; }
@@ -230,7 +243,7 @@
   <section>
     <div class="lede">
       <span class="label">The roster</span>
-      <h2>Sixteen heroes, each with a style of their own</h2>
+      <h2>Seventeen heroes, each with a style of their own</h2>
       <p>Every hero has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Their numbers are balanced against one another, and each hero's moves come from what that apologist is known for.</p>
     </div>
     <div class="roster" id="roster"></div>
@@ -252,8 +265,8 @@
   <section>
     <div class="lede">
       <span class="label">The opposition</span>
-      <h2>Three storylines, three traditions</h2>
-      <p>Each tradition has its own set of rank-and-file debaters and a boss. The rank and file are invented characters. The bosses are real people, so they appear only with their permission.</p>
+      <h2>Five chapters, five groups</h2>
+      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. The bosses are real people, so they appear only with their permission.</p>
     </div>
     <div class="factions" id="factions"></div>
   </section>
@@ -270,8 +283,18 @@
   <section>
     <div class="lede">
       <span class="label">The story</span>
-      <h2>Eight chapters, each ending in a teaching card</h2>
-      <p>The story runs in eight chapters of six missions each, and each chapter ends by unlocking a teaching card. Every card is graded by its theological weight, so a player learns to tell a dogma from a pious opinion.</p>
+      <h2>Five mysteries, told in cut scenes</h2>
+      <p>Each chapter sets the team a mystery: a question they can't answer at first. Short scenes between battles move the story along. When the team gets stuck, anyone on the roster can walk on and pitch in, even someone who wasn't in the last battle. Scott Hahn has a habit of arriving at exactly that moment. Tap the scene to read on.</p>
+    </div>
+    <div class="stage"><canvas id="story" width="640" height="360" tabindex="0" aria-label="A cut scene. Tap or press Enter to continue."></canvas></div>
+    <p class="story-line" id="story-line" aria-live="polite"></p>
+    <div class="story-ui">
+      <p class="status" id="story-where"></p>
+      <button id="story-next" class="next">Next ▸</button>
+    </div>
+    <div class="picker story-tabs" id="story-tabs" role="group" aria-label="Choose a chapter"></div>
+    <div class="lede">
+      <p>Each chapter ends by unlocking teaching cards, graded by their theological weight, so a player learns to tell a dogma from a pious opinion.</p>
       <div class="legend">
         <span class="grade g-dogma">Dogma</span> defined, to be believed with divine faith
         <span class="grade g-doctrine">Doctrine</span> taught with authority, not defined
@@ -289,7 +312,8 @@
       <h2>Open questions</h2>
     </div>
     <ul class="notes">
-      <li><b>Permission from everyone depicted, including the bosses.</b> A boss who converts is the joke of the game, and it is also the part most likely to hurt. James White and Jacob Hansen should see their kits and their OCIA scenes before release. Without their yes, their places go to invented characters.</li>
+      <li><b>Permission from everyone depicted, including the bosses.</b> A boss who converts is the joke of the game, and it is also the part most likely to hurt. Alex O'Connor, Ryan Hemelaar, Jacob Hansen and James White should see their kits, their scenes and their OCIA moments before release. Without their yes, their places go to invented characters.</li>
+      <li><b>Every line of dialogue is a draft.</b> The words given to real people are written to reflect what each has said in public, and each person should read his own lines.</li>
       <li><b>The Islam storyline needs a boss.</b> Until one is chosen and agrees, an invented character, the Speakers' Corner Champion, fills the place.</li>
       <li><b>GodLogic is a mere-Christian apologist, not a Catholic one.</b> He fits best as a guest ally in the Islam storyline, where Catholics and Protestants make common cause, and that is a good lesson in itself.</li>
       <li><b>The likenesses are first drafts.</b> They are built from each man's best-known look and will be redrawn from photographs.</li>
@@ -299,13 +323,15 @@
   <section>
     <span class="label">Sources</span>
     <ul class="sources">
-      <li>The apologists: <a href="https://en.wikipedia.org/wiki/Jimmy_Akin">Jimmy Akin</a>; <a href="https://en.wikipedia.org/wiki/Trent_Horn">Trent Horn</a>; <a href="https://www.wordonfire.org/articles/contributors/apologetics-isnt-dead-cameron-bertuzzis-conversion-to-catholicism/">Cameron Bertuzzi's conversion (Word on Fire)</a>; <a href="https://mileskdonahue.substack.com/p/90-a-heated-debate-on-hell-catholicism">Ethan Muse</a>; <a href="https://www.catholic.com/audio/cot/godlogic-vs-muslims-jws-and-orthobros">GodLogic on the Council of Trent podcast</a>; <a href="https://www.fatherboniface.org/wordpresshome/">Fr. Boniface Hicks</a>; <a href="https://opeast.org/godsplaining/">Godsplaining</a>; <a href="https://www.catholic.com/profile/joe-heschmeyer">Joe Heschmeyer</a>; <a href="https://brianholdsworth.ca/about-me">Brian Holdsworth</a>; <a href="https://sistersoflife.org/resources/a-habit-for-life/">the Sisters of Life habit</a></li>
+      <li>The apologists: <a href="https://en.wikipedia.org/wiki/Jimmy_Akin">Jimmy Akin</a>; <a href="https://en.wikipedia.org/wiki/Trent_Horn">Trent Horn</a>; <a href="https://www.wordonfire.org/articles/contributors/apologetics-isnt-dead-cameron-bertuzzis-conversion-to-catholicism/">Cameron Bertuzzi's conversion (Word on Fire)</a>; <a href="https://mileskdonahue.substack.com/p/90-a-heated-debate-on-hell-catholicism">Ethan Muse</a>; <a href="https://www.catholic.com/audio/cot/godlogic-vs-muslims-jws-and-orthobros">GodLogic on the Council of Trent podcast</a>; <a href="https://www.fatherboniface.org/wordpresshome/">Fr. Boniface Hicks</a>; <a href="https://opeast.org/godsplaining/">Godsplaining</a>; <a href="https://www.catholic.com/profile/joe-heschmeyer">Joe Heschmeyer</a>; <a href="https://brianholdsworth.ca/about-me">Brian Holdsworth</a>; <a href="https://sistersoflife.org/resources/a-habit-for-life/">the Sisters of Life habit</a>; <a href="https://en.wikipedia.org/wiki/Scott_Hahn">Scott Hahn</a>; <a href="https://en.wikipedia.org/wiki/Alex_O%27Connor">Alex O'Connor</a>; <a href="https://apologeticscanada.com/online-evangelism-with-ryan-from-needgod-net/">Ryan from NeedGod.net</a></li>
+      <li>The fawn: <a href="https://www.catholic.com/magazine/online-edition/the-problem-of-animal-suffering">John DeRosa, “The Problem of Animal Suffering” (Catholic Answers)</a>; <a href="https://stpaulcenter.com/posts/animal-pain">Clement Harrold, “Why Does God Permit Animal Pain?” (St. Paul Center)</a>; <a href="https://www.catholic.com/audio/cot/dialogue-does-evil-disprove-god-with-alex-oconnor-joe-schmid-and-cameron-bertuzzi">“Does Evil Disprove God?” with Alex O'Connor, Joe Schmid and Cameron Bertuzzi</a></li>
     </ul>
   </section>
 </main>
 
 <script src="art.js"></script>
 <script src="moves.js"></script>
+<script src="story.js"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -495,6 +521,18 @@
       flavor: "A scientist whose great move locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
     },
     {
+      id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Leader",
+      stats: [275, 72, 110, 22, 95],
+      passive: ["Rome Sweet Home", "At the start of each battle, every convert on the team gains +1 Conviction: Scott Hahn, Jimmy Akin, Cameron Bertuzzi and Brian Holdsworth."],
+      skills: [
+        ["Covenant Is Family", "1 foe", "0", "125% Learning. Passes through Faith Alone."],
+        ["Wide-Eyed Wonder", "1 foe", "3", "Dumbfounded for 2 turns, and Rhetoric Down. Nobody can keep a debate face against that much delight."],
+        ["The Lamb's Supper", "All allies", "3 (starts 1)", "An encouragement for everyone, Examen, and +1 Conviction on each."],
+        ["Rome Sweet Home", "All foes", "4 (starts 2)", "−2 Conviction on each foe, and Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
+      ],
+      flavor: "The elder statesman. Slower than the young debaters and harder to shake, he shows up in the story when the team is stuck, and he usually has the key.",
+    },
+    {
       id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
       stats: [188, 30, 88, 10, 170],
       passive: ["The Early Church Was the Catholic Church", "+5% Learning to Catholic Answers allies."],
@@ -509,20 +547,31 @@
 
   const BOSSES = [
     {
-      id: "white", name: "James White", tag: "Alpha and Omega Ministries · The Dividing Line", faction: "Protestant",
-      grunts: ["preacher"],
-      blurb: "The boss of the Protestant storyline, fought twice: over the canon in Chapter 7 and over assurance in Chapter 8. Rank and file: Street Preachers, Seminarians, Reformed Podcasters.",
+      id: "oconnor", name: "Alex O'Connor", tag: "Within Reason · CosmicSkeptic", faction: "Atheists",
+      grunts: ["skeptic"],
+      blurb: "The boss of Chapter 1, The Fawn in the Forest. Unfailingly polite, which makes him very hard to discourage. Rank and file: skeptic streamers and comment-section rationalists.",
       skills: [
-        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Doubting."],
-        ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Learning Down for 2 turns. Only Scripture counts."],
-        ["Eternal Security", "Self", "4", "His Conviction cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Hard Sayings passes through it."],
-        ["Debate Challenge", "All foes", "4 (starts 2)", "250% Rhetoric to each, and +1 Conviction to himself.", true],
+        ["Within Reason", "1 foe", "0", "125% Learning."],
+        ["The Fawn in the Forest", "All foes", "3", "Doubting on each, and −1 Conviction. A fawn burns to death in a forest fire, alone. What was the point?"],
+        ["Euthyphro", "1 foe", "3 (starts 1)", "Dumbfounded for 2 turns. Is a thing good because God wills it, or does God will it because it is good? Fr. Pine's Distinguo cancels it: God's own nature is the Good."],
+        ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Charity Up.", true],
       ],
     },
     {
-      id: "hansen", name: "Jacob Hansen", tag: "Latter-day Saint apologist · Thoughtful Faith", faction: "Latter-day Saint",
+      id: "ryan", name: "Ryan Hemelaar", tag: "NeedGod.net", faction: "Evangelicals",
+      grunts: ["preacher"],
+      blurb: "The boss of Chapter 2, Are You a Good Person? A street and online evangelist who asks everyone the same two questions. Rank and file: street preachers with signs and tracts.",
+      skills: [
+        ["Gospel Tract", "1 foe", "0", "125% Rhetoric. He walks over and hands you one."],
+        ["Are You a Good Person?", "All foes", "3", "Every foe is Cross-Examined. Have you ever told a lie?"],
+        ["If You Died Tonight", "All foes", "3 (starts 1)", "−1 Conviction on each. Would you go to heaven?"],
+        ["Faith Alone", "Self", "4 (starts 2)", "Arguments from works do nothing to him for 2 turns. Scott Hahn's Covenant Is Family passes through it.", true],
+      ],
+    },
+    {
+      id: "hansen", name: "Jacob Hansen", tag: "Latter-day Saint apologist · Thoughtful Faith", faction: "Latter-day Saints",
       grunts: ["elder"],
-      blurb: "The boss of the Latter-day Saint storyline, in Chapter 3. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Charity.",
+      blurb: "The boss of Chapter 3, The Restoration. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Charity.",
       skills: [
         ["Scholarly Citation", "1 foe", "0", "125% Learning."],
         ["Great Apostasy", "All foes", "3", "−1 Conviction on each, and Learning Down. The claim that true authority left the earth after the apostles."],
@@ -532,8 +581,8 @@
     },
     {
       id: "speaker", name: "Speakers' Corner Champion", tag: "Invented until a real boss agrees", faction: "Islam",
-      grunts: ["speaker", "skeptic"],
-      blurb: "The boss of the Islam storyline, in Chapter 6, where GodLogic joins as a guest. Rank and file: street debaters from Speakers' Corner and comment-section brothers. The same chapter has skeptic streamers too.",
+      grunts: ["speaker"],
+      blurb: "The boss of Chapter 4, People of the Book, where GodLogic joins as a guest. Rank and file: street debaters from Speakers' Corner and comment-section brothers.",
       skills: [
         ["Crowd Question", "1 foe", "0", "125% Rhetoric."],
         ["Tahrif", "All foes", "3", "Fact-Checks buffs that came from Scripture. The claim that the Bible was corrupted."],
@@ -541,25 +590,48 @@
         ["The Crowd Gathers", "Summon", "4 (starts 2)", "Calls two more debaters from the crowd.", true],
       ],
     },
+    {
+      id: "white", name: "James White", tag: "Alpha and Omega Ministries · The Dividing Line", faction: "Reformed",
+      grunts: ["seminarian"],
+      blurb: "The final boss, in Chapter 5, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
+      skills: [
+        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Doubting."],
+        ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Learning Down for 2 turns. Only Scripture counts."],
+        ["Eternal Security", "Self", "4", "His Conviction cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Hard Sayings passes through it."],
+        ["Debate Challenge", "All foes", "4 (starts 2)", "250% Rhetoric to each, and +1 Conviction to himself.", true],
+      ],
+    },
   ];
 
   const OCIA = [
+    { id: "skeptic", faction: "Atheists", line: "Catechumen", text: "Unbaptized, he enters the catechumenate. At the Easter Vigil he is baptized, confirmed and receives his First Communion, all in one night." },
     { id: "preacher", faction: "Protestant", line: "Received into full communion", text: "His baptism was already valid, so he is not baptized again. He makes a profession of faith and is confirmed. Tuesdays, 7 pm, parish hall." },
     { id: "elder", faction: "Latter-day Saint", line: "Baptism at the Easter Vigil", text: "The Church does not recognize Latter-day Saint baptism as valid (CDF, 2001), so he is baptized, confirmed and receives First Communion at the Vigil." },
     { id: "speaker", faction: "Islam", line: "Catechumen", text: "He enters the catechumenate, and at the Easter Vigil he is baptized, confirmed and receives his First Communion. His conversion must be free: no one may be forced to believe (Dignitatis Humanae 2)." },
   ];
 
   const CHAPTERS = [
-    ["The Comment Section", "The tutorial. A viral clip, a flood of replies, and the first two recruits from Catholic Answers: Trent Horn and Jimmy Akin.", "1 Peter 3:15: apologetics is a defense given with gentleness and respect, never an attack.", "Scripture", "g-doctrine", "Doctrine"],
-    ["Upon This Rock", "A Protestant podcaster is weighing the evidence for the papacy, as Cameron Bertuzzi once did. Help him follow it all the way. Cameron joins the team.", "The primacy and infallible teaching office of the Pope. Vatican I, Pastor Aeternus (1870).", "", "g-dogma", "Dogma"],
-    ["Pints and Paradoxes", "Matt Fradd opens the pub for a night of debates with skeptic streamers. Can reason reach God at all?", "God can be known with certainty by the natural light of reason. Vatican I, Dei Filius, canon 2.1.", "", "g-dogma", "Dogma"],
-    ["The Restoration", "Two missionaries knock on the door, and the trail leads to Jacob Hansen. Can the Church Christ founded fall away?", "The Church cannot fail: “the gates of hell shall not prevail” (Mt 16:18; Lumen Gentium 8). God is utterly simple, not an exalted man (Lateran IV, 1215).", "", "g-dogma", "Dogma"],
-    ["Signs and Wonders", "Ethan Muse and Fr. Spitzer take on the skeptics over Fatima, Lanciano and the Shroud, and unlock Vindicatory Miracles together. You learn to argue a miracle without overclaiming it.", "That miracles happen and can be known with certainty, as signs that revelation is from God, is defined (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is another matter: approved apparitions are private revelation, and no Catholic is bound to believe them (CCC 67).", "", "g-dogma", "Dogma"],
-    ["Mysterious World", "Jimmy Akin investigates a UFO sect with a message from the stars. Discernment, not ridicule.", "Whether intelligent life exists on other worlds is an open question. The Church has taught nothing on it.", "", "g-opinion", "Opinion"],
-    ["People of the Book", "At Speakers' Corner, GodLogic joins as a guest. Catholics and Protestants stand together on the Trinity and the Cross.", "“Let the People of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact in Muhammad's day, what corrupted it afterward? Beside it: Muslims “together with us adore the one, merciful God” (CCC 841).", "", "g-argument", "Argument"],
-    ["Scripture Alone?", "First battle with James White. Which books belong in the Bible, and who decided?", "The canon of Scripture, defined at Trent, Session IV (1546). The same list was received at Rome (382) and Hippo (393).", "", "g-dogma", "Dogma"],
-    ["Once Saved?", "The rematch. James White raises Eternal Security, and Trent's Hard Sayings answer it.", "Without a special revelation, no one can know with absolute certainty that he will persevere to the end (Trent, Session VI, canon 16). What we have instead is hope, a theological virtue (CCC 1817).", "", "g-dogma", "Dogma"],
-    ["One Fold", "The epilogue. Every opponent you converted comes back for the Easter Vigil.", "“There shall be one fold and one shepherd” (John 10:16).", "", "g-doctrine", "Scripture"],
+    ["The Comment Section", "Tutorial", "", "A viral clip, a flood of replies, and the first two recruits from Catholic Answers: Trent Horn and Jimmy Akin.",
+      [["g-doctrine", "Scripture", "1 Peter 3:15: a defense given with gentleness and reverence, never an attack."]]],
+    ["The Fawn in the Forest", "Atheists", "Alex O'Connor", "Why would a good God let a fawn burn to death, alone, where no one will ever know? Fr. Pine brings St. Thomas, Fr. Spitzer brings the laws of nature, and Scott Hahn brings Romans 8. Along the way, Ethan Muse and Fr. Spitzer face skeptic streamers over Fatima and the Shroud, and unlock Vindicatory Miracles.",
+      [["g-doctrine", "Doctrine", "God freely willed a world “in a state of journeying” toward its perfection. Until it arrives, physical evil exists alongside physical good (CCC 310)."],
+       ["g-opinion", "Opinion", "The particular answers to the fawn: the good of the whole (Summa I, q. 22, a. 2, ad 2), a law-governed world, creation's coming liberation (Romans 8:21). Faithful Catholics weigh them differently."],
+       ["g-dogma", "Dogma", "That miracles happen and can be known with certainty as signs of revelation (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is private revelation, which no Catholic is bound to believe (CCC 67)."]]],
+    ["Are You a Good Person?", "Evangelicals", "Ryan Hemelaar", "“If you died tonight, would you go to heaven?” The team has to answer without claiming to earn it, and without claiming a certainty no one has. Scott Hahn, once a Presbyterian minister, shows them the family behind the courtroom.",
+      [["g-dogma", "Dogma", "We are justified freely: nothing that comes before justification, faith or works, merits the grace of it (Trent, Session VI, ch. 8). And without a special revelation, no one can know with absolute certainty that he will persevere (canon 16)."],
+       ["g-doctrine", "Doctrine", "What we have instead is hope, a theological virtue: confident trust in God's promises (CCC 1817–1821)."]]],
+    ["The Restoration", "Latter-day Saints", "Jacob Hansen", "If the Church fell away after the apostles died, when did it happen, and why didn't anyone notice? Joe Heschmeyer opens Ignatius of Antioch's letters.",
+      [["g-doctrine", "Doctrine", "The Church cannot fail: “the gates of Hades shall not prevail against it” (Matthew 16:18; 28:20; Lumen Gentium 8)."],
+       ["g-dogma", "Dogma", "God is utterly simple, one in substance, without parts: not an exalted man (Lateran IV, 1215)."]]],
+    ["People of the Book", "Islam", "Speakers' Corner Champion", "If the Bible was corrupted, when? And why does the Qur'an tell Christians to judge by the Gospel? GodLogic joins as a guest, and Catholics and Protestants stand together.",
+      [["g-dogma", "Dogma", "The Son is “one in being with the Father”: not a second god, but God's own eternal Word (Nicaea, 325)."],
+       ["g-argument", "Argument", "“Let the people of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact then, what corrupted it afterward?"],
+       ["g-doctrine", "Doctrine", "Muslims “together with us adore the one, merciful God” (CCC 841; Nostra Aetate 3)."]]],
+    ["Scripture Alone?", "Reformed", "James White", "How do you answer sola scriptura in a way James White hasn't heard a thousand times? Grant him the canon, and ask for the verse that says the rule of faith changes when the last apostle dies.",
+      [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
+       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]]],
+    ["One Fold", "Epilogue", "", "The Easter Vigil. Every opponent you reached comes back, and one of them is just visiting.",
+      [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]]],
   ];
 
   // ---- Roster, factions, chapters ------------------------------------------
@@ -670,17 +742,62 @@
   }
 
   const chapters = document.getElementById("chapters");
-  for (const [title, story, card, , cls, grade] of CHAPTERS) {
+  for (const [title, group, boss, story, cards] of CHAPTERS) {
     const li = document.createElement("li");
-    li.innerHTML = `<div class="body"><h3></h3><p></p><div class="card-note"><span class="grade"></span><span></span></div></div>`;
+    li.innerHTML = `<div class="body"><span class="label"></span><h3></h3><p></p></div>`;
+    li.querySelector(".label").textContent = group + (boss ? " · Boss: " + boss : "");
     li.querySelector("h3").textContent = title;
     li.querySelector("p").textContent = story;
-    const g = li.querySelector(".grade");
-    g.className = "grade " + cls;
-    g.textContent = grade;
-    li.querySelector(".card-note span:last-child").textContent = card;
+    for (const [cls, grade, text] of cards) {
+      const note = document.createElement("div");
+      note.className = "card-note";
+      note.innerHTML = `<span class="grade"></span><span></span>`;
+      note.querySelector(".grade").className = "grade " + cls;
+      note.querySelector(".grade").textContent = grade;
+      note.querySelector("span:last-child").textContent = text;
+      li.querySelector(".body").append(note);
+    }
     chapters.append(li);
   }
+
+  // ---- The cut scenes --------------------------------------------------------------
+
+  const storyCanvas = document.getElementById("story");
+  const story = Story.create(storyCanvas);
+  const tabs = document.getElementById("story-tabs");
+  const where = document.getElementById("story-where");
+  function paintTabs() {
+    for (const b of tabs.children) b.setAttribute("aria-pressed", String(b.dataset.id === story.chapter.id));
+    const c = story.chapter;
+    const [who, said] = story.spoken;
+    const line = document.getElementById("story-line");
+    line.textContent = "";
+    if (who) { const b = document.createElement("b"); b.textContent = who + ": "; line.append(b); }
+    line.append(said);
+    where.textContent = (c.mystery ? "The mystery: " + c.mystery + " " : "") + "Scene " + (story.scene + 1) + " of " + c.scenes.length + ": " + c.scenes[story.scene].when + ".";
+  }
+  for (const c of Story.CHAPTERS) {
+    const b = document.createElement("button");
+    b.dataset.id = c.id;
+    b.innerHTML = "<small></small><span></span>";
+    b.querySelector("small").textContent = c.group;
+    b.querySelector("span").textContent = c.title;
+    b.addEventListener("click", () => { story.open(c.id, 0); paintTabs(); });
+    tabs.append(b);
+  }
+  story.open("atheists", 0);
+  story.onChange((finished) => {
+    if (finished) {
+      // At the end of a chapter, go on to the next one.
+      const i = Story.CHAPTERS.indexOf(finished);
+      story.open(Story.CHAPTERS[(i + 1) % Story.CHAPTERS.length].id, 0);
+    }
+    paintTabs();
+  });
+  paintTabs();
+  storyCanvas.addEventListener("click", () => story.next());
+  storyCanvas.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); story.next(); } });
+  document.getElementById("story-next").addEventListener("click", () => story.next());
 
   // ---- The battle demo ---------------------------------------------------------
 
@@ -933,7 +1050,7 @@
   if (still) {
     drawBattle(9.2); drawOcia(3.2);
     // With reduced motion the theater and the spotlight only move when asked.
-    const loop = (now) => { drawTheater(now / 1000); drawSpot(now / 1000); requestAnimationFrame(loop); };
+    const loop = (now) => { drawTheater(now / 1000); drawSpot(now / 1000); story.frame(now / 1000); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
     return;
   }
@@ -943,10 +1060,11 @@
     drawBattle(t % LOOP);
     drawTheater(t);
     drawSpot(t);
+    story.frame(t);
     drawOcia(t);
     requestAnimationFrame(frame);
   }
-  drawBattle(0.6); drawTheater(0); drawSpot(0); drawOcia(0);
+  drawBattle(0.6); drawTheater(0); drawSpot(0); story.frame(0); drawOcia(0);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 })();
 </script>

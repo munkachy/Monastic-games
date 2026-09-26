@@ -204,8 +204,14 @@ const Art = (() => {
     // Brows and eyes.
     const browY = s.browY || 10;
     for (const x of s.browThin ? [12, 13, 18, 19] : [11, 12, 13, 18, 19, 20]) g.put(x, browY, s.brow || hair);
-    for (const x of [12, 13, 18, 19]) g.put(x, 12, "#221a22");
-    g.put(12, 12, "#fdfaf2"); g.put(19, 12, "#fdfaf2");
+    if (s.wideEyes) {
+      // Big, delighted eyes: white all round, the pupil in the middle.
+      for (const x0 of [11, 18]) for (let x = x0; x < x0 + 3; x++) for (const y of [11, 12, 13]) g.put(x, y, "#fdfaf2");
+      g.put(12, 12, "#221a22"); g.put(19, 12, "#221a22");
+    } else {
+      for (const x of [12, 13, 18, 19]) g.put(x, 12, "#221a22");
+      g.put(12, 12, "#fdfaf2"); g.put(19, 12, "#fdfaf2");
+    }
 
     // Nose.
     g.put(16, 14, s.shade); g.put(16, 15, s.shade); g.put(15, 16, s.shade);
@@ -235,6 +241,8 @@ const Art = (() => {
       }
       for (let y = 11; y < 16; y++) { g.put(8, y, beard); g.put(23, y, beard); }
       for (let x = 12; x < 20; x++) g.put(x, 17, beard);
+    } else if (b === "mustache") {
+      for (let x = 14; x < 18; x++) g.put(x, 17, beard);
     } else if (b === "goatee") {
       for (let x = 13; x < 19; x++) g.put(x, 17, beard);
       for (let y = 19; y < 23; y++) for (let x = 13; x < 19; x++) if (!(y === 22 && (x === 13 || x === 18))) g.put(x, y, beard);
@@ -478,6 +486,10 @@ const Art = (() => {
     holdsworth: { skin: "#f0c6a8", shade: "#cf9d82", hair: "#8a3e1e", hairLight: "#a8542a", style: "long", beard: "full", beardColor: "#9a4a24", brow: "#8a3e1e", outfit: "shirt", clothes: "#9a8a6a", trim: "#7a6a4e" },
     jurado: { skin: "#dcae8c", shade: "#bb8b6a", hair: "#1e1612", style: "short", beard: "short", beardColor: "#1e1612", brow: "#1e1612", outfit: "shirt", clothes: "#1f1f26", trim: "#3a3a44", prop: "mic" },
     heschmeyer: { skin: "#f0c6a8", shade: "#cf9d80", hair: "#3a2618", style: "side", beard: "full", beardColor: "#3a2618", outfit: "suit", clothes: "#2a4a8a", lapel: "#1e3a6e", shirt: "#cfe0f2", tie: "#3a5a9a", smile: true },
+    hahn: { skin: "#e8b596", shade: "#c89276", hair: "#8e887e", hairLight: "#b8b2a8", style: "side", beard: "short", beardColor: "#dcd8d0", brow: "#6a645c", browY: 9, wideEyes: true, outfit: "suit", clothes: "#26293a", lapel: "#1a1c28", shirt: "#b8cce4", smile: true },
+    oconnor: { skin: "#f2d0ba", shade: "#d4a88e", hair: "#2a1c14", hairLight: "#4a3424", style: "side", beard: "mustache", beardColor: "#6a5040", mouth: "#c47e70", outfit: "suit", clothes: "#5a5d66", lapel: "#474a52", shirt: "#f7f5ee", tie: "#7a2a34" },
+    ryan: { skin: "#e9bf9e", shade: "#c9977a", hair: "#3a2618", hairLight: "#5a3d28", style: "short", outfit: "shirt", clothes: "#2a4a7a", trim: "#dfe6f2", smile: true },
+    seminarian: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#6a4a2f", style: "side", glasses: "#2a2a33", outfit: "suit", clothes: "#3a3f4a", lapel: "#2a2f3a", tie: "#5a2a2a", prop: "book", bookColor: "#1f2d4f" },
     // Rank-and-file opponents, invented for the game.
     elder: { skin: "#f4d0b3", shade: "#d7a98a", hair: "#d9b25a", hairLight: "#f0cf7a", style: "side", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#243a66", prop: "nametag", smile: true },
     preacher: { skin: "#e9b896", shade: "#c78f70", hair: "#6b4a2f", style: "short", beard: "chin", beardColor: "#6b4a2f", outfit: "shirt", clothes: "#7a6a4f", trim: "#e9e2d0", prop: "sign" },
