@@ -6,17 +6,21 @@
 // Targets: "foe" one opponent you choose, "foes" every opponent, "two" two
 // opponents at random, "ally" one friend you choose, "allies" every friend,
 // "self". Effects run in order on each target:
-//   dmg: share of Rhetoric (stat "r") or Learning ("l"); hits: how many
+//   dmg: a hit on Composure, as a share of the hidden Rhetoric (stat "r") or
+//        Learning ("l"); hits: how many. The player just sees "a hit".
 //   vs: [status, multiplier] hits harder against a status (or "guarded")
-//   conv: change in Conviction, chance: how likely
+//   morale: change in Morale (−1 knocks it down a step), chance: how likely
 //   status: dumbfounded, doubting, muted, examined, called; turns
 //   buff: r, l, c (Poise), crit; amt (+0.5 is 50% up); turns
 //   heal: share of full Composure (revives the Discouraged)
 //   cleanse, purge (remove buffs: a number or "all"), shield, citation
 //   taunt: the targets must answer the one who used it
-//   counter: answer back when addressed; immune: "conviction" or "learning"
-//   selfConv / allyConv: Conviction for the user or its friends
-//   onBreak: extra Conviction for the user if the move converts someone
+//   counter: answer back when addressed; immune: "conviction" (no Morale
+//   loss) or "learning" (hits land at half strength)
+//   selfMorale / allyMorale: Morale for the user or its friends
+//   onBreak: extra Morale for the user if the move puts someone out
+// An opponent with secretConvert converts when his Morale bottoms out,
+// instead of leaving; the player is never told which ones do.
 // A move's pierce list names defenses it passes through.
 
 const GameData = (() => {
@@ -26,103 +30,103 @@ const GameData = (() => {
     akin: { name: "Jimmy Akin", stats: [225, 70, 90, 25, 58], skills: [
       H("Precise Distinction", "foe", 0, 0, [{ dmg: 1.0, stat: "l" }]),
       H("Senior Apologist", "foe", 3, 0, [{ dmg: 1.5, stat: "r", vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.25 }]),
-      H("Logical Paradox", "foes", 3, 0, [{ buff: "r", amt: -0.2, turns: 3 }, { conv: -1, chance: 0.5 }]),
-      H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { conv: -1 }]),
+      H("Logical Paradox", "foes", 3, 0, [{ buff: "r", amt: -0.2, turns: 3 }, { morale: -1, chance: 0.5 }]),
+      H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { morale: -1 }]),
     ] },
     muse: { name: "Ethan Muse", stats: [288, 76, 45, 18, 88], skills: [
       H("Pointed Question", "foe", 0, 0, [{ dmg: 1.25, stat: "r" }, { status: "doubting", turns: 3, chance: 0.5 }]),
-      H("Open Challenge", "foes", 3, 0, [{ taunt: 3 }, { conv: -1 }]),
+      H("Open Challenge", "foes", 3, 0, [{ taunt: 3 }, { morale: -1 }]),
       H("Steelman Stance", "self", 3, 1, [{ counter: 3 }, { buff: "r", amt: 0.5, turns: 3 }]),
-      H("Camera Mog", "foe", 4, 2, [{ dmg: 4.0, stat: "r", vs: ["doubting", 1.5] }, { conv: -1 }, { onBreak: 1 }]),
-      H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { conv: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "spitzer" }),
+      H("Camera Mog", "foe", 4, 2, [{ dmg: 4.0, stat: "r", vs: ["doubting", 1.5] }, { morale: -1 }, { onBreak: 1 }]),
+      H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { morale: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "spitzer" }),
     ] },
     schmitz: { name: "Fr. Mike Schmitz", stats: [250, 58, 105, 12, 125], skills: [
       H("Two-Minute Homily", "foe", 0, 0, [{ dmg: 1.5, stat: "r" }]),
       H("I'm Praying for You", "ally", 3, 0, [{ buff: "r", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.25, turns: 3 }]),
-      H("The Bible in a Year", "allies", 3, 1, [{ conv: 1 }, { buff: "c", amt: 0.5, turns: 3 }]),
+      H("The Bible in a Year", "allies", 3, 1, [{ morale: 1 }, { buff: "c", amt: 0.5, turns: 3 }]),
       H("The Catechism in a Year", "allies", 4, 2, [{ cleanse: true }, { shield: 0.25, turns: 3 }, { buff: "l", amt: 0.3, turns: 3 }]),
     ] },
     bertuzzi: { name: "Cameron Bertuzzi", stats: [238, 79, 60, 14, 118], passive: { allies: { c: 0.05 } }, skills: [
       H("Clarifying Questions", "foe", 0, 0, [{ dmg: 0.45, stat: "r", hits: 3 }]),
       H("Time's Up", "foe", 3, 0, [{ dmg: 2.5, stat: "r" }, { buff: "r", amt: -0.5, turns: 3 }]),
-      H("Point of Order", "foes", 3, 1, [{ conv: -1 }, { purge: 1 }]),
+      H("Point of Order", "foes", 3, 1, [{ morale: -1 }, { purge: 1 }]),
       H("Bayesian Update", "allies", 4, 2, [{ heal: 0.3 }, { cleanse: true }, { buff: "c", amt: 0.5, turns: 3 }]),
     ] },
     horn: { name: "Trent Horn", stats: [250, 82, 15, 15, 140], passive: { group: ["akin", "horn", "heschmeyer"], r: 0.05 }, skills: [
       H("Deadpan", "foe", 0, 0, [{ dmg: 1.5, stat: "r" }, { buff: "r", amt: -0.2, turns: 1, chance: 0.5 }]),
-      H("Free-for-All Friday", "allies", 3, 0, [{ conv: 1 }, { randomLift: true }]),
-      H("Is That in the Bible?", "foes", 3, 1, [{ purge: 1 }, { conv: -1 }], { pierce: ["security", "faith"] }),
+      H("Free-for-All Friday", "allies", 3, 0, [{ morale: 1 }, { randomLift: true }]),
+      H("Is That in the Bible?", "foes", 3, 1, [{ purge: 1 }, { morale: -1 }], { pierce: ["security", "faith"] }),
       H("The Case for Catholicism", "foes", 4, 2, [{ dmg: 3.0, stat: "r", vs: ["guarded", 1.5] }]),
     ] },
     fradd: { name: "Matt Fradd", stats: [225, 61, 105, 14, 125], skills: [
       H("Cheeky Question", "foe", 0, 0, [{ dmg: 1.5, stat: "r" }]),
-      H("Pints with Aquinas", "ally", 3, 0, [{ heal: 0.5 }, { conv: 2, chance: 0.5 }]),
-      H("Australian Charm", "ally", 3, 0, [{ buff: "r", amt: 0.5, turns: 3 }, { conv: 2 }]),
+      H("Pints with Aquinas", "ally", 3, 0, [{ heal: 0.5 }, { morale: 2, chance: 0.5 }]),
+      H("Australian Charm", "ally", 3, 0, [{ buff: "r", amt: 0.5, turns: 3 }, { morale: 2 }]),
       H("Summa Session", "allies", 4, 2, [{ cleanse: true }, { buff: "c", amt: 0.5, turns: 3 }]),
     ] },
     godlogic: { name: "GodLogic", guest: true, stats: [163, 61, 135, 15, 125], skills: [
       H("Smooth Question", "foe", 0, 0, [{ dmg: 1.0, stat: "l" }, { buff: "l", amt: -0.2, turns: 1, chance: 0.1 }]),
       H("Smooth Pivot", "ally", 3, 0, [{ citation: true }, { buff: "l", amt: 0.3, turns: 3 }]),
-      H("Stay Smooth", "allies", 3, 0, [{ shield: 0.3, turns: 3 }, { conv: 1 }]),
-      H("Common Ground", "foes", 4, 0, [{ purge: "all" }, { buff: "l", amt: -0.5, turns: 3 }, { conv: -1, faction: "islam" }]),
+      H("Stay Smooth", "allies", 3, 0, [{ shield: 0.3, turns: 3 }, { morale: 1 }]),
+      H("Common Ground", "foes", 4, 0, [{ purge: "all" }, { buff: "l", amt: -0.5, turns: 3 }, { morale: -1, faction: "islam" }]),
     ] },
     barron: { name: "Bishop Barron", stats: [262, 82, 60, 11, 110], skills: [
       H("Sunday Sermon", "foe", 0, 0, [{ dmg: 1.25, stat: "r" }, { buff: "r", amt: -0.2, turns: 1, chance: 0.5 }]),
       H("Word on Fire", "foes", 3, 0, [{ dmg: 2.5, stat: "r" }]),
       H("The Way of Beauty", "self", 3, 1, [{ tauntAll: 3 }, { citation: true }, { buff: "r", amt: 0.3, turns: 3 }]),
-      H("No Beige Catholicism", "foe", 4, 2, [{ status: "muted", turns: 3 }, { buff: "r", amt: -0.3, turns: 3 }, { conv: -1 }]),
+      H("No Beige Catholicism", "foe", 4, 2, [{ status: "muted", turns: 3 }, { buff: "r", amt: -0.3, turns: 3 }, { morale: -1 }]),
     ] },
     hicks: { name: "Fr. Boniface Hicks", stats: [200, 64, 128, 14, 110], skills: [
       H("Gentle Correction", "foe", 0, 0, [{ dmg: 1.25, stat: "l" }, { buff: "r", amt: -0.2, turns: 1, chance: 0.25 }]),
       H("Discernment of Spirits", "foes", 3, 0, [{ status: "examined", turns: 3 }]),
-      H("Obsculta", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }, { conv: -2 }]),
-      H("Spiritual Direction", "foe", 4, 2, [{ conv: -2 }, { selfConv: 2 }]),
+      H("Obsculta", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }, { morale: -2 }]),
+      H("Spiritual Direction", "foe", 4, 2, [{ morale: -2 }, { selfMorale: 2 }]),
     ] },
     pine: { name: "Fr. Gregory Pine", stats: [213, 53, 88, 14, 118], skills: [
       H("Distinguo", "two", 0, 0, [{ dmg: 0.75, stat: "l" }, { friendsCleanse: "dumbfounded" }]),
       H("Sed Contra", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { immune: "conviction", turns: 3 }]),
       H("The Five Ways", "foes", 3, 1, [{ dmg: 2.5, stat: "l" }, { buff: "c", amt: -0.3, turns: 3 }]),
-      H("Respondeo", "foe", 4, 2, [{ dmg: 1.5, stat: "l", hits: 3 }, { allyConv: 2 }]),
+      H("Respondeo", "foe", 4, 2, [{ dmg: 1.5, stat: "l", hits: 3 }, { allyMorale: 2 }]),
     ] },
     marygrace: { name: "Sr. Mary Grace", stats: [213, 64, 75, 10, 170], skills: [
       H("A Word of Truth", "foe", 0, 0, [{ dmg: 1.5, stat: "l" }]),
-      H("Let Love", "allies", 3, 0, [{ buff: "c", amt: 0.5, turns: 3 }, { conv: 1 }]),
-      H("Every Life Is Good", "foes", 3, 1, [{ buff: "r", amt: -0.3, turns: 3 }, { buff: "l", amt: -0.3, turns: 3 }, { conv: -1, chance: 0.5 }]),
+      H("Let Love", "allies", 3, 0, [{ buff: "c", amt: 0.5, turns: 3 }, { morale: 1 }]),
+      H("Every Life Is Good", "foes", 3, 1, [{ buff: "r", amt: -0.3, turns: 3 }, { buff: "l", amt: -0.3, turns: 3 }, { morale: -1, chance: 0.5 }]),
     ] },
     rose: { name: "Lila Rose", stats: [200, 60, 100, 15, 120], passive: { allies: { c: 0.05 } }, skills: [
       H("Every Life", "foe", 0, 0, [{ dmg: 1.25, stat: "l" }]),
       H("Sense Deception", "foe", 3, 0, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }]),
-      H("Counsel", "ally", 3, 0, [{ cleanse: true }, { conv: 2 }]),
-      H("Live Action", "foes", 4, 2, [{ buff: "r", amt: -0.3, turns: 3 }, { conv: -1 }, { allyConv: 1 }]),
+      H("Counsel", "ally", 3, 0, [{ cleanse: true }, { morale: 2 }]),
+      H("Live Action", "foes", 4, 2, [{ buff: "r", amt: -0.3, turns: 3 }, { morale: -1 }, { allyMorale: 1 }]),
     ] },
     holdsworth: { name: "Brian Holdsworth", stats: [200, 58, 135, 12, 125], skills: [
       H("Ten-Minute Essay", "foe", 0, 0, [{ dmg: 1.5, stat: "l" }]),
       H("Beauty Will Save the World", "allies", 3, 0, [{ heal: 0.25 }]),
       H("Cultural Diagnosis", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "c", amt: -0.5, turns: 3 }]),
-      H("Authentic Catholic Culture", "allies", 4, 2, [{ cleanse: true }, { shield: 0.35, turns: 3 }, { conv: 1 }, { immune: "conviction", turns: 3 }]),
+      H("Authentic Catholic Culture", "allies", 4, 2, [{ cleanse: true }, { shield: 0.35, turns: 3 }, { morale: 1 }, { immune: "conviction", turns: 3 }]),
     ] },
     jurado: { name: "Alex Jurado", stats: [288, 100, 30, 15, 88], skills: [
       H("One-Two", "foe", 0, 0, [{ dmg: 0.5, stat: "r", hits: 2 }]),
-      H("Deep Cut", "foe", 3, 0, [{ status: "doubting", turns: 3 }, { buff: "c", amt: -0.5, turns: 3 }, { conv: -1 }]),
+      H("Deep Cut", "foe", 3, 0, [{ status: "doubting", turns: 3 }, { buff: "c", amt: -0.5, turns: 3 }, { morale: -1 }]),
       H("Stallone Voice", "foe", 3, 1, [{ dmg: 2.5, stat: "r" }, { status: "dumbfounded", turns: 2, chance: 0.5 }]),
-      H("Voice of Reason", "foes", 4, 2, [{ purge: "all" }, { conv: -2 }]),
+      H("Voice of Reason", "foes", 4, 2, [{ purge: "all" }, { morale: -2 }]),
     ] },
     spitzer: { name: "Fr. Robert Spitzer", stats: [188, 70, 135, 18, 73], skills: [
       H("Fine-Tuning", "foe", 0, 0, [{ dmg: 0.6, stat: "l", hits: 2 }, { purge: 1, chance: 0.25 }]),
       H("The Four Levels of Happiness", "allies", 3, 0, [{ cleanse: true }, { shield: 0.25, turns: 3 }]),
-      H("Borde–Guth–Vilenkin", "foe", 4, 2, [{ dmg: 2.5, stat: "l", splash: 1.0 }, { status: "muted", turns: 3 }, { conv: -1 }]),
-      H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { conv: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
+      H("Borde–Guth–Vilenkin", "foe", 4, 2, [{ dmg: 2.5, stat: "l", splash: 1.0 }, { status: "muted", turns: 3 }, { morale: -1 }]),
+      H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { morale: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
     hahn: { name: "Scott Hahn", stats: [275, 72, 110, 22, 95], passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth"] }, skills: [
       H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.25, stat: "l" }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ status: "dumbfounded", turns: 2 }, { buff: "r", amt: -0.3, turns: 3 }]),
-      H("The Lamb's Supper", "allies", 3, 1, [{ heal: 0.25 }, { cleanse: true }, { conv: 1 }]),
-      H("Rome Sweet Home", "foes", 4, 2, [{ conv: -2 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
+      H("The Lamb's Supper", "allies", 3, 1, [{ heal: 0.25 }, { cleanse: true }, { morale: 1 }]),
+      H("Rome Sweet Home", "foes", 4, 2, [{ morale: -2 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
     ] },
     heschmeyer: { name: "Joe Heschmeyer", stats: [188, 30, 88, 10, 170], passive: { group: ["akin", "horn", "heschmeyer"], l: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, stat: "l", hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
       H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
-      H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, stat: "l", hits: 3 }, { conv: -1 }]),
+      H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, stat: "l", hits: 3 }, { morale: -1 }]),
     ] },
   };
 
@@ -156,21 +160,31 @@ const GameData = (() => {
       H("TULIP", "foe", 3, 1, [{ status: "muted", turns: 1 }], { anim: X("Total depravity.", "muted") }),
     ] },
 
+    // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
+    // animal suffering first led him away from the Church; in August 2026 he
+    // announced his return. Wear down his Morale and he comes home.
+    schmid: { name: "Joe Schmid", faction: "atheist", secretConvert: true, sign: ["CONFESSION", "WELCOME HOME"], stats: [120, 64, 82, 16, 104], skills: [
+      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.2, stat: "l" }], { anim: V(["Consider…", "…a dilemma."], "#9fd0ff") }),
+      H("Evolutionary Suffering", "foes", 3, 0, [{ status: "doubting", turns: 2 }, { morale: -1, chance: 0.5 }], { anim: X("Millions of years of it?", ["doubting", "pipDown"]) }),
+      H("Modal Collapse", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }], { anim: X("Then everything is necessary.", "dumbfounded") }),
+      H("Steelman", "self", 3, 1, [{ heal: 0.2 }, { selfMorale: 2 }], { anim: U("Let me steelman that.", ["heal", "pipUp"]) }),
+    ] },
+
     oconnor: { name: "Alex O'Connor", boss: true, faction: "atheist", stats: [340, 70, 85, 20, 105], skills: [
       H("Within Reason", "foe", 0, 0, [{ dmg: 1.25, stat: "l" }], { anim: V(["Hm, but…"], "#9fd0ff") }),
-      H("The Fawn in the Forest", "foes", 3, 0, [{ status: "doubting", turns: 3 }, { conv: -1 }], { anim: X("What about the fawn?", ["doubting", "pipDown"]) }),
+      H("The Fawn in the Forest", "foes", 3, 0, [{ status: "doubting", turns: 3 }, { morale: -1 }], { anim: X("What about the fawn?", ["doubting", "pipDown"]) }),
       H("Euthyphro", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }], { anim: X("Good because God wills it, or…?", "dumbfounded") }),
       H("Charitable Skeptic", "self", 4, 2, [{ heal: 0.3 }, { buff: "c", amt: 0.5, turns: 3 }], { anim: U("That's a fair point.", ["heal", "up"]) }),
     ] },
     ryan: { name: "Ryan Hemelaar", boss: true, faction: "protestant", stats: [330, 72, 60, 18, 110], skills: [
       H("Gospel Tract", "foe", 0, 0, [{ dmg: 1.25, stat: "r" }], { anim: A("Here, take one!", "down", "scroll") }),
       H("Are You a Good Person?", "foes", 3, 0, [{ status: "examined", turns: 3 }], { anim: X("Are you a good person?", "examined") }),
-      H("If You Died Tonight", "foes", 3, 1, [{ conv: -1 }], { anim: X("If you died tonight…?", "pipDown") }),
+      H("If You Died Tonight", "foes", 3, 1, [{ morale: -1 }], { anim: X("If you died tonight…?", "pipDown") }),
       H("Faith Alone", "self", 4, 2, [{ immune: "faith", turns: 2 }], { anim: U("It's by faith alone!", ["shield"]) }),
     ] },
     hansen: { name: "Jacob Hansen", boss: true, faction: "lds", stats: [340, 70, 80, 24, 100], skills: [
       H("Scholarly Citation", "foe", 0, 0, [{ dmg: 1.25, stat: "l" }], { anim: V(["Footnote 14."], "#7ea4e6") }),
-      H("Great Apostasy", "foes", 3, 0, [{ conv: -1 }, { buff: "l", amt: -0.3, turns: 3 }], { anim: X("The authority was lost.", ["pipDown", "down"]) }),
+      H("Great Apostasy", "foes", 3, 0, [{ morale: -1 }, { buff: "l", amt: -0.3, turns: 3 }], { anim: X("The authority was lost.", ["pipDown", "down"]) }),
       H("Burning in the Bosom", "self", 3, 1, [{ heal: 0.25 }, { immune: "learning", turns: 2 }], { anim: U("I've felt it.", ["heal", "shield"]) }),
       H("Eternal Progression", "self", 4, 2, [{ buff: "r", amt: 0.6, turns: 3 }], { anim: U("As man is, God once was.", ["up"]) }),
     ] },
@@ -184,7 +198,7 @@ const GameData = (() => {
       H("Greek Exegesis", "foe", 0, 0, [{ dmg: 1.5, stat: "l" }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
       H("Sola Scriptura", "foes", 3, 0, [{ purge: "all" }, { buff: "l", amt: -0.3, turns: 2 }], { anim: X("Scripture alone!", ["factcheck", "down"]) }),
       H("Eternal Security", "self", 5, 2, [{ immune: "security", turns: 2 }, { heal: 0.15 }], { anim: U("Perseverance of the saints.", ["shield", "heal"]) }),
-      H("Debate Challenge", "foes", 4, 2, [{ dmg: 1.4, stat: "r" }, { selfConv: 1 }], { anim: X("Let's debate. Right now.", ["down"]) }),
+      H("Debate Challenge", "foes", 4, 2, [{ dmg: 1.4, stat: "r" }, { selfMorale: 1 }], { anim: X("Let's debate. Right now.", ["down"]) }),
     ] },
   };
 
@@ -197,7 +211,7 @@ const GameData = (() => {
     { id: "atheists", title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
-      { name: "Signs and Wonders", foes: ["skeptic2", "skeptic", "skeptic2"] },
+      { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"] },
     { id: "evangelicals", title: "Are You a Good Person?", group: "Evangelicals", missions: [
