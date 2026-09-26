@@ -172,7 +172,31 @@
     color: #fff;
     font-size: 8px;
   }
+  .spell .charges {
+    position: absolute;
+    left: 2px;
+    top: 4px;
+    padding: 3px 4px;
+    border-radius: 10px;
+    background: var(--maroon);
+    color: #fff;
+    font-size: 8px;
+  }
   .spell:disabled { cursor: default; }
+  .sound-toggle {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 16px;
+    text-shadow: 2px 2px 0 var(--maroon);
+  }
+  .sound-toggle.off { opacity: 0.55; }
+  .title-top { display: flex; gap: 8px; align-items: stretch; }
+  .title-top .ribbon { flex: 1; }
+  .title-top .sound-toggle { width: 56px; height: auto; font-size: 20px; border: 3px solid var(--maroon); }
   .spell:disabled .gem { filter: grayscale(0.8) brightness(0.8); opacity: 0.6; }
   .spell.armed .gem { border-color: var(--gold); box-shadow: 0 0 0 3px var(--maroon), 0 0 12px var(--gold); }
   #candles {
@@ -450,6 +474,7 @@
       <div class="topbar">
         <div class="banner left">
           <button id="btn-pause" aria-label="Pause">II</button>
+          <button class="sound-toggle" aria-label="Turn sound off">♪</button>
           <span id="height">0.0</span><small>cubits</small>
         </div>
         <div class="banner right">
@@ -462,7 +487,7 @@
       <div id="spells">
         <button id="spell-repel" class="spell" aria-label="Holy water: drive off the demon"><span class="gem"><canvas data-sprite="aspergillum"></canvas></span><span class="cost">4</span></button>
         <button id="spell-zap" class="spell" aria-label="Zap: break the last stone"><span class="gem"><canvas data-sprite="bolt"></canvas></span><span class="cost">3</span></button>
-        <button id="spell-mortar" class="spell" aria-label="Mortar: the stone sets fast"><span class="gem"><canvas data-sprite="mortar"></canvas></span><span class="cost">3</span></button>
+        <button id="spell-mortar" class="spell" aria-label="Mortar: the stone sets fast"><span class="gem"><canvas data-sprite="mortar"></canvas></span><span class="cost">4</span><span class="charges" id="mortar-charges">×0</span></button>
         <button id="spell-scaffold" class="spell" aria-label="Scaffold: a platform level with the tower top"><span class="gem"><canvas data-sprite="scaffold"></canvas></span><span class="cost">5</span></button>
         <button id="spell-gild" class="spell" aria-label="Gild: a stone worth extra coins"><span class="gem"><canvas data-sprite="coin"></canvas></span><span class="cost">2</span></button>
       </div>
@@ -483,7 +508,10 @@
 
     <div id="title" class="screen title-screen" hidden>
       <div class="title-panel">
-        <h1 class="ribbon title-ribbon">Benedictine Bricks</h1>
+        <div class="title-top">
+          <h1 class="ribbon title-ribbon">Benedictine Bricks</h1>
+          <button class="sound-toggle chunky" aria-label="Turn sound off">♪</button>
+        </div>
         <div class="world-head" id="world-name"></div>
         <ul id="world-missions" class="mission-rows"></ul>
         <div class="diploma">
@@ -531,6 +559,8 @@
   </div>
 </div>
 <script src="lib/matter.min.js"></script>
+<script src="chants.js"></script>
+<script src="audio.js"></script>
 <script src="art.js"></script>
 <script src="monasteries.js"></script>
 <script src="game.js"></script>

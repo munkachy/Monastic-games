@@ -6,7 +6,7 @@ serve the whole repo as-is.
 
 | Game | Folder | What it is |
 | --- | --- | --- |
-| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on six real Benedictine monasteries |
+| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
 
 ## Playing locally
 
@@ -27,3 +27,16 @@ end of `art.js`.
 
 The physics engine is [Matter.js](https://github.com/liabru/matter-js)
 (MIT license), included in `benedictine-bricks/lib/`.
+
+## Benedictine Bricks: music
+
+The music is real Gregorian chant, one piece for each Hour of the Office the
+game passes through as you build: the Te Deum (Vigils), Jam lucis orto sidere
+(Prime), Rector potens (Sext), Ave maris stella (Vespers), Te lucis ante
+terminum and the Salve Regina (Compline). The scores are GABC transcriptions
+from [GregoBase](https://gregobase.selapa.net/), kept in
+`benedictine-bricks/music/gabc/`. `node tools/gabc2js.js` turns them into
+`benedictine-bricks/chants.js` for the game, and into MIDI files in
+`benedictine-bricks/music/` that open in any music program. The game sings
+them with a synthesized choir over a drone and a beat, all made in the
+browser (`audio.js`).

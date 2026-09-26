@@ -68,6 +68,46 @@ const MonasteryArt = (() => {
     for (let x = -40; x < 40; x += 1.5) c.fillRect(Math.round(x * T), Math.round((y + 0.4 + (x % 3 === 0 ? 0.3 : 0)) * T), Math.round(0.6 * T), 3);
   }
 
+  // St. Bernard Abbey, Cullman, Alabama: the abbey church, a great square
+  // block of rough sandstone quarried on the monastery's own land, with one
+  // tall window of gold-tinted panes over the door. Low college buildings and
+  // trees stand beside it.
+  function stbernard(c) {
+    for (const [x0, x1] of [[-17, -4.6], [4.6, 17]]) {
+      box(c, x0, 8.6, x1 - x0, 3.9, "#d8b48a");
+      box(c, x0, 8.3, x1 - x0, 0.35, "#9aa0a8");
+      for (let x = x0 + 0.6; x < x1 - 0.8; x += 1.5) box(c, x, 9.6, 0.7, 1.4, "#4a5a6a");
+    }
+    for (const [x, y, r] of [[-12, 6.4, 2.2], [-8.6, 5.8, 2.6], [8.4, 6, 2.4], [12.4, 6.6, 2.1], [15.6, 7.2, 1.8]]) {
+      box(c, x - 0.25, y, 0.5, 12.5 - y, "#6a4a2a");
+      disc(c, x, y, r, "#4f8a3a");
+      disc(c, x - r * 0.4, y + r * 0.2, r * 0.7, "#5f9a45");
+    }
+    // Rough coursed sandstone: rows of blocks of uneven size and colour.
+    const tones = ["#b8955e", "#a88450", "#c9a86e", "#967244", "#bf9a62"];
+    let seed = 11;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let y = 0; y < 12.5;) {
+      const h = 0.35 + rnd() * 0.3;
+      for (let x = -4; x < 4;) {
+        const w = Math.min(0.6 + rnd() * 0.9, 4 - x);
+        box(c, x, y, w, Math.min(h, 12.5 - y), tones[Math.floor(rnd() * tones.length)]);
+        x += w;
+      }
+      y += h;
+    }
+    c.fillStyle = "rgba(60,40,20,0.35)";
+    for (let y = 0; y < 12.5; y += 0.5) c.fillRect(-4 * T, Math.round(y * T), 8 * T, 1);
+    box(c, -4, 0, 8, 0.3, "#d8c8a0");
+    // The tall window over the door: a grid of gold-tinted panes.
+    box(c, -1.5, 1.6, 3, 8.4, "#6a5236");
+    box(c, -1.3, 1.8, 2.6, 8, "#f2e2a8");
+    c.fillStyle = "#8a8a88";
+    for (let i = 0; i <= 5; i++) c.fillRect(Math.round((-1.3 + i * 0.52) * T), Math.round(1.8 * T), 2, Math.round(8 * T));
+    for (let j = 0; j <= 12; j++) c.fillRect(Math.round(-1.3 * T), Math.round((1.8 + j * 0.667) * T), Math.round(2.6 * T), 2);
+    box(c, -0.9, 10.4, 1.8, 2.1, "#3a2a1e");
+  }
+
   // Subiaco: the Sacro Speco, built into the cliff around Benedict's cave.
   function subiaco(c) {
     poly(c, [[3, 13], [3.6, 3], [5, -4], [9, -8], [13, -7.5], [16, -3], [17, 13]], "#8a7a68");
@@ -192,5 +232,5 @@ const MonasteryArt = (() => {
     for (const x of [-1.4, 3]) arch(c, x, 4.3, 0.5, 1.4, "#4a3a3a");
   }
 
-  return { subiaco, montecassino, cluny, melk, montsaintmichel, montserrat };
+  return { stbernard, subiaco, montecassino, cluny, melk, montsaintmichel, montserrat };
 })();

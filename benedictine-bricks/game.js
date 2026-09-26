@@ -23,8 +23,8 @@ const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
 const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
-const MAX_DROP_SPEED = 5;
-const LANDING_DAMPING = 0.3; // share of speed a stone keeps when it lands
+const MAX_DROP_SPEED = 4;
+const LANDING_DAMPING = 0.12; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
 const PRAYER_PER_TIER = 3;
@@ -47,8 +47,8 @@ const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
-const STONE = { density: 0.002, friction: 0.9, frictionStatic: 1.4, frictionAir: 0.02, restitution: 0 };
-const ICE = { density: 0.002, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.02, restitution: 0 };
+const STONE = { density: 0.002, friction: 0.9, frictionStatic: 1.6, frictionAir: 0.03, restitution: 0, slop: 0.02 };
+const ICE = { density: 0.002, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.03, restitution: 0, slop: 0.02 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -68,7 +68,9 @@ const SHAPES = [
 
 const PRAYER_BY_LEVEL = [10, 13, 16, 20];
 const FOUNDATION_BY_LEVEL = [7, 9, 11];
-const MORTAR_COST_BY_LEVEL = [3, 2, 1];
+const MORTAR_COST_BY_LEVEL = [4, 3, 2];
+const MORTAR_PER_BUBBLE = 2;       // uses of Mortar in each mortar bubble
+const MORTAR_FROM_ROSARY = 1;      // uses at the start, with the olive-wood rosary
 
 const UPGRADES = [
   { id: "prayerLevel", name: "Deeper prayer", icon: "beads", now: (l) => "You hold " + PRAYER_BY_LEVEL[l] + " prayer.",
@@ -81,8 +83,8 @@ const UPGRADES = [
     levels: [{ price: 500, text: "Drop four stones before the tower is finished, instead of three." }] },
   { id: "trowel", name: "Mason's trowel", icon: "mortar", now: (l) => "Mortar costs " + MORTAR_COST_BY_LEVEL[l] + " prayer.",
     levels: [
-      { price: 250, text: "Mortar costs 2 prayer." },
-      { price: 600, text: "Mortar costs 1 prayer." },
+      { price: 250, text: "Mortar costs 3 prayer." },
+      { price: 600, text: "Mortar costs 2 prayer." },
     ] },
   { id: "foundation", name: "Wider foundation", icon: "stone_granite", now: (l) => "Your foundation is " + FOUNDATION_BY_LEVEL[l] + " stones wide.",
     levels: [
@@ -95,7 +97,7 @@ const UPGRADES = [
 
 const ROSARIES = [
   { id: "boxwood", name: "Boxwood rosary", price: 0, beads: "#d8b878", spell: null, text: "A plain rosary. Your towers start with no spell." },
-  { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: "mortar", text: "Every tower starts with Mortar." },
+  { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: "mortar", text: "Every tower starts with one use of Mortar." },
   { id: "silver", name: "Silver rosary", price: 450, beads: "#c8d0d8", spell: "scaffold", text: "Every tower starts with Scaffold." },
   { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: "gild", text: "Every tower starts with Gild." },
 ];
@@ -119,28 +121,35 @@ const STARS_TO_OPEN = 5;
 
 const WORLDS = [
   {
-    id: "subiaco", name: "Subiaco", rank: "Postulant",
-    about: "The Sacro Speco, built into the cliff around the cave where St. Benedict lived as a hermit.",
-    base: [{ x: -3.5, w: 7 }],
+    id: "stbernard", name: "St. Bernard Abbey", rank: "Postulant",
+    about: "The abbey church at Cullman, Alabama: a great square block of sandstone quarried on the monks' own land.",
+    base: [{ x: -4, w: 8 }],
     spells: ["mortar"],
     curses: ["ice"],
   },
   {
-    id: "montecassino", name: "Monte Cassino", rank: "Novice",
+    id: "subiaco", name: "Subiaco", rank: "Novice",
+    about: "The Sacro Speco, built into the cliff around the cave where St. Benedict lived as a hermit.",
+    base: [{ x: -3.5, w: 7 }],
+    spells: ["mortar", "scaffold"],
+    curses: ["ice", "huge"],
+  },
+  {
+    id: "montecassino", name: "Monte Cassino", rank: "Simple Vows",
     about: "St. Benedict's abbey on the mountain, where he wrote the Rule. Mind the cloister between the wings.",
     base: [{ x: -5.5, w: 4 }, { x: 1.5, w: 4 }],
     spells: ["mortar", "scaffold"],
     curses: ["ice", "huge"],
   },
   {
-    id: "cluny", name: "Cluny", rank: "Simple Vows",
+    id: "cluny", name: "Cluny", rank: "Solemn Profession",
     about: "The great abbey of Burgundy. Of its church, one octagonal bell tower still stands.",
     base: [{ x: -2.5, w: 5 }],
     spells: ["mortar", "scaffold", "gild"],
     curses: ["ice", "huge", "invisible"],
   },
   {
-    id: "melk", name: "Melk", rank: "Solemn Profession",
+    id: "melk", name: "Melk", rank: "Cellarer",
     about: "The Baroque abbey on its rock above the Danube, with green domes on its towers.",
     base: [{ x: -4, w: 8 }],
     spells: ["mortar", "scaffold", "gild"],
@@ -164,7 +173,7 @@ const WORLDS = [
 
 // Ten missions for each monastery, harder at each one, in a fixed shuffled order.
 function makeMissions(world, level) {
-  const H = 10 + 5 * level;
+  const H = 10 + 4 * level;
   const times = (n) => (n === 1 ? "once" : n === 2 ? "twice" : n + " times");
   const half = Math.round(H * 0.5);
   const pool = [
@@ -175,9 +184,9 @@ function makeMissions(world, level) {
     { key: "noloss", text: "Reach " + Math.round(H * 0.6) + " cubits without dropping a stone", check: (s) => s.heightNoLoss >= Math.round(H * 0.6) },
     { key: "coins", text: "Earn " + (60 + 40 * level) + " coins in one tower", check: (s) => s.earned >= 60 + 40 * level },
     { key: "bubbles", text: "Catch " + (1 + Math.floor(level / 2)) + " bubble" + (level >= 2 ? "s" : "") + " in one tower", check: (s) => s.bubbles >= 1 + Math.floor(level / 2) },
-    level === 0 ? { key: "mortar", text: "Use Mortar twice in one tower", check: (s) => s.mortars >= 2 }
-      : level === 1 ? { key: "scaffold", text: "Use Scaffold twice in one tower", check: (s) => s.scaffolds >= 2 }
-      : { key: "gold", text: "Build a tower with " + level + " gold stones", check: (s) => s.golds >= level },
+    level === 0 ? { key: "mortar", text: "Use Mortar in a tower", check: (s) => s.mortars >= 1 }
+      : level <= 2 ? { key: "scaffold", text: "Use Scaffold twice in one tower", check: (s) => s.scaffolds >= 2 }
+      : { key: "gold", text: "Build a tower with " + (level - 1) + " gold stones", check: (s) => s.golds >= level - 1 },
     { key: "noprayer", text: "Reach " + half + " cubits without using prayer", check: (s) => s.heightNoPrayer >= half },
     { key: "cursed", text: "Lay " + (2 + level) + " cursed stones on one tower", check: (s) => s.cursedLanded >= 2 + level },
   ];
@@ -201,9 +210,18 @@ function worldOpen(index) {
   return index === 0 || starsIn(WORLDS[index - 1]) >= STARS_TO_OPEN;
 }
 
-// The three missions on offer: the first three not yet done.
+// The three missions on offer. Done ones drop off and are replaced by
+// missions drawn at random from those not yet done.
 function currentMissions(world) {
-  return world.missions.filter((m) => !save.missions[m.id]).slice(0, 3);
+  const byId = Object.fromEntries(world.missions.map((m) => [m.id, m]));
+  let active = (save.active[world.id] || []).filter((id) => byId[id] && !save.missions[id]);
+  const rest = world.missions.filter((m) => !save.missions[m.id] && !active.includes(m.id));
+  while (active.length < 3 && rest.length) {
+    active.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0].id);
+  }
+  save.active[world.id] = active;
+  writeSave();
+  return active.map((id) => byId[id]);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +235,7 @@ function loadSave() {
   const fresh = {
     coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
     rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
-    missions: {}, world: "subiaco", bests: {},
+    missions: {}, active: {}, world: "stbernard", bests: {}, sound: true,
   };
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { /* no storage */ }
@@ -261,6 +279,7 @@ let lost = 0;
 let prayer = 0;
 let prayerMax = 10;
 let known = new Set();    // spells learned this tower
+let mortarCharges = 0;    // Mortar is limited: each use needs one of these
 let tier = 0;
 let multiplier = 1;
 let earned = 0;           // coins earned on this tower
@@ -306,8 +325,8 @@ function spellCost(name) {
 
 function newTower() {
   engine = Engine.create({ enableSleeping: true });
-  engine.positionIterations = 12;
-  engine.velocityIterations = 8;
+  engine.positionIterations = 20;
+  engine.velocityIterations = 14;
 
   world = WORLDS.find((w) => w.id === save.world) || WORLDS[0];
   missionsNow = currentMissions(world);
@@ -353,12 +372,18 @@ function newTower() {
   prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
   const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
   known = new Set(rosary.spell ? [rosary.spell] : []);
+  mortarCharges = rosary.spell === "mortar" ? MORTAR_FROM_ROSARY : 0;
   stats = {
     height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, mortars: 0, scaffolds: 0, golds: 0,
     cursedLanded: 0, spellsUsed: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0, heightNoPrayer: 0,
   };
   finale = null;
   zoom = 1;
+  dayClock = 0;
+  hourIndex = 0;
+  if (save.sound) Sound.startMusic(HOURS[0].chant);
+  Sound.setChant(HOURS[0].chant);
+  Sound.setIntensity(0);
   tier = 0;
   multiplier = 1;
   earned = 0;
@@ -427,6 +452,7 @@ function spawn() {
   targetAngle = 0;
   activeSpeed = Math.min(MAX_FALL_SPEED, FALL_SPEED + tier * FALL_SPEED_PER_TIER);
   if (curse === "haste") activeSpeed *= HASTE_FACTOR;
+  snapToSupport();
   if (curse === "tumble") {
     // The stone breaks free and tumbles down on its own.
     steering = false;
@@ -438,6 +464,7 @@ function spawn() {
     pending = null;
   }
   if (curse) {
+    Sound.play("curse");
     effects.push(makeBolt(demon.x, demon.y + 10, body.position.x, body.position.y, "#ff4a3a", "#ffd0f0"));
     effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.4, color: "#ff6a5a" });
   }
@@ -466,6 +493,9 @@ function land() {
   if (body.plugin.mortar) {
     Body.setStatic(body, true);
     effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.6, color: "#ffffff" });
+    Sound.play("mortar");
+  } else {
+    Sound.play("land", (body.plugin.tile || TILE) / TILE);
   }
   let coins = 1;
   if (body.plugin.gold) coins += GOLD_BONUS;
@@ -489,6 +519,7 @@ function move(dir) {
   const half = TILE / 2;
   const x = Math.max(half, Math.min(VIEW_W - half, active.position.x + dir * half));
   Body.setPosition(active, { x, y: active.position.y });
+  snapToSupport();
 }
 
 function rotate() {
@@ -496,18 +527,49 @@ function rotate() {
   targetAngle += Math.PI / 2;
   Body.setAngle(active, targetAngle);
   stats.rotations++;
+  snapToSupport();
+  Sound.play("rotate");
+}
+
+// Line the falling stone up with whatever it would land on: its edges sit
+// either flush with the stone below or exactly half a stone over, even when
+// the tower underneath has shifted off the grid.
+function snapToSupport() {
+  const half = TILE / 2;
+  const minX = active.bounds.min.x;
+  const maxX = active.bounds.max.x;
+  let origin = null;
+  let top = Infinity;
+  for (const b of landed.concat(planks)) {
+    if (b.bounds.max.x <= minX || b.bounds.min.x >= maxX) continue;
+    if (b.bounds.min.y < active.bounds.max.y - 2 || b.bounds.min.y >= top) continue;
+    top = b.bounds.min.y;
+    const turn = ((b.angle % (Math.PI / 2)) + Math.PI / 2) % (Math.PI / 2);
+    const square = turn < 0.08 || turn > Math.PI / 2 - 0.08;
+    origin = square ? b.bounds.min.x : null;
+  }
+  if (origin === null) {
+    for (const r of foundRects) {
+      if (r.x + r.w > minX && r.x < maxX && r.top < top) { top = r.top; origin = r.x; }
+    }
+  }
+  if (origin === null) origin = VIEW_W / 2;
+  const snapped = origin + Math.round((minX - origin) / half) * half;
+  Body.setPosition(active, { x: active.position.x + (snapped - minX), y: active.position.y });
 }
 
 function drop() {
   if (mode !== "play" || !active || !steering) return;
   steering = false;
   Body.setVelocity(active, { x: 0, y: MAX_DROP_SPEED });
+  Sound.play("drop");
 }
 
 function canCast(name) {
   if (mode !== "play" || prayer < spellCost(name)) return false;
   if (name === "repel") return demon.present && !demon.fleeing;
   if (name === "zap") return !!lastLaid();
+  if (name === "mortar") return mortarCharges > 0;
   return known.has(name);
 }
 
@@ -515,7 +577,7 @@ function cast(name) {
   if (!canCast(name)) return;
   prayer -= spellCost(name);
   stats.spellsUsed++;
-  if (name === "mortar") stats.mortars++;
+  if (name === "mortar") { stats.mortars++; mortarCharges--; }
   if (name === "scaffold") stats.scaffolds++;
   if (name === "repel") repel();
   else if (name === "zap") zap();
@@ -530,6 +592,7 @@ function cast(name) {
 function repel() {
   demon.fleeing = 99; // he is hit when the spray arrives; see updateEffects
   effects.push({ kind: "spray", from: monkHands(), t: 0, duration: 0.45 });
+  Sound.play("repel");
   blessAnim = 1;
 }
 
@@ -538,6 +601,7 @@ function zap() {
   const body = lastLaid();
   const x = body.position.x;
   const y = body.position.y;
+  Sound.play("zap");
   effects.push(makeBolt(x + rand(-30, 30), camY - 10, x, y, "#ffe45a", "#ffffff"));
   effects.push({ kind: "flash", x, y, t: 0.5, color: "#ffffff" });
   for (let i = 0; i < 16; i++) {
@@ -603,9 +667,14 @@ function tapAt(clientX, clientY) {
 function catchBubble() {
   const spell = bubble.spell;
   effects.push({ kind: "flash", x: bubble.x, y: bubble.y, t: 0.5, color: "#bfe8ff" });
+  Sound.play("bubble");
   if (spell === "prayer") {
     prayer = Math.min(prayerMax, prayer + PRAYER_FROM_BUBBLE);
     flashBanner("+" + PRAYER_FROM_BUBBLE + " prayer");
+  } else if (spell === "mortar") {
+    known.add(spell);
+    mortarCharges += MORTAR_PER_BUBBLE;
+    flashBanner("Mortar +" + MORTAR_PER_BUBBLE);
   } else {
     known.add(spell);
     flashBanner(SPELLS[spell].name + " learned");
@@ -634,6 +703,7 @@ function frame(now) {
       accumulator -= STEP;
     }
     gameLogic(dt);
+    updateHours(dt);
     updateEffects(dt);
   } else if (mode === "finale") {
     updateFinale(dt);
@@ -652,6 +722,15 @@ function physicsStep() {
   } else if (active && active.velocity.y > MAX_DROP_SPEED) {
     // A dropped stone falls fast, but not so fast that it bounces off.
     Body.setVelocity(active, { x: active.velocity.x, y: MAX_DROP_SPEED });
+  }
+  // Settle small jiggles in stones that have landed, so they sit still instead
+  // of bouncing and creeping; real tumbles are far faster than this and pass.
+  for (const b of landed) {
+    if (b.isStatic || b.isSleeping) continue;
+    if (b.speed < 0.6 && Math.abs(b.angularVelocity) < 0.012) {
+      Body.setVelocity(b, { x: b.velocity.x * 0.8, y: b.velocity.y * 0.8 });
+      Body.setAngularVelocity(b, b.angularVelocity * 0.8);
+    }
   }
   Engine.update(engine, STEP);
 }
@@ -676,6 +755,7 @@ function gameLogic(dt) {
       spawnTimer = 0.35;
     }
     lost++;
+    Sound.play("lost");
     updateCandles();
     updateHud();
   }
@@ -706,6 +786,8 @@ function gameLogic(dt) {
     }
     prayer = Math.min(prayerMax, prayer + PRAYER_PER_TIER);
     tierPopup = { level: tier + 1, t: 2.6, y: towerTop - 40 };
+    Sound.play("tier");
+    Sound.setIntensity(Math.min(2, tier));
   }
 
   updateDemon(dt);
@@ -729,6 +811,7 @@ function checkMissions() {
     save.missions[m.id] = true;
     writeSave();
     flashBanner("★ " + m.text, 2.4);
+    Sound.play("star");
   }
 }
 
@@ -736,6 +819,7 @@ function checkMissions() {
 // back to show the whole thing.
 function startFinale() {
   mode = "finale";
+  Sound.play("end");
   demon.present = false;
   bubble = null;
   if (active && steering) {
@@ -784,6 +868,7 @@ function updateDemon(dt) {
       demon.curses = DEMON_CURSES;
       demon.timer = 30;
       flashBanner("A demon comes!");
+      Sound.play("demon");
     }
   } else {
     demon.timer -= dt;
@@ -805,8 +890,15 @@ function updateBubble(dt) {
   bubbleTimer -= dt;
   if (bubbleTimer > 0) return;
   bubbleTimer = rand(BUBBLE_EVERY[0], BUBBLE_EVERY[1]);
-  const unknown = world.spells.filter((s) => !known.has(s));
-  const spell = unknown.length ? unknown[Math.floor(Math.random() * unknown.length)] : "prayer";
+  // Mortar is the rarest bubble; others appear only until you know them.
+  const choices = [["prayer", 3]];
+  for (const s of world.spells) {
+    if (s === "mortar") choices.push(["mortar", 1]);
+    else if (!known.has(s)) choices.push([s, 3]);
+  }
+  let roll = Math.random() * choices.reduce((sum, [, w]) => sum + w, 0);
+  let spell = choices[0][0];
+  for (const [s, w] of choices) { if ((roll -= w) < 0) { spell = s; break; } }
   const fromLeft = Math.random() < 0.5;
   bubble = {
     spell,
@@ -1022,38 +1114,113 @@ function mixColor(a, b, t) {
   return "#" + ((1 << 24) | (mix(16) << 16) | (mix(8) << 8) | mix(0)).toString(16).slice(1);
 }
 
-// Sky colors from the ground (index 0) up into the night.
-const SKY = [
-  ["#7fd0f5", "#d8f2ff"],
-  ["#62c8d8", "#b8f0e0"],
-  ["#5aa0e0", "#f0c8a0"],
-  ["#2a2f6a", "#8a5a9a"],
-  ["#070a1e", "#1a1f4a"],
+// ---------------------------------------------------------------------------
+// The Hours. As you build, the day turns through the Divine Office and back
+// again: the monks' prayer goes on around the clock. Each Hour has its sky
+// and its chant.
+// ---------------------------------------------------------------------------
+
+const HOUR_SECONDS = 40;
+const HOURS = [
+  { name: "Prime", chant: "prime", top: "#4a6ab8", bottom: "#f5b080", dark: 0.12, stars: 0.15 },
+  { name: "Sext", chant: "sext", top: "#7fd0f5", bottom: "#d8f2ff", dark: 0, stars: 0 },
+  { name: "Vespers", chant: "vespers", top: "#5a60b0", bottom: "#f08a58", dark: 0.18, stars: 0.1 },
+  { name: "Compline", chant: "compline", top: "#26285a", bottom: "#7a4a8a", dark: 0.38, stars: 0.6 },
+  { name: "Compline", chant: "salve", top: "#141836", bottom: "#3a2e5a", dark: 0.5, stars: 0.9 },
+  { name: "Vigils", chant: "vigils", top: "#070a1e", bottom: "#1a1f4a", dark: 0.55, stars: 1 },
 ];
 
+let dayClock = 0;          // seconds of play since the tower began
+let hourIndex = 0;
+
+// The sky now: blend into the next Hour over the last third of this one.
+function skyNow() {
+  const here = HOURS[hourIndex];
+  const next = HOURS[(hourIndex + 1) % HOURS.length];
+  const into = (dayClock % HOUR_SECONDS) / HOUR_SECONDS;
+  const f = Math.max(0, (into - 0.67) / 0.33);
+  return {
+    top: mixColor(here.top, next.top, f),
+    bottom: mixColor(here.bottom, next.bottom, f),
+    dark: here.dark + (next.dark - here.dark) * f,
+    stars: here.stars + (next.stars - here.stars) * f,
+  };
+}
+
+function updateHours(dt) {
+  dayClock += dt;
+  const index = Math.floor(dayClock / HOUR_SECONDS) % HOURS.length;
+  if (index !== hourIndex) {
+    hourIndex = index;
+    if (HOURS[index].name !== HOURS[(index + HOURS.length - 1) % HOURS.length].name) {
+      flashBanner(HOURS[index].name, 2.2);
+      Sound.play("hour");
+    }
+    Sound.setChant(HOURS[index].chant);
+  }
+}
+
 function drawSky() {
-  const t = Math.min(SKY.length - 1.001, Math.max(0, -cameraRise() / 800));
-  const i = Math.floor(t);
-  const f = t - i;
-  const top = mixColor(SKY[i][0], SKY[i + 1][0], f);
-  const bottom = mixColor(SKY[i][1], SKY[i + 1][1], f);
+  const sky = skyNow();
   // Banded gradient, for a pixel look.
   const bands = 18;
   for (let b = 0; b < bands; b++) {
-    ctx.fillStyle = mixColor(top, bottom, b / (bands - 1));
+    ctx.fillStyle = mixColor(sky.top, sky.bottom, b / (bands - 1));
     ctx.fillRect(0, Math.floor((b * VIEW_H) / bands), VIEW_W, Math.ceil(VIEW_H / bands) + 1);
   }
-  if (t > 2.5) {
-    ctx.globalAlpha = Math.min(1, t - 2.5);
+  if (sky.stars > 0.02) {
+    ctx.globalAlpha = sky.stars;
     ctx.fillStyle = "#fff";
     for (let s = 0; s < 110; s++) {
       const sx = (s * 97) % VIEW_W;
-      const sy = (s * 57) % VIEW_H;
+      const sy = (s * 57 + cameraRise() * -0.05) % VIEW_H;
       const twinkle = Math.sin(time * 2 + s) > 0.6 ? 3 : 2;
-      ctx.fillRect(sx, sy, twinkle, twinkle);
+      ctx.fillRect(sx, (sy + VIEW_H) % VIEW_H, twinkle, twinkle);
     }
     ctx.globalAlpha = 1;
   }
+  // The sun crosses the sky from Prime to Vespers; the moon from Compline to Vigils.
+  const cycle = (dayClock / (HOUR_SECONDS * HOURS.length)) % 1;
+  const dayPart = cycle < 0.5 ? cycle / 0.5 : (cycle - 0.5) / 0.5;
+  const x = VIEW_W * (0.08 + dayPart * 0.84);
+  const y = VIEW_H * (0.5 - Math.sin(dayPart * Math.PI) * 0.38);
+  if (cycle < 0.5) {
+    ctx.fillStyle = "rgba(255,230,150,0.25)";
+    ctx.beginPath();
+    ctx.arc(x, y, 58, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe28a";
+    ctx.beginPath();
+    ctx.arc(x, y, 34, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = "#f2f0e0";
+    ctx.beginPath();
+    ctx.arc(x, y, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = mixColor(sky.top, sky.bottom, 0.3);
+    ctx.beginPath();
+    ctx.arc(x + 10, y - 6, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// Night falls over the whole scene, but never so dark the stones are hard to see.
+function drawNightTint() {
+  const dark = skyNow().dark;
+  if (dark <= 0.01) return;
+  ctx.fillStyle = "rgba(12,16,52," + (dark * 0.6).toFixed(3) + ")";
+  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+}
+
+// The Latin being sung, faintly at the foot of the screen.
+function drawLyric() {
+  const text = Sound.lyric();
+  if (!text || mode !== "play") return;
+  ctx.font = "16px 'Press Start 2P', monospace";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.fillText(text, VIEW_W / 2, VIEW_H - 22);
 }
 
 function drawScenery() {
@@ -1364,6 +1531,8 @@ function draw() {
   drawTierPopup();
   drawRoof();
   ctx.restore();
+  drawNightTint();
+  drawLyric();
   drawBanner();
 }
 
@@ -1389,6 +1558,7 @@ function updateHud() {
     el.classList.toggle("armed", pending === name);
     el.querySelector(".cost").textContent = spellCost(name);
   }
+  $("mortar-charges").textContent = "×" + mortarCharges;
 }
 
 function paintIcon(el, name) {
@@ -1614,6 +1784,30 @@ function bindButton(el, action) {
 }
 
 bindButton($("btn-pause"), togglePause);
+
+// Sound on and off. Browsers allow sound only after a tap, so any tap on the
+// page also wakes the sound system.
+function paintSoundButtons() {
+  for (const el of document.querySelectorAll(".sound-toggle")) {
+    el.textContent = save.sound ? "♪" : "♪̸";
+    el.setAttribute("aria-label", save.sound ? "Turn sound off" : "Turn sound on");
+    el.classList.toggle("off", !save.sound);
+  }
+}
+
+function toggleSound() {
+  Sound.unlock();
+  save.sound = !save.sound;
+  writeSave();
+  Sound.setEnabled(save.sound);
+  if (save.sound && (mode === "play" || mode === "paused")) Sound.startMusic(HOURS[hourIndex].chant);
+  paintSoundButtons();
+}
+
+for (const el of document.querySelectorAll(".sound-toggle")) bindButton(el, toggleSound);
+document.addEventListener("pointerdown", () => Sound.unlock(), { capture: true });
+Sound.setEnabled(save.sound);
+paintSoundButtons();
 for (const name of Object.keys(SPELLS)) bindButton($("spell-" + name), () => cast(name));
 
 // Touch on the play area: drag sideways to steer, tap to turn (or to catch a
