@@ -2,7 +2,8 @@
 //
 // Every character is built from one recipe: a 32×32 bust (head, hair, beard,
 // glasses, clothes and a prop) so the whole cast shares one style. The same
-// recipe draws the 48×48 "Camera Mog" close-up.
+// recipe draws the 48×48 "Camera Mog" close-up, and the full-length figures
+// (40×52, with walking and reaching poses) that act out the moves in battle.
 
 const Art = (() => {
   const OUTLINE = "#1a1326";
@@ -22,7 +23,8 @@ const Art = (() => {
     for (let y = 0; y < g.h; y++) {
       for (let x = 0; x < g.w; x++) {
         if (g.get(x, y)) continue;
-        if (g.get(x - 1, y) || g.get(x + 1, y) || g.get(x, y - 1) || g.get(x, y + 1)) edge.push([x, y]);
+        const solid = (c) => c && c !== OUTLINE;
+        if (solid(g.get(x - 1, y)) || solid(g.get(x + 1, y)) || solid(g.get(x, y - 1)) || solid(g.get(x, y + 1))) edge.push([x, y]);
       }
     }
     for (const [x, y] of edge) g.put(x, y, OUTLINE);
@@ -257,6 +259,79 @@ const Art = (() => {
     return g;
   }
 
+  // ---- The full figure ------------------------------------------------------------
+  // The bust on top of a body, for acting out moves. Poses: "stand", "walkA",
+  // "walkB" (the two steps of a walk), "reach" (the near arm held out, to
+  // hand something over or rest a hand on a shoulder) and "raise" (the arm
+  // lifted, for a toast, a blessing or a point of order).
+  const ROBES = { habit: 1, dominican: 1, sisters: 1, blouse: 1 };
+  const PANTS = { suit: null, whiteshirt: "#23252e", clerical: "#1b1b22", sweater: "#34405a", hoodie: "#34405a", shirt: "#3a3f4f", thobe: null };
+  const figures = new Map();
+
+  function figure(s, pose) {
+    const key = JSON.stringify(s) + pose;
+    if (figures.has(key)) return figures.get(key);
+    const keep = s.prop === "cross" || s.prop === "nametag" || s.prop === "headset" ? s.prop : null;
+    const top = bust({ ...s, prop: keep });
+    const g = grid(40, 52);
+    const X = 4;
+    // The body first, so the bust's outline sits over it cleanly.
+    const clothes = s.clothes;
+    const dark = shadeOf(clothes);
+    const robe = ROBES[s.outfit] || s.style === "veil";
+    const robeColor = s.outfit === "blouse" ? (s.skirt || "#5b4a66") : s.outfit === "sisters" ? "#f7f5ee" : clothes;
+    for (let y = 31; y < 39; y++) for (let x = 4; x < 28; x++) g.put(X + x, y, clothes);
+    if (s.outfit === "sisters") for (let y = 31; y < 49; y++) for (let x = 12; x < 20; x++) g.put(X + x, y, "#1f2f66");
+    if (s.outfit === "suit" || s.outfit === "clerical" || s.outfit === "whiteshirt") for (let y = 31; y < 39; y++) { g.put(X + 15, y, s.tie || dark); }
+    // Arms at the sides: sleeves, then hands.
+    const armL = pose === "raise" ? null : [[1, 3]];
+    for (let y = 29; y < 39; y++) { g.put(X + 1, y, dark); g.put(X + 2, y, clothes); g.put(X + 3, y, dark); }
+    g.put(X + 1, 39, s.skin); g.put(X + 2, 39, s.skin); g.put(X + 2, 40, s.skin);
+    if (pose === "reach") {
+      for (let x = 28; x < 38; x++) { g.put(X + x - 4, 31, clothes); g.put(X + x - 4, 32, clothes); g.put(X + x - 4, 33, dark); }
+      g.put(X + 34, 31, s.skin); g.put(X + 35, 31, s.skin); g.put(X + 34, 32, s.skin); g.put(X + 35, 32, s.skin);
+    } else if (pose === "raise") {
+      for (let y = 16; y < 31; y++) { g.put(X + 28, y, dark); g.put(X + 29, y, clothes); g.put(X + 30, y, clothes); }
+      g.put(X + 29, 14, s.skin); g.put(X + 30, 14, s.skin); g.put(X + 29, 15, s.skin); g.put(X + 30, 15, s.skin);
+    } else {
+      for (let y = 29; y < 39; y++) { g.put(X + 28, y, dark); g.put(X + 29, y, clothes); g.put(X + 30, y, dark); }
+      g.put(X + 29, 39, s.skin); g.put(X + 30, 39, s.skin); g.put(X + 29, 40, s.skin);
+    }
+    // Legs, or a robe to the ground.
+    const stepL = pose === "walkA" ? -2 : pose === "walkB" ? 1 : 0;
+    const stepR = pose === "walkA" ? 1 : pose === "walkB" ? -2 : 0;
+    if (robe) {
+      for (let y = 39; y < 50; y++) {
+        const half = 11 + Math.floor((y - 39) / 4);
+        for (let x = 16 - half; x < 16 + half; x++) g.put(X + x, y, robeColor);
+      }
+      if (s.outfit === "sisters") for (let y = 39; y < 49; y++) for (let x = 12; x < 20; x++) g.put(X + x, y, "#1f2f66");
+      for (let x = 5; x < 27; x += 4) g.put(X + x, 47, shadeOf(robeColor));
+      for (const [x0, dx] of [[10, stepL], [18, stepR]]) for (let x = x0; x < x0 + 5; x++) { g.put(X + x + dx, 50, "#231c1c"); g.put(X + x + dx, 51, "#231c1c"); }
+    } else {
+      const pants = s.pants || PANTS[s.outfit] || clothes;
+      for (let x = 7; x < 25; x++) g.put(X + x, 39, "#2a2226");
+      for (const [x0, dx] of [[8, stepL], [17, stepR]]) {
+        for (let y = 40; y < 50; y++) {
+          const d = y > 44 ? dx : Math.round(dx / 2);
+          for (let x = x0; x < x0 + 6; x++) g.put(X + x + d, y, pants);
+        }
+        for (let x = x0 - 1; x < x0 + 6; x++) { g.put(X + x + dx, 50, "#231c1c"); g.put(X + x + dx, 51, "#231c1c"); }
+      }
+    }
+    // Now the bust, over the top of the body.
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (top.cells[y][x] && !(y === 31 && top.cells[y][x] === OUTLINE)) g.put(X + x, y, top.cells[y][x]);
+    outline(g);
+    figures.set(key, g);
+    return g;
+  }
+
+  function shadeOf(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.max(0, Math.round(v * 0.72)).toString(16).padStart(2, "0");
+    return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+  }
+
   // ---- Camera Mog -------------------------------------------------------------
   // The debater leans right into the lens and peers over the top of his
   // glasses. `t` runs 0 → 1 as the glasses slide down and the brows go up.
@@ -349,5 +424,5 @@ const Art = (() => {
     skeptic: { skin: "#f3cdb2", shade: "#d3a58a", hair: "#9a5a2e", style: "curly", outfit: "hoodie", clothes: "#5d6470", trim: "#434955", prop: "headset" },
   };
 
-  return { bust, mog, paint, CAST };
+  return { bust, mog, figure, paint, CAST };
 })();

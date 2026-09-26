@@ -98,10 +98,27 @@
   .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
   .open-slot { border-style: dashed; background: transparent; }
 
-  /* Camera Mog */
-  .mog { display: grid; grid-template-columns: minmax(0, 300px) 1fr; gap: 24px; align-items: center; }
-  .mog canvas { width: 100%; max-width: 300px; aspect-ratio: 1; background: #0e1122; border: 3px solid var(--line); border-radius: 6px; }
-  .mog .lede p { font-size: 17px; }
+  /* Move theater */
+  .theater-ui { display: grid; gap: 14px; }
+  .picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .picker button {
+    display: grid; justify-items: center; gap: 4px; width: 76px; padding: 6px 4px 8px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 4px; color: var(--muted);
+    font: 600 11px/1.15 var(--display); cursor: pointer;
+  }
+  .picker button canvas { width: 48px; height: 48px; }
+  .picker button[aria-pressed="true"] { border-color: var(--gold); color: var(--text); background: var(--panel-2); }
+  .movebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .movebar button {
+    display: grid; gap: 2px; text-align: left; padding: 8px 12px; min-height: 44px;
+    background: var(--panel-2); border: 2px solid var(--line); border-radius: 4px; color: var(--text);
+    font: 600 15px/1.1 var(--display); cursor: pointer;
+  }
+  .movebar button small { font: 600 10px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .movebar button.great { border-color: var(--gold); }
+  .movebar button.great small { color: var(--gold); }
+  .movebar button:hover, .picker button:hover { border-color: var(--marian); }
+  .autoplay { margin-left: auto; font: 600 12px/1 var(--display); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; cursor: pointer; }
 
   /* Factions */
   .factions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 18px; }
@@ -138,7 +155,6 @@
   .sources { font-size: 14px; color: var(--muted); display: grid; gap: 6px; margin: 0; padding-left: 20px; }
 
   @media (max-width: 640px) {
-    .mog { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .card-head { grid-template-columns: 72px 1fr; }
     .card-head canvas { width: 72px; height: 72px; }
@@ -202,12 +218,16 @@
     <div class="roster" id="roster"></div>
   </section>
 
-  <section class="mog">
-    <canvas id="mog" width="288" height="288" aria-label="Ethan Muse leans into the camera and peers over his glasses."></canvas>
+  <section>
     <div class="lede">
-      <span class="label">Signature move</span>
-      <h2>Camera Mog</h2>
-      <p>Ethan Muse leans right into the lens, slides his glasses down, and looks over the top of them. The battle pauses for a close-up. It is Worf's Klingon Fury in the kit: a boss-breaking 400%, raised to 600% if the target is already Doubting. If it breaks the target's conviction, Ethan gains a pip of his own.</p>
+      <span class="label">Every move, animated</span>
+      <h2>The move theater</h2>
+      <p>Ordinary moves share a few animations, the way every phaser shot in Legends looks alike. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Pick a hero, then a move.</p>
+    </div>
+    <div class="stage"><canvas id="theater" width="640" height="360" aria-label="The move theater: the chosen hero performs the chosen move against three opponents."></canvas></div>
+    <div class="theater-ui">
+      <div class="movebar" id="movebar"></div>
+      <div class="picker" id="picker" role="group" aria-label="Choose a hero"></div>
     </div>
   </section>
 
@@ -269,6 +289,7 @@
 </main>
 
 <script src="art.js"></script>
+<script src="moves.js"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -746,19 +767,71 @@
     if (last && caption.textContent !== last.caption) caption.textContent = last.caption;
   }
 
-  // ---- Camera Mog showcase -------------------------------------------------------
+  // ---- The move theater ------------------------------------------------------------
 
-  const mogCanvas = document.getElementById("mog");
-  const mx = mogCanvas.getContext("2d");
-  function drawMog(t) {
-    const phase = (t % 4) / 4;
-    const lean = phase < 0.25 ? 0 : phase < 0.45 ? (phase - 0.25) / 0.2 : phase < 0.85 ? 1 : 1 - (phase - 0.85) / 0.15;
-    mx.fillStyle = "#0e1122"; mx.fillRect(0, 0, 288, 288);
-    // A camera's recording frame.
-    mx.fillStyle = "#de5e55"; mx.fillRect(16, 16, 10, 10);
-    mx.fillStyle = "#ece4d0"; mx.font = "600 14px 'Pixelify Sans', monospace"; mx.textAlign = "left"; mx.fillText("REC", 32, 26);
-    Art.paint(mx, Art.mog(C.muse, lean), 0, 0, 6);
+  const theater = Theater.create(document.getElementById("theater"));
+  const picker = document.getElementById("picker");
+  const movebar = document.getElementById("movebar");
+  const ORDER = HEROES.map((h) => h.id);
+  const NAMES = Object.fromEntries(HEROES.map((h) => [h.id, h.name]));
+  let chosen = "muse";
+  let autoplay = !still;
+  let clock = 0;
+  let queued = null;
+
+  function renderMoves() {
+    movebar.textContent = "";
+    const moves = Theater.MOVES[chosen];
+    moves.forEach((m, i) => {
+      const b = document.createElement("button");
+      const great = i === moves.length - 1;
+      b.className = great ? "great" : "";
+      b.innerHTML = "<small></small><span></span>";
+      b.querySelector("small").textContent = great ? "Great move" : i === 0 ? "Basic" : "Skill";
+      b.querySelector("span").textContent = m.name;
+      b.addEventListener("click", () => { autoplay = false; paintAuto(); queued = [chosen, i]; });
+      movebar.append(b);
+    });
+    const auto = document.createElement("button");
+    auto.className = "autoplay";
+    auto.id = "autoplay";
+    auto.addEventListener("click", () => { autoplay = !autoplay; paintAuto(); });
+    movebar.append(auto);
+    paintAuto();
   }
+  function paintAuto() {
+    const a = document.getElementById("autoplay");
+    if (a) a.textContent = autoplay ? "Autoplay: on" : "Autoplay: off";
+  }
+  function choose(id) {
+    chosen = id;
+    for (const b of picker.children) b.setAttribute("aria-pressed", String(b.dataset.id === id));
+    renderMoves();
+  }
+  for (const id of ORDER) {
+    const b = document.createElement("button");
+    b.dataset.id = id;
+    b.append(portrait(id, 2));
+    const name = document.createElement("span");
+    name.textContent = NAMES[id].replace(/^(Fr\.|Sr\.|Bishop) /, "").split(",")[0];
+    b.append(name);
+    b.addEventListener("click", () => { autoplay = false; choose(id); queued = [id, Theater.MOVES[id].length - 1]; });
+    picker.append(b);
+  }
+  choose(chosen);
+  theater.onDone(() => {
+    if (!autoplay) return;
+    // Autoplay walks through every hero's great move in turn.
+    const next = ORDER[(ORDER.indexOf(chosen) + 1) % ORDER.length];
+    choose(next);
+    queued = [next, Theater.MOVES[next].length - 1];
+  });
+  function drawTheater(t) {
+    clock = t;
+    if (queued) { theater.play(queued[0], queued[1], t); queued = null; }
+    theater.frame(t);
+  }
+  if (autoplay) queued = ["muse", 3];
 
   // ---- OCIA flicker -----------------------------------------------------------------
 
@@ -805,18 +878,21 @@
   // ---- Run ----------------------------------------------------------------------
 
   if (still) {
-    drawBattle(9.2); drawMog(2); drawOcia(3.2);
+    drawBattle(9.2); drawOcia(3.2);
+    // With reduced motion the theater only moves when asked.
+    const loop = (now) => { drawTheater(now / 1000); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
     return;
   }
   const t0 = performance.now();
   function frame(now) {
     const t = (now - t0) / 1000;
     drawBattle(t % LOOP);
-    drawMog(t);
+    drawTheater(t);
     drawOcia(t);
     requestAnimationFrame(frame);
   }
-  drawBattle(0.6); drawMog(0); drawOcia(0);
+  drawBattle(0.6); drawTheater(0); drawOcia(0);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 })();
 </script>
