@@ -24,6 +24,11 @@ const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
 const MAX_DROP_SPEED = 6;
+// Forgiveness: each square's solid body is a little smaller than its picture,
+// with rounded corners, so stones slip into gaps instead of catching on them.
+const INSET = 1.2;            // pixels trimmed from each side of a square
+const CORNER = 3;             // corner rounding, in pixels
+const MAGNET = 6;             // a stone this close to lining up with an edge snaps to it
 const LANDING_DAMPING = 0.12; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
@@ -442,7 +447,7 @@ function spawn() {
   const y = Math.max(camY + VIEW_H * 0.12, towerTop - 380);
   const material = curse === "ice" ? ICE : STONE;
   const parts = shape.cells.map(([cx, cy]) =>
-    Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
+    Bodies.rectangle(x + cx * tile, y + cy * tile, tile - 2 * INSET, tile - 2 * INSET, { ...material, chamfer: { radius: CORNER } })
   );
   const body = Body.create({ parts, ...material });
   body.plugin.kind = "stone";
@@ -551,7 +556,7 @@ function rotate() {
 function overlapsTower() {
   const others = Composite.allBodies(engine.world).filter((b) => b !== active);
   const squares = active.parts.length > 1 ? active.parts.slice(1) : [active];
-  return squares.some((sq) => Matter.Query.collides(sq, others).some((c) => (c.collided !== false) && c.depth > 1));
+  return squares.some((sq) => Matter.Query.collides(sq, others).some((c) => (c.collided !== false) && c.depth > 2));
 }
 
 // Line the falling stone up with whatever it would land on: its edges sit
@@ -569,16 +574,46 @@ function snapToSupport() {
     top = b.bounds.min.y;
     const turn = ((b.angle % (Math.PI / 2)) + Math.PI / 2) % (Math.PI / 2);
     const square = turn < 0.08 || turn > Math.PI / 2 - 0.08;
-    origin = square ? b.bounds.min.x : null;
+    origin = square ? b.bounds.min.x - (b.plugin.kind === "stone" ? 0 : -INSET) : null;
   }
   if (origin === null) {
     for (const r of foundRects) {
-      if (r.x + r.w > minX && r.x < maxX && r.top < top) { top = r.top; origin = r.x; }
+      if (r.x + r.w > minX && r.x < maxX && r.top < top) { top = r.top; origin = r.x + INSET; }
     }
   }
-  if (origin === null) origin = VIEW_W / 2;
+  if (origin === null) origin = VIEW_W / 2 + INSET;
   const snapped = origin + Math.round((minX - origin) / half) * half;
   Body.setPosition(active, { x: active.position.x + (snapped - minX), y: active.position.y });
+  magnetToEdges();
+}
+
+// If a square of the falling stone is within a few pixels of lining up with
+// the edge of a square below it (the side of a gap, or the stone beneath),
+// close the difference so it drops cleanly into place.
+function magnetToEdges() {
+  const squares = active.parts.length > 1 ? active.parts.slice(1) : [active];
+  const edges = (b) => [b.bounds.min.x - INSET, b.bounds.max.x + INSET];
+  const mine = squares.flatMap(edges);
+  const bottom = active.bounds.max.y;
+  const theirs = [];
+  for (const b of landed) {
+    const turn = ((b.angle % (Math.PI / 2)) + Math.PI / 2) % (Math.PI / 2);
+    if (turn > 0.08 && turn < Math.PI / 2 - 0.08) continue;
+    if (b.bounds.min.y < bottom - 2 || b.bounds.min.y > bottom + 4 * TILE) continue;
+    if (b.bounds.max.x < active.bounds.min.x - TILE || b.bounds.min.x > active.bounds.max.x + TILE) continue;
+    for (const sq of b.parts.length > 1 ? b.parts.slice(1) : [b]) theirs.push(...edges(sq));
+  }
+  for (const r of foundRects) theirs.push(r.x, r.x + r.w);
+  let best = 0;
+  for (const a of mine) {
+    for (const e of theirs) {
+      const d = e - a;
+      if (Math.abs(d) > 0.3 && Math.abs(d) <= MAGNET && (!best || Math.abs(d) < Math.abs(best))) best = d;
+    }
+  }
+  if (!best) return;
+  Body.setPosition(active, { x: active.position.x + best, y: active.position.y });
+  if (overlapsTower()) Body.setPosition(active, { x: active.position.x - best, y: active.position.y });
 }
 
 function drop() {
