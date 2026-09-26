@@ -425,14 +425,14 @@ const BattleView = (() => {
           if (targetable.has(a.key)) { ctx.strokeStyle = `rgba(232,185,74,${0.5 + Math.sin(t * 8) * 0.4})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(a.x, a.y, 38, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
         }
         // Numbers and words that float up from the fighters.
-        floaters = floaters.filter((f) => now - f.t0 < 1.4);
+        floaters = floaters.filter((f) => now - f.t0 < 2.2);
         for (const f of floaters) {
           const a = actors.find((x) => x.key === f.key);
           if (!a) continue;
-          const k = (now - f.t0) / 1.4;
-          ctx.globalAlpha = Math.min(1, (1 - k) * 2);
-          ctx.font = "700 14px " + FONT; ctx.textAlign = "center"; ctx.lineWidth = 3; ctx.strokeStyle = "#1a1326";
-          const y = a.y - 112 - k * 26 - f.row * 15;
+          const k = (now - f.t0) / 2.2;
+          ctx.globalAlpha = Math.min(1, (1 - k) * 3);
+          ctx.font = "700 17px " + FONT; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = "#1a1326";
+          const y = a.y - 112 - k * 20 - f.row * 18;
           ctx.strokeText(f.text, a.x, y); ctx.fillStyle = f.color; ctx.fillText(f.text, a.x, y);
           ctx.globalAlpha = 1;
         }

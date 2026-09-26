@@ -246,35 +246,49 @@ const Theater = (() => {
     return [api.foes[0]];
   }
 
-  // A volley of words or signs flies from the hero's mouth.
+  // A volley of words or signs flies from the hero's mouth. A phrase is said
+  // first, in a bubble over the speaker, long enough to read; then it flies.
+  // Single signs (?, ♥) just fly.
   function volley(m) {
-    const count = m.glyphs.length;
+    const plan = [];
+    let at = 0.15;
+    for (const g of m.glyphs) {
+      const words = g.length > 2;
+      const read = words ? Math.min(2, 0.8 + g.length * 0.045) : 0;
+      plan.push({ g, words, say: at, fly: at + read, land: at + read + 0.45 });
+      at += words ? read + 0.25 : 0.16;
+    }
+    const lastLand = plan[plan.length - 1].land;
     return {
-      duration: 1.1 + count * 0.16,
+      duration: lastLand + 0.6,
       run(api) {
         const { t, hero } = api;
         hero.dx = Math.sin(span(t, 0, 0.25) * Math.PI) * 14;
-        hero.pose = t < 0.9 ? "raise" : "stand";
+        hero.pose = t < lastLand - 0.2 ? "raise" : "stand";
         const targets = pick(api, m.to);
-        m.glyphs.forEach((g, i) => {
+        plan.forEach(({ g, words, say, fly, land }, i) => {
           const target = targets[i % targets.length];
-          const k = span(t, 0.15 + i * 0.16, 0.6 + i * 0.16);
-          if (k <= 0) return;
           const from = api.mouth(hero);
           const to = api.head(target);
+          if (words && t >= say && t < fly) {
+            api.after(() => bubble(api.ctx, g, hero.x + (hero.dx || 0) + 8, hero.y - FIG_H - 2, { size: 17 }));
+            return;
+          }
+          const k = span(t, fly, land);
+          if (k <= 0) return;
           if (k < 1) {
             api.after(() => {
               const x = lerp(from.x, to.x, k);
               const y = lerp(from.y, to.y + 30, k) - Math.sin(k * Math.PI) * 50;
-              if (g.length > 2) bubble(api.ctx, g, x, y + 10, { size: 13 });
+              if (words) bubble(api.ctx, g, x, y + 10, { size: 13 });
               else outlinedText(api.ctx, g, x, y, 26, m.color || "#ffd84a");
             });
-          } else if (t < 0.6 + i * 0.16 + 0.3) {
+          } else if (t < land + 0.3) {
             target.shake = true;
-            api.after(() => burst(api.ctx, to.x, to.y + 34, span(t, 0.6 + i * 0.16, 0.9 + i * 0.16), m.color || "#ffd84a"));
+            api.after(() => burst(api.ctx, to.x, to.y + 34, span(t, land, land + 0.3), m.color || "#ffd84a"));
           }
         });
-        if (m.mark) for (const target of targets) if (t > 0.7 + (count - 1) * 0.16) api.mark(target, m.mark, t - 0.7);
+        if (m.mark) for (const target of targets) if (t > lastLand + 0.1) api.mark(target, m.mark, t - lastLand - 0.1);
       },
     };
   }
@@ -307,7 +321,7 @@ const Theater = (() => {
           const hx = hero.x + hero.dx + (hero.flip ? -30 : 30);
           const hy = hero.y + dy - 44;
           if (m.item) api.after(() => ITEMS[m.item](api.ctx, Math.round(lerp(hx, hx + (hero.flip ? -6 : 6), span(t, 0.9, 1.2))), Math.round(hy - 6)));
-          if (m.say) api.after(() => bubble(api.ctx, m.say, hero.x + hero.dx + 8, hero.y + dy - FIG_H - 2, { size: 13 }));
+          if (m.say) api.after(() => bubble(api.ctx, m.say, hero.x + hero.dx + 8, hero.y + dy - FIG_H - 2, { size: 16 }));
           if (m.bow) hero.dy = dy + Math.sin(span(t, 1, 1.8) * Math.PI) * 6;
         }
         if (t > 1.3) {
@@ -326,7 +340,7 @@ const Theater = (() => {
       run(api) {
         const { t, hero } = api;
         hero.pose = t < 1.8 ? "raise" : "stand";
-        if (m.say && t < 1.8) api.after(() => bubble(api.ctx, m.say, hero.x + 10, hero.y - FIG_H - 2, { size: 13 }));
+        if (m.say && t < 1.8) api.after(() => bubble(api.ctx, m.say, hero.x + 10, hero.y - FIG_H - 2, { size: 16 }));
         if (m.backdrop) api.after(() => m.backdrop(api.ctx, hero, t));
         const targets = pick(api, m.to);
         if (t > 0.5) targets.forEach((a, i) => {
