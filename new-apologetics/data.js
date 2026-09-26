@@ -192,7 +192,7 @@ const GameData = (() => {
 
   const CAMPAIGN = [
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
-      { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3 },
+      { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2 },
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"] },
     { id: "atheists", title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
