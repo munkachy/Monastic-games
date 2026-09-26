@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>New Apologetics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --night: #14172a;
+    --panel: #1d2140;
+    --panel-2: #252a50;
+    --line: #363d6a;
+    --text: #ece4d0;
+    --muted: #a9a6bd;
+    --gold: #e8b94a;
+    --marian: #7ea4e6;
+    --crimson: #de5e55;
+    --green: #74c07a;
+    --display: "Pixelify Sans", "Courier New", monospace;
+    --body: "Literata", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--night); color: var(--text); font: 16px/1.5 var(--body); }
+  body { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+  button { font: 600 15px/1.1 var(--display); color: var(--text); background: var(--panel-2); border: 2px solid var(--line); border-radius: 4px; padding: 10px 14px; min-height: 44px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--marian); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button:focus-visible, canvas:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  button.primary { background: var(--gold); color: var(--night); border-color: var(--gold); }
+  a { color: var(--marian); }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+  canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; border: 3px solid var(--line); border-radius: 6px; background: #0e1122; }
+
+  .bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .bar .home { font: 700 18px/1 var(--display); color: var(--gold); text-decoration: none; }
+  .bar .wip { font: 600 11px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .bar button { margin-left: auto; min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+  .screen { max-width: 760px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+  .label { font: 600 11px/1 var(--display); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .note { font-size: 14px; color: var(--muted); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* Title */
+  .title-card { display: grid; gap: 16px; justify-items: start; padding-block: 24px; }
+  .title-card h1 { font-size: clamp(44px, 10vw, 80px); line-height: 1; color: var(--gold); }
+  .title-card p { max-width: 56ch; margin: 0; }
+  #title-cast { max-width: 100%; }
+
+  /* Map */
+  .chapter { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 10px; }
+  .chapter.locked { opacity: 0.5; }
+  .chapter h3 { font-size: 20px; }
+  .chapter .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .mission { display: grid; gap: 4px; text-align: left; }
+  .mission small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .mission .stars { color: var(--gold); letter-spacing: 2px; }
+  .mission.boss { border-color: var(--crimson); }
+
+  /* Team */
+  .foes, .picked { display: flex; gap: 6px; flex-wrap: wrap; }
+  .foes canvas, .picked canvas { width: 56px; height: 56px; border-width: 2px; }
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .roster button { display: grid; justify-items: center; gap: 4px; padding: 8px 4px; font-size: 12px; }
+  .roster button canvas { width: 64px; height: 64px; border: none; background: transparent; }
+  .roster button small { font: 600 9px/1 var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .roster button[aria-pressed="true"] { border-color: var(--gold); background: #3a3420; }
+
+  /* Battle */
+  .hud { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  #turn { font: 700 16px/1.2 var(--display); }
+  #log { font-size: 14px; color: var(--muted); min-height: 1.5em; margin: 0; }
+  .moves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .moves button { display: grid; gap: 3px; text-align: left; }
+  .moves button small { font: 600 10px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .moves button.great { border-color: var(--gold); }
+  .moves button.duo { border-color: #8a6ad8; }
+  .targets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls button { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+  .controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+  #battle { cursor: pointer; }
+
+  /* Results and cards */
+  .result h2 { font-size: 36px; }
+  .result .stars { font-size: 34px; color: var(--gold); letter-spacing: 6px; }
+  .card-note { display: grid; gap: 6px; padding: 12px 14px; border-left: 3px solid var(--marian); background: var(--panel); font-size: 15px; }
+  .grade { font: 600 11px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 6px; border-radius: 3px; justify-self: start; }
+  .g-dogma { background: var(--gold); color: var(--night); }
+  .g-doctrine { background: var(--marian); color: var(--night); }
+  .g-opinion { background: var(--green); color: var(--night); }
+  .g-argument { background: var(--line); color: var(--text); }
+  .scene-line { display: none; font-size: 16px; margin: 0; }
+  .scene-line b { font-family: var(--display); color: var(--gold); }
+  @media (max-width: 640px) { .scene-line { display: block; } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="home" href="./">New Apologetics</a>
+  <span class="wip">Work in progress · under review</span>
+</header>
+
+<section id="s-title" class="screen">
+  <div class="title-card">
+    <span class="label">A team battler</span>
+    <h1>New Apologetics</h1>
+    <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
+    <p>Lead a team of Catholic apologists through five chapters of debates. Nobody gets hurt. When an opponent's conviction finally gives way, he flickers, and then he signs up for OCIA.</p>
+    <div class="row">
+      <button class="primary" id="play">Play</button>
+      <button id="reset">Start over</button>
+    </div>
+    <p class="note">This game is still under review. The likenesses, the lines and the moves are drafts and may change. <a href="./">About the game</a></p>
+  </div>
+</section>
+
+<section id="s-map" class="screen" hidden>
+  <div>
+    <span class="label">Chapters</span>
+    <h2>Choose a mission</h2>
+  </div>
+  <div id="chapters" class="screen" style="padding:0"></div>
+</section>
+
+<section id="s-scene" class="screen" hidden>
+  <canvas id="scene" width="640" height="360" tabindex="0" aria-label="A cut scene. Tap or press Enter to continue."></canvas>
+  <p class="scene-line" id="scene-line" aria-live="polite"></p>
+  <div class="row"><button class="primary" id="scene-next">Next ▸</button><button id="scene-skip">Skip scene</button></div>
+</section>
+
+<section id="s-team" class="screen" hidden>
+  <div>
+    <span class="label" id="team-chapter"></span>
+    <h2 id="team-mission"></h2>
+  </div>
+  <div><span class="label">Opponents</span><div class="foes" id="team-foes"></div></div>
+  <div><span class="label" id="team-count"></span><div class="picked" id="team-picked"></div></div>
+  <div class="roster" id="roster"></div>
+  <div class="row"><button class="primary" id="begin" disabled>Begin</button><button id="team-back">Back</button></div>
+</section>
+
+<section id="s-battle" class="screen" hidden>
+  <div class="hud"><span id="turn"></span><span class="label" id="round"></span></div>
+  <canvas id="battle" width="640" height="360" aria-label="The battle. Tap an opponent or a friend to choose a target."></canvas>
+  <p id="log" aria-live="polite"></p>
+  <div id="panel" style="display:grid;gap:10px"></div>
+  <div class="controls">
+    <button id="speed" aria-pressed="false">Speed ×1</button>
+    <button id="auto" aria-pressed="false">Auto</button>
+    <button id="retreat">Leave the debate</button>
+  </div>
+</section>
+
+<section id="s-result" class="screen result" hidden></section>
+<section id="s-cards" class="screen" hidden></section>
+
+<script src="art.js"></script>
+<script src="moves.js"></script>
+<script src="story.js"></script>
+<script src="data.js"></script>
+<script src="battle.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const C = GameData.CAMPAIGN;
+  const HEROES = GameData.HEROES;
+  const FOES = GameData.FOES;
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Leader", heschmeyer: "Leader" };
+  const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", ally: "One friend", allies: "Whole team", self: "Self" };
+
+  // The teaching cards each chapter unlocks.
+  const CARDS = {
+    prologue: [["g-doctrine", "Scripture", "1 Peter 3:15: a defense given with gentleness and reverence, never an attack."]],
+    atheists: [["g-doctrine", "Doctrine", "God freely willed a world “in a state of journeying” toward its perfection. Until it arrives, physical evil exists alongside physical good (CCC 310)."],
+      ["g-opinion", "Opinion", "The particular answers to the fawn: the good of the whole (Summa I, q. 22, a. 2, ad 2), a law-governed world, creation's coming liberation (Romans 8:21). Faithful Catholics weigh them differently."],
+      ["g-dogma", "Dogma", "That miracles happen and can be known with certainty as signs of revelation (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is private revelation, which no Catholic is bound to believe (CCC 67)."]],
+    evangelicals: [["g-dogma", "Dogma", "We are justified freely: nothing that comes before justification, faith or works, merits the grace of it (Trent, Session VI, ch. 8). And without a special revelation, no one can know with absolute certainty that he will persevere (canon 16)."],
+      ["g-doctrine", "Doctrine", "What we have instead is hope, a theological virtue: confident trust in God's promises (CCC 1817–1821)."]],
+    lds: [["g-doctrine", "Doctrine", "The Church cannot fail: “the gates of Hades shall not prevail against it” (Matthew 16:18; 28:20; Lumen Gentium 8)."],
+      ["g-dogma", "Dogma", "God is utterly simple, one in substance, without parts: not an exalted man (Lateran IV, 1215)."]],
+    islam: [["g-dogma", "Dogma", "The Son is “one in being with the Father”: not a second god, but God's own eternal Word (Nicaea, 325)."],
+      ["g-argument", "Argument", "“Let the people of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact then, what corrupted it afterward?"],
+      ["g-doctrine", "Doctrine", "Muslims “together with us adore the one, merciful God” (CCC 841; Nostra Aetate 3)."]],
+    reformed: [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
+      ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]],
+    epilogue: [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]],
+  };
+
+  // ---- Saving ------------------------------------------------------------------------
+
+  const SAVE_KEY = "new-apologetics-save";
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.stars) return s; } catch (e) { /* no storage */ }
+    return { stars: {}, seen: {}, team: [] };
+  }
+  let save = load();
+  function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* no storage */ } }
+
+  const mkey = (ci, mi) => C[ci].id + ":" + mi;
+  const stars = (ci, mi) => save.stars[mkey(ci, mi)] || 0;
+  function chapterDone(ci) {
+    const ch = C[ci];
+    return ch.missions.length ? stars(ci, ch.missions.length - 1) > 0 : !!save.seen[ch.id + ":before"];
+  }
+  const chapterOpen = (ci) => ci === 0 || chapterDone(ci - 1);
+  const missionOpen = (ci, mi) => chapterOpen(ci) && (mi === 0 || stars(ci, mi - 1) > 0);
+  function roster() {
+    const r = new Set(GameData.START);
+    C.forEach((ch, ci) => { if (chapterDone(ci)) ch.unlocks.forEach((h) => r.add(h)); });
+    return [...r];
+  }
+
+  // ---- Screens and the clock -----------------------------------------------------------
+
+  const screens = ["s-title", "s-map", "s-scene", "s-team", "s-battle", "s-result", "s-cards"];
+  function show(id) {
+    for (const s of screens) $(s).hidden = s !== id;
+    window.scrollTo(0, 0);
+  }
+
+  let clock = 0;
+  let speed = 1;
+  let last = performance.now();
+  let view = null;
+  const story = Story.create($("scene"));
+  function loop(t) {
+    const dt = Math.min(0.1, (t - last) / 1000);
+    last = t;
+    clock += dt * (screenIs("s-battle") ? speed : 1);
+    if (screenIs("s-battle") && view) view.frame(clock);
+    if (screenIs("s-scene")) story.frame(clock);
+    if (screenIs("s-title")) drawTitle(clock);
+    requestAnimationFrame(loop);
+  }
+  const screenIs = (id) => !$(id).hidden;
+
+  function portrait(id, size) {
+    const c = document.createElement("canvas");
+    c.width = 32 * size; c.height = 32 * size;
+    Art.paint(c.getContext("2d"), Art.bust(Art.CAST[id]), 0, 0, size);
+    return c;
+  }
+
+  // The title: the whole cast in a row, bobbing.
+  const titleCtx = $("title-cast").getContext("2d");
+  function drawTitle(t) {
+    titleCtx.fillStyle = "#0e1122"; titleCtx.fillRect(0, 0, 640, 130);
+    const ids = Object.keys(HEROES);
+    ids.forEach((id, i) => {
+      const x = 8 + i * 37;
+      const bob = Math.round(Math.abs(Math.sin(t * 2 + i * 0.7)) * 3);
+      Art.paint(titleCtx, Art.figure(Art.CAST[id], "stand"), x - 2, 20 - bob, 1.5 | 0 || 1);
+    });
+  }
+
+  // ---- The map --------------------------------------------------------------------------
+
+  function showMap() {
+    const box = $("chapters");
+    box.textContent = "";
+    C.forEach((ch, ci) => {
+      const open = chapterOpen(ci);
+      const el = document.createElement("article");
+      el.className = "chapter" + (open ? "" : " locked");
+      el.innerHTML = `<span class="label"></span><h3></h3><div class="missions"></div><div class="row extra"></div>`;
+      el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
+      el.querySelector("h3").textContent = ch.title;
+      const list = el.querySelector(".missions");
+      ch.missions.forEach((m, mi) => {
+        const b = document.createElement("button");
+        b.className = "mission" + (m.boss ? " boss" : "");
+        b.disabled = !missionOpen(ci, mi);
+        b.innerHTML = `<small></small><span></span><span class="stars"></span>`;
+        b.querySelector("small").textContent = m.boss ? "Boss · " + FOES[m.boss].name : "Mission " + (mi + 1);
+        b.querySelector("span").textContent = m.name;
+        const s = stars(ci, mi);
+        b.querySelector(".stars").textContent = "★".repeat(s) + "☆".repeat(3 - s);
+        b.addEventListener("click", () => startMission(ci, mi));
+        list.append(b);
+      });
+      const extra = el.querySelector(".extra");
+      if (!ch.missions.length) {
+        const b = document.createElement("button");
+        b.textContent = "Watch";
+        b.disabled = !open;
+        b.addEventListener("click", async () => { await playScene(ch.id, 0); save.seen[ch.id + ":before"] = true; store(); await showCards(ch.id); showMap(); });
+        extra.append(b);
+      }
+      if (chapterDone(ci) && ch.missions.length) {
+        const b = document.createElement("button");
+        b.textContent = "Teaching cards";
+        b.addEventListener("click", async () => { await showCards(ch.id); showMap(); });
+        extra.append(b);
+      }
+      if (ch.guest && open) {
+        const n = document.createElement("span");
+        n.className = "note";
+        n.textContent = HEROES[ch.guest].name + " joins every mission in this chapter as a guest.";
+        extra.append(n);
+      }
+      box.append(el);
+    });
+    show("s-map");
+  }
+
+  // ---- Cut scenes ---------------------------------------------------------------------
+
+  let sceneDone = null;
+  function playScene(id, index) {
+    story.open(id, index, true);
+    show("s-scene");
+    paintLine();
+    $("scene").focus({ preventScroll: true });
+    return new Promise((res) => { sceneDone = res; });
+  }
+  function paintLine() {
+    const [who, said] = story.spoken;
+    const p = $("scene-line");
+    p.textContent = "";
+    if (who) { const b = document.createElement("b"); b.textContent = who + ": "; p.append(b); }
+    p.append(said);
+  }
+  function endScene() { if (sceneDone) { const d = sceneDone; sceneDone = null; d(); } }
+  story.onChange((e) => { if (e === "scene-end") endScene(); else paintLine(); });
+  $("scene").addEventListener("click", () => story.next());
+  $("scene").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); story.next(); } });
+  $("scene-next").addEventListener("click", () => story.next());
+  $("scene-skip").addEventListener("click", endScene);
+
+  // ---- Choosing a team ------------------------------------------------------------------
+
+  function chooseTeam(ci, mi) {
+    const ch = C[ci];
+    const m = ch.missions[mi];
+    const fixed = m.team ? m.team.slice() : ch.guest ? [ch.guest] : [];
+    const size = m.team ? m.team.length : 4;
+    const available = m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : []);
+    let picked = fixed.slice();
+    for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
+
+    $("team-chapter").textContent = ch.title + " · " + ch.group;
+    $("team-mission").textContent = m.name;
+    const foes = $("team-foes");
+    foes.textContent = "";
+    for (const id of m.foes) foes.append(portrait(id, 2));
+
+    const box = $("roster");
+    function paint() {
+      $("team-count").textContent = "Your team (" + picked.length + " of " + Math.min(size, available.length) + ")" + (ch.guest ? " · " + HEROES[ch.guest].name + " is a guest" : "");
+      const p = $("team-picked");
+      p.textContent = "";
+      for (const id of picked) p.append(portrait(id, 2));
+      for (const b of box.children) b.setAttribute("aria-pressed", String(picked.includes(b.dataset.id)));
+      $("begin").disabled = picked.length !== Math.min(size, available.length);
+    }
+    box.textContent = "";
+    for (const id of available) {
+      const b = document.createElement("button");
+      b.dataset.id = id;
+      b.disabled = fixed.includes(id);
+      b.append(portrait(id, 2));
+      const n = document.createElement("span"); n.textContent = HEROES[id].name.replace(/^(Fr\.|Sr\.|Bishop) /, "");
+      const r = document.createElement("small"); r.textContent = HEROES[id].guest ? "Guest" : ROLES[id];
+      b.append(n, r);
+      b.addEventListener("click", () => {
+        if (picked.includes(id)) picked = picked.filter((x) => x !== id);
+        else if (picked.length < size) picked.push(id);
+        paint();
+      });
+      box.append(b);
+    }
+    paint();
+    show("s-team");
+    return new Promise((res) => {
+      $("begin").onclick = () => { save.team = picked.filter((x) => !HEROES[x].guest); store(); res(picked); };
+      $("team-back").onclick = () => res(null);
+    });
+  }
+
+  // ---- The battle ---------------------------------------------------------------------
+
+  let auto = false;
+  let stopped = false;
+  $("speed").addEventListener("click", () => {
+    speed = speed === 1 ? 2 : speed === 2 ? 3 : 1;
+    $("speed").textContent = "Speed ×" + speed;
+    $("speed").setAttribute("aria-pressed", String(speed > 1));
+  });
+  $("auto").addEventListener("click", () => {
+    auto = !auto;
+    $("auto").setAttribute("aria-pressed", String(auto));
+    if (auto && pending) { const p = pending; pending = null; p.resolve(p.b.think(p.u)); }
+  });
+  $("retreat").addEventListener("click", () => { stopped = true; if (pending) { const p = pending; pending = null; p.resolve({ i: 0, target: null }); } });
+
+  let pending = null;
+  function playerChoose(b, u) {
+    if (auto) return Promise.resolve(b.think(u));
+    return new Promise((resolve) => {
+      pending = { resolve, b, u };
+      paintMoves(b, u);
+    });
+  }
+
+  function paintMoves(b, u) {
+    const panel = $("panel");
+    panel.textContent = "";
+    view.setTargets([]);
+    $("turn").textContent = u.name + "'s turn";
+    const grid = document.createElement("div");
+    grid.className = "moves";
+    const ready = b.usable(u);
+    u.def.skills.forEach((s, i) => {
+      if (s.duo && !b.units.some((x) => x.side === "hero" && x.id === s.duo && x.state === "in")) return;
+      const btn = document.createElement("button");
+      const great = i === u.def.skills.filter((x) => !x.duo).length - 1 && !s.duo;
+      btn.className = s.duo ? "duo" : great ? "great" : "";
+      btn.disabled = !ready.includes(i);
+      btn.innerHTML = "<span></span><small></small>";
+      btn.querySelector("span").textContent = s.name;
+      const wait = u.cd[i] > 0 ? " · ready in " + u.cd[i] : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
+      btn.querySelector("small").textContent = (s.duo ? "Duo · " : great ? "Great move · " : i === 0 ? "Basic · " : "") + TARGET_WORDS[s.target] + wait;
+      btn.addEventListener("click", () => pickMove(b, u, i));
+      grid.append(btn);
+    });
+    panel.append(grid);
+  }
+
+  function pickMove(b, u, i) {
+    const s = u.def.skills[i];
+    const options = b.choices(u, i);
+    if ((s.target !== "foe" && s.target !== "ally") || options.length === 1) return finish({ i, target: options[0] || null });
+    const panel = $("panel");
+    panel.textContent = "";
+    const p = document.createElement("p");
+    p.className = "note"; p.style.margin = "0";
+    p.textContent = s.name + ": " + (s.target === "foe" ? "tap the opponent to answer." : "tap the friend to help.");
+    const list = document.createElement("div");
+    list.className = "targets";
+    for (const t of options) {
+      const btn = document.createElement("button");
+      btn.textContent = t.name + (t.state === "discouraged" ? " (discouraged)" : "");
+      btn.addEventListener("click", () => finish({ i, target: t }));
+      list.append(btn);
+    }
+    const back = document.createElement("button");
+    back.textContent = "Back";
+    back.addEventListener("click", () => paintMoves(b, u));
+    list.append(back);
+    panel.append(p, list);
+    view.setTargets(options.map((t) => t.key));
+    targeting = { options, i };
+  }
+  let targeting = null;
+  function finish(choice) {
+    targeting = null;
+    view.setTargets([]);
+    $("panel").textContent = "";
+    if (pending) { const p = pending; pending = null; p.resolve(choice); }
+  }
+  $("battle").addEventListener("click", (e) => {
+    if (!targeting || !view) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const u = view.pick((e.clientX - r.left) * 640 / r.width, (e.clientY - r.top) * 360 / r.height);
+    if (u && targeting.options.includes(u)) finish({ i: targeting.i, target: u });
+  });
+
+  async function fight(ci, mi, team) {
+    const m = C[ci].missions[mi];
+    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci });
+    view = BattleView.create($("battle"), b);
+    stopped = false;
+    $("log").textContent = "";
+    $("panel").textContent = "";
+    show("s-battle");
+    const out = await Battle.run(b, view, {
+      choose: (u) => playerChoose(b, u),
+      stopped: () => stopped,
+      onAction: (u, s) => {
+        $("turn").textContent = u.name + "'s turn";
+        $("round").textContent = "Round " + b.round;
+        $("log").textContent = u.name + " uses " + s.name + ".";
+        $("panel").textContent = "";
+      },
+    });
+    const foes = b.units.filter((u) => u.side === "foe");
+    const converted = foes.filter((u) => u.state === "converted");
+    const walked = foes.filter((u) => u.state === "walked");
+    let st = 0;
+    if (out === "win") st = converted.length === foes.length ? 3 : converted.length * 2 >= foes.length ? 2 : 1;
+    return { out, converted, walked, stars: st };
+  }
+
+  function showResult(ci, mi, r) {
+    const box = $("s-result");
+    box.textContent = "";
+    const win = r.out === "win";
+    const h = document.createElement("h2");
+    h.textContent = win ? "Well argued!" : r.out === "stopped" ? "You left the debate" : "Not this time";
+    const s = document.createElement("div");
+    s.className = "stars";
+    s.textContent = win ? "★".repeat(r.stars) + "☆".repeat(3 - r.stars) : "";
+    const p = document.createElement("p");
+    const names = (list) => list.map((u) => u.name).join(", ");
+    p.textContent = win
+      ? (r.converted.length ? "Converted: " + names(r.converted) + ". " : "") + (r.walked.length ? "Walked off, unconvinced: " + names(r.walked) + ". " : "") + (r.stars < 3 ? "Convert every opponent for three stars." : "Every opponent converted.")
+      : "Your whole team was discouraged. Try a different team, or lean on your Encouragers.";
+    if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
+    const row = document.createElement("div");
+    row.className = "row";
+    box.append(h, s, p, row);
+    show("s-result");
+    return new Promise((res) => {
+      const go = document.createElement("button");
+      go.className = "primary";
+      go.textContent = win ? "Continue" : "Try again";
+      go.addEventListener("click", () => res(win ? "next" : "retry"));
+      const map = document.createElement("button");
+      map.textContent = "Map";
+      map.addEventListener("click", () => res("map"));
+      row.append(go, map);
+    });
+  }
+
+  function showCards(id) {
+    const box = $("s-cards");
+    box.textContent = "";
+    const ch = C.find((c) => c.id === id);
+    const head = document.createElement("div");
+    head.innerHTML = `<span class="label">Teaching cards unlocked</span><h2></h2>`;
+    head.querySelector("h2").textContent = ch.title;
+    box.append(head);
+    for (const [cls, grade, text] of CARDS[id] || []) {
+      const c = document.createElement("div");
+      c.className = "card-note";
+      c.innerHTML = `<span class="grade"></span><span></span>`;
+      c.querySelector(".grade").className = "grade " + cls;
+      c.querySelector(".grade").textContent = grade;
+      c.querySelector("span:last-child").textContent = text;
+      box.append(c);
+    }
+    if (ch.unlocks.length) {
+      const n = document.createElement("p");
+      n.textContent = "New on your roster: " + ch.unlocks.map((h) => HEROES[h].name).join(", ") + ".";
+      box.append(n);
+    }
+    const go = document.createElement("button");
+    go.className = "primary";
+    go.textContent = "Continue";
+    box.append(go);
+    show("s-cards");
+    return new Promise((res) => go.addEventListener("click", res));
+  }
+
+  // ---- A mission, start to finish --------------------------------------------------------
+
+  async function startMission(ci, mi) {
+    const ch = C[ci];
+    const last = ch.missions.length - 1;
+    if (mi === 0 && ch.scenes.before !== undefined && !save.seen[ch.id + ":before"]) {
+      await playScene(ch.id, ch.scenes.before);
+      save.seen[ch.id + ":before"] = true; store();
+    }
+    for (;;) {
+      const team = await chooseTeam(ci, mi);
+      if (!team) return showMap();
+      const r = await fight(ci, mi, team);
+      if (r.out === "win") { save.stars[mkey(ci, mi)] = Math.max(stars(ci, mi), r.stars); store(); }
+      const next = await showResult(ci, mi, r);
+      if (next === "retry") continue;
+      if (next === "map" || r.out !== "win") return showMap();
+      break;
+    }
+    if (mi === 2 && ch.scenes.mid !== undefined && !save.seen[ch.id + ":mid"]) {
+      await playScene(ch.id, ch.scenes.mid);
+      save.seen[ch.id + ":mid"] = true; store();
+    }
+    if (mi === last) {
+      if (ch.scenes.after !== undefined) await playScene(ch.id, ch.scenes.after);
+      await showCards(ch.id);
+    }
+    showMap();
+  }
+
+  // ---- Start ----------------------------------------------------------------------------
+
+  $("play").addEventListener("click", showMap);
+  let resetArmed = false;
+  $("reset").addEventListener("click", () => {
+    if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
+    save = { stars: {}, seen: {}, team: [] }; store();
+    resetArmed = false; $("reset").textContent = "Progress erased";
+  });
+  if (Object.keys(save.stars).length) $("play").textContent = "Continue";
+  show("s-title");
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

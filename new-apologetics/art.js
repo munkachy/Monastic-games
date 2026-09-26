@@ -572,6 +572,12 @@ const Art = (() => {
     preacher: { skin: "#e9b896", shade: "#c78f70", hair: "#6b4a2f", style: "short", beard: "chin", beardColor: "#6b4a2f", outfit: "shirt", clothes: "#7a6a4f", trim: "#e9e2d0", prop: "sign" },
     speaker: { skin: "#b98563", shade: "#976746", hair: "#1c140f", style: "kufi", cap: "#f2efe6", capTrim: "#c9c3b4", beard: "chin", beardColor: "#1c140f", brow: "#1c140f", outfit: "shirt", clothes: "#4f5a3a", trim: "#d8d2bf" },
     skeptic: { skin: "#f3cdb2", shade: "#d3a58a", hair: "#9a5a2e", style: "curly", outfit: "hoodie", clothes: "#5d6470", trim: "#434955", prop: "headset" },
+    skeptic2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2f3a4a", trim: "#23303e" },
+    preacher2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "side", outfit: "shirt", clothes: "#8a2a2a", trim: "#e9e2d0", prop: "sign" },
+    elder2: { skin: "#e6b896", shade: "#c69676", hair: "#3a2618", style: "short", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#6a2a3a", prop: "nametag", smile: true },
+    dai: { skin: "#a8764e", shade: "#885838", hair: "#1c140f", style: "kufi", cap: "#2a2a30", capTrim: "#4a4a52", beard: "full", beardColor: "#1c140f", brow: "#1c140f", outfit: "shirt", clothes: "#3a4a5a", trim: "#c8d2dc" },
+    dai2: { skin: "#c49068", shade: "#a47048", hair: "#241a14", style: "short", beard: "chin", beardColor: "#241a14", brow: "#241a14", outfit: "hoodie", clothes: "#4a3a2a", trim: "#3a2c20" },
+    seminarian2: { skin: "#f0c6a8", shade: "#d09e82", hair: "#8a5a2e", style: "curly", beard: "short", beardColor: "#8a5a2e", outfit: "sweater", clothes: "#3a4a3a", trim: "#e9e2d0" },
   };
 
   return { bust, mog, figure, paint, CAST };

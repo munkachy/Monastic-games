@@ -54,6 +54,8 @@
   /* Hero */
   .hero { display: grid; gap: 20px; }
   .hero-top { display: grid; gap: 14px; }
+  .play-link { display: inline-block; padding: 12px 20px; background: var(--gold); color: var(--night); font: 700 20px/1 var(--display); text-decoration: none; border-radius: 4px; }
+  .play-link:hover { background: #f2ca66; }
   .verse { font-style: italic; color: var(--muted); max-width: 60ch; }
   .verse b { font-style: normal; color: var(--gold); font-weight: 600; }
   .stage { border: 3px solid var(--line); background: #0e1122; border-radius: 6px; overflow: hidden; }
@@ -189,14 +191,15 @@
 <main>
   <header class="hero">
     <div class="hero-top">
-      <span class="label">Game design · concept draft</span>
+      <span class="label">A game in progress</span>
       <h1>New Apologetics</h1>
       <p>A turn-based team battler where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
       <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The four stats of the game come from this verse.</p>
     </div>
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
-    <p class="status">A fan-made concept. It is not affiliated with or endorsed by any of the people depicted, and each of them will be asked before anything is released.</p>
+    <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
+    <p><a class="play-link" href="play.html">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -267,7 +270,7 @@
     <div class="lede">
       <span class="label">The opposition</span>
       <h2>Five chapters, five groups</h2>
-      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. The bosses are real people, so they appear only with their permission.</p>
+      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters.</p>
     </div>
     <div class="factions" id="factions"></div>
   </section>
@@ -309,15 +312,14 @@
 
   <section>
     <div class="lede">
-      <span class="label">Before release</span>
-      <h2>Open questions</h2>
+      <span class="label">Still under review</span>
+      <h2>Work in progress</h2>
     </div>
     <ul class="notes">
-      <li><b>Permission from everyone depicted, including the bosses.</b> A boss who converts is the joke of the game, and it is also the part most likely to hurt. Alex O'Connor, Ryan Hemelaar, Jacob Hansen and James White should see their kits, their scenes and their OCIA moments before release. Without their yes, their places go to invented characters.</li>
-      <li><b>Every line of dialogue is a draft.</b> The words given to real people are written to reflect what each has said in public, and each person should read his own lines.</li>
+      <li><b>The whole game is still under review.</b> The dialogue, the moves and the balance are drafts. The words given to real people are written to reflect what each has said in public.</li>
       <li><b>The Islam storyline needs a boss.</b> Until one is chosen and agrees, an invented character, the Speakers' Corner Champion, fills the place.</li>
       <li><b>GodLogic is a mere-Christian apologist, not a Catholic one.</b> He fits best as a guest ally in the Islam storyline, where Catholics and Protestants make common cause, and that is a good lesson in itself.</li>
-      <li><b>The likenesses are first drafts.</b> They are built from each man's best-known look and will be redrawn from photographs.</li>
+      <li><b>The likenesses are mostly drawn from photographs.</b> A few are still best guesses and will be redrawn as better photographs come in.</li>
     </ul>
   </section>
 
@@ -333,6 +335,8 @@
 <script src="art.js"></script>
 <script src="moves.js"></script>
 <script src="story.js"></script>
+<script src="data.js"></script>
+<script src="battle.js"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -800,128 +804,26 @@
   storyCanvas.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); story.next(); } });
   document.getElementById("story-next").addEventListener("click", () => story.next());
 
-  // ---- The battle demo ---------------------------------------------------------
+  // ---- The opening battle: the real game engine, playing itself ------------------------
 
   const busts = {};
   for (const k of Object.keys(C)) busts[k] = Art.bust(C[k]);
 
-  const battle = document.getElementById("battle");
-  const bx = battle.getContext("2d");
   const caption = document.getElementById("battle-caption");
-  const HERO_POS = [["akin", 40, 18], ["muse", 118, 104], ["fradd", 40, 190], ["bertuzzi", 118, 276]];
-  const FOE_POS = [["elder", 456, 40], ["preacher", 536, 138], ["skeptic", 456, 236]];
-  const LOOP = 17;
-
-  // What has happened by time t: each event changes conviction or composure.
-  const EVENTS = [
-    { t: 0.4, who: "akin", say: "Jimmy Akin · Logical Paradox", caption: "Logical Paradox: every foe's Rhetoric falls, and two of them lose a pip of Conviction.", fx: { elder: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"] },
-    { t: 3.2, who: "muse", say: "Ethan Muse · Open Challenge", caption: "Open Challenge: all three are Called Out and must answer Ethan. Each loses a pip.", fx: { elder: [-1, 0], preacher: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"], called: true },
-    { t: 6.0, who: "preacher", say: "Street Preacher · Turn or Burn", caption: "Called Out, the preacher has to aim at Ethan, who is the tank.", fx: { muse: [0, -0.45] }, flash: ["muse"] },
-    { t: 8.2, who: "muse", say: "Ethan Muse · Camera Mog", caption: "Camera Mog: the elder's last two pips go at once.", fx: { elder: [-2, -0.3] }, mog: true, flash: ["elder"] },
-    { t: 11.4, who: "elder", say: "Elder Missionary · converted", caption: "His conviction is gone, so he flickers, and then he signs up for OCIA.", ocia: "elder" },
-    { t: 14.2, who: "fradd", say: "Matt Fradd · Pints with Aquinas", caption: "Pints with Aquinas: Ethan gets his Composure back.", fx: { muse: [0, 0.45] }, flash: ["muse"] },
-  ];
-
-  function stateAt(t) {
-    const s = {};
-    for (const [id] of HERO_POS.concat(FOE_POS)) s[id] = { pips: 4, comp: 1 };
-    let last = null;
-    for (const e of EVENTS) {
-      if (e.t > t) break;
-      last = e;
-      for (const [id, [dp, dc]] of Object.entries(e.fx || {})) {
-        s[id].pips = Math.max(0, s[id].pips + dp);
-        s[id].comp = Math.max(0.05, Math.min(1, s[id].comp + dc));
-      }
-    }
-    return { s, last };
-  }
-
-  function drawBars(x, y, st, foe) {
-    bx.fillStyle = "#2a2f55"; bx.fillRect(x, y, 64, 6);
-    bx.fillStyle = "#74c07a"; bx.fillRect(x, y, Math.round(64 * st.comp), 6);
-    for (let i = 0; i < 4; i++) {
-      bx.fillStyle = i < st.pips ? "#7ea4e6" : (foe ? "#5a2a36" : "#3a2a36");
-      bx.fillRect(x + i * 17, y + 10, 13, 6);
+  let demo = null;
+  async function runDemo() {
+    const squads = [["skeptic", "preacher", "elder"], ["elder", "dai", "seminarian"], ["skeptic2", "preacher2", "skeptic"]];
+    const teams = [["akin", "muse", "fradd", "bertuzzi"], ["horn", "hahn", "pine", "marygrace"], ["barron", "jurado", "spitzer", "muse"]];
+    for (let n = 0; ; n++) {
+      const b = Battle.create({ team: teams[n % teams.length], foes: squads[n % squads.length], level: 1 });
+      demo = BattleView.create(document.getElementById("battle"), b);
+      await Battle.run(b, demo, { onAction: (u, sk) => { caption.textContent = u.name + " uses " + sk.name + "."; } });
+      const won = b.units.filter((u) => u.side === "foe" && u.state === "converted").length;
+      caption.textContent = won ? won + " converted. Tuesdays, 7 pm, parish hall." : "The debate is over.";
+      await demo.sleep(3);
     }
   }
-
-  function drawSign(x, y, a) {
-    bx.globalAlpha = a;
-    bx.fillStyle = "#8a5a2b"; bx.fillRect(x + 29, y + 36, 6, 30);
-    bx.fillStyle = "#f7f1de"; bx.fillRect(x - 4, y + 4, 72, 36);
-    bx.strokeStyle = "#1a1326"; bx.lineWidth = 3; bx.strokeRect(x - 4, y + 4, 72, 36);
-    bx.fillStyle = "#b3261e"; bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
-    bx.fillText("OCIA", x + 32, y + 26);
-    bx.fillStyle = "#1a1326"; bx.font = "600 10px 'Pixelify Sans', monospace";
-    bx.fillText("TUES · 7 PM", x + 32, y + 37);
-    bx.globalAlpha = 1;
-  }
-
-  function drawBattle(t) {
-    const { s, last } = stateAt(t);
-    bx.fillStyle = "#0e1122"; bx.fillRect(0, 0, 640, 360);
-    // A studio floor and two lecterns of light.
-    bx.fillStyle = "#171b36"; bx.fillRect(0, 300, 640, 60);
-    for (let x = 0; x < 640; x += 32) { bx.fillStyle = x % 64 ? "#1b2040" : "#161a33"; bx.fillRect(x, 300, 32, 60); }
-    bx.fillStyle = "rgba(232,185,74,0.05)"; bx.fillRect(20, 0, 200, 360); bx.fillRect(430, 0, 200, 360);
-
-    const since = last ? t - last.t : 99;
-    for (const [id, x, y] of HERO_POS) {
-      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
-      const active = last && last.who === id && since < 2.2;
-      if (active) { bx.fillStyle = "rgba(232,185,74,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
-      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2);
-      drawBars(x, y + 68, s[id], false);
-    }
-    for (const [id, x, y] of FOE_POS) {
-      const conv = last && last.ocia === id ? since : (s[id].pips === 0 && t >= 11.4 ? 99 : -1);
-      if (conv >= 0 && conv > 1.6) { drawSign(x, y, Math.min(1, (conv - 1.6) * 2)); continue; }
-      if (conv >= 0 && Math.floor(conv * 12) % 2 === 1) {
-        bx.fillStyle = "rgba(255,255,255,0.8)"; bx.fillRect(x + 8, y + 4, 48, 60);
-        continue;
-      }
-      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
-      const active = last && last.who === id && since < 2.2;
-      if (active) { bx.fillStyle = "rgba(222,94,85,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
-      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2, true);
-      drawBars(x, y + 68, s[id], true);
-      const called = EVENTS.find((e) => e.called);
-      if (called && t >= called.t && t < 11) {
-        bx.fillStyle = "#de5e55"; bx.font = "600 11px 'Pixelify Sans', monospace"; bx.textAlign = "left";
-        bx.fillText("CALLED OUT", x - 2, y - 6);
-      }
-    }
-    // Pips lost float up from the target.
-    if (last && last.fx && since < 1.2) {
-      for (const [id, [dp, dc]] of Object.entries(last.fx)) {
-        const pos = HERO_POS.concat(FOE_POS).find((p) => p[0] === id);
-        bx.fillStyle = dp < 0 ? "#7ea4e6" : dc < 0 ? "#de5e55" : "#74c07a";
-        bx.font = "700 16px 'Pixelify Sans', monospace"; bx.textAlign = "center";
-        const text = dp < 0 ? dp + " CONVICTION" : dc < 0 ? "−COMPOSURE" : "+COMPOSURE";
-        bx.fillText(text, pos[1] + 32, pos[2] - 10 - since * 18);
-      }
-    }
-    // The move's name.
-    if (last && since < 2.6) {
-      bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
-      const w = bx.measureText(last.say).width + 28;
-      bx.fillStyle = "rgba(20,23,42,0.92)"; bx.fillRect(320 - w / 2, 10, w, 34);
-      bx.strokeStyle = "#e8b94a"; bx.lineWidth = 2; bx.strokeRect(320 - w / 2, 10, w, 34);
-      bx.fillStyle = "#ece4d0"; bx.fillText(last.say, 320, 34);
-    }
-    // The Camera Mog close-up.
-    if (last && last.mog && since < 2.6) {
-      const k = Math.min(1, since / 0.35);
-      bx.fillStyle = `rgba(8,9,20,${0.85 * k})`; bx.fillRect(0, 0, 640, 360);
-      const scale = 6;
-      const lean = Math.min(1, Math.max(0, (since - 0.3) / 0.9));
-      Art.paint(bx, Art.mog(C.muse, lean), 320 - 24 * scale, 360 - 48 * scale + Math.round((1 - k) * 60), scale);
-      bx.fillStyle = "#e8b94a"; bx.font = "700 28px 'Pixelify Sans', monospace"; bx.textAlign = "left";
-      bx.fillText("CAMERA", 24, 60); bx.fillText("MOG", 24, 92);
-    }
-    if (last && caption.textContent !== last.caption) caption.textContent = last.caption;
-  }
+  function drawBattle(t) { if (demo) demo.frame(t); }
 
   // ---- The Camera Mog spotlight ---------------------------------------------------------
 
@@ -1049,7 +951,8 @@
   // ---- Run ----------------------------------------------------------------------
 
   if (still) {
-    drawBattle(9.2); drawOcia(3.2);
+    demo = BattleView.create(document.getElementById("battle"), Battle.create({ team: ["akin", "muse", "fradd", "bertuzzi"], foes: ["skeptic", "preacher", "elder"] }));
+    drawBattle(0); drawOcia(3.2);
     // With reduced motion the theater and the spotlight only move when asked.
     const loop = (now) => { drawTheater(now / 1000); drawSpot(now / 1000); story.frame(now / 1000); requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
@@ -1058,14 +961,15 @@
   const t0 = performance.now();
   function frame(now) {
     const t = (now - t0) / 1000;
-    drawBattle(t % LOOP);
+    drawBattle(t);
     drawTheater(t);
     drawSpot(t);
     story.frame(t);
     drawOcia(t);
     requestAnimationFrame(frame);
   }
-  drawBattle(0.6); drawTheater(0); drawSpot(0); story.frame(0); drawOcia(0);
+  runDemo();
+  drawTheater(0); drawSpot(0); story.frame(0); drawOcia(0);
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
 })();
 </script>

@@ -10,9 +10,8 @@
 // surprised, "idea" a light bulb, "…" thinking. A cast entry that begins with
 // "+" walks on during the scene, at the line where it first speaks.
 //
-// The words given to real people are drafts, written to reflect what each
-// one has said in public. Every one of them is to be shown to the person
-// before the game is released.
+// The words given to real people are drafts, still under review, written to
+// reflect what each one has said in public.
 
 const Story = (() => {
   const W = 640;
@@ -397,12 +396,16 @@ const Story = (() => {
       if (page < pages - 1) { page++; lineStart = now; return; }
       page = 0;
       if (line < sc.lines.length - 1) { line++; lineStart = now; }
+      else if (single) { listeners.forEach((fn) => fn("scene-end")); return; }
       else if (scene < chapter.scenes.length - 1) { scene++; line = 0; lineStart = now; for (const k in entered) delete entered[k]; }
       else { listeners.forEach((fn) => fn(chapter)); return; }
       listeners.forEach((fn) => fn(null));
     }
 
-    function open(id, sceneIndex) {
+    // With `only`, play just this one scene, then report "scene-end".
+    let single = false;
+    function open(id, sceneIndex, only) {
+      single = !!only;
       chapter = CHAPTERS.find((c) => c.id === id) || CHAPTERS[0];
       scene = sceneIndex || 0; line = 0; page = 0; lineStart = now;
       for (const k in entered) delete entered[k];

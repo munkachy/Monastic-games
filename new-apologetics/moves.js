@@ -117,20 +117,25 @@ const Theater = (() => {
   const HERO_SLOTS = [[190, 318], [80, 318], [120, 206], [226, 206]];
   const FOE_SLOTS = [[450, 318], [560, 318], [506, 206]];
 
-  function create(canvas) {
+  // opts.state(actor) may return { hidden, alpha, pose } for each fighter, and
+  // opts.hud(ctx, actors, t) draws over the stage (bars, pips, numbers).
+  function create(canvas, opts) {
+    const o = opts || {};
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     const C = Art.CAST;
     let team = ["akin", "muse", "fradd", "bertuzzi"];
     let foes = ["elder", "preacher", "skeptic"];
-    let current = null;       // { hero, move, start }
+    let current = null;       // { key, move, start, targets }
     let listeners = [];
     let tNow = 0;
 
-    const actors = () => team.map((id, i) => ({ id, side: "hero", x: HERO_SLOTS[i][0], y: HERO_SLOTS[i][1] }))
-      .concat(foes.map((id, i) => ({ id, side: "foe", x: FOE_SLOTS[i][0], y: FOE_SLOTS[i][1] })));
+    // Each fighter has a slot key (h0–h3, f0–f2), so two alike can share a stage.
+    const actors = () => team.map((id, i) => ({ key: "h" + i, id, side: "hero", x: HERO_SLOTS[i][0], y: HERO_SLOTS[i][1] }))
+      .concat(foes.map((id, i) => ({ key: "f" + i, id, side: "foe", x: FOE_SLOTS[i][0], y: FOE_SLOTS[i][1] })));
 
     function setTeam(ids) { team = ids.slice(0, 4); }
+    function setFoes(ids) { foes = ids.slice(0, 3); }
 
     function drawFloor() {
       ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, W, H);
@@ -155,16 +160,21 @@ const Theater = (() => {
       tNow = t;
       const list = actors();
       const byId = {};
-      for (const a of list) { a.pose = "stand"; a.flip = a.side === "foe"; a.marks = []; byId[a.id + ":" + a.side] = a; }
+      for (const a of list) {
+        a.pose = "stand"; a.flip = a.side === "foe"; a.marks = []; byId[a.key] = a;
+        if (o.state) Object.assign(a, o.state(a) || {});
+      }
       const after = [];
       let overlay = null;
       if (current) {
         const k = t - current.start;
-        const hero = list.find((a) => a.side === "hero" && a.id === current.hero);
+        const hero = byId[current.key];
+        const alive = (a) => !a.hidden;
         const api = {
           t: k, now: t, ctx, W, H, hero, actors: list,
-          foes: list.filter((a) => a.side === "foe"),
-          allies: list.filter((a) => a.side === "hero"),
+          foes: list.filter((a) => a.side !== hero.side && alive(a)),
+          allies: list.filter((a) => a.side === hero.side && alive(a)),
+          targets: current.targets ? current.targets.map((key) => byId[key]).filter(Boolean) : null,
           head: (a) => ({ x: a.x, y: a.y - FIG_H + 4 }),
           mouth: (a) => ({ x: a.x + (a.side === "hero" ? 14 : -14), y: a.y - FIG_H + 38 }),
           hand: (a) => ({ x: a.x + (a.side === "hero" ? 30 : -30), y: a.y - 42 }),
@@ -181,14 +191,16 @@ const Theater = (() => {
       }
       drawFloor();
       list.slice().sort((a, b) => a.y - b.y).forEach((a) => {
+        if (a.hidden) return;
         drawFigure(a.id, a.x + (a.dx || 0), a.y + (a.dy || 0), a.pose, a.flip, a.alpha, a.shake);
         for (const [name, since] of a.marks) MARKS[name](ctx, a.x + (a.dx || 0), a.y + (a.dy || 0) - FIG_H + 4, t, clamp(since, 0, 1));
       });
+      if (o.hud) o.hud(ctx, list, t, !!(current && current.move.cinematic && t - current.start < current.move.duration - 1.3));
       after.forEach((fn) => fn());
       if (overlay) overlay();
       if (current) {
         const k = t - current.start;
-        if (!current.move.cinematic && k < current.move.duration - 0.2) banner(current.move.name, C[current.hero]);
+        if (!current.move.cinematic && k < current.move.duration - 0.2) banner(current.move.name);
       }
     }
 
@@ -205,11 +217,17 @@ const Theater = (() => {
       else team = [hero, ...team.filter((h) => h !== hero)];
       const move = MOVES[hero][index];
       if (move.duo && !team.includes(move.duo)) team = [hero, move.duo, ...team.filter((h) => h !== hero && h !== move.duo)].slice(0, 4);
-      current = { hero, move: build(move, hero), start: now, index };
+      current = { key: "h0", move: build(move, hero), start: now, index };
+    }
+
+    // For the game: the fighter in slot `key` performs `move` on the fighters
+    // in `targets` (slot keys), without anyone changing places.
+    function act(key, move, now, targets) {
+      current = { key, move: build(move), start: now, targets };
     }
 
     return {
-      frame, play, setTeam,
+      frame, play, act, setTeam, setFoes,
       get busy() { return !!current; },
       onDone(fn) { listeners.push(fn); },
     };
@@ -219,6 +237,7 @@ const Theater = (() => {
 
   // Pick targets: the first foe, two foes, every foe, the hero, or allies.
   function pick(api, who) {
+    if (api.targets && api.targets.length) return api.targets;
     if (who === "all") return api.foes;
     if (who === "two") return [api.foes[0], api.foes[1]];
     if (who === "self") return [api.hero];
@@ -872,5 +891,5 @@ const Theater = (() => {
     return move;
   }
 
-  return { create, MOVES };
+  return { create, MOVES, kinds: { volley, approach, aura, hex, cinematic }, SCENES, HERO_SLOTS, FOE_SLOTS };
 })();
