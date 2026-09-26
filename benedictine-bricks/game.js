@@ -1,6 +1,6 @@
 // Benedictine Bricks — a stacking game in the style of 99 Bricks Wizard Academy.
 // Build the tower as high as you can. When your candles are out, a roof caps the tower.
-// Physics by Matter.js (lib/matter.min.js). Art in art.js.
+// Physics by Box2D (planck.js, through physics.js). Art in art.js.
 
 const { Engine, Bodies, Body, Composite, Events, Sleeping } = Matter;
 
@@ -24,11 +24,10 @@ const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
 const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
 const MAX_DROP_SPEED = 6;
-// Forgiveness: each square's solid body is a little smaller than its picture,
-// with rounded corners, so stones slip into gaps instead of catching on them.
-const INSET = 1.2;            // pixels trimmed from each side of a square
-const CORNER = 3;             // corner rounding, in pixels
-const MAGNET = 6;             // a stone this close to lining up with an edge snaps to it
+// Every square is exactly one stone wide. A falling stone this close to
+// lining up with an edge below snaps to it.
+const INSET = 0;
+const MAGNET = 6;
 const LANDING_DAMPING = 0.12; // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
@@ -52,11 +51,10 @@ const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
-// Stone is heavy: strong gravity and almost no air drag, so a stone that
-// tips falls hard instead of drifting down like foam.
-const GRAVITY = 2.4;
-const STONE = { density: 0.004, friction: 0.9, frictionStatic: 1.6, frictionAir: 0.004, restitution: 0, slop: 0.02 };
-const ICE = { density: 0.004, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.004, restitution: 0, slop: 0.02 };
+// Box2D units: one stone square is one metre. Stone is heavy and grips.
+const GRAVITY = 30;           // metres (stone squares) per second squared
+const STONE = { density: 1, friction: 0.8, restitution: 0, linearDamping: 0.05, angularDamping: 0.1 };
+const ICE = { density: 1, friction: 0.03, restitution: 0, linearDamping: 0.05, angularDamping: 0.1 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -333,8 +331,8 @@ function spellCost(name) {
 
 function newTower() {
   engine = Engine.create({ enableSleeping: true });
-  engine.positionIterations = 20;
-  engine.velocityIterations = 14;
+  engine.velocityIterations = 12;
+  engine.positionIterations = 8;
   engine.gravity.y = GRAVITY;
 
   world = WORLDS.find((w) => w.id === save.world) || WORLDS[0];
@@ -447,7 +445,7 @@ function spawn() {
   const y = Math.max(camY + VIEW_H * 0.12, towerTop - 380);
   const material = curse === "ice" ? ICE : STONE;
   const parts = shape.cells.map(([cx, cy]) =>
-    Bodies.rectangle(x + cx * tile, y + cy * tile, tile - 2 * INSET, tile - 2 * INSET, { ...material, chamfer: { radius: CORNER } })
+    Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
   );
   const body = Body.create({ parts, ...material });
   body.plugin.kind = "stone";
@@ -555,8 +553,7 @@ function rotate() {
 // under an overhang.
 function overlapsTower() {
   const others = Composite.allBodies(engine.world).filter((b) => b !== active);
-  const squares = active.parts.length > 1 ? active.parts.slice(1) : [active];
-  return squares.some((sq) => Matter.Query.collides(sq, others).some((c) => (c.collided !== false) && c.depth > 2));
+  return Matter.overlaps(active, others, 2);
 }
 
 // Line the falling stone up with whatever it would land on: its edges sit
@@ -780,15 +777,6 @@ function physicsStep() {
   } else if (active && active.velocity.y > MAX_DROP_SPEED) {
     // A dropped stone falls fast, but not so fast that it bounces off.
     Body.setVelocity(active, { x: active.velocity.x, y: MAX_DROP_SPEED });
-  }
-  // Settle small jiggles in stones that have landed, so they sit still instead
-  // of bouncing and creeping; real tumbles are far faster than this and pass.
-  for (const b of landed) {
-    if (b.isStatic || b.isSleeping) continue;
-    if (b.speed < 0.6 && Math.abs(b.angularVelocity) < 0.012) {
-      Body.setVelocity(b, { x: b.velocity.x * 0.8, y: b.velocity.y * 0.8 });
-      Body.setAngularVelocity(b, b.angularVelocity * 0.8);
-    }
   }
   Engine.update(engine, STEP);
 }

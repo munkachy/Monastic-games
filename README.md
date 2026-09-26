@@ -25,8 +25,9 @@ All art is in `benedictine-bricks/art.js`, drawn as grids of characters. Open
 sprite, put it in `benedictine-bricks/img/` and list it in `IMAGE_OVERRIDES` at the
 end of `art.js`.
 
-The physics engine is [Matter.js](https://github.com/liabru/matter-js)
-(MIT license), included in `benedictine-bricks/lib/`.
+The physics engine is [planck.js](https://github.com/piqnt/planck.js), a
+JavaScript port of Box2D (MIT license), included in `benedictine-bricks/lib/`
+and wrapped for the game in `benedictine-bricks/physics.js`.
 
 ## Benedictine Bricks: music
 
