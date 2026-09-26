@@ -8,20 +8,21 @@ const { Engine, Bodies, Body, Composite, Events, Sleeping } = Matter;
 // Tuning. Most of the "feel" of the game lives in these numbers.
 // ---------------------------------------------------------------------------
 
-const VIEW_W = 480;          // logical screen width, in world pixels
-const MIN_VIEW_H = 720;      // taller screens show more sky above
+const VIEW_W = 576;          // logical screen width, in world pixels
+const MIN_VIEW_H = 864;      // taller screens show more sky above
 let VIEW_H = MIN_VIEW_H;
 const PX = 2;                // one art pixel = 2 world pixels
 const TILE = 12 * PX;        // one stone square; also one cubit of height
-const FOUND_Y = 600;         // top of the rock foundation
-const TOWER_VIEW = 420;      // how much of the tower stays in view below its top
+const FOUND_Y = 744;         // top of the rock foundation
+const TOWER_VIEW = 500;      // how much of the tower stays in view below its top
 
 const LOSSES_ALLOWED = 3;    // drop this many stones and the tower is finished
 const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
-const FALL_SPEED = 1.5;      // world pixels per physics step
-const FALL_SPEED_PER_CUBIT = 0.012;
+const FALL_SPEED = 1.0;      // world pixels per physics step, at the start
+const FALL_SPEED_PER_TIER = 0.2;  // a little faster at each new tier
 const MAX_FALL_SPEED = 2.6;
-const MAX_DROP_SPEED = 7;
+const MAX_DROP_SPEED = 5;
+const LANDING_DAMPING = 0.3;  // share of speed a stone keeps when it lands
 
 const PRAYER_PER_STONE = 1;
 const PRAYER_PER_TIER = 3;
@@ -45,8 +46,8 @@ const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
-const STONE = { density: 0.002, friction: 0.8, frictionStatic: 1.2, restitution: 0 };
-const ICE = { density: 0.002, friction: 0.02, frictionStatic: 0.04, restitution: 0 };
+const STONE = { density: 0.002, friction: 0.9, frictionStatic: 1.4, frictionAir: 0.02, restitution: 0 };
+const ICE = { density: 0.002, friction: 0.02, frictionStatic: 0.04, frictionAir: 0.02, restitution: 0 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -243,7 +244,7 @@ function spawn() {
   const tile = curse === "huge" ? TILE * HUGE_FACTOR : TILE;
   const x = VIEW_W / 2;
   // Start well above the tower, but not so far that the wait is tedious.
-  const y = Math.max(camY + 50, towerTop - 300);
+  const y = Math.max(camY + 50, towerTop - 340);
   const material = curse === "ice" ? ICE : STONE;
   const parts = shape.cells.map(([cx, cy]) =>
     Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
@@ -258,7 +259,7 @@ function spawn() {
   active = body;
   steering = true;
   targetAngle = 0;
-  activeSpeed = Math.min(MAX_FALL_SPEED, FALL_SPEED + height * FALL_SPEED_PER_CUBIT);
+  activeSpeed = Math.min(MAX_FALL_SPEED, FALL_SPEED + tier * FALL_SPEED_PER_TIER);
   if (curse === "haste") activeSpeed *= HASTE_FACTOR;
   if (pending) {
     enchant(body, pending);
@@ -287,6 +288,9 @@ function land() {
   const body = active;
   active = null;
   steering = false;
+  // Soak up most of the impact so stones settle instead of bouncing.
+  Body.setVelocity(body, { x: body.velocity.x * LANDING_DAMPING, y: body.velocity.y * LANDING_DAMPING });
+  Body.setAngularVelocity(body, body.angularVelocity * LANDING_DAMPING);
   if (body.plugin.mortar) {
     Body.setStatic(body, true);
     effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.6, color: "#ffffff" });
@@ -510,7 +514,7 @@ function gameLogic(dt) {
       }
     }
     prayer = Math.min(prayerMax, prayer + PRAYER_PER_TIER);
-    flashBanner("Gradus " + roman(tier + 1) + " · coins ×" + multiplier, 2.4);
+    flashBanner("Gradus " + roman(tier + 1) + " · coins ×" + multiplier + " · faster", 2.4);
   }
 
   updateDemon(dt);
@@ -626,7 +630,7 @@ function finish() {
   if (record) save.best = final;
   save.coins += earned;
   writeSave();
-  showOverlay(
+  reopenOverlay = () => showOverlay(
     record ? "Deo gratias!" : "Consummatum est",
     "Your tower stands " + final.toFixed(1) + " cubits high" +
       (record ? ", a new record." : ". Your best is " + save.best.toFixed(1) + ".") +
@@ -634,6 +638,7 @@ function finish() {
     ["Build again", newTower],
     ["Shop", openShop]
   );
+  reopenOverlay();
 }
 
 // Keep the foundation near the bottom of the screen until the tower grows,
@@ -1016,7 +1021,11 @@ function hideOverlay() {
   $("overlay").hidden = true;
 }
 
+let modeBeforeShop = "title";
+let reopenOverlay = null;   // redraws the screen the shop was opened from
+
 function openShop() {
+  modeBeforeShop = mode;
   mode = "shop";
   $("overlay").hidden = true;
   renderShop();
@@ -1058,7 +1067,14 @@ function renderShop() {
   }
 }
 
+function closeShop() {
+  $("shop").hidden = true;
+  mode = modeBeforeShop;
+  if (reopenOverlay) reopenOverlay();
+}
+
 $("shop-back").addEventListener("click", newTower);
+$("shop-close").addEventListener("click", closeShop);
 
 // ---------------------------------------------------------------------------
 // Input
@@ -1169,7 +1185,7 @@ loadArt((loaded) => {
   resize();
   newTower();
   mode = "title";
-  showOverlay(
+  reopenOverlay = () => showOverlay(
     "Benedictine Bricks",
     "Build the abbey tower as high as you can. Drop three stones and the tower is finished. " +
       "Drag or use the arrows to steer, tap to turn, flick down to drop. " +
@@ -1178,5 +1194,6 @@ loadArt((loaded) => {
     ["Begin", newTower],
     ["Shop", openShop]
   );
+  reopenOverlay();
   requestAnimationFrame(frame);
 });
