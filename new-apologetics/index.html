@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>New Apologetics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+  /* A single deliberate look: a late-night livestream studio lit by altar gold. */
+  :root {
+    color-scheme: dark;
+    --night: #14172a;
+    --panel: #1d2140;
+    --panel-2: #252a50;
+    --line: #363d6a;
+    --text: #ece4d0;
+    --muted: #a9a6bd;
+    --gold: #e8b94a;
+    --marian: #7ea4e6;
+    --crimson: #de5e55;
+    --green: #74c07a;
+    --display: "Pixelify Sans", "Courier New", monospace;
+    --body: "Literata", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--night);
+    color: var(--text);
+    font: 16px/1.6 var(--body);
+    padding-inline: 16px;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding-block: 28px 64px; display: grid; gap: 64px; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+  h1 { font-size: clamp(40px, 8vw, 76px); line-height: 1; color: var(--gold); }
+  h2 { font-size: clamp(26px, 4vw, 36px); line-height: 1.1; }
+  h3 { font-size: 22px; line-height: 1.15; }
+  p { margin: 0; max-width: 66ch; }
+  a { color: var(--marian); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .label {
+    font: 600 12px/1 var(--display);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  section { display: grid; gap: 20px; }
+  .lede { display: grid; gap: 12px; }
+
+  /* Hero */
+  .hero { display: grid; gap: 20px; }
+  .hero-top { display: grid; gap: 14px; }
+  .verse { font-style: italic; color: var(--muted); max-width: 60ch; }
+  .verse b { font-style: normal; color: var(--gold); font-weight: 600; }
+  .stage { border: 3px solid var(--line); background: #0e1122; border-radius: 6px; overflow: hidden; }
+  .stage canvas { width: 100%; height: auto; }
+  .status { font-size: 13px; color: var(--muted); }
+
+  /* Rulebook table */
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 420px; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 12px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  td:first-child { white-space: nowrap; }
+  td strong { font-family: var(--display); font-weight: 600; font-size: 17px; color: var(--text); }
+
+  .rule { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; display: grid; gap: 8px; }
+  .rule h3 { color: var(--gold); }
+
+  /* Roster */
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 470px), 1fr)); gap: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 14px; align-content: start; }
+  .card-head { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: center; }
+  .card-head canvas { width: 96px; height: 96px; background: var(--panel-2); border-radius: 4px; }
+  .card-head .who { display: grid; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 600 12px/1 var(--display); padding: 5px 8px; border-radius: 3px; background: var(--panel-2); color: var(--muted); letter-spacing: 0.04em; }
+  .chip.role { color: var(--night); background: var(--gold); }
+  .chip.boss { color: #fff; background: var(--crimson); }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .stat { display: grid; gap: 4px; }
+  .stat span { font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .stat i { display: block; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .stat i b { display: block; height: 100%; background: var(--marian); }
+  .stat small { font: 600 10px/1 var(--display); color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .passive { font-size: 14px; color: var(--muted); }
+  .passive b { color: var(--text); font-weight: 600; }
+  .skills { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .skills li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; background: var(--panel-2); border-radius: 4px; }
+  .skills .name { font: 600 16px/1.2 var(--display); }
+  .skills .meta { font: 500 12px/1.4 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
+  .skills .fx { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  .skills .ult .name { color: var(--gold); }
+  .duo { display: grid; gap: 4px; padding: 10px 12px; border: 2px solid #8a6ad8; border-radius: 4px; font-size: 14px; color: var(--muted); }
+  .duo b { font: 600 17px/1.2 var(--display); color: #c9b4ff; }
+  .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
+  .open-slot { border-style: dashed; background: transparent; }
+
+  /* Camera Mog spotlight */
+  .spotlight { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: center; gap: 24px; }
+  .spotlight h2 { color: var(--crimson); font-size: clamp(32px, 5vw, 48px); }
+
+  /* Move theater */
+  .theater-ui { display: grid; gap: 14px; }
+  .picker { display: flex; flex-wrap: wrap; gap: 6px; }
+  .picker button {
+    display: grid; justify-items: center; gap: 4px; width: 76px; padding: 6px 4px 8px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 4px; color: var(--muted);
+    font: 600 11px/1.15 var(--display); cursor: pointer;
+  }
+  .picker button canvas { width: 48px; height: 48px; }
+  .picker button[aria-pressed="true"] { border-color: var(--gold); color: var(--text); background: var(--panel-2); }
+  .movebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .movebar button {
+    display: grid; gap: 2px; text-align: left; padding: 8px 12px; min-height: 44px;
+    background: var(--panel-2); border: 2px solid var(--line); border-radius: 4px; color: var(--text);
+    font: 600 15px/1.1 var(--display); cursor: pointer;
+  }
+  .movebar button small { font: 600 10px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .movebar button.great { border-color: var(--gold); }
+  .movebar button.great small { color: var(--gold); }
+  .movebar button.duo-move { border-color: #8a6ad8; }
+  .movebar button.duo-move small { color: #c9b4ff; }
+  .movebar button:hover, .picker button:hover { border-color: var(--marian); }
+  .autoplay { margin-left: auto; font: 600 12px/1 var(--display); color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 3px; padding: 8px 10px; cursor: pointer; }
+
+  /* Factions */
+  .factions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 310px), 1fr)); gap: 18px; }
+  .faction { display: grid; gap: 12px; align-content: start; border-top: 3px solid var(--crimson); padding-top: 14px; }
+  .faction .grunts { display: flex; gap: 8px; }
+  .faction .grunts canvas { width: 64px; height: 64px; background: var(--panel); border-radius: 4px; }
+  .faction p { font-size: 15px; }
+
+  /* OCIA */
+  .ocia { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+  .ocia figure { margin: 0; display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+  .ocia canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; background: #0e1122; border-radius: 4px; }
+  .ocia figcaption { font-size: 14px; color: var(--muted); }
+  .ocia figcaption b { color: var(--text); }
+
+  /* Story */
+  .story-ui { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  .story-ui .status { max-width: 70ch; }
+  .next { flex-shrink: 0; min-height: 44px; padding: 8px 16px; background: var(--gold); color: var(--night); border: none; border-radius: 4px; font: 700 16px/1 var(--display); cursor: pointer; }
+  .story-tabs button { width: auto; padding: 8px 12px; text-align: left; justify-items: start; }
+  .story-tabs button small { font: 600 10px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .story-tabs button span { font-size: 14px; color: var(--text); }
+  #story { cursor: pointer; }
+  .story-line { display: none; font-size: 16px; }
+  .story-line b { font-family: var(--display); color: var(--gold); }
+  @media (max-width: 640px) { .story-line { display: block; } }
+  .chapters .body .label { color: var(--crimson); }
+
+  /* Chapters */
+  .chapters { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: ch -1; }
+  .chapters li { display: grid; grid-template-columns: 64px 1fr; gap: 16px; padding: 16px; background: var(--panel); border-radius: 6px; border: 1px solid var(--line); counter-increment: ch; }
+  .chapters li::before { content: counter(ch); font: 700 36px/1 var(--display); color: var(--gold); }
+  .chapters li:first-child::before { content: "P"; }
+  .chapters li:last-child::before { content: "E"; }
+  .chapters .body { display: grid; gap: 8px; }
+  .chapters .card-note { display: grid; gap: 4px; padding: 10px 12px; border-left: 3px solid var(--marian); background: var(--panel-2); font-size: 14px; }
+  .grade { font: 600 11px/1 var(--display); text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 6px; border-radius: 3px; justify-self: start; }
+  .g-dogma { background: var(--gold); color: var(--night); }
+  .g-doctrine { background: var(--marian); color: var(--night); }
+  .g-opinion { background: var(--green); color: var(--night); }
+  .g-private { background: #c69ae8; color: var(--night); }
+  .g-argument { background: var(--line); color: var(--text); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; color: var(--muted); }
+
+  .notes { display: grid; gap: 10px; margin: 0; padding-left: 20px; }
+  .notes li { max-width: 70ch; }
+  .sources { font-size: 14px; color: var(--muted); display: grid; gap: 6px; margin: 0; padding-left: 20px; }
+
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .card-head { grid-template-columns: 72px 1fr; }
+    .card-head canvas { width: 72px; height: 72px; }
+    .chapters li { grid-template-columns: 1fr; }
+    .spotlight { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<main>
+  <header class="hero">
+    <div class="hero-top">
+      <span class="label">Game design · concept draft</span>
+      <h1>New Apologetics</h1>
+      <p>A turn-based team battler where the heroes are today's Catholic apologists and nobody is ever hurt. Opponents are not defeated. When their conviction finally gives way, they flicker, and then they sign up for OCIA.</p>
+      <p class="verse">“Always be <b>ready</b> to make a <b>defense</b> to anyone who asks you for a reason for the <b>hope</b> that is in you; yet do it with <b>gentleness and respect</b>.” 1 Peter 3:15. The four stats of the game come from this verse.</p>
+    </div>
+    <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
+    <p class="status" id="battle-caption">A turn in progress.</p>
+    <p class="status">A fan-made concept. It is not affiliated with or endorsed by any of the people depicted, and each of them will be asked before anything is released.</p>
+  </header>
+
+  <section class="spotlight">
+    <div class="stage"><canvas id="spotlight" width="640" height="360" aria-label="Ethan Muse's Camera Mog: he tips his head toward the lens and looks up over his glasses."></canvas></div>
+    <div class="lede">
+      <span class="label">Great move spotlight</span>
+      <h2>Camera Mog</h2>
+      <p>Ethan Muse tips his head toward the lens, lets his glasses slide down his nose, and looks up at you over the top of them. The battle stops for the close-up. It is the hardest-hitting single move any Defender has: 400% Rhetoric, 600% if the opponent is already Doubting. If it breaks the opponent's conviction, Ethan gains a pip of his own. Drawn from the real thing.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The rules</span>
+      <h2>A battle, turned into a debate</h2>
+      <p>Teams of four take turns in order of Readiness. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Nobody is ever hurt: the numbers measure composure and conviction.</p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Stat or status</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back.</td></tr>
+          <tr><td><strong>Conviction</strong></td><td>Four pips. When an opponent loses all four, he is converted: he flickers and goes to OCIA.</td></tr>
+          <tr><td><strong>Rhetoric</strong></td><td>The strength of arguments from wit and persuasion.</td></tr>
+          <tr><td><strong>Learning</strong></td><td>The strength of arguments from Scripture, history and philosophy.</td></tr>
+          <tr><td><strong>Charity</strong></td><td>Gentleness and respect. It softens every blow taken.</td></tr>
+          <tr><td><strong>Readiness</strong></td><td>“Always be ready.” Sets the turn order.</td></tr>
+          <tr><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
+          <tr><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
+          <tr><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
+          <tr><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
+          <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
+          <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
+          <tr><td><strong>Citation · Charity Shield</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
+          <tr><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="rule">
+      <h3>Win the man, not the argument</h3>
+      <p>An opponent can be beaten two ways, and they are not equal. Break his <b>Conviction</b> and he converts: full reward, and sometimes he joins your roster. Run his <b>Composure</b> to zero first and he storms off embarrassed: small reward, no conversion. Players learn to lower Conviction with patient, charitable arguments instead of just scoring points. This mirrors how conversion really happens. Newman called it the convergence of many probabilities, a cumulative case, not one knockout blow. Cameron Bertuzzi's own Bayesian approach is the same idea in numbers.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The roster</span>
+      <h2>Seventeen heroes, each with a style of their own</h2>
+      <p>Every hero has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Their numbers are balanced against one another, and each hero's moves come from what that apologist is known for.</p>
+    </div>
+    <div class="roster" id="roster"></div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">Every move, animated</span>
+      <h2>The move theater</h2>
+      <p>Ordinary moves share a few animations, as in most battle games. A hero fires off a volley of words, walks over to hand someone something, raises an aura over the team, or throws a hex across the floor. Each hero fills them with their own words and things. Every great move has its own full-screen close-up: Jimmy Akin's UFO case files, Fr. Mike's calendar racing to Day 365, Bishop Barron's stained glass breaking through the beige, Fr. Pine's Summa article writing itself. Two heroes also share a duo great move: Ethan Muse and Fr. Spitzer's Vindicatory Miracles. Pick a hero, then a move.</p>
+    </div>
+    <div class="stage"><canvas id="theater" width="640" height="360" aria-label="The move theater: the chosen hero performs the chosen move against three opponents."></canvas></div>
+    <div class="theater-ui">
+      <div class="movebar" id="movebar"></div>
+      <div class="picker" id="picker" role="group" aria-label="Choose a hero"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The opposition</span>
+      <h2>Five chapters, five groups</h2>
+      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. The bosses are real people, so they appear only with their permission.</p>
+    </div>
+    <div class="factions" id="factions"></div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">Instead of defeat</span>
+      <h2>The OCIA flicker</h2>
+      <p>A converted opponent flickers, fades, and leaves behind a sign for the parish OCIA class. The caption is theologically exact for each tradition, so even the victory screen teaches something.</p>
+    </div>
+    <div class="ocia" id="ocia"></div>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">The story</span>
+      <h2>Five mysteries, told in cut scenes</h2>
+      <p>Each chapter sets the team a mystery: a question they can't answer at first. Short scenes between battles move the story along. When the team gets stuck, anyone on the roster can walk on and pitch in, even someone who wasn't in the last battle. Scott Hahn has a habit of arriving at exactly that moment. Tap the scene to read on.</p>
+    </div>
+    <div class="stage"><canvas id="story" width="640" height="360" tabindex="0" aria-label="A cut scene. Tap or press Enter to continue."></canvas></div>
+    <p class="story-line" id="story-line" aria-live="polite"></p>
+    <div class="story-ui">
+      <p class="status" id="story-where"></p>
+      <button id="story-next" class="next">Next ▸</button>
+    </div>
+    <div class="picker story-tabs" id="story-tabs" role="group" aria-label="Choose a chapter"></div>
+    <div class="lede">
+      <p>Each chapter ends by unlocking teaching cards, graded by their theological weight, so a player learns to tell a dogma from a pious opinion.</p>
+      <div class="legend">
+        <span class="grade g-dogma">Dogma</span> defined, to be believed with divine faith
+        <span class="grade g-doctrine">Doctrine</span> taught with authority, not defined
+        <span class="grade g-private">Private revelation</span> approved, never binding
+        <span class="grade g-opinion">Opinion</span> open question
+        <span class="grade g-argument">Argument</span> an apologetic case, not Church teaching
+      </div>
+    </div>
+    <ol class="chapters" id="chapters"></ol>
+  </section>
+
+  <section>
+    <div class="lede">
+      <span class="label">Before release</span>
+      <h2>Open questions</h2>
+    </div>
+    <ul class="notes">
+      <li><b>Permission from everyone depicted, including the bosses.</b> A boss who converts is the joke of the game, and it is also the part most likely to hurt. Alex O'Connor, Ryan Hemelaar, Jacob Hansen and James White should see their kits, their scenes and their OCIA moments before release. Without their yes, their places go to invented characters.</li>
+      <li><b>Every line of dialogue is a draft.</b> The words given to real people are written to reflect what each has said in public, and each person should read his own lines.</li>
+      <li><b>The Islam storyline needs a boss.</b> Until one is chosen and agrees, an invented character, the Speakers' Corner Champion, fills the place.</li>
+      <li><b>GodLogic is a mere-Christian apologist, not a Catholic one.</b> He fits best as a guest ally in the Islam storyline, where Catholics and Protestants make common cause, and that is a good lesson in itself.</li>
+      <li><b>The likenesses are first drafts.</b> They are built from each man's best-known look and will be redrawn from photographs.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="label">Sources</span>
+    <ul class="sources">
+      <li>The apologists: <a href="https://en.wikipedia.org/wiki/Jimmy_Akin">Jimmy Akin</a>; <a href="https://en.wikipedia.org/wiki/Trent_Horn">Trent Horn</a>; <a href="https://www.wordonfire.org/articles/contributors/apologetics-isnt-dead-cameron-bertuzzis-conversion-to-catholicism/">Cameron Bertuzzi's conversion (Word on Fire)</a>; <a href="https://mileskdonahue.substack.com/p/90-a-heated-debate-on-hell-catholicism">Ethan Muse</a>; <a href="https://www.catholic.com/audio/cot/godlogic-vs-muslims-jws-and-orthobros">GodLogic on the Council of Trent podcast</a>; <a href="https://www.fatherboniface.org/wordpresshome/">Fr. Boniface Hicks</a>; <a href="https://opeast.org/godsplaining/">Godsplaining</a>; <a href="https://www.catholic.com/profile/joe-heschmeyer">Joe Heschmeyer</a>; <a href="https://brianholdsworth.ca/about-me">Brian Holdsworth</a>; <a href="https://sistersoflife.org/resources/a-habit-for-life/">the Sisters of Life habit</a>; <a href="https://en.wikipedia.org/wiki/Scott_Hahn">Scott Hahn</a>; <a href="https://en.wikipedia.org/wiki/Alex_O%27Connor">Alex O'Connor</a>; <a href="https://apologeticscanada.com/online-evangelism-with-ryan-from-needgod-net/">Ryan from NeedGod.net</a></li>
+      <li>The fawn: <a href="https://www.catholic.com/magazine/online-edition/the-problem-of-animal-suffering">John DeRosa, “The Problem of Animal Suffering” (Catholic Answers)</a>; <a href="https://stpaulcenter.com/posts/animal-pain">Clement Harrold, “Why Does God Permit Animal Pain?” (St. Paul Center)</a>; <a href="https://www.catholic.com/audio/cot/dialogue-does-evil-disprove-god-with-alex-oconnor-joe-schmid-and-cameron-bertuzzi">“Does Evil Disprove God?” with Alex O'Connor, Joe Schmid and Cameron Bertuzzi</a></li>
+    </ul>
+  </section>
+</main>
+
+<script src="art.js"></script>
+<script src="moves.js"></script>
+<script src="story.js"></script>
+<script>
+(() => {
+  const C = Art.CAST;
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- Data ---------------------------------------------------------------------
+
+  const HEROES = [
+    {
+      id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Scholar",
+      stats: [225, 70, 90, 25, 58],
+      passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
+      skills: [
+        ["Precise Distinction", "1 foe", "0", "100% Learning."],
+        ["Senior Apologist", "1 foe", "3", "150% Rhetoric (225% against a Citation). 25% chance to leave him Dumbfounded for 3 turns. “Well, actually, there are three views on that…”"],
+        ["Logical Paradox", "All foes", "3", "Minor Rhetoric Down for 3 turns. 50% chance of −1 Conviction on each."],
+        ["Mysterious World", "2 random foes", "3", "Cross-Examined, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
+      ],
+      flavor: "The coolest head in any debate. He weighs every claim without heat, and his distinctions leave an opponent nothing to push against.",
+    },
+    {
+      id: "muse", name: "Ethan Muse", tag: "Philosopher and debater", role: "Defender",
+      stats: [288, 76, 45, 18, 88],
+      passive: ["Doctoral Rigor", "+5% Rhetoric to every Catholic ally."],
+      skills: [
+        ["Pointed Question", "1 foe", "0", "125% Rhetoric. 50% chance to leave him Doubting."],
+        ["Open Challenge", "All foes", "3", "Every foe is Called Out for 3 turns and must answer Ethan. −1 Conviction on each. “I'll debate any of you. Right now.”"],
+        ["Steelman Stance", "Self", "3 (starts 1)", "Rebuttal, and Major Rhetoric Up for 3 turns. He states your case better than you did, then answers it."],
+        ["Camera Mog", "1 foe", "4 (starts 2)", "400% Rhetoric, 600% if the target is Doubting. If this breaks the target's conviction, Ethan gains +1 Conviction.", true],
+      ],
+      duo: ["Vindicatory Miracles", "with Fr. Spitzer", "All foes", "A duo great move, unlocked when both men are on the team. Fatima, Lanciano, Guadalupe and Lourdes appear one by one, each stamped VINDICATED: miracles that confirm specifically Catholic teaching. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
+      flavor: "The tank. Open Challenge draws every argument onto him, so the healer can keep one man standing.",
+    },
+    {
+      id: "schmitz", name: "Fr. Mike Schmitz", tag: "Ascension Presents · The Bible in a Year", role: "Leader",
+      stats: [250, 58, 105, 12, 125],
+      passive: ["Please Pray for Me", "+5% Resolve to every ally."],
+      skills: [
+        ["Two-Minute Homily", "1 foe", "0", "150% Rhetoric."],
+        ["I'm Praying for You", "1 ally", "3", "Major Rhetoric Up and Crit Chance Up for 3 turns. His sign-off, turned into a blessing."],
+        ["The Bible in a Year", "All allies", "3 (starts 1)", "+1 Conviction on each, and Charity Up for 3 turns. Day by day, the whole team grows steadier."],
+        ["The Catechism in a Year", "All allies", "4 (starts 2)", "Examen, a Charity Shield and Learning Up for 3 turns.", true],
+      ],
+      flavor: "He isn't built for scoring points. His calm voice makes everyone around him better.",
+    },
+    {
+      id: "bertuzzi", name: "Cameron Bertuzzi", tag: "Host, Capturing Christianity", role: "Leader",
+      stats: [238, 79, 60, 14, 118],
+      passive: ["Follow the Evidence", "+5% Charity to every ally."],
+      skills: [
+        ["Clarifying Questions", "1 foe", "0", "Three quick questions at 45% Rhetoric each."],
+        ["Time's Up", "1 foe", "3", "250% Rhetoric, and Major Rhetoric Down for 3 turns. The moderator ends a filibuster."],
+        ["Point of Order", "All foes", "3 (starts 1)", "−1 Conviction on each, and a guaranteed Fact-Check."],
+        ["Bayesian Update", "All allies", "4 (starts 2)", "A major encouragement for everyone, Examen, and Major Charity Up for 3 turns. Each piece of evidence shifts the odds.", true],
+      ],
+      flavor: "A moderator. He keeps the debate fair more than he wins it, and he came into the Church by following the evidence himself.",
+    },
+    {
+      id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Leader",
+      stats: [250, 82, 15, 15, 140],
+      passive: ["The Council of Trent", "+5% Rhetoric to Catholic Answers allies. With Jimmy Akin or Joe Heschmeyer on the team, they all get it."],
+      skills: [
+        ["Deadpan", "1 foe", "0", "150% Rhetoric, and a 50% chance of Rhetoric Down for 1 turn. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
+        ["Free-for-All Friday", "All allies", "3", "+1 Conviction on each, and each ally gets a different lift, the way the listener questions come in: Rhetoric Up, Crit Chance Up, a Charity Shield or an encouragement."],
+        ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks every foe and −1 Conviction on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
+        ["The Case for Catholicism", "All foes", "4 (starts 2)", "300% Rhetoric to each (450% against a Citation or Charity Shield).", true],
+      ],
+      flavor: "The fastest man in the game, with the driest sense of humor. His moves come from his books, his podcast and his favorite question: where does the Bible actually say that?",
+    },
+    {
+      id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Encourager",
+      stats: [225, 61, 105, 14, 125],
+      passive: ["She'll Be Right", "+10% resistance to Doubting."],
+      skills: [
+        ["Cheeky Question", "1 foe", "0", "150% Rhetoric."],
+        ["Pints with Aquinas", "1 ally", "3", "A major encouragement: restores most of his Composure, with a 50% chance of +2 Conviction. A Discouraged ally comes back into the fight."],
+        ["Australian Charm", "1 ally", "3", "Major Rhetoric Up for 3 turns and +2 Conviction. Nobody can stay tense around him."],
+        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Charity Up, and immunity to Doubting for 3 turns.", true],
+      ],
+      flavor: "The healer. He hosted Cameron Bertuzzi's debates while Cameron was still a Protestant, so he knows how to keep a hard conversation friendly.",
+    },
+    {
+      id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Builder", guest: true,
+      stats: [163, 61, 135, 15, 125],
+      passive: ["Smooth", "+3% Learning."],
+      skills: [
+        ["Smooth Question", "1 foe", "0", "100% Learning. 10% chance of Learning Down."],
+        ["Smooth Pivot", "1 ally", "3", "Gives a Citation and Learning Up."],
+        ["Stay Smooth", "All allies", "3", "A major Charity Shield for 3 turns and +1 Conviction on each."],
+        ["Common Ground", "All foes", "4", "Removes every buff and gives Major Learning Down for 3 turns. −1 Conviction on any foe from the Islam storyline.", true],
+      ],
+      flavor: "Shields with a smooth delivery. His great move works best in his own field: dialogue with Muslims.",
+    },
+    {
+      id: "barron", name: "Bishop Robert Barron", tag: "Word on Fire", role: "Leader",
+      stats: [262, 82, 60, 11, 110],
+      passive: ["Media Veteran", "+3% Composure."],
+      skills: [
+        ["Sunday Sermon", "1 foe", "0", "125% Rhetoric. 50% chance of Rhetoric Down for 1 turn."],
+        ["Word on Fire", "All foes", "3", "250% Rhetoric to every foe at once. One broadcast that reaches everybody."],
+        ["The Way of Beauty", "Self", "3 (starts 1)", "Calls out every foe to answer him, gains a Citation, and Rhetoric Up for 3 turns. Beauty first, then goodness, then truth."],
+        ["No Beige Catholicism", "1 foe", "4 (starts 2)", "Muted for 3 turns, Rhetoric Down, and −1 Conviction.", true],
+      ],
+      flavor: "A bold leader with the one attack that reaches the whole room, from the man who built a media apostolate that reaches millions.",
+    },
+    {
+      id: "hicks", name: "Fr. Boniface Hicks, OSB", tag: "Monk of Saint Vincent Archabbey · spiritual director", role: "Scholar",
+      stats: [200, 64, 128, 14, 110],
+      passive: ["Stability", "+10% resistance to Fact-Check. The Benedictine vow."],
+      skills: [
+        ["Gentle Correction", "1 foe", "0", "125% Learning. 25% chance of Rhetoric Down for 1 turn."],
+        ["Discernment of Spirits", "All foes", "3", "Every foe is Cross-Examined. Which voice is God's, and which is only our own?"],
+        ["Obsculta", "1 foe", "3 (starts 1)", "Dumbfounded for 3 turns, even through a Citation, and −2 Conviction. “Listen”: the first word of the Rule."],
+        ["Spiritual Direction", "1 foe", "4 (starts 2)", "−2 Conviction on the foe and +2 on Fr. Boniface. Two souls come to understand each other.", true],
+      ],
+      flavor: "Quiet and steady. His great move turns a debate into spiritual direction. Before he was ordained, he also earned a PhD in computer science.",
+    },
+    {
+      id: "pine", name: "Fr. Gregory Pine, OP", tag: "Godsplaining · Thomistic Institute", role: "Leader",
+      stats: [213, 53, 88, 14, 118],
+      passive: ["Order of Preachers", "+3% Learning."],
+      skills: [
+        ["Distinguo", "2 random foes", "0", "75% Learning to each. “I distinguish the major premise…”"],
+        ["Sed Contra", "All allies", "3", "Major Crit Chance Up, and no ally can lose Conviction for 3 turns."],
+        ["The Five Ways", "All foes", "3 (starts 1)", "250% Learning to each, and Charity Down for 3 turns."],
+        ["Respondeo", "1 foe", "4 (starts 2)", "Three hits of 150% Learning, then +2 Conviction on every ally.", true],
+      ],
+      flavor: "Every move is set out in the order of an article of the Summa: the objection, the Sed contra, and the answer.",
+    },
+    {
+      id: "marygrace", name: "Sr. Mary Grace, SV", tag: "Sisters of Life · Let Love podcast", role: "Scholar",
+      stats: [213, 64, 75, 10, 170],
+      passive: ["Consecrated", "+10% resistance to Cross-Examined."],
+      skills: [
+        ["A Word of Truth", "1 foe", "0", "150% Learning."],
+        ["Let Love", "All allies", "3", "Major Charity Up and +1 Conviction on each."],
+        ["Every Life Is Good", "All foes", "3 (starts 1)", "Rhetoric Down and Learning Down for 3 turns. She speaks so that anyone can hear."],
+      ],
+      flavor: "One of the fastest heroes in the game. She has three skills, not four, and she almost always acts first.",
+    },
+    {
+      id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Scholar",
+      stats: [200, 60, 100, 15, 120],
+      passive: ["Empathy", "+5% Charity to every ally."],
+      skills: [
+        ["Every Life", "1 foe", "0", "125% Learning."],
+        ["Sense Deception", "1 foe", "3", "Cross-Examined, and a 50% chance of a Fact-Check. She can tell when an argument is hiding something."],
+        ["Counsel", "1 ally", "3", "Examen and +2 Conviction."],
+        ["Live Action", "All foes", "4 (starts 2)", "Rhetoric Down for 3 turns and −1 Conviction on each foe. +1 Conviction on each ally.", true],
+      ],
+      flavor: "A counselor. She reads the room, draws out what is hidden, and steadies her friends.",
+    },
+    {
+      id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Encourager",
+      stats: [200, 58, 135, 12, 125],
+      passive: ["Domestic Church", "+3% Composure. A father of seven knows patience."],
+      skills: [
+        ["Ten-Minute Essay", "1 foe", "0", "150% Learning."],
+        ["Beauty Will Save the World", "All allies", "3", "An encouragement for every ally."],
+        ["Cultural Diagnosis", "1 foe", "3 (starts 1)", "Cross-Examined, and Major Charity Down for 3 turns."],
+        ["Authentic Catholic Culture", "All allies", "4 (starts 2)", "Examen, a major Charity Shield, and +1 Conviction on each. For 3 turns no ally can lose Conviction.", true],
+      ],
+      flavor: "The healer who looks after the whole team at once, where Matt Fradd looks after one friend at a time.",
+    },
+    {
+      id: "jurado", name: "Alex Jurado", tag: "Voice of Reason · Byzantine Catholic", role: "Leader",
+      stats: [288, 100, 30, 15, 88],
+      passive: ["Byzantine Rite", "+3% Rhetoric."],
+      skills: [
+        ["One-Two", "1 foe", "0", "Two hits of 50% Rhetoric."],
+        ["Deep Cut", "1 foe", "3", "Doubting, Major Charity Down, and −1 Conviction."],
+        ["Stallone Voice", "1 foe", "3 (starts 1)", "250% Rhetoric, with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
+        ["Voice of Reason", "All foes", "4 (starts 2)", "Fact-Checks every foe, and −2 Conviction on each.", true],
+      ],
+      flavor: "The hardest single hitter in the game, with the biggest voice to match.",
+    },
+    {
+      id: "spitzer", name: "Fr. Robert Spitzer, SJ", tag: "Magis Center · physicist-philosopher", role: "Builder",
+      stats: [188, 70, 135, 18, 73],
+      passive: ["Magis", "+3% Learning."],
+      skills: [
+        ["Fine-Tuning", "1 foe", "0", "Two hits of 60% Learning: the constants of nature, set on a knife's edge. 25% chance of a Fact-Check."],
+        ["The Four Levels of Happiness", "All allies", "3", "Examen and a Charity Shield for everyone. From pleasure, to achievement, to love, to the transcendent."],
+        ["Borde–Guth–Vilenkin", "1 foe", "4 (starts 2)", "250% Learning, and Muted for 3 turns, with a smaller blow to the others. An expanding universe cannot be past-eternal.", true],
+      ],
+      duo: ["Vindicatory Miracles", "with Ethan Muse", "All foes", "The duo great move he shares with Ethan Muse: the miracles that confirm specifically Catholic teaching, one after another. Fact-Checks every foe, −1 Conviction on each, and a 50% chance to leave each one Dumbfounded."],
+      flavor: "A scientist whose great move locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
+    },
+    {
+      id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Leader",
+      stats: [275, 72, 110, 22, 95],
+      passive: ["Rome Sweet Home", "At the start of each battle, every convert on the team gains +1 Conviction: Scott Hahn, Jimmy Akin, Cameron Bertuzzi and Brian Holdsworth."],
+      skills: [
+        ["Covenant Is Family", "1 foe", "0", "125% Learning. Passes through Faith Alone."],
+        ["Wide-Eyed Wonder", "1 foe", "3", "Dumbfounded for 2 turns, and Rhetoric Down. Nobody can keep a debate face against that much delight."],
+        ["The Lamb's Supper", "All allies", "3 (starts 1)", "An encouragement for everyone, Examen, and +1 Conviction on each."],
+        ["Rome Sweet Home", "All foes", "4 (starts 2)", "−2 Conviction on each foe, and Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
+      ],
+      flavor: "The elder statesman. Slower than the young debaters and harder to shake, he shows up in the story when the team is stuck, and he usually has the key.",
+    },
+    {
+      id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
+      stats: [188, 30, 88, 10, 170],
+      passive: ["The Early Church Was the Catholic Church", "+5% Learning to Catholic Answers allies."],
+      skills: [
+        ["Ignatius of Antioch", "1 foe", "0", "Two quotations at 65% Learning each. 50% chance to leave him Doubting."],
+        ["Former Litigator", "Self", "3", "Rebuttal, and Major Crit Chance Up for all allies for 3 turns."],
+        ["Shameless Popery", "1 foe", "3 (starts 1)", "Three hits of 150% Learning, and −1 Conviction."],
+      ],
+      flavor: "A fencer: quick thrusts, a parry, then a flurry, and his blade is the Church Fathers. He is also the third Catholic Answers apologist, which opens a team bonus.",
+    },
+  ];
+
+  const BOSSES = [
+    {
+      id: "oconnor", name: "Alex O'Connor", tag: "Within Reason · CosmicSkeptic", faction: "Atheists",
+      grunts: ["skeptic"],
+      blurb: "The boss of Chapter 1, The Fawn in the Forest. Unfailingly polite, which makes him very hard to discourage. Rank and file: skeptic streamers and comment-section rationalists.",
+      skills: [
+        ["Within Reason", "1 foe", "0", "125% Learning."],
+        ["The Fawn in the Forest", "All foes", "3", "Doubting on each, and −1 Conviction. A fawn burns to death in a forest fire, alone. What was the point?"],
+        ["Euthyphro", "1 foe", "3 (starts 1)", "Dumbfounded for 2 turns. Is a thing good because God wills it, or does God will it because it is good? Fr. Pine's Distinguo cancels it: God's own nature is the Good."],
+        ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Charity Up.", true],
+      ],
+    },
+    {
+      id: "ryan", name: "Ryan Hemelaar", tag: "NeedGod.net", faction: "Evangelicals",
+      grunts: ["preacher"],
+      blurb: "The boss of Chapter 2, Are You a Good Person? A street and online evangelist who asks everyone the same two questions. Rank and file: street preachers with signs and tracts.",
+      skills: [
+        ["Gospel Tract", "1 foe", "0", "125% Rhetoric. He walks over and hands you one."],
+        ["Are You a Good Person?", "All foes", "3", "Every foe is Cross-Examined. Have you ever told a lie?"],
+        ["If You Died Tonight", "All foes", "3 (starts 1)", "−1 Conviction on each. Would you go to heaven?"],
+        ["Faith Alone", "Self", "4 (starts 2)", "Arguments from works do nothing to him for 2 turns. Scott Hahn's Covenant Is Family passes through it.", true],
+      ],
+    },
+    {
+      id: "hansen", name: "Jacob Hansen", tag: "Latter-day Saint apologist · Thoughtful Faith", faction: "Latter-day Saints",
+      grunts: ["elder"],
+      blurb: "The boss of Chapter 3, The Restoration. Rank and file: pairs of Elder Missionaries, Institute Teachers, a Bishop. They are courteous and hard to discourage, so they have high Charity.",
+      skills: [
+        ["Scholarly Citation", "1 foe", "0", "125% Learning."],
+        ["Great Apostasy", "All foes", "3", "−1 Conviction on each, and Learning Down. The claim that true authority left the earth after the apostles."],
+        ["Burning in the Bosom", "Self", "3", "Recovers Composure, and arguments from Learning do nothing to him for 2 turns. A personal testimony is not argued away, but Charity and Rhetoric still reach him."],
+        ["Eternal Progression", "Self", "4 (starts 2)", "Rhetoric Up that grows each turn, up to three times.", true],
+      ],
+    },
+    {
+      id: "speaker", name: "Speakers' Corner Champion", tag: "Invented until a real boss agrees", faction: "Islam",
+      grunts: ["speaker"],
+      blurb: "The boss of Chapter 4, People of the Book, where GodLogic joins as a guest. Rank and file: street debaters from Speakers' Corner and comment-section brothers.",
+      skills: [
+        ["Crowd Question", "1 foe", "0", "125% Rhetoric."],
+        ["Tahrif", "All foes", "3", "Fact-Checks buffs that came from Scripture. The claim that the Bible was corrupted."],
+        ["Tawhid", "Self", "4", "Resists arguments about the Trinity for 2 turns. The absolute oneness of God."],
+        ["The Crowd Gathers", "Summon", "4 (starts 2)", "Calls two more debaters from the crowd.", true],
+      ],
+    },
+    {
+      id: "white", name: "James White", tag: "Alpha and Omega Ministries · The Dividing Line", faction: "Reformed",
+      grunts: ["seminarian"],
+      blurb: "The final boss, in Chapter 5, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
+      skills: [
+        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Doubting."],
+        ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Learning Down for 2 turns. Only Scripture counts."],
+        ["Eternal Security", "Self", "4", "His Conviction cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Is That in the Bible? passes through it."],
+        ["Debate Challenge", "All foes", "4 (starts 2)", "250% Rhetoric to each, and +1 Conviction to himself.", true],
+      ],
+    },
+  ];
+
+  const OCIA = [
+    { id: "skeptic", faction: "Atheists", line: "Catechumen", text: "Unbaptized, he enters the catechumenate. At the Easter Vigil he is baptized, confirmed and receives his First Communion, all in one night." },
+    { id: "preacher", faction: "Protestant", line: "Received into full communion", text: "His baptism was already valid, so he is not baptized again. He makes a profession of faith and is confirmed. Tuesdays, 7 pm, parish hall." },
+    { id: "elder", faction: "Latter-day Saint", line: "Baptism at the Easter Vigil", text: "The Church does not recognize Latter-day Saint baptism as valid (CDF, 2001), so he is baptized, confirmed and receives First Communion at the Vigil." },
+    { id: "speaker", faction: "Islam", line: "Catechumen", text: "He enters the catechumenate, and at the Easter Vigil he is baptized, confirmed and receives his First Communion. His conversion must be free: no one may be forced to believe (Dignitatis Humanae 2)." },
+  ];
+
+  const CHAPTERS = [
+    ["The Comment Section", "Tutorial", "", "A viral clip, a flood of replies, and the first two recruits from Catholic Answers: Trent Horn and Jimmy Akin.",
+      [["g-doctrine", "Scripture", "1 Peter 3:15: a defense given with gentleness and reverence, never an attack."]]],
+    ["The Fawn in the Forest", "Atheists", "Alex O'Connor", "Why would a good God let a fawn burn to death, alone, where no one will ever know? Fr. Pine brings St. Thomas, Fr. Spitzer brings the laws of nature, and Scott Hahn brings Romans 8. Along the way, Ethan Muse and Fr. Spitzer face skeptic streamers over Fatima and the Shroud, and unlock Vindicatory Miracles.",
+      [["g-doctrine", "Doctrine", "God freely willed a world “in a state of journeying” toward its perfection. Until it arrives, physical evil exists alongside physical good (CCC 310)."],
+       ["g-opinion", "Opinion", "The particular answers to the fawn: the good of the whole (Summa I, q. 22, a. 2, ad 2), a law-governed world, creation's coming liberation (Romans 8:21). Faithful Catholics weigh them differently."],
+       ["g-dogma", "Dogma", "That miracles happen and can be known with certainty as signs of revelation (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is private revelation, which no Catholic is bound to believe (CCC 67)."]]],
+    ["Are You a Good Person?", "Evangelicals", "Ryan Hemelaar", "“If you died tonight, would you go to heaven?” The team has to answer without claiming to earn it, and without claiming a certainty no one has. Scott Hahn, once a Presbyterian minister, shows them the family behind the courtroom.",
+      [["g-dogma", "Dogma", "We are justified freely: nothing that comes before justification, faith or works, merits the grace of it (Trent, Session VI, ch. 8). And without a special revelation, no one can know with absolute certainty that he will persevere (canon 16)."],
+       ["g-doctrine", "Doctrine", "What we have instead is hope, a theological virtue: confident trust in God's promises (CCC 1817–1821)."]]],
+    ["The Restoration", "Latter-day Saints", "Jacob Hansen", "If the Church fell away after the apostles died, when did it happen, and why didn't anyone notice? Joe Heschmeyer opens Ignatius of Antioch's letters.",
+      [["g-doctrine", "Doctrine", "The Church cannot fail: “the gates of Hades shall not prevail against it” (Matthew 16:18; 28:20; Lumen Gentium 8)."],
+       ["g-dogma", "Dogma", "God is utterly simple, one in substance, without parts: not an exalted man (Lateran IV, 1215)."]]],
+    ["People of the Book", "Islam", "Speakers' Corner Champion", "If the Bible was corrupted, when? And why does the Qur'an tell Christians to judge by the Gospel? GodLogic joins as a guest, and Catholics and Protestants stand together.",
+      [["g-dogma", "Dogma", "The Son is “one in being with the Father”: not a second god, but God's own eternal Word (Nicaea, 325)."],
+       ["g-argument", "Argument", "“Let the people of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact then, what corrupted it afterward?"],
+       ["g-doctrine", "Doctrine", "Muslims “together with us adore the one, merciful God” (CCC 841; Nostra Aetate 3)."]]],
+    ["Scripture Alone?", "Reformed", "James White", "How do you answer sola scriptura in a way James White hasn't heard a thousand times? Grant him the canon, and ask for the verse that says the rule of faith changes when the last apostle dies.",
+      [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
+       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]]],
+    ["One Fold", "Epilogue", "", "The Easter Vigil. Every opponent you reached comes back, and one of them is just visiting.",
+      [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]]],
+  ];
+
+  // ---- Roster, factions, chapters ------------------------------------------
+
+  function portrait(id, size) {
+    const c = document.createElement("canvas");
+    c.width = 32 * (size || 3); c.height = 32 * (size || 3);
+    Art.paint(c.getContext("2d"), Art.bust(C[id]), 0, 0, size || 3);
+    return c;
+  }
+
+  const STAT_NAMES = ["Composure", "Rhetoric", "Learning", "Charity", "Readiness"];
+  const STAT_MAX = [300, 100, 140, 30, 170];
+
+  function skillList(skills) {
+    const ul = document.createElement("ul");
+    ul.className = "skills";
+    skills.forEach(([name, target, cd, fx, ult], i) => {
+      const li = document.createElement("li");
+      if (ult || i === 3) li.className = "ult";
+      li.innerHTML = `<span class="name"></span><span class="meta"></span><span class="fx"></span>`;
+      li.querySelector(".name").textContent = name;
+      li.querySelector(".meta").textContent = target + " · cd " + cd;
+      li.querySelector(".fx").textContent = fx;
+      ul.append(li);
+    });
+    return ul;
+  }
+
+  const roster = document.getElementById("roster");
+  for (const h of HEROES) {
+    const card = document.createElement("article");
+    card.className = "card";
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const pic = portrait(h.id, 3);
+    pic.setAttribute("aria-label", "Pixel portrait of " + h.name);
+    const who = document.createElement("div");
+    who.className = "who";
+    who.innerHTML = `<h3></h3><span class="passive"></span><div class="chips"><span class="chip role"></span></div>`;
+    who.querySelector("h3").textContent = h.name;
+    who.querySelector(".passive").textContent = h.tag;
+    who.querySelector(".chip.role").textContent = h.role;
+    if (h.guest) {
+      const g = document.createElement("span");
+      g.className = "chip"; g.textContent = "guest ally";
+      who.querySelector(".chips").append(g);
+    }
+    head.append(pic, who);
+
+    const stats = document.createElement("div");
+    stats.className = "stats";
+    h.stats.forEach((v, i) => {
+      const s = document.createElement("div");
+      s.className = "stat";
+      s.innerHTML = `<span>${v}</span><i><b style="width:${Math.min(100, (v / STAT_MAX[i]) * 100).toFixed(0)}%"></b></i><small>${STAT_NAMES[i]}</small>`;
+      stats.append(s);
+    });
+
+    const passive = document.createElement("p");
+    passive.className = "passive";
+    passive.innerHTML = `<b></b> · <span></span>`;
+    passive.querySelector("b").textContent = "Passive: " + h.passive[0];
+    passive.querySelector("span").textContent = h.passive[1];
+
+    const flavor = document.createElement("p");
+    flavor.className = "flavor";
+    flavor.textContent = h.flavor;
+    card.append(head, stats, passive, skillList(h.skills));
+    if (h.duo) {
+      const d = document.createElement("div");
+      d.className = "duo";
+      d.innerHTML = `<span class="label"></span><b></b><span></span>`;
+      d.querySelector(".label").textContent = "Duo great move · " + h.duo[1];
+      d.querySelector("b").textContent = h.duo[0];
+      d.querySelector("span:last-child").textContent = h.duo[3];
+      card.append(d);
+    }
+    card.append(flavor);
+    roster.append(card);
+  }
+
+  const factions = document.getElementById("factions");
+  for (const b of BOSSES) {
+    const f = document.createElement("article");
+    f.className = "faction";
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const who = document.createElement("div");
+    who.className = "who";
+    who.innerHTML = `<span class="label"></span><h3></h3><span class="passive"></span>`;
+    who.querySelector(".label").textContent = b.faction;
+    who.querySelector("h3").textContent = b.name;
+    who.querySelector(".passive").textContent = b.tag;
+    const pic = portrait(b.id, 3);
+    pic.setAttribute("aria-label", "Pixel portrait of " + b.name);
+    head.append(pic, who);
+    const grunts = document.createElement("div");
+    grunts.className = "grunts";
+    for (const g of b.grunts) grunts.append(portrait(g, 2));
+    const p = document.createElement("p");
+    p.textContent = b.blurb;
+    const chip = document.createElement("div");
+    chip.className = "chips";
+    chip.innerHTML = `<span class="chip boss">Boss</span>`;
+    f.append(head, chip, p, grunts, skillList(b.skills));
+    factions.append(f);
+  }
+
+  const chapters = document.getElementById("chapters");
+  for (const [title, group, boss, story, cards] of CHAPTERS) {
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="body"><span class="label"></span><h3></h3><p></p></div>`;
+    li.querySelector(".label").textContent = group + (boss ? " · Boss: " + boss : "");
+    li.querySelector("h3").textContent = title;
+    li.querySelector("p").textContent = story;
+    for (const [cls, grade, text] of cards) {
+      const note = document.createElement("div");
+      note.className = "card-note";
+      note.innerHTML = `<span class="grade"></span><span></span>`;
+      note.querySelector(".grade").className = "grade " + cls;
+      note.querySelector(".grade").textContent = grade;
+      note.querySelector("span:last-child").textContent = text;
+      li.querySelector(".body").append(note);
+    }
+    chapters.append(li);
+  }
+
+  // ---- The cut scenes --------------------------------------------------------------
+
+  const storyCanvas = document.getElementById("story");
+  const story = Story.create(storyCanvas);
+  const tabs = document.getElementById("story-tabs");
+  const where = document.getElementById("story-where");
+  function paintTabs() {
+    for (const b of tabs.children) b.setAttribute("aria-pressed", String(b.dataset.id === story.chapter.id));
+    const c = story.chapter;
+    const [who, said] = story.spoken;
+    const line = document.getElementById("story-line");
+    line.textContent = "";
+    if (who) { const b = document.createElement("b"); b.textContent = who + ": "; line.append(b); }
+    line.append(said);
+    where.textContent = (c.mystery ? "The mystery: " + c.mystery + " " : "") + "Scene " + (story.scene + 1) + " of " + c.scenes.length + ": " + c.scenes[story.scene].when + ".";
+  }
+  for (const c of Story.CHAPTERS) {
+    const b = document.createElement("button");
+    b.dataset.id = c.id;
+    b.innerHTML = "<small></small><span></span>";
+    b.querySelector("small").textContent = c.group;
+    b.querySelector("span").textContent = c.title;
+    b.addEventListener("click", () => { story.open(c.id, 0); paintTabs(); });
+    tabs.append(b);
+  }
+  story.open("atheists", 0);
+  story.onChange((finished) => {
+    if (finished) {
+      // At the end of a chapter, go on to the next one.
+      const i = Story.CHAPTERS.indexOf(finished);
+      story.open(Story.CHAPTERS[(i + 1) % Story.CHAPTERS.length].id, 0);
+    }
+    paintTabs();
+  });
+  paintTabs();
+  storyCanvas.addEventListener("click", () => story.next());
+  storyCanvas.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); story.next(); } });
+  document.getElementById("story-next").addEventListener("click", () => story.next());
+
+  // ---- The battle demo ---------------------------------------------------------
+
+  const busts = {};
+  for (const k of Object.keys(C)) busts[k] = Art.bust(C[k]);
+
+  const battle = document.getElementById("battle");
+  const bx = battle.getContext("2d");
+  const caption = document.getElementById("battle-caption");
+  const HERO_POS = [["akin", 40, 18], ["muse", 118, 104], ["fradd", 40, 190], ["bertuzzi", 118, 276]];
+  const FOE_POS = [["elder", 456, 40], ["preacher", 536, 138], ["skeptic", 456, 236]];
+  const LOOP = 17;
+
+  // What has happened by time t: each event changes conviction or composure.
+  const EVENTS = [
+    { t: 0.4, who: "akin", say: "Jimmy Akin · Logical Paradox", caption: "Logical Paradox: every foe's Rhetoric falls, and two of them lose a pip of Conviction.", fx: { elder: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"] },
+    { t: 3.2, who: "muse", say: "Ethan Muse · Open Challenge", caption: "Open Challenge: all three are Called Out and must answer Ethan. Each loses a pip.", fx: { elder: [-1, 0], preacher: [-1, 0], skeptic: [-1, 0] }, flash: ["elder", "preacher", "skeptic"], called: true },
+    { t: 6.0, who: "preacher", say: "Street Preacher · Turn or Burn", caption: "Called Out, the preacher has to aim at Ethan, who is the tank.", fx: { muse: [0, -0.45] }, flash: ["muse"] },
+    { t: 8.2, who: "muse", say: "Ethan Muse · Camera Mog", caption: "Camera Mog: the elder's last two pips go at once.", fx: { elder: [-2, -0.3] }, mog: true, flash: ["elder"] },
+    { t: 11.4, who: "elder", say: "Elder Missionary · converted", caption: "His conviction is gone, so he flickers, and then he signs up for OCIA.", ocia: "elder" },
+    { t: 14.2, who: "fradd", say: "Matt Fradd · Pints with Aquinas", caption: "Pints with Aquinas: Ethan gets his Composure back.", fx: { muse: [0, 0.45] }, flash: ["muse"] },
+  ];
+
+  function stateAt(t) {
+    const s = {};
+    for (const [id] of HERO_POS.concat(FOE_POS)) s[id] = { pips: 4, comp: 1 };
+    let last = null;
+    for (const e of EVENTS) {
+      if (e.t > t) break;
+      last = e;
+      for (const [id, [dp, dc]] of Object.entries(e.fx || {})) {
+        s[id].pips = Math.max(0, s[id].pips + dp);
+        s[id].comp = Math.max(0.05, Math.min(1, s[id].comp + dc));
+      }
+    }
+    return { s, last };
+  }
+
+  function drawBars(x, y, st, foe) {
+    bx.fillStyle = "#2a2f55"; bx.fillRect(x, y, 64, 6);
+    bx.fillStyle = "#74c07a"; bx.fillRect(x, y, Math.round(64 * st.comp), 6);
+    for (let i = 0; i < 4; i++) {
+      bx.fillStyle = i < st.pips ? "#7ea4e6" : (foe ? "#5a2a36" : "#3a2a36");
+      bx.fillRect(x + i * 17, y + 10, 13, 6);
+    }
+  }
+
+  function drawSign(x, y, a) {
+    bx.globalAlpha = a;
+    bx.fillStyle = "#8a5a2b"; bx.fillRect(x + 29, y + 36, 6, 30);
+    bx.fillStyle = "#f7f1de"; bx.fillRect(x - 4, y + 4, 72, 36);
+    bx.strokeStyle = "#1a1326"; bx.lineWidth = 3; bx.strokeRect(x - 4, y + 4, 72, 36);
+    bx.fillStyle = "#b3261e"; bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+    bx.fillText("OCIA", x + 32, y + 26);
+    bx.fillStyle = "#1a1326"; bx.font = "600 10px 'Pixelify Sans', monospace";
+    bx.fillText("TUES · 7 PM", x + 32, y + 37);
+    bx.globalAlpha = 1;
+  }
+
+  function drawBattle(t) {
+    const { s, last } = stateAt(t);
+    bx.fillStyle = "#0e1122"; bx.fillRect(0, 0, 640, 360);
+    // A studio floor and two lecterns of light.
+    bx.fillStyle = "#171b36"; bx.fillRect(0, 300, 640, 60);
+    for (let x = 0; x < 640; x += 32) { bx.fillStyle = x % 64 ? "#1b2040" : "#161a33"; bx.fillRect(x, 300, 32, 60); }
+    bx.fillStyle = "rgba(232,185,74,0.05)"; bx.fillRect(20, 0, 200, 360); bx.fillRect(430, 0, 200, 360);
+
+    const since = last ? t - last.t : 99;
+    for (const [id, x, y] of HERO_POS) {
+      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
+      const active = last && last.who === id && since < 2.2;
+      if (active) { bx.fillStyle = "rgba(232,185,74,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
+      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2);
+      drawBars(x, y + 68, s[id], false);
+    }
+    for (const [id, x, y] of FOE_POS) {
+      const conv = last && last.ocia === id ? since : (s[id].pips === 0 && t >= 11.4 ? 99 : -1);
+      if (conv >= 0 && conv > 1.6) { drawSign(x, y, Math.min(1, (conv - 1.6) * 2)); continue; }
+      if (conv >= 0 && Math.floor(conv * 12) % 2 === 1) {
+        bx.fillStyle = "rgba(255,255,255,0.8)"; bx.fillRect(x + 8, y + 4, 48, 60);
+        continue;
+      }
+      const hit = last && last.flash && last.flash.includes(id) && since < 0.5;
+      const active = last && last.who === id && since < 2.2;
+      if (active) { bx.fillStyle = "rgba(222,94,85,0.25)"; bx.fillRect(x - 6, y - 6, 76, 76); }
+      Art.paint(bx, busts[id], x + (hit ? Math.round(Math.sin(t * 60) * 2) : 0), y, 2, true);
+      drawBars(x, y + 68, s[id], true);
+      const called = EVENTS.find((e) => e.called);
+      if (called && t >= called.t && t < 11) {
+        bx.fillStyle = "#de5e55"; bx.font = "600 11px 'Pixelify Sans', monospace"; bx.textAlign = "left";
+        bx.fillText("CALLED OUT", x - 2, y - 6);
+      }
+    }
+    // Pips lost float up from the target.
+    if (last && last.fx && since < 1.2) {
+      for (const [id, [dp, dc]] of Object.entries(last.fx)) {
+        const pos = HERO_POS.concat(FOE_POS).find((p) => p[0] === id);
+        bx.fillStyle = dp < 0 ? "#7ea4e6" : dc < 0 ? "#de5e55" : "#74c07a";
+        bx.font = "700 16px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+        const text = dp < 0 ? dp + " CONVICTION" : dc < 0 ? "−COMPOSURE" : "+COMPOSURE";
+        bx.fillText(text, pos[1] + 32, pos[2] - 10 - since * 18);
+      }
+    }
+    // The move's name.
+    if (last && since < 2.6) {
+      bx.font = "700 20px 'Pixelify Sans', monospace"; bx.textAlign = "center";
+      const w = bx.measureText(last.say).width + 28;
+      bx.fillStyle = "rgba(20,23,42,0.92)"; bx.fillRect(320 - w / 2, 10, w, 34);
+      bx.strokeStyle = "#e8b94a"; bx.lineWidth = 2; bx.strokeRect(320 - w / 2, 10, w, 34);
+      bx.fillStyle = "#ece4d0"; bx.fillText(last.say, 320, 34);
+    }
+    // The Camera Mog close-up.
+    if (last && last.mog && since < 2.6) {
+      const k = Math.min(1, since / 0.35);
+      bx.fillStyle = `rgba(8,9,20,${0.85 * k})`; bx.fillRect(0, 0, 640, 360);
+      const scale = 6;
+      const lean = Math.min(1, Math.max(0, (since - 0.3) / 0.9));
+      Art.paint(bx, Art.mog(C.muse, lean), 320 - 24 * scale, 360 - 48 * scale + Math.round((1 - k) * 60), scale);
+      bx.fillStyle = "#e8b94a"; bx.font = "700 28px 'Pixelify Sans', monospace"; bx.textAlign = "left";
+      bx.fillText("CAMERA", 24, 60); bx.fillText("MOG", 24, 92);
+    }
+    if (last && caption.textContent !== last.caption) caption.textContent = last.caption;
+  }
+
+  // ---- The Camera Mog spotlight ---------------------------------------------------------
+
+  const spot = Theater.create(document.getElementById("spotlight"));
+  spot.setTeam(["muse", "akin", "fradd", "bertuzzi"]);
+  let spotNext = still ? null : 0.4;
+  spot.onDone(() => { spotNext = clockSpot + 1.2; });
+  let clockSpot = 0;
+  function drawSpot(t) {
+    clockSpot = t;
+    if (spotNext !== null && t >= spotNext) { spot.play("muse", Theater.MOVES.muse.findIndex((m) => m.great), t); spotNext = null; }
+    spot.frame(t);
+  }
+  document.getElementById("spotlight").addEventListener("click", () => { if (!spot.busy) spotNext = clockSpot; });
+
+  // ---- The move theater ------------------------------------------------------------
+
+  const theater = Theater.create(document.getElementById("theater"));
+  const picker = document.getElementById("picker");
+  const movebar = document.getElementById("movebar");
+  const ORDER = HEROES.map((h) => h.id);
+  const NAMES = Object.fromEntries(HEROES.map((h) => [h.id, h.name]));
+  let chosen = "muse";
+  let autoplay = !still;
+  let clock = 0;
+  let queued = null;
+  const greatIndex = (id) => Theater.MOVES[id].findIndex((m) => m.great);
+
+  function renderMoves() {
+    movebar.textContent = "";
+    const moves = Theater.MOVES[chosen];
+    moves.forEach((m, i) => {
+      const b = document.createElement("button");
+      const great = !!m.great;
+      b.className = great ? "great" : m.duo ? "great duo-move" : "";
+      b.innerHTML = "<small></small><span></span>";
+      b.querySelector("small").textContent = m.duo ? "Duo great move" : great ? "Great move" : i === 0 ? "Basic" : "Skill";
+      b.querySelector("span").textContent = m.name;
+      b.addEventListener("click", () => { autoplay = false; paintAuto(); queued = [chosen, i]; });
+      movebar.append(b);
+    });
+    const auto = document.createElement("button");
+    auto.className = "autoplay";
+    auto.id = "autoplay";
+    auto.addEventListener("click", () => { autoplay = !autoplay; paintAuto(); });
+    movebar.append(auto);
+    paintAuto();
+  }
+  function paintAuto() {
+    const a = document.getElementById("autoplay");
+    if (a) a.textContent = autoplay ? "Autoplay: on" : "Autoplay: off";
+  }
+  function choose(id) {
+    chosen = id;
+    for (const b of picker.children) b.setAttribute("aria-pressed", String(b.dataset.id === id));
+    renderMoves();
+  }
+  for (const id of ORDER) {
+    const b = document.createElement("button");
+    b.dataset.id = id;
+    b.append(portrait(id, 2));
+    const name = document.createElement("span");
+    name.textContent = NAMES[id].replace(/^(Fr\.|Sr\.|Bishop) /, "").split(",")[0];
+    b.append(name);
+    b.addEventListener("click", () => { autoplay = false; choose(id); queued = [id, greatIndex(id)]; });
+    picker.append(b);
+  }
+  choose(chosen);
+  theater.onDone(() => {
+    if (!autoplay) return;
+    // Autoplay walks through every hero's great move in turn.
+    const next = ORDER[(ORDER.indexOf(chosen) + 1) % ORDER.length];
+    choose(next);
+    queued = [next, greatIndex(next)];
+  });
+  function drawTheater(t) {
+    clock = t;
+    if (queued) { theater.play(queued[0], queued[1], t); queued = null; }
+    theater.frame(t);
+  }
+  if (autoplay) queued = ["muse", 3];
+
+  // ---- OCIA flicker -----------------------------------------------------------------
+
+  const oBox = document.getElementById("ocia");
+  const oCanvases = OCIA.map((o) => {
+    const fig = document.createElement("figure");
+    const c = document.createElement("canvas");
+    c.width = 200; c.height = 100;
+    c.setAttribute("aria-label", "A converted " + o.faction + " opponent flickers and becomes an OCIA sign.");
+    const cap = document.createElement("figcaption");
+    cap.innerHTML = `<span class="label"></span><br><b></b>. <span></span>`;
+    cap.querySelector(".label").textContent = o.faction;
+    cap.querySelector("b").textContent = o.line;
+    cap.querySelector("span:last-child").textContent = o.text;
+    fig.append(c, cap);
+    oBox.append(fig);
+    return { c, ctx: c.getContext("2d"), o };
+  });
+  function drawOcia(t) {
+    oCanvases.forEach(({ ctx, o }, i) => {
+      const p = (t + i * 0.7) % 5;
+      ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, 200, 100);
+      if (p < 1.4) { Art.paint(ctx, busts[o.id], 68, 18, 2); return; }
+      if (p < 2.6) {
+        if (Math.floor(p * 12) % 2) { ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(76, 22, 48, 60); }
+        else Art.paint(ctx, busts[o.id], 68, 18, 2);
+        for (let k = 0; k < 6; k++) {
+          const a = k + p * 3;
+          ctx.fillStyle = "#e8b94a";
+          ctx.fillRect(100 + Math.cos(a) * 46 - 2, 50 + Math.sin(a) * 34 - 2, 4, 4);
+        }
+        return;
+      }
+      ctx.fillStyle = "#8a5a2b"; ctx.fillRect(97, 62, 6, 34);
+      ctx.fillStyle = "#f7f1de"; ctx.fillRect(58, 18, 84, 46);
+      ctx.strokeStyle = "#1a1326"; ctx.lineWidth = 3; ctx.strokeRect(58, 18, 84, 46);
+      ctx.fillStyle = "#b3261e"; ctx.font = "700 22px 'Pixelify Sans', monospace"; ctx.textAlign = "center";
+      ctx.fillText("OCIA", 100, 44);
+      ctx.fillStyle = "#1a1326"; ctx.font = "600 10px 'Pixelify Sans', monospace";
+      ctx.fillText("ALL WELCOME", 100, 57);
+    });
+  }
+
+  // ---- Run ----------------------------------------------------------------------
+
+  if (still) {
+    drawBattle(9.2); drawOcia(3.2);
+    // With reduced motion the theater and the spotlight only move when asked.
+    const loop = (now) => { drawTheater(now / 1000); drawSpot(now / 1000); story.frame(now / 1000); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    return;
+  }
+  const t0 = performance.now();
+  function frame(now) {
+    const t = (now - t0) / 1000;
+    drawBattle(t % LOOP);
+    drawTheater(t);
+    drawSpot(t);
+    story.frame(t);
+    drawOcia(t);
+    requestAnimationFrame(frame);
+  }
+  drawBattle(0.6); drawTheater(0); drawSpot(0); story.frame(0); drawOcia(0);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => requestAnimationFrame(frame));
+})();
+</script>
+</body>
+</html>
