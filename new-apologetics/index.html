@@ -192,7 +192,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260926c">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260926d">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -220,7 +220,7 @@
           <tr><td><strong>Hidden strengths</strong></td><td>Some heroes argue best from wit, some from Scripture and history, some keep their poise under pressure, some are always ready first. The game never shows these numbers. You learn each hero's gifts by playing them.</td></tr>
           <tr><td><strong>Dumbfounded</strong></td><td>Loses turns while he thinks it over.</td></tr>
           <tr><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
-          <tr><td><strong>Doubting</strong></td><td>Loses a little Composure each turn. Some skills hit Doubting targets harder.</td></tr>
+          <tr><td><strong>Doubting · Flustered</strong></td><td>Loses a little Composure each turn. An opponent is left Doubting his position, and some skills hit him harder for it. An apologist never doubts his faith: the same hard question leaves him Flustered.</td></tr>
           <tr><td><strong>Cross-Examined</strong></td><td>Takes more from arguments based on Learning.</td></tr>
           <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
           <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
@@ -323,11 +323,11 @@
   </section>
 </main>
 
-<script src="art.js?v=20260926c"></script>
-<script src="moves.js?v=20260926c"></script>
-<script src="story.js?v=20260926c"></script>
-<script src="data.js?v=20260926c"></script>
-<script src="battle.js?v=20260926c"></script>
+<script src="art.js?v=20260926d"></script>
+<script src="moves.js?v=20260926d"></script>
+<script src="story.js?v=20260926d"></script>
+<script src="data.js?v=20260926d"></script>
+<script src="battle.js?v=20260926d"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -394,12 +394,12 @@
     },
     {
       id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Encourager",
-      passive: ["She'll Be Right", "+10% resistance to Doubting."],
+      passive: ["She'll Be Right", "+10% resistance to being Flustered."],
       skills: [
         ["Cheeky Question", "1 foe", "0", "150% Rhetoric."],
         ["Pints with Aquinas", "1 ally", "3", "A major encouragement: restores most of his Composure, with a 50% chance of +2 Conviction. A Discouraged ally comes back into the fight."],
         ["Australian Charm", "1 ally", "3", "Major Rhetoric Up for 3 turns and +2 Conviction. Nobody can stay tense around him."],
-        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Poise Up, and immunity to Doubting for 3 turns.", true],
+        ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Poise Up, and immunity to being Flustered for 3 turns.", true],
       ],
       flavor: "The healer. He hosted Cameron Bertuzzi's debates while Cameron was still a Protestant, so he knows how to keep a hard conversation friendly.",
     },
@@ -531,7 +531,7 @@
       blurb: "The boss of Chapter 1, The Fawn in the Forest. Unfailingly polite, which makes him very hard to discourage. Rank and file: skeptic streamers and comment-section rationalists.",
       skills: [
         ["Within Reason", "1 foe", "0", "125% Learning."],
-        ["The Fawn in the Forest", "All foes", "3", "Doubting on each, and −1 Conviction. A fawn burns to death in a forest fire, alone. What was the point?"],
+        ["The Fawn in the Forest", "All foes", "3", "Flustered on each, and −1 Conviction. A fawn burns to death in a forest fire, alone. What was the point?"],
         ["Euthyphro", "1 foe", "3 (starts 1)", "Dumbfounded for 2 turns. Is a thing good because God wills it, or does God will it because it is good? Fr. Pine's Distinguo cancels it: God's own nature is the Good."],
         ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Poise Up.", true],
       ],
@@ -574,7 +574,7 @@
       grunts: ["seminarian"],
       blurb: "The final boss, in Chapter 5, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
       skills: [
-        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Doubting."],
+        ["Greek Exegesis", "1 foe", "0", "150% Learning. 25% chance to leave him Flustered."],
         ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Learning Down for 2 turns. Only Scripture counts."],
         ["Eternal Security", "Self", "4", "His Conviction cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Is That in the Bible? passes through it."],
         ["Debate Challenge", "All foes", "4 (starts 2)", "250% Rhetoric to each, and +1 Conviction to himself.", true],

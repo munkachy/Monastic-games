@@ -196,7 +196,7 @@ const Battle = (() => {
             }
           }
           if (e.conv) { if (conviction(t, e.conv, s, events)) broke = true; }
-          if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status), color: "#ffd84a" }); }
+          if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" }); }
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
@@ -311,7 +311,9 @@ const Battle = (() => {
   }
 
   const LABELS = { dumbfounded: "Dumbfounded", doubting: "Doubting", muted: "Muted", examined: "Cross-Examined", called: "Called Out" };
-  const label = (s) => LABELS[s] || s;
+  // An apologist under pressure is flustered, not doubting his faith: the same
+  // status (it wears on Composure) takes a different name on the heroes' side.
+  const label = (s, u) => (s === "doubting" && u && u.side === "hero" ? "Flustered" : LABELS[s] || s);
   const statName = (s) => ({ r: "Rhetoric", l: "Learning", c: "Poise", crit: "Crit" }[s] || s);
   const immuneName = (k) => ({ conviction: "Steadfast", learning: "Testimony", faith: "Faith Alone", security: "Eternal Security" }[k] || k);
 
@@ -408,7 +410,7 @@ const BattleView = (() => {
           // Statuses, as small letters.
           const tags = [];
           if (u.statuses.dumbfounded > 0) tags.push(["Z", "#ffd84a"]);
-          if (u.statuses.doubting > 0) tags.push(["?", "#c69ae8"]);
+          if (u.statuses.doubting > 0) tags.push(u.side === "hero" ? ["!", "#e89a4a"] : ["?", "#c69ae8"]);
           if (u.statuses.muted > 0) tags.push(["M", "#de5e55"]);
           if (u.statuses.examined > 0) tags.push(["X", "#e8b94a"]);
           if (u.called) tags.push(["!", "#de5e55"]);

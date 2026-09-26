@@ -87,6 +87,14 @@ const Theater = (() => {
       }
     },
     doubting(ctx, x, y, t) { outlinedText(ctx, "?", x + 20 + Math.sin(t * 9) * 3, y - 2, 22, "#c69ae8"); },
+    // A hero rattled by a hard question: a bead of sweat and a small puff of steam.
+    flustered(ctx, x, y, t) {
+      const drop = (t * 1.5) % 1;
+      px(ctx, x + 16, y + 6 + drop * 10, 3, "#9fd0ff"); px(ctx, x + 17, y + 3 + drop * 10, 2, "#9fd0ff");
+      ctx.globalAlpha = 0.7;
+      for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; px(ctx, x - 14 + i * 5, y - 4 - k * 14, 4, "#e8e4f0"); }
+      ctx.globalAlpha = 1;
+    },
     muted(ctx, x, y) { ctx.fillStyle = "#2a2a33"; ctx.fillRect(x - 12, y + 30, 24, 8); ctx.fillStyle = "#de5e55"; for (let i = 0; i < 8; i++) { ctx.fillRect(x - 4 + i, y + 30 + i, 2, 2); ctx.fillRect(x + 3 - i, y + 30 + i, 2, 2); } },
     examined(ctx, x, y, t) { const mx = x + 18 + Math.sin(t * 4) * 6; ctx.strokeStyle = "#1a1326"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(mx, y + 20, 11, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = "#e8b94a"; ctx.lineWidth = 3; ctx.stroke(); ctx.fillStyle = "rgba(190,225,255,0.45)"; ctx.fill(); ctx.fillStyle = "#8a5a2b"; ctx.fillRect(mx + 7, y + 28, 4, 10); },
     called(ctx, x, y, t) { outlinedText(ctx, "!", x, y - 8 - Math.abs(Math.sin(t * 8)) * 4, 26, "#de5e55"); },
@@ -180,7 +188,7 @@ const Theater = (() => {
           hand: (a) => ({ x: a.x + (a.side === "hero" ? 30 : -30), y: a.y - 42 }),
           after: (fn) => after.push(fn),
           overlay: (fn) => { overlay = fn; },
-          mark: (a, name, since) => a.marks.push([name, since]),
+          mark: (a, name, since) => a.marks.push([name === "doubting" && a.side === "hero" ? "flustered" : name, since]),
         };
         current.move.run(api);
         if (k > current.move.duration) {
