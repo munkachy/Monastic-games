@@ -608,7 +608,7 @@ function magnetToEdges() {
   for (const a of mine) {
     for (const e of theirs) {
       const d = e - a;
-      if (Math.abs(d) > 0.3 && Math.abs(d) <= MAGNET && (!best || Math.abs(d) < Math.abs(best))) best = d;
+      if (Math.abs(d) > 1.5 && Math.abs(d) <= MAGNET && (!best || Math.abs(d) < Math.abs(best))) best = d;
     }
   }
   if (!best) return;
