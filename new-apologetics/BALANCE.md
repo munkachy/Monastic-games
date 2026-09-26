@@ -46,5 +46,6 @@ Bosses have no Legends model. Their kits follow the same shape (a basic
 move, two 3-turn skills, one 4-turn great move) with a counter built in
 that a particular hero can answer: Fr. Pine's Distinguo cancels
 O'Connor's Euthyphro; Hahn's Covenant Is Family passes through Ryan's
-Faith Alone; Trent Horn's Hard Sayings passes through White's Eternal
-Security.
+Faith Alone; Trent Horn's Is That in the Bible? passes through White's
+Eternal
+Security and Sola Scriptura.

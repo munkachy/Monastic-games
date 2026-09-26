@@ -310,9 +310,10 @@ const Theater = (() => {
         if (m.say && t < 1.8) api.after(() => bubble(api.ctx, m.say, hero.x + 10, hero.y - FIG_H - 2, { size: 13 }));
         if (m.backdrop) api.after(() => m.backdrop(api.ctx, hero, t));
         const targets = pick(api, m.to);
-        if (t > 0.5) for (const a of targets) {
-          for (const name of [].concat(m.mark)) api.mark(a, name, t - 0.5);
-        }
+        if (t > 0.5) targets.forEach((a, i) => {
+          const marks = m.markEach ? m.markEach[i % m.markEach.length] : m.mark;
+          for (const name of [].concat(marks)) api.mark(a, name, t - 0.5);
+        });
         if (m.foes && t > 0.7) for (const a of api.foes) api.mark(a, m.foes, t - 0.7);
         if (t > 0.3 && t < 0.9) api.after(() => {
           const k = span(t, 0.3, 0.9);
@@ -770,9 +771,22 @@ const Theater = (() => {
       { name: "Bayesian Update", kind: cinematic, who: "Cameron Bertuzzi", color: "#2f5a8a", scene: SCENES.bayes, to: "allies", mark: ["heal", "shield"] },
     ],
     horn: [
-      { name: "Rapid Response", kind: volley, glyphs: ["But—", "Actually,", "Consider:"], color: "#e8b94a" },
-      { name: "Why We're Catholic", kind: aura, to: "allies", mark: ["up", "pipUp"], backdrop: (ctx, h, t) => { if (t < 1.9) ITEMS.book(ctx, h.x + 34, h.y - 150, "#1f3b6b"); } },
-      { name: "Hard Sayings", kind: hex, to: "all", say: "Hebrews 6, verses 4 to 6.", mark: ["down", "pipDown"], fx: (ctx, api, h, targets, t, k) => { for (const a of targets) { const p = api.head(a); if (k > 0 && k < 1) ITEMS.scroll(ctx, lerp(h.x + 30, p.x, k), lerp(h.y - 60, p.y + 30, k) - Math.sin(k * Math.PI) * 40); } } },
+      { name: "Deadpan", kind: volley, glyphs: ["Wonderful.", "…and yet here we are."], color: "#9fd0ff", mark: "down" },
+      { name: "Free-for-All Friday", kind: aura, to: "allies", markEach: [["up", "pipUp"], ["crit", "pipUp"], ["shield", "pipUp"], ["heal", "pipUp"]], say: "It's Free-for-All Friday!", color: "#e8b94a",
+        backdrop: (ctx, h, t) => {
+          if (t > 1.9) return;
+          const x = h.x + 60; const y = 62;
+          ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 70, y - 16, 140, 28); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 68, y - 14, 136, 24);
+          ctx.font = "700 12px " + FONT; ctx.textAlign = "center"; ctx.fillStyle = "#1a1326"; ctx.fillText("FREE-FOR-ALL FRIDAY", x, y + 3);
+          // Listener questions tumble in.
+          for (let i = 0; i < 6; i++) { const q = (t * 0.9 + i / 6) % 1; ctx.globalAlpha = 1 - q; outlinedText(ctx, "?", x - 60 + i * 24, y + 30 + q * 60, 16, ["#9fd0ff", "#ffd84a", "#ff7a9a"][i % 3]); ctx.globalAlpha = 1; }
+        } },
+      { name: "Is That in the Bible?", kind: hex, to: "all", say: "Chapter and verse, please.", mark: ["factcheck", "pipDown"],
+        fx: (ctx, api, h, targets, t, k) => {
+          // An open Bible sails over, and a question mark lands on each foe.
+          if (k > 0 && k < 1) { const x = lerp(h.x + 30, 520, k); const y = h.y - 120 - Math.sin(k * Math.PI) * 60; ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 22, y - 12, 44, 26); ctx.fillStyle = "#f4efe0"; ctx.fillRect(x - 20, y - 10, 19, 22); ctx.fillRect(x + 1, y - 10, 19, 22); ctx.fillStyle = "#b8322a"; ctx.fillRect(x - 1, y - 12, 2, 26); for (let r = 0; r < 4; r++) { ctx.fillStyle = "#8a7a5a"; ctx.fillRect(x - 17, y - 6 + r * 5, 13, 1); ctx.fillRect(x + 4, y - 6 + r * 5, 13, 1); } }
+          if (k >= 1 && t < 1.8) for (const a of targets) { const p = api.head(a); outlinedText(ctx, "?", p.x, p.y - 10, 26, "#ffd84a"); }
+        } },
       { name: "The Case for Catholicism", kind: cinematic, who: "Trent Horn", color: "#7a1f2b", scene: SCENES.books, to: "all", mark: ["pipDown"], impact: impactOn("#e8b94a") },
     ],
     fradd: [

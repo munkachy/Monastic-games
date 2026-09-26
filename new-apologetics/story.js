@@ -96,11 +96,14 @@ const Story = (() => {
           ["fradd", "Then what do we say when he asks, “If you died tonight”?"],
           ["hahn", "“I trust my Father completely, and myself not at all.” That's not doubt. That's hope."],
         ] },
-        { when: "The last conversation", place: "square", left: ["schmitz", "heschmeyer", "fradd"], right: ["ryan"], lines: [
+        { when: "The last conversation", place: "square", left: ["schmitz", "heschmeyer", "+horn"], right: ["ryan"], lines: [
           ["ryan", "But if you can lose it, how can you ever have peace?"],
           ["schmitz", "The way a child has peace in his father's arms. Not because he couldn't fall, but because he's being held."],
           ["heschmeyer", "The Council of Trent said it plainly: without a special revelation, no one can know with absolute certainty that he'll persevere. But everyone can hope in God with complete confidence."],
           ["ryan", "That's more biblical than I expected.", "!"],
+          ["horn", "Can I ask you one more? Where does the Bible tell a married couple which acts are off-limits in their own marriage? Chapter and verse."],
+          ["ryan", "It doesn't spell that out, no.", "…"],
+          ["horn", "So on some of the most personal moral questions there are, the Bible alone leaves a Christian guessing. Wonderful. It's almost as if Christ left us a Church to spell it out."],
           ["", "Ryan offers the team a gospel tract. The team offers him a Catechism. Both are accepted."],
         ] },
       ],
