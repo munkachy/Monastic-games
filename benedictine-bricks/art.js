@@ -417,6 +417,28 @@ ART.beads = {
   colors: { b: "#8a5a2a", g: "#e0b030" },
 };
 
+// The belfry roof that caps a finished tower.
+ART.roof = {
+  grid: [
+    ".........gg.........",
+    ".......gggggg.......",
+    ".........gg.........",
+    ".........gg.........",
+    ".........rr.........",
+    "........rRRr........",
+    ".......rRRRRr.......",
+    "......rRRRRRRr......",
+    ".....rRRRRRRRRr.....",
+    "....rRRRRRRRRRRr....",
+    "...rRRRRRRRRRRRRr...",
+    "..rRRRRRRRRRRRRRRr..",
+    ".rRRRRRRRRRRRRRRRRr.",
+    "rrrrrrrrrrrrrrrrrrrr",
+    "ssssssssssssssssssss",
+  ],
+  colors: { g: "#f0c030", r: "#2a3448", R: "#4a5a7a", s: "#b8b0a0" },
+};
+
 // ---------------------------------------------------------------------------
 // Optional: replace any sprite above with your own PNG. Put the file in
 // benedictine-bricks/img/ and add a line such as

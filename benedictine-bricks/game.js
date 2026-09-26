@@ -1,5 +1,5 @@
 // Benedictine Bricks — a stacking game in the style of 99 Bricks Wizard Academy.
-// Build the tower as high as you can. When your candles are out, the tower is finished.
+// Build the tower as high as you can. When your candles are out, a roof caps the tower.
 // Physics by Matter.js (lib/matter.min.js). Art in art.js.
 
 const { Engine, Bodies, Body, Composite, Events, Sleeping } = Matter;
@@ -13,6 +13,7 @@ const MIN_VIEW_H = 1000;     // taller screens show more sky above
 let VIEW_H = MIN_VIEW_H;
 const PX = 2;                // one art pixel = 2 world pixels, for stones and scenery
 const FIGURE_PX = 3;         // the monk and the demon are drawn a little larger
+const ROOF_PX = 4;           // and the roof that caps a finished tower, larger still
 const TILE = 12 * PX;        // one stone square; also one cubit of height
 const FOUND_Y = MIN_VIEW_H - 120;  // top of the rock foundation
 const TOWER_TOP_AT = 0.55;   // where the top of the tower sits on screen (0 top, 1 bottom)
@@ -35,7 +36,6 @@ const SPELLS = {
   scaffold: { icon: "scaffold",    cost: 5, name: "Scaffold",   key: "s" },
   gild:     { icon: "coin",        cost: 2, name: "Gild",       key: "g" },
 };
-const BUBBLE_SPELLS = ["mortar", "scaffold", "gild"];
 const BUBBLE_EVERY = [16, 28];     // seconds between bubbles (min, max)
 const GOLD_BONUS = 10;             // coins for a gilded stone
 
@@ -106,6 +106,64 @@ const HABITS = [
 ];
 
 // ---------------------------------------------------------------------------
+// Stages of monastic formation. Each has its own foundation, spells, curses and
+// three missions; finishing the missions opens the next stage.
+// A foundation is a list of pillars: x is the left edge in stones from the
+// centre, w the width in stones, and drop how far below the top it starts.
+// ---------------------------------------------------------------------------
+
+const STAGES = [
+  {
+    id: "postulant", name: "Postulant",
+    base: [{ x: -3.5, w: 7 }],
+    spells: ["mortar"],
+    curses: ["ice"],
+    missions: [
+      { id: "p-height", text: "Reach 10 cubits", check: (s) => s.height >= 10 },
+      { id: "p-laid", text: "Lay 20 stones in one tower", check: (s) => s.laid >= 20 },
+      { id: "p-repel", text: "Drive off the demon", check: (s) => s.repelled >= 1 },
+    ],
+  },
+  {
+    id: "novice", name: "Novice",
+    base: [{ x: -4.5, w: 3 }, { x: 1.5, w: 3 }],
+    spells: ["mortar", "scaffold"],
+    curses: ["ice", "huge"],
+    missions: [
+      { id: "n-height", text: "Reach 20 cubits", check: (s) => s.height >= 20 },
+      { id: "n-norotate", text: "Reach 10 cubits without turning a stone", check: (s) => s.heightNoTurn >= 10 },
+      { id: "n-bubbles", text: "Catch two bubbles in one tower", check: (s) => s.bubbles >= 2 },
+    ],
+  },
+  {
+    id: "vows", name: "Simple Vows",
+    base: [{ x: -2.5, w: 5 }],
+    spells: ["mortar", "scaffold", "gild"],
+    curses: ["ice", "huge", "invisible"],
+    missions: [
+      { id: "v-height", text: "Reach 30 cubits", check: (s) => s.height >= 30 },
+      { id: "v-mortar", text: "Use Mortar three times in one tower", check: (s) => s.mortars >= 3 },
+      { id: "v-noloss", text: "Reach 15 cubits without dropping a stone", check: (s) => s.heightNoLoss >= 15 },
+    ],
+  },
+  {
+    id: "profession", name: "Solemn Profession",
+    base: [{ x: -5, w: 3, drop: 1 }, { x: -2, w: 6 }],
+    spells: ["mortar", "scaffold", "gild"],
+    curses: ["ice", "huge", "invisible", "tumble"],
+    missions: [
+      { id: "s-height", text: "Reach 40 cubits", check: (s) => s.height >= 40 },
+      { id: "s-coins", text: "Earn 150 coins in one tower", check: (s) => s.earned >= 150 },
+      { id: "s-repel", text: "Drive off the demon three times in one tower", check: (s) => s.repelled >= 3 },
+    ],
+  },
+];
+
+function stageOpen(index) {
+  return index === 0 || STAGES[index - 1].missions.every((m) => save.missions[m.id]);
+}
+
+// ---------------------------------------------------------------------------
 // Saved progress (coins, best height, what you own). Stored on this device only.
 // ---------------------------------------------------------------------------
 
@@ -116,6 +174,7 @@ function loadSave() {
   const fresh = {
     coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
     rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
+    missions: {}, stage: "postulant",
   };
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { /* no storage */ }
@@ -139,7 +198,12 @@ function writeSave() {
 
 let images;
 let engine;
-let foundTiles = 7;
+let stage = STAGES[0];
+let foundRects = [];      // the foundation's pillars, in world pixels
+let stats = {};           // what has happened on this tower, for the missions
+let finale = null;        // the roof coming down and the camera pulling back
+let zoom = 1;
+let focusY = 0;
 let lives = 3;
 let active = null;        // the stone being steered or dropped
 let steering = false;     // true while the player controls the falling stone
@@ -201,14 +265,24 @@ function newTower() {
   engine.positionIterations = 12;
   engine.velocityIterations = 8;
 
-  foundTiles = FOUNDATION_BY_LEVEL[save.foundation];
-  const foundation = Bodies.rectangle(VIEW_W / 2, FOUND_Y + 200, foundTiles * TILE, 400, {
-    isStatic: true,
-    friction: 1,
-    frictionStatic: 1.5,
-    label: "foundation",
+  stage = STAGES.find((st) => st.id === save.stage) || STAGES[0];
+  // A wider foundation (from the shop) widens the outer pillars outward.
+  const extra = (FOUNDATION_BY_LEVEL[save.foundation] - FOUNDATION_BY_LEVEL[0]) / 2;
+  foundRects = stage.base.map((b, i) => {
+    let left = b.x;
+    let w = b.w;
+    if (i === 0) { left -= extra; w += extra; }
+    if (i === stage.base.length - 1) w += extra;
+    return { x: VIEW_W / 2 + left * TILE, w: w * TILE, top: FOUND_Y + (b.drop || 0) * TILE };
   });
-  Composite.add(engine.world, foundation);
+  for (const r of foundRects) {
+    Composite.add(engine.world, Bodies.rectangle(r.x + r.w / 2, r.top + 200, r.w, 400, {
+      isStatic: true,
+      friction: 1,
+      frictionStatic: 1.5,
+      label: "foundation",
+    }));
+  }
 
   Events.on(engine, "collisionStart", (event) => {
     if (!active) return;
@@ -234,6 +308,9 @@ function newTower() {
   prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
   const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
   known = new Set(rosary.spell ? [rosary.spell] : []);
+  stats = { height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, mortars: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0 };
+  finale = null;
+  zoom = 1;
   tier = 0;
   multiplier = 1;
   earned = 0;
@@ -278,7 +355,7 @@ function spawn() {
   // The demon may curse this stone.
   let curse = null;
   if (demon.present && !demon.fleeing && demon.curses > 0 && !pending && Math.random() < CURSE_CHANCE) {
-    curse = ["ice", "haste", "huge"][Math.floor(Math.random() * 3)];
+    curse = stage.curses[Math.floor(Math.random() * stage.curses.length)];
     demon.curses--;
   }
 
@@ -302,6 +379,12 @@ function spawn() {
   targetAngle = 0;
   activeSpeed = Math.min(MAX_FALL_SPEED, FALL_SPEED + tier * FALL_SPEED_PER_TIER);
   if (curse === "haste") activeSpeed *= HASTE_FACTOR;
+  if (curse === "tumble") {
+    // The stone breaks free and tumbles down on its own.
+    steering = false;
+    Body.setVelocity(body, { x: rand(-2, 2), y: 1 });
+    Body.setAngularVelocity(body, rand(-0.12, 0.12));
+  }
   if (pending) {
     enchant(body, pending);
     pending = null;
@@ -339,6 +422,8 @@ function land() {
   let coins = 1;
   if (body.plugin.gold) coins += GOLD_BONUS;
   earned += coins * multiplier;
+  stats.earned = earned;
+  stats.laid++;
   landed.push(body);
   prayer = Math.min(prayerMax, prayer + PRAYER_PER_STONE);
   spawnTimer = 0.35;
@@ -360,6 +445,7 @@ function rotate() {
   if (mode !== "play" || !active || !steering) return;
   targetAngle += Math.PI / 2;
   Body.setAngle(active, targetAngle);
+  stats.rotations++;
 }
 
 function drop() {
@@ -378,6 +464,7 @@ function canCast(name) {
 function cast(name) {
   if (!canCast(name)) return;
   prayer -= spellCost(name);
+  if (name === "mortar") stats.mortars++;
   if (name === "repel") repel();
   else if (name === "zap") zap();
   else if (name === "scaffold") scaffold();
@@ -471,6 +558,7 @@ function catchBubble() {
     known.add(spell);
     flashBanner(SPELLS[spell].name + " learned");
   }
+  stats.bubbles++;
   bubble = null;
   updateHud();
 }
@@ -494,6 +582,9 @@ function frame(now) {
       accumulator -= STEP;
     }
     gameLogic(dt);
+    updateEffects(dt);
+  } else if (mode === "finale") {
+    updateFinale(dt);
     updateEffects(dt);
   }
   if (engine) draw();
@@ -544,6 +635,10 @@ function gameLogic(dt) {
     if (still && body.bounds.min.y < towerTop) towerTop = body.bounds.min.y;
   }
   height = Math.max(0, (FOUND_Y - towerTop) / TILE);
+  stats.height = Math.max(stats.height, height);
+  if (stats.rotations === 0) stats.heightNoTurn = Math.max(stats.heightNoTurn, height);
+  if (lost === 0) stats.heightNoLoss = Math.max(stats.heightNoLoss, height);
+  checkMissions();
 
   // Every tier of height, the tower below sets solid and coins count for more.
   const reached = Math.floor(height / TIER_CUBITS);
@@ -565,7 +660,7 @@ function gameLogic(dt) {
 
   if (lost >= lives) {
     endTimer += dt;
-    if (endTimer > 1.2) return finish();
+    if (endTimer > 0.8) return startFinale();
   } else if (!active) {
     spawnTimer -= dt;
     if (spawnTimer <= 0) spawn();
@@ -573,6 +668,47 @@ function gameLogic(dt) {
 
   camY += (cameraTarget() - camY) * Math.min(1, dt * 3);
   updateHud();
+}
+
+function checkMissions() {
+  for (const m of stage.missions) {
+    if (save.missions[m.id] || !m.check(stats)) continue;
+    save.missions[m.id] = true;
+    writeSave();
+    flashBanner("Mission done: " + m.text, 2.4);
+  }
+}
+
+// The tower is finished: a roof comes down onto its top and the camera pulls
+// back to show the whole thing.
+function startFinale() {
+  mode = "finale";
+  demon.present = false;
+  bubble = null;
+  if (active && steering) {
+    Composite.remove(engine.world, active);
+    active = null;
+  }
+  let top = null;
+  for (const body of landed) if (!top || body.bounds.min.y < top.bounds.min.y) top = body;
+  const x = top ? top.position.x : VIEW_W / 2;
+  const topY = top ? Math.min(top.bounds.min.y, towerTop) : towerTop;
+  const [, h] = artSize(images.roof, ROOF_PX);
+  finale = { t: 0, x, fromY: camY - h, toY: topY - h + 6, startFocus: camY + VIEW_H / 2 };
+}
+
+function updateFinale(dt) {
+  finale.t += dt;
+  // Pull back until the whole tower, foundation to roof, fits on screen.
+  const towerSpan = FOUND_Y + 160 - (towerTop - 140);
+  const fit = Math.min(1, (VIEW_H * 0.85) / towerSpan);
+  const p = Math.min(1, Math.max(0, (finale.t - 1) / 1.3));
+  const ease = p * p * (3 - 2 * p);
+  zoom = 1 + (fit - 1) * ease;
+  // Centre on the tower, but never show more ground below it than play does.
+  const target = Math.min((towerTop - 140 + FOUND_Y + 160) / 2, FOUND_Y + 160 - VIEW_H / (2 * fit));
+  focusY = finale.startFocus + (target - finale.startFocus) * ease;
+  if (finale.t > 3.6) finish();
 }
 
 function updateDemon(dt) {
@@ -616,7 +752,7 @@ function updateBubble(dt) {
   bubbleTimer -= dt;
   if (bubbleTimer > 0) return;
   bubbleTimer = rand(BUBBLE_EVERY[0], BUBBLE_EVERY[1]);
-  const unknown = BUBBLE_SPELLS.filter((s) => !known.has(s));
+  const unknown = stage.spells.filter((s) => !known.has(s));
   const spell = unknown.length ? unknown[Math.floor(Math.random() * unknown.length)] : "prayer";
   const fromLeft = Math.random() < 0.5;
   bubble = {
@@ -635,6 +771,7 @@ function updateEffects(dt) {
       if (e.t >= e.duration && !e.done) {
         e.done = true;
         demon.fleeing = 1.2;
+        stats.repelled++;
         effects.push({ kind: "flash", x: demon.x, y: demon.y, t: 0.6, color: "#bfe8ff" });
         flashBanner("Vade retro, Satana!");
       }
@@ -675,15 +812,65 @@ function finish() {
   if (record) save.best = final;
   save.coins += earned;
   writeSave();
-  reopenOverlay = () => showOverlay(
-    record ? "Deo gratias!" : "Consummatum est",
-    "Your tower stands " + final.toFixed(1) + " cubits high" +
-      (record ? ", a new record." : ". Your best is " + save.best.toFixed(1) + ".") +
-      " You earned " + earned + " coins, and have " + save.coins + " in all.",
-    ["Build again", newTower],
+  reopenOverlay = () => {
+    showOverlay(
+      record ? "Deo gratias!" : "Consummatum est",
+      "Your tower stands " + final.toFixed(1) + " cubits high" +
+        (record ? ", a new record." : ". Your best is " + save.best.toFixed(1) + ".") +
+        " You earned " + earned + " coins, and have " + save.coins + " in all.",
+      ["Build again", newTower],
+      ["Stages", showTitle],
+      ["Shop", openShop]
+    );
+    renderMissions($("overlay-extra"), stage);
+  };
+  reopenOverlay();
+}
+
+// The title screen, with the stages of formation and their missions.
+function showTitle() {
+  mode = "title";
+  reopenOverlay = showTitle;
+  const index = STAGES.findIndex((st) => st.id === save.stage);
+  showOverlay(
+    "Benedictine Bricks",
+    "Build the abbey tower as high as you can. Each stone you drop puts out a candle; when they are all out, a roof caps the tower. " +
+      "Drag to steer, tap to turn, swipe down to drop. Each stone you lay adds prayer for the spells at the right. " +
+      "Tap the bubbles that float past to learn new spells, and tap the demon to sprinkle him with holy water.",
+    ["Begin", newTower],
     ["Shop", openShop]
   );
-  reopenOverlay();
+  const box = $("overlay-extra");
+  const list = document.createElement("div");
+  list.className = "stages";
+  STAGES.forEach((st, i) => {
+    const open = stageOpen(i);
+    const done = st.missions.filter((m) => save.missions[m.id]).length;
+    const b = document.createElement("button");
+    b.className = "stage" + (i === index ? " current" : "");
+    b.disabled = !open;
+    b.textContent = (open ? st.name : "Locked") + "  " + done + "/3";
+    b.addEventListener("click", () => { save.stage = st.id; writeSave(); showTitle(); });
+    list.append(b);
+  });
+  box.append(list);
+  renderMissions(box, STAGES[Math.max(0, index)]);
+}
+
+function renderMissions(box, st) {
+  const ul = document.createElement("ul");
+  ul.className = "missions";
+  for (const m of st.missions) {
+    const li = document.createElement("li");
+    li.className = save.missions[m.id] ? "done" : "";
+    li.textContent = (save.missions[m.id] ? "✓ " : "○ ") + m.text;
+    ul.append(li);
+  }
+  const heading = document.createElement("p");
+  heading.className = "missions-title";
+  const next = STAGES.indexOf(st) + 1;
+  heading.textContent = st.name + " missions" + (next < STAGES.length ? ", to open " + STAGES[next].name : "");
+  box.append(heading, ul);
 }
 
 // Keep the foundation near the bottom of the screen until the tower grows,
@@ -767,18 +954,18 @@ function drawScenery() {
   // Distant mountains, then nearer hills, each scrolling more slowly than the tower.
   const farY = FOUND_Y + 30 + cameraRise() * 0.8;
   ctx.fillStyle = "#7aa6c0";
-  for (let x = 0; x < VIEW_W; x += 4) {
+  for (let x = -VIEW_W; x < VIEW_W * 2; x += 4) {
     const h = 150 - Math.abs(((x + 120) % 360) - 180) * 0.8 + Math.sin(x * 0.05) * 6;
     ctx.fillRect(x, Math.round(farY - h), 4, 600);
   }
   const hillY = FOUND_Y + 60 + cameraRise() * 0.7;
   ctx.fillStyle = "#4f8a6a";
-  for (let x = 0; x < VIEW_W; x += 4) {
+  for (let x = -VIEW_W; x < VIEW_W * 2; x += 4) {
     const h = 60 + Math.sin(x * 0.012 + 1) * 24 + Math.sin(x * 0.041) * 8;
     ctx.fillRect(x, Math.round(hillY - h), 4, 600);
   }
   ctx.fillStyle = "#3a6e50";
-  for (let x = 0; x < VIEW_W; x += 4) {
+  for (let x = -VIEW_W; x < VIEW_W * 2; x += 4) {
     const h = 26 + Math.sin(x * 0.03 + 2) * 10;
     ctx.fillRect(x, Math.round(hillY + 50 - h), 4, 600);
   }
@@ -808,12 +995,8 @@ function drawMarks() {
   }
 }
 
-function foundationLeft() {
-  return VIEW_W / 2 - (foundTiles * TILE) / 2;
-}
-
 function ledge() {
-  return { x: foundationLeft() - 5 * TILE, y: FOUND_Y + 3 * TILE };
+  return { x: foundRects[0].x - 5 * TILE, y: FOUND_Y + 3 * TILE };
 }
 
 // The monk climbs his scaffold so he stays on screen as the tower rises.
@@ -828,20 +1011,26 @@ function monkHands() {
 
 function drawFoundation() {
   const tex = images.stone_granite;
-  const centerX = VIEW_W / 2;
-  for (let row = 0; row < 14; row++) {
-    // Odd rows are shifted half a stone, like laid masonry.
-    const widthTiles = foundTiles + Math.floor(row / 2) * 2 + (row % 2);
-    const left = centerX - (widthTiles * TILE) / 2;
-    for (let i = 0; i < widthTiles; i++) {
-      ctx.drawImage(tex, left + i * TILE, FOUND_Y + row * TILE, TILE, TILE);
+  // A rocky hill under the pillars, widening as it goes down.
+  const hillLeft = foundRects[0].x;
+  const hillRight = foundRects[foundRects.length - 1].x + foundRects[foundRects.length - 1].w;
+  for (let row = 8; row < 34; row++) {
+    const spread = Math.floor((row - 8) / 2) * TILE;
+    const offset = row % 2 ? TILE / 2 : 0;
+    for (let x = hillLeft - spread - offset; x < hillRight + spread; x += TILE) {
+      ctx.drawImage(tex, x, FOUND_Y + row * TILE, TILE, TILE);
     }
   }
-  const grassX = foundationLeft();
-  ctx.fillStyle = "#5fa845";
-  ctx.fillRect(grassX, FOUND_Y - 2, foundTiles * TILE, 4);
-  ctx.fillStyle = "#86cf5c";
-  ctx.fillRect(grassX, FOUND_Y - 2, foundTiles * TILE, 2);
+  // Each pillar of the foundation, with grass on top.
+  for (const r of foundRects) {
+    for (let y = r.top; y < FOUND_Y + 8 * TILE; y += TILE) {
+      for (let x = r.x; x < r.x + r.w - 1; x += TILE) ctx.drawImage(tex, x, y, Math.min(TILE, r.x + r.w - x), TILE);
+    }
+    ctx.fillStyle = "#5fa845";
+    ctx.fillRect(r.x, r.top - 2, r.w, 4);
+    ctx.fillStyle = "#86cf5c";
+    ctx.fillRect(r.x, r.top - 2, r.w, 2);
+  }
 
   // The ledge, the scaffold above it, and the monk.
   const l = ledge();
@@ -865,6 +1054,8 @@ function drawStone(body) {
   const parts = body.parts.length > 1 ? body.parts.slice(1) : [body];
   const tex = images[body.plugin.tex];
   const tile = body.plugin.tile || TILE;
+  const hidden = body === active && body.plugin.curse === "invisible";
+  if (hidden) ctx.globalAlpha = 0.07 + Math.max(0, Math.sin(time * 3)) * 0.05;
   for (const part of parts) {
     ctx.save();
     ctx.translate(part.position.x, part.position.y);
@@ -880,6 +1071,7 @@ function drawStone(body) {
     }
     ctx.restore();
   }
+  ctx.globalAlpha = 1;
   if (body === active && body.plugin.curse === "haste") {
     ctx.fillStyle = "rgba(220,40,40,0.6)";
     for (let i = -1; i <= 1; i++) ctx.fillRect(body.position.x + i * 16, body.bounds.min.y - 30, 3, 22);
@@ -898,12 +1090,14 @@ function drawPlank(plank) {
 
 // A column of light, from the top of the screen down to where the stone will land.
 function drawDropGuide() {
-  if (!active || !steering) return;
+  if (!active || !steering || active.plugin.curse === "invisible") return;
   const minX = active.bounds.min.x;
   const maxX = active.bounds.max.x;
   const top = active.bounds.max.y;
-  const foundL = foundationLeft();
-  let surface = maxX > foundL && minX < foundL + foundTiles * TILE ? FOUND_Y : camY + VIEW_H;
+  let surface = camY + VIEW_H;
+  for (const r of foundRects) {
+    if (r.x + r.w > minX && r.x < maxX) surface = Math.min(surface, r.top);
+  }
   for (const b of landed.concat(planks)) {
     if (b.bounds.max.x > minX && b.bounds.min.x < maxX && b.bounds.min.y > top) {
       surface = Math.min(surface, b.bounds.min.y);
@@ -911,6 +1105,14 @@ function drawDropGuide() {
   }
   ctx.fillStyle = "rgba(255,255,240,0.16)";
   ctx.fillRect(minX, camY, maxX - minX, Math.max(0, surface - camY));
+}
+
+function drawRoof() {
+  if (!finale) return;
+  const [w] = artSize(images.roof, ROOF_PX);
+  const p = Math.min(1, finale.t / 0.9);
+  const y = finale.fromY + (finale.toY - finale.fromY) * p * p;
+  drawSprite("roof", Math.round(finale.x - w / 2), Math.round(y), ROOF_PX);
 }
 
 function drawDemon() {
@@ -1022,7 +1224,13 @@ function draw() {
 
   drawSky();
   ctx.save();
-  ctx.translate(0, -Math.round(camY));
+  if (mode === "finale") {
+    ctx.translate(VIEW_W / 2, VIEW_H / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-VIEW_W / 2, -focusY);
+  } else {
+    ctx.translate(0, -Math.round(camY));
+  }
   drawScenery();
   drawDropGuide();
   drawFoundation();
@@ -1035,6 +1243,7 @@ function draw() {
   drawBubble();
   drawEffects();
   drawTierPopup();
+  drawRoof();
   ctx.restore();
   drawBanner();
 }
@@ -1120,6 +1329,7 @@ function showOverlay(title, text, ...buttons) {
     b.addEventListener("click", action);
     row.append(b);
   }
+  $("overlay-extra").textContent = "";
   $("shop").hidden = true;
   $("overlay").hidden = false;
 }
@@ -1345,16 +1555,6 @@ loadArt((loaded) => {
   for (const el of document.querySelectorAll("[data-sprite]")) paintIcon(el, el.dataset.sprite);
   resize();
   newTower();
-  mode = "title";
-  reopenOverlay = () => showOverlay(
-    "Benedictine Bricks",
-    "Build the abbey tower as high as you can. Each stone you drop puts out a candle; when they are all out, the tower is finished. " +
-      "Drag to steer, tap to turn, swipe down to drop. " +
-      "Each stone you lay adds prayer. Spend it on the spells at the right: holy water drives off the demon, " +
-      "the bolt breaks your last stone. Tap the bubbles that float past to learn new spells.",
-    ["Begin", newTower],
-    ["Shop", openShop]
-  );
-  reopenOverlay();
+  showTitle();
   requestAnimationFrame(frame);
 });
