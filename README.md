@@ -6,7 +6,7 @@ serve the whole repo as-is.
 
 | Game | Folder | What it is |
 | --- | --- | --- |
-| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy |
+| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on six real Benedictine monasteries |
 
 ## Playing locally
 

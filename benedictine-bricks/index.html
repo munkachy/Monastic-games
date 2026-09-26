@@ -238,18 +238,6 @@
   .chunky:active { box-shadow: inset 0 -2px 0 var(--tan-dark); transform: translateY(2px); }
   .chunky:disabled { filter: grayscale(0.7); opacity: 0.6; }
 
-  .stages { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-  .stage {
-    min-height: 40px;
-    padding: 6px;
-    font-size: 8px;
-    line-height: 1.5;
-    background: var(--tan-light);
-    border: 3px solid var(--maroon);
-    border-radius: 4px;
-  }
-  .stage.current { background: var(--orange); color: #fff; text-shadow: 1px 1px 0 var(--maroon); }
-  .stage:disabled { opacity: 0.45; }
   .missions-title { font-size: 8px; color: var(--rose); margin: 0 0 8px; }
   .missions {
     list-style: none;
@@ -264,6 +252,104 @@
   }
   .missions li { font-size: 8px; line-height: 1.6; color: var(--ink); }
   .missions li.done { color: #2e8a4a; }
+
+  /* ---- Title: the monasteries ---- */
+  .title-screen { background: linear-gradient(#7fd0f5, #bfe8f8); padding: 12px; }
+  .title-panel {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .title-ribbon { border: 4px solid var(--maroon); border-radius: 6px; background: var(--rose); }
+  .mission-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .mission-rows li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 10px;
+    background: var(--parchment);
+    border: 3px solid var(--maroon);
+    border-bottom: 5px solid var(--rose);
+    border-radius: 4px;
+    font-size: 9px;
+    line-height: 1.6;
+    color: var(--maroon);
+  }
+  .mission-rows li::before { content: "✗"; color: var(--rose); font-size: 16px; }
+  .mission-rows li.done::before { content: "★"; color: var(--gold); }
+  .diploma {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #cfe8f8;
+    border: 3px solid var(--maroon);
+    border-radius: 4px;
+  }
+  .seal {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--rose);
+    border: 3px solid var(--maroon);
+    color: #fff;
+    font-size: 20px;
+  }
+  .diploma strong { display: block; font-size: 11px; color: var(--maroon); margin-bottom: 8px; }
+  #diploma-stars { font-size: 14px; letter-spacing: 2px; color: var(--gold); text-shadow: 1px 1px 0 var(--maroon); word-break: break-all; }
+  .world-head { text-align: center; font-size: 13px; color: #fff; text-shadow: 2px 2px 0 var(--maroon); }
+  .world-view { display: flex; align-items: center; gap: 6px; }
+  .world-view canvas {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    aspect-ratio: 640 / 440;
+    border: 3px solid var(--maroon);
+    border-radius: 4px;
+  }
+  .arrow {
+    width: 40px;
+    height: 64px;
+    flex-shrink: 0;
+    font-size: 26px;
+    color: #fff;
+    text-shadow: 2px 2px 0 var(--maroon);
+    background: transparent;
+    border: none;
+  }
+  .arrow:disabled { opacity: 0.25; }
+  #world-about { margin: 0; font-size: 8px; line-height: 1.8; color: var(--maroon); text-align: center; }
+  #world-dots { display: flex; justify-content: center; gap: 8px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--maroon); border: 2px solid var(--maroon); }
+  .dot.current { background: #fff; }
+  .dot.locked { opacity: 0.4; }
+  .title-bottom { display: flex; align-items: stretch; gap: 10px; }
+  .sign {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background: var(--tan-light);
+    border: 3px solid var(--maroon);
+    border-radius: 4px;
+    color: var(--maroon);
+  }
+  .sign small { font-size: 7px; }
+  .sign b { font-size: 16px; color: var(--rose); }
+  .title-bottom .chunky { height: auto; min-height: 56px; }
+  .chunky.start { background: #2eb86a; box-shadow: inset 0 -5px 0 #1f8a4e; }
+  .help { margin: 0; text-align: center; font-size: 7px; color: var(--maroon); }
 
   /* ---- Shop ---- */
   .shop-panel {
@@ -395,6 +481,31 @@
       </div>
     </div>
 
+    <div id="title" class="screen title-screen" hidden>
+      <div class="title-panel">
+        <h1 class="ribbon title-ribbon">Benedictine Bricks</h1>
+        <div class="world-head" id="world-name"></div>
+        <ul id="world-missions" class="mission-rows"></ul>
+        <div class="diploma">
+          <span class="seal" aria-hidden="true">&#10016;</span>
+          <div><strong id="diploma-name"></strong><span id="diploma-stars"></span></div>
+        </div>
+        <div class="world-view">
+          <button id="world-prev" class="arrow" aria-label="Previous monastery">&#9664;</button>
+          <canvas id="world-canvas"></canvas>
+          <button id="world-next" class="arrow" aria-label="Next monastery">&#9654;</button>
+        </div>
+        <p id="world-about"></p>
+        <div id="world-dots"></div>
+        <div class="title-bottom">
+          <div class="sign"><small>Highest tower</small><b id="world-best">0.0</b><small>cubits</small></div>
+          <button id="title-shop" class="chunky">Shop</button>
+          <button id="title-start" class="chunky start">Start</button>
+        </div>
+        <p class="help">Drag to steer · tap to turn · swipe down to drop</p>
+      </div>
+    </div>
+
     <div id="shop" class="screen" hidden>
       <div class="shop-panel">
         <div class="shop-top">
@@ -421,6 +532,7 @@
 </div>
 <script src="lib/matter.min.js"></script>
 <script src="art.js"></script>
+<script src="monasteries.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

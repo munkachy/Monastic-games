@@ -15,7 +15,8 @@ const PX = 2;                // one art pixel = 2 world pixels, for stones and s
 const FIGURE_PX = 3;         // the monk and the demon are drawn a little larger
 const ROOF_PX = 4;           // and the roof that caps a finished tower, larger still
 const TILE = 12 * PX;        // one stone square; also one cubit of height
-const FOUND_Y = MIN_VIEW_H - 120;  // top of the rock foundation
+const FOUND_Y = MIN_VIEW_H - 330;  // top of the monastery, where you build
+const GROUND_Y = FOUND_Y + 12.5 * TILE;  // the ground the monastery stands on
 const TOWER_TOP_AT = 0.55;   // where the top of the tower sits on screen (0 top, 1 bottom)
 
 const TIER_CUBITS = 10;      // every 10 cubits the tower below sets solid
@@ -106,61 +107,103 @@ const HABITS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Stages of monastic formation. Each has its own foundation, spells, curses and
-// three missions; finishing the missions opens the next stage.
-// A foundation is a list of pillars: x is the left edge in stones from the
+// The monasteries. Each is a world with its own building to build on, its own
+// spells and curses, and ten missions shown three at a time. Every mission
+// done earns a star; five stars open the next monastery. The rank is the step
+// of monastic formation that the monastery stands for.
+// A base is a list of solid tops: x is the left edge in stones from the
 // centre, w the width in stones, and drop how far below the top it starts.
 // ---------------------------------------------------------------------------
 
-const STAGES = [
+const STARS_TO_OPEN = 5;
+
+const WORLDS = [
   {
-    id: "postulant", name: "Postulant",
+    id: "subiaco", name: "Subiaco", rank: "Postulant",
+    about: "The Sacro Speco, built into the cliff around the cave where St. Benedict lived as a hermit.",
     base: [{ x: -3.5, w: 7 }],
     spells: ["mortar"],
     curses: ["ice"],
-    missions: [
-      { id: "p-height", text: "Reach 10 cubits", check: (s) => s.height >= 10 },
-      { id: "p-laid", text: "Lay 20 stones in one tower", check: (s) => s.laid >= 20 },
-      { id: "p-repel", text: "Drive off the demon", check: (s) => s.repelled >= 1 },
-    ],
   },
   {
-    id: "novice", name: "Novice",
-    base: [{ x: -4.5, w: 3 }, { x: 1.5, w: 3 }],
+    id: "montecassino", name: "Monte Cassino", rank: "Novice",
+    about: "St. Benedict's abbey on the mountain, where he wrote the Rule. Mind the cloister between the wings.",
+    base: [{ x: -5.5, w: 4 }, { x: 1.5, w: 4 }],
     spells: ["mortar", "scaffold"],
     curses: ["ice", "huge"],
-    missions: [
-      { id: "n-height", text: "Reach 20 cubits", check: (s) => s.height >= 20 },
-      { id: "n-norotate", text: "Reach 10 cubits without turning a stone", check: (s) => s.heightNoTurn >= 10 },
-      { id: "n-bubbles", text: "Catch two bubbles in one tower", check: (s) => s.bubbles >= 2 },
-    ],
   },
   {
-    id: "vows", name: "Simple Vows",
+    id: "cluny", name: "Cluny", rank: "Simple Vows",
+    about: "The great abbey of Burgundy. Of its church, one octagonal bell tower still stands.",
     base: [{ x: -2.5, w: 5 }],
     spells: ["mortar", "scaffold", "gild"],
     curses: ["ice", "huge", "invisible"],
-    missions: [
-      { id: "v-height", text: "Reach 30 cubits", check: (s) => s.height >= 30 },
-      { id: "v-mortar", text: "Use Mortar three times in one tower", check: (s) => s.mortars >= 3 },
-      { id: "v-noloss", text: "Reach 15 cubits without dropping a stone", check: (s) => s.heightNoLoss >= 15 },
-    ],
   },
   {
-    id: "profession", name: "Solemn Profession",
+    id: "melk", name: "Melk", rank: "Solemn Profession",
+    about: "The Baroque abbey on its rock above the Danube, with green domes on its towers.",
+    base: [{ x: -4, w: 8 }],
+    spells: ["mortar", "scaffold", "gild"],
+    curses: ["ice", "huge", "invisible", "haste"],
+  },
+  {
+    id: "montsaintmichel", name: "Mont-Saint-Michel", rank: "Prior",
+    about: "The abbey on its rock in the bay of Normandy, under the spire of St. Michael.",
+    base: [{ x: -2, w: 4 }],
+    spells: ["mortar", "scaffold", "gild"],
+    curses: ["ice", "huge", "invisible", "haste", "tumble"],
+  },
+  {
+    id: "montserrat", name: "Montserrat", rank: "Abbot",
+    about: "The abbey among the saw-toothed peaks of Catalonia, home of the Black Madonna.",
     base: [{ x: -5, w: 3, drop: 1 }, { x: -2, w: 6 }],
     spells: ["mortar", "scaffold", "gild"],
-    curses: ["ice", "huge", "invisible", "tumble"],
-    missions: [
-      { id: "s-height", text: "Reach 40 cubits", check: (s) => s.height >= 40 },
-      { id: "s-coins", text: "Earn 150 coins in one tower", check: (s) => s.earned >= 150 },
-      { id: "s-repel", text: "Drive off the demon three times in one tower", check: (s) => s.repelled >= 3 },
-    ],
+    curses: ["ice", "huge", "invisible", "haste", "tumble"],
   },
 ];
 
-function stageOpen(index) {
-  return index === 0 || STAGES[index - 1].missions.every((m) => save.missions[m.id]);
+// Ten missions for each monastery, harder at each one, in a fixed shuffled order.
+function makeMissions(world, level) {
+  const H = 10 + 5 * level;
+  const times = (n) => (n === 1 ? "once" : n === 2 ? "twice" : n + " times");
+  const half = Math.round(H * 0.5);
+  const pool = [
+    { key: "height", text: "Reach " + H + " cubits", check: (s) => s.height >= H },
+    { key: "laid", text: "Lay " + (20 + 5 * level) + " stones in one tower", check: (s) => s.laid >= 20 + 5 * level },
+    { key: "repel", text: "Drive off the demon " + times(1 + Math.floor(level / 2)) + " in one tower", check: (s) => s.repelled >= 1 + Math.floor(level / 2) },
+    { key: "noturn", text: "Reach " + half + " cubits without turning a stone", check: (s) => s.heightNoTurn >= half },
+    { key: "noloss", text: "Reach " + Math.round(H * 0.6) + " cubits without dropping a stone", check: (s) => s.heightNoLoss >= Math.round(H * 0.6) },
+    { key: "coins", text: "Earn " + (60 + 40 * level) + " coins in one tower", check: (s) => s.earned >= 60 + 40 * level },
+    { key: "bubbles", text: "Catch " + (1 + Math.floor(level / 2)) + " bubble" + (level >= 2 ? "s" : "") + " in one tower", check: (s) => s.bubbles >= 1 + Math.floor(level / 2) },
+    level === 0 ? { key: "mortar", text: "Use Mortar twice in one tower", check: (s) => s.mortars >= 2 }
+      : level === 1 ? { key: "scaffold", text: "Use Scaffold twice in one tower", check: (s) => s.scaffolds >= 2 }
+      : { key: "gold", text: "Build a tower with " + level + " gold stones", check: (s) => s.golds >= level },
+    { key: "noprayer", text: "Reach " + half + " cubits without using prayer", check: (s) => s.heightNoPrayer >= half },
+    { key: "cursed", text: "Lay " + (2 + level) + " cursed stones on one tower", check: (s) => s.cursedLanded >= 2 + level },
+  ];
+  // Shuffle with a fixed seed, so each monastery keeps the same order.
+  let seed = 7 + level * 31;
+  const next = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.map((m) => ({ ...m, id: world.id + "-" + m.key }));
+}
+
+WORLDS.forEach((w, i) => { w.missions = makeMissions(w, i); });
+
+function starsIn(world) {
+  return world.missions.filter((m) => save.missions[m.id]).length;
+}
+
+function worldOpen(index) {
+  return index === 0 || starsIn(WORLDS[index - 1]) >= STARS_TO_OPEN;
+}
+
+// The three missions on offer: the first three not yet done.
+function currentMissions(world) {
+  return world.missions.filter((m) => !save.missions[m.id]).slice(0, 3);
 }
 
 // ---------------------------------------------------------------------------
@@ -174,7 +217,7 @@ function loadSave() {
   const fresh = {
     coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
     rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
-    missions: {}, stage: "postulant",
+    missions: {}, world: "subiaco", bests: {},
   };
   let stored = {};
   try { stored = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) { /* no storage */ }
@@ -198,7 +241,8 @@ function writeSave() {
 
 let images;
 let engine;
-let stage = STAGES[0];
+let world = WORLDS[0];
+let missionsNow = [];     // the three missions on offer for this tower
 let foundRects = [];      // the foundation's pillars, in world pixels
 let stats = {};           // what has happened on this tower, for the missions
 let finale = null;        // the roof coming down and the camera pulling back
@@ -265,14 +309,15 @@ function newTower() {
   engine.positionIterations = 12;
   engine.velocityIterations = 8;
 
-  stage = STAGES.find((st) => st.id === save.stage) || STAGES[0];
+  world = WORLDS.find((w) => w.id === save.world) || WORLDS[0];
+  missionsNow = currentMissions(world);
   // A wider foundation (from the shop) widens the outer pillars outward.
   const extra = (FOUNDATION_BY_LEVEL[save.foundation] - FOUNDATION_BY_LEVEL[0]) / 2;
-  foundRects = stage.base.map((b, i) => {
+  foundRects = world.base.map((b, i) => {
     let left = b.x;
     let w = b.w;
     if (i === 0) { left -= extra; w += extra; }
-    if (i === stage.base.length - 1) w += extra;
+    if (i === world.base.length - 1) w += extra;
     return { x: VIEW_W / 2 + left * TILE, w: w * TILE, top: FOUND_Y + (b.drop || 0) * TILE };
   });
   for (const r of foundRects) {
@@ -308,7 +353,10 @@ function newTower() {
   prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
   const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
   known = new Set(rosary.spell ? [rosary.spell] : []);
-  stats = { height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, mortars: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0 };
+  stats = {
+    height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, mortars: 0, scaffolds: 0, golds: 0,
+    cursedLanded: 0, spellsUsed: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0, heightNoPrayer: 0,
+  };
   finale = null;
   zoom = 1;
   tier = 0;
@@ -355,7 +403,7 @@ function spawn() {
   // The demon may curse this stone.
   let curse = null;
   if (demon.present && !demon.fleeing && demon.curses > 0 && !pending && Math.random() < CURSE_CHANCE) {
-    curse = stage.curses[Math.floor(Math.random() * stage.curses.length)];
+    curse = world.curses[Math.floor(Math.random() * world.curses.length)];
     demon.curses--;
   }
 
@@ -424,6 +472,8 @@ function land() {
   earned += coins * multiplier;
   stats.earned = earned;
   stats.laid++;
+  if (body.plugin.gold) stats.golds++;
+  if (body.plugin.curse) stats.cursedLanded++;
   landed.push(body);
   prayer = Math.min(prayerMax, prayer + PRAYER_PER_STONE);
   spawnTimer = 0.35;
@@ -464,7 +514,9 @@ function canCast(name) {
 function cast(name) {
   if (!canCast(name)) return;
   prayer -= spellCost(name);
+  stats.spellsUsed++;
   if (name === "mortar") stats.mortars++;
+  if (name === "scaffold") stats.scaffolds++;
   if (name === "repel") repel();
   else if (name === "zap") zap();
   else if (name === "scaffold") scaffold();
@@ -613,7 +665,7 @@ function gameLogic(dt) {
   const screenBottom = camY + VIEW_H;
   for (const body of Composite.allBodies(engine.world)) {
     if (body.plugin.kind !== "stone" || body.isStatic) continue;
-    const gone = body.position.y > FOUND_Y + 320 ||
+    const gone = body.position.y > GROUND_Y + 200 ||
       (body.position.y > screenBottom + 60 && body.velocity.y > 3);
     if (!gone) continue;
     Composite.remove(engine.world, body);
@@ -638,6 +690,7 @@ function gameLogic(dt) {
   stats.height = Math.max(stats.height, height);
   if (stats.rotations === 0) stats.heightNoTurn = Math.max(stats.heightNoTurn, height);
   if (lost === 0) stats.heightNoLoss = Math.max(stats.heightNoLoss, height);
+  if (stats.spellsUsed === 0) stats.heightNoPrayer = Math.max(stats.heightNoPrayer, height);
   checkMissions();
 
   // Every tier of height, the tower below sets solid and coins count for more.
@@ -671,11 +724,11 @@ function gameLogic(dt) {
 }
 
 function checkMissions() {
-  for (const m of stage.missions) {
+  for (const m of missionsNow) {
     if (save.missions[m.id] || !m.check(stats)) continue;
     save.missions[m.id] = true;
     writeSave();
-    flashBanner("Mission done: " + m.text, 2.4);
+    flashBanner("★ " + m.text, 2.4);
   }
 }
 
@@ -700,13 +753,13 @@ function startFinale() {
 function updateFinale(dt) {
   finale.t += dt;
   // Pull back until the whole tower, foundation to roof, fits on screen.
-  const towerSpan = FOUND_Y + 160 - (towerTop - 140);
+  const towerSpan = GROUND_Y + 40 - (towerTop - 140);
   const fit = Math.min(1, (VIEW_H * 0.85) / towerSpan);
   const p = Math.min(1, Math.max(0, (finale.t - 1) / 1.3));
   const ease = p * p * (3 - 2 * p);
   zoom = 1 + (fit - 1) * ease;
   // Centre on the tower, but never show more ground below it than play does.
-  const target = Math.min((towerTop - 140 + FOUND_Y + 160) / 2, FOUND_Y + 160 - VIEW_H / (2 * fit));
+  const target = Math.min((towerTop - 140 + GROUND_Y + 40) / 2, GROUND_Y + 40 - VIEW_H / (2 * fit));
   focusY = finale.startFocus + (target - finale.startFocus) * ease;
   if (finale.t > 3.6) finish();
 }
@@ -752,7 +805,7 @@ function updateBubble(dt) {
   bubbleTimer -= dt;
   if (bubbleTimer > 0) return;
   bubbleTimer = rand(BUBBLE_EVERY[0], BUBBLE_EVERY[1]);
-  const unknown = stage.spells.filter((s) => !known.has(s));
+  const unknown = world.spells.filter((s) => !known.has(s));
   const spell = unknown.length ? unknown[Math.floor(Math.random() * unknown.length)] : "prayer";
   const fromLeft = Math.random() < 0.5;
   bubble = {
@@ -808,70 +861,132 @@ let reopenOverlay = null;   // redraws the screen the shop was opened from
 function finish() {
   mode = "over";
   const final = Number(height.toFixed(1));
-  const record = final > save.best;
-  if (record) save.best = final;
+  const best = save.bests[world.id] || 0;
+  const record = final > best;
+  if (record) save.bests[world.id] = final;
+  save.best = Math.max(save.best, final);
   save.coins += earned;
   writeSave();
   reopenOverlay = () => {
     showOverlay(
       record ? "Deo gratias!" : "Consummatum est",
-      "Your tower stands " + final.toFixed(1) + " cubits high" +
-        (record ? ", a new record." : ". Your best is " + save.best.toFixed(1) + ".") +
+      "Your tower at " + world.name + " stands " + final.toFixed(1) + " cubits high" +
+        (record ? ", a new record." : ". Your best here is " + best.toFixed(1) + ".") +
         " You earned " + earned + " coins, and have " + save.coins + " in all.",
       ["Build again", newTower],
-      ["Stages", showTitle],
+      ["Monasteries", showTitle],
       ["Shop", openShop]
     );
-    renderMissions($("overlay-extra"), stage);
+    const box = $("overlay-extra");
+    const ul = document.createElement("ul");
+    ul.className = "missions";
+    for (const m of missionsNow) {
+      const li = document.createElement("li");
+      li.className = save.missions[m.id] ? "done" : "";
+      li.textContent = (save.missions[m.id] ? "★ " : "☆ ") + m.text;
+      ul.append(li);
+    }
+    const stars = document.createElement("p");
+    stars.className = "missions-title";
+    stars.textContent = starsIn(world) + " of " + world.missions.length + " stars at " + world.name;
+    box.append(stars, ul);
   };
   reopenOverlay();
 }
 
-// The title screen, with the stages of formation and their missions.
+// ---------------------------------------------------------------------------
+// The title screen: page through the monasteries, see their missions and stars.
+// ---------------------------------------------------------------------------
+
+let titleIndex = 0;
+
 function showTitle() {
   mode = "title";
   reopenOverlay = showTitle;
-  const index = STAGES.findIndex((st) => st.id === save.stage);
-  showOverlay(
-    "Benedictine Bricks",
-    "Build the abbey tower as high as you can. Each stone you drop puts out a candle; when they are all out, a roof caps the tower. " +
-      "Drag to steer, tap to turn, swipe down to drop. Each stone you lay adds prayer for the spells at the right. " +
-      "Tap the bubbles that float past to learn new spells, and tap the demon to sprinkle him with holy water.",
-    ["Begin", newTower],
-    ["Shop", openShop]
-  );
-  const box = $("overlay-extra");
-  const list = document.createElement("div");
-  list.className = "stages";
-  STAGES.forEach((st, i) => {
-    const open = stageOpen(i);
-    const done = st.missions.filter((m) => save.missions[m.id]).length;
-    const b = document.createElement("button");
-    b.className = "stage" + (i === index ? " current" : "");
-    b.disabled = !open;
-    b.textContent = (open ? st.name : "Locked") + "  " + done + "/3";
-    b.addEventListener("click", () => { save.stage = st.id; writeSave(); showTitle(); });
-    list.append(b);
-  });
-  box.append(list);
-  renderMissions(box, STAGES[Math.max(0, index)]);
+  titleIndex = Math.max(0, WORLDS.findIndex((w) => w.id === save.world));
+  $("overlay").hidden = true;
+  $("shop").hidden = true;
+  $("title").hidden = false;
+  renderTitle();
 }
 
-function renderMissions(box, st) {
-  const ul = document.createElement("ul");
-  ul.className = "missions";
-  for (const m of st.missions) {
+function renderTitle() {
+  const w = WORLDS[titleIndex];
+  const open = worldOpen(titleIndex);
+  const stars = starsIn(w);
+  $("world-name").textContent = (titleIndex + 1) + " · " + w.name;
+  $("world-about").textContent = open ? w.about : "Earn " + STARS_TO_OPEN + " stars at " + WORLDS[titleIndex - 1].name + " to open " + w.name + ".";
+
+  const list = $("world-missions");
+  list.textContent = "";
+  const shown = open ? currentMissions(w) : [];
+  for (const m of shown) {
     const li = document.createElement("li");
-    li.className = save.missions[m.id] ? "done" : "";
-    li.textContent = (save.missions[m.id] ? "✓ " : "○ ") + m.text;
-    ul.append(li);
+    li.textContent = m.text;
+    list.append(li);
   }
-  const heading = document.createElement("p");
-  heading.className = "missions-title";
-  const next = STAGES.indexOf(st) + 1;
-  heading.textContent = st.name + " missions" + (next < STAGES.length ? ", to open " + STAGES[next].name : "");
-  box.append(heading, ul);
+  if (open && shown.length === 0) {
+    const li = document.createElement("li");
+    li.className = "done";
+    li.textContent = "Every mission here is done. Deo gratias!";
+    list.append(li);
+  }
+
+  $("diploma-name").textContent = stars >= STARS_TO_OPEN ? w.rank : w.rank + " (" + stars + "/" + STARS_TO_OPEN + ")";
+  $("diploma-stars").textContent = "★".repeat(stars) + "☆".repeat(w.missions.length - stars);
+  $("world-best").textContent = (save.bests[w.id] || 0).toFixed(1);
+  $("title-start").disabled = !open;
+  $("world-prev").disabled = titleIndex === 0;
+  $("world-next").disabled = titleIndex === WORLDS.length - 1;
+
+  const dots = $("world-dots");
+  dots.textContent = "";
+  WORLDS.forEach((_, i) => {
+    const d = document.createElement("span");
+    d.className = "dot" + (i === titleIndex ? " current" : "") + (worldOpen(i) ? "" : " locked");
+    dots.append(d);
+  });
+
+  drawWorldPicture($("world-canvas"), w, open);
 }
+
+// A picture of the monastery for the title screen.
+function drawWorldPicture(el, w, open) {
+  const c = el.getContext("2d");
+  const T = TILE;
+  el.width = 640;
+  el.height = 440;
+  const s = el.width / (32 * T);
+  const sky = c.createLinearGradient(0, 0, 0, el.height);
+  sky.addColorStop(0, "#7fd0f5");
+  sky.addColorStop(1, "#d8f2ff");
+  c.fillStyle = sky;
+  c.fillRect(0, 0, el.width, el.height);
+  c.save();
+  c.scale(s, s);
+  c.translate(16 * T, 9.5 * T);
+  c.fillStyle = "#5fa845";
+  c.fillRect(-16 * T, 12.5 * T, 32 * T, 6 * T);
+  MonasteryArt[w.id](c);
+  c.restore();
+  if (!open) {
+    c.fillStyle = "rgba(30,20,40,0.55)";
+    c.fillRect(0, 0, el.width, el.height);
+    c.fillStyle = "#fff";
+    c.font = "28px 'Press Start 2P', monospace";
+    c.textAlign = "center";
+    c.fillText("Locked", el.width / 2, el.height / 2);
+  }
+}
+
+$("world-prev").addEventListener("click", () => { titleIndex = Math.max(0, titleIndex - 1); renderTitle(); });
+$("world-next").addEventListener("click", () => { titleIndex = Math.min(WORLDS.length - 1, titleIndex + 1); renderTitle(); });
+$("title-start").addEventListener("click", () => {
+  save.world = WORLDS[titleIndex].id;
+  writeSave();
+  newTower();
+});
+$("title-shop").addEventListener("click", openShop);
 
 // Keep the foundation near the bottom of the screen until the tower grows,
 // then keep the top of the tower a little below the middle of the screen.
@@ -952,13 +1067,13 @@ function drawScenery() {
     ctx.globalAlpha = 1;
   }
   // Distant mountains, then nearer hills, each scrolling more slowly than the tower.
-  const farY = FOUND_Y + 30 + cameraRise() * 0.8;
+  const farY = GROUND_Y - 40 + cameraRise() * 0.8;
   ctx.fillStyle = "#7aa6c0";
   for (let x = -VIEW_W; x < VIEW_W * 2; x += 4) {
     const h = 150 - Math.abs(((x + 120) % 360) - 180) * 0.8 + Math.sin(x * 0.05) * 6;
     ctx.fillRect(x, Math.round(farY - h), 4, 600);
   }
-  const hillY = FOUND_Y + 60 + cameraRise() * 0.7;
+  const hillY = GROUND_Y - 10 + cameraRise() * 0.7;
   ctx.fillStyle = "#4f8a6a";
   for (let x = -VIEW_W; x < VIEW_W * 2; x += 4) {
     const h = 60 + Math.sin(x * 0.012 + 1) * 24 + Math.sin(x * 0.041) * 8;
@@ -995,11 +1110,12 @@ function drawMarks() {
   }
 }
 
+// The monk stands on the ground to the left of the monastery.
 function ledge() {
-  return { x: foundRects[0].x - 5 * TILE, y: FOUND_Y + 3 * TILE };
+  return { x: foundRects[0].x - 5 * TILE, y: GROUND_Y };
 }
 
-// The monk climbs his scaffold so he stays on screen as the tower rises.
+// He climbs a scaffold so he stays on screen as the tower rises.
 function monkFeetY() {
   return Math.min(ledge().y, camY + VIEW_H - 40);
 }
@@ -1010,32 +1126,35 @@ function monkHands() {
 }
 
 function drawFoundation() {
-  const tex = images.stone_granite;
-  // A rocky hill under the pillars, widening as it goes down.
-  const hillLeft = foundRects[0].x;
-  const hillRight = foundRects[foundRects.length - 1].x + foundRects[foundRects.length - 1].w;
-  for (let row = 8; row < 34; row++) {
-    const spread = Math.floor((row - 8) / 2) * TILE;
-    const offset = row % 2 ? TILE / 2 : 0;
-    for (let x = hillLeft - spread - offset; x < hillRight + spread; x += TILE) {
-      ctx.drawImage(tex, x, FOUND_Y + row * TILE, TILE, TILE);
-    }
-  }
-  // Each pillar of the foundation, with grass on top.
-  for (const r of foundRects) {
-    for (let y = r.top; y < FOUND_Y + 8 * TILE; y += TILE) {
-      for (let x = r.x; x < r.x + r.w - 1; x += TILE) ctx.drawImage(tex, x, y, Math.min(TILE, r.x + r.w - x), TILE);
-    }
-    ctx.fillStyle = "#5fa845";
-    ctx.fillRect(r.x, r.top - 2, r.w, 4);
-    ctx.fillStyle = "#86cf5c";
-    ctx.fillRect(r.x, r.top - 2, r.w, 2);
-  }
+  // The ground.
+  ctx.fillStyle = "#5fa845";
+  ctx.fillRect(-VIEW_W, GROUND_Y, VIEW_W * 3, 8);
+  ctx.fillStyle = "#4a8a3a";
+  ctx.fillRect(-VIEW_W, GROUND_Y + 8, VIEW_W * 3, 800);
 
-  // The ledge, the scaffold above it, and the monk.
+  // The monastery, drawn from monasteries.js.
+  ctx.save();
+  ctx.translate(VIEW_W / 2, FOUND_Y);
+  MonasteryArt[world.id](ctx);
+  ctx.restore();
+
+  // A wider foundation from the shop: wooden platforms out to each side.
+  world.base.forEach((b, i) => {
+    const r = foundRects[i];
+    const artLeft = VIEW_W / 2 + b.x * TILE;
+    const artRight = artLeft + b.w * TILE;
+    for (const [from, to] of [[r.x, artLeft], [artRight, r.x + r.w]]) {
+      if (to - from < 2) continue;
+      for (let x = from; x < to; x += TILE) ctx.drawImage(images.stone_wood, x, r.top, Math.min(TILE, to - x), TILE / 2);
+      ctx.fillStyle = "#6a4424";
+      ctx.fillRect(from + 4, r.top + TILE / 2, 4, TILE);
+      ctx.fillRect(to - 8, r.top + TILE / 2, 4, TILE);
+    }
+  });
+
+  // The scaffold the monk climbs, and the monk.
   const l = ledge();
   const w = 4 * TILE;
-  for (let i = 0; i < 4; i++) ctx.drawImage(tex, l.x + i * TILE, l.y, TILE, TILE);
   const feet = monkFeetY();
   if (feet < l.y) {
     ctx.fillStyle = "#6a4424";
@@ -1331,12 +1450,14 @@ function showOverlay(title, text, ...buttons) {
   }
   $("overlay-extra").textContent = "";
   $("shop").hidden = true;
+  $("title").hidden = true;
   $("overlay").hidden = false;
 }
 
 function hideScreens() {
   $("overlay").hidden = true;
   $("shop").hidden = true;
+  $("title").hidden = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1354,6 +1475,7 @@ function openShop() {
   mode = "shop";
   shopPick = null;
   $("overlay").hidden = true;
+  $("title").hidden = true;
   renderShop();
   $("shop").hidden = false;
 }
