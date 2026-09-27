@@ -232,3 +232,12 @@ nine bosses (O'Connor, Ryan, Hansen; the Speakers' Corner Champion, the
 WitchTok influencer, Destiny; the Affirming Pastor, White, Ehrman): 40–65 /
 45–60 / 50–53 across runs, so its regular power went 1.35 → 1.25. Whole
 campaign on Normal: grunt 85, boss 76.
+
+## Update: great moves hit half again as hard
+
+Each hero's great move (the last skill in the kit) and any duo move now hits,
+heals and shields ×1.5 (GREAT_KICK), so unlocking it feels like a real
+upgrade. Jimmy Akin's Senior Apologist stun went 25% → 50% (Data's number);
+Brant Pitre moved onto Spock's kit with T'Pol's stats. On their own these
+made Normal easier (grunt 90, boss 82), so opponent punch went 1.6 → 1.8:
+grunt 85, boss 74, 5.4 rounds a debate (Normal, 30 runs; 1.7 gave 89 / 79).

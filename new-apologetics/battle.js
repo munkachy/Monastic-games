@@ -32,7 +32,7 @@ const Battle = (() => {
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const careK = () => CARE_K / IMPACT;
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
-  let FOE_PUNCH = 1.6;     // opponents argue harder than their listed stats
+  let FOE_PUNCH = 1.8;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
   const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
