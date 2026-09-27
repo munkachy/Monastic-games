@@ -386,7 +386,7 @@ const GameData = (() => {
       { name: "Mercury in Retrograde", foes: ["tarot", "crystal", "tarot2"] },
       { name: "Apollo Loves You", foes: ["tarot", "witch", "crystal"], boss: "witch" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["martins", "hicks"] },
-    { id: "body", par: 8, power: [3.1, 2.2], title: "My Body, My Brand", group: "Online Culture", missions: [
+    { id: "body", par: 8, power: [3.1, 2.0], title: "My Body, My Brand", group: "Online Culture", missions: [
       { name: "Link in Bio", foes: ["creator", "activist"] },
       { name: "The Campus Rally", foes: ["activist", "creator", "activist2"] },
       { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
