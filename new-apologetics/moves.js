@@ -105,7 +105,33 @@ const Theater = (() => {
     down(ctx, x, y, t) { const b = (t * 30) % 10; ctx.fillStyle = "#de5e55"; for (let i = 0; i < 3; i++) { ctx.fillRect(x + 20, y + 4 + b + i * 3, 6 - i * 2 + 4, 2); } outlinedText(ctx, "↓", x + 24, y + 22 + b, 18, "#de5e55"); },
     halo(ctx, x, y, t) { ctx.strokeStyle = "#ffe07a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y - 4, 18, 5, 0, 0, Math.PI * 2); ctx.stroke(); for (let i = 0; i < 4; i++) { const a = t * 3 + i * 1.6; px(ctx, x + Math.cos(a) * 26, y + 20 + Math.sin(a) * 30, 3, "#fff6c0"); } },
     heal(ctx, x, y, t) { for (let i = 0; i < 3; i++) { const k = (t * 1.5 + i / 3) % 1; const cx = x - 16 + i * 16; const cy = y + 60 - k * 70; ctx.globalAlpha = 1 - k; px(ctx, cx - 2, cy - 6, 4, "#74c07a"); ctx.fillStyle = "#74c07a"; ctx.fillRect(cx - 6, cy - 2, 12, 4); ctx.fillRect(cx - 2, cy - 6, 4, 12); ctx.globalAlpha = 1; } },
-    shield(ctx, x, y, t) { ctx.strokeStyle = "rgba(126,164,230,0.9)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, y + 48, 44, 58, 0, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = "rgba(126,164,230,0.14)"; ctx.fill(); px(ctx, x - 28, y + 14 + Math.sin(t * 3) * 3, 4, "#dbe8ff"); },
+    // A Shield of Faith forming: the same bubble that stays on afterwards,
+    // growing into place, so the move and the lasting shield look like one.
+    shield(ctx, x, y, t, k) {
+      const feet = y + FIG_H - 4, cy = feet - 50, g = clamp(k * 2.5, 0, 1);
+      ctx.save(); ctx.globalAlpha = 0.3 + 0.7 * (1 - Math.abs(g - 0.8));
+      ctx.translate(x, cy); ctx.scale(g, g * 62 / 34);
+      ctx.strokeStyle = "rgba(230,240,255,0.9)"; ctx.lineWidth = 2.5 / Math.max(0.2, g);
+      ctx.beginPath(); ctx.arc(0, 0, 34, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(126,164,230,0.12)"; ctx.fill();
+      ctx.restore();
+    },
+    // A stance taken: a ring of steel closes in to the feet (the ring that
+    // stays while the stance holds), and a glint of steel runs across him.
+    stance(ctx, x, y, t, k) {
+      const feet = y + FIG_H - 4, g = clamp(k * 2.5, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = 1 - clamp((k - 0.6) * 2.5, 0, 1);
+      ctx.strokeStyle = "#c8d4e6"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(x, feet + 1, 34 + (1 - g) * 50, 8 + (1 - g) * 12, 0, 0, Math.PI * 2); ctx.stroke();
+      const sweep = clamp((k - 0.3) * 3, 0, 1);
+      if (sweep > 0 && sweep < 1) {
+        const gx = x - 30 + sweep * 60;
+        ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(gx - 10, feet - 70); ctx.lineTo(gx + 10, feet - 30); ctx.stroke();
+      }
+      ctx.restore();
+    },
     up(ctx, x, y, t) { const b = (t * 30) % 10; outlinedText(ctx, "↑", x + 24, y + 26 - b, 18, "#74c07a"); },
     hearts(ctx, x, y, t) { for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; const cx = x - 18 + i * 18 + Math.sin(k * 6 + i) * 4; const cy = y + 50 - k * 70; ctx.globalAlpha = 1 - k; heart(ctx, cx, cy, 2, "#ff7a9a"); ctx.globalAlpha = 1; } },
     pipDown(ctx, x, y, t, k) { ctx.globalAlpha = 1 - k; outlinedText(ctx, "▼ ZEAL", x, y - 16 - k * 20, 13, "#e25a50"); ctx.globalAlpha = 1; },
@@ -795,7 +821,7 @@ const Theater = (() => {
     muse: [
       { name: "Pointed Question", kind: volley, glyphs: ["?"], color: "#de5e55", mark: "doubting" },
       { name: "Open Challenge", kind: hex, to: "all", pose: "raise", say: "I'll debate any of you. Right now.", mark: ["called", "pipDown"], fx: (ctx, api, h, targets, t, k) => waves(ctx, api, h, targets, t, k, "#de5e55") },
-      { name: "Steelman Stance", kind: aura, to: "self", mark: ["shield", "up"], say: "Let me put your case better.", color: "#cfd6dc" },
+      { name: "Steelman Stance", kind: aura, to: "self", mark: ["stance", "up"], say: "Let me put your case better.", color: "#cfd6dc" },
       { name: "Camera Mog", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 136, faceScale: 7, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
       { name: "Vindicatory Miracles", duo: "spitzer", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
     ],
@@ -809,7 +835,7 @@ const Theater = (() => {
       { name: "Clarifying Questions", kind: volley, glyphs: ["?", "?", "?"], color: "#9fd0ff" },
       { name: "Time's Up", kind: approach, to: "foe", item: "timer", say: "Time's up.", mark: "down" },
       { name: "Point of Order", kind: hex, to: "all", pose: "raise", say: "Point of order!", mark: ["factcheck", "pipDown"] },
-      { name: "Bayesian Update", kind: cinematic, who: "Cameron Bertuzzi", color: "#2f5a8a", scene: SCENES.bayes, to: "allies", mark: ["heal", "shield"] },
+      { name: "Bayesian Update", kind: cinematic, who: "Cameron Bertuzzi", color: "#2f5a8a", scene: SCENES.bayes, to: "allies", mark: ["heal", "up"] },
     ],
     horn: [
       { name: "Deadpan", kind: volley, glyphs: ["Wonderful.", "…and yet here we are."], color: "#9fd0ff", mark: "down" },
@@ -837,18 +863,18 @@ const Theater = (() => {
       { name: "Cheeky Question", kind: volley, glyphs: ["Mate…"], color: "#e8b94a" },
       { name: "Pints with Aquinas", kind: approach, to: "ally", item: "pint", say: "Cheers, mate!", mark: "heal", mark2: "pipUp" },
       { name: "Australian Charm", kind: approach, to: "ally", say: "G'day! You've got this.", mark: "up", mark2: "hearts" },
-      { name: "Summa Session", kind: cinematic, who: "Matt Fradd", color: "#1f4a2e", scene: SCENES.pub, to: "allies", mark: ["shield", "heal"] },
+      { name: "Summa Session", kind: cinematic, who: "Matt Fradd", color: "#1f4a2e", scene: SCENES.pub, to: "allies", mark: ["up", "heal"] },
     ],
     godlogic: [
       { name: "Smooth Question", kind: volley, glyphs: ["♪", "♫"], color: "#c69ae8" },
-      { name: "Smooth Pivot", kind: approach, to: "ally", item: "scroll", say: "Here's your citation.", mark: "shield" },
+      { name: "Smooth Pivot", kind: approach, to: "ally", item: "scroll", say: "Here's your citation.", mark: "up" },
       { name: "Stay Smooth", kind: aura, to: "allies", mark: ["shield", "pipUp"], say: "Stay smooth.", color: "#c69ae8" },
       { name: "Common Ground", kind: cinematic, who: "GodLogic", color: "#6a2a8a", scene: SCENES.venn, front: SCENES.godlogicFront, to: "all", mark: ["factcheck", "down"] },
     ],
     barron: [
       { name: "Sunday Sermon", kind: volley, glyphs: ["Friends,"], color: "#e8b94a" },
       { name: "Word on Fire", kind: hex, to: "all", pose: "raise", say: "Friends, the Gospel is good news!", mark: ["pipDown"], fx: (ctx, api, h, targets, t, k) => { waves(ctx, api, h, targets, t, k, "#ff8a3a"); for (const a of targets) if (k >= 1 && t < 1.6) { const p = api.head(a); ctx.fillStyle = "#ffcf5a"; ctx.fillRect(p.x - 4, p.y - 22, 8, 14); ctx.fillStyle = "#ff8a3a"; ctx.fillRect(p.x - 2, p.y - 16, 4, 8); } } },
-      { name: "The Way of Beauty", kind: aura, to: "self", mark: ["shield", "up"], foes: "called", backdrop: (ctx, h, t) => { const q = span(t, 0.1, 0.7); const cx = h.x; const cy = h.y - 120; const cs = ["#c33a3a", "#2f5ad8", "#e8b94a", "#2f8a4a"]; for (let i = 0; i < 8; i++) { ctx.fillStyle = cs[i % 4]; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, 60 * q, (i * Math.PI) / 4, ((i + 1) * Math.PI) / 4); ctx.fill(); ctx.globalAlpha = 1; } } },
+      { name: "The Way of Beauty", kind: aura, to: "self", mark: ["up"], foes: "called", backdrop: (ctx, h, t) => { const q = span(t, 0.1, 0.7); const cx = h.x; const cy = h.y - 120; const cs = ["#c33a3a", "#2f5ad8", "#e8b94a", "#2f8a4a"]; for (let i = 0; i < 8; i++) { ctx.fillStyle = cs[i % 4]; ctx.globalAlpha = 0.7; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, 60 * q, (i * Math.PI) / 4, ((i + 1) * Math.PI) / 4); ctx.fill(); ctx.globalAlpha = 1; } } },
       { name: "No Beige Catholicism", kind: cinematic, who: "Bishop Barron", color: "#9b1f5a", scene: SCENES.beige, to: "one", mark: ["muted", "pipDown"] },
     ],
     hicks: [
@@ -859,7 +885,7 @@ const Theater = (() => {
     ],
     pine: [
       { name: "Distinguo", kind: volley, to: "two", glyphs: ["I distinguish…", "…the major."], color: "#e8b94a" },
-      { name: "Sed Contra", kind: aura, to: "allies", mark: ["crit", "shield"], say: "Sed contra!" },
+      { name: "Sed Contra", kind: aura, to: "allies", mark: ["crit", "halo"], say: "Sed contra!" },
       { name: "The Five Ways", kind: hex, to: "all", say: "First, from motion…", mark: ["down", "pipDown"], fx: (ctx, api, h, targets, t, k) => { ["I", "II", "III", "IV", "V"].forEach((n, i) => { const q = clamp(k * 1.6 - i * 0.15, 0, 1); if (q <= 0 || q >= 1) return; const a = targets[i % targets.length]; const p = api.head(a); outlinedText(ctx, n, lerp(h.x + 30, p.x, q), lerp(h.y - 70, p.y + 30, q) - Math.sin(q * Math.PI) * 30, 22, "#e8b94a"); }); } },
       { name: "Respondeo", kind: cinematic, who: "Fr. Gregory Pine, OP", color: "#1d1d24", scene: SCENES.summa, to: "one", mark: ["factcheck", "pipDown"], impact: impactOn("#e8b94a") },
     ],
@@ -871,7 +897,7 @@ const Theater = (() => {
     rose: [
       { name: "Every Life", kind: volley, glyphs: ["♥", "♥"], color: "#ff6a80" },
       { name: "Live Action", kind: cinematic, who: "Lila Rose", color: "#b8505a", scene: SCENES.rec, to: "all", mark: ["down", "pipDown"] },
-      { name: "Undercover", kind: aura, to: "self", say: "Nobody knows who I am.", mark: ["shield", "up"] },
+      { name: "Undercover", kind: aura, to: "self", say: "Nobody knows who I am.", mark: ["crit", "heal"] },
     ],
     holdsworth: [
       { name: "Ten-Minute Essay", kind: volley, glyphs: ["Here's why."], color: "#e8b94a" },
@@ -898,7 +924,7 @@ const Theater = (() => {
     ],
     schmid: [
       { name: "Majesty of Reason", kind: volley, glyphs: ["Consider…", "…a dilemma."], color: "#9fd0ff" },
-      { name: "Steelman", kind: aura, to: "self", say: "Let me steelman that.", mark: ["shield", "up"] },
+      { name: "Steelman", kind: aura, to: "self", say: "Let me steelman that.", mark: ["stance", "up"] },
       { name: "Contingency Argument", kind: hex, to: "one", say: "Why is there anything at all?", mark: ["examined", "down"] },
       { name: "Welcome Home", kind: approach, to: "ally", say: "Welcome home.", mark: "up", mark2: "pipUp" },
     ],
