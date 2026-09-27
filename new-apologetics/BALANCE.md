@@ -136,3 +136,20 @@ Crucible mission ≥ 20% with the smart bot; Crucible bosses 23-60% with two
 extra levels. Joe Schmid comes home in about half of Normal runs (the smart
 bot hunts Zeal); as a hero (Soji's kit) his team wins 88/120 against 99 for
 a random team, like Fr. Spitzer (91): a support, a little below average.
+
+## Update: the whole team backs up
+
+Backing up used to stop at the first friend whose roll succeeded, so a move
+drew at most one backer. Now every friend with Zeal 0 or higher rolls for
+himself (25% at Zeal 0, 40%, 55%, 70% at +3), for heroes and opponents alike,
+and when a hero is Discouraged each friend still standing is Shaken and loses
+1 Zeal (Resilience and Steadfast can hold it; it doesn't chain).
+
+Backers per hero attack (random teams, Normal): before 0: 59%, 1: 31%,
+2: 8%, 3: 1%; now 0: 37%, 1: 34%, 2: 22%, 3: 7%.
+
+Tuning (smart bot, regular / boss win %): letting opponents pile on down to
+Zeal −2 made Normal 77 / 58, too hard; down to −1, 88 / 71; the same rule as
+the heroes (from 0) with the higher hero chances kept the old curve. Final,
+30 runs per mission: Gentle 100 / 99, Normal 92 / 77, Very Hard 58 / 38,
+Crucible 46 / 31 (before: 100 / 99, 93 / 81, 56 / 37, 39 / 31).
