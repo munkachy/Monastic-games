@@ -678,6 +678,8 @@ const Battle = (() => {
       if (e.friendsCleanse) out.push("Frees friends from being " + (LABELS[e.friendsCleanse] || e.friendsCleanse));
       if (e.summon) out.push("Calls in help");
     }
+    // Every hit can land as a critical hit, which also knocks Zeal down.
+    if (sk.effects.some((e) => e.dmg)) out.push("A critical hit also knocks Zeal down 1 (not through a podium)");
     return [...new Set(out)].join(" · ");
   }
 
