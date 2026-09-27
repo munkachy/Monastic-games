@@ -393,7 +393,7 @@ const GameData = (() => {
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     // The final chapter: open once every story is done, and the hardest in
     // the game. Every boss comes back to the table.
-    { id: "finale", power: [1.35, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
+    { id: "finale", power: [1.25, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
       { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
       { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
       { name: "The Last Table", foes: ["pastor", "white", "ehrman"], boss: "white" },

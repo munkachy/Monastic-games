@@ -217,3 +217,18 @@ Child of God (Group Hug: heal, cleanse, Morale up). With the shorter
 debates the final chapter's last debate fell to 25%, so its boss power went
 0.85 → 0.7. Normal, 30 runs: Identity 100 / 70 / 77 / boss 73; final chapter
 73 / 53 / 57; whole campaign grunt 87, boss 81.
+
+## Update: Misquoting Jesus? and Brant Pitre; nine bosses in the final chapter
+
+Chapter 8 (Skeptical Scholars; Bart Ehrman; Religion 101 students and
+mythicist YouTubers), par 8.5. Brant Pitre joins at its end, modelled on Saru
+(base × 10: Health 25, Attack 6.4, Defense 0.44, Tech 9, Speed 16.25):
+Jewish Roots (Phaser), The Big Picture (Tricorder Scan: Exposed, Defense
+Down Major), The New Passover (We Are Starfleet: Attack Up Major, Morale
+up), The Case for Jesus (Vahar'ai Quills: heavy hit, Wound → Doubting).
+First cut [3.0, 2.3] gave 100 / 60 / 85 / boss 50; eased to [2.8, 1.9]:
+100 / 97 / 77 / boss 73 (Normal, 30 runs). The final chapter now fields all
+nine bosses (O'Connor, Ryan, Hansen; the Speakers' Corner Champion, the
+WitchTok influencer, Destiny; the Affirming Pastor, White, Ehrman): 40–65 /
+45–60 / 50–53 across runs, so its regular power went 1.35 → 1.25. Whole
+campaign on Normal: grunt 85, boss 76.
