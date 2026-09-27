@@ -174,3 +174,20 @@ settled at New Age [3.0, 2.6], Body [3.1, 2.2], Reformed boss 1.3 → 1.15.
 Final, 30 runs: New Age 97 / 90 / 73 / boss 93; Body 97 / 83 / 80 / boss 70;
 Reformed 100 / 87 / 87 / boss 77; whole campaign grunt 92, boss 79 (Normal),
 grunt 41 (Crucible).
+
+## Update: any order, players, and the final chapter
+
+Stories can be played in any order after the tutorial. Each chapter has a
+par, the team level its balance was tuned for (atheists 2.5, evangelicals
+4.3, LDS 5.3, Islam 6.3, New Age 7, Body 8, Reformed 8.5). A team d levels
+below par meets opponents d levels lower and with 0.88^d of the chapter's
+power (floor 0.5). Tested at team level 2 on Normal (smart bot, 20 runs):
+atheists 100/100/95/80, evangelicals 100/100/90/55, LDS 100/100/100/90,
+Islam 100/95/100/90, New Age, Body and Reformed 100 throughout; at level 4
+everything 75–100. At or above par nothing changes.
+
+The final chapter, The Great Debate (O'Connor, Ryan, Hansen; the Speakers'
+Corner Champion, the WitchTok influencer, Destiny; Destiny, White,
+O'Connor), opens when all seven stories are done and has no par, so it never
+scales down. Power [1.35, 0.85]; Normal 60 / 63 / 67, Very Hard 77 / 53 / 33
+(30 runs): the hardest chapter in the game.

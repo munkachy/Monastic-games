@@ -270,6 +270,32 @@ const Story = (() => {
       ],
     },
     {
+      id: "finale", title: "The Great Debate", group: "Everyone", boss: "white", place: "studio", mystery: "Every opponent comes back to the table on one night. What do you say when you can't win them all?",
+      scenes: [
+        { when: "Before the first battle", place: "studio", left: ["horn","akin","schmitz"], right: ["oconnor","ryan","hansen"], lines: [
+          ["horn","One debate night, and everyone who has ever sat across from us."],
+          ["oconnor","Round two, then. I've been thinking about that fawn."],
+          ["akin","Good. So have we. Charity first, and then the arguments."],
+        ] },
+        { when: "After the first battle", place: "studio", left: ["bertuzzi","muse"], right: ["speaker","witch","destiny"], lines: [
+          ["bertuzzi","Next table: three rivals from this year."],
+          ["destiny","I read Boethius. I have notes."],
+          ["witch","I threw out the cards. I still have questions.","?"],
+        ] },
+        { when: "After the second battle", place: "studio", left: ["hahn","pine","marygrace"], right: [], lines: [
+          ["hahn","One more. And it's the man who taught us all to argue carefully."],
+          ["pine","Grant everything true in what he says. Then show him the rest.","idea"],
+          ["marygrace","And remember why we came. Not to win them. To love them."],
+        ] },
+        { when: "The last conversation", place: "studio", left: ["heschmeyer","akin","schmitz"], right: ["white","oconnor","destiny"], lines: [
+          ["white","Well. That was a debate.","…"],
+          ["heschmeyer","It was. Thank you for taking every one of us seriously."],
+          ["schmitz","You're all welcome at our table, any time. And we'll keep praying for you."],
+          ["","No argument converts a soul. “I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6). Tonight the ground is clear, and the seed is in the soil."],
+        ] },
+      ],
+    },
+    {
       id: "epilogue", title: "One Fold", group: "Epilogue", place: "church",
       scenes: [
         { when: "The Easter Vigil", place: "church", left: ["schmitz","horn","akin"], right: ["oconnor","ryan","+white"], lines: [

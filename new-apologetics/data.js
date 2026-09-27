@@ -283,48 +283,56 @@ const GameData = (() => {
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
       { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2, cover: { foe: [1], hero: [], size: 0.2 } },
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"], book: "catechism" },
-    { id: "atheists", power: [2.0, 1.8], title: "The Fawn in the Forest", group: "Atheists", missions: [
+    { id: "atheists", par: 2.5, power: [2.0, 1.8], title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"], book: "confessions" },
-    { id: "evangelicals", power: [2.8, 2.5], title: "Are You a Good Person?", group: "Evangelicals", missions: [
+    { id: "evangelicals", par: 4.3, power: [2.8, 2.5], title: "Are You a Good Person?", group: "Evangelicals", missions: [
       { name: "The City Square", foes: ["preacher", "preacher2"] },
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"], book: "summa" },
-    { id: "lds", power: [3.6, 4.0], title: "The Restoration", group: "Latter-day Saints", missions: [
+    { id: "lds", par: 5.3, power: [3.6, 4.0], title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
-    { id: "islam", power: [3.9, 2.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
+    { id: "islam", par: 6.3, power: [3.9, 2.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["martins"], book: "rule" },
-    { id: "newage", power: [3.0, 2.6], title: "Apollo Loves You", group: "New Age", missions: [
+    { id: "newage", par: 7, power: [3.0, 2.6], title: "Apollo Loves You", group: "New Age", missions: [
       { name: "The Crystal Shop", foes: ["tarot", "crystal"] },
       { name: "The Full Moon Circle", foes: ["crystal", "tarot", "crystal2"] },
       { name: "Mercury in Retrograde", foes: ["tarot", "crystal", "tarot2"] },
       { name: "Apollo Loves You", foes: ["tarot", "witch", "crystal"], boss: "witch" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
-    { id: "body", power: [3.1, 2.2], title: "My Body, My Brand", group: "Online Culture", missions: [
+    { id: "body", par: 8, power: [3.1, 2.2], title: "My Body, My Brand", group: "Online Culture", missions: [
       { name: "Link in Bio", foes: ["creator", "activist"] },
       { name: "The Campus Rally", foes: ["activist", "creator", "activist2"] },
       { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
       { name: "The Debate Stream", foes: ["activist", "destiny", "creator"], boss: "destiny" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
-    { id: "reformed", power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
+    { id: "reformed", par: 8.5, power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
       { name: "The Dividing Line", foes: ["seminarian", "white", "seminarian2"], boss: "white" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    // The final chapter: open once every story is done, and the hardest in
+    // the game. Every boss comes back to the table. It has no par, so it
+    // never scales down to a weaker team.
+    { id: "finale", power: [1.35, 0.85], title: "The Great Debate", group: "Everyone", final: true, missions: [
+      { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
+      { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
+      { name: "The Last Table", foes: ["destiny", "white", "oconnor"], boss: "white" },
+    ], scenes: { before: 0, after: [1, 2, 3] }, unlocks: [] },
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
 

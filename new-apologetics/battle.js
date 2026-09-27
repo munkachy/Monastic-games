@@ -764,7 +764,17 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; } };
+  // Chapters can be played in any order. Each has a par: the team level its
+  // balance was tuned for. A team below par meets opponents scaled down to
+  // it, a chapter's worth of growth and 12% of its power for each level
+  // short (tuned in BALANCE.md). At or above par, nothing changes.
+  function catchDown(ci, power, par, teamLevel) {
+    const d = Math.max(0, (par || 0) - teamLevel);
+    if (!d) return { level: ci, power };
+    return { level: Math.max(0, ci - d), power: Math.max(0.5, power * Math.pow(0.88, d)) };
+  }
+
+  return { create, label, run, catchDown, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
