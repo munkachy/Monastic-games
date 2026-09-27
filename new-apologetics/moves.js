@@ -816,7 +816,9 @@ const Theater = (() => {
       { name: "Free-for-All Friday", kind: aura, to: "allies", mark: ["pipUp"], say: "It's Free-for-All Friday!", color: "#e8b94a",
         backdrop: (ctx, h, t) => {
           if (t > 1.9) return;
-          const x = h.x + 60; const y = 62;
+          // Beside Trent, at head height, wherever he stands: clear of his
+          // speech bubble above and of the other side across the stage.
+          const x = h.x + 105; const y = h.y - FIG_H + 34;
           ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 70, y - 16, 140, 28); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 68, y - 14, 136, 24);
           ctx.font = "700 12px " + FONT; ctx.textAlign = "center"; ctx.fillStyle = "#1a1326"; ctx.fillText("FREE-FOR-ALL FRIDAY", x, y + 3);
           // The week's topics tumble in: anything he finds interesting.
