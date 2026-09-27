@@ -15,8 +15,8 @@ const Battle = (() => {
   const HERO_FLOOR = -4;     // how far Zeal can fall before a fighter is out
   const GRUNT_FLOOR = -5;
   const BOSS_FLOOR = -6;
-  const BACKUP = [0.1, 0.2, 0.3, 0.4];
-  const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care   // chance to back up a friend, by Zeal 0..3
+  const BACKUP = [0.1, 0.2, 0.3, 0.4];   // chance to back up a friend, by Zeal 0..3
+  const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
   const FOE_PUNCH = 2.4;     // opponents argue harder than their listed stats
 
@@ -52,6 +52,20 @@ const Battle = (() => {
     };
   }
 
+  // A hero's book, applied at the start of a debate.
+  function readBook(u, fx) {
+    u.book = fx;
+    if (fx.hp) { u.maxHp = Math.round(u.maxHp * (1 + fx.hp)); u.hp = u.maxHp; }
+    if (fx.def) u.bonus.def += fx.def;
+    if (fx.atk) u.bonus.atk += fx.atk;
+    if (fx.crit) u.crit += fx.crit;
+    if (fx.resist) u.resist = fx.resist;
+    if (fx.regen) u.regen = { pct: fx.regen[0], n: fx.regen[1] };
+    if (fx.shield) u.shield = { amt: Math.round(u.care * fx.shield * CARE_K), n: 4 };
+    if (fx.opening) u.buffs.push({ stat: "atk", amt: fx.opening, n: 2 });
+    if (u.shield && u.shield.amt <= 0) u.shield = null;
+  }
+
   function create(opts) {
     const H = GameData.HEROES;
     const F = GameData.FOES;
@@ -65,6 +79,8 @@ const Battle = (() => {
       const u = makeUnit(id, "hero", i, H[id], level);
       u.level = level;
       u.locked = H[id].skills.map((s, k) => gated && unlockLevel(H[id], k) > Math.max(level, opts.movesAt || 0));
+      const book = opts.books && GameData.BOOKS[opts.books[id]];
+      if (book) readBook(u, book.fx);
       return u;
     })
       .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level)));
@@ -136,6 +152,11 @@ const Battle = (() => {
     // At the start of a turn: Doubting wears on Composure, everything counts down.
     function startTurn(u) {
       const events = [];
+      if (u.regen && u.regen.n > 0 && inPlay(u)) {
+        u.regen.n--;
+        const a = Math.min(u.maxHp - u.hp, Math.round(u.maxHp * u.regen.pct));
+        if (a > 0) { u.hp += a; events.push({ key: u.key, text: "+" + a, color: "#74c07a" }); }
+      }
       if (u.statuses.doubting > 0) {
         const d = Math.round(u.maxHp * 0.05);
         u.hp = Math.max(0, u.hp - d);
@@ -180,11 +201,14 @@ const Battle = (() => {
       const ready = usable(u);
       let i = 0;
       for (const j of ready.slice().sort((a, b) => b - a)) if (j > 0 && rnd() < 0.7) { i = j; break; }
+      // Anyone who can go Undercover does so whenever they're in the open.
+      const hide = ready.find((j) => u.def.skills[j].effects.some((e) => e.status === "cloaked"));
+      if (hide !== undefined && !(u.statuses.cloaked > 0)) i = hide;
       const s = u.def.skills[i];
       let target = null;
       const c = choices(u, i);
       if (s.target === "foe" && c.length) {
-        const score = (x) => x.hp / x.maxHp + (x.zeal - x.floor) * 0.1 + (x.cover && !(s.pierce || []).includes("cover") ? 0.5 : 0);
+        const score = (x) => x.hp / x.maxHp + (x.zeal - x.floor) * 0.1 + (x.cover && !(s.pierce || []).includes("cover") ? 0.5 : 0) + (x.statuses.cloaked > 0 ? 1 : 0);
         target = c.slice().sort((a, b) => score(a) - score(b))[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
       } else if (s.target === "ally" && c.length) {
         target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
@@ -199,6 +223,7 @@ const Battle = (() => {
       switch (s.target) {
         case "foe": return chosen ? [chosen] : opp.slice(0, 1);
         case "two": return opp.slice().sort(() => rnd() - 0.5).slice(0, 2);
+        case "random4": return opp.length ? [0, 1, 2, 3].map(() => opp[Math.floor(rnd() * opp.length)]) : [];
         case "foes": return opp;
         case "ally": return chosen ? [chosen] : [u];
         case "allies": return friends(u).filter((x) => x.state === "in" || x.state === "discouraged");
@@ -230,7 +255,8 @@ const Battle = (() => {
             }
           }
           if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
-          if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" }); }
+          if (e.status && t.resist && t.resist[e.status] && rnd() < t.resist[e.status]) events.push({ key: t.key, text: "Resisted", color: "#a9a6bd" });
+          else if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" }); }
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
@@ -267,6 +293,7 @@ const Battle = (() => {
       }
       for (const t of targets) if (!inPlay(t) && t.side !== u.side) broke = true;
       for (const e of s.effects) if (e.onBreak && broke) zeal(u, e.onBreak, s, events);
+      for (const e of s.effects) if (e.onBreakCloak && broke && inPlay(u)) { u.statuses.cloaked = e.onBreakCloak; events.push({ key: u.key, text: "Undercover", color: "#9fd0ff" }); }
       return { skill: s, targets, events, commanded };
     }
 
@@ -312,8 +339,9 @@ const Battle = (() => {
       if (t.immune.testimony > 0) d *= 0.5;
       d *= 1 - Math.min(60, stat(t, "def")) / 100;
       // Exposed fighters can't deflect anything.
-      const glance = !(t.statuses.examined > 0) && rnd() < t.glance;
-      if (glance) d *= 1 - t.glanceCut;
+      // Undercover: every hit on her is deflected, unless she has been Exposed.
+      const glance = !(t.statuses.examined > 0) && (t.statuses.cloaked > 0 || rnd() < t.glance);
+      if (glance) d *= t.statuses.cloaked > 0 && !(t.statuses.examined > 0) ? 0.25 : 1 - t.glanceCut;
       d = Math.round(d);
       if (t.shield) { const a = Math.min(t.shield.amt, d); t.shield.amt -= a; d -= a; if (t.shield.amt <= 0) t.shield = null; }
       t.hp = Math.max(0, t.hp - d);
@@ -365,7 +393,7 @@ const Battle = (() => {
       const drop = n === "all" ? good.length : n;
       let removed = 0;
       for (const b of good.slice(0, drop)) { t.buffs.splice(t.buffs.indexOf(b), 1); removed++; }
-      if (n === "all") { if (t.shield) removed++; t.shield = null; for (const k of Object.keys(t.immune)) { if (t.immune[k]) removed++; t.immune[k] = 0; } }
+      if (n === "all") { if (t.shield) removed++; if (t.statuses.cloaked > 0) removed++; t.shield = null; t.statuses.cloaked = 0; for (const k of Object.keys(t.immune)) { if (t.immune[k]) removed++; t.immune[k] = 0; } }
       else if (removed < drop && t.shield) { t.shield = null; removed++; }
       if (removed) events.push({ key: t.key, text: "Fact-Checked", color: "#de5e55" });
     }
@@ -388,7 +416,7 @@ const Battle = (() => {
     };
   }
 
-  const LABELS = { dumbfounded: "Dumbfounded", doubting: "Doubting", muted: "Muted", examined: "Exposed", called: "Called Out" };
+  const LABELS = { dumbfounded: "Dumbfounded", doubting: "Doubting", muted: "Muted", examined: "Exposed", called: "Called Out", cloaked: "Undercover" };
   // An apologist under pressure is flustered, not doubting his faith: the same
   // status (it wears on Composure) takes a different name on the heroes' side.
   const label = (s, u) => (s === "doubting" && u && u.side === "hero" ? "Flustered" : LABELS[s] || s);
@@ -462,7 +490,7 @@ const Battle = (() => {
   function describe(sk) {
     const out = [];
     const pct = (e) => (e.chance !== undefined && e.chance < 1 ? Math.round(e.chance * 100) + "% chance: " : "");
-    const STATUS = { dumbfounded: "Dumbfounded (loses turns)", doubting: "Doubting (loses Composure each turn)", muted: "Muted (basic move only)", examined: "Exposed (takes harder hits)", called: "Called Out" };
+    const STATUS = { cloaked: "Undercover (hard to single out, and hits land at a quarter strength, unless Exposed)", dumbfounded: "Dumbfounded (loses turns)", doubting: "Doubting (loses Composure each turn)", muted: "Muted (basic move only)", examined: "Exposed (takes harder hits)", called: "Called Out" };
     for (const e of sk.effects) {
       if (e.dmg) {
         const total = e.dmg * (e.hits || 1);
@@ -488,6 +516,7 @@ const Battle = (() => {
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
       if (e.onBreak) out.push("Zeal up if it puts someone out");
+      if (e.onBreakCloak) out.push("Goes Undercover if it puts someone out");
       if (e.randomLift) out.push("A random lift for each");
       if (e.friendsCleanse) out.push("Frees friends from " + e.friendsCleanse);
       if (e.summon) out.push("Calls in help");
@@ -557,6 +586,7 @@ const BattleView = (() => {
           if (u.statuses.doubting > 0) tags.push(u.side === "hero" ? ["!", "#e89a4a"] : ["?", "#c69ae8"]);
           if (u.statuses.muted > 0) tags.push(["M", "#de5e55"]);
           if (u.statuses.examined > 0) tags.push(["X", "#e8b94a"]);
+          if (u.statuses.cloaked > 0) tags.push(["U", "#9fd0ff"]);
           if (u.called) tags.push(["!", "#de5e55"]);
           if (u.counter > 0) tags.push(["R", "#e8b94a"]);
           if (Object.values(u.immune).some((v) => v > 0)) tags.push(["◆", "#7ea4e6"]);

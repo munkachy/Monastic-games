@@ -867,9 +867,8 @@ const Theater = (() => {
     ],
     rose: [
       { name: "Every Life", kind: volley, glyphs: ["♥", "♥"], color: "#ff6a80" },
-      { name: "Sense Deception", kind: approach, to: "foe", item: "phone", say: "Is that really true?", mark: "examined", mark2: "factcheck" },
-      { name: "Counsel", kind: approach, to: "ally", say: "You're not alone.", mark: "hearts", mark2: "pipUp" },
       { name: "Live Action", kind: cinematic, who: "Lila Rose", color: "#b8505a", scene: SCENES.rec, to: "all", mark: ["down", "pipDown"] },
+      { name: "Undercover", kind: aura, to: "self", say: "Nobody knows who I am.", mark: ["shield", "up"] },
     ],
     holdsworth: [
       { name: "Ten-Minute Essay", kind: volley, glyphs: ["Here's why."], color: "#e8b94a" },
@@ -891,9 +890,8 @@ const Theater = (() => {
     ],
     hahn: [
       { name: "Covenant Is Family", kind: volley, glyphs: ["Abba!", "Family!"], color: "#e8b94a" },
-      { name: "Wide-Eyed Wonder", kind: hex, to: "one", say: "Isn't that amazing?!", mark: ["dumbfounded", "down"], fx: (ctx, api, h, targets, t, k) => { if (t < 0.2 || t > 1.8) return; const s = 1 + Math.sin(t * 10) * 0.08; const x = h.x + 70; const y = h.y - 170; for (const dx of [-26, 26]) { ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx, y, 22 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x + dx, y, 19 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4a6a8a"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 4, 0, Math.PI * 2); ctx.fill(); } } },
-      { name: "The Lamb's Supper", kind: aura, to: "allies", mark: ["heal", "pipUp"], say: "This is the wedding feast of the Lamb!", backdrop: (ctx, h, t) => { if (t > 0.2 && t < 1.9) { const x = h.x + 44; const y = h.y - 160; ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 12, y - 2, 24, 30); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 10, y, 20, 12); ctx.fillRect(x - 3, y + 12, 6, 10); ctx.fillRect(x - 9, y + 22, 18, 4); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x, y - 12, 10, 0, Math.PI * 2); ctx.fill(); } } },
-      { name: "Rome Sweet Home", kind: cinematic, who: "Scott Hahn", color: "#8a5a1a", scene: SCENES.romehome, to: "all", mark: ["pipDown", "factcheck"], impact: impactOn("#e8b94a") },
+      { name: "Wide-Eyed Wonder", kind: hex, to: "one", say: "Isn't that amazing?!", mark: ["pipDown", "down"], fx: (ctx, api, h, targets, t, k) => { if (t < 0.2 || t > 1.8) return; const s = 1 + Math.sin(t * 10) * 0.08; const x = h.x + 70; const y = h.y - 170; for (const dx of [-26, 26]) { ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx, y, 22 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x + dx, y, 19 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4a6a8a"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 4, 0, Math.PI * 2); ctx.fill(); } } },
+      { name: "Rome Sweet Home", kind: cinematic, who: "Scott Hahn", color: "#8a5a1a", scene: SCENES.romehome, to: "one", mark: ["dumbfounded", "factcheck"], impact: impactOn("#e8b94a") },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
