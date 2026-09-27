@@ -199,7 +199,8 @@ const Art = (() => {
       for (let y = 2; y < 12; y++) {
         for (let x = 6; x < 26; x++) {
           if (!inEllipse(x, y, 16, 12.5, 8.3, 10.6)) continue;
-          if (x <= 9 || x >= 22 || y <= 2) g.put(x, y, hair);
+          // Grey at the temples, when given.
+          if (x <= 9 || x >= 22 || y <= 2) g.put(x, y, s.temples && y >= 6 && (x <= 9 || x >= 22) ? s.temples : hair);
         }
       }
       if (s.quiff) {
@@ -212,6 +213,8 @@ const Art = (() => {
     } else if (style === "bald") {
       for (const [x, y] of [[12, 4], [13, 4], [12, 5], [11, 6]]) g.put(x, y, s.shine || "#fff1e0");
       for (let y = 9; y < 13; y++) { g.put(8, y, s.shade); g.put(23, y, s.shade); }
+      // A fringe of short hair round the sides, for a balding head.
+      if (s.fringe) for (let y = 5; y < 12; y++) { g.put(7, y, s.fringe); g.put(8, y, s.fringe); g.put(23, y, s.fringe); g.put(24, y, s.fringe); }
     } else if (style === "shaggy") {
       // A mop of hair with a jagged fringe that hangs to the brows.
       for (let y = 0; y < 10; y++) for (let x = 5; x < 27; x++) if (inEllipse(x, y, 16, 12.5, 9, 11.4)) g.put(x, y, (x * 7 + y * 3) % 11 === 0 ? (s.hairLight || hair) : hair);
@@ -336,7 +339,8 @@ const Art = (() => {
       const c = s.glasses;
       const gy = 11 + (s.glassesDrop || 0);
       for (const x0 of [10, 17]) {
-        for (let x = x0; x < x0 + 5; x++) { g.put(x, gy - 1, c); g.put(x, gy + 2, c); }
+        // Round frames leave the corners open.
+        for (let x = x0 + (s.roundGlasses ? 1 : 0); x < x0 + (s.roundGlasses ? 4 : 5); x++) { g.put(x, gy - 1, c); g.put(x, gy + 2, c); }
         g.put(x0, gy, c); g.put(x0, gy + 1, c); g.put(x0 + 4, gy, c); g.put(x0 + 4, gy + 1, c);
       }
       g.put(15, gy, c); g.put(16, gy, c);
@@ -609,13 +613,23 @@ const Art = (() => {
     creator2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#9a4a5a", outfit: "blouse", clothes: "#2a2a34", skirt: "#1e1e28", prop: "phone" },
     activist: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#3a8a6a", hairLight: "#5aaa8a", style: "side", browThin: true, brow: "#4a3a2a", outfit: "hoodie", clothes: "#6a3a8a", trim: "#52306a", prop: "sign" },
     activist2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2a5a4a", trim: "#224a3c", prop: "sign" },
-    // Kim Zember: a best guess until a photograph comes in.
-    zember: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#6a4630", hairLight: "#8a6448", style: "long", part: true, browThin: true, brow: "#4a3020", mouth: "#c06070", outfit: "blouse", clothes: "#2a6a7a", skirt: "#24586a", prop: "cross", smile: true },
+    // Kim Zember: long golden-blonde hair, blue eyes, a wide smile, a black top.
+    zember: { skin: "#f4d0b4", shade: "#d6a88c", hair: "#d4aa68", hairLight: "#ecd098", style: "long", part: true, browThin: true, brow: "#a8804a", eyeColor: "#5a90c8", mouth: "#c06070", outfit: "blouse", clothes: "#1a1a1e", skirt: "#1a1a1e", smile: true },
     pastor: { skin: "#f0c6aa", shade: "#cf9e84", hair: "#a8a296", style: "short", glasses: "#2a2a33", brow: "#8a857c", outfit: "clerical", clothes: "#3a5a8a", smile: true },
     ally: { skin: "#f4d0b8", shade: "#d6aa92", hair: "#e87aa8", hairLight: "#f4a0c4", style: "side", browThin: true, brow: "#6a4a3a", outfit: "hoodie", clothes: "#e8e4dc", trim: "#c8c2b8", prop: "phone" },
     ally2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", style: "curly", brow: "#1c140f", outfit: "hoodie", clothes: "#6a4a8a", trim: "#52386a", prop: "phone" },
     podcaster: { skin: "#efc6a8", shade: "#cf9e84", hair: "#5a3a26", hairLight: "#7a5a44", style: "shaggy", beard: "full", beardColor: "#5a3a26", glasses: "#2a2a33", outfit: "sweater", clothes: "#4a5a4a", trim: "#3a4a3a", prop: "headset" },
     podcaster2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "long", browThin: true, brow: "#8a6a3a", mouth: "#b45a5a", outfit: "blouse", clothes: "#8a5a3a", skirt: "#6a4a2e", prop: "headset" },
+    // Bart Ehrman: balding, a fringe of grey-brown hair, round tortoiseshell
+    // glasses, grey stubble, a navy jacket over a sweater.
+    ehrman: { skin: "#eec4a6", shade: "#cf9c80", hair: "#8a7a6a", fringe: "#8a7a6a", style: "bald", roundGlasses: true, glasses: "#7a5230", beard: "stubble", beardColor: "#b0a89c", brow: "#6a5a4a", outfit: "suit", clothes: "#3a4658", lapel: "#2c3646", shirt: "#8a8c90", smile: true },
+    // Brant Pitre: dark hair going grey at the temples, a trimmed beard, thick
+    // black rectangular glasses, a tan jacket over a navy shirt.
+    pitre: { skin: "#e8b99a", shade: "#c8957a", hair: "#2a1e16", hairLight: "#4a3a2e", style: "receding", quiff: true, temples: "#9a948c", beard: "short", beardColor: "#3a2e26", brow: "#2a1e16", glasses: "#141418", outfit: "suit", clothes: "#b09a78", lapel: "#94805e", shirt: "#1f2f5a", smile: true },
+    student: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#3a2a1e", style: "side", brow: "#3a2a1e", outfit: "hoodie", clothes: "#8a2a2a", trim: "#6a2020", prop: "book", bookColor: "#1f3b6b" },
+    student2: { skin: "#c89068", shade: "#a87050", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#8a4a4a", outfit: "blouse", clothes: "#3a6a8a", skirt: "#2e566e", prop: "book", bookColor: "#6b1e22" },
+    mythicist: { skin: "#efc6a8", shade: "#cf9e84", hair: "#1c1410", style: "crew", beard: "goatee", beardColor: "#1c1410", outfit: "hoodie", clothes: "#1a1a24", trim: "#2a2a34", prop: "mic" },
+    mythicist2: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#b06a3a", hairLight: "#d08a5a", style: "shaggy", beard: "stubble", beardColor: "#8a5a3a", glasses: "#2a2a33", outfit: "shirt", clothes: "#4a3a5a", trim: "#e9e2d0", prop: "headset" },
     skeptic: { skin: "#f3cdb2", shade: "#d3a58a", hair: "#9a5a2e", style: "curly", outfit: "hoodie", clothes: "#5d6470", trim: "#434955", prop: "headset" },
     skeptic2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2f3a4a", trim: "#23303e" },
     preacher2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "side", outfit: "shirt", clothes: "#8a2a2a", trim: "#e9e2d0", prop: "sign" },

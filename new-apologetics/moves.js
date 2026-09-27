@@ -604,6 +604,24 @@ const Theater = (() => {
       ctx.fillStyle = "#fdfaf2"; ctx.fillRect(dx - 20, dy - 4, 40, 8); ctx.fillRect(dx - 4, dy - 10, 8, 20);
       if (k > 0.9) text(ctx, "CHILD OF GOD", 430, 330, 22, "#1a1326");
     },
+    // Brant Pitre: the early manuscripts come up one after another, and every
+    // one opens on its name. There is no anonymous copy of a Gospel.
+    gospels(ctx, k) {
+      ctx.fillStyle = "#1e1812"; ctx.fillRect(0, 0, W, H);
+      const titles = ["ΚΑΤΑ ΜΑΘΘΑΙΟΝ", "ΚΑΤΑ ΜΑΡΚΟΝ", "ΚΑΤΑ ΛΟΥΚΑΝ", "ΚΑΤΑ ΙΩΑΝΝΗΝ"];
+      titles.forEach((t, i) => {
+        const a = span(k, 0.15 + i * 0.3, 0.45 + i * 0.3);
+        if (a <= 0) return;
+        const x = 290 + (i % 2) * 170, y = 60 + Math.floor(i / 2) * 140 + (1 - a) * 30;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 4, y - 4, 158, 118);
+        ctx.fillStyle = "#e6d3a3"; ctx.fillRect(x, y, 150, 110);
+        ctx.fillStyle = "#c9b27a"; for (let r = 0; r < 6; r++) ctx.fillRect(x + 12, y + 44 + r * 10, 126 - (r % 3) * 18, 3);
+        text(ctx, t, x + 75, y + 28, 13, "#7a1f2b");
+        ctx.globalAlpha = 1;
+      });
+      if (k > 1.5) text(ctx, "NO ANONYMOUS COPY", 450, 340, 16, "#e8b94a");
+    },
     books(ctx, k) {
       ctx.fillStyle = "#2a1a14"; ctx.fillRect(0, 0, W, H);
       for (let y = 60; y < H; y += 90) { ctx.fillStyle = "#4a2e1e"; ctx.fillRect(0, y, W, 10); }
@@ -984,6 +1002,12 @@ const Theater = (() => {
       { name: "Boldly Beloved", kind: aura, to: "allies", mark: ["shield"], say: "You are loved. Boldly.", color: "#9fd0ff" },
       { name: "Here I Am", kind: aura, to: "self", mark: ["up"], foes: "called", say: "Here I am. Ask me anything.", color: "#e8b94a" },
       { name: "Child of God", kind: cinematic, who: "Kim Zember", color: "#2a6a7a", scene: SCENES.childOfGod, to: "allies", mark: ["heal", "pipUp"] },
+    ],
+    pitre: [
+      { name: "Jewish Roots", kind: volley, glyphs: ["✡", "✚"], color: "#e8b94a" },
+      { name: "The Big Picture", kind: hex, to: "one", say: "Step back. Look at the whole picture.", mark: ["examined", "down"] },
+      { name: "The New Passover", kind: aura, to: "allies", mark: ["up", "pipUp"], say: "This is the new Passover.", color: "#e8b94a" },
+      { name: "The Case for Jesus", kind: cinematic, who: "Brant Pitre", color: "#6a4a2a", scene: SCENES.gospels, to: "one", mark: ["doubting"], impact: impactOn("#e8b94a") },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
