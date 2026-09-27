@@ -192,7 +192,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260926g">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260926h">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -208,7 +208,7 @@
     <div class="lede">
       <span class="label">The rules</span>
       <h2>A battle, turned into a debate</h2>
-      <p>Teams of four take turns, the readiest first. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.</p>
+      <p>Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.</p>
     </div>
     <div class="scroll">
       <table>
@@ -218,14 +218,18 @@
           <tr><td><strong>Zeal</strong></td><td>Everyone starts at 0. Blue arrows up (to +3) when it rises, red arrows down when it falls. At the bottom, an opponent leaves the debate and a hero is <b>Discouraged</b>.</td></tr>
           <tr><td><strong>Backing up</strong></td><td>When someone argues, a teammate with Zeal at 0 or higher may jump in with their basic move. The higher the Zeal, the more often it happens. A fired-up team argues as one.</td></tr>
           <tr><td><strong>Level</strong></td><td>Every hero starts at level 1 and grows with each debate, win or lose. A hero who joins the roster later starts level with the rest of the team.</td></tr>
-          <tr><td><strong>Hidden strengths</strong></td><td>Some heroes hit harder, some take a hit better, some are always ready first. The game never shows these numbers. You learn each hero's gifts by playing them.</td></tr>
+          <tr><td><strong>Speed</strong></td><td>Everyone acts once a round, fastest first, and speed never changes. Fast heroes tend to be fragile; the sturdy ones are slow. Going first lets you shield the team or finish off an opponent before he answers.</td></tr>
+          <tr><td><strong>Podiums</strong></td><td>Some debaters start behind something: a podium, a soapbox, a stepladder at Speakers' Corner, a pulpit, a streamer's desk. It changes every battle. It takes the hits meant for the debater until it falls. A few moves go straight past it, a few hit it extra hard, and lowering Zeal gets past it every time.</td></tr>
+          <tr><td><strong>Sent in</strong></td><td>A few moves send a teammate in to answer at once with their basic move, out of turn. Best used on a slow friend who hits hard.</td></tr>
+          <tr><td><strong>Deflect · Crit · Resilience</strong></td><td>Every debater has a small chance to deflect part of a hit, to land a critical hit (which also knocks the other's Zeal down), and to shrug off a loss of Zeal. Exposed debaters can't deflect.</td></tr>
+          <tr><td><strong>Hidden strengths</strong></td><td>Some heroes hit harder, some take a hit better, some build stronger shields and podiums for their friends. The game never shows these numbers. You learn each hero's gifts by playing them.</td></tr>
           <tr><td><strong>Dumbfounded</strong></td><td>Stunned: loses turns while he thinks it over.</td></tr>
           <tr><td><strong>Called Out</strong></td><td>Must answer one particular apologist and no one else.</td></tr>
           <tr><td><strong>Doubting · Flustered</strong></td><td>Loses a little Composure each turn. An opponent is left Doubting his position, and some skills hit him harder for it. An apologist never doubts his faith: the same hard question leaves him Flustered.</td></tr>
           <tr><td><strong>Exposed</strong></td><td>Takes harder hits.</td></tr>
           <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
           <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
-          <tr><td><strong>Citation · Shield of Faith</strong></td><td>Blocks most of the next argument · absorbs arguments for 3 turns.</td></tr>
+          <tr><td><strong>Shield of Faith</strong></td><td>Absorbs hits for 3 turns. How strong it is depends on the hero who gives it.</td></tr>
           <tr><td><strong>Muted · Rebuttal</strong></td><td>Can use only his basic move · answers back when addressed.</td></tr>
         </tbody>
       </table>
@@ -324,11 +328,11 @@
   </section>
 </main>
 
-<script src="art.js?v=20260926g"></script>
-<script src="moves.js?v=20260926g"></script>
-<script src="story.js?v=20260926g"></script>
-<script src="data.js?v=20260926g"></script>
-<script src="battle.js?v=20260926g"></script>
+<script src="art.js?v=20260926h"></script>
+<script src="moves.js?v=20260926h"></script>
+<script src="story.js?v=20260926h"></script>
+<script src="data.js?v=20260926h"></script>
+<script src="battle.js?v=20260926h"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -342,7 +346,7 @@
       passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
       skills: [
         ["Precise Distinction", "1 foe", "0", "Hit."],
-        ["Senior Apologist", "1 foe", "3", "Strong hit (harder against a Citation). 25% chance to leave him Dumbfounded for 3 turns. “Well, actually, there are three views on that…”"],
+        ["Senior Apologist", "1 foe", "3", "Strong hit (harder against a shield or podium). 25% chance to leave him Dumbfounded for 3 turns. “Well, actually, there are three views on that…”"],
         ["Logical Paradox", "All foes", "3", "Minor Attack Down for 3 turns. 50% chance of −1 Zeal on each."],
         ["Mysterious World", "2 random foes", "3", "Exposed, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
       ],
@@ -365,7 +369,7 @@
       passive: ["Please Pray for Me", "+5% Resolve to every ally."],
       skills: [
         ["Two-Minute Homily", "1 foe", "0", "Strong hit."],
-        ["I'm Praying for You", "1 ally", "3", "Major Attack Up and Crit Chance Up for 3 turns. His sign-off, turned into a blessing."],
+        ["I'm Praying for You", "1 ally", "3", "Sends the friend in to answer at once with their basic move, with Major Attack Up and Crit Chance Up for 3 turns. His sign-off, turned into a blessing."],
         ["The Bible in a Year", "All allies", "3 (starts 1)", "+1 Zeal on each, and Defense Up for 3 turns. Day by day, the whole team grows steadier."],
         ["The Catechism in a Year", "All allies", "4 (starts 2)", "Examen, a Shield of Faith and Attack Up for 3 turns.", true],
       ],
@@ -389,7 +393,7 @@
         ["Deadpan", "1 foe", "0", "Strong hit, and a 50% chance of Attack Down for 1 turn. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
         ["Free-for-All Friday", "All allies", "3", "+1 Zeal on each, and each ally gets a different lift, the way the listener questions come in: Attack Up, Crit Chance Up, a Shield of Faith or an encouragement."],
         ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks every foe and −1 Zeal on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
-        ["The Case for Catholicism", "All foes", "4 (starts 2)", "Heavy hit on each (harder against a Citation or Shield of Faith).", true],
+        ["The Case for Catholicism", "All foes", "4 (starts 2)", "Heavy hit on each (harder against a shield or podium).", true],
       ],
       flavor: "The fastest man in the game, with the driest sense of humor. His moves come from his books, his podcast and his favorite question: where does the Bible actually say that?",
     },
@@ -409,7 +413,7 @@
       passive: ["Smooth", "+3% Attack."],
       skills: [
         ["Smooth Question", "1 foe", "0", "Hit. 10% chance of Attack Down."],
-        ["Smooth Pivot", "1 ally", "3", "Gives a Citation and Attack Up."],
+        ["Smooth Pivot", "1 ally", "3", "Sets up a podium in front of a friend, and Attack Up."],
         ["Stay Smooth", "All allies", "3", "A major Shield of Faith for 3 turns and +1 Zeal on each."],
         ["Common Ground", "All foes", "4", "Removes every buff and gives Major Attack Down for 3 turns. −1 Zeal on any foe from the Islam storyline.", true],
       ],
@@ -421,7 +425,7 @@
       skills: [
         ["Sunday Sermon", "1 foe", "0", "Hit. 50% chance of Attack Down for 1 turn."],
         ["Word on Fire", "All foes", "3", "Heavy hit on every foe at once. One broadcast that reaches everybody."],
-        ["The Way of Beauty", "Self", "3 (starts 1)", "Calls out every foe to answer him, gains a Citation, and Attack Up for 3 turns. Beauty first, then goodness, then truth."],
+        ["The Way of Beauty", "Self", "3 (starts 1)", "Calls out every foe to answer him, sets up a podium in front of himself, and Attack Up for 3 turns. Beauty first, then goodness, then truth."],
         ["No Beige Catholicism", "1 foe", "4 (starts 2)", "Muted for 3 turns, Attack Down, and −1 Zeal.", true],
       ],
       flavor: "A bold leader with the one attack that reaches the whole room, from the man who built a media apostolate that reaches millions.",
@@ -432,7 +436,7 @@
       skills: [
         ["Gentle Correction", "1 foe", "0", "Hit. 25% chance of Attack Down for 1 turn."],
         ["Discernment of Spirits", "All foes", "3", "Every foe is Exposed. Which voice is God's, and which is only our own?"],
-        ["Obsculta", "1 foe", "3 (starts 1)", "Dumbfounded for 3 turns, even through a Citation, and −2 Zeal. “Listen”: the first word of the Rule."],
+        ["Obsculta", "1 foe", "3 (starts 1)", "Dumbfounded for 3 turns, straight past any podium, and −2 Zeal. “Listen”: the first word of the Rule."],
         ["Spiritual Direction", "1 foe", "4 (starts 2)", "−2 Zeal on the foe and +2 Zeal for Fr. Boniface. Two souls come to understand each other.", true],
       ],
       flavor: "Quiet and steady. His great move turns a debate into spiritual direction. Before he was ordained, he also earned a PhD in computer science.",
@@ -452,7 +456,7 @@
       id: "marygrace", name: "Sr. Mary Grace, SV", tag: "Sisters of Life · Let Love podcast", role: "Scholar",
       passive: ["Consecrated", "+10% resistance to Exposed."],
       skills: [
-        ["A Word of Truth", "1 foe", "0", "Strong hit."],
+        ["A Word of Truth", "1 foe", "0", "Strong hit, straight past any podium. She speaks so that anyone can hear."],
         ["Let Love", "All allies", "3", "Major Defense Up and +1 Zeal on each."],
         ["Every Life Is Good", "All foes", "3 (starts 1)", "Attack Down for 3 turns. She speaks so that anyone can hear."],
       ],
@@ -486,7 +490,7 @@
       skills: [
         ["One-Two", "1 foe", "0", "Two light hits."],
         ["Deep Cut", "1 foe", "3", "Doubting, Major Defense Down, and −1 Zeal."],
-        ["Stallone Voice", "1 foe", "3 (starts 1)", "Heavy hit, with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
+        ["Stallone Voice", "1 foe", "3 (starts 1)", "Heavy hit (harder against a shield or podium), with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
         ["Voice of Reason", "All foes", "4 (starts 2)", "Fact-Checks every foe, and −2 Zeal on each.", true],
       ],
       flavor: "The hardest single hitter in the game, with the biggest voice to match.",

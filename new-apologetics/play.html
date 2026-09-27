@@ -103,6 +103,13 @@
   .controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
   #battle { cursor: pointer; }
 
+  .order-row { display: flex; align-items: center; gap: 8px; }
+  .order { display: flex; gap: 4px; overflow: hidden; }
+  .order canvas { width: 34px; height: 34px; border-width: 2px; border-radius: 4px; }
+  .order canvas.hero { border-color: var(--marian); }
+  .order canvas.foe { border-color: var(--crimson); }
+  .order canvas.now { border-color: var(--gold); width: 42px; height: 42px; }
+
   /* Results and cards */
   .result h2 { font-size: 36px; }
   .result .stars { font-size: 34px; color: var(--gold); letter-spacing: 6px; }
@@ -175,6 +182,7 @@
 
 <section id="s-battle" class="screen" hidden>
   <div class="hud"><span id="turn"></span><span class="label" id="round"></span></div>
+  <div class="order-row"><span class="label">Next</span><div class="order" id="order" aria-label="Turn order, fastest first"></div></div>
   <canvas id="battle" width="640" height="360" aria-label="The battle. Tap an opponent or a friend to choose a target."></canvas>
   <p id="log" aria-live="polite"></p>
   <p class="coach" id="battle-coach" hidden></p>
@@ -189,13 +197,13 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926g"></script>
-<script src="audio.js?v=20260926g"></script>
-<script src="art.js?v=20260926g"></script>
-<script src="moves.js?v=20260926g"></script>
-<script src="story.js?v=20260926g"></script>
-<script src="data.js?v=20260926g"></script>
-<script src="battle.js?v=20260926g"></script>
+<script src="chants.js?v=20260926h"></script>
+<script src="audio.js?v=20260926h"></script>
+<script src="art.js?v=20260926h"></script>
+<script src="moves.js?v=20260926h"></script>
+<script src="story.js?v=20260926h"></script>
+<script src="data.js?v=20260926h"></script>
+<script src="battle.js?v=20260926h"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -570,7 +578,32 @@
   $("retreat").addEventListener("click", () => { stopped = true; if (pending) { const p = pending; pending = null; p.resolve({ i: 0, target: null }); } });
 
   let pending = null;
+  // Podiums: which fighters start behind one. Not everyone gets one, and it
+  // changes from battle to battle. What they look like depends on the chapter.
+  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", reformed: "pulpit" };
+  function coverFor(ci, m) {
+    if (m.cover) return m.cover;
+    const foe = [], hero = [];
+    m.foes.forEach((f, i) => { if (foe.length < 2 && Math.random() < 0.35) foe.push(i); });
+    for (let i = 0; i < 4; i++) if (hero.length < 1 && Math.random() < 0.15) hero.push(i);
+    return { foe, hero, size: 0.4 };
+  }
+
+  // The turn order, fastest first, as a strip of small portraits.
+  function paintOrder(b, current) {
+    const box = $("order");
+    box.textContent = "";
+    const list = (current ? [current] : []).concat(b.upcoming(current ? 6 : 7));
+    list.forEach((u, i) => {
+      const c = portrait(u.id, 1);
+      c.className = (u.side === "hero" ? "hero" : "foe") + (i === 0 && current ? " now" : "");
+      c.title = u.name;
+      box.append(c);
+    });
+  }
+
   function playerChoose(b, u) {
+    paintOrder(b, u);
     if (auto) return Promise.resolve(b.think(u));
     return new Promise((resolve) => {
       pending = { resolve, b, u };
@@ -641,6 +674,7 @@
     const tips = [
       "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it.",
       "<b>Step 4 of 4 · Composure and Zeal.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Zeal</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Zeal all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Zeal, so try it now. " : "") + "Keep your own team's Zeal up: at 0 or higher, teammates jump in to back each other up.",
+      "<b>Tip.</b> See the soapbox in front of the Street Preacher? It takes the hits meant for him until it breaks, so knock it down first, or pick a move that lowers his Zeal instead: Zeal goes right past it. The strip of faces at the top shows who goes next. The fastest debaters act first every round.",
       "<b>Tip.</b> A move that says “ready in 2” is recharging: it comes back in two turns. Until then, the basic move is always there.",
       "<b>Tip.</b> The gold-edged move, <b>" + (great >= 0 ? u.def.skills[great].name : "the great move") + "</b>, is locked until level " + (great >= 0 ? Battle.unlockLevel(u.def, great) : 4) + ". Every debate earns experience, and each level opens new moves.",
       "<b>Tip.</b> <b>Auto</b> lets your team play by itself, and <b>Speed</b> makes everything faster. You're on your own now. Good luck!",
@@ -664,11 +698,12 @@
     const m = C[ci].missions[mi];
     const levels = {};
     for (const id of team) levels[id] = levelOfHero(id);
-    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test });
+    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");
-    view = BattleView.create($("battle"), b);
+    view = BattleView.create($("battle"), b, { coverKind: COVER_KIND[C[ci].id] });
+    paintOrder(b, null);
     stopped = false;
     $("log").textContent = "";
     $("panel").textContent = "";
@@ -677,13 +712,14 @@
       choose: (u) => playerChoose(b, u),
       stopped: () => stopped,
       onAction: (u, s, backup) => {
+        paintOrder(b, u);
         $("turn").textContent = u.name + "'s turn" + (u.level ? " · Lv " + u.level : "");
         $("round").textContent = "Round " + b.round;
         // What the fighter says, in plain text under the stage, easy to read at any speed.
         const i = u.def.skills.indexOf(s);
         const mv = u.side === "hero" ? Theater.MOVES[u.id][i] : s.anim || {};
         const said = [].concat(mv.glyphs || [], mv.say || []).filter((g) => typeof g === "string" && g.length > 2);
-        $("log").textContent = (backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "") + "”" : "");
+        $("log").textContent = (backup === "command" ? u.name + " is sent in: " + s.name + "." : backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "") + "”" : "");
         $("panel").textContent = "";
       },
     });

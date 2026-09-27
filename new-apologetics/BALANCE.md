@@ -49,3 +49,24 @@ O'Connor's Euthyphro; Hahn's Covenant Is Family passes through Ryan's
 Faith Alone; Trent Horn's Is That in the Bible? passes through White's
 Eternal
 Security and Sola Scriptura.
+
+## Update: Zeal, podiums and the finer stats
+
+Stats are now Composure (Health), Attack, Defense and Speed, plus traits
+taken straight from each hero's Legends model (LegendsDataCore,
+data/characters.json): Care = the model's base Tech × 10 (it scales the
+Shields of Faith and podiums a hero gives, as Tech scales shields in
+Legends), glance [chance, share deflected], crit [chance, damage], and
+resolve (chance to resist losing Zeal). Morale → Zeal (0, up to +3, floor
+−4 heroes and Joe, −5 grunts, −6 bosses; at 0+ a friend may back you up).
+
+Cover → podiums. Legends places cover in 0–2 slots per battle (none on
+Easy); ours: each foe 35% (max 2), each hero 15% (max 1), strength 40% of
+the average Composure. Chapter looks: desk (atheists), soapbox
+(evangelicals, tutorial), display (LDS), stepladder (Speakers' Corner),
+pulpit (Reformed). Cover-piercing moves: Obsculta (Spock's Nerve Pinch
+ignores cover), A Word of Truth. Extra against cover: Senior Apologist
+(Android Backhand), The Case for Catholicism (Orbital Strike), Stallone
+Voice (Khan's Cover Smash). Podium makers: Smooth Pivot (Geordi's
+Replicated Barrier), The Way of Beauty (Riker Maneuver). Command attack:
+I'm Praying for You (Picard's Make it So).
