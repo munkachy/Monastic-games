@@ -345,7 +345,7 @@ const Battle = (() => {
             if (e.splash) for (const o of others(u).filter((x) => inPlay(x) && x !== t)) hit(u, o, { ...e, dmg: e.dmg * 0.4 }, s, events, true);
             // Rebuttal: anyone ready to answer back, and actually hurt by an
             // opponent's move (a podium's hit doesn't count), answers once.
-            if (hurt && !answering && t.side !== u.side && t.counter > 0 && !rebuttals.includes(t)) rebuttals.push(t);
+            if (hurt && !answering && t.side !== u.side && t.counter > 0 && !(t.statuses.dumbfounded > 0) && !rebuttals.includes(t)) rebuttals.push(t);
           }
           if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
           if (e.status && t.resist && t.resist[e.status] && rnd() < t.resist[e.status]) events.push({ key: t.key, text: "Resisted", color: "#a9a6bd" });
@@ -563,6 +563,9 @@ const Battle = (() => {
     async function rebut(r, attacker) {
       for (const t of r.rebuttals || []) {
         if (b.outcome() || t.state !== "in" || attacker.state !== "in") return;
+        // A Dumbfounded hero can't answer back, even with a Rebuttal ready
+        // (the same move may have just dumbfounded him).
+        if (t.statuses.dumbfounded > 0) { view.show([{ key: t.key, text: "Too dumbfounded to answer", color: "#ffd84a" }]); await view.sleep(0.5); continue; }
         const rt = b.aim(t, 0, attacker);
         view.show([{ key: t.key, text: "Rebuttal!", color: "#e8b94a" }]);
         const line = lineOf(t, 0);
@@ -668,7 +671,7 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move");
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move (not while Dumbfounded)");
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
