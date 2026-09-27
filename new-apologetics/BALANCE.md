@@ -205,3 +205,15 @@ punch 2.0 77 / 71, 1.8 82 / 75, 1.6 88 / 84, 1.5 89 / 88. Chosen: impact 2,
 punch 1.6 (was 1 and 2.4). Rounds per debate on Normal 7.0 → 5.3. Other
 difficulties: Gentle 99 / 100, Hard 77 / 64, Very Hard 60 / 46, Crucible
 48 / 29.
+
+## Update: Who Do You Say You Are? and Kim Zember
+
+Chapter 7 (Identity; an invented Affirming Pastor; campus allies and
+deconstruction podcasters), par 8.3, power [3.0, 2.3]. Kim Zember joins at
+its end, modelled on Sylvia Tilly (base × 10: Health 35, Attack 4.75,
+Defense 1.5, Tech 11.25, Speed 6.87): Restless Heart (Phaser), Boldly
+Beloved (Antimatter Shield), Here I Am (Nervous Ramble: taunt, Defense Up),
+Child of God (Group Hug: heal, cleanse, Morale up). With the shorter
+debates the final chapter's last debate fell to 25%, so its boss power went
+0.85 → 0.7. Normal, 30 runs: Identity 100 / 70 / 77 / boss 73; final chapter
+73 / 53 / 57; whole campaign grunt 87, boss 81.

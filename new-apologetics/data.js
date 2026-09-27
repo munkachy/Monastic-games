@@ -346,7 +346,7 @@ const GameData = (() => {
       { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
       { name: "The Debate Stream", foes: ["activist", "destiny", "creator"], boss: "destiny" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
-    { id: "identity", par: 8.3, power: [3.1, 2.3], title: "Who Do You Say You Are?", group: "Identity", missions: [
+    { id: "identity", par: 8.3, power: [3.0, 2.3], title: "Who Do You Say You Are?", group: "Identity", missions: [
       { name: "The Campus Panel", foes: ["ally", "podcaster"] },
       { name: "Deconstruction", foes: ["podcaster", "ally", "podcaster2"] },
       { name: "Love Is Love", foes: ["ally", "podcaster", "ally2"] },
@@ -360,7 +360,7 @@ const GameData = (() => {
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     // The final chapter: open once every story is done, and the hardest in
     // the game. Every boss comes back to the table.
-    { id: "finale", power: [1.35, 0.85], title: "The Great Debate", group: "Everyone", final: true, missions: [
+    { id: "finale", power: [1.35, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
       { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
       { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
       { name: "The Last Table", foes: ["destiny", "white", "oconnor"], boss: "white" },
