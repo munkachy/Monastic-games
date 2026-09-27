@@ -227,9 +227,12 @@ const Battle = (() => {
         if (u.called) { const c = units.find((x) => x.key === u.called.by && inPlay(x)); if (c) return [c]; }
         return opp;
       }
-      if (s.target === "ally") return friends(u).filter((x) => x.state === "in" || x.state === "discouraged");
+      if (s.target === "ally") return friends(u).filter((x) => x.state === "in" || (x.state === "discouraged" && revives(s)));
       return [];
     }
+    // Only a move that restores Composure can reach a Discouraged friend:
+    // anything else (a shield, a boost, Zeal) would do him no good.
+    const revives = (s) => s.effects.some((e) => e.heal);
 
     // A simple opponent: its best ready move, most of the time.
     function think(u) {
@@ -319,7 +322,7 @@ const Battle = (() => {
         case "random4": return opp.length ? [0, 1, 2, 3].map(() => opp[Math.floor(rnd() * opp.length)]) : [];
         case "foes": return opp;
         case "ally": return chosen ? [chosen] : [u];
-        case "allies": return friends(u).filter((x) => x.state === "in" || x.state === "discouraged");
+        case "allies": return friends(u).filter((x) => x.state === "in" || (x.state === "discouraged" && revives(s)));
         default: return [u];
       }
     }
@@ -342,6 +345,9 @@ const Battle = (() => {
           if (e.faction && t.faction !== e.faction) continue;
           if (e.onlyFor && !e.onlyFor.includes(t.id)) continue;
           if (t.state === "converted" || t.state === "walked" || t.state === "left") break;
+          // A Discouraged friend is reached only by the Composure that brings
+          // him back; once he is back, the rest of the move applies to him.
+          if (t.state === "discouraged" && !e.heal) continue;
           if (e.dmg) {
             let hurt = false;
             for (let h = 0; h < (e.hits || 1); h++) hurt = hit(u, t, e, s, events, false) || hurt;
