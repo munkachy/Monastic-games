@@ -26,6 +26,13 @@ const Battle = (() => {
   let GREAT_KICK = 1.5;
   // Each point of Zeal below zero takes this much off a debater's arguments
   let ZEAL_SAP = 0.1;
+  let HERO_SHIELD = 1.5;      // extra strength of the heroes' own shields and podiums
+  // A debater behind a Shield of Faith argues more boldly: this much more Attack
+  let SHIELD_BOLD = 0.15;
+  // A boss's closing argument: his first wind-up comes on his second turn,
+  // and each one after that three turns after the last
+  const CLOSER_FIRST = 2, CLOSER_EVERY = 3;
+  let HERO_HEAL = 1;          // extra strength of the heroes' own healing
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   // Impact: every debater's Composure, and every shield and podium, is divided
   // by this, so each hit, heal and shield counts for more and debates end
@@ -65,6 +72,8 @@ const Battle = (() => {
 
   function makeUnit(id, side, slot, def, level, diff) {
     const hero = side === "hero";
+    // A boss's closing argument rides along as two extra moves: the wind-up and the blow.
+    if (!hero && def.closer) def = { ...def, skills: def.skills.concat(def.closer) };
     const kind = hero ? "hero" : def.boss ? "boss" : "grunt";
     const d = hero ? { hp: 1, atk: 1, zeal: 0, resolve: 0 } : diff || DIFFICULTY[1];
     const grow = hero ? 1 + HERO_GROWTH * Math.max(0, (level || 1) - 1) : 1 + FOE_GROWTH * (level || 0);
@@ -86,6 +95,7 @@ const Battle = (() => {
       cd: def.skills.map((s) => s.start || 0),
       statuses: {}, called: null, buffs: [], shield: null, counter: 0, immune: {},
       state: "in", since: 0,
+      closerIn: !hero && def.closer ? CLOSER_FIRST : 0, windup: false,
     };
   }
 
@@ -167,6 +177,7 @@ const Battle = (() => {
     function stat(u, s) {
       let m = 1 + (u.bonus[s] || 0);
       for (const b of u.buffs) if (b.stat === s) m += b.amt;
+      if (s === "atk" && u.shield) m += SHIELD_BOLD;
       return u.base[s] * Math.max(0.2, m);
     }
     function critChance(u) {
@@ -219,6 +230,7 @@ const Battle = (() => {
       if (u.shield && --u.shield.n <= 0) u.shield = null;
       for (const k of Object.keys(u.immune)) if (u.immune[k] > 0) u.immune[k]--;
       if (u.counter > 0) u.counter--;
+      if (u.def.closer && !u.windup) u.closerIn--;
       u.cd = u.cd.map((c) => Math.max(0, c - 1));
       if (skip) events.push({ key: u.key, text: "Dumbfounded: loses this turn", color: "#ffd84a" });
       return { skip: skip || !inPlay(u), events };
@@ -233,7 +245,7 @@ const Battle = (() => {
     const inStance = (u, s) => s.target === "self" && s.effects.some((e) => e.counter) && u.counter > 0;
     function usable(u) {
       return u.def.skills.map((s, i) => ({ s, i })).filter(({ s, i }) =>
-        u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s) && !inStance(u, s)).map(({ i }) => i);
+        !s.closer && u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s) && !inStance(u, s)).map(({ i }) => i);
     }
     // Who can be picked for a move that asks for one target.
     function choices(u, i) {
@@ -252,6 +264,8 @@ const Battle = (() => {
 
     // A simple opponent: its best ready move, most of the time.
     function think(u) {
+      // A boss winds up his closing argument, then lands it.
+      if (u.def.closer && (u.windup || u.closerIn <= 0)) return { i: u.def.skills.findIndex((x) => x.closer === (u.windup ? "strike" : "wind")), target: null };
       if (u.side === "hero" && opts.randomHeroes) {
         // For testing only: any ready move, any target.
         const ready = usable(u);
@@ -291,6 +305,9 @@ const Battle = (() => {
       const opp = others(u).filter(inPlay);
       const setbacks = (x) => DEBUFFS.filter((k) => x.statuses[k] > 0).length + x.buffs.filter((b) => b.amt < 0).length;
       const nearZealFloor = (x) => x.zeal - x.floor;
+      // A boss winding up his closing argument: shield the team, or stop him.
+      const winding = opp.find((x) => x.windup);
+      const stops = (e) => e.status === "dumbfounded" || e.status === "muted";
       let best = 0, bestScore = -1;
       for (const i of ready) {
         const sk = u.def.skills[i];
@@ -301,7 +318,10 @@ const Battle = (() => {
           if (e.dmg) sc += e.dmg * (e.hits || 1) * (sk.target === "random4" ? 4 : many) * 0.9;
           if (e.heal) sc += (down.length * 5 + hurt.length * 2.5) * (sk.target === "allies" ? 1 : 0.8);
           if (e.shield) sc += team.filter((x) => x.state === "in" && !x.shield).length * (sk.target === "allies" ? 0.8 : 1) + (hurt.length ? 1.5 : 0);
-          if (e.podium) sc += 1.5;
+          if (e.podium) sc += winding ? 3 : 1.5;
+          if (winding && e.shield) sc += team.filter((x) => x.state === "in" && !x.shield).length * (sk.target === "allies" ? 2 : 0.8);
+          if (winding && stops(e)) sc += 6 * p;
+          if (winding && e.buff === "def" && e.amt > 0) sc += many * 0.8;
           if (e.cleanse) sc += team.reduce((n, x) => n + setbacks(x), 0) * 1.2;
           if (e.zeal < 0) sc += -e.zeal * p * many * (opp.some((x) => nearZealFloor(x) <= 2) ? 1.8 : 1.1);
           if (e.zeal > 0 || e.allyZeal || e.selfZeal) sc += 1;
@@ -324,7 +344,7 @@ const Battle = (() => {
         const zealMove = sk.effects.some((e) => e.zeal < 0);
         const pierce = (sk.pierce || []).includes("cover") || sk.effects.some((e) => e.vs && e.vs[0] === "guarded");
         const score = (x) => (zealMove ? nearZealFloor(x) * 0.25 : x.hp / x.maxHp) + (x.cover && !pierce && !zealMove ? 0.6 : 0) + (x.statuses.cloaked > 0 ? 0.5 : 0);
-        target = c.slice().sort((a, b) => score(a) - score(b))[0];
+        target = winding && c.includes(winding) && sk.effects.some(stops) ? winding : c.slice().sort((a, b) => score(a) - score(b))[0];
       } else if (sk.target === "ally" && c.length) {
         const heals = sk.effects.some((e) => e.heal || e.cleanse);
         const cmd = sk.effects.some((e) => e.command);
@@ -372,6 +392,7 @@ const Battle = (() => {
       let commanded = null;
       const rebuttals = [];            // who was hurt and will answer back
       u.cd[i] = s.cd;
+      if (s.closer === "strike") { u.windup = false; u.closerIn = CLOSER_EVERY; }
       for (const t of targets) {
         for (const e of s.effects) {
           if (e.chance !== undefined && rnd() > e.chance) continue;
@@ -391,15 +412,21 @@ const Battle = (() => {
           }
           if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
           if (e.status && t.resist && t.resist[e.status] && rnd() < t.resist[e.status]) events.push({ key: t.key, text: "Resisted", color: "#a9a6bd" });
-          else if (e.status) { t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns); events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" }); }
+          else if (e.status) {
+            t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns);
+            events.push({ key: t.key, text: label(e.status, t), color: "#ffd84a" });
+            // Dumbfounded or Muted mid wind-up: the closing argument never comes.
+            if (t.windup && (e.status === "dumbfounded" || e.status === "muted")) { t.windup = false; t.closerIn = CLOSER_EVERY; events.push({ key: t.key, text: "Closing argument stopped!", color: "#74c07a" }); }
+          }
+          if (e.windup) { u.windup = true; events.push({ key: u.key, text: "Winding up!", color: "#ff5a4e" }); }
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
-          if (e.heal) heal(t, e.heal * kick(u, s), events);
+          if (e.heal) heal(t, e.heal * kick(u, s) * (u.side === "hero" ? HERO_HEAL : 1), events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK() * kick(u, s)), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
-          if (e.podium) { const hp = Math.round(u.care * e.podium * careK() * kick(u, s)); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1)), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.podium) { const hp = Math.round(u.care * e.podium * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1)); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
           if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
@@ -732,6 +759,7 @@ const Battle = (() => {
       }
       if (e.zeal) out.push(pct(e) + (e.zeal < 0 ? "Zeal down " + -e.zeal : "Zeal up " + e.zeal) + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.status) out.push(pct(e) + STATUS[e.status]);
+      if (e.windup) out.push("Winds up his closing argument: next turn it lands on the whole team. Shield your team, or leave him Dumbfounded or Muted to stop it");
       if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero. A spotlight shows who, and a red arrow over each opponent points his way");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
       if (e.heal) out.push("Restores Composure (and encourages the Discouraged)");
@@ -791,7 +819,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
@@ -843,6 +871,7 @@ const BattleView = (() => {
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign || SIGNS[u.faction]); continue; }
           if (a.hidden) continue;
           if (u.statuses.dumbfounded > 0) stunStars(ctx, a.x + (a.dx || 0), a.y, t, Math.min(3, u.statuses.dumbfounded));
+          if (u.windup && u.state === "in") windupMark(ctx, a.x + (a.dx || 0), a.y, t);
           // Called out: a spotlight on the one they must answer, and a red
           // arrow over each opponent he has called, pointing his way.
           const calling = Object.values(units).some((f) => f.called && f.called.by === u.key && f.state === "in");
@@ -997,6 +1026,15 @@ const BattleView = (() => {
 
     // Dumbfounded: stars circling his head, one for each turn he has left to
     // lose. The ones passing behind his head are dimmer.
+    // A boss winding up his closing argument: a pulsing red warning over his head.
+    function windupMark(ctx, x, y, t) {
+      const cy = y - 118, pulse = 0.55 + 0.45 * Math.abs(Math.sin(t * 4));
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 13, cy - 17, 26, 34);
+      ctx.fillStyle = "#ff5a4e"; ctx.fillRect(x - 11, cy - 15, 22, 30);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 3, cy - 11, 6, 14); ctx.fillRect(x - 3, cy + 6, 6, 5);
+      ctx.globalAlpha = 1;
+    }
     function stunStars(ctx, x, y, t, n) {
       const cx = x, cy = y - 112;
       for (let i = 0; i < n + 1; i++) {
