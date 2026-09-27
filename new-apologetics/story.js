@@ -254,10 +254,11 @@ const Story = (() => {
           ["pine","Your fundamental identity? A creature of God, and by grace, his child and heir to eternal life."],
           ["hicks","And every one of us has disordered desires. That's concupiscence, and it stays with the baptized. Nobody stands above anybody here."],
         ] },
-        { when: "After the third battle", place: "studio", left: ["zember","marygrace","fradd"], right: [], lines: [
+        { when: "After the third battle", place: "studio", left: ["zember","schmitz","marygrace"], right: [], lines: [
           ["zember","What changed me wasn't an argument. It was being loved by Someone who wanted more for me than I wanted for myself."],
-          ["marygrace","And chastity isn't a special rule for some people. It's for all of us: married, single, priests, sisters."],
-          ["fradd","Same call, same grace, same Father. Nobody gets a harder or easier deal than anyone else."],
+          ["schmitz","I wrote a whole book on this, Made for Love. Here's the heart of it. If you're a Christian, you've been recreated as a son or daughter of God. Even if your story has a lot of brokenness in it, your identity is not that."],
+          ["schmitz","My experiences can't define me. I'm defined by something more: I've been made on purpose, by a God who loves me.","idea"],
+          ["marygrace","And chastity isn't a special rule for some people. It's for all of us: married, single, priests, sisters. The big call for everyone is the same: discipleship, and holiness."],
         ] },
         { when: "The last conversation", place: "square", left: ["zember","schmitz","pine"], right: ["pastor"], lines: [
           ["pastor","So you're saying they're not less than anyone else?","?"],
