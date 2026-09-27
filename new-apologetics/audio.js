@@ -1,5 +1,7 @@
-// Music and sound, made in the browser with Web Audio. Shared with Benedictine Bricks:
-// keep this file the same as benedictine-bricks/audio.js.
+// Music and sound, made in the browser with Web Audio. Begun as Benedictine
+// Bricks' audio.js; New Apologetics adds the stir (the music shifts a little
+// with every move) and battle sound effects that land on the beat, in the key
+// of the chant being sung.
 //
 // Music is chosen with the music button. Three beats — techno, dubstep and
 // electro — each come with the chant or without it:
@@ -47,6 +49,13 @@ const Sound = (() => {
   let drone = null;
   let finalPitch = 55;
   let arpNotes = [55, 59, 62];
+
+  // How the beat has been stirred by the moves so far: which chant note the
+  // bass sits on, which bass figure, how busy the hats are, where the
+  // arpeggio starts, and when the next drum fill falls.
+  const BASS_FIGURES = [[0, 0, 12, 0, 0, 12, 7, 12], [0, 12, 0, 12, 0, 12, 10, 12], [0, 0, 7, 0, 12, 0, 7, 5], [0, 7, 12, 7, 0, 7, 12, 14]];
+  const mix = { root: 0, bass: 0, hats: 0, arp: 0, fill: -99, turns: 0 };
+  const rootNote = () => arpNotes[mix.root % arpNotes.length];
 
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -411,11 +420,13 @@ const Sound = (() => {
       if (s % 4 === 2) noiseHit(t, "highpass", 8000, 0.12, 0.05);
       if (s === 4 || s === 12) noiseHit(t, "bandpass", 1500, 0.25, 0.18);
     }
+    if (level >= 1 && mix.hats === 1 && s % 2 === 1) noiseHit(t, "highpass", 9500, 0.05, 0.03);
+    if (level >= 1 && mix.hats === 2 && s % 4 === 3) noiseHit(t, "highpass", 6000, 0.09, 0.12);
     if (level >= 2 && s % 2 === 0) {
-      const pattern = [0, 0, 12, 0, 0, 12, 7, 12];
-      bass(finalPitch - 24 + pattern[(s / 2) % 8], t, SIXTEENTH * 2);
+      const pattern = BASS_FIGURES[mix.bass];
+      bass(rootNote() - 24 + pattern[(s / 2) % 8], t, SIXTEENTH * 2);
     }
-    if (lead && level >= 3 && s % 2 === 1) pluck(arpNotes[(step >> 1) % arpNotes.length] + 12, t);
+    if (lead && level >= 3 && s % 2 === 1) pluck(arpNotes[((step >> 1) + mix.arp) % arpNotes.length] + 12, t);
   }
 
   // Dubstep's half-time: one kick at the top of the bar, a heavy snare on
@@ -434,7 +445,7 @@ const Sound = (() => {
       const beat = s / 4;
       const wobbles = [[2, 2, 3, 4], [1, 2, 4, 6], [2, 3, 2, 8], [4, 2, 6, 3]][bar][beat];
       const pattern = [0, 0, 3, 5];
-      const root = arpNotes[pattern[beat] % arpNotes.length] - 24;
+      const root = arpNotes[(pattern[beat] + mix.root) % arpNotes.length] - 24;
       wobble(root, t, BEAT * 0.96, wobbles);
     }
     if (lead && level >= 3 && (s === 14 || s === 6) && bar % 2 === 1) {
@@ -454,7 +465,7 @@ const Sound = (() => {
     if (level >= 2) {
       const hits = { 0: 0, 3: 0, 6: 2, 8: 0, 11: 1, 14: 3 };
       if (s in hits) {
-        const note = arpNotes[hits[s] % arpNotes.length] - 24;
+        const note = arpNotes[(hits[s] + mix.root) % arpNotes.length] - 24;
         robotBass(note, lastBass, t, SIXTEENTH * 2.5);
         lastBass = note;
       }
@@ -477,6 +488,8 @@ const Sound = (() => {
       const t = gridTime;
       const s = step % 16;
       const level = mode === "both" ? intensity : intensity + 1;
+      // A snare fill leading into the next bar, after a great move.
+      if (step >= mix.fill && step < mix.fill + 4 && level >= 1) noiseHit(t, "bandpass", 1600 + (step - mix.fill) * 350, 0.16 + (step - mix.fill) * 0.04, 0.09);
       if (style === "techno") technoStep(t, s, level, !sings(mode));
       else if (style === "dubstep") dubstepStep(t, s, level, !sings(mode));
       else if (style === "electro") electroStep(t, s, level, !sings(mode));
@@ -563,6 +576,82 @@ const Sound = (() => {
     }
   }
 
+  // ---- The stir -----------------------------------------------------------------
+  // Every move shifts one thing in the beat, in turn, so the music never sits
+  // still for long: the bass figure, the note it sits on, the hats, the
+  // arpeggio. A great move also brings a drum fill into the next bar.
+  function stir(big) {
+    mix.turns++;
+    const k = mix.turns % 4;
+    if (k === 1) mix.bass = (mix.bass + 1) % BASS_FIGURES.length;
+    if (k === 2) mix.root = (mix.root + 1) % Math.max(1, Math.min(3, arpNotes.length));
+    if (k === 3) mix.hats = (mix.hats + 1) % 3;
+    if (k === 0) mix.arp++;
+    if (big && playing) {
+      let at = step + (16 - (step % 16)) - 4;
+      if (at <= step + 2) at += 16;
+      mix.fill = at;
+    }
+  }
+
+  // ---- Battle sounds -----------------------------------------------------------
+  // Little bleeps and boops, each on the next sixteenth and in the key of the
+  // chant, so they play as part of the music rather than over it.
+  const key = (i, oct) => arpNotes[((i % arpNotes.length) + arpNotes.length) % arpNotes.length] + 12 * (oct || 0) + (i >= arpNotes.length ? 12 : 0);
+  const hz = (i, oct) => mtof(key(i, oct));
+  function blip(t, f, type, level, len, end) { tone(t, f, type, level, len, end); }
+  function fx(name, n, delay) {
+    if (!ac || mode === "off") return;
+    const S = SIXTEENTH;
+    const t = onBeat() + (delay || 0) * S;
+    switch (name) {
+      case "bleep":      // words flying: a quick run of square-wave bleeps, rising
+        for (let i = 0; i < Math.min(6, n || 2); i++) blip(t + i * S, hz(i, 1), "square", 0.07, S * 0.8);
+        break;
+      case "hit": blip(t, hz(0, 0), "triangle", 0.22, 0.12, hz(0, -1)); noiseHit(t, "lowpass", 1200, 0.18, 0.05, sfxGain); break;
+      case "crit": blip(t, hz(2, 2), "sine", 0.14, 0.3); blip(t + S, hz(0, 3), "sine", 0.12, 0.4); bell(t, hz(0, 1), 0.06); break;
+      case "deflect":    // boing
+        blip(t, hz(0, 1), "sine", 0.16, 0.22, hz(0, 1) * 1.8); blip(t + S, hz(0, 1) * 1.8, "sine", 0.1, 0.2, hz(0, 1)); break;
+      case "podium":     // a woodblock knock
+        blip(t, 900, "triangle", 0.2, 0.05, 700); noiseHit(t, "bandpass", 2600, 0.12, 0.03, sfxGain); break;
+      case "podiumFall": // womp womp
+        blip(t, hz(1, 0), "sawtooth", 0.1, S * 2.5, hz(0, 0)); blip(t + S * 3, hz(0, 0), "sawtooth", 0.1, S * 4, hz(0, -1)); break;
+      case "zealDown":   // wah-wah
+        blip(t, hz(1, 1), "square", 0.06, S * 1.8, hz(0, 1)); blip(t + S * 2, hz(0, 1), "square", 0.06, S * 3, hz(0, 1) * 0.94); break;
+      case "zealUp":     // a twinkle, rising
+        for (let i = 0; i < 3; i++) blip(t + i * S * 0.5, hz(i, 2), "sine", 0.09, 0.18); break;
+      case "stun":       // a cuckoo clock
+        for (let r = 0; r < 2; r++) { blip(t + r * S * 3, hz(2, 2), "sine", 0.1, S * 1.2); blip(t + r * S * 3 + S, hz(0, 2), "sine", 0.1, S * 1.6); }
+        break;
+      case "concede": {  // the sad trombone
+        const f0 = hz(0, 0);
+        [3, 2, 1].forEach((d, i) => blip(t + i * S * 2, f0 * Math.pow(2, d / 12), "sawtooth", 0.08, S * 1.8));
+        blip(t + S * 6, f0, "sawtooth", 0.08, S * 6, f0 * 0.97);
+        break;
+      }
+      case "left": blip(t, hz(0, 0), "triangle", 0.12, S * 2, hz(0, -1)); blip(t + S * 2, hz(0, -1), "triangle", 0.1, S * 4, hz(0, -1) * 0.5); break;
+      case "shield":     // a shimmer, three notes of the chant at once
+        for (let i = 0; i < 3; i++) blip(t + i * 0.02, hz(i, 2), "sine", 0.05, 0.7); break;
+      case "heal":       // a harp run
+        for (let i = 0; i < 6; i++) blip(t + i * S * 0.5, hz(i, 1), "triangle", 0.08, 0.35); break;
+      case "backup": noiseHit(t, "bandpass", 1400, 0.2, 0.06, sfxGain); blip(t, hz(0, 1), "square", 0.07, S, hz(2, 1)); break;  // "hey!"
+      case "command":    // a whistle: whee-whoo
+        blip(t, hz(0, 2), "sine", 0.1, S * 1.5, hz(2, 2)); blip(t + S * 2, hz(2, 2), "sine", 0.1, S * 2, hz(0, 2)); break;
+      case "muted": blip(t, hz(0, 1), "sawtooth", 0.08, 0.45, hz(0, 1) * 0.2); break;   // a tape stop
+      case "undercover": // sneaking: low plucks on the off-beats
+        [0, 1, 0, 2].forEach((d, i) => blip(t + i * S * 2, hz(d, -1), "triangle", 0.12, S * 0.7)); break;
+      case "sniff": noiseHit(t, "highpass", 3200, 0.2, 0.07, sfxGain); noiseHit(t + S * 0.7, "highpass", 3600, 0.16, 0.06, sfxGain); break;
+      case "step": blip(t, 1300, "triangle", 0.05, 0.03); blip(t + S * 2, 1100, "triangle", 0.05, 0.03); break;
+      case "hex": blip(t, hz(2, 1), "sawtooth", 0.06, S * 3, hz(0, 0)); blip(t, hz(2, 1) * 1.01, "square", 0.04, S * 3, hz(0, 0)); break;
+      case "great":      // a big stab chord, and a fill into the next bar
+        for (let i = 0; i < 3; i++) stab(key(i, 1), t, 0.5, 0.08);
+        stir(true);
+        break;
+      case "discouraged": blip(t, hz(0, -1), "triangle", 0.14, S * 5, hz(0, -1) * 0.8); break;
+      case "encouraged": for (let i = 0; i < 4; i++) blip(t + i * S * 0.5, hz(i, 1), "square", 0.05, 0.12); break;
+    }
+  }
+
   // ---- Effects ------------------------------------------------------------------
 
   function play(name, size) {
@@ -604,7 +693,7 @@ const Sound = (() => {
   }
 
   return {
-    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play,
+    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play, stir, fx,
     get mode() { return mode; },
     get playing() { return playing; },
   };

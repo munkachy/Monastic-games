@@ -94,6 +94,8 @@
   .duo { display: grid; gap: 4px; padding: 10px 12px; border: 2px solid #8a6ad8; border-radius: 4px; font-size: 14px; color: var(--muted); }
   .duo b { font: 600 17px/1.2 var(--display); color: #c9b4ff; }
   .flavor { font-style: italic; font-size: 14px; color: var(--muted); }
+  .good-for { margin: 0; font-size: 15px; }
+  .good-for b { font-family: var(--display); color: var(--gold); font-weight: 600; }
   .open-slot { border-style: dashed; background: transparent; }
 
   /* Camera Mog spotlight */
@@ -192,7 +194,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260926i">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260926j">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -342,11 +344,11 @@
   </section>
 </main>
 
-<script src="art.js?v=20260926i"></script>
-<script src="moves.js?v=20260926i"></script>
-<script src="story.js?v=20260926i"></script>
-<script src="data.js?v=20260926i"></script>
-<script src="battle.js?v=20260926i"></script>
+<script src="art.js?v=20260926j"></script>
+<script src="moves.js?v=20260926j"></script>
+<script src="story.js?v=20260926j"></script>
+<script src="data.js?v=20260926j"></script>
+<script src="battle.js?v=20260926j"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -685,7 +687,12 @@
     const flavor = document.createElement("p");
     flavor.className = "flavor";
     flavor.textContent = h.flavor;
-    card.append(head, passive, skillList(h.skills));
+    // What this hero is good for, in plain words (the same text the game shows).
+    const good = document.createElement("p");
+    good.className = "good-for";
+    good.innerHTML = "<b>Good for</b> · <span></span>";
+    good.querySelector("span").textContent = (GameData.HEROES[h.id] || {}).about || "";
+    card.append(head, good, passive, skillList(h.skills));
     if (h.duo) {
       const d = document.createElement("div");
       d.className = "duo";

@@ -60,6 +60,7 @@
   .books button { display: grid; gap: 3px; text-align: left; font-size: 13px; }
   .books button small { font: 400 13px/1.35 var(--body); color: var(--muted); text-transform: none; letter-spacing: 0; }
   .books button[aria-pressed="true"] { border-color: var(--gold); background: #3a3420; }
+  .hero-info .about { margin: 0; font-size: 14px; }
   .hero-info li .what { font-size: 13px; color: var(--muted); margin: 2px 0 4px 20px; }
   .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
   .music-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -201,13 +202,13 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926i"></script>
-<script src="audio.js?v=20260926i"></script>
-<script src="art.js?v=20260926i"></script>
-<script src="moves.js?v=20260926i"></script>
-<script src="story.js?v=20260926i"></script>
-<script src="data.js?v=20260926i"></script>
-<script src="battle.js?v=20260926i"></script>
+<script src="chants.js?v=20260926j"></script>
+<script src="audio.js?v=20260926j"></script>
+<script src="art.js?v=20260926j"></script>
+<script src="moves.js?v=20260926j"></script>
+<script src="story.js?v=20260926j"></script>
+<script src="data.js?v=20260926j"></script>
+<script src="battle.js?v=20260926j"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -514,6 +515,9 @@
       info.textContent = "";
       const h = document.createElement("h3");
       h.textContent = HEROES[id].name + " · Level " + lv;
+      const about = document.createElement("p");
+      about.className = "about";
+      about.textContent = HEROES[id].about || "";
       const ul = document.createElement("ul");
       HEROES[id].skills.forEach((sk, i) => {
         const at = Battle.unlockLevel(HEROES[id], i);
@@ -529,7 +533,7 @@
         li.append(tag, what);
         ul.append(li);
       });
-      info.append(h, ul);
+      info.append(h, about, ul);
       // The book this hero carries: tap one to hand it over, tap again to take it back.
       const books = shelf();
       if (books.length && !HEROES[id].guest) {
@@ -628,6 +632,59 @@
     m.foes.forEach((f, i) => { if (foe.length < 2 && Math.random() < 0.35) foe.push(i); });
     for (let i = 0; i < 4; i++) if (hero.length < 1 && Math.random() < 0.15) hero.push(i);
     return { foe, hero, size: 0.4 };
+  }
+
+  // Sound for the stage: each move stirs the music and makes its own noise as
+  // it starts; each result makes its own as it lands. All on the beat.
+  function soundOfEvent(e) {
+    const x = e.text;
+    if (x.startsWith("Crit!")) return "crit";
+    if (x.startsWith("Deflected")) return "deflect";
+    if (x === "Podium falls!") return "podiumFall";
+    if (x.endsWith("podium")) return "podium";
+    if (x.includes("▼") && x.includes("Zeal")) return "zealDown";
+    if (x.includes("▲") && x.includes("Zeal")) return "zealUp";
+    if (x === "Dumbfounded") return "stun";
+    if (x === "Concedes") return "concede";
+    if (x === "Leaves the debate") return "left";
+    if (x === "Converted!") return "converted";
+    if (x === "Shield of Faith" || x === "Podium up") return "shield";
+    if (x === "Encouraged!") return "encouraged";
+    if (x === "Discouraged") return "discouraged";
+    if (x === "Muted") return "muted";
+    if (x === "Undercover") return "undercover";
+    if (x === "Backs you up!" || x === "Piles on!") return "backup";
+    if (x === "Sent in!") return "command";
+    if (/^\+\d/.test(x)) return "heal";
+    if (/^−\d/.test(x)) return "hit";
+    return null;
+  }
+  function withSound(v) {
+    const show = v.show, perform = v.perform;
+    v.show = (events) => {
+      const seen = new Set();
+      let slot = 0;
+      for (const e of events) {
+        const snd = soundOfEvent(e);
+        if (!snd || seen.has(snd)) continue;     // one of each kind per moment is plenty
+        seen.add(snd);
+        if (snd === "converted") Sound.play("star");
+        else Sound.fx(snd, 0, slot);
+        slot += snd === "hit" ? 1 : 2;
+      }
+      return show(events);
+    };
+    v.perform = (u, i, targets) => {
+      const mv = u.side === "hero" ? Theater.MOVES[u.id][i] : u.def.skills[i].anim || {};
+      const kind = mv.kind === Theater.kinds.volley || mv.kind === "volley" ? "bleep"
+        : mv.kind === Theater.kinds.approach || mv.kind === "approach" ? "step"
+        : mv.kind === Theater.kinds.hex || mv.kind === "hex" ? "hex"
+        : mv.kind === Theater.kinds.cinematic || mv.kind === "cinematic" ? "great" : null;
+      Sound.stir(false);
+      if (u.def.skills[i].name === "Žižek Impression") Sound.fx("sniff");
+      else if (kind) Sound.fx(kind, (mv.glyphs || []).length || 2);
+      return perform(u, i, targets);
+    };
   }
 
   // The turn order, fastest first, as a strip of small portraits.
@@ -746,6 +803,7 @@
     coachStep = 0;
     coach("battle-coach", "");
     view = BattleView.create($("battle"), b, { coverKind: COVER_KIND[C[ci].id] });
+    withSound(view);
     paintOrder(b, null);
     stopped = false;
     $("log").textContent = "";
