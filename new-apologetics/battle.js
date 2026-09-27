@@ -172,7 +172,7 @@ const Battle = (() => {
       for (const k of Object.keys(u.immune)) if (u.immune[k] > 0) u.immune[k]--;
       if (u.counter > 0) u.counter--;
       u.cd = u.cd.map((c) => Math.max(0, c - 1));
-      if (skip) events.push({ key: u.key, text: "Dumbfounded", color: "#ffd84a" });
+      if (skip) events.push({ key: u.key, text: "Dumbfounded: loses this turn", color: "#ffd84a" });
       return { skip: skip || !inPlay(u), events };
     }
 
@@ -440,6 +440,7 @@ const Battle = (() => {
 
   async function run(b, view, opts) {
     const o = opts || {};
+    const inPlayNow = (u) => u.state === "in";
     // Rebuttals: whoever was hit and is ready answers the attacker at once,
     // with his basic move. A rebuttal never sets off another.
     async function rebut(r, attacker) {
@@ -464,6 +465,7 @@ const Battle = (() => {
       view.setActive(u.key);
       const st = b.startTurn(u);
       if (st.events.length) { view.show(st.events); await view.sleep(0.7); }
+      if (st.skip && inPlayNow(u) && o.onSkip) o.onSkip(u);
       if (st.skip || b.outcome()) continue;
       const pick = u.side === "hero" && o.choose ? await o.choose(u) : b.think(u);
       if (o.stopped && o.stopped()) return "stopped";
@@ -590,6 +592,8 @@ const BattleView = (() => {
           return { alpha: 1 - k / 1.2, dx: a.side === "foe" ? k * 60 : -k * 60, flip: a.side !== "foe" };
         }
         if (u.state === "discouraged") return { alpha: 0.4 };
+        // Dumbfounded: swaying on his feet.
+        if (u.statuses.dumbfounded > 0) return { dx: Math.round(Math.sin(now * 5 + u.slot) * 3) };
         return null;
       },
       hud(ctx, actors, t, cinematic) {
@@ -600,6 +604,7 @@ const BattleView = (() => {
           if (!u) continue;
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
+          if (u.statuses.dumbfounded > 0) stunStars(ctx, a.x + (a.dx || 0), a.y, t, Math.min(3, u.statuses.dumbfounded));
           if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t, u.slot * 1.7 + (u.side === "foe" ? 0.9 : 0));
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.def.podium || (u.side === "foe" ? o.coverKind || "podium" : "podium"));
           const x = a.x - 30;
@@ -743,6 +748,25 @@ const BattleView = (() => {
       ctx.globalAlpha = 1;
     }
 
+    // Dumbfounded: stars circling his head, one for each turn he has left to
+    // lose. The ones passing behind his head are dimmer.
+    function stunStars(ctx, x, y, t, n) {
+      const cx = x, cy = y - 112;
+      for (let i = 0; i < n + 1; i++) {
+        const ang = t * 3.2 + (i * Math.PI * 2) / (n + 1);
+        const sx = Math.round(cx + Math.cos(ang) * 26), sy = Math.round(cy + Math.sin(ang) * 8);
+        ctx.globalAlpha = Math.sin(ang) > 0 ? 1 : 0.6;
+        const c = i < n ? "#ffd84a" : "#ffffff";
+        // A chunky four-pointed star with a dark outline.
+        ctx.fillStyle = "#1a1326";
+        ctx.fillRect(sx - 7, sy - 2, 15, 5); ctx.fillRect(sx - 2, sy - 7, 5, 15); ctx.fillRect(sx - 4, sy - 4, 9, 9);
+        ctx.fillStyle = c;
+        ctx.fillRect(sx - 6, sy - 1, 13, 3); ctx.fillRect(sx - 1, sy - 6, 3, 13); ctx.fillRect(sx - 3, sy - 3, 7, 7);
+        ctx.fillStyle = "#ffffff"; ctx.fillRect(sx - 1, sy - 1, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+
     function arrow(ctx, x, y, up, color) {
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -780,6 +804,15 @@ const BattleView = (() => {
         move.mark = a.kind === "volley" ? (a.mark ? [].concat(a.mark)[0] : undefined) : [].concat(a.mark || []);
       }
       if (line) move = { ...move, ...line };
+      // Stun marks only when a stun really lands (drawn from the fighter's
+      // actual state), never just because the move might stun.
+      // (Volleys and walk-overs take one mark or none; other kinds a list.)
+      const single = move.kind === Theater.kinds.volley || move.kind === Theater.kinds.approach;
+      const noStun = (m) => {
+        const list = [].concat(m || []).filter((x) => x && x !== "dumbfounded");
+        return single ? list[0] : list;
+      };
+      move = { ...move, mark: noStun(move.mark), mark2: noStun(move.mark2) };
       theater.act(u.key, move, now, targets.map((t) => t.key));
       return new Promise((res) => { done = res; });
     }

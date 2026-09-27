@@ -202,14 +202,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926p"></script>
-<script src="audio.js?v=20260926p"></script>
-<script src="art.js?v=20260926p"></script>
-<script src="moves.js?v=20260926p"></script>
-<script src="story.js?v=20260926p"></script>
-<script src="data.js?v=20260926p"></script>
-<script src="lines.js?v=20260926p"></script>
-<script src="battle.js?v=20260926p"></script>
+<script src="chants.js?v=20260926q"></script>
+<script src="audio.js?v=20260926q"></script>
+<script src="art.js?v=20260926q"></script>
+<script src="moves.js?v=20260926q"></script>
+<script src="story.js?v=20260926q"></script>
+<script src="data.js?v=20260926q"></script>
+<script src="lines.js?v=20260926q"></script>
+<script src="battle.js?v=20260926q"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -661,7 +661,7 @@
     if (x.endsWith("podium")) return "podium";
     if (x.includes("▼") && x.includes("Zeal")) return "zealDown";
     if (x.includes("▲") && x.includes("Zeal")) return "zealUp";
-    if (x === "Dumbfounded") return "stun";
+    if (x.startsWith("Dumbfounded")) return "stun";
     if (x === "Concedes") return "concede";
     if (x === "Leaves the debate") return "left";
     if (x === "Converted!") return "converted";
@@ -829,6 +829,12 @@
     show("s-battle");
     const out = await Battle.run(b, view, {
       choose: (u) => playerChoose(b, u),
+      onSkip: (u) => {
+        paintOrder(b, u);
+        $("turn").textContent = u.name + "'s turn";
+        $("log").textContent = u.name + " is dumbfounded and loses this turn.";
+        $("panel").textContent = "";
+      },
       stopped: () => stopped,
       onAction: (u, s, backup, line) => {
         paintOrder(b, u);
