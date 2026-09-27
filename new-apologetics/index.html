@@ -195,7 +195,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260927z">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260928a">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -211,7 +211,7 @@
     <div class="lede">
       <span class="label">The rules</span>
       <h2>A battle, turned into a debate</h2>
-      <p>Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.</p>
+      <p>Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every hero has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. A great move lands half again as hard as the rest, so reaching it is a real upgrade. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.</p>
     </div>
     <div class="scroll">
       <table>
@@ -342,12 +342,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260927z"></script>
-<script src="moves.js?v=20260927z"></script>
-<script src="story.js?v=20260927z"></script>
-<script src="data.js?v=20260927z"></script>
-<script src="lines.js?v=20260927z"></script>
-<script src="battle.js?v=20260927z"></script>
+<script src="art.js?v=20260928a"></script>
+<script src="moves.js?v=20260928a"></script>
+<script src="story.js?v=20260928a"></script>
+<script src="data.js?v=20260928a"></script>
+<script src="lines.js?v=20260928a"></script>
+<script src="battle.js?v=20260928a"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -361,7 +361,7 @@
       passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
       skills: [
         ["Precise Distinction", "1 foe", "0", "Hit."],
-        ["Senior Apologist", "1 foe", "3", "Strong hit (harder against a shield or podium). 25% chance to leave him Dumbfounded for 3 turns. “Well, actually, there are three views on that…”"],
+        ["Senior Apologist", "1 foe", "3", "Strong hit (harder against a shield or podium). 50% chance to leave him Dumbfounded for 2 turns. “Well, actually, there are three views on that…”"],
         ["Logical Paradox", "All foes", "3", "Minor Attack Down for 3 turns. 50% chance of −1 Zeal on each."],
         ["Mysterious World", "2 random foes", "3", "Exposed, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
       ],
@@ -566,12 +566,12 @@
       id: "pitre", name: "Brant Pitre", tag: "Scripture scholar · The Case for Jesus · Jesus and the Jewish Roots of the Eucharist", role: "Scholar",
       passive: ["Second Temple Context", "+5% Attack to every ally: the whole team reads the texts in their setting."],
       skills: [
-        ["Jewish Roots", "1 foe", "0", "Hit."],
-        ["The Big Picture", "1 foe", "3", "Exposed for 3 turns, and Major Defense Down. Step back and read Jesus as a first-century Jew."],
-        ["The New Passover", "All allies", "3 (starts 1)", "Major Attack Up for 3 turns, and +1 Zeal on each."],
-        ["The Case for Jesus", "1 foe", "4 (starts 2)", "A crushing hit, and Doubting for 3 turns. No anonymous copy of a Gospel has ever been found.", true],
+        ["Jewish Roots", "1 foe", "0", "Hit. 25% chance of Attack Down."],
+        ["The Big Picture", "All foes", "3", "Every opponent is Exposed for 3 turns. Step back and read Jesus as a first-century Jew."],
+        ["The Son of Man", "1 foe", "3 (starts 1)", "Always leaves him Dumbfounded for 2 turns, straight past any podium, and −2 Zeal. Daniel 7: the claim that silences the room."],
+        ["The Case for Jesus", "1 foe", "4 (starts 2)", "A crushing hit, −2 Zeal, and Doubting for 3 turns. No anonymous copy of a Gospel has ever been found.", true],
       ],
-      flavor: "Quick, and he sees the whole picture where others get lost in details. He joins after the chapter Misquoting Jesus?",
+      flavor: "Very quick, and he sees the whole picture where others get lost in details. He joins after the chapter Misquoting Jesus?",
     },
   ];
 

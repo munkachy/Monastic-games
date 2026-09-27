@@ -36,7 +36,7 @@ const GameData = (() => {
   const HEROES = {
     akin: { name: "Jimmy Akin", about: "Careful and thorough: he takes his time and gets it right. Senior Apologist is the move for breaking down a podium or a shield, and it can leave the speaker dumbfounded. Logical Paradox and Mysterious World wear down the whole other side's Zeal and leave the strongest opponents exposed. Bring him when the other side hides behind podiums, and pair him with a quick friend who can move before him.", stats: [225, 78, 25, 58], traits: { care: 90, glance: [0.04, 0.22], crit: [0.05, 1.3], resolve: 0.08 }, skills: [
       H("Precise Distinction", "foe", 0, 0, [{ dmg: 1.0 }]),
-      H("Senior Apologist", "foe", 3, 0, [{ dmg: 1.5, vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.25 }]),
+      H("Senior Apologist", "foe", 3, 0, [{ dmg: 1.5, vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.5 }]),
       H("Logical Paradox", "foes", 3, 0, [{ buff: "atk", amt: -0.2, turns: 3 }, { zeal: -1, chance: 0.5 }]),
       H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { zeal: -1 }]),
     ] },
@@ -165,14 +165,14 @@ const GameData = (() => {
       H("Child of God", "allies", 4, 2, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
     ] },
     // Brant Pitre: Scripture scholar (The Case for Jesus; Jesus and the Jewish
-    // Roots of the Eucharist). Modelled on Saru: Phaser, Tricorder Scan (Scan,
-    // Defense Down Major), We Are Starfleet (Tech Up Major, Morale up),
-    // Vahar'ai Quills (heavy hit, Wound).
-    pitre: { name: "Brant Pitre", about: "A scholar who reads Jesus in his own world, the Judaism of the first century, and so sees the big picture where others get lost in details. Quick to act. The Big Picture exposes an opponent and lowers his guard. The New Passover lifts the team's arguments and Zeal. The Case for Jesus lands a heavy blow and leaves the opponent doubting. He joins after the chapter Misquoting Jesus?", stats: [250, 64, 4, 163], traits: { care: 90, glance: [0.06, 0.2], crit: [0.04, 1.34], resolve: 0.08 }, passive: { allies: { atk: 0.05 } }, skills: [
-      H("Jewish Roots", "foe", 0, 0, [{ dmg: 1.0 }]),
-      H("The Big Picture", "foe", 3, 0, [{ status: "examined", turns: 3 }, { buff: "def", amt: -0.5, turns: 3 }]),
-      H("The New Passover", "allies", 3, 1, [{ buff: "atk", amt: 0.5, turns: 3 }, { zeal: 1 }]),
-      H("The Case for Jesus", "foe", 4, 2, [{ dmg: 3.0 }, { status: "doubting", turns: 3 }]),
+    // Roots of the Eucharist). Tuvok isn't in the Legends data, so: Spock's kit
+    // (Phaser with Attack Down, Tricorder Wide Scan, the Vulcan Nerve Pinch that
+    // always stuns, Mind Meld) on the other Vulcan's numbers, T'Pol's.
+    pitre: { name: "Brant Pitre", about: "A scholar who reads Jesus in his own world, the Judaism of the first century, and so sees the big picture where others get lost in details. Very quick. The Big Picture exposes every opponent at once. The Son of Man never fails to leave an opponent dumbfounded, straight past any podium. The Case for Jesus lands a crushing blow and drains the opponent's Zeal. He joins after the chapter Misquoting Jesus?", stats: [200, 76, 9, 170], traits: { care: 60, glance: [0.12, 0.27], crit: [0.01, 1.14], resolve: 0.09 }, passive: { allies: { atk: 0.05 } }, skills: [
+      H("Jewish Roots", "foe", 0, 0, [{ dmg: 1.0 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.25 }]),
+      H("The Big Picture", "foes", 3, 0, [{ status: "examined", turns: 3 }]),
+      H("The Son of Man", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }, { zeal: -2 }], { pierce: ["cover"] }),
+      H("The Case for Jesus", "foe", 4, 2, [{ dmg: 3.0 }, { zeal: -2 }, { status: "doubting", turns: 3 }]),
     ] },
   };
 

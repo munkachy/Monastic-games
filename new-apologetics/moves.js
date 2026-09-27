@@ -1005,9 +1005,9 @@ const Theater = (() => {
     ],
     pitre: [
       { name: "Jewish Roots", kind: volley, glyphs: ["✡", "✚"], color: "#e8b94a" },
-      { name: "The Big Picture", kind: hex, to: "one", say: "Step back. Look at the whole picture.", mark: ["examined", "down"] },
-      { name: "The New Passover", kind: aura, to: "allies", mark: ["up", "pipUp"], say: "This is the new Passover.", color: "#e8b94a" },
-      { name: "The Case for Jesus", kind: cinematic, who: "Brant Pitre", color: "#6a4a2a", scene: SCENES.gospels, to: "one", mark: ["doubting"], impact: impactOn("#e8b94a") },
+      { name: "The Big Picture", kind: hex, to: "all", say: "Step back. Look at the whole picture.", mark: ["examined"] },
+      { name: "The Son of Man", kind: hex, to: "one", say: "“One like a son of man, coming with the clouds.”", mark: ["dumbfounded", "pipDown"] },
+      { name: "The Case for Jesus", kind: cinematic, who: "Brant Pitre", color: "#6a4a2a", scene: SCENES.gospels, to: "one", mark: ["pipDown", "doubting"], impact: impactOn("#e8b94a") },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
