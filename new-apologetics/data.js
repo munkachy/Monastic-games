@@ -145,7 +145,7 @@ const GameData = (() => {
     ] },
     // Fr. Carlos Martins, exorcist: a hit, a call-out that lifts the team's
     // Zeal, a team heal and cleanse, and Attack, Crit and Zeal for everyone.
-    martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. Bring him to the New Age chapter, and to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
+    martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. He joins after the New Age chapter, Apollo Loves You; bring him to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
       H("Holy Water", "foe", 0, 0, [{ dmg: 1.0 }]),
       H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 3 }, { allyZeal: 1 }]),
       H("Prayer of Deliverance", "allies", 4, 1, [{ heal: 0.3 }, { cleanse: true }, { zeal: 1, chance: 0.5 }]),
@@ -361,43 +361,43 @@ const GameData = (() => {
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"], book: "confessions" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer"], book: "confessions" },
     { id: "evangelicals", par: 4.3, power: [2.8, 2.5], title: "Are You a Good Person?", group: "Evangelicals", missions: [
       { name: "The City Square", foes: ["preacher", "preacher2"] },
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"], book: "summa" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["hahn"], book: "summa" },
     { id: "lds", par: 5.3, power: [3.6, 4.0], title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer"], book: "apologia" },
     { id: "islam", par: 6.3, power: [3.9, 3.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["martins"], book: "rule" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["jurado"], book: "rule" },
     { id: "newage", par: 7, power: [3.0, 2.6], title: "Apollo Loves You", group: "New Age", missions: [
       { name: "The Crystal Shop", foes: ["tarot", "crystal"] },
       { name: "The Full Moon Circle", foes: ["crystal", "tarot", "crystal2"] },
       { name: "Mercury in Retrograde", foes: ["tarot", "crystal", "tarot2"] },
       { name: "Apollo Loves You", foes: ["tarot", "witch", "crystal"], boss: "witch" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["martins", "hicks"] },
     { id: "body", par: 8, power: [3.1, 2.2], title: "My Body, My Brand", group: "Online Culture", missions: [
       { name: "Link in Bio", foes: ["creator", "activist"] },
       { name: "The Campus Rally", foes: ["activist", "creator", "activist2"] },
       { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
       { name: "The Debate Stream", foes: ["activist", "destiny", "creator"], boss: "destiny" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["rose", "marygrace"] },
     { id: "identity", par: 8.3, power: [3.0, 2.3], title: "Who Do You Say You Are?", group: "Identity", missions: [
       { name: "The Campus Panel", foes: ["ally", "podcaster"] },
       { name: "Deconstruction", foes: ["podcaster", "ally", "podcaster2"] },
       { name: "Love Is Love", foes: ["ally", "podcaster", "ally2"] },
       { name: "Who Do You Say You Are?", foes: ["ally", "pastor", "podcaster"], boss: "pastor" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["zember"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["zember", "holdsworth"] },
     { id: "scholars", par: 8.5, power: [2.8, 1.9], title: "Misquoting Jesus?", group: "Skeptical Scholars", missions: [
       { name: "Religion 101", foes: ["student", "mythicist"] },
       { name: "The Mythicists", foes: ["mythicist", "student", "mythicist2"] },
@@ -409,7 +409,7 @@ const GameData = (() => {
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
       { name: "The Dividing Line", foes: ["seminarian", "white", "seminarian2"], boss: "white" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["barron"] },
     // The final chapter: open once every story is done, and the hardest in
     // the game. Every boss comes back to the table.
     { id: "finale", power: [1.25, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
