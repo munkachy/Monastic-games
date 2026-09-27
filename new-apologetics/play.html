@@ -255,14 +255,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927u2"></script>
-<script src="audio.js?v=20260927u2"></script>
-<script src="art.js?v=20260927u2"></script>
-<script src="moves.js?v=20260927u2"></script>
-<script src="story.js?v=20260927u2"></script>
-<script src="data.js?v=20260927u2"></script>
-<script src="lines.js?v=20260927u2"></script>
-<script src="battle.js?v=20260927u2"></script>
+<script src="chants.js?v=20260927v"></script>
+<script src="audio.js?v=20260927v"></script>
+<script src="art.js?v=20260927v"></script>
+<script src="moves.js?v=20260927v"></script>
+<script src="story.js?v=20260927v"></script>
+<script src="data.js?v=20260927v"></script>
+<script src="lines.js?v=20260927v"></script>
+<script src="battle.js?v=20260927v"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -449,7 +449,10 @@
       row.append(b);
     });
     const d = Battle.DIFFICULTY[now];
-    $("diff-note").textContent = (best ? "Best won here: " + Battle.DIFFICULTY[best - 1].name + ". " : "Not won yet. ") + d.name + ": " + d.blurb + (ci === 0 ? " The tutorial goes no higher than Normal." : "");
+    // Jumping ahead: a chapter's par is the team level it was built for.
+    const par = C[ci].par, yours = Battle.levelOf(averageXp());
+    const ahead = par && yours < par - 1 && now > 0 ? " This chapter is built for about level " + Math.round(par) + ", and your team is level " + yours + ": Gentle makes it winnable." : "";
+    $("diff-note").textContent = (best ? "Best won here: " + Battle.DIFFICULTY[best - 1].name + ". " : "Not won yet. ") + d.name + ": " + d.blurb + (ci === 0 ? " The tutorial goes no higher than Normal." : "") + ahead;
   }
 
   // ---- Music ------------------------------------------------------------------------------
@@ -709,7 +712,7 @@
     coach("map-coach", save.test ? "" : !played
       ? "<b>Start here.</b> Tap <b>Tutorial</b> in the Prologue below. It walks you through your first debate, one step at a time."
       : played === 1 && !storiesDone() && !STORIES.some((ci) => stars(ci, 0))
-        ? "<b>Well done!</b> New heroes have joined your roster, and every story is open now. Start with whichever you like: tap <b>Mission 1</b> of any chapter. When all " + STORIES.length + " are done, the final chapter opens."
+        ? "<b>Well done!</b> New heroes have joined your roster, and every story is open now. Start with whichever you like: tap <b>Mission 1</b> of any chapter. The later chapters are built for a stronger team, so try them on Gentle at first. When all " + STORIES.length + " are done, the final chapter opens."
         : "");
     paintRecord();
     music("vespers", 0);
@@ -1118,11 +1121,7 @@
     // Chapter 1 gets only half the difficulty's extra toughness and at most
     // one reinforcement, before the team has its great moves.
     const reserve = ci === 0 || !grunts.length ? [] : Array.from({ length: ci === 1 ? Math.min(1, D.reserve) : D.reserve }, (_, k) => grunts[k % grunts.length]);
-    // Below the chapter's par level, the opponents come down to meet the team.
-    const own = team.filter((h) => !HEROES[h].guest);
-    const teamLevel = own.length ? own.reduce((t, h) => t + levels[h], 0) / own.length : 1;
-    const scaled = Battle.catchDown(m.level !== undefined ? m.level : ci, power, C[ci].par, teamLevel);
-    const b = Battle.create({ difficulty: dIdx, power: scaled.power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: foeIds, level: scaled.level, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
+    const b = Battle.create({ difficulty: dIdx, power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: foeIds, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");

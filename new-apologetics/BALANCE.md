@@ -177,14 +177,15 @@ grunt 41 (Crucible).
 
 ## Update: any order, players, and the final chapter
 
-Stories can be played in any order after the tutorial. Each chapter has a
-par, the team level its balance was tuned for (atheists 2.5, evangelicals
-4.3, LDS 5.3, Islam 6.3, New Age 7, Body 8, Reformed 8.5). A team d levels
-below par meets opponents d levels lower and with 0.88^d of the chapter's
-power (floor 0.5). Tested at team level 2 on Normal (smart bot, 20 runs):
-atheists 100/100/95/80, evangelicals 100/100/90/55, LDS 100/100/100/90,
-Islam 100/95/100/90, New Age, Body and Reformed 100 throughout; at level 4
-everything 75–100. At or above par nothing changes.
+Stories can be played in any order after the tutorial. There is no scaling:
+the difficulty setting is the lever. A level-2 team with no scaling wins
+almost nothing past Chapter 1 on Normal (0–17%), so Gentle was made softer
+(Composure ×0.5, Attack ×0.55, was 0.6 / 0.65) and earns less (×0.75, was
+0.9). A level-2 team on Gentle, 16 runs: atheists 100 throughout,
+evangelicals 100/100/100/94, LDS 100/100/100/63, Islam 100/75/94/88,
+New Age 100/94/88/100, Body 100/94/69/75, Reformed 100/75/88/88. Each chapter
+keeps a par (the team level it was built for) only to tell a player who has
+jumped ahead that Gentle will make it winnable.
 
 The final chapter, The Great Debate (O'Connor, Ryan, Hansen; the Speakers'
 Corner Champion, the WitchTok influencer, Destiny; Destiny, White,
