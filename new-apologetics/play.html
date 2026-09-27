@@ -174,7 +174,7 @@
     <span class="label">A team battler</span>
     <h1 id="title-name">New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
-    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on seven chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
+    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on eight chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
     <p class="who" id="who"></p>
     <div class="row">
       <button class="primary" id="play">Play</button>
@@ -255,21 +255,21 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927w"></script>
-<script src="audio.js?v=20260927w"></script>
-<script src="art.js?v=20260927w"></script>
-<script src="moves.js?v=20260927w"></script>
-<script src="story.js?v=20260927w"></script>
-<script src="data.js?v=20260927w"></script>
-<script src="lines.js?v=20260927w"></script>
-<script src="battle.js?v=20260927w"></script>
+<script src="chants.js?v=20260927x"></script>
+<script src="audio.js?v=20260927x"></script>
+<script src="art.js?v=20260927x"></script>
+<script src="moves.js?v=20260927x"></script>
+<script src="story.js?v=20260927x"></script>
+<script src="data.js?v=20260927x"></script>
+<script src="lines.js?v=20260927x"></script>
+<script src="battle.js?v=20260927x"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = GameData.CAMPAIGN;
   const HEROES = GameData.HEROES;
   const FOES = GameData.FOES;
-  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader", martins: "Encourager" };
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader", martins: "Encourager", zember: "Defender" };
   const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", random4: "Four strikes at random opponents", ally: "One friend", allies: "Whole team", self: "Self" };
 
   // The teaching cards each chapter unlocks.
@@ -291,6 +291,9 @@
     body: [["g-doctrine", "Doctrine", "Human life must be respected and protected absolutely from the moment of conception; direct abortion is gravely contrary to the moral law (CCC 2270–2271; Evangelium Vitae 62)."],
       ["g-argument", "Argument", "A person is “an individual substance of a rational nature” (Boethius), not a stream of experiences. You were you before you could think, and you are still you asleep. Consciousness is something a person does, not what makes him one."],
       ["g-doctrine", "Doctrine", "The body is not a product: it is the person, made a gift. Pornography does grave injury to the dignity of everyone involved, and makes them objects of pleasure and profit for others (CCC 2354; 1 Corinthians 6:19–20)."]],
+    identity: [["g-doctrine", "Doctrine", "No one is adequately described by their sexual orientation. Every person's fundamental identity is “the creature of God, and by grace, his child and heir to eternal life” (CDF, Letter on the Pastoral Care of Homosexual Persons, 1986, no. 16)."],
+      ["g-doctrine", "Doctrine", "Persons with same-sex attraction “must be accepted with respect, compassion, and sensitivity,” with no unjust discrimination (CCC 2358). Sexual acts belong within the marriage of a man and a woman, and all the baptized are called to chastity, each in his own state of life (CCC 2348, 2357, 2359)."],
+      ["g-dogma", "Dogma", "Concupiscence, the inclination to sin, remains in the baptized: everyone has disordered desires to fight, and no one is above anyone (Trent, Session V, canon 5; CCC 1264)."]],
     reformed: [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]],
     finale: [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
@@ -887,7 +890,7 @@
   let pending = null;
   // Podiums: which fighters start behind one. Not everyone gets one, and it
   // changes from battle to battle. What they look like depends on the chapter.
-  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", newage: "display", body: "desk", reformed: "pulpit" };
+  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", newage: "display", body: "desk", identity: "desk", reformed: "pulpit" };
   function coverFor(ci, m) {
     if (m.cover) return m.cover;
     const foe = [], hero = [];

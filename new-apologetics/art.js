@@ -609,6 +609,13 @@ const Art = (() => {
     creator2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#9a4a5a", outfit: "blouse", clothes: "#2a2a34", skirt: "#1e1e28", prop: "phone" },
     activist: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#3a8a6a", hairLight: "#5aaa8a", style: "side", browThin: true, brow: "#4a3a2a", outfit: "hoodie", clothes: "#6a3a8a", trim: "#52306a", prop: "sign" },
     activist2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2a5a4a", trim: "#224a3c", prop: "sign" },
+    // Kim Zember: a best guess until a photograph comes in.
+    zember: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#6a4630", hairLight: "#8a6448", style: "long", part: true, browThin: true, brow: "#4a3020", mouth: "#c06070", outfit: "blouse", clothes: "#2a6a7a", skirt: "#24586a", prop: "cross", smile: true },
+    pastor: { skin: "#f0c6aa", shade: "#cf9e84", hair: "#a8a296", style: "short", glasses: "#2a2a33", brow: "#8a857c", outfit: "clerical", clothes: "#3a5a8a", smile: true },
+    ally: { skin: "#f4d0b8", shade: "#d6aa92", hair: "#e87aa8", hairLight: "#f4a0c4", style: "side", browThin: true, brow: "#6a4a3a", outfit: "hoodie", clothes: "#e8e4dc", trim: "#c8c2b8", prop: "phone" },
+    ally2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", style: "curly", brow: "#1c140f", outfit: "hoodie", clothes: "#6a4a8a", trim: "#52386a", prop: "phone" },
+    podcaster: { skin: "#efc6a8", shade: "#cf9e84", hair: "#5a3a26", hairLight: "#7a5a44", style: "shaggy", beard: "full", beardColor: "#5a3a26", glasses: "#2a2a33", outfit: "sweater", clothes: "#4a5a4a", trim: "#3a4a3a", prop: "headset" },
+    podcaster2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "long", browThin: true, brow: "#8a6a3a", mouth: "#b45a5a", outfit: "blouse", clothes: "#8a5a3a", skirt: "#6a4a2e", prop: "headset" },
     skeptic: { skin: "#f3cdb2", shade: "#d3a58a", hair: "#9a5a2e", style: "curly", outfit: "hoodie", clothes: "#5d6470", trim: "#434955", prop: "headset" },
     skeptic2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2f3a4a", trim: "#23303e" },
     preacher2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "side", outfit: "shirt", clothes: "#8a2a2a", trim: "#e9e2d0", prop: "sign" },

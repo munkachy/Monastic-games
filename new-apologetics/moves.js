@@ -586,6 +586,24 @@ const Theater = (() => {
       ctx.fillStyle = "#6a4a2a"; ctx.fillRect(cx - 3, cy - 44, 6, 40); ctx.fillRect(cx - 14, cy - 21, 28, 6);
       if (g > 0.5) text(ctx, "LIGNUM CRUCIS", cx, cy + 90, 14, "#f3ead2");
     },
+    // Kim Zember: dawn over a baptismal font, the dove comes down, and the
+    // words of every Christian's first and deepest name.
+    childOfGod(ctx, k) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#f7d9a8"); g.addColorStop(1, "#8ab8d8");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      for (let r = 0; r < 14; r++) { const a = -Math.PI / 2 + (r - 6.5) * 0.14; ctx.strokeStyle = "rgba(255,248,220,0.35)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(430, -20); ctx.lineTo(430 + Math.cos(a) * 600, -20 - Math.sin(a) * 600); ctx.stroke(); }
+      // The font, with water rippling.
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(360, 240, 140, 22); ctx.fillRect(400, 262, 60, 70);
+      ctx.fillStyle = "#e8e2d4"; ctx.fillRect(362, 242, 136, 18); ctx.fillRect(402, 262, 56, 68);
+      ctx.fillStyle = "#6ab0e0"; ctx.fillRect(368, 244, 124, 8);
+      for (let i = 0; i < 3; i++) { const q = (k * 1.2 + i / 3) % 1; ctx.strokeStyle = `rgba(255,255,255,${1 - q})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(430, 248, 10 + q * 56, 2 + q * 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+      // The dove, coming down.
+      const dy = 40 + span(k, 0, 1.2) * 110, dx = 430;
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(dx - 22, dy - 6, 44, 12); ctx.fillRect(dx - 6, dy - 12, 12, 24);
+      ctx.fillStyle = "#fdfaf2"; ctx.fillRect(dx - 20, dy - 4, 40, 8); ctx.fillRect(dx - 4, dy - 10, 8, 20);
+      if (k > 0.9) text(ctx, "CHILD OF GOD", 430, 330, 22, "#1a1326");
+    },
     books(ctx, k) {
       ctx.fillStyle = "#2a1a14"; ctx.fillRect(0, 0, W, H);
       for (let y = 60; y < H; y += 90) { ctx.fillStyle = "#4a2e1e"; ctx.fillRect(0, y, W, 10); }
@@ -960,6 +978,12 @@ const Theater = (() => {
       { name: "Stand Behind Me", kind: aura, to: "allies", mark: ["pipUp"], foes: "called", say: "Stand behind me. I've seen worse.", color: "#e8b94a" },
       { name: "Prayer of Deliverance", kind: aura, to: "allies", mark: ["heal", "up"], say: "Deliver us from evil.", color: "#ffe07a" },
       { name: "Treasures of the Church", kind: cinematic, who: "Fr. Carlos Martins", color: "#5a1420", scene: SCENES.relics, to: "allies", mark: ["up", "crit"] },
+    ],
+    zember: [
+      { name: "Restless Heart", kind: volley, glyphs: ["♥"], color: "#ff8ac0" },
+      { name: "Boldly Beloved", kind: aura, to: "allies", mark: ["shield"], say: "You are loved. Boldly.", color: "#9fd0ff" },
+      { name: "Here I Am", kind: aura, to: "self", mark: ["up"], foes: "called", say: "Here I am. Ask me anything.", color: "#e8b94a" },
+      { name: "Child of God", kind: cinematic, who: "Kim Zember", color: "#2a6a7a", scene: SCENES.childOfGod, to: "allies", mark: ["heal", "pipUp"] },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
