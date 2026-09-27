@@ -213,9 +213,11 @@ const Battle = (() => {
     function partnerHere(u, skill) {
       return !skill.duo || units.some((x) => x.side === u.side && x.id === skill.duo && inPlay(x));
     }
+    // A stance can't be taken again while it still holds (Steelman Stance).
+    const inStance = (u, s) => s.target === "self" && s.effects.some((e) => e.counter) && u.counter > 0;
     function usable(u) {
       return u.def.skills.map((s, i) => ({ s, i })).filter(({ s, i }) =>
-        u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s)).map(({ i }) => i);
+        u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s) && !inStance(u, s)).map(({ i }) => i);
     }
     // Who can be picked for a move that asks for one target.
     function choices(u, i) {
@@ -674,7 +676,7 @@ const Battle = (() => {
       }
       if (e.zeal) out.push(pct(e) + (e.zeal < 0 ? "Zeal down " + -e.zeal : "Zeal up " + e.zeal) + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.status) out.push(pct(e) + STATUS[e.status]);
-      if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero");
+      if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero. A spotlight shows who, and a red arrow over each opponent points his way");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
       if (e.heal) out.push("Restores Composure (and encourages the Discouraged)");
       if (e.cleanse) out.push("Examen: clears every setback");
@@ -682,7 +684,7 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move (not while Dumbfounded)");
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move (not while Dumbfounded)" + (e.counter && sk.target === "self" ? ". Arms folded and a ring of steel show the stance, and it can't be taken again while it holds" : ""));
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
@@ -772,6 +774,8 @@ const BattleView = (() => {
         }
         // Dumbfounded: swaying on his feet.
         if (u.statuses.dumbfounded > 0) return { dx: Math.round(Math.sin(now * 5 + u.slot) * 3) };
+        // A Rebuttal ready: arms folded, feet planted, waiting for it.
+        if (u.counter > 0) return { pose: "guard" };
         return null;
       },
       hud(ctx, actors, t, cinematic) {
@@ -783,6 +787,12 @@ const BattleView = (() => {
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign || SIGNS[u.faction]); continue; }
           if (a.hidden) continue;
           if (u.statuses.dumbfounded > 0) stunStars(ctx, a.x + (a.dx || 0), a.y, t, Math.min(3, u.statuses.dumbfounded));
+          // Called out: a spotlight on the one they must answer, and a red
+          // arrow over each opponent he has called, pointing his way.
+          const calling = Object.values(units).some((f) => f.called && f.called.by === u.key && f.state === "in");
+          if (calling && u.state === "in") spotlight(ctx, a.x + (a.dx || 0), a.y, t);
+          if (u.called && u.state === "in") { const by = units[u.called.by]; if (by && by.state === "in") calledArrow(ctx, a.x + (a.dx || 0), a.y, t, by.side === "hero" ? -1 : 1); }
+          if (u.counter > 0 && u.state === "in") stanceRing(ctx, a.x + (a.dx || 0), a.y, t);
           // A new shield shows only once its "Shield of Faith" has popped up,
           // not while the move that gives it is still playing.
           const shield = u.shield && (!u.shield.fresh || (u.shield.revealAt !== undefined && now >= u.shield.revealAt)) ? u.shield : null;
@@ -956,6 +966,42 @@ const BattleView = (() => {
       else { ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 8); }
       ctx.closePath(); ctx.stroke();
       ctx.fill();
+    }
+
+    // The spotlight on a hero who has called the other side out: a warm beam
+    // from above and a slow pulse on the floor. Every attack comes to him.
+    function spotlight(ctx, x, y, t) {
+      const pulse = 0.5 + Math.sin(t * 3) * 0.5;
+      ctx.save();
+      const g = ctx.createLinearGradient(0, 0, 0, y);
+      g.addColorStop(0, "rgba(255,120,90,0)");
+      g.addColorStop(1, `rgba(255,120,90,${0.16 + pulse * 0.08})`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(x - 12, 0); ctx.lineTo(x + 12, 0); ctx.lineTo(x + 44, y + 4); ctx.lineTo(x - 44, y + 4); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = `rgba(255,110,80,${0.55 + pulse * 0.4})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x, y, 40 + pulse * 4, 9 + pulse, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+    // Over an opponent who has been called out: a red arrow toward the one
+    // he must answer.
+    function calledArrow(ctx, x, y, t, dir) {
+      const top = y - 124 + Math.sin(t * 5) * 2;
+      ctx.fillStyle = "#1a1326";
+      ctx.beginPath(); ctx.moveTo(x + dir * 14, top); ctx.lineTo(x - dir * 4, top - 10); ctx.lineTo(x - dir * 4, top + 10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#ff6e50";
+      ctx.beginPath(); ctx.moveTo(x + dir * 11, top); ctx.lineTo(x - dir * 2, top - 7); ctx.lineTo(x - dir * 2, top + 7); ctx.closePath(); ctx.fill();
+      ctx.fillRect(Math.min(x - dir * 2, x - dir * 12), top - 2, 10, 4);
+    }
+    // A Rebuttal ready: a ring of steel around his feet, turning slowly.
+    function stanceRing(ctx, x, y, t) {
+      ctx.save();
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 6; k++) {
+        const a0 = t * 1.2 + (k * Math.PI) / 3;
+        ctx.strokeStyle = k % 2 ? "rgba(200,212,230,0.9)" : "rgba(120,140,170,0.9)";
+        ctx.beginPath(); ctx.ellipse(x, y + 1, 34, 8, 0, a0, a0 + 0.7); ctx.stroke();
+      }
+      ctx.restore();
     }
 
     // What each kind of convert's sign says, exact for where he's coming from:

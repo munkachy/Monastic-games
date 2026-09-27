@@ -226,14 +226,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927k"></script>
-<script src="audio.js?v=20260927k"></script>
-<script src="art.js?v=20260927k"></script>
-<script src="moves.js?v=20260927k"></script>
-<script src="story.js?v=20260927k"></script>
-<script src="data.js?v=20260927k"></script>
-<script src="lines.js?v=20260927k"></script>
-<script src="battle.js?v=20260927k"></script>
+<script src="chants.js?v=20260927l"></script>
+<script src="audio.js?v=20260927l"></script>
+<script src="art.js?v=20260927l"></script>
+<script src="moves.js?v=20260927l"></script>
+<script src="story.js?v=20260927l"></script>
+<script src="data.js?v=20260927l"></script>
+<script src="lines.js?v=20260927l"></script>
+<script src="battle.js?v=20260927l"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -844,7 +844,8 @@
       btn.disabled = !ready.includes(i);
       btn.innerHTML = "<span></span><small></small>";
       btn.querySelector("span").textContent = s.name;
-      const wait = locked ? " · 🔒 level " + Battle.unlockLevel(u.def, i) : u.cd[i] > 0 ? " · ready in " + u.cd[i] : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
+      const stance = s.target === "self" && s.effects.some((e) => e.counter) && u.counter > 0;
+      const wait = locked ? " · 🔒 level " + Battle.unlockLevel(u.def, i) : u.cd[i] > 0 ? " · ready in " + u.cd[i] : stance ? " · stance holds" : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
       btn.querySelector("small").textContent = (s.duo ? "Duo · " : great ? "Great move · " : i === 0 ? "Basic · " : "") + TARGET_WORDS[s.target] + wait;
       btn.addEventListener("click", () => pickMove(b, u, i));
       // The lightbulb: what the move does, and when it is worth using.
