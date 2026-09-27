@@ -22,9 +22,14 @@ const Battle = (() => {
   // The same as the heroes' (0) gives the fairest fight; tuned in BALANCE.md.
   let FOE_BACKUP_FROM = 0;
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
+  // Impact: every debater's Composure, and every shield and podium, is divided
+  // by this, so each hit, heal and shield counts for more and debates end
+  // sooner, the same for both sides (tuned in BALANCE.md).
+  let IMPACT = 2;
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
+  const careK = () => CARE_K / IMPACT;
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
-  const FOE_PUNCH = 2.4;     // opponents argue harder than their listed stats
+  let FOE_PUNCH = 1.6;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
   const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
@@ -59,7 +64,7 @@ const Battle = (() => {
     const d = hero ? { hp: 1, atk: 1, zeal: 0, resolve: 0 } : diff || DIFFICULTY[1];
     const grow = hero ? 1 + HERO_GROWTH * Math.max(0, (level || 1) - 1) : 1 + FOE_GROWTH * (level || 0);
     const punch = (hero ? grow : FOE_PUNCH * grow * (def.boss ? 1.3 : 1)) * d.atk;
-    const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow * d.hp);
+    const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow * d.hp / IMPACT);
     const t = def.traits || { care: 60, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 };
     return {
       id, side, key: (hero ? "h" : "f") + slot, slot, def, kind,
@@ -88,7 +93,7 @@ const Battle = (() => {
     if (fx.crit) u.crit += fx.crit;
     if (fx.resist) u.resist = fx.resist;
     if (fx.regen) u.regen = { pct: fx.regen[0], n: fx.regen[1] };
-    if (fx.shield) u.shield = { amt: Math.round(u.care * fx.shield * CARE_K), n: 4 };
+    if (fx.shield) u.shield = { amt: Math.round(u.care * fx.shield * careK()), n: 4 };
     if (fx.opening) u.buffs.push({ stat: "atk", amt: fx.opening, n: 2 });
     if (u.shield && u.shield.amt <= 0) u.shield = null;
   }
@@ -371,8 +376,8 @@ const Battle = (() => {
           if (e.heal) heal(t, e.heal, events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * CARE_K), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
-          if (e.podium) { const hp = Math.round(u.care * e.podium * CARE_K); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK()), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.podium) { const hp = Math.round(u.care * e.podium * careK()); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
           if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
@@ -764,7 +769,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
