@@ -17,6 +17,8 @@ const Story = (() => {
   const W = 640;
   const H = 360;
   const FONT = "'Pixelify Sans', 'Courier New', monospace";
+  // The dialogue: a heavier, clearer pixel face, large enough to read easily.
+  const TEXT = "'Jersey 15', 'Pixelify Sans', 'Courier New', monospace";
 
   const NAMES = {
     akin: "Jimmy Akin", muse: "Ethan Muse", bertuzzi: "Cameron Bertuzzi", horn: "Trent Horn", fradd: "Matt Fradd",
@@ -561,9 +563,10 @@ const Story = (() => {
       }
       drawBox(speaker, text, t);
       // The chapter and scene, top left.
-      ctx.fillStyle = "rgba(20,23,42,0.85)"; ctx.fillRect(10, 10, 300, 26);
-      ctx.font = "600 12px " + FONT; ctx.textAlign = "left"; ctx.fillStyle = "#e8b94a";
-      ctx.fillText(chapter.title.toUpperCase() + " · " + sc.when.toUpperCase(), 18, 28);
+      ctx.font = "16px " + TEXT; ctx.textAlign = "left";
+      const head = chapter.title.toUpperCase() + " · " + sc.when.toUpperCase();
+      ctx.fillStyle = "rgba(20,23,42,0.85)"; ctx.fillRect(10, 10, Math.max(300, ctx.measureText(head).width + 20), 26);
+      ctx.fillStyle = "#e8b94a"; ctx.fillText(head, 18, 29);
     }
     const entered = {};
 
@@ -582,19 +585,20 @@ const Story = (() => {
     }
 
     function drawBox(speaker, text, t) {
-      const x = 10; const y = 262; const w = W - 20; const h = 90;
+      const x = 10; const y = 248; const w = W - 20; const h = 104;
       ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
       ctx.fillStyle = "#fdfaf2"; ctx.fillRect(x, y, w, h);
       let tx = x + 14;
       if (speaker) {
-        ctx.fillStyle = "#e9e2d0"; ctx.fillRect(x + 8, y + 8, 72, 74);
-        Art.paint(ctx, Art.bust(Art.CAST[speaker]), x + 12, y + 14, 2);
+        ctx.fillStyle = "#e9e2d0"; ctx.fillRect(x + 8, y + 15, 72, 74);
+        Art.paint(ctx, Art.bust(Art.CAST[speaker]), x + 12, y + 21, 2);
         tx = x + 94;
-        ctx.font = "700 14px " + FONT; ctx.textAlign = "left"; ctx.fillStyle = "#7a1f2b";
-        ctx.fillText(NAMES[speaker] || speaker, tx, y + 22);
+        ctx.font = "20px " + TEXT; ctx.textAlign = "left"; ctx.fillStyle = "#7a1f2b";
+        ctx.fillText(NAMES[speaker] || speaker, tx, y + 23);
       }
-      ctx.font = (speaker ? "500 " : "italic 500 ") + "15px " + FONT;
-      ctx.fillStyle = "#1a1326"; ctx.textAlign = "left";
+      // Narration (no speaker) in a softer ink, since a pixel face has no italic.
+      ctx.font = "22px " + TEXT;
+      ctx.fillStyle = speaker ? "#1a1326" : "#4a3a62"; ctx.textAlign = "left";
       // Three rows to a page; the typewriter runs through the current page.
       const rows = wrap(ctx, text, w - (tx - x) - 20);
       pages = Math.ceil(rows.length / 3);
@@ -602,7 +606,7 @@ const Story = (() => {
       pageLength = shownRows.join(" ").length;
       let left = Math.floor((t - lineStart) * 60);
       shownRows.forEach((r, i) => {
-        ctx.fillText(r.slice(0, Math.max(0, left)), tx, y + (speaker ? 44 : 30) + i * 19);
+        ctx.fillText(r.slice(0, Math.max(0, left)), tx, y + (speaker ? 47 : 33) + i * 24);
         left -= r.length + 1;
       });
       if (left >= 0 && Math.floor(t * 2) % 2 === 0) {
