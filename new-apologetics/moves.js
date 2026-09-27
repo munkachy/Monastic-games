@@ -122,8 +122,8 @@ const Theater = (() => {
   // ---- The stage --------------------------------------------------------------------
 
   // Where each fighter stands: feet position. Heroes on the left, foes on the right.
-  const HERO_SLOTS = [[190, 318], [80, 318], [120, 206], [226, 206]];
-  const FOE_SLOTS = [[450, 318], [560, 318], [506, 206]];
+  const HERO_SLOTS = [[190, 324], [80, 324], [135, 194], [245, 194]];
+  const FOE_SLOTS = [[450, 324], [560, 324], [505, 194]];
 
   // opts.state(actor) may return { hidden, alpha, pose } for each fighter, and
   // opts.hud(ctx, actors, t) draws over the stage (bars, pips, numbers).
@@ -813,7 +813,7 @@ const Theater = (() => {
     ],
     horn: [
       { name: "Deadpan", kind: volley, glyphs: ["Wonderful.", "…and yet here we are."], color: "#9fd0ff", mark: "down" },
-      { name: "Free-for-All Friday", kind: aura, to: "allies", markEach: [["up", "pipUp"], ["crit", "pipUp"], ["shield", "pipUp"], ["heal", "pipUp"]], say: "It's Free-for-All Friday!", color: "#e8b94a",
+      { name: "Free-for-All Friday", kind: aura, to: "allies", mark: ["pipUp"], say: "It's Free-for-All Friday!", color: "#e8b94a",
         backdrop: (ctx, h, t) => {
           if (t > 1.9) return;
           const x = h.x + 60; const y = 62;

@@ -55,7 +55,11 @@ const Sound = (() => {
   // arpeggio starts, and when the next drum fill falls.
   const BASS_FIGURES = [[0, 0, 12, 0, 0, 12, 7, 12], [0, 12, 0, 12, 0, 12, 10, 12], [0, 0, 7, 0, 12, 0, 7, 5], [0, 7, 12, 7, 0, 7, 12, 14]];
   const mix = { root: 0, bass: 0, hats: 0, arp: 0, fill: -99, turns: 0 };
-  const rootNote = () => arpNotes[mix.root % arpNotes.length];
+  // The note the bass and the drone sit on wanders through the chant's own
+  // notes and keeps coming home to its final: home, away, home, further away.
+  const ROOT_PATH = [0, 1, 0, 2, 0, 3, 1, 2];
+  const rootIndex = () => ROOT_PATH[mix.root % ROOT_PATH.length] % arpNotes.length;
+  const rootNote = () => arpNotes[rootIndex()];
 
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -377,11 +381,20 @@ const Sound = (() => {
       return { o, interval };
     });
     drone = { out, oscs };
+    retuneDrone(true);
   }
 
-  function retuneDrone() {
+  // Glides the drone onto the root note, on the next beat when the music is
+  // playing. On the final it sounds the fifth as well; on any other note only
+  // octaves, so it never rubs against the chant.
+  function retuneDrone(slow) {
     if (!drone) return;
-    for (const { o, interval } of drone.oscs) o.frequency.setTargetAtTime(mtof(finalPitch - 12 + interval), ac.currentTime, 0.8);
+    const root = rootNote();
+    const home = root === finalPitch;
+    // Kept low: a note more than a fourth above the final sounds an octave down.
+    const base = root - 12 - (root - finalPitch > 5 ? 12 : 0);
+    const when = playing && !slow ? Math.max(ac.currentTime, gridTime + ((4 - (step % 4)) % 4) * SIXTEENTH) : ac.currentTime;
+    for (const { o, interval } of drone.oscs) o.frequency.setTargetAtTime(mtof(base + (home || interval !== 7 ? interval : 12)), when, slow ? 0.8 : 0.12);
   }
 
   function stopDrone() {
@@ -402,7 +415,7 @@ const Sound = (() => {
     const set = [...new Set(pitched.map(([p]) => p))].sort((a, b) => a - b);
     const above = set.filter((p) => p > finalPitch).slice(0, 4);
     arpNotes = [finalPitch, ...above];
-    retuneDrone();
+    retuneDrone(true);
   }
 
   // The time of the first sixteenth of the next bar.
@@ -445,7 +458,7 @@ const Sound = (() => {
       const beat = s / 4;
       const wobbles = [[2, 2, 3, 4], [1, 2, 4, 6], [2, 3, 2, 8], [4, 2, 6, 3]][bar][beat];
       const pattern = [0, 0, 3, 5];
-      const root = arpNotes[(pattern[beat] + mix.root) % arpNotes.length] - 24;
+      const root = arpNotes[(pattern[beat] + rootIndex()) % arpNotes.length] - 24;
       wobble(root, t, BEAT * 0.96, wobbles);
     }
     if (lead && level >= 3 && (s === 14 || s === 6) && bar % 2 === 1) {
@@ -465,7 +478,7 @@ const Sound = (() => {
     if (level >= 2) {
       const hits = { 0: 0, 3: 0, 6: 2, 8: 0, 11: 1, 14: 3 };
       if (s in hits) {
-        const note = arpNotes[(hits[s] + mix.root) % arpNotes.length] - 24;
+        const note = arpNotes[(hits[s] + rootIndex()) % arpNotes.length] - 24;
         robotBass(note, lastBass, t, SIXTEENTH * 2.5);
         lastBass = note;
       }
@@ -582,16 +595,24 @@ const Sound = (() => {
   // arpeggio. A great move also brings a drum fill into the next bar.
   function stir(big) {
     mix.turns++;
-    const k = mix.turns % 4;
+    // Every second move (and every great move) the bass and the drone move
+    // to their next note; in between, one of the other parts changes.
+    if (big || mix.turns % 2 === 0) shift();
+    const k = mix.turns % 6;
     if (k === 1) mix.bass = (mix.bass + 1) % BASS_FIGURES.length;
-    if (k === 2) mix.root = (mix.root + 1) % Math.max(1, Math.min(3, arpNotes.length));
     if (k === 3) mix.hats = (mix.hats + 1) % 3;
-    if (k === 0) mix.arp++;
+    if (k === 5) mix.arp++;
     if (big && playing) {
       let at = step + (16 - (step % 16)) - 4;
       if (at <= step + 2) at += 16;
       mix.fill = at;
     }
+  }
+
+  // The bass and the drone step to the next note on their path.
+  function shift() {
+    mix.root = (mix.root + 1) % ROOT_PATH.length;
+    retuneDrone();
   }
 
   // ---- Battle sounds -----------------------------------------------------------
@@ -629,7 +650,7 @@ const Sound = (() => {
         blip(t + S * 6, f0, "sawtooth", 0.08, S * 6, f0 * 0.97);
         break;
       }
-      case "left": blip(t, hz(0, 0), "triangle", 0.12, S * 2, hz(0, -1)); blip(t + S * 2, hz(0, -1), "triangle", 0.1, S * 4, hz(0, -1) * 0.5); break;
+      case "left": shift(); blip(t, hz(0, 0), "triangle", 0.12, S * 2, hz(0, -1)); blip(t + S * 2, hz(0, -1), "triangle", 0.1, S * 4, hz(0, -1) * 0.5); break;
       case "shield":     // a shimmer, three notes of the chant at once
         for (let i = 0; i < 3; i++) blip(t + i * 0.02, hz(i, 2), "sine", 0.05, 0.7); break;
       case "heal":       // a harp run
@@ -652,8 +673,8 @@ const Sound = (() => {
         for (let i = 0; i < 3; i++) stab(key(i, 1), t, 0.5, 0.08);
         stir(true);
         break;
-      case "discouraged": blip(t, hz(0, -1), "triangle", 0.14, S * 5, hz(0, -1) * 0.8); break;
-      case "encouraged": for (let i = 0; i < 4; i++) blip(t + i * S * 0.5, hz(i, 1), "square", 0.05, 0.12); break;
+      case "discouraged": shift(); blip(t, hz(0, -1), "triangle", 0.14, S * 5, hz(0, -1) * 0.8); break;
+      case "encouraged": shift(); for (let i = 0; i < 4; i++) blip(t + i * S * 0.5, hz(i, 1), "square", 0.05, 0.12); break;
     }
   }
 

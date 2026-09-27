@@ -356,7 +356,7 @@ const Battle = (() => {
           if (e.heal) heal(t, e.heal, events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * CARE_K), n: e.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * CARE_K), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
           if (e.podium) { const hp = Math.round(u.care * e.podium * CARE_K); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
           if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
@@ -371,7 +371,7 @@ const Battle = (() => {
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
             // Free-for-All Friday's shield is sized from the one receiving it,
             // not from Trent's Care (he has almost none): a fifth of his Composure.
-            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -769,7 +769,10 @@ const BattleView = (() => {
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
           if (u.statuses.dumbfounded > 0) stunStars(ctx, a.x + (a.dx || 0), a.y, t, Math.min(3, u.statuses.dumbfounded));
-          if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t, u.slot * 1.7 + (u.side === "foe" ? 0.9 : 0));
+          // A new shield shows only once its "Shield of Faith" has popped up,
+          // not while the move that gives it is still playing.
+          const shield = u.shield && (!u.shield.fresh || (u.shield.revealAt !== undefined && now >= u.shield.revealAt)) ? u.shield : null;
+          if (shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t, u.slot * 1.7 + (u.side === "foe" ? 0.9 : 0));
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.def.podium || (u.side === "foe" ? o.coverKind || "podium" : "podium"));
           const x = a.x - 30;
           const y = a.y + 6;
@@ -777,7 +780,7 @@ const BattleView = (() => {
           // Legends does it: when the two together pass full, the bar grows
           // longer (up to half again), so the shield's strength is plain.
           const hpW = Math.round(60 * u.hp / u.maxHp);
-          const shW = u.shield ? Math.min(90 - hpW, Math.max(2, Math.round(60 * u.shield.amt / u.maxHp))) : 0;
+          const shW = shield ? Math.min(90 - hpW, Math.max(2, Math.round(60 * shield.amt / u.maxHp))) : 0;
           const barW = Math.max(60, hpW + shW);
           ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 1, barW + 2, 7);
           ctx.fillStyle = "#2a2f55"; ctx.fillRect(x, y, 60, 5);
@@ -989,6 +992,7 @@ const BattleView = (() => {
         rows[e.key]++;
         if (e.out) { const u = byKey()[e.key]; if (u) u.outAt = now; }
         if (e.summon) { const nu = byKey()[e.key]; if (nu) nu.joinedAt = now; }
+        if (e.text === "Shield of Faith") { const su = byKey()[e.key]; if (su && su.shield && su.shield.fresh) su.shield.revealAt = now + rows[e.key] * 0.12 - 0.12; }
         if (e.summon) theater.setFoes([0, 1, 2].map((s) => { const x = battle.units.find((v) => v.side === "foe" && v.slot === s); return x ? x.id : "skeptic"; }));
       }
     }
