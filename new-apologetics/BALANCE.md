@@ -192,3 +192,16 @@ Corner Champion, the WitchTok influencer, Destiny; Destiny, White,
 O'Connor), opens when all seven stories are done and has no par, so it never
 scales down. Power [1.35, 0.85]; Normal 60 / 63 / 67, Very Hard 77 / 53 / 33
 (30 runs): the hardest chapter in the game.
+
+## Update: shorter, harder-hitting debates
+
+An impact factor divides every debater's Composure and every Care-based
+shield and podium (heals, Doubting and Free-for-All Friday's shield are
+fractions of Composure, so they follow). Impact alone favoured the
+opponents, since the heroes' heals, shields and great moves take turns to
+charge: Normal fell to 75 / 69 at 1.5 and 69 / 56 at 2. Softening the
+opponents' punch restored it (20 runs, Normal, regular / boss): impact 2 with
+punch 2.0 77 / 71, 1.8 82 / 75, 1.6 88 / 84, 1.5 89 / 88. Chosen: impact 2,
+punch 1.6 (was 1 and 2.4). Rounds per debate on Normal 7.0 → 5.3. Other
+difficulties: Gentle 99 / 100, Hard 77 / 64, Very Hard 60 / 46, Crucible
+48 / 29.
