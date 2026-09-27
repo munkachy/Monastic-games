@@ -330,23 +330,23 @@ const GameData = (() => {
   // can see it coming), then lands it on the whole team on his next turn. A
   // Shield of Faith soaks it up; leaving him Dumbfounded or Muted while he
   // winds up stops it altogether. [name, what he says winding up, the blow,
-  // how hard it lands: set boss by boss (BALANCE.md): gentlest from O'Connor,
+  // the share of each hero's Composure it takes: gentlest from O'Connor,
   // when the team has few shields and stuns, and hardest from James White]
   const CLOSERS = {
-    oconnor: ["The Problem of Evil", "Let me put it as plainly as I can…", "Then why the fawn? Why any of it?", 0.7],
-    ryan: ["Judgment Day", "Let me ask you all something…", "Liars, thieves. Guilty. Judgment Day!", 1.6],
-    hansen: ["The First Vision", "In the spring of 1820…", "A pillar of light. A new dispensation.", 1.1],
-    speaker: ["Three Is Not One", "Everyone, gather round. Watch this.", "One plus one plus one is three!", 2.3],
-    witch: ["Full Moon Ritual", "Wait. The moon is almost full…", "Feel that? The goddess is here.", 1.8],
-    destiny: ["Speed Round", "Okay. I'm going to go fast now.", "Twelve points. Sixty seconds. Answer all of them.", 1.1],
-    pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 1.1],
-    ehrman: ["Four Hundred Thousand Variants", "Let me show you the manuscripts.", "More variants than words in the New Testament!", 1.6],
-    white: ["Cross-Examination", "I have a few questions for you.", "Yes or no. Yes or no!", 2.8],
+    oconnor: ["The Problem of Evil", "Let me put it as plainly as I can…", "Then why the fawn? Why any of it?", 0.55],
+    ryan: ["Judgment Day", "Let me ask you all something…", "Liars, thieves. Guilty. Judgment Day!", 0.6],
+    hansen: ["The First Vision", "In the spring of 1820…", "A pillar of light. A new dispensation.", 0.6],
+    speaker: ["Three Is Not One", "Everyone, gather round. Watch this.", "One plus one plus one is three!", 0.7],
+    witch: ["Full Moon Ritual", "Wait. The moon is almost full…", "Feel that? The goddess is here.", 0.7],
+    destiny: ["Speed Round", "Okay. I'm going to go fast now.", "Twelve points. Sixty seconds. Answer all of them.", 0.65],
+    pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 0.65],
+    ehrman: ["Four Hundred Thousand Variants", "Let me show you the manuscripts.", "More variants than words in the New Testament!", 0.75],
+    white: ["Cross-Examination", "I have a few questions for you.", "Yes or no. Yes or no!", 0.85],
   };
-  for (const [id, [name, wind, blow, dmg]] of Object.entries(CLOSERS)) {
+  for (const [id, [name, wind, blow, share]] of Object.entries(CLOSERS)) {
     FOES[id].closer = [
       H("Winding up: " + name, "self", 0, 0, [{ windup: true }], { closer: "wind", anim: U(wind, []) }),
-      H(name, "foes", 0, 0, [{ dmg }, { zeal: -1 }], { closer: "strike", anim: X(blow, ["down"]) }),
+      H(name, "foes", 0, 0, [{ share }, { zeal: -1 }], { closer: "strike", anim: X(blow, ["down"]) }),
     ];
   }
 
@@ -356,7 +356,7 @@ const GameData = (() => {
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"], book: "catechism" },
     // par: the team level a chapter was built for, so a player who jumps
     // ahead can be told that Gentle will make it winnable.
-    { id: "atheists", par: 2.5, power: [2.0, 1.8], title: "The Fawn in the Forest", group: "Atheists", missions: [
+    { id: "atheists", par: 2.5, power: [2.0, 1.45], title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
@@ -374,7 +374,7 @@ const GameData = (() => {
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
-    { id: "islam", par: 6.3, power: [3.9, 3.2], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
+    { id: "islam", par: 6.3, power: [3.9, 3.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
