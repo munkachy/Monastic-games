@@ -202,13 +202,13 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926j"></script>
-<script src="audio.js?v=20260926j"></script>
-<script src="art.js?v=20260926j"></script>
-<script src="moves.js?v=20260926j"></script>
-<script src="story.js?v=20260926j"></script>
-<script src="data.js?v=20260926j"></script>
-<script src="battle.js?v=20260926j"></script>
+<script src="chants.js?v=20260926k"></script>
+<script src="audio.js?v=20260926k"></script>
+<script src="art.js?v=20260926k"></script>
+<script src="moves.js?v=20260926k"></script>
+<script src="story.js?v=20260926k"></script>
+<script src="data.js?v=20260926k"></script>
+<script src="battle.js?v=20260926k"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -655,6 +655,7 @@
     if (x === "Undercover") return "undercover";
     if (x === "Backs you up!" || x === "Piles on!") return "backup";
     if (x === "Sent in!") return "command";
+    if (x === "Rebuttal!") return "rebuttal";
     if (/^\+\d/.test(x)) return "heal";
     if (/^−\d/.test(x)) return "hit";
     return null;
@@ -820,7 +821,7 @@
         const i = u.def.skills.indexOf(s);
         const mv = u.side === "hero" ? Theater.MOVES[u.id][i] : s.anim || {};
         const said = [].concat(mv.glyphs || [], mv.say || []).filter((g) => typeof g === "string" && g.length > 2);
-        $("log").textContent = (backup === "command" ? u.name + " is sent in: " + s.name + "." : backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "") + "”" : "");
+        $("log").textContent = (backup === "command" ? u.name + " is sent in: " + s.name + "." : backup === "rebuttal" ? u.name + " answers back: " + s.name + "." : backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "") + "”" : "");
         $("panel").textContent = "";
       },
     });
