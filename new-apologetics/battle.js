@@ -599,7 +599,7 @@ const BattleView = (() => {
           if (!u) continue;
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
-          if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t);
+          if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t, u.slot * 1.7 + (u.side === "foe" ? 0.9 : 0));
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.side === "foe" ? o.coverKind || "podium" : "podium");
           const x = a.x - 30;
           const y = a.y + 6;
@@ -692,21 +692,46 @@ const BattleView = (() => {
       ctx.restore();
     }
 
-    // A Shield of Faith: a pale blue bubble around the fighter, shimmering,
-    // with a glint that travels round its edge.
-    function shieldAura(ctx, x, y, t) {
-      const cx = x, cy = y - 50, rx = 32, ry = 60;
-      const pulse = 0.5 + Math.sin(t * 3) * 0.15;
+    // A Shield of Faith (Ephesians 6:16): a glowing bubble, clear at the
+    // centre and bright at the edge; two broken rings of light turning in
+    // opposite directions; little cross-shaped sparks rising through it; and
+    // a faint cross that shimmers in the middle.
+    function shieldAura(ctx, x, y, t, seed) {
+      const cx = x, cy = y - 50, rx = 34, ry = 62;
+      const pulse = 0.5 + Math.sin(t * 3 + seed) * 0.5;
       ctx.save();
-      ctx.fillStyle = `rgba(126,164,230,${0.16 + pulse * 0.08})`;
-      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = `rgba(200,222,255,${0.6 + pulse * 0.3})`; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
-      const g = t * 2.2;
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.fillRect(Math.round(cx + Math.cos(g) * rx) - 2, Math.round(cy + Math.sin(g) * ry) - 2, 4, 4);
-      ctx.fillRect(Math.round(cx + Math.cos(g + Math.PI) * rx) - 1, Math.round(cy + Math.sin(g + Math.PI) * ry) - 1, 3, 3);
+      // The bubble.
+      ctx.translate(cx, cy); ctx.scale(1, ry / rx);
+      const g = ctx.createRadialGradient(0, 0, rx * 0.35, 0, 0, rx);
+      g.addColorStop(0, "rgba(126,164,230,0)");
+      g.addColorStop(0.75, `rgba(126,164,230,${0.10 + pulse * 0.06})`);
+      g.addColorStop(1, `rgba(190,215,255,${0.38 + pulse * 0.2})`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill();
+      // Two broken rings of light, turning opposite ways.
+      ctx.lineWidth = 2.5;
+      for (const [dir, r, col] of [[1, rx, "rgba(230,240,255,0.85)"], [-1, rx - 5, "rgba(232,185,74,0.6)"]]) {
+        ctx.strokeStyle = col;
+        for (let k = 0; k < 4; k++) {
+          const a0 = dir * t * 1.4 + seed + (k * Math.PI) / 2;
+          ctx.beginPath(); ctx.arc(0, 0, r, a0, a0 + 0.7); ctx.stroke();
+        }
+      }
       ctx.restore();
+      // A faint cross at the centre, breathing in and out.
+      ctx.fillStyle = `rgba(255,236,170,${0.16 + pulse * 0.2})`;
+      ctx.fillRect(Math.round(cx) - 2, Math.round(cy) - 16, 4, 28);
+      ctx.fillRect(Math.round(cx) - 9, Math.round(cy) - 8, 18, 4);
+      // Sparks rising through the bubble.
+      for (let i = 0; i < 5; i++) {
+        const k = (t * 0.45 + i / 5 + seed * 0.13) % 1;
+        const sx = Math.round(cx + Math.sin(i * 2.3 + seed) * rx * 0.6);
+        const sy = Math.round(cy + ry * 0.8 - k * ry * 1.6);
+        ctx.globalAlpha = Math.sin(k * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(sx - 1, sy - 3, 2, 6); ctx.fillRect(sx - 3, sy - 1, 6, 2);
+      }
+      ctx.globalAlpha = 1;
     }
 
     function arrow(ctx, x, y, up, color) {

@@ -60,6 +60,10 @@ const Story = (() => {
           ["bertuzzi","Maybe we're looking in the wrong place. We keep staring at one animal."],
           ["pine","May I? St. Thomas asked almost exactly this. Not about fawns. About lions."],
           ["pine","“If all evil were prevented, much good would be absent from the universe. A lion would cease to live if there were no slaying of animals.” Summa, first part, question 22."],
+          ["bertuzzi","Next on the livestream: Joe Schmid. Majesty of Reason. He knows every version of this argument, including the ones nobody's thought of yet."],
+          ["akin","Funny thing, though. Word is he's been taking theism seriously lately. Contingency arguments, mostly. They keep him up at night.","idea"],
+          ["pine","Then maybe don't try to beat him on points. When a man's old certainties are already slipping… sometimes the kindest thing is to let them go."],
+          ["muse","Noted. Let's see where his heart is."],
         ] },
         { when: "After the third battle", place: "forest", left: ["muse","bertuzzi","akin"], right: ["pine","+spitzer"], lines: [
           ["akin","So a world with lions in it is a world where things die. The good of the whole can require a loss in a part.","idea"],
