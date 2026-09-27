@@ -15,7 +15,13 @@ const Battle = (() => {
   const HERO_FLOOR = -4;     // how far Zeal can fall before a fighter is out
   const GRUNT_FLOOR = -5;
   const BOSS_FLOOR = -6;
-  const BACKUP = [0.1, 0.2, 0.3, 0.4];   // chance to back up a friend, by Zeal 0..3
+  // Chance that each friend backs up a move, by his Zeal 0..3. Every friend
+  // rolls for himself, so a fired-up team often piles in two or three strong.
+  let BACKUP = [0.25, 0.4, 0.55, 0.7];
+  // The Zeal from which opponents pile on (their chance counts from here).
+  // The same as the heroes' (0) gives the fairest fight; tuned in BALANCE.md.
+  let FOE_BACKUP_FROM = 0;
+  let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
   const FOE_PUNCH = 2.4;     // opponents argue harder than their listed stats
@@ -417,9 +423,12 @@ const Battle = (() => {
       const offensive = s.effects.some((e) => e.dmg || e.zeal < 0 || e.status);
       const target = targets.find((t) => t.side !== u.side && inPlay(t));
       if (!offensive || !target || !inPlay(u)) return null;
-      const helpers = friends(u).filter((f) => f !== u && inPlay(f) && f.zeal >= 0 && !(f.statuses.dumbfounded > 0)).sort(() => rnd() - 0.5);
-      for (const f of helpers) if (rnd() < BACKUP[Math.min(ZEAL_MAX, f.zeal)]) return { ally: f, target };
-      return null;
+      // Every friend with Zeal 0 or higher rolls for himself, so a fired-up
+      // team can pile in two or three strong.
+      const from = u.side === "foe" ? FOE_BACKUP_FROM : 0;
+      const helpers = friends(u).filter((f) => f !== u && inPlay(f) && f.zeal >= from && !(f.statuses.dumbfounded > 0)).sort(() => rnd() - 0.5);
+      const joined = helpers.filter((f) => rnd() < BACKUP[Math.min(ZEAL_MAX, f.zeal - from)]).map((f) => ({ ally: f, target }));
+      return joined.length ? joined : null;
     }
 
     // Returns true if the fighter himself took the hit.
@@ -474,11 +483,21 @@ const Battle = (() => {
       else if (t.side === "foe") {
         t.state = "left"; t.since = 0;
         events.push({ key: t.key, text: "Leaves the debate", color: "#a9a6bd", out: "left" });
-      } else {
-        t.state = "discouraged"; t.downs++;
-        events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" });
-      }
+      } else discourage(t, events);
       return true;
+    }
+
+    // A hero goes down, and it shakes the team: each friend still standing
+    // loses 1 Zeal (Resilience and Steadfast can hold it). It doesn't chain:
+    // a friend it discourages shakes no one further.
+    let shaking = false;
+    function discourage(t, events) {
+      t.state = "discouraged"; t.downs++;
+      events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" });
+      if (shaking || !SHAKEN) return;
+      shaking = true;
+      for (const f of friends(t).filter(inPlay)) { events.push({ key: f.key, text: "Shaken", color: "#de5e55" }); zeal(f, -SHAKEN, null, events); }
+      shaking = false;
     }
 
     function heal(t, frac, events) {
@@ -517,7 +536,7 @@ const Battle = (() => {
       if (t.hp > 0 || !inPlay(t)) return;
       if (t.side === "foe" && (t.def.secretConvert || mayConvert(t))) convert(t, events);
       else if (t.side === "foe") { t.state = "walked"; t.since = 0; events.push({ key: t.key, text: "Concedes", color: "#a9a6bd", out: "walked" }); }
-      else { t.state = "discouraged"; t.downs++; events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" }); }
+      else discourage(t, events);
     }
 
     // Reinforcements: when an opponent goes out, the next one waiting steps
@@ -637,8 +656,12 @@ const Battle = (() => {
         }
       }
       // A friend with good Zeal may jump in.
-      const bk = b.outcome() ? null : b.backup(u, pick.i, targets);
-      if (bk) {
+      const bks = b.outcome() ? null : b.backup(u, pick.i, targets);
+      for (const bk of bks || []) {
+        if (b.outcome() || !inPlayNow(bk.ally)) break;
+        // If the first backers already put him out, the next one takes
+        // whoever is left on the other side.
+        if (!inPlayNow(bk.target)) { const next = (bk.ally.side === "hero" ? b.foes() : b.heroes()).find(inPlayNow); if (!next) break; bk.target = next; }
         const bt = b.aim(bk.ally, 0, bk.target);
         view.show([{ key: bk.ally.key, text: bk.ally.side === "hero" ? "Backs you up!" : "Piles on!", color: "#7ea4e6" }]);
         const bl = lineOf(bk.ally, 0);
@@ -741,7 +764,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
