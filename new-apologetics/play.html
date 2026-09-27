@@ -263,14 +263,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928g"></script>
-<script src="audio.js?v=20260928g"></script>
-<script src="art.js?v=20260928g"></script>
-<script src="moves.js?v=20260928g"></script>
-<script src="story.js?v=20260928g"></script>
-<script src="data.js?v=20260928g"></script>
-<script src="lines.js?v=20260928g"></script>
-<script src="battle.js?v=20260928g"></script>
+<script src="chants.js?v=20260928h"></script>
+<script src="audio.js?v=20260928h"></script>
+<script src="art.js?v=20260928h"></script>
+<script src="moves.js?v=20260928h"></script>
+<script src="story.js?v=20260928h"></script>
+<script src="data.js?v=20260928h"></script>
+<script src="lines.js?v=20260928h"></script>
+<script src="battle.js?v=20260928h"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -388,6 +388,9 @@
     const r = new Set(GameData.START);
     if (save.converted && save.converted.schmid) r.add("schmid");     // he joins once he has come home
     C.forEach((ch, ci) => { if (chapterDone(ci)) ch.unlocks.forEach((h) => r.add(h)); });
+    // Anyone the player has already debated with stays, even if a later
+    // version of the game moved the chapter they join in.
+    for (const h of Object.keys(save.played || {})) if (HEROES[h] && !HEROES[h].guest) r.add(h);
     return [...r];
   }
 
