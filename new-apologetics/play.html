@@ -273,7 +273,7 @@
     <div class="diff-row" id="diff-row" role="radiogroup" aria-label="Difficulty for this debate"></div>
     <p class="note" id="diff-note"></p>
   </div>
-  <div class="row"><button class="primary" id="begin" disabled>Begin</button><button id="team-back">Back</button></div>
+  <div class="row"><button class="primary" id="begin" disabled>Begin</button><button id="team-back">Back</button><span class="note" id="begin-note" aria-live="polite"></span></div>
 </section>
 
 <section id="s-battle" class="screen" hidden>
@@ -293,14 +293,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928l"></script>
-<script src="audio.js?v=20260928l"></script>
-<script src="art.js?v=20260928l"></script>
-<script src="moves.js?v=20260928l"></script>
-<script src="story.js?v=20260928l"></script>
-<script src="data.js?v=20260928l"></script>
-<script src="lines.js?v=20260928l"></script>
-<script src="battle.js?v=20260928l"></script>
+<script src="chants.js?v=20260928m"></script>
+<script src="audio.js?v=20260928m"></script>
+<script src="art.js?v=20260928m"></script>
+<script src="moves.js?v=20260928m"></script>
+<script src="story.js?v=20260928m"></script>
+<script src="data.js?v=20260928m"></script>
+<script src="lines.js?v=20260928m"></script>
+<script src="battle.js?v=20260928m"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -555,7 +555,7 @@
   document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
   // Every button, every screen, every turn of a cut scene: the drone moves to
   // a new note. (In a debate the moves themselves move the music.)
-  const droneStep = (el) => { if (el && !el.closest("#s-battle")) Sound.moveDrone(); };
+  const droneStep = (el) => { try { if (el && !el.closest("#s-battle")) Sound.moveDrone(); } catch (err) { /* the music must never get in the way */ } };
   document.addEventListener("click", (e) => droneStep(e.target.closest("button, #scene")));
   $("scene").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") droneStep(e.target); });
   paintMusic();
@@ -863,6 +863,11 @@
     const available = (m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : [])).filter((h) => !foesOf(m).includes(h));
     let picked = fixed.slice();
     for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
+    // Any places still empty (the first time, or after a guest's chapter) are
+    // filled with the strongest evangelists on hand, so Begin is ready to tap.
+    // Tap a card to swap someone out.
+    const spare = available.filter((id) => !picked.includes(id) && !HEROES[id].guest).sort((a, b) => xpOf(b) - xpOf(a));
+    while (picked.length < Math.min(size, available.length) && spare.length) picked.push(spare.shift());
     tutorial = !!m.team && ci === 0;
     paintDifficulty(ci, mi);
     coach("team-coach", tutorial
@@ -941,7 +946,10 @@
         const id2 = b.dataset.id;
         b.querySelector("small").textContent = "Lv " + levelOfHero(id2) + " · " + (HEROES[id2].guest ? "Guest" : ROLES[id2]) + (bookOf(id2) ? " · 📖" : "");
       }
-      $("begin").disabled = picked.length !== Math.min(size, available.length);
+      const need = Math.min(size, available.length) - picked.length;
+      $("begin").disabled = need !== 0;
+      // Say plainly why Begin isn't ready.
+      $("begin-note").textContent = need > 0 ? "Pick " + need + " more evangelist" + (need === 1 ? "" : "s") + " to begin." : need < 0 ? "Take " + -need + " off the team to begin." : "";
     }
     box.textContent = "";
     for (const id of available) {
