@@ -283,6 +283,8 @@ const GameData = (() => {
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
       { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2, cover: { foe: [1], hero: [], size: 0.2 } },
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"], book: "catechism" },
+    // par: the team level a chapter was built for, so a player who jumps
+    // ahead can be told that Gentle will make it winnable.
     { id: "atheists", par: 2.5, power: [2.0, 1.8], title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
@@ -326,8 +328,7 @@ const GameData = (() => {
       { name: "The Dividing Line", foes: ["seminarian", "white", "seminarian2"], boss: "white" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     // The final chapter: open once every story is done, and the hardest in
-    // the game. Every boss comes back to the table. It has no par, so it
-    // never scales down to a weaker team.
+    // the game. Every boss comes back to the table.
     { id: "finale", power: [1.35, 0.85], title: "The Great Debate", group: "Everyone", final: true, missions: [
       { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
       { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
