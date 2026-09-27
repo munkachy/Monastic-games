@@ -226,14 +226,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927n"></script>
-<script src="audio.js?v=20260927n"></script>
-<script src="art.js?v=20260927n"></script>
-<script src="moves.js?v=20260927n"></script>
-<script src="story.js?v=20260927n"></script>
-<script src="data.js?v=20260927n"></script>
-<script src="lines.js?v=20260927n"></script>
-<script src="battle.js?v=20260927n"></script>
+<script src="chants.js?v=20260927o"></script>
+<script src="audio.js?v=20260927o"></script>
+<script src="art.js?v=20260927o"></script>
+<script src="moves.js?v=20260927o"></script>
+<script src="story.js?v=20260927o"></script>
+<script src="data.js?v=20260927o"></script>
+<script src="lines.js?v=20260927o"></script>
+<script src="battle.js?v=20260927o"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -608,12 +608,20 @@
 
   // ---- Choosing a team ------------------------------------------------------------------
 
+  // The opponents of a debate. Once Joe Schmid has come home and joined the
+  // roster, replaying his debate brings in one of the rank and file in his
+  // place, so he never argues against himself and can stand with the team.
+  function foesOf(m) {
+    const standIn = m.foes.find((f) => !FOES[f].boss && !FOES[f].secretConvert) || "skeptic";
+    return m.foes.map((f) => (FOES[f].secretConvert && roster().includes(f) ? standIn : f));
+  }
+
   function chooseTeam(ci, mi) {
     const ch = C[ci];
     const m = ch.missions[mi];
     const fixed = m.team ? m.team.slice() : ch.guest ? [ch.guest] : [];
     const size = m.team ? m.team.length : 4;
-    const available = (m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : [])).filter((h) => !m.foes.includes(h));
+    const available = (m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : [])).filter((h) => !foesOf(m).includes(h));
     let picked = fixed.slice();
     for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
     tutorial = !!m.team && ci === 0;
@@ -681,7 +689,7 @@
     $("team-mission").textContent = m.name;
     const foes = $("team-foes");
     foes.textContent = "";
-    for (const id of m.foes) foes.append(portrait(id, 2));
+    for (const id of foesOf(m)) foes.append(portrait(id, 2));
 
     const box = $("roster");
     function paint() {
@@ -970,11 +978,12 @@
     const dIdx = ci === 0 ? Math.min(1, difficulty()) : difficulty();
     const D = Battle.DIFFICULTY[dIdx];
     const power = C[ci].power ? C[ci].power[m.boss ? 1 : 0] : 1;
-    const grunts = m.foes.filter((f) => !FOES[f].boss && !FOES[f].secretConvert);
+    const foeIds = foesOf(m);
+    const grunts = foeIds.filter((f) => !FOES[f].boss && !FOES[f].secretConvert);
     // Chapter 1 gets only half the difficulty's extra toughness and at most
     // one reinforcement, before the team has its great moves.
     const reserve = ci === 0 || !grunts.length ? [] : Array.from({ length: ci === 1 ? Math.min(1, D.reserve) : D.reserve }, (_, k) => grunts[k % grunts.length]);
-    const b = Battle.create({ difficulty: dIdx, power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
+    const b = Battle.create({ difficulty: dIdx, power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: foeIds, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");
