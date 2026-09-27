@@ -790,7 +790,7 @@ const Battle = (() => {
       if (e.status) out.push(pct(e) + STATUS[e.status]);
       if (e.share) out.push("Hits each for " + Math.round(e.share * 100) + "% of his Composure; a Shield of Faith or a podium soaks it up first");
       if (e.windup) out.push("Winds up his closing argument: next turn it lands on the whole team. Shield your team, leave him Dumbfounded or Muted, or knock a fifth of his Composure off first to stop it");
-      if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero. A spotlight shows who, and a red arrow over each opponent points his way");
+      if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this evangelist. A spotlight shows who, and a red arrow over each opponent points his way");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
       if (e.heal) out.push("Restores Composure (and encourages the Discouraged)");
       if (e.cleanse) out.push("Examen: clears every setback");
@@ -798,9 +798,9 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move (not while Dumbfounded)" + (e.counter && sk.target === "self" ? ". Arms folded and a ring of steel show the stance, and it can't be taken again while it holds" : ""));
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this evangelist, the evangelist answers back at once with the basic move (not while Dumbfounded)" + (e.counter && sk.target === "self" ? ". Arms folded and a ring of steel show the stance, and it can't be taken again while it holds" : ""));
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
-      if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
+      if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this evangelist");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
       if (e.onBreak) out.push("Zeal up if it puts someone out");
       if (e.onBreakCloak) out.push("Goes Undercover if it puts someone out");
@@ -823,13 +823,13 @@ const Battle = (() => {
     const many = ["foes", "two", "random4"].includes(sk.target);
     const friendly = ["ally", "allies", "self"].includes(sk.target);
     // What the move is for.
-    if (has((e) => e.status === "cloaked")) tips.push("Go Undercover when the other side keeps singling this hero out, or to line up a big hit.");
+    if (has((e) => e.status === "cloaked")) tips.push("Go Undercover when the other side keeps singling this evangelist out, or to line up a big hit.");
     else if (has((e) => e.heal)) tips.push("Save it for a friend who is low on Composure or Discouraged: it brings them back into the debate.");
     else if (has((e) => e.cleanse || e.friendsCleanse)) tips.push("Use it when a friend is Dumbfounded, Muted or Doubting, not before.");
     else if (has((e) => e.shield || e.podium)) tips.push("Put it in front of the friend taking the most hits, or the one with the least Composure, before the other side moves.");
     else if (has((e) => e.command)) tips.push("Send in your hardest hitter, or the friend whose basic move can put someone out.");
-    else if (has((e) => e.counter || e.selfCounter)) tips.push("Best just before the other side attacks: every hit on this hero earns a free answer back.");
-    else if (has((e) => e.taunt || e.tauntAll)) tips.push("Use it to pull attacks away from a weaker friend, on a hero with plenty of Composure.");
+    else if (has((e) => e.counter || e.selfCounter)) tips.push("Best just before the other side attacks: every hit on this evangelist earns a free answer back.");
+    else if (has((e) => e.taunt || e.tauntAll)) tips.push("Use it to pull attacks away from a weaker friend, on an evangelist with plenty of Composure.");
     else if (has((e) => e.randomLift)) tips.push("A good all-round lift when nothing is urgent, best early, before the team's big moves.");
     // What it does to the other side.
     if (has((e) => e.status === "dumbfounded")) tips.push("Aim it at the most dangerous opponent: a Dumbfounded speaker loses turns.");
