@@ -202,13 +202,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926k"></script>
-<script src="audio.js?v=20260926k"></script>
-<script src="art.js?v=20260926k"></script>
-<script src="moves.js?v=20260926k"></script>
-<script src="story.js?v=20260926k"></script>
-<script src="data.js?v=20260926k"></script>
-<script src="battle.js?v=20260926k"></script>
+<script src="chants.js?v=20260926l"></script>
+<script src="audio.js?v=20260926l"></script>
+<script src="art.js?v=20260926l"></script>
+<script src="moves.js?v=20260926l"></script>
+<script src="story.js?v=20260926l"></script>
+<script src="data.js?v=20260926l"></script>
+<script src="lines.js?v=20260926l"></script>
+<script src="battle.js?v=20260926l"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -675,8 +676,8 @@
       }
       return show(events);
     };
-    v.perform = (u, i, targets) => {
-      const mv = u.side === "hero" ? Theater.MOVES[u.id][i] : u.def.skills[i].anim || {};
+    v.perform = (u, i, targets, line) => {
+      const mv = { ...(u.side === "hero" ? Theater.MOVES[u.id][i] : u.def.skills[i].anim || {}), ...(line || {}) };
       const kind = mv.kind === Theater.kinds.volley || mv.kind === "volley" ? "bleep"
         : mv.kind === Theater.kinds.approach || mv.kind === "approach" ? "step"
         : mv.kind === Theater.kinds.hex || mv.kind === "hex" ? "hex"
@@ -684,7 +685,7 @@
       Sound.stir(false);
       if (u.def.skills[i].name === "Žižek Impression") Sound.fx("sniff");
       else if (kind) Sound.fx(kind, (mv.glyphs || []).length || 2);
-      return perform(u, i, targets);
+      return perform(u, i, targets, line);
     };
   }
 
@@ -813,15 +814,15 @@
     const out = await Battle.run(b, view, {
       choose: (u) => playerChoose(b, u),
       stopped: () => stopped,
-      onAction: (u, s, backup) => {
+      onAction: (u, s, backup, line) => {
         paintOrder(b, u);
         $("turn").textContent = u.name + "'s turn" + (u.level ? " · Lv " + u.level : "");
         $("round").textContent = "Round " + b.round;
         // What the fighter says, in plain text under the stage, easy to read at any speed.
         const i = u.def.skills.indexOf(s);
-        const mv = u.side === "hero" ? Theater.MOVES[u.id][i] : s.anim || {};
+        const mv = { ...(u.side === "hero" ? Theater.MOVES[u.id][i] : s.anim || {}), ...(line || {}) };
         const said = [].concat(mv.glyphs || [], mv.say || []).filter((g) => typeof g === "string" && g.length > 2);
-        $("log").textContent = (backup === "command" ? u.name + " is sent in: " + s.name + "." : backup === "rebuttal" ? u.name + " answers back: " + s.name + "." : backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "") + "”" : "");
+        $("log").textContent = (backup === "command" ? u.name + " is sent in: " + s.name + "." : backup === "rebuttal" ? u.name + " answers back: " + s.name + "." : backup ? u.name + (u.side === "hero" ? " jumps in to back up the team: " : " piles on: ") + s.name + "." : u.name + " uses " + s.name + ".") + (said.length ? " “" + said.join(" ").replace(/[“”]/g, "").replace(/…\s+…/g, "… ") + "”" : "");
         $("panel").textContent = "";
       },
     });
