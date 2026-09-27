@@ -580,7 +580,7 @@ const Art = (() => {
     // a plain black crew-neck.
     schmid: { skin: "#f0c4a6", shade: "#d09c82", hair: "#3a2416", hairLight: "#5a3a26", style: "curly", brow: "#3a2416", glasses: "#141418", outfit: "sweater", clothes: "#1e1e22", trim: "#1e1e22", grin: true },
     oconnor: { skin: "#f2d0ba", shade: "#d4a88e", hair: "#2a1c14", hairLight: "#4a3424", style: "side", beard: "mustache", beardColor: "#6a5040", mouth: "#c47e70", outfit: "suit", clothes: "#5a5d66", lapel: "#474a52", shirt: "#f7f5ee", tie: "#7a2a34" },
-    ryan: { skin: "#f0c4a8", shade: "#d09c84", hair: "#6a3a26", hairLight: "#8a5236", style: "bowl", brow: "#5a3222", wideEyes: true, eyeColor: "#5aa0e0", outfit: "shirt", clothes: "#1c2440", trim: "#e9e2d0", prop: "headphones", smile: true },
+    ryan: { skin: "#f0c4a8", shade: "#d09c84", hair: "#6a3a26", hairLight: "#8a5236", style: "bowl", brow: "#5a3222", wideEyes: true, eyeColor: "#5aa0e0", outfit: "shirt", clothes: "#1c2440", trim: "#e9e2d0", smile: true },
     seminarian: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#6a4a2f", style: "side", glasses: "#2a2a33", outfit: "suit", clothes: "#3a3f4a", lapel: "#2a2f3a", tie: "#5a2a2a", prop: "book", bookColor: "#1f2d4f" },
     // Rank-and-file opponents, invented for the game.
     elder: { skin: "#f4d0b3", shade: "#d7a98a", hair: "#d9b25a", hairLight: "#f0cf7a", style: "side", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#243a66", prop: "nametag", smile: true },
