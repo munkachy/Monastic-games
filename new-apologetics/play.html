@@ -6,7 +6,7 @@
 <title>New Apologetics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Jersey+15&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap">
 <style>
   :root {
     color-scheme: dark;
@@ -103,6 +103,14 @@
   .mission .stars { color: var(--gold); letter-spacing: 2px; }
   .mission .stars em { margin-left: 8px; font: 600 10px/1.2 var(--display); font-style: normal; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
   .mission.boss { border-color: var(--crimson); }
+  /* Who joins the roster when the chapter is won */
+  .joins { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; border: 1px dashed var(--gold); border-radius: 4px; background: rgba(232, 185, 74, 0.06); }
+  .joins .label { flex-basis: 100%; color: var(--gold); }
+  .joins.done { border-style: solid; border-color: var(--line); background: transparent; }
+  .joins.done .label { color: var(--muted); }
+  .joiner { display: grid; justify-items: center; gap: 4px; width: 84px; text-align: center; font: 600 12px/1.15 var(--display); color: var(--text); }
+  .joiner canvas { width: 64px; height: 64px; background: var(--panel-2); border-radius: 4px; }
+  .joiner small { font: 600 9px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
 
   /* Team */
   .foes, .picked { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -255,14 +263,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928e"></script>
-<script src="audio.js?v=20260928e"></script>
-<script src="art.js?v=20260928e"></script>
-<script src="moves.js?v=20260928e"></script>
-<script src="story.js?v=20260928e"></script>
-<script src="data.js?v=20260928e"></script>
-<script src="lines.js?v=20260928e"></script>
-<script src="battle.js?v=20260928e"></script>
+<script src="chants.js?v=20260928f"></script>
+<script src="audio.js?v=20260928f"></script>
+<script src="art.js?v=20260928f"></script>
+<script src="moves.js?v=20260928f"></script>
+<script src="story.js?v=20260928f"></script>
+<script src="data.js?v=20260928f"></script>
+<script src="lines.js?v=20260928f"></script>
+<script src="battle.js?v=20260928f"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -668,7 +676,7 @@
       const open = chapterOpen(ci);
       const el = document.createElement("article");
       el.className = "chapter" + (open ? "" : " locked");
-      el.innerHTML = `<span class="label"></span><h3></h3><div class="missions"></div><div class="row extra"></div>`;
+      el.innerHTML = `<span class="label"></span><h3></h3><div class="missions"></div><div class="joins-slot"></div><div class="row extra"></div>`;
       el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.final ? "Final chapter" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
       el.querySelector("h3").textContent = ch.title;
       const list = el.querySelector(".missions");
@@ -692,6 +700,30 @@
         b.addEventListener("click", () => startMission(ci, mi));
         list.append(b);
       });
+      // Who joins the roster when this chapter is won, with their faces.
+      const joining = ch.unlocks.filter((h) => HEROES[h]);
+      if (joining.length && ch.missions.length) {
+        const done = chapterDone(ci);
+        const j = document.createElement("div");
+        j.className = "joins" + (done ? " done" : "");
+        const lab = document.createElement("span");
+        lab.className = "label";
+        lab.textContent = done ? "Joined your roster" : "Finish this chapter and " + (joining.length === 1 ? "this hero joins" : "these heroes join") + " your roster";
+        j.append(lab);
+        for (const h of joining) {
+          const f = document.createElement("div");
+          f.className = "joiner";
+          const pic = portrait(h, 2);
+          pic.setAttribute("aria-label", "Pixel portrait of " + HEROES[h].name);
+          const nm = document.createElement("span");
+          nm.textContent = HEROES[h].name;
+          const role = document.createElement("small");
+          role.textContent = ROLES[h] || "";
+          f.append(pic, nm, role);
+          j.append(f);
+        }
+        el.querySelector(".joins-slot").append(j);
+      }
       const extra = el.querySelector(".extra");
       if (!ch.missions.length) {
         const b = document.createElement("button");
