@@ -429,6 +429,14 @@ const Battle = (() => {
 
   // Fight to the end. `choose(u)` returns a promise of { i, target } for a hero
   // the player controls; without it, everyone plays themselves.
+  // What a fighter says this time (see lines.js): picked once per use, so
+  // the stage and the log agree.
+  function lineOf(u, i) {
+    if (typeof Lines === "undefined") return null;
+    const move = u.side === "hero" ? (typeof Theater !== "undefined" && Theater.MOVES[u.id] || [])[i] : { name: u.def.skills[i].name, ...(u.def.skills[i].anim || {}) };
+    return Lines.pick(move);
+  }
+
   async function run(b, view, opts) {
     const o = opts || {};
     // Rebuttals: whoever was hit and is ready answers the attacker at once,
@@ -438,8 +446,9 @@ const Battle = (() => {
         if (b.outcome() || t.state !== "in" || attacker.state !== "in") return;
         const rt = b.aim(t, 0, attacker);
         view.show([{ key: t.key, text: "Rebuttal!", color: "#e8b94a" }]);
-        if (o.onAction) o.onAction(t, t.def.skills[0], "rebuttal");
-        await view.perform(t, 0, rt);
+        const line = lineOf(t, 0);
+        if (o.onAction) o.onAction(t, t.def.skills[0], "rebuttal", line);
+        await view.perform(t, 0, rt, line);
         const r4 = b.use(t, 0, attacker, rt, true);
         view.show(r4.events);
         await view.sleep(r4.events.some((e) => e.out) ? 2.0 : 0.8);
@@ -458,9 +467,10 @@ const Battle = (() => {
       const pick = u.side === "hero" && o.choose ? await o.choose(u) : b.think(u);
       if (o.stopped && o.stopped()) return "stopped";
       const targets = b.aim(u, pick.i, pick.target);
-      if (o.onAction) o.onAction(u, u.def.skills[pick.i]);
+      const line = lineOf(u, pick.i);
+      if (o.onAction) o.onAction(u, u.def.skills[pick.i], undefined, line);
       view.setActive(null);
-      await view.perform(u, pick.i, targets);
+      await view.perform(u, pick.i, targets, line);
       const r = b.use(u, pick.i, pick.target, targets);
       view.show(r.events);
       await view.sleep(r.events.some((e) => e.out) ? 2.0 : 0.9);
@@ -471,8 +481,9 @@ const Battle = (() => {
         if (tgt) {
           const ct = b.aim(ally, 0, tgt);
           view.show([{ key: ally.key, text: "Sent in!", color: "#e8b94a" }]);
-          if (o.onAction) o.onAction(ally, ally.def.skills[0], "command");
-          await view.perform(ally, 0, ct);
+          const cl = lineOf(ally, 0);
+          if (o.onAction) o.onAction(ally, ally.def.skills[0], "command", cl);
+          await view.perform(ally, 0, ct, cl);
           const r3 = b.use(ally, 0, tgt, ct);
           view.show(r3.events);
           await view.sleep(r3.events.some((e) => e.out) ? 2.0 : 0.8);
@@ -484,8 +495,9 @@ const Battle = (() => {
       if (bk) {
         const bt = b.aim(bk.ally, 0, bk.target);
         view.show([{ key: bk.ally.key, text: bk.ally.side === "hero" ? "Backs you up!" : "Piles on!", color: "#7ea4e6" }]);
-        if (o.onAction) o.onAction(bk.ally, bk.ally.def.skills[0], true);
-        await view.perform(bk.ally, 0, bt);
+        const bl = lineOf(bk.ally, 0);
+        if (o.onAction) o.onAction(bk.ally, bk.ally.def.skills[0], true, bl);
+        await view.perform(bk.ally, 0, bt, bl);
         const r2 = b.use(bk.ally, 0, bk.target, bt);
         view.show(r2.events);
         await view.sleep(r2.events.some((e) => e.out) ? 2.0 : 0.8);
@@ -700,7 +712,7 @@ const BattleView = (() => {
     }
 
     // Play a move's animation; resolves when it ends.
-    function perform(u, i, targets) {
+    function perform(u, i, targets, line) {
       let move;
       if (u.side === "hero") move = Theater.MOVES[u.id][i];
       else {
@@ -710,6 +722,7 @@ const BattleView = (() => {
         // A volley shows at most one mark; the others take a list (possibly empty).
         move.mark = a.kind === "volley" ? (a.mark ? [].concat(a.mark)[0] : undefined) : [].concat(a.mark || []);
       }
+      if (line) move = { ...move, ...line };
       theater.act(u.key, move, now, targets.map((t) => t.key));
       return new Promise((res) => { done = res; });
     }
