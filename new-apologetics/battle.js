@@ -599,14 +599,20 @@ const BattleView = (() => {
           if (!u) continue;
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
+          if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t);
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.side === "foe" ? o.coverKind || "podium" : "podium");
           const x = a.x - 30;
           const y = a.y + 6;
-          // Composure.
-          ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 1, 62, 7);
+          // Composure, with any Shield of Faith added on the end in white, as
+          // Legends does it: when the two together pass full, the bar grows
+          // longer (up to half again), so the shield's strength is plain.
+          const hpW = Math.round(60 * u.hp / u.maxHp);
+          const shW = u.shield ? Math.min(90 - hpW, Math.max(2, Math.round(60 * u.shield.amt / u.maxHp))) : 0;
+          const barW = Math.max(60, hpW + shW);
+          ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 1, barW + 2, 7);
           ctx.fillStyle = "#2a2f55"; ctx.fillRect(x, y, 60, 5);
-          ctx.fillStyle = u.hp / u.maxHp > 0.3 ? "#74c07a" : "#de8a4a"; ctx.fillRect(x, y, Math.round(60 * u.hp / u.maxHp), 5);
-          if (u.shield) { ctx.fillStyle = "#7ea4e6"; ctx.fillRect(x, y - 3, Math.min(60, Math.round(60 * u.shield.amt / u.maxHp)), 2); }
+          ctx.fillStyle = u.hp / u.maxHp > 0.3 ? "#74c07a" : "#de8a4a"; ctx.fillRect(x, y, hpW, 5);
+          if (shW) { ctx.fillStyle = "#f4f6ff"; ctx.fillRect(x + hpW, y, shW, 5); ctx.fillStyle = "#9fb8ee"; ctx.fillRect(x + hpW, y + 4, shW, 1); }
           // Zeal: blue arrows up when it is good; red arrows down when it
           // falls, with dim ones showing how far until the floor.
           const step = Math.min(14, Math.floor(62 / Math.max(3, -u.floor)));
@@ -683,6 +689,23 @@ const BattleView = (() => {
       }
       // The podium's own strength, as a small tan bar.
       px(-13, -9, 26, 5, "#1a1326"); px(-12, -8, Math.max(1, Math.round(24 * c.hp / c.max)), 3, "#f0dca0");
+      ctx.restore();
+    }
+
+    // A Shield of Faith: a pale blue bubble around the fighter, shimmering,
+    // with a glint that travels round its edge.
+    function shieldAura(ctx, x, y, t) {
+      const cx = x, cy = y - 50, rx = 32, ry = 60;
+      const pulse = 0.5 + Math.sin(t * 3) * 0.15;
+      ctx.save();
+      ctx.fillStyle = `rgba(126,164,230,${0.16 + pulse * 0.08})`;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = `rgba(200,222,255,${0.6 + pulse * 0.3})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+      const g = t * 2.2;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(Math.round(cx + Math.cos(g) * rx) - 2, Math.round(cy + Math.sin(g) * ry) - 2, 4, 4);
+      ctx.fillRect(Math.round(cx + Math.cos(g + Math.PI) * rx) - 1, Math.round(cy + Math.sin(g + Math.PI) * ry) - 1, 3, 3);
       ctx.restore();
     }
 
