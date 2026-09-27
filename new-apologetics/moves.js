@@ -559,6 +559,33 @@ const Theater = (() => {
       ev.forEach((e, i) => { if (k > 0.4 + i * 0.35) text(ctx, e, 350 + (i % 2) * 140, 290 + Math.floor(i / 2) * 22, 14, "#e8b94a", "left"); });
     },
     // Trent Horn: his books slam down into a stack, then fly out.
+    // Fr. Carlos Martins: the relics come out, lit one by one in their gold
+    // reliquaries, and at the centre the wood of the True Cross.
+    relics(ctx, k) {
+      ctx.fillStyle = "#120c14"; ctx.fillRect(0, 0, W, H);
+      // A red cloth over the exposition table, and candles.
+      ctx.fillStyle = "#5a1420"; ctx.fillRect(0, 250, W, 110); ctx.fillStyle = "#e8b94a"; ctx.fillRect(0, 248, W, 4);
+      for (let i = 0; i < 9; i++) { const x = 250 + i * 44; ctx.fillStyle = "#f3ead2"; ctx.fillRect(x, 222, 6, 26); ctx.fillStyle = Math.sin(k * 9 + i) > 0 ? "#ffcf5a" : "#ffe07a"; ctx.fillRect(x + 1, 212, 4, 10); }
+      // The reliquaries, lighting up in turn.
+      const lit = Math.floor(span(k, 0.1, 1.6) * 7);
+      for (let i = 0; i < 7; i++) {
+        if (i === 3) continue;
+        const x = 250 + i * 58, y = 186 - (i % 2) * 14, on = i < lit || (i > 3 && i - 1 < lit);
+        if (on) { ctx.fillStyle = "rgba(255,220,120,0.22)"; ctx.beginPath(); ctx.arc(x, y - 10, 26, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 12, y - 30, 24, 40);
+        ctx.fillStyle = on ? "#e8b94a" : "#7a6a3a"; ctx.fillRect(x - 10, y - 28, 20, 36);
+        ctx.fillStyle = on ? "#fff4d0" : "#3a3020"; ctx.fillRect(x - 5, y - 20, 10, 12);
+        ctx.fillStyle = on ? "#e8b94a" : "#7a6a3a"; ctx.fillRect(x - 2, y - 38, 4, 10); ctx.fillRect(x - 6, y - 34, 12, 3);
+      }
+      // The True Cross, the largest, at the centre.
+      const g = span(k, 0.9, 1.8);
+      const cx = 424, cy = 120;
+      if (g > 0) { ctx.fillStyle = `rgba(255,236,170,${0.25 * g})`; ctx.beginPath(); ctx.arc(cx, cy, 70, 0, Math.PI * 2); ctx.fill(); for (let r = 0; r < 12; r++) { const a = r * Math.PI / 6 + k * 0.4; ctx.fillStyle = `rgba(255,236,170,${0.35 * g})`; ctx.fillRect(cx + Math.cos(a) * 58, cy + Math.sin(a) * 58, 4, 4); } }
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(cx - 12, cy - 62, 24, 130); ctx.fillRect(cx - 44, cy - 30, 88, 24);
+      ctx.fillStyle = "#e8b94a"; ctx.fillRect(cx - 10, cy - 60, 20, 126); ctx.fillRect(cx - 42, cy - 28, 84, 20);
+      ctx.fillStyle = "#6a4a2a"; ctx.fillRect(cx - 3, cy - 44, 6, 40); ctx.fillRect(cx - 14, cy - 21, 28, 6);
+      if (g > 0.5) text(ctx, "LIGNUM CRUCIS", cx, cy + 90, 14, "#f3ead2");
+    },
     books(ctx, k) {
       ctx.fillStyle = "#2a1a14"; ctx.fillRect(0, 0, W, H);
       for (let y = 60; y < H; y += 90) { ctx.fillStyle = "#4a2e1e"; ctx.fillRect(0, y, W, 10); }
@@ -927,6 +954,12 @@ const Theater = (() => {
       { name: "Steelman", kind: aura, to: "self", say: "Let me steelman that.", mark: ["stance", "up"] },
       { name: "Contingency Argument", kind: hex, to: "one", say: "Why is there anything at all?", mark: ["examined", "down"] },
       { name: "Welcome Home", kind: approach, to: "ally", say: "Welcome home.", mark: "up", mark2: "pipUp" },
+    ],
+    martins: [
+      { name: "Holy Water", kind: volley, glyphs: ["✚"], color: "#9fd0ff" },
+      { name: "Stand Behind Me", kind: aura, to: "allies", mark: ["pipUp"], foes: "called", say: "Stand behind me. I've seen worse.", color: "#e8b94a" },
+      { name: "Prayer of Deliverance", kind: aura, to: "allies", mark: ["heal", "up"], say: "Deliver us from evil.", color: "#ffe07a" },
+      { name: "Treasures of the Church", kind: cinematic, who: "Fr. Carlos Martins", color: "#5a1420", scene: SCENES.relics, to: "allies", mark: ["up", "crit"] },
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },

@@ -70,6 +70,10 @@ const Lines = (() => {
     "Contingency Argument": ["What explains the whole chain?", "Contingent things need a ground.", "Why this, and not nothing?", "Pruss would like a word."],
     "Welcome Home": ["It's good to be back.", "The door was always open.", "Pull up a chair, brother.", "Home at last."],
 
+    // Fr. Carlos Martins
+    "Stand Behind Me": ["Stand behind me. I've seen worse.", "Look at me, not them.", "Keep your eyes on me.", "Christ has already won."],
+    "Prayer of Deliverance": ["Deliver us from evil.", "Saint Michael, defend us.", "Lord, set them free.", "Be healed, in Jesus' name."],
+
     // Opponents
     "Where's the Evidence?": ["Source?", "Extraordinary claims…", "That's just, like, faith.", "Peer-reviewed?"],
     "Turn or Burn": [["Turn or burn!"], ["Sinner!"], ["Not too late!"], ["Hellfire!"]],
@@ -86,6 +90,25 @@ const Lines = (() => {
     "Steelman": ["Charitably construed…", "Your best version is…", "Fair. Very fair.", "Let me grant that."],
     // Joe Schmid does Slavoj Žižek.
     "Žižek Impression": ["Pure ideology! *sniff*", "This is, eh, ideology!", "Even your coffee is ideology!", "German toilets! Ideology!", "I am, eh, a Christian atheist!", "*sniff* And so on. Beautiful!", "Like, eh… nothing is simple!"],
+    // The New Age
+    "Card Pull": [["The cards say…"], ["Three of Swords."], ["The Moon…", "…reversed."], ["Pull again."]],
+    "The Tower": ["The Tower. Upheaval!", "The Devil card. Hm.", "Ten of Swords. Yikes.", "Death card! It's fine."],
+    "Good Vibes": [["Good vibes!"], ["High vibration!"], ["Namaste."], ["Raise your frequency."]],
+    "Crystal Grid": ["Amethyst protects me.", "Rose quartz, for love.", "Charged in moonlight.", "The grid is set."],
+    "Manifest It": [["Manifest it!"], ["Speak it into being."], ["Ask the universe."], ["Big Leo energy."]],
+    "Apollo Loves You": ["Apollo loves you, babe.", "Aphrodite wants you happy.", "Hecate is so protective.", "The gods adore you, bestie."],
+    "Mercury in Retrograde": ["Mercury's in retrograde!", "Blame the full moon.", "It's your Saturn return.", "Bad astrology week."],
+    "Protection Circle": ["Salt circle. Protected.", "Sage it out.", "My spirit guides got me.", "White light around me."],
+    // My Body, My Brand
+    "Link in Bio": [["Link in bio!"], ["Subscribe!"], ["It's my brand."], ["Smash that like."]],
+    "It's Empowering": ["It's empowering!", "My body, my business.", "I'm my own boss.", "It's just content!"],
+    "Chant": [["My body!"], ["My choice!"], ["Not your body!"], ["Hands off!"]],
+    "Clump of Cells": ["It's just a clump of cells!", "It's not a baby yet!", "It's healthcare!", "It's a medical decision!"],
+    // Destiny: his own case, fairly put.
+    "Rapid Fire": [["Okay,", "so,", "no."], ["Hold on.", "That's", "incoherent."], ["Wrong.", "Next.", "Next."]],
+    "Define 'Person'": ["Define “person.”", "Define your terms.", "What's a person, exactly?", "Personhood needs a mind."],
+    "Life Support": ["Would you unplug him or not?", "Life support. Same thing.", "No one owes their body.", "Sleep is different. Why?"],
+    "No Experiences, No Harm": ["No conscious experience, no one harmed.", "Consciousness first.", "No mind, no victim.", "Who's harmed? Nobody."],
     "Within Reason": [["Right, but…"], ["Fair, but…"], ["I'm not sure…", "…that follows."], ["Mm. Okay."]],
     "The Fawn in the Forest": ["Why the burning fawn?", "Whom does its pain serve?", "Alone. In the forest.", "No one sees. No one learns."],
     "Euthyphro": ["Good because commanded?", "Arbitrary, or above God?", "Plato's old question…", "Which horn will you take?"],

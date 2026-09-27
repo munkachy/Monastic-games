@@ -163,7 +163,7 @@
     <span class="label">A team battler</span>
     <h1 id="title-name">New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
-    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
+    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on seven chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
     <div class="row">
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
@@ -226,21 +226,21 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927q"></script>
-<script src="audio.js?v=20260927q"></script>
-<script src="art.js?v=20260927q"></script>
-<script src="moves.js?v=20260927q"></script>
-<script src="story.js?v=20260927q"></script>
-<script src="data.js?v=20260927q"></script>
-<script src="lines.js?v=20260927q"></script>
-<script src="battle.js?v=20260927q"></script>
+<script src="chants.js?v=20260927s"></script>
+<script src="audio.js?v=20260927s"></script>
+<script src="art.js?v=20260927s"></script>
+<script src="moves.js?v=20260927s"></script>
+<script src="story.js?v=20260927s"></script>
+<script src="data.js?v=20260927s"></script>
+<script src="lines.js?v=20260927s"></script>
+<script src="battle.js?v=20260927s"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = GameData.CAMPAIGN;
   const HEROES = GameData.HEROES;
   const FOES = GameData.FOES;
-  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader" };
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader", martins: "Encourager" };
   const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", random4: "Four strikes at random opponents", ally: "One friend", allies: "Whole team", self: "Self" };
 
   // The teaching cards each chapter unlocks.
@@ -256,6 +256,12 @@
     islam: [["g-dogma", "Dogma", "The Son is “one in being with the Father”: not a second god, but God's own eternal Word (Nicaea, 325)."],
       ["g-argument", "Argument", "“Let the people of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact then, what corrupted it afterward?"],
       ["g-doctrine", "Doctrine", "Muslims “together with us adore the one, merciful God” (CCC 841; Nostra Aetate 3)."]],
+    newage: [["g-doctrine", "Doctrine", "All forms of divination are to be rejected: horoscopes, astrology, palm reading, consulting mediums. Magic and sorcery are gravely contrary to the virtue of religion (CCC 2116–2117)."],
+      ["g-argument", "Argument", "No ancient Greek thought the gods loved him. “Such is the way the gods spun life for unfortunate mortals, that we live in unhappiness, but the gods themselves have no sorrows” (Iliad 24.525–526). Aristotle held that friendship with a god is impossible: the distance is too great (Nicomachean Ethics VIII.7). “God is love” (1 John 4:8) came with revelation, and “Apollo loves you” borrows it."],
+      ["g-doctrine", "Doctrine", "The Church has power over evil spirits in the name of Jesus Christ. A solemn exorcism is done only by a priest, with the bishop's permission (CCC 1673)."]],
+    body: [["g-doctrine", "Doctrine", "Human life must be respected and protected absolutely from the moment of conception; direct abortion is gravely contrary to the moral law (CCC 2270–2271; Evangelium Vitae 62)."],
+      ["g-argument", "Argument", "A person is “an individual substance of a rational nature” (Boethius), not a stream of experiences. You were you before you could think, and you are still you asleep. Consciousness is something a person does, not what makes him one."],
+      ["g-doctrine", "Doctrine", "The body is not a product: it is the person, made a gift. Pornography does grave injury to the dignity of everyone involved, and makes them objects of pleasure and profit for others (CCC 2354; 1 Corinthians 6:19–20)."]],
     reformed: [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]],
     epilogue: [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]],
@@ -749,7 +755,7 @@
   let pending = null;
   // Podiums: which fighters start behind one. Not everyone gets one, and it
   // changes from battle to battle. What they look like depends on the chapter.
-  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", reformed: "pulpit" };
+  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", newage: "display", body: "desk", reformed: "pulpit" };
   function coverFor(ci, m) {
     if (m.cover) return m.cover;
     const foe = [], hero = [];
@@ -1081,6 +1087,8 @@
       protestant: "His baptism was already valid, so he is not baptized again: he makes a profession of faith, is confirmed, and is received into full communion.",
       lds: "The Church does not recognize Latter-day Saint baptism as valid, so at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
       islam: "He enters the catechumenate, freely, and at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
+      newage: "The parish meets this one where the journey started: the catechumenate if never baptized, confession if baptized and drifted. Either way the tarot deck and the spells are renounced for good.",
+      secular: "Like many of this generation, never baptized: the catechumenate, then baptism, confirmation and First Communion at the Easter Vigil.",
     };
     for (const u of r.converted.filter((x) => x.def.secretConvert)) {
       const c = document.createElement("p");
@@ -1095,7 +1103,7 @@
       c.className = "coach";
       const who = flock.length === 1 ? (/^[AEIOU]/.test(flock[0].name) ? "An " : "A ") + flock[0].name + " signs" : flock.length + " of them sign";
       c.innerHTML = "<b>" + who + " up for OCIA.</b> ";
-      c.append((flock.length === 1 ? ROAD[flock[0].faction] || "" : "Each will be received by the road that fits where he started.") + " The argument only cleared the ground; the rest was the Holy Spirit's work.");
+      c.append((flock.length === 1 ? ROAD[flock[0].faction] || "" : "Each will be received by the road that fits where each one started.") + " The argument only cleared the ground; the rest was the Holy Spirit's work.");
       box.append(c);
     }
     for (const g of r.grew) {
