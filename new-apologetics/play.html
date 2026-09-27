@@ -263,14 +263,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928i"></script>
-<script src="audio.js?v=20260928i"></script>
-<script src="art.js?v=20260928i"></script>
-<script src="moves.js?v=20260928i"></script>
-<script src="story.js?v=20260928i"></script>
-<script src="data.js?v=20260928i"></script>
-<script src="lines.js?v=20260928i"></script>
-<script src="battle.js?v=20260928i"></script>
+<script src="chants.js?v=20260928j"></script>
+<script src="audio.js?v=20260928j"></script>
+<script src="art.js?v=20260928j"></script>
+<script src="moves.js?v=20260928j"></script>
+<script src="story.js?v=20260928j"></script>
+<script src="data.js?v=20260928j"></script>
+<script src="lines.js?v=20260928j"></script>
+<script src="battle.js?v=20260928j"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -523,6 +523,11 @@
   $("music").addEventListener("click", () => setMusic(Sound.MODES[(Sound.MODES.indexOf(save.music) + 1) % Sound.MODES.length]));
   // Browsers allow sound only after a tap, so the first tap anywhere starts it.
   document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
+  // Every button, every screen, every turn of a cut scene: the drone moves to
+  // a new note. (In a debate the moves themselves move the music.)
+  const droneStep = (el) => { if (el && !el.closest("#s-battle")) Sound.moveDrone(); };
+  document.addEventListener("click", (e) => droneStep(e.target.closest("button, #scene")));
+  $("scene").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") droneStep(e.target); });
   paintMusic();
 
   // Developer mode: every chapter, hero, move and book open, and nothing
