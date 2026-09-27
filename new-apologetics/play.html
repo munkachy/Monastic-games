@@ -21,6 +21,8 @@
     --crimson: #de5e55;
     --green: #74c07a;
     --display: "Pixelify Sans", "Courier New", monospace;
+    /* A heavier, clearer pixel face for anything that has to be read at a glance */
+    --clear: "Jersey 15", "Pixelify Sans", "Courier New", monospace;
     --body: "Literata", Georgia, serif;
   }
   * { box-sizing: border-box; }
@@ -96,21 +98,24 @@
   /* Map */
   .chapter { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 10px; }
   .chapter.locked { opacity: 0.5; }
-  .chapter h3 { font-size: 20px; }
+  .chapter h3 { font: 400 32px/1.1 var(--clear); }
+  #s-map .chapter > .label { font: 400 19px/1.2 var(--clear); letter-spacing: 0.02em; text-transform: none; }
+  #s-map .chapter button { font: 400 22px/1.1 var(--clear); }
   .chapter .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-  .mission { display: grid; gap: 4px; text-align: left; }
-  .mission small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-  .mission .stars { color: var(--gold); letter-spacing: 2px; }
-  .mission .stars em { margin-left: 8px; font: 600 10px/1.2 var(--display); font-style: normal; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .mission { display: grid; gap: 5px; text-align: left; }
+  #s-map .mission span { font: 400 25px/1.05 var(--clear); }
+  .mission small { font: 400 18px/1.1 var(--clear); color: var(--muted); letter-spacing: 0.02em; }
+  #s-map .mission .stars { font: 400 21px/1.2 var(--clear); color: var(--gold); letter-spacing: 2px; }
+  .mission .stars em { display: block; margin-top: 2px; font: 400 18px/1.2 var(--clear); font-style: normal; color: var(--muted); letter-spacing: 0.02em; }
   .mission.boss { border-color: var(--crimson); }
   /* Who joins the roster when the chapter is won */
   .joins { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 12px; border: 1px dashed var(--gold); border-radius: 4px; background: rgba(232, 185, 74, 0.06); }
-  .joins .label { flex-basis: 100%; color: var(--gold); }
+  .joins .label { flex-basis: 100%; color: var(--gold); font: 400 19px/1.2 var(--clear); letter-spacing: 0.02em; text-transform: none; }
   .joins.done { border-style: solid; border-color: var(--line); background: transparent; }
   .joins.done .label { color: var(--muted); }
-  .joiner { display: grid; justify-items: center; gap: 4px; width: 84px; text-align: center; font: 600 12px/1.15 var(--display); color: var(--text); }
+  .joiner { display: grid; justify-items: center; gap: 4px; width: 100px; text-align: center; font: 400 20px/1.05 var(--clear); color: var(--text); }
   .joiner canvas { width: 64px; height: 64px; background: var(--panel-2); border-radius: 4px; }
-  .joiner small { font: 600 9px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .joiner small { font: 400 17px/1.2 var(--clear); color: var(--muted); letter-spacing: 0.02em; }
 
   /* Team */
   .foes, .picked { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -263,14 +268,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928j"></script>
-<script src="audio.js?v=20260928j"></script>
-<script src="art.js?v=20260928j"></script>
-<script src="moves.js?v=20260928j"></script>
-<script src="story.js?v=20260928j"></script>
-<script src="data.js?v=20260928j"></script>
-<script src="lines.js?v=20260928j"></script>
-<script src="battle.js?v=20260928j"></script>
+<script src="chants.js?v=20260928k"></script>
+<script src="audio.js?v=20260928k"></script>
+<script src="art.js?v=20260928k"></script>
+<script src="moves.js?v=20260928k"></script>
+<script src="story.js?v=20260928k"></script>
+<script src="data.js?v=20260928k"></script>
+<script src="lines.js?v=20260928k"></script>
+<script src="battle.js?v=20260928k"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
