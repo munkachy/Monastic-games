@@ -22,7 +22,8 @@ const Lines = (() => {
     "Point of Order": ["Let's define our terms.", "That's not the question.", "Back to the topic, please.", "Let's update our priors."],
     // Trent Horn
     "Deadpan": [["Fascinating.", "Anyway."], ["Great point.", "…said no one."], ["Cool.", "Cool cool cool."], ["That's…", "…a choice."], ["I'm thrilled.", "Can you tell?"], ["Well.", "That happened."], ["Oh good.", "More of this."]],
-    "Free-for-All Friday": ["Next caller, you're on!", "Line two, you're on the air.", "Any question. Go!", "Let's go to the phones!"],
+    // Topics from real Free-for-All Friday episodes of The Counsel of Trent.
+    "Free-for-All Friday": ["So… I finally got glasses.", "I once filmed a zombie movie.", "My favorite last meals…", "The weirdest phobias. Mine too.", "Let's talk YouTube algorithms.", "Why do millennials look so young?", "Someone tried to steal $4,000!", "So I've looked into dieting.", "Remote-work hacks, anyone?", "Good things from the pandemic?", "My all-time favorite movies…", "Crew Resource Management!", "What happened to bowling alleys?"],
     "Is That in the Bible?": ["Where does it say that?", "Show me that verse.", "Is that in the Bible, though?", "Book, chapter, verse?"],
     // Matt Fradd
     "Cheeky Question": [["Hang on, mate."], ["Crikey…"], ["Fair dinkum?"], ["Righto…", "…but why?"], ["Mate.", "Mate."]],
