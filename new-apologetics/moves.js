@@ -893,6 +893,12 @@ const Theater = (() => {
       { name: "Wide-Eyed Wonder", kind: hex, to: "one", say: "Isn't that amazing?!", mark: ["pipDown", "down"], fx: (ctx, api, h, targets, t, k) => { if (t < 0.2 || t > 1.8) return; const s = 1 + Math.sin(t * 10) * 0.08; const x = h.x + 70; const y = h.y - 170; for (const dx of [-26, 26]) { ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx, y, 22 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fdfaf2"; ctx.beginPath(); ctx.arc(x + dx, y, 19 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#4a6a8a"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 8, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x + dx + 4, y, 4, 0, Math.PI * 2); ctx.fill(); } } },
       { name: "Rome Sweet Home", kind: cinematic, who: "Scott Hahn", color: "#8a5a1a", scene: SCENES.romehome, to: "one", mark: ["dumbfounded", "factcheck"], impact: impactOn("#e8b94a") },
     ],
+    schmid: [
+      { name: "Majesty of Reason", kind: volley, glyphs: ["Consider…", "…a dilemma."], color: "#9fd0ff" },
+      { name: "Steelman", kind: aura, to: "self", say: "Let me steelman that.", mark: ["shield", "up"] },
+      { name: "Contingency Argument", kind: hex, to: "one", say: "Why is there anything at all?", mark: ["examined", "down"] },
+      { name: "Welcome Home", kind: approach, to: "ally", say: "Welcome home.", mark: "up", mark2: "pipUp" },
+    ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
       { name: "Former Litigator", kind: aura, to: "allies", mark: "crit", say: "Objection!", color: "#e8b94a" },

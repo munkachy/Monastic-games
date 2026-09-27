@@ -125,10 +125,20 @@ const GameData = (() => {
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
     // Modelled on the Gorn: the slowest and sturdiest, with the heaviest blows.
-    hahn: { name: "Scott Hahn", about: "The slowest on the roster and the hardest to shake, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth"] }, skills: [
+    hahn: { name: "Scott Hahn", about: "The slowest on the roster and the hardest to shake, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }, skills: [
       H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
       H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
+    ] },
+    // Joe Schmid, once he has come home. Modelled on Soji, who discovers who
+    // she really is and changes sides: Punch, Fighting Posture (Counter), Insightful
+    // Scan, Synthetic Beacon (cover and Zeal, more for a fellow synthetic; here, a
+    // fellow convert).
+    schmid: { name: "Joe Schmid", about: "Back home and arguing for the Church now. A builder who reasons from first principles: Steelman lets him answer back every objection while he braces himself, and the Contingency Argument exposes an opponent and blunts his arguments. Welcome Home puts a podium in front of a friend and fires him up, and fires up a fellow convert even more.", stats: [213, 73, 17, 110], traits: { care: 83, glance: [0.07, 0.21], crit: [0.04, 1.38], resolve: 0.07 }, skills: [
+      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.5 }]),
+      H("Steelman", "self", 3, 0, [{ counter: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
+      H("Contingency Argument", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "atk", amt: -0.5, turns: 3 }]),
+      H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }]),
     ] },
     heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, and he never stops talking. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
@@ -226,35 +236,37 @@ const GameData = (() => {
 
   // ---- The campaign ------------------------------------------------------------------
 
+  // power: [regular debates, boss] — how far each chapter's opponents have
+  // come, found by simulation (see BALANCE.md); the tutorial has none.
   const CAMPAIGN = [
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
       { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2, cover: { foe: [1], hero: [], size: 0.2 } },
     ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"], book: "catechism" },
-    { id: "atheists", title: "The Fawn in the Forest", group: "Atheists", missions: [
+    { id: "atheists", power: [2.0, 1.8], title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"], book: "confessions" },
-    { id: "evangelicals", title: "Are You a Good Person?", group: "Evangelicals", missions: [
+    { id: "evangelicals", power: [2.8, 2.5], title: "Are You a Good Person?", group: "Evangelicals", missions: [
       { name: "The City Square", foes: ["preacher", "preacher2"] },
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"], book: "summa" },
-    { id: "lds", title: "The Restoration", group: "Latter-day Saints", missions: [
+    { id: "lds", power: [3.6, 4.0], title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
-    { id: "islam", title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
+    { id: "islam", power: [3.9, 2.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [], book: "rule" },
-    { id: "reformed", title: "Scripture Alone?", group: "Reformed", missions: [
+    { id: "reformed", power: [3.0, 1.3], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },

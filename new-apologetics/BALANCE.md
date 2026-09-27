@@ -97,3 +97,42 @@ whole-team; not when a podium takes it), once per move, answering the
 attacker with the hero's basic move on stage. Rebuttals never trigger
 rebuttals. White fight, 200 runs: with Ethan 148 wins (137 before), without
 146; Heschmeyer 127 (124 before; his weakness there predates this).
+
+## Difficulty and the balance harness (September 2026)
+
+Method, after simulation-based balance testing (bots of different skill
+bracket the result; about 30 runs per case keeps sampling error near ±5
+points) and Csikszentmihalyi's flow channel (challenge a little above
+skill, rising with it):
+
+- Two bots play every mission on every difficulty with realistic levels
+  (experience as a player would earn it), random podiums and books as
+  earned: "simple" (the old random Auto: a careless player, the floor) and
+  "smart" (the new Auto, which heals the hurt, revives the Discouraged,
+  shields, clears setbacks, and presses the opponent nearest to giving way:
+  the reference player).
+- Targets (smart bot, regular / boss): Gentle ~95-100 / 90+; Normal 85-95 /
+  65-85; Hard 70-85 / 45-65; Very Hard 55-75 / 30-50; Crucible 40-60 /
+  20-40, and every mission winnable.
+
+What the harness found in the old game: Normal was won ~100% everywhere;
+chapters 2-4 could not be lost even at triple strength, because (1) the
+heroes out-act the opponents about 17 to 6 per battle and (2) Zeal attacks
+ignore Composure, so tougher opponents simply left by Zeal instead.
+
+Fixes: each chapter has a power k (Composure ×k, Attack ×√k, Zeal depth
++2(k−1)), found by bisection for Normal to hit ~90% regular / ~75% boss:
+atheists 2.0/1.8, evangelicals 2.8/2.5, LDS 3.6/4.0, Islam 3.9/2.8,
+Reformed 3.0/1.3. Difficulty adds toughness, Zeal depth, resilience,
+sharper opponent tactics, more podiums, and reinforcements (Legends-style
+waves: a fresh rank-and-file steps into an empty place). The experience
+bonus is small (≤ +30%) because a large one cancelled the difficulty.
+Chapter 1 gets half the difficulty and at most one reinforcement; the
+tutorial is always Normal or easier.
+
+Final (smart bot, 30 runs per mission; regular / boss): Gentle 100 / 99,
+Normal 93 / 81, Hard 73 / 63, Very Hard 56 / 37, Crucible 39 / 31, every
+Crucible mission ≥ 20% with the smart bot; Crucible bosses 23-60% with two
+extra levels. Joe Schmid comes home in about half of Normal runs (the smart
+bot hunts Zeal); as a hero (Soji's kit) his team wins 88/120 against 99 for
+a random team, like Fr. Spitzer (91): a support, a little below average.

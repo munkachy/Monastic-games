@@ -63,6 +63,10 @@ const Lines = (() => {
     "Ignatius of Antioch": [["“The Eucharist…", "…is the flesh”"], ["“Follow", "the bishop”"], ["Irenaeus,", "c. 180"], ["Clement,", "c. 96"]],
     "Former Litigator": ["Leading the witness!", "Asked and answered.", "No further questions.", "Sustained!"],
 
+    // Joe Schmid, once he has come home
+    "Contingency Argument": ["What explains the whole chain?", "Contingent things need a ground.", "Why this, and not nothing?", "Pruss would like a word."],
+    "Welcome Home": ["It's good to be back.", "The door was always open.", "Pull up a chair, brother.", "Home at last."],
+
     // Opponents
     "Where's the Evidence?": ["Source?", "Extraordinary claims…", "That's just, like, faith.", "Peer-reviewed?"],
     "Turn or Burn": [["Turn or burn!"], ["Sinner!"], ["Not too late!"], ["Hellfire!"]],
