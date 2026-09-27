@@ -241,3 +241,26 @@ upgrade. Jimmy Akin's Senior Apologist stun went 25% → 50% (Data's number);
 Brant Pitre moved onto Spock's kit with T'Pol's stats. On their own these
 made Normal easier (grunt 90, boss 82), so opponent punch went 1.6 → 1.8:
 grunt 85, boss 74, 5.4 rounds a debate (Normal, 30 runs; 1.7 gave 89 / 79).
+
+## Update: low Zeal weakens arguments; bots compared; team makeup
+
+As in Legends, a debater with Zeal below zero now hits softer: each point
+below 0 takes 10% off his hits (ZEAL_SAP; heals and shields unchanged). The
+heroes lower Zeal far more than the opponents do, so this made Normal easier
+(86 / 77 → 92 / 86); opponent punch went 1.8 → 2.15 to restore 86 / 76.
+
+New harness (scratchpad strat.js): teams are drawn only from the roster the
+player really has at each point in the campaign, and every battle's team is
+logged for team analysis (teams.js). Normal, 30 runs per debate, three bots:
+
+| Hero bot | Regular debates | Boss debates |
+|---|---|---|
+| Random: any ready move, any target | 49% | 34% |
+| Simple: usually its strongest ready move, weakest target | 76% | 65% |
+| Smart: weighs what the team needs | 86% | 76% |
+
+Move choice matters a great deal. Team makeup matters much less (heroes range
+about ±9 points from their mission's average, within noise for most), and
+what does show favours stacking attackers: Builders and Encouragers come out
+slightly below average, because debates of about five rounds leave little
+time for shields and healing to pay off.

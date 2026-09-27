@@ -24,6 +24,8 @@ const Battle = (() => {
   // A hero's great move (and a duo move) hits, heals and shields this much
   // harder: reaching it should feel like a real upgrade (tuned in BALANCE.md).
   let GREAT_KICK = 1.5;
+  // Each point of Zeal below zero takes this much off a debater's arguments
+  let ZEAL_SAP = 0.1;
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   // Impact: every debater's Composure, and every shield and podium, is divided
   // by this, so each hit, heal and shield counts for more and debates end
@@ -32,7 +34,7 @@ const Battle = (() => {
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const careK = () => CARE_K / IMPACT;
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
-  let FOE_PUNCH = 1.8;     // opponents argue harder than their listed stats
+  let FOE_PUNCH = 2.15;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
   const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
@@ -250,6 +252,13 @@ const Battle = (() => {
 
     // A simple opponent: its best ready move, most of the time.
     function think(u) {
+      if (u.side === "hero" && opts.randomHeroes) {
+        // For testing only: any ready move, any target.
+        const ready = usable(u);
+        const i = ready[Math.floor(rnd() * ready.length)];
+        const c = choices(u, i);
+        return { i, target: c.length ? c[Math.floor(rnd() * c.length)] : null };
+      }
       if (u.side === "hero" && !opts.simpleHeroes) return thinkHero(u);
       const ready = usable(u);
       // How sharp an opponent is depends on the difficulty (Normal: 0.6).
@@ -343,7 +352,9 @@ const Battle = (() => {
 
     function aim(u, i, chosen) { return targetsOf(u, u.def.skills[i], chosen); }
 
-    // `answering` marks a Rebuttal: it can't set off another one.
+    // How much of his strength a debater's arguments carry: less below Zeal 0.
+    const sapped = (u) => (u.zeal < 0 ? Math.max(0.2, 1 + ZEAL_SAP * u.zeal) : 1);
+
     // How much harder this move lands: a hero's great move or duo move.
     function kick(u, s) {
       if (!s || u.side !== "hero") return 1;
@@ -351,6 +362,7 @@ const Battle = (() => {
       return s.duo || s === own[own.length - 1] ? GREAT_KICK : 1;
     }
 
+    // `answering` marks a Rebuttal: it can't set off another one.
     function use(u, i, chosen, fixed, answering) {
       const s = u.def.skills[i];
       const targets = fixed || targetsOf(u, s, chosen);
@@ -449,7 +461,7 @@ const Battle = (() => {
     // Returns true if the fighter himself took the hit.
     function hit(u, t, e, s, events, quiet) {
       if (!inPlay(t)) return false;
-      let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16) * kick(u, s);
+      let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16) * kick(u, s) * sapped(u);
       if (e.vs) {
         const [what, mult] = e.vs;
         if (what === "guarded" ? t.shield || t.cover : t.statuses[what] > 0) d *= mult;
@@ -779,7 +791,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------

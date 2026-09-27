@@ -255,14 +255,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928a"></script>
-<script src="audio.js?v=20260928a"></script>
-<script src="art.js?v=20260928a"></script>
-<script src="moves.js?v=20260928a"></script>
-<script src="story.js?v=20260928a"></script>
-<script src="data.js?v=20260928a"></script>
-<script src="lines.js?v=20260928a"></script>
-<script src="battle.js?v=20260928a"></script>
+<script src="chants.js?v=20260928b"></script>
+<script src="audio.js?v=20260928b"></script>
+<script src="art.js?v=20260928b"></script>
+<script src="moves.js?v=20260928b"></script>
+<script src="story.js?v=20260928b"></script>
+<script src="data.js?v=20260928b"></script>
+<script src="lines.js?v=20260928b"></script>
+<script src="battle.js?v=20260928b"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1109,7 +1109,7 @@
     const great = u.def.skills.findIndex((sk, i) => isGreat(u.def, i));
     const tips = [
       "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it. (The 💡 on any move tells you what it does and when to use it.)",
-      "<b>Step 4 of 4 · Composure and Zeal.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Zeal</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Zeal all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Zeal, so try it now. " : "") + "Keep your own team's Zeal up: at 0 or higher, teammates jump in to back each other up.",
+      "<b>Step 4 of 4 · Composure and Zeal.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Zeal</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Zeal all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Zeal, so try it now. " : "") + "Keep your own team's Zeal up: at 0 or higher, teammates jump in to back each other up, and below 0 every red arrow makes a debater's arguments a tenth weaker.",
       "<b>Tip.</b> See the soapbox in front of the Street Preacher? It takes the hits meant for him until it breaks, so knock it down first, or pick a move that lowers his Zeal instead: Zeal goes right past it. The strip of faces at the top shows who goes next. The fastest debaters act first every round.",
       "<b>Tip.</b> A move that says “ready in 2” is recharging: it comes back in two turns. Until then, the basic move is always there.",
       "<b>Tip.</b> The gold-edged move, <b>" + (great >= 0 ? u.def.skills[great].name : "the great move") + "</b>, is locked until level " + (great >= 0 ? Battle.unlockLevel(u.def, great) : 4) + ". Every debate earns experience, and each level opens new moves.",
