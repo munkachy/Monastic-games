@@ -125,7 +125,7 @@ const GameData = (() => {
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
     // Modelled on the Gorn: unhurried and unshakable, with the heaviest blows.
-    hahn: { name: "Scott Hahn", about: "Unhurried, and the hardest to shake on the roster, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }, skills: [
+    hahn: { name: "Scott Hahn", about: "Unhurried, and the hardest to shake on the roster, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }, skills: [
       H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
       H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
@@ -138,7 +138,7 @@ const GameData = (() => {
       H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.5 }]),
       H("Steelman", "self", 3, 0, [{ counter: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
       H("Contingency Argument", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "atk", amt: -0.5, turns: 3 }]),
-      H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }]),
+      H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }]),
     ] },
     heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, with a case file for every occasion. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
@@ -153,6 +153,16 @@ const GameData = (() => {
       H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 3 }, { allyZeal: 1 }]),
       H("Prayer of Deliverance", "allies", 4, 1, [{ heal: 0.3 }, { cleanse: true }, { zeal: 1, chance: 0.5 }]),
       H("Treasures of the Church", "allies", 4, 2, [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { zeal: 2 }]),
+    ] },
+    // Kim Zember: Catholic speaker and author (Restless Heart), host of EWTN's
+    // Here I AM Stories. Modelled on Sylvia Tilly: Phaser, Antimatter Shield
+    // (shield for all), Nervous Ramble (taunt, Defense Up), Group Hug (heal,
+    // cleanse, Morale up).
+    zember: { name: "Kim Zember", about: "Warm, steady and hard to shake: she has heard every question and answers from her own story. Boldly Beloved shields the whole team. Here I Am steps forward so every opponent answers her, and she braces for it. Child of God brings back a Discouraged friend, clears every setback and fires up the team. She joins after the chapter Who Do You Say You Are?", stats: [350, 48, 15, 69], traits: { care: 113, glance: [0.07, 0.2], crit: [0.05, 1.3], resolve: 0.07 }, passive: { converts: ["zember"] }, skills: [
+      H("Restless Heart", "foe", 0, 0, [{ dmg: 1.0 }]),
+      H("Boldly Beloved", "allies", 3, 0, [{ shield: 0.3, turns: 3 }]),
+      H("Here I Am", "self", 3, 1, [{ tauntAll: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
+      H("Child of God", "allies", 4, 2, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
     ] },
   };
 
@@ -214,6 +224,14 @@ const GameData = (() => {
       H("Chant", "foe", 0, 0, [{ dmg: 1.05 }], { anim: V(["My body!"], "#de5e55") }),
       H("Clump of Cells", "foe", 3, 1, [{ zeal: -1, chance: 0.5 }], { anim: X("It's just a clump of cells!", "pipDown") }),
     ] },
+    ally: { name: "Campus Ally", grunt: true, faction: "secular", stats: [115, 60, 11, 96], traits: { care: 55, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Hashtag", "foe", 0, 0, [{ dmg: 1.05 }], { anim: V(["#LoveWins"], "#ff8ac0") }),
+      H("Call-Out Post", "foe", 3, 1, [{ status: "muted", turns: 1 }], { anim: X("You can't say that!", "muted") }),
+    ] },
+    podcaster: { name: "Deconstruction Podcaster", grunt: true, faction: "secular", stats: [110, 62, 10, 100], traits: { care: 55, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Deconstructing", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["Deconstructing…"], "#9fd0ff") }),
+      H("Purity Culture", "foe", 3, 1, [{ status: "doubting", turns: 2 }], { anim: X("That's just purity culture.", "doubting") }),
+    ] },
 
     // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
     // animal suffering first led him away from the Church; in August 2026 he
@@ -266,6 +284,13 @@ const GameData = (() => {
       H("Define 'Person'", "foes", 3, 0, [{ status: "examined", turns: 3 }], { anim: X("Define “person.”", "examined") }),
       H("Life Support", "foe", 3, 1, [{ dmg: 1.0 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("Would you unplug him or not?", "dumbfounded") }),
       H("No Experiences, No Harm", "foes", 4, 2, [{ zeal: -1 }, { status: "doubting", turns: 2, chance: 0.5 }], { anim: X("No conscious experience, no one harmed.", ["pipDown", "doubting"]) }),
+    ] },
+    // An invented character: no real person.
+    pastor: { name: "Affirming Pastor", boss: true, faction: "protestant", stats: [335, 78, 20, 105], traits: { care: 85, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
+      H("Love Is Love", "foe", 0, 0, [{ dmg: 1.25 }], { anim: V(["Love is love."], "#ff8ac0") }),
+      H("Jesus Never Mentioned It", "foes", 3, 0, [{ zeal: -1 }, { buff: "atk", amt: -0.2, turns: 2 }], { anim: X("Jesus never mentioned it!", ["pipDown", "down"]) }),
+      H("Born This Way", "foe", 3, 1, [{ dmg: 0.8 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("God made them this way!", "dumbfounded") }),
+      H("Radical Welcome", "self", 4, 2, [{ heal: 0.3 }, { buff: "def", amt: 0.5, turns: 3 }], { anim: U("All are welcome here.", ["heal", "up"]) }),
     ] },
     white: { name: "James White", boss: true, faction: "protestant", stats: [320, 80, 22, 108], traits: { care: 88, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
       H("Greek Exegesis", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
@@ -321,6 +346,12 @@ const GameData = (() => {
       { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
       { name: "The Debate Stream", foes: ["activist", "destiny", "creator"], boss: "destiny" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    { id: "identity", par: 8.3, power: [3.1, 2.3], title: "Who Do You Say You Are?", group: "Identity", missions: [
+      { name: "The Campus Panel", foes: ["ally", "podcaster"] },
+      { name: "Deconstruction", foes: ["podcaster", "ally", "podcaster2"] },
+      { name: "Love Is Love", foes: ["ally", "podcaster", "ally2"] },
+      { name: "Who Do You Say You Are?", foes: ["ally", "pastor", "podcaster"], boss: "pastor" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["zember"] },
     { id: "reformed", par: 8.5, power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
@@ -340,7 +371,7 @@ const GameData = (() => {
   const START = ["horn", "akin"];
 
   // Variants share a kit with the original, with a different look.
-  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"]]) FOES[copy] = FOES[of];
+  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"]]) FOES[copy] = FOES[of];
 
   return { HEROES, FOES, CAMPAIGN, START, BOOKS };
 })();

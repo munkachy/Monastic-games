@@ -25,7 +25,7 @@ const Story = (() => {
     heschmeyer: "Joe Heschmeyer", hahn: "Scott Hahn", oconnor: "Alex O'Connor", ryan: "Ryan (NeedGod.net)", white: "James White",
     hansen: "Jacob Hansen", speaker: "Speakers' Corner Champion", elder: "Elder Missionary", skeptic: "Skeptic Streamer",
     preacher: "Street Preacher", seminarian: "Seminarian", martins: "Fr. Carlos Martins", witch: "WitchTok Influencer",
-    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", "": "",
+    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", "": "",
   };
 
   // ---- The chapters ------------------------------------------------------------------
@@ -234,6 +234,37 @@ const Story = (() => {
           ["destiny","Interesting. I'll take it apart on stream tonight.","…"],
           ["marygrace","We'll be watching, and praying for you. Every life is a gift. Yours too."],
           ["","No one converts today. But the chat fills up with people asking questions they've never asked before."],
+        ] },
+      ],
+    },
+    {
+      id: "identity", title: "Who Do You Say You Are?", group: "Identity", boss: "pastor", place: "square", mystery: "People say the Church hates gay people. What does it actually teach, and why isn't it hateful at all?",
+      scenes: [
+        { when: "Before the first battle", place: "square", left: ["schmitz","marygrace"], right: ["pastor"], lines: [
+          ["pastor","Your Church's teaching hurts people. Why can't love just be love?"],
+          ["schmitz","Friends, we agree that love matters. That's actually our whole point. Can we start there?"],
+        ] },
+        { when: "After the first battle", place: "square", left: ["schmitz","marygrace","+zember"], right: ["ally"], lines: [
+          ["ally","The Church thinks people like me are less than everyone else."],
+          ["zember","I'm Kim. I was raised Catholic, and for about ten years I lived with women. I got my sacraments, but I didn't know Jesus."],
+          ["zember","Nobody at church hated me. What I was missing was him. And he never once asked me to be less. He asked me to be his."],
+        ] },
+        { when: "After the second battle", place: "studio", left: ["pine","hicks","zember"], right: [], lines: [
+          ["pine","Here's what surprises people. The Church won't even sum a person up by their attractions. In 1986 the Vatican said no one is adequately described by their orientation.","idea"],
+          ["pine","Your fundamental identity? A creature of God, and by grace, his child and heir to eternal life."],
+          ["hicks","And every one of us has disordered desires. That's concupiscence, and it stays with the baptized. Nobody stands above anybody here."],
+        ] },
+        { when: "After the third battle", place: "studio", left: ["zember","marygrace","fradd"], right: [], lines: [
+          ["zember","What changed me wasn't an argument. It was being loved by Someone who wanted more for me than I wanted for myself."],
+          ["marygrace","And chastity isn't a special rule for some people. It's for all of us: married, single, priests, sisters."],
+          ["fradd","Same call, same grace, same Father. Nobody gets a harder or easier deal than anyone else."],
+        ] },
+        { when: "The last conversation", place: "square", left: ["zember","schmitz","pine"], right: ["pastor"], lines: [
+          ["pastor","So you're saying they're not less than anyone else?","?"],
+          ["zember","Less? We're all beggars at the same door. He asks the same thing of every one of us: give him everything."],
+          ["schmitz","The Church asks respect, compassion and sensitivity for every person, and no unjust discrimination at all. That's in the Catechism."],
+          ["pastor","That isn't what I was told you believe.","…"],
+          ["","It is the first time he has heard the teaching from someone who lived it. He asks Kim for her book."],
         ] },
       ],
     },

@@ -74,6 +74,10 @@ const Lines = (() => {
     "Stand Behind Me": ["Stand behind me. I've seen worse.", "Look at me, not them.", "Keep your eyes on me.", "Christ has already won."],
     "Prayer of Deliverance": ["Deliver us from evil.", "Saint Michael, defend us.", "Lord, set them free.", "Be healed, in Jesus' name."],
 
+    // Kim Zember
+    "Boldly Beloved": ["You are loved. Boldly.", "He wants all of you.", "You're not a label.", "You were made for more."],
+    "Here I Am": ["Here I am. Ask me anything.", "I lived it. Ask away.", "I've been where you are.", "I'm not afraid of the question."],
+
     // Opponents
     "Where's the Evidence?": ["Source?", "Extraordinary claims…", "That's just, like, faith.", "Peer-reviewed?"],
     "Turn or Burn": [["Turn or burn!"], ["Sinner!"], ["Not too late!"], ["Hellfire!"]],
@@ -109,6 +113,15 @@ const Lines = (() => {
     "Define 'Person'": ["Define “person.”", "Define your terms.", "What's a person, exactly?", "Personhood needs a mind."],
     "Life Support": ["Would you unplug him or not?", "Life support. Same thing.", "No one owes their body.", "Sleep is different. Why?"],
     "No Experiences, No Harm": ["No conscious experience, no one harmed.", "Consciousness first.", "No mind, no victim.", "Who's harmed? Nobody."],
+    // Who Do You Say You Are?
+    "Hashtag": [["#LoveWins"], ["#Pride"], ["#BeYourself"], ["#Valid"]],
+    "Call-Out Post": ["You can't say that!", "That's so harmful.", "Screenshotted.", "I'm posting this."],
+    "Deconstructing": [["Deconstructing…"], ["I used to believe…"], ["Religious trauma."], ["Unpack that."]],
+    "Purity Culture": ["That's just purity culture.", "Shame-based theology.", "That's so toxic.", "I grew out of that."],
+    "Love Is Love": [["Love is love."], ["Love wins."], ["Who are we to judge?"], ["God is love!"]],
+    "Jesus Never Mentioned It": ["Jesus never mentioned it!", "Red letters only, please.", "That's Paul, not Jesus.", "Wrong translation!"],
+    "Born This Way": ["God made them this way!", "Born this way!", "You can't choose who you love.", "It's who they are!"],
+    "Radical Welcome": ["All are welcome here.", "Radical inclusion!", "No one is turned away.", "Come as you are."],
     "Within Reason": [["Right, but…"], ["Fair, but…"], ["I'm not sure…", "…that follows."], ["Mm. Okay."]],
     "The Fawn in the Forest": ["Why the burning fawn?", "Whom does its pain serve?", "Alone. In the forest.", "No one sees. No one learns."],
     "Euthyphro": ["Good because commanded?", "Arbitrary, or above God?", "Plato's old question…", "Which horn will you take?"],
