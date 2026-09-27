@@ -34,7 +34,8 @@ whom to pair him with.
   he converts instead. His sign fits where he started: OCIA and the Easter
   Vigil for the unbaptized, full communion for a baptized Protestant, baptism
   for a Latter-day Saint (the CDF, 2001, does not recognize LDS baptism).
-- Bosses never convert in battle. Joe Schmid is the one exception; his path is
-  hinted at in the story but never stated.
+- Bosses never convert in battle. Joe Schmid is the one exception: he always
+  converts when he goes out, however it happens, and joins the roster. His path
+  is hinted at in the story but never stated.
 - The reason for the coin toss: apologetics clears the ground, and conversion
   is the Holy Spirit's work, so the game keeps it out of the player's hands.

@@ -65,8 +65,13 @@
   .hero-info .about { margin: 0; font-size: 14px; }
   .hero-info li .what { font-size: 13px; color: var(--muted); margin: 2px 0 4px 20px; }
   .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
-  .difficulty input[type=range] { flex: 1; min-width: 160px; accent-color: var(--gold); height: 32px; }
-  .difficulty b { font: 600 16px/1 var(--display); color: var(--gold); min-width: 7em; }
+  .diff-pick { display: grid; gap: 8px; }
+  .diff-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .diff-row button { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; font-size: 12px; position: relative; }
+  .diff-row button .st { color: var(--gold); font-size: 10px; letter-spacing: 1px; }
+  .diff-row button[aria-checked="true"] { border-color: var(--gold); background: #3a3420; }
+  .diff-row button .won { position: absolute; top: -8px; right: -4px; font: 700 9px/1 var(--display); background: var(--gold); color: var(--night); padding: 2px 4px; border-radius: 3px; letter-spacing: 0.04em; }
+  #diff-note { margin: 0; }
   .music-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .music-modes button { min-height: 40px; padding: 6px 10px; font-size: 13px; }
   .music-modes button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
@@ -163,11 +168,6 @@
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
     </div>
-    <div style="justify-self:stretch" class="difficulty">
-      <label class="label" for="difficulty">Difficulty</label>
-      <div class="row" style="margin-top:8px"><input type="range" id="difficulty" min="0" max="4" step="1" value="1"><b id="difficulty-name">Normal</b></div>
-      <p class="note" id="difficulty-note" style="margin:4px 0 0"></p>
-    </div>
     <div style="justify-self:stretch">
       <span class="label">Music</span>
       <div class="music-modes" id="music-modes" style="margin-top:8px"></div>
@@ -201,6 +201,11 @@
   <p class="coach" id="team-coach" hidden></p>
   <div class="roster" id="roster"></div>
   <div class="hero-info" id="hero-info" hidden></div>
+  <div class="diff-pick">
+    <span class="label">Difficulty</span>
+    <div class="diff-row" id="diff-row" role="radiogroup" aria-label="Difficulty for this debate"></div>
+    <p class="note" id="diff-note"></p>
+  </div>
   <div class="row"><button class="primary" id="begin" disabled>Begin</button><button id="team-back">Back</button></div>
 </section>
 
@@ -221,14 +226,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927g"></script>
-<script src="audio.js?v=20260927g"></script>
-<script src="art.js?v=20260927g"></script>
-<script src="moves.js?v=20260927g"></script>
-<script src="story.js?v=20260927g"></script>
-<script src="data.js?v=20260927g"></script>
-<script src="lines.js?v=20260927g"></script>
-<script src="battle.js?v=20260927g"></script>
+<script src="chants.js?v=20260927h"></script>
+<script src="audio.js?v=20260927h"></script>
+<script src="art.js?v=20260927h"></script>
+<script src="moves.js?v=20260927h"></script>
+<script src="story.js?v=20260927h"></script>
+<script src="data.js?v=20260927h"></script>
+<script src="lines.js?v=20260927h"></script>
+<script src="battle.js?v=20260927h"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -361,14 +366,31 @@
   // Five steps, Gentle to Crucible; it can be changed at any time and takes
   // effect in the next debate.
   const difficulty = () => (save.difficulty === undefined ? 1 : save.difficulty);
-  function paintDifficulty() {
-    const d = Battle.DIFFICULTY[difficulty()];
-    $("difficulty").value = String(difficulty());
-    $("difficulty-name").textContent = d.name;
-    $("difficulty-note").textContent = d.blurb;
-    $("difficulty").setAttribute("aria-valuetext", d.name);
+  // Chosen on the team screen, just before each debate, beside the best
+  // difficulty this debate has been won on. The choice carries over to the
+  // next debate. The tutorial goes no higher than Normal.
+  function paintDifficulty(ci, mi) {
+    const row = $("diff-row");
+    row.textContent = "";
+    const cap = ci === 0 ? 1 : 4;
+    const best = stars(ci, mi);
+    const now = Math.min(cap, difficulty());
+    Battle.DIFFICULTY.forEach((d, i) => {
+      const b = document.createElement("button");
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(i === now));
+      b.disabled = i > cap;
+      b.innerHTML = "<span></span><span class=\"st\"></span>";
+      b.children[0].textContent = d.name;
+      b.children[1].textContent = "★".repeat(i + 1);
+      if (best === i + 1) { const w = document.createElement("span"); w.className = "won"; w.textContent = "BEST"; b.append(w); }
+      b.setAttribute("aria-label", d.name + (best === i + 1 ? ", your best on this debate" : ""));
+      b.addEventListener("click", () => { save.difficulty = i; store(); paintDifficulty(ci, mi); });
+      row.append(b);
+    });
+    const d = Battle.DIFFICULTY[now];
+    $("diff-note").textContent = (best ? "Best won here: " + Battle.DIFFICULTY[best - 1].name + ". " : "Not won yet. ") + d.name + ": " + d.blurb + (ci === 0 ? " The tutorial goes no higher than Normal." : "");
   }
-  $("difficulty").addEventListener("input", () => { save.difficulty = +$("difficulty").value; store(); paintDifficulty(); });
 
   // ---- Music ------------------------------------------------------------------------------
 
@@ -410,7 +432,6 @@
   // Browsers allow sound only after a tap, so the first tap anywhere starts it.
   document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
   paintMusic();
-  paintDifficulty();
 
   // Developer mode: every chapter, hero, move and book open, and nothing
   // earned is kept. A secret switch: tap the title on the first screen seven
@@ -596,6 +617,7 @@
     let picked = fixed.slice();
     for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
     tutorial = !!m.team && ci === 0;
+    paintDifficulty(ci, mi);
     coach("team-coach", tutorial
       ? "<b>Step 1 of 4 · Your team.</b> For the tutorial, Trent Horn and Jimmy Akin are already on your team: you can see them under “Your team” above. Tap either one below to see his moves. Then tap <b>Begin</b>."
       : !save.stars[mkey(ci, mi)] && ci === 1 && mi === 0

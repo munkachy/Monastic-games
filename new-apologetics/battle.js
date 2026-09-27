@@ -497,8 +497,8 @@ const Battle = (() => {
     // The rank and file: when one goes out of the debate, whether he concedes
     // or leaves, there is an even chance he converts instead. The argument
     // only clears the ground; the rest is the Holy Spirit's work, so the game
-    // leaves it to chance, not to the player. Bosses never convert (Joe
-    // Schmid has his own way home).
+    // leaves it to chance, not to the player. Bosses never convert; Joe
+    // Schmid always does, however he goes out.
     function mayConvert(t) { return t.def.grunt && rnd() < GRUNT_CONVERT; }
     function convert(t, events) {
       t.state = "converted"; t.since = 0;
@@ -507,7 +507,7 @@ const Battle = (() => {
 
     function checkOut(t, events) {
       if (t.hp > 0 || !inPlay(t)) return;
-      if (t.side === "foe" && mayConvert(t)) convert(t, events);
+      if (t.side === "foe" && (t.def.secretConvert || mayConvert(t))) convert(t, events);
       else if (t.side === "foe") { t.state = "walked"; t.since = 0; events.push({ key: t.key, text: "Concedes", color: "#a9a6bd", out: "walked" }); }
       else { t.state = "discouraged"; t.downs++; events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" }); }
     }

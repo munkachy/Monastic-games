@@ -819,8 +819,9 @@ const Theater = (() => {
           const x = h.x + 60; const y = 62;
           ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 70, y - 16, 140, 28); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 68, y - 14, 136, 24);
           ctx.font = "700 12px " + FONT; ctx.textAlign = "center"; ctx.fillStyle = "#1a1326"; ctx.fillText("FREE-FOR-ALL FRIDAY", x, y + 3);
-          // Listener questions tumble in.
-          for (let i = 0; i < 6; i++) { const q = (t * 0.9 + i / 6) % 1; ctx.globalAlpha = 1 - q; outlinedText(ctx, "?", x - 60 + i * 24, y + 30 + q * 60, 16, ["#9fd0ff", "#ffd84a", "#ff7a9a"][i % 3]); ctx.globalAlpha = 1; }
+          // The week's topics tumble in: anything he finds interesting.
+          const topics = ["glasses", "zombies", "last meals", "phobias", "bowling", "movies"];
+          for (let i = 0; i < 6; i++) { const q = (t * 0.9 + i / 6) % 1; ctx.globalAlpha = 1 - q; outlinedText(ctx, topics[i], x - 60 + (i % 3) * 60, y + 30 + q * 60, 10, ["#9fd0ff", "#ffd84a", "#ff7a9a"][i % 3]); ctx.globalAlpha = 1; }
         } },
       { name: "Is That in the Bible?", kind: hex, to: "all", say: "Chapter and verse, please.", mark: ["factcheck", "pipDown"],
         fx: (ctx, api, h, targets, t, k) => {
