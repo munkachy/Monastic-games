@@ -379,7 +379,7 @@ const GameData = (() => {
       { name: "Love Is Love", foes: ["ally", "podcaster", "ally2"] },
       { name: "Who Do You Say You Are?", foes: ["ally", "pastor", "podcaster"], boss: "pastor" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["zember"] },
-    { id: "scholars", par: 8.5, power: [3.0, 2.3], title: "Misquoting Jesus?", group: "Skeptical Scholars", missions: [
+    { id: "scholars", par: 8.5, power: [2.8, 1.9], title: "Misquoting Jesus?", group: "Skeptical Scholars", missions: [
       { name: "Religion 101", foes: ["student", "mythicist"] },
       { name: "The Mythicists", foes: ["mythicist", "student", "mythicist2"] },
       { name: "A Game of Telephone", foes: ["student", "mythicist", "student2"] },
