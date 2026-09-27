@@ -87,3 +87,13 @@ Books follow the five Nexus Particle types: Undo Damage → Confessions,
 Nexus Field → The Catechism, Temporal Flux (resist Scan) → The Summa,
 Accelerated Coagulation (resist Wound) → The Rule of St. Benedict, Amplify
 Force → Apologia Pro Vita Sua. One per chapter won.
+
+## Update: Rebuttal as Legends' Counter
+
+Legends: "Counter: trigger an attack when damaged by an enemy attack" (Worf's
+Bat'leth Poise, Sulu's Riposte, Soji's Fighting Posture; 3 turns). Rebuttal
+now triggers on any enemy move that reaches the hero (single, multi or
+whole-team; not when a podium takes it), once per move, answering the
+attacker with the hero's basic move on stage. Rebuttals never trigger
+rebuttals. White fight, 200 runs: with Ethan 148 wins (137 before), without
+146; Heschmeyer 127 (124 before; his weakness there predates this).

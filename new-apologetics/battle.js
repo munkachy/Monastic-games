@@ -233,13 +233,15 @@ const Battle = (() => {
 
     function aim(u, i, chosen) { return targetsOf(u, u.def.skills[i], chosen); }
 
-    function use(u, i, chosen, fixed) {
+    // `answering` marks a Rebuttal: it can't set off another one.
+    function use(u, i, chosen, fixed, answering) {
       const s = u.def.skills[i];
       const targets = fixed || targetsOf(u, s, chosen);
       const events = [];
       const done = new Set();          // effects that happen once per move
       let broke = false;
       let commanded = null;
+      const rebuttals = [];            // who was hurt and will answer back
       u.cd[i] = s.cd;
       for (const t of targets) {
         for (const e of s.effects) {
@@ -247,12 +249,12 @@ const Battle = (() => {
           if (e.faction && t.faction !== e.faction) continue;
           if (t.state === "converted" || t.state === "walked" || t.state === "left") break;
           if (e.dmg) {
-            for (let h = 0; h < (e.hits || 1); h++) hit(u, t, e, s, events, false);
+            let hurt = false;
+            for (let h = 0; h < (e.hits || 1); h++) hurt = hit(u, t, e, s, events, false) || hurt;
             if (e.splash) for (const o of others(u).filter((x) => inPlay(x) && x !== t)) hit(u, o, { ...e, dmg: e.dmg * 0.4 }, s, events, true);
-            if (s.target === "foe" && t.counter > 0 && inPlay(t) && inPlay(u)) {
-              events.push({ key: t.key, text: "Rebuttal!", color: "#e8b94a" });
-              hit(t, u, { dmg: 0.6 }, t.def.skills[0], events, true);
-            }
+            // Rebuttal: anyone ready to answer back, and actually hurt by an
+            // opponent's move (a podium's hit doesn't count), answers once.
+            if (hurt && !answering && t.side !== u.side && t.counter > 0 && !rebuttals.includes(t)) rebuttals.push(t);
           }
           if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
           if (e.status && t.resist && t.resist[e.status] && rnd() < t.resist[e.status]) events.push({ key: t.key, text: "Resisted", color: "#a9a6bd" });
@@ -294,7 +296,7 @@ const Battle = (() => {
       for (const t of targets) if (!inPlay(t) && t.side !== u.side) broke = true;
       for (const e of s.effects) if (e.onBreak && broke) zeal(u, e.onBreak, s, events);
       for (const e of s.effects) if (e.onBreakCloak && broke && inPlay(u)) { u.statuses.cloaked = e.onBreakCloak; events.push({ key: u.key, text: "Undercover", color: "#9fd0ff" }); }
-      return { skill: s, targets, events, commanded };
+      return { skill: s, targets, events, commanded, rebuttals: rebuttals.filter((t) => inPlay(t) && inPlay(u)) };
     }
 
     // A commanded ally answers at once: basic move on the opponent most
@@ -318,8 +320,9 @@ const Battle = (() => {
       return null;
     }
 
+    // Returns true if the fighter himself took the hit.
     function hit(u, t, e, s, events, quiet) {
-      if (!inPlay(t)) return;
+      if (!inPlay(t)) return false;
       let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16);
       if (e.vs) {
         const [what, mult] = e.vs;
@@ -333,7 +336,7 @@ const Battle = (() => {
         t.cover.hp -= c;
         events.push({ key: t.key, text: (crit ? "Crit! " : "") + "−" + c + " podium", color: "#c9b48a" });
         if (t.cover.hp <= 0) { t.cover = null; events.push({ key: t.key, text: "Podium falls!", color: "#e8b94a" }); }
-        return;
+        return false;
       }
       if (t.statuses.examined > 0) d *= 1.3;
       if (t.immune.testimony > 0) d *= 0.5;
@@ -348,6 +351,7 @@ const Battle = (() => {
       events.push({ key: t.key, text: (crit ? "Crit! " : glance ? "Deflected " : "") + "−" + d, color: crit ? "#ffd84a" : glance ? "#9fd0ff" : "#ece4d0" });
       if (crit) zeal(t, -1, s, events);
       checkOut(t, events);
+      return true;
     }
 
     // Returns true if the change puts the fighter out.
@@ -427,6 +431,20 @@ const Battle = (() => {
   // the player controls; without it, everyone plays themselves.
   async function run(b, view, opts) {
     const o = opts || {};
+    // Rebuttals: whoever was hit and is ready answers the attacker at once,
+    // with his basic move. A rebuttal never sets off another.
+    async function rebut(r, attacker) {
+      for (const t of r.rebuttals || []) {
+        if (b.outcome() || t.state !== "in" || attacker.state !== "in") return;
+        const rt = b.aim(t, 0, attacker);
+        view.show([{ key: t.key, text: "Rebuttal!", color: "#e8b94a" }]);
+        if (o.onAction) o.onAction(t, t.def.skills[0], "rebuttal");
+        await view.perform(t, 0, rt);
+        const r4 = b.use(t, 0, attacker, rt, true);
+        view.show(r4.events);
+        await view.sleep(r4.events.some((e) => e.out) ? 2.0 : 0.8);
+      }
+    }
     for (;;) {
       if (o.stopped && o.stopped()) return "stopped";
       const out = b.outcome();
@@ -446,6 +464,7 @@ const Battle = (() => {
       const r = b.use(u, pick.i, pick.target, targets);
       view.show(r.events);
       await view.sleep(r.events.some((e) => e.out) ? 2.0 : 0.9);
+      await rebut(r, u);
       // A commanded ally answers at once.
       if (r.commanded && !b.outcome() && r.commanded.state === "in") {
         const ally = r.commanded, tgt = b.commandTarget(ally);
@@ -457,6 +476,7 @@ const Battle = (() => {
           const r3 = b.use(ally, 0, tgt, ct);
           view.show(r3.events);
           await view.sleep(r3.events.some((e) => e.out) ? 2.0 : 0.8);
+          await rebut(r3, ally);
         }
       }
       // A friend with good Zeal may jump in.
@@ -469,6 +489,7 @@ const Battle = (() => {
         const r2 = b.use(bk.ally, 0, bk.target, bt);
         view.show(r2.events);
         await view.sleep(r2.events.some((e) => e.out) ? 2.0 : 0.8);
+        await rebut(r2, bk.ally);
       }
     }
   }
@@ -511,7 +532,7 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: answers back when addressed");
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, he answers back at once with his basic move");
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");

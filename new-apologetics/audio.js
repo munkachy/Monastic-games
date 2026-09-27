@@ -640,6 +640,11 @@ const Sound = (() => {
       case "muted": blip(t, hz(0, 1), "sawtooth", 0.08, 0.45, hz(0, 1) * 0.2); break;   // a tape stop
       case "undercover": // sneaking: low plucks on the off-beats
         [0, 1, 0, 2].forEach((d, i) => blip(t + i * S * 2, hz(d, -1), "triangle", 0.12, S * 0.7)); break;
+      case "rebuttal":   // "Objection!": two raps of a gavel, then a stab
+        blip(t, 220, "triangle", 0.25, 0.06, 160); noiseHit(t, "lowpass", 900, 0.2, 0.04, sfxGain);
+        blip(t + S, 220, "triangle", 0.25, 0.06, 160); noiseHit(t + S, "lowpass", 900, 0.2, 0.04, sfxGain);
+        stab(key(0, 1), t + S * 2, 0.2, 0.07);
+        break;
       case "sniff": noiseHit(t, "highpass", 3200, 0.2, 0.07, sfxGain); noiseHit(t + S * 0.7, "highpass", 3600, 0.16, 0.06, sfxGain); break;
       case "step": blip(t, 1300, "triangle", 0.05, 0.03); blip(t + S * 2, 1100, "triangle", 0.05, 0.03); break;
       case "hex": blip(t, hz(2, 1), "sawtooth", 0.06, S * 3, hz(0, 0)); blip(t, hz(2, 1) * 1.01, "square", 0.04, S * 3, hz(0, 0)); break;
