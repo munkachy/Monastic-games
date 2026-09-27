@@ -220,14 +220,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927c"></script>
-<script src="audio.js?v=20260927c"></script>
-<script src="art.js?v=20260927c"></script>
-<script src="moves.js?v=20260927c"></script>
-<script src="story.js?v=20260927c"></script>
-<script src="data.js?v=20260927c"></script>
-<script src="lines.js?v=20260927c"></script>
-<script src="battle.js?v=20260927c"></script>
+<script src="chants.js?v=20260927d"></script>
+<script src="audio.js?v=20260927d"></script>
+<script src="art.js?v=20260927d"></script>
+<script src="moves.js?v=20260927d"></script>
+<script src="story.js?v=20260927d"></script>
+<script src="data.js?v=20260927d"></script>
+<script src="lines.js?v=20260927d"></script>
+<script src="battle.js?v=20260927d"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -295,13 +295,29 @@
   }
 
   // ---- Levels: every hero starts at level 1 and grows by debating --------------------------
-  // A hero who joins late (or a guest) starts at the team's average, so nobody lags behind.
-
+  // Only heroes who debate gain experience. A hero who joins later starts with
+  // half the experience of the heroes you have been playing (a level or two
+  // behind), and stays there until he debates. A guest is only passing
+  // through, so he always stands level with the team.
+  // The experience of the team you have been playing: your four most
+  // experienced heroes, on average.
+  const averageXp = () => {
+    const known = roster().filter((h) => save.xp[h] !== undefined).map((h) => save.xp[h]).sort((a, b) => b - a).slice(0, 4);
+    return known.length ? known.reduce((a, b) => a + b, 0) / known.length : 0;
+  };
   function xpOf(id) {
-    if (save.xp[id] !== undefined) return save.xp[id];
-    const known = roster().filter((h) => save.xp[h] !== undefined).map((h) => save.xp[h]);
-    return known.length ? Math.round(known.reduce((a, b) => a + b, 0) / known.length) : 0;
+    if (HEROES[id].guest) return Math.round(averageXp());
+    if (save.xp[id] === undefined && !save.test) { save.xp[id] = Math.round(averageXp() / 2); store(); }
+    return save.xp[id] || 0;
   }
+  // Catching up: a hero debating alongside higher-level teammates learns
+  // faster, half as much again for each level behind the strongest, up to
+  // double. Bringing a newcomer along is how he grows.
+  const MENTOR = 0.5;
+  const catchUp = (id, team) => {
+    const top = Math.max(...team.filter((h) => !HEROES[h].guest).map(levelOfHero));
+    return 1 + Math.min(1, MENTOR * Math.max(0, top - levelOfHero(id)));
+  };
   const levelOfHero = (id) => Battle.levelOf(xpOf(id));
 
   // ---- Books: one per hero, passed freely between them ----------------------------------
@@ -562,7 +578,7 @@
     coach("team-coach", tutorial
       ? "<b>Step 1 of 4 · Your team.</b> For the tutorial, Trent Horn and Jimmy Akin are already on your team: you can see them under “Your team” above. Tap either one below to see his moves. Then tap <b>Begin</b>."
       : !save.stars[mkey(ci, mi)] && ci === 1 && mi === 0
-        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath, and the books on your shelf: tap <b>The Catechism</b> there to give it to that hero. When your team is full, tap <b>Begin</b>."
+        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath, and the books on your shelf: tap <b>The Catechism</b> there to give it to that hero. Only heroes who debate gain experience, and a newcomer catches up fast beside veterans. When your team is full, tap <b>Begin</b>."
         : "");
     const info = $("hero-info");
     info.hidden = true;
@@ -960,8 +976,12 @@
     const gain = Math.round((out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : out === "lose" ? 40 : 0) * Battle.DIFFICULTY[difficulty()].xp);
     const grew = [];
     const start = team.map(xpOf);
+    const boost = team.map((id) => catchUp(id, team));
+    const caught = [];
     if (gain) team.forEach((id, i) => {
-      save.xp[id] = start[i] + gain;
+      if (HEROES[id].guest) return;
+      save.xp[id] = start[i] + Math.round(gain * boost[i]);
+      if (boost[i] > 1) caught.push(HEROES[id].name + " +" + Math.round(gain * boost[i]));
       const after = Battle.levelOf(save.xp[id]);
       if (after > Battle.levelOf(start[i])) {
         const opened = unlockedBetween(id, Math.max(Battle.levelOf(start[i]), m.movesAt || 0), after);
@@ -972,7 +992,7 @@
     coach("battle-coach", "");
     Sound.play(out === "win" ? "star" : out === "lose" ? "lost" : "hour");
     if (grew.length) setTimeout(() => Sound.play("tier"), 1600);
-    return { out, converted, walked, left, stars: st, gain, grew, downs };
+    return { out, converted, walked, left, stars: st, gain, grew, downs, caught };
   }
 
   function showResult(ci, mi, r) {
@@ -993,7 +1013,7 @@
     if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
     const xp = document.createElement("p");
     xp.className = "label";
-    xp.textContent = r.gain ? "+" + r.gain + " experience for each debater." : "";
+    xp.textContent = r.gain ? "+" + r.gain + " experience for each debater" + (r.caught && r.caught.length ? ". Catching up faster: " + r.caught.join(", ") + "." : ".") : "";
     const row = document.createElement("div");
     row.className = "row";
     box.append(h, s, p, xp);
