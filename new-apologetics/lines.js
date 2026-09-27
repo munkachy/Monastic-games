@@ -80,7 +80,7 @@ const Lines = (() => {
 
     // Brant Pitre
     "The Big Picture": ["Step back. Look at the whole picture.", "Read him as a first-century Jew.", "You're lost in the details.", "Zoom out. It's all there."],
-    "The New Passover": ["This is the new Passover.", "The Lamb, the bread, the covenant.", "Do this in memory of me.", "Exodus, fulfilled."],
+    "The Son of Man": ["Daniel 7. Read it again.", "He claimed the throne of God.", "Coming on the clouds.", "Son of Man. Think about it."],
 
     // Opponents
     "Where's the Evidence?": ["Source?", "Extraordinary claims…", "That's just, like, faith.", "Peer-reviewed?"],

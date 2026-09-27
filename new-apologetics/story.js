@@ -368,7 +368,8 @@ const Story = (() => {
           ["","Every debate won, on the hardest setting there is. Along the way, you saw {conversions}."],
           ["horn","And then I went online.","…"],
           ["akin","New heresies every week. And the people we debated? Their channels are bigger than ever, still repeating the arguments we answered."],
-          ["horn","More evidence than any generation has ever had. And still so many far from faith. Why are we doing this?","?"],
+          ["horn","We have the truth. We have the evidence, piles of it, more than any generation before us. And it's like the world just isn't listening.","…"],
+          ["akin","So many still far from faith. Honestly? Why are we doing this?","?"],
         ] },
         { when: "An answer", place: "church", left: ["horn","akin"], right: ["+hahn","+pine"], lines: [
           ["hahn","Give thanks! Every heresy in history made the Church think harder. Arius pushed us all the way to Nicaea."],

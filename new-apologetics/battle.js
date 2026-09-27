@@ -21,6 +21,9 @@ const Battle = (() => {
   // The Zeal from which opponents pile on (their chance counts from here).
   // The same as the heroes' (0) gives the fairest fight; tuned in BALANCE.md.
   let FOE_BACKUP_FROM = 0;
+  // A hero's great move (and a duo move) hits, heals and shields this much
+  // harder: reaching it should feel like a real upgrade (tuned in BALANCE.md).
+  let GREAT_KICK = 1.5;
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   // Impact: every debater's Composure, and every shield and podium, is divided
   // by this, so each hit, heal and shield counts for more and debates end
@@ -29,7 +32,7 @@ const Battle = (() => {
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const careK = () => CARE_K / IMPACT;
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
-  let FOE_PUNCH = 1.6;     // opponents argue harder than their listed stats
+  let FOE_PUNCH = 1.8;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
   const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
@@ -341,6 +344,13 @@ const Battle = (() => {
     function aim(u, i, chosen) { return targetsOf(u, u.def.skills[i], chosen); }
 
     // `answering` marks a Rebuttal: it can't set off another one.
+    // How much harder this move lands: a hero's great move or duo move.
+    function kick(u, s) {
+      if (!s || u.side !== "hero") return 1;
+      const own = u.def.skills.filter((x) => !x.duo);
+      return s.duo || s === own[own.length - 1] ? GREAT_KICK : 1;
+    }
+
     function use(u, i, chosen, fixed, answering) {
       const s = u.def.skills[i];
       const targets = fixed || targetsOf(u, s, chosen);
@@ -373,11 +383,11 @@ const Battle = (() => {
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
-          if (e.heal) heal(t, e.heal, events);
+          if (e.heal) heal(t, e.heal * kick(u, s), events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK()), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
-          if (e.podium) { const hp = Math.round(u.care * e.podium * careK()); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK() * kick(u, s)), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.podium) { const hp = Math.round(u.care * e.podium * careK() * kick(u, s)); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
           if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
@@ -439,7 +449,7 @@ const Battle = (() => {
     // Returns true if the fighter himself took the hit.
     function hit(u, t, e, s, events, quiet) {
       if (!inPlay(t)) return false;
-      let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16);
+      let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16) * kick(u, s);
       if (e.vs) {
         const [what, mult] = e.vs;
         if (what === "guarded" ? t.shield || t.cover : t.statuses[what] > 0) d *= mult;
@@ -769,7 +779,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
