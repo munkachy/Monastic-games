@@ -21,12 +21,12 @@ from that hero's rank-one base stats (× 10).
 | Fr. Boniface Hicks | Scholar | Spock | 200 | 64 | 128 | 14 | 110 |
 | Fr. Gregory Pine | Leader | Janeway (Attack and Tech swapped) | 213 | 53 | 88 | 14 | 118 |
 | Sr. Mary Grace | Scholar | Uhura | 213 | 64 | 75 | 10 | 170 |
-| Lila Rose | Scholar | Troi (no data found; built on the usual pattern) | 200 | 60 | 100 | 15 | 120 |
+| Lila Rose | Scholar | Sela (cloak → Undercover, Surprise Attack → Live Action) | 138 | 58 | 128 | 6 | 200 |
 | Brian Holdsworth | Encourager | Crusher | 200 | 58 | 135 | 12 | 125 |
 | Alex Jurado | Leader | Khan | 288 | 100 | 30 | 15 | 88 |
 | Fr. Robert Spitzer | Builder | Seven of Nine | 188 | 70 | 135 | 18 | 73 |
 | Joe Heschmeyer | Leader | Sulu (Attack and Tech swapped) | 188 | 30 | 88 | 10 | 170 |
-| Scott Hahn | Leader | Gowron in character (no Legends numbers found; built on the Leader pattern, slower and sturdier) | 275 | 72 | 110 | 22 | 95 |
+| Scott Hahn | Defender | The Gorn (Smash, Charge, Boulder Toss) | 350 | 94 | 0 | 18 | 50 |
 
 The duo great move, Vindicatory Miracles (Ethan Muse and Fr. Spitzer), is
 modelled on Legends' morale combos and team-up attacks.
@@ -70,3 +70,20 @@ ignores cover), A Word of Truth. Extra against cover: Senior Apologist
 Voice (Khan's Cover Smash). Podium makers: Smooth Pivot (Geordi's
 Replicated Barrier), The Way of Beauty (Riker Maneuver). Command attack:
 I'm Praying for You (Picard's Make it So).
+
+## Update: Hahn as the Gorn, Lila as Sela, books
+
+Scott Hahn now follows the Gorn exactly (base ×10: Health 35, Attack 9.4,
+Speed 5; Smash 150% + 50% Wound, Charge 300% −1 Morale, Boulder Toss 500% +
+Stun 3). Lila Rose follows Sela (Health 13.75, Tech 12.75, Speed 20;
+Disruptor Blast 125% + Cloak on kill, Surprise Attack 4 × 150% random with
+50% −1 Morale, Cloaking Heal). Deviations, found by simulation: Undercover
+(Cloak) cuts hits to 25% and makes her a low-priority target; her Cloaking
+Heal starts ready (Legends: starting cooldown 1). James White's Sola
+Scriptura strips Undercover, so he is her counter (125/200 with her vs
+162/200 without); against O'Connor and Hansen she is at or above par.
+
+Books follow the five Nexus Particle types: Undo Damage → Confessions,
+Nexus Field → The Catechism, Temporal Flux (resist Scan) → The Summa,
+Accelerated Coagulation (resist Wound) → The Rule of St. Benedict, Amplify
+Force → Apologia Pro Vita Sua. One per chapter won.

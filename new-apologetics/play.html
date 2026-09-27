@@ -56,6 +56,10 @@
   .hero-info h3 { font-size: 17px; }
   .hero-info ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
   .hero-info li.locked { color: var(--muted); }
+  .books { display: grid; gap: 6px; }
+  .books button { display: grid; gap: 3px; text-align: left; font-size: 13px; }
+  .books button small { font: 400 13px/1.35 var(--body); color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .books button[aria-pressed="true"] { border-color: var(--gold); background: #3a3420; }
   .hero-info li .what { font-size: 13px; color: var(--muted); margin: 2px 0 4px 20px; }
   .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
   .music-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -197,21 +201,21 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926h"></script>
-<script src="audio.js?v=20260926h"></script>
-<script src="art.js?v=20260926h"></script>
-<script src="moves.js?v=20260926h"></script>
-<script src="story.js?v=20260926h"></script>
-<script src="data.js?v=20260926h"></script>
-<script src="battle.js?v=20260926h"></script>
+<script src="chants.js?v=20260926i"></script>
+<script src="audio.js?v=20260926i"></script>
+<script src="art.js?v=20260926i"></script>
+<script src="moves.js?v=20260926i"></script>
+<script src="story.js?v=20260926i"></script>
+<script src="data.js?v=20260926i"></script>
+<script src="battle.js?v=20260926i"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = GameData.CAMPAIGN;
   const HEROES = GameData.HEROES;
   const FOES = GameData.FOES;
-  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Leader", heschmeyer: "Leader" };
-  const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", ally: "One friend", allies: "Whole team", self: "Self" };
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", heschmeyer: "Leader" };
+  const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", random4: "Four strikes at random opponents", ally: "One friend", allies: "Whole team", self: "Self" };
 
   // The teaching cards each chapter unlocks.
   const CARDS = {
@@ -278,6 +282,14 @@
     return known.length ? Math.round(known.reduce((a, b) => a + b, 0) / known.length) : 0;
   }
   const levelOfHero = (id) => Battle.levelOf(xpOf(id));
+
+  // ---- Books: one per hero, passed freely between them ----------------------------------
+  const BOOKS = GameData.BOOKS;
+  function shelf() {
+    if (save.test) return Object.keys(BOOKS);
+    return C.filter((ch, ci) => ch.book && chapterDone(ci)).map((ch) => ch.book);
+  }
+  const bookOf = (hero) => shelf().find((b) => save.books && save.books[b] === hero);
   const isGreat = (def, i) => !def.skills[i].duo && i === def.skills.filter((x) => !x.duo).length - 1;
   // The moves a hero gains in going from one level to another.
   const unlockedBetween = (id, from, to) => HEROES[id].skills.filter((sk, i) => {
@@ -492,11 +504,12 @@
     coach("team-coach", tutorial
       ? "<b>Step 1 of 4 · Your team.</b> For the tutorial, Trent Horn and Jimmy Akin are already on your team: you can see them under “Your team” above. Tap either one below to see his moves. Then tap <b>Begin</b>."
       : !save.stars[mkey(ci, mi)] && ci === 1 && mi === 0
-        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath. When your team is full, tap <b>Begin</b>."
+        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath, and the books on your shelf: tap <b>The Catechism</b> there to give it to that hero. When your team is full, tap <b>Begin</b>."
         : "");
     const info = $("hero-info");
     info.hidden = true;
     function showInfo(id) {
+      if (!save.books) save.books = {};
       const lv = levelOfHero(id);
       info.textContent = "";
       const h = document.createElement("h3");
@@ -517,6 +530,30 @@
         ul.append(li);
       });
       info.append(h, ul);
+      // The book this hero carries: tap one to hand it over, tap again to take it back.
+      const books = shelf();
+      if (books.length && !HEROES[id].guest) {
+        const lab = document.createElement("span");
+        lab.className = "label"; lab.textContent = "Book";
+        const row = document.createElement("div");
+        row.className = "books";
+        for (const bk of books) {
+          const b = document.createElement("button");
+          const holder = save.books[bk];
+          b.setAttribute("aria-pressed", String(holder === id));
+          b.innerHTML = "<span></span><small></small>";
+          b.querySelector("span").textContent = BOOKS[bk].name;
+          b.querySelector("small").textContent = BOOKS[bk].text + (holder && holder !== id && HEROES[holder] ? " (Carried by " + HEROES[holder].name + ".)" : "");
+          b.addEventListener("click", () => {
+            const had = bookOf(id);
+            if (had) delete save.books[had];
+            if (had !== bk) save.books[bk] = id;
+            store(); showInfo(id); paint();
+          });
+          row.append(b);
+        }
+        info.append(lab, row);
+      }
       info.hidden = false;
     }
 
@@ -532,7 +569,11 @@
       const p = $("team-picked");
       p.textContent = "";
       for (const id of picked) p.append(portrait(id, 2));
-      for (const b of box.children) b.setAttribute("aria-pressed", String(picked.includes(b.dataset.id)));
+      for (const b of box.children) {
+        b.setAttribute("aria-pressed", String(picked.includes(b.dataset.id)));
+        const id2 = b.dataset.id;
+        b.querySelector("small").textContent = "Lv " + levelOfHero(id2) + " · " + (HEROES[id2].guest ? "Guest" : ROLES[id2]) + (bookOf(id2) ? " · 📖" : "");
+      }
       $("begin").disabled = picked.length !== Math.min(size, available.length);
     }
     box.textContent = "";
@@ -542,7 +583,7 @@
       if (fixed.includes(id)) b.title = "Always on the team for this mission";
       b.append(portrait(id, 2));
       const n = document.createElement("span"); n.textContent = HEROES[id].name.replace(/^(Fr\.|Sr\.|Bishop) /, "");
-      const r = document.createElement("small"); r.textContent = "Lv " + levelOfHero(id) + " · " + (HEROES[id].guest ? "Guest" : ROLES[id]);
+      const r = document.createElement("small");
       b.append(n, r);
       b.addEventListener("click", () => {
         showInfo(id);
@@ -698,7 +739,9 @@
     const m = C[ci].missions[mi];
     const levels = {};
     for (const id of team) levels[id] = levelOfHero(id);
-    const b = Battle.create({ team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
+    const books = {};
+    for (const id of team) { const bk = bookOf(id); if (bk) books[id] = bk; }
+    const b = Battle.create({ books, team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");
@@ -820,6 +863,11 @@
       c.querySelector(".grade").textContent = grade;
       c.querySelector("span:last-child").textContent = text;
       box.append(c);
+    }
+    if (ch.book) {
+      const n = document.createElement("p");
+      n.textContent = "New on your shelf: " + BOOKS[ch.book].name + " (" + BOOKS[ch.book].by + "). " + BOOKS[ch.book].text + " Give it to a hero on the team screen.";
+      box.append(n);
     }
     if (ch.unlocks.length) {
       const n = document.createElement("p");

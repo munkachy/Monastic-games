@@ -100,11 +100,11 @@ const GameData = (() => {
       H("Let Love", "allies", 3, 0, [{ buff: "def", amt: 0.5, turns: 3 }, { zeal: 1 }]),
       H("Every Life Is Good", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1, chance: 0.5 }]),
     ] },
-    rose: { name: "Lila Rose", stats: [200, 100, 15, 120], traits: { care: 100, glance: [0.08, 0.2], crit: [0.03, 1.2], resolve: 0.12 }, passive: { allies: { def: 0.05 } }, skills: [
-      H("Every Life", "foe", 0, 0, [{ dmg: 1.25 }]),
-      H("Sense Deception", "foe", 3, 0, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }]),
-      H("Counsel", "ally", 3, 0, [{ cleanse: true }, { zeal: 2 }]),
-      H("Live Action", "foes", 4, 2, [{ buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1 }, { allyZeal: 1 }]),
+    // Modelled on Sela: the fastest and most fragile, striking from cover.
+    rose: { name: "Lila Rose", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
+      H("Every Life", "foe", 0, 0, [{ dmg: 1.25 }, { onBreakCloak: 2 }]),
+      H("Live Action", "random4", 3, 0, [{ dmg: 1.5 }, { zeal: -1, chance: 0.5 }]),
+      H("Undercover", "self", 3, 0, [{ status: "cloaked", turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { heal: 0.15 }]),
     ] },
     holdsworth: { name: "Brian Holdsworth", stats: [200, 135, 12, 125], traits: { care: 135, glance: [0.07, 0.18], crit: [0.03, 1.22], resolve: 0.12 }, skills: [
       H("Ten-Minute Essay", "foe", 0, 0, [{ dmg: 1.5 }]),
@@ -124,17 +124,30 @@ const GameData = (() => {
       H("Borde–Guth–Vilenkin", "foe", 4, 2, [{ dmg: 2.5, splash: 1.0 }, { status: "muted", turns: 3 }, { zeal: -1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
-    hahn: { name: "Scott Hahn", stats: [275, 110, 22, 95], traits: { care: 110, glance: [0.05, 0.18], crit: [0.05, 1.3], resolve: 0.12 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth"] }, skills: [
-      H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.25 }], { pierce: ["faith"] }),
-      H("Wide-Eyed Wonder", "foe", 3, 0, [{ status: "dumbfounded", turns: 2 }, { buff: "atk", amt: -0.3, turns: 3 }]),
-      H("The Lamb's Supper", "allies", 3, 1, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
-      H("Rome Sweet Home", "foes", 4, 2, [{ zeal: -2 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
+    // Modelled on the Gorn: the slowest and sturdiest, with the heaviest blows.
+    hahn: { name: "Scott Hahn", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth"] }, skills: [
+      H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
+      H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
+      H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
     ] },
     heschmeyer: { name: "Joe Heschmeyer", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
       H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
       H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
     ] },
+  };
+
+  // ---- Books ---------------------------------------------------------------------------
+  // A hero can carry one book into a debate, and books pass freely between
+  // heroes. Each chapter won adds one to the shelf. (They follow the five
+  // kinds of Nexus Particle: regenerate, self-shield, resist Scan, resist
+  // Wound, first-round Attack, each with a small stat bonus.)
+  const BOOKS = {
+    catechism: { name: "The Catechism", by: "Catechism of the Catholic Church", text: "Starts the debate behind a Shield of Faith. +10% Defense.", fx: { shield: 0.3, def: 0.1 } },
+    confessions: { name: "Confessions", by: "St. Augustine", text: "“Our heart is restless until it rests in you.” Recovers 8% Composure in each of the first two turns. +5% Composure.", fx: { regen: [0.08, 2], hp: 0.05 } },
+    summa: { name: "The Summa", by: "St. Thomas Aquinas", text: "An answer ready for every objection: 25% chance to shrug off being Exposed. +3% crit chance.", fx: { resist: { examined: 0.25 }, crit: 0.03 } },
+    apologia: { name: "Apologia Pro Vita Sua", by: "St. John Henry Newman", text: "A strong opening: Attack Up for the first round. +5% Attack.", fx: { opening: 0.25, atk: 0.05 } },
+    rule: { name: "The Rule of St. Benedict", by: "St. Benedict", text: "Stability: 25% chance to shrug off being Flustered. +5% Composure.", fx: { resist: { doubting: 0.25 }, hp: 0.05 } },
   };
 
   // ---- Opponents ---------------------------------------------------------------------
@@ -216,31 +229,31 @@ const GameData = (() => {
   const CAMPAIGN = [
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
       { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2, cover: { foe: [1], hero: [], size: 0.2 } },
-    ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"] },
+    ], scenes: { before: 0 }, unlocks: ["muse", "bertuzzi", "fradd", "schmitz"], book: "catechism" },
     { id: "atheists", title: "The Fawn in the Forest", group: "Atheists", missions: [
       { name: "Comment Section Skeptics", foes: ["skeptic", "skeptic2"] },
       { name: "The Livestream", foes: ["skeptic", "skeptic2", "skeptic"] },
       { name: "Majesty of Reason", foes: ["skeptic2", "schmid", "skeptic"] },
       { name: "The Dialogue", foes: ["skeptic", "oconnor", "skeptic2"], boss: "oconnor" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pine", "spitzer", "hicks", "hahn"], book: "confessions" },
     { id: "evangelicals", title: "Are You a Good Person?", group: "Evangelicals", missions: [
       { name: "The City Square", foes: ["preacher", "preacher2"] },
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["heschmeyer", "holdsworth", "barron"], book: "summa" },
     { id: "lds", title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
     { id: "islam", title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [], book: "rule" },
     { id: "reformed", title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
@@ -255,5 +268,5 @@ const GameData = (() => {
   // Variants share a kit with the original, with a different look.
   for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"]]) FOES[copy] = FOES[of];
 
-  return { HEROES, FOES, CAMPAIGN, START };
+  return { HEROES, FOES, CAMPAIGN, START, BOOKS };
 })();

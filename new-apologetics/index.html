@@ -192,7 +192,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260926h">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260926i">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -273,6 +273,20 @@
 
   <section>
     <div class="lede">
+      <span class="label">Carried into every debate</span>
+      <h2>Five books</h2>
+      <p>Each hero can carry one book into a debate, and the books pass freely from hero to hero on the team screen. Every chapter won adds one to the shelf.</p>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Book</th><th>What it does</th></tr></thead>
+        <tbody id="books"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="lede">
       <span class="label">Rare, and worth waiting for</span>
       <h2>When someone comes home</h2>
       <p>On the rare occasion an opponent converts, he flickers, fades, and leaves behind a sign. What the sign says is theologically exact for where he's coming from, so even that moment teaches something. Not everyone goes to OCIA.</p>
@@ -328,11 +342,11 @@
   </section>
 </main>
 
-<script src="art.js?v=20260926h"></script>
-<script src="moves.js?v=20260926h"></script>
-<script src="story.js?v=20260926h"></script>
-<script src="data.js?v=20260926h"></script>
-<script src="battle.js?v=20260926h"></script>
+<script src="art.js?v=20260926i"></script>
+<script src="moves.js?v=20260926i"></script>
+<script src="story.js?v=20260926i"></script>
+<script src="data.js?v=20260926i"></script>
+<script src="battle.js?v=20260926i"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -466,12 +480,11 @@
       id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Scholar",
       passive: ["Empathy", "+5% Defense to every ally."],
       skills: [
-        ["Every Life", "1 foe", "0", "Hit."],
-        ["Sense Deception", "1 foe", "3", "Exposed, and a 50% chance of a Fact-Check. She can tell when an argument is hiding something."],
-        ["Counsel", "1 ally", "3", "Examen and +2 Zeal."],
-        ["Live Action", "All foes", "4 (starts 2)", "Attack Down for 3 turns and −1 Zeal on each foe. +1 Zeal on each ally.", true],
+        ["Every Life", "1 foe", "0", "Hit. If it puts someone out of the debate, she goes Undercover."],
+        ["Live Action", "4 random foes", "3", "Four strong hits on opponents at random, each with a 50% chance of −1 Zeal. The camera was rolling the whole time."],
+        ["Undercover", "Self", "3", "Undercover for 3 turns: hard to single out, and hits land at a quarter strength unless she is Exposed. Major Crit Chance Up, and she recovers a little Composure.", true],
       ],
-      flavor: "A counselor. She reads the room, draws out what is hidden, and steadies her friends.",
+      flavor: "The fastest debater on the roster and the most fragile. She works from cover, strikes, and is gone before anyone knows she was there. A Fact-Check blows her cover.",
     },
     {
       id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Encourager",
@@ -507,15 +520,14 @@
       flavor: "A scientist whose great move locks an opponent's mind. With Ethan Muse on the team, the two unlock the duo move, Vindicatory Miracles.",
     },
     {
-      id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Leader",
+      id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Defender",
       passive: ["Rome Sweet Home", "At the start of each battle, every convert on the team starts with +1 Zeal: Scott Hahn, Jimmy Akin, Cameron Bertuzzi and Brian Holdsworth."],
       skills: [
-        ["Covenant Is Family", "1 foe", "0", "Hit. Passes through Faith Alone."],
-        ["Wide-Eyed Wonder", "1 foe", "3", "Dumbfounded for 2 turns, and Attack Down. Nobody can keep a debate face against that much delight."],
-        ["The Lamb's Supper", "All allies", "3 (starts 1)", "An encouragement for everyone, Examen, and +1 Zeal on each."],
-        ["Rome Sweet Home", "All foes", "4 (starts 2)", "−2 Zeal on each foe, and Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
+        ["Covenant Is Family", "1 foe", "0", "Strong hit, with a 50% chance of leaving him Doubting. Passes through Faith Alone."],
+        ["Wide-Eyed Wonder", "1 foe", "3", "Heavy hit and −1 Zeal. Nobody can keep a debate face against that much delight."],
+        ["Rome Sweet Home", "1 foe", "4 (starts 2)", "Crushing hit, and Dumbfounded for 3 turns. Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
       ],
-      flavor: "The elder statesman. Slower than the young debaters and harder to shake, he shows up in the story when the team is stuck, and he usually has the key.",
+      flavor: "The elder statesman. The slowest on the roster and the hardest to shake, with the heaviest blows. Pair him with Fr. Mike, who can send him in out of turn. In the story he shows up when the team is stuck, and he usually has the key.",
     },
     {
       id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
@@ -773,6 +785,16 @@
   document.getElementById("story-next").addEventListener("click", () => story.next());
 
   // ---- The opening battle: the real game engine, playing itself ------------------------
+
+  // The shelf, straight from the game's own data.
+  for (const b of Object.values(GameData.BOOKS)) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td><strong></strong><br><small></small></td><td></td>";
+    tr.querySelector("strong").textContent = b.name;
+    tr.querySelector("small").textContent = b.by;
+    tr.querySelector("td:last-child").textContent = b.text;
+    document.getElementById("books").append(tr);
+  }
 
   const busts = {};
   for (const k of Object.keys(C)) busts[k] = Art.bust(C[k]);
