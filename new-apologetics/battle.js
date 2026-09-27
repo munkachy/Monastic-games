@@ -668,7 +668,7 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, he answers back at once with his basic move");
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this hero, the hero answers back at once with the basic move");
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
@@ -681,7 +681,43 @@ const Battle = (() => {
     return [...new Set(out)].join(" · ");
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; } };
+  // When a move is worth using: one or two plain tips for the player, taken
+  // from what the move does. The first match wins in each group.
+  function advise(sk) {
+    const fx = sk.effects;
+    const has = (f) => fx.some(f);
+    const tips = [];
+    const dmg = fx.reduce((t, e) => t + (e.dmg || 0) * (e.hits || 1), 0);
+    const many = ["foes", "two", "random4"].includes(sk.target);
+    const friendly = ["ally", "allies", "self"].includes(sk.target);
+    // What the move is for.
+    if (has((e) => e.status === "cloaked")) tips.push("Go Undercover when the other side keeps singling this hero out, or to line up a big hit.");
+    else if (has((e) => e.heal)) tips.push("Save it for a friend who is low on Composure or Discouraged: it brings them back into the debate.");
+    else if (has((e) => e.cleanse || e.friendsCleanse)) tips.push("Use it when a friend is Dumbfounded, Muted or Doubting, not before.");
+    else if (has((e) => e.shield || e.podium)) tips.push("Put it in front of the friend taking the most hits, or the one with the least Composure, before the other side moves.");
+    else if (has((e) => e.command)) tips.push("Send in your hardest hitter, or the friend whose basic move can put someone out.");
+    else if (has((e) => e.counter || e.selfCounter)) tips.push("Best just before the other side attacks: every hit on this hero earns a free answer back.");
+    else if (has((e) => e.taunt || e.tauntAll)) tips.push("Use it to pull attacks away from a weaker friend, on a hero with plenty of Composure.");
+    else if (has((e) => e.randomLift)) tips.push("A good all-round lift when nothing is urgent, best early, before the team's big moves.");
+    // What it does to the other side.
+    if (has((e) => e.status === "dumbfounded")) tips.push("Aim it at the most dangerous opponent: a Dumbfounded speaker loses turns.");
+    else if (has((e) => e.status === "examined")) tips.push("Use it first, then hit the Exposed opponent with your strongest moves.");
+    else if (has((e) => e.status === "muted")) tips.push("Mute the opponent whose big moves are nearly ready.");
+    else if (has((e) => e.status === "doubting")) tips.push("Doubt keeps wearing an opponent down each turn, so use it early on someone who will stay a while.");
+    if (has((e) => e.zeal < 0)) tips.push("Wears down Zeal, the other way to win: an opponent whose Zeal hits bottom leaves the debate.");
+    else if (friendly && has((e) => e.zeal > 0 || e.allyZeal || e.selfZeal)) tips.push("Zeal keeps your side in the debate: use it when a friend's Zeal is running low.");
+    if (has((e) => (e.vs || [])[0] === "guarded") || (sk.pierce || []).includes("cover")) tips.push("The answer to podiums and shields.");
+    const purge = fx.find((e) => e.purge);
+    if (purge) tips.push(purge.faction ? "Strongest against " + purge.faction[0].toUpperCase() + purge.faction.slice(1) + " opponents: it strips their boosts." : "Strip an opponent's boosts right after they have been helped.");
+    if (has((e) => e.buff && e.amt > 0) && friendly) tips.push("Use it early, before the big moves, so the boost counts.");
+    if (has((e) => e.buff && e.amt < 0)) tips.push("Weaken the opponent who hits hardest.");
+    // Plain hits.
+    if (dmg > 0 && tips.length < 2) tips.push(many ? "Best when several opponents are standing." : dmg >= 2.2 ? "Save it to put an opponent out, or to break through a tough one." : "The steady choice when nothing else is ready.");
+    if (sk.cd === 0 && dmg > 0 && tips.length < 2) tips.push("Always ready, so use it while the bigger moves are waiting.");
+    return tips.slice(0, 2);
+  }
+
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------

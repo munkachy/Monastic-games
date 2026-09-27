@@ -106,6 +106,16 @@
   .moves button.great { border-color: var(--gold); }
   .moves button.duo { border-color: #8a6ad8; }
   .moves button.locked { border-style: dashed; }
+  .moves .move { position: relative; display: grid; }
+  .moves .move > button:first-child { padding-right: 42px; }
+  .moves button.info { position: absolute; top: 3px; right: 3px; width: 36px; min-height: 36px; padding: 0; display: grid; place-items: center; background: transparent; border: 0; border-radius: 50%; font-size: 17px; line-height: 1; opacity: 0.75; filter: grayscale(0.4); }
+  .moves button.info:hover, .moves button.info[aria-expanded="true"] { opacity: 1; filter: none; background: #2e2a18; }
+  .explain { grid-column: 1 / -1; margin: 0; padding: 10px 12px; background: #2e2a18; border: 2px solid var(--gold); border-radius: 6px; font-size: 14px; line-height: 1.4; }
+  .explain h4 { margin: 0 0 2px; font: 700 15px/1.2 var(--display); color: var(--gold); }
+  .explain .kind { margin: 0 0 6px; font: 600 10px/1.2 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .explain p { margin: 0 0 6px; }
+  .explain p:last-child { margin-bottom: 0; }
+  .explain .tip::before { content: "💡 "; }
   .targets { display: flex; gap: 8px; flex-wrap: wrap; }
   .controls { display: flex; gap: 8px; flex-wrap: wrap; }
   .controls button { min-height: 36px; padding: 6px 12px; font-size: 13px; }
@@ -210,14 +220,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926u"></script>
-<script src="audio.js?v=20260926u"></script>
-<script src="art.js?v=20260926u"></script>
-<script src="moves.js?v=20260926u"></script>
-<script src="story.js?v=20260926u"></script>
-<script src="data.js?v=20260926u"></script>
-<script src="lines.js?v=20260926u"></script>
-<script src="battle.js?v=20260926u"></script>
+<script src="chants.js?v=20260927a"></script>
+<script src="audio.js?v=20260927a"></script>
+<script src="art.js?v=20260927a"></script>
+<script src="moves.js?v=20260927a"></script>
+<script src="story.js?v=20260927a"></script>
+<script src="data.js?v=20260927a"></script>
+<script src="lines.js?v=20260927a"></script>
+<script src="battle.js?v=20260927a"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -778,10 +788,58 @@
       const wait = locked ? " · 🔒 level " + Battle.unlockLevel(u.def, i) : u.cd[i] > 0 ? " · ready in " + u.cd[i] : u.statuses.muted > 0 && i > 0 ? " · muted" : "";
       btn.querySelector("small").textContent = (s.duo ? "Duo · " : great ? "Great move · " : i === 0 ? "Basic · " : "") + TARGET_WORDS[s.target] + wait;
       btn.addEventListener("click", () => pickMove(b, u, i));
-      grid.append(btn);
+      // The lightbulb: what the move does, and when it is worth using.
+      const info = document.createElement("button");
+      info.className = "info";
+      info.textContent = "💡";
+      info.setAttribute("aria-label", "About " + s.name);
+      info.setAttribute("aria-expanded", "false");
+      info.addEventListener("click", () => explainMove(grid, info, u, i));
+      const cell = document.createElement("div");
+      cell.className = "move";
+      cell.append(btn, info);
+      grid.append(cell);
     });
     panel.append(grid);
     if (tutorial) coachTurn(b, u);
+  }
+
+  // Opens (or closes) the card under the moves that explains one of them.
+  function explainMove(grid, info, u, i) {
+    const s = u.def.skills[i];
+    const open = info.getAttribute("aria-expanded") === "true";
+    grid.querySelectorAll("button.info").forEach((x) => x.setAttribute("aria-expanded", "false"));
+    const old = grid.querySelector(".explain");
+    if (old) old.remove();
+    if (open) return;
+    info.setAttribute("aria-expanded", "true");
+    const great = i === u.def.skills.filter((x) => !x.duo).length - 1 && !s.duo;
+    const box = document.createElement("div");
+    box.className = "explain";
+    box.setAttribute("role", "note");
+    const h = document.createElement("h4");
+    h.textContent = s.name;
+    const kind = document.createElement("p");
+    kind.className = "kind";
+    const partner = s.duo && HEROES[s.duo] ? " with " + HEROES[s.duo].name : "";
+    // Waits tick down at the start of the hero's own turn, so a wait of 3
+    // means every third turn, and a starting wait of 2 skips the first turn.
+    const often = s.cd <= 1 ? "every turn" : "every " + (s.cd === 2 ? "other" : s.cd === 3 ? "third" : s.cd === 4 ? "fourth" : s.cd + "th") + " turn";
+    const first = s.start > 1 ? ", from turn " + s.start : "";
+    kind.textContent = [s.duo ? "Duo move" + partner : great ? "Great move" : i === 0 ? "Basic move" : "Move", TARGET_WORDS[s.target], "Usable " + often + first].concat(u.locked && u.locked[i] ? ["🔒 opens at level " + Battle.unlockLevel(u.def, i)] : []).join(" · ");
+    const what = document.createElement("p");
+    what.textContent = Battle.describe(s) + ".";
+    box.append(h, kind, what);
+    for (const t of Battle.advise(s)) {
+      const tip = document.createElement("p");
+      tip.className = "tip";
+      tip.textContent = t;
+      box.append(tip);
+    }
+    const cells = [...grid.children];
+    const row = Math.floor(cells.indexOf(info.parentNode) / 2);
+    const after = cells[Math.min(cells.length - 1, row * 2 + 1)];
+    after.after(box);
   }
 
   function pickMove(b, u, i) {
@@ -819,7 +877,7 @@
     const convMove = u.def.skills.find((sk, i) => !(u.locked && u.locked[i]) && sk.effects.some((e) => e.zeal < 0));
     const great = u.def.skills.findIndex((sk, i) => isGreat(u.def, i));
     const tips = [
-      "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it.",
+      "<b>Step 2 of 4 · Pick a move.</b> It's " + name + "'s turn. The buttons below are his moves. Start with <b>" + u.def.skills[0].name + "</b>, his basic move, which he can use every turn: tap it. (The 💡 on any move tells you what it does and when to use it.)",
       "<b>Step 4 of 4 · Composure and Zeal.</b> Under each fighter is a green bar: <b>Composure</b>. Empty it and an opponent concedes. Below it is <b>Zeal</b>: blue arrows up when it's high, red arrows down when it falls. Knock an opponent's Zeal all the way down and he leaves the debate. " + (convMove ? "<b>" + convMove.name + "</b> lowers Zeal, so try it now. " : "") + "Keep your own team's Zeal up: at 0 or higher, teammates jump in to back each other up.",
       "<b>Tip.</b> See the soapbox in front of the Street Preacher? It takes the hits meant for him until it breaks, so knock it down first, or pick a move that lowers his Zeal instead: Zeal goes right past it. The strip of faces at the top shows who goes next. The fastest debaters act first every round.",
       "<b>Tip.</b> A move that says “ready in 2” is recharging: it comes back in two turns. Until then, the basic move is always there.",
