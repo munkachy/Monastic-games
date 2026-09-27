@@ -15,7 +15,8 @@ const Battle = (() => {
   const HERO_FLOOR = -4;     // how far Zeal can fall before a fighter is out
   const GRUNT_FLOOR = -5;
   const BOSS_FLOOR = -6;
-  const BACKUP = [0.1, 0.2, 0.3, 0.4];   // chance to back up a friend, by Zeal 0..3
+  const BACKUP = [0.1, 0.2, 0.3, 0.4];
+  const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care   // chance to back up a friend, by Zeal 0..3
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
   const FOE_PUNCH = 2.4;     // opponents argue harder than their listed stats
 
@@ -33,15 +34,20 @@ const Battle = (() => {
     const grow = hero ? 1 + HERO_GROWTH * Math.max(0, (level || 1) - 1) : 1 + FOE_GROWTH * (level || 0);
     const punch = hero ? grow : FOE_PUNCH * grow * (def.boss ? 1.3 : 1);
     const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow);
+    const t = def.traits || { care: 60, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 };
     return {
       id, side, key: (hero ? "h" : "f") + slot, slot, def, kind,
       name: def.name, faction: def.faction || "catholic",
       maxHp, hp: maxHp,
       base: { atk: def.stats[1] * punch, def: def.stats[2], spd: def.stats[3] },
       bonus: { atk: 0, def: 0 },
+      // Care makes this fighter's shields and podiums stronger; glance is the
+      // chance to deflect part of a hit; resolve, to shrug off a loss of Zeal.
+      care: t.care * grow, glance: t.glance[0], glanceCut: t.glance[1], crit: t.crit[0], critDmg: t.crit[1], resolve: t.resolve,
+      cover: null, tie: 0,
       zeal: 0, floor: floorOf(def, hero), downs: 0,
       cd: def.skills.map((s) => s.start || 0),
-      statuses: {}, called: null, buffs: [], shield: null, citation: false, counter: 0, immune: {},
+      statuses: {}, called: null, buffs: [], shield: null, counter: 0, immune: {},
       state: "in", since: 0,
     };
   }
@@ -64,6 +70,16 @@ const Battle = (() => {
       .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level)));
     let queue = [];
     let round = 0;
+    units.forEach((u) => { u.tie = rnd(); });
+
+    // Podiums: some fighters start the battle behind one. It takes the hits
+    // meant for them until it falls.
+    const avgHp = units.reduce((n, u) => n + u.maxHp, 0) / units.length;
+    const cover = opts.cover || {};
+    for (const u of units) if (((u.side === "hero" ? cover.hero : cover.foe) || []).includes(u.slot)) {
+      const hp = Math.round(avgHp * (cover.size || 0.4));
+      u.cover = { hp, max: hp };
+    }
 
     const heroes = () => units.filter((u) => u.side === "hero");
     const foes = () => units.filter((u) => u.side === "foe");
@@ -89,23 +105,32 @@ const Battle = (() => {
       return u.base[s] * Math.max(0.2, m);
     }
     function critChance(u) {
-      let c = 0.1;
+      let c = u.crit;
       for (const b of u.buffs) if (b.stat === "crit") c += b.amt;
       return c;
     }
 
     // ---- Turn order ---------------------------------------------------------------
 
+    // Everyone acts once a round, fastest first. Speed never changes, so the
+    // player can plan around it; the turn order is shown on screen.
+    const bySpeed = (a, b) => stat(b, "spd") - stat(a, "spd") || b.tie - a.tie;
     function nextUnit() {
       for (;;) {
         if (!queue.length) {
           round++;
-          queue = units.filter(inPlay).sort((a, b) => stat(b, "spd") - stat(a, "spd") + (rnd() - 0.5) * 6);
+          queue = units.filter(inPlay).sort(bySpeed);
           if (!queue.length) return null;
         }
         const u = queue.shift();
         if (inPlay(u)) return u;
       }
+    }
+    // Who acts next: the rest of this round, then the next one.
+    function upcoming(n) {
+      const now = queue.filter(inPlay);
+      const next = units.filter(inPlay).sort(bySpeed);
+      return now.concat(next, next).slice(0, n);
     }
 
     // At the start of a turn: Doubting wears on Composure, everything counts down.
@@ -159,7 +184,8 @@ const Battle = (() => {
       let target = null;
       const c = choices(u, i);
       if (s.target === "foe" && c.length) {
-        target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp + (a.zeal - a.floor - (b.zeal - b.floor)) * 0.1)[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
+        const score = (x) => x.hp / x.maxHp + (x.zeal - x.floor) * 0.1 + (x.cover && !(s.pierce || []).includes("cover") ? 0.5 : 0);
+        target = c.slice().sort((a, b) => score(a) - score(b))[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
       } else if (s.target === "ally" && c.length) {
         target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       }
@@ -188,6 +214,7 @@ const Battle = (() => {
       const events = [];
       const done = new Set();          // effects that happen once per move
       let broke = false;
+      let commanded = null;
       u.cd[i] = s.cd;
       for (const t of targets) {
         for (const e of s.effects) {
@@ -210,8 +237,9 @@ const Battle = (() => {
           if (e.heal) heal(t, e.heal, events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(t.maxHp * e.shield), n: e.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
-          if (e.citation) { t.citation = true; events.push({ key: t.key, text: "Citation", color: "#7ea4e6" }); }
+          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * CARE_K), n: e.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.podium) { const hp = Math.round(u.care * e.podium * CARE_K); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
+          if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
           if (e.selfCounter && !done.has("selfCounter")) { done.add("selfCounter"); u.counter = e.selfCounter + 1; }
           if (e.immune) { t.immune[e.immune] = e.turns + 1; events.push({ key: t.key, text: immuneName(e.immune), color: "#7ea4e6" }); }
@@ -222,7 +250,7 @@ const Battle = (() => {
             const lifts = [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.25, turns: 3 }, { heal: 0.2 }];
             const l = lifts[Math.floor(rnd() * lifts.length)];
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
-            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+            if (l.shield) { t.shield = { amt: Math.round(u.care * l.shield * CARE_K), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -239,7 +267,16 @@ const Battle = (() => {
       }
       for (const t of targets) if (!inPlay(t) && t.side !== u.side) broke = true;
       for (const e of s.effects) if (e.onBreak && broke) zeal(u, e.onBreak, s, events);
-      return { skill: s, targets, events };
+      return { skill: s, targets, events, commanded };
+    }
+
+    // A commanded ally answers at once: basic move on the opponent most
+    // worth hitting (in the open, and nearest to giving way).
+    function commandTarget(ally) {
+      const pierce = ally.def.skills[0].pierce || [];
+      const opp = others(ally).filter(inPlay);
+      if (!opp.length) return null;
+      return opp.slice().sort((a, b) => ((a.cover && !pierce.includes("cover")) - (b.cover && !pierce.includes("cover"))) || a.hp / a.maxHp - b.hp / b.maxHp)[0];
     }
 
     // After an argument against the other side, one friend with Zeal 0 or
@@ -259,18 +296,28 @@ const Battle = (() => {
       let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16);
       if (e.vs) {
         const [what, mult] = e.vs;
-        if (what === "guarded" ? t.shield || t.citation : t.statuses[what] > 0) d *= mult;
+        if (what === "guarded" ? t.shield || t.cover : t.statuses[what] > 0) d *= mult;
+      }
+      const crit = rnd() < critChance(u);
+      if (crit) d *= u.critDmg;
+      // A podium in front takes the hit, unless the move goes around it.
+      if (t.cover && !((s && s.pierce) || []).includes("cover")) {
+        const c = Math.round(d);
+        t.cover.hp -= c;
+        events.push({ key: t.key, text: (crit ? "Crit! " : "") + "−" + c + " podium", color: "#c9b48a" });
+        if (t.cover.hp <= 0) { t.cover = null; events.push({ key: t.key, text: "Podium falls!", color: "#e8b94a" }); }
+        return;
       }
       if (t.statuses.examined > 0) d *= 1.3;
       if (t.immune.testimony > 0) d *= 0.5;
       d *= 1 - Math.min(60, stat(t, "def")) / 100;
-      const crit = rnd() < critChance(u);
-      if (crit) d *= 1.5;
-      if (t.citation) { d *= 0.3; t.citation = false; }
+      // Exposed fighters can't deflect anything.
+      const glance = !(t.statuses.examined > 0) && rnd() < t.glance;
+      if (glance) d *= 1 - t.glanceCut;
       d = Math.round(d);
       if (t.shield) { const a = Math.min(t.shield.amt, d); t.shield.amt -= a; d -= a; if (t.shield.amt <= 0) t.shield = null; }
       t.hp = Math.max(0, t.hp - d);
-      events.push({ key: t.key, text: (crit ? "Crit! " : "") + "−" + d, color: crit ? "#ffd84a" : "#ece4d0" });
+      events.push({ key: t.key, text: (crit ? "Crit! " : glance ? "Deflected " : "") + "−" + d, color: crit ? "#ffd84a" : glance ? "#9fd0ff" : "#ece4d0" });
       if (crit) zeal(t, -1, s, events);
       checkOut(t, events);
     }
@@ -282,6 +329,7 @@ const Battle = (() => {
       if (n < 0) {
         const held = t.immune.steadfast > 0 || (t.immune.security > 0 && !pierce.includes("security")) || (t.immune.faith > 0 && !pierce.includes("faith"));
         if (held) { events.push({ key: t.key, text: "Holds firm", color: "#a9a6bd" }); return false; }
+        if (rnd() < t.resolve) { events.push({ key: t.key, text: "Resilient!", color: "#a9a6bd" }); return false; }
       }
       const before = t.zeal;
       t.zeal = Math.max(t.floor, Math.min(ZEAL_MAX, t.zeal + n));
@@ -317,7 +365,7 @@ const Battle = (() => {
       const drop = n === "all" ? good.length : n;
       let removed = 0;
       for (const b of good.slice(0, drop)) { t.buffs.splice(t.buffs.indexOf(b), 1); removed++; }
-      if (n === "all") { if (t.shield) removed++; if (t.citation) removed++; t.shield = null; t.citation = false; for (const k of Object.keys(t.immune)) { if (t.immune[k]) removed++; t.immune[k] = 0; } }
+      if (n === "all") { if (t.shield) removed++; t.shield = null; for (const k of Object.keys(t.immune)) { if (t.immune[k]) removed++; t.immune[k] = 0; } }
       else if (removed < drop && t.shield) { t.shield = null; removed++; }
       if (removed) events.push({ key: t.key, text: "Fact-Checked", color: "#de5e55" });
     }
@@ -335,7 +383,7 @@ const Battle = (() => {
     }
 
     return {
-      units, heroes, foes, nextUnit, startTurn, usable, choices, think, aim, use, backup, outcome, stat,
+      units, heroes, foes, nextUnit, upcoming, startTurn, usable, choices, think, aim, use, backup, commandTarget, outcome, stat,
       get round() { return round; },
     };
   }
@@ -370,6 +418,19 @@ const Battle = (() => {
       const r = b.use(u, pick.i, pick.target, targets);
       view.show(r.events);
       await view.sleep(r.events.some((e) => e.out) ? 2.0 : 0.9);
+      // A commanded ally answers at once.
+      if (r.commanded && !b.outcome() && r.commanded.state === "in") {
+        const ally = r.commanded, tgt = b.commandTarget(ally);
+        if (tgt) {
+          const ct = b.aim(ally, 0, tgt);
+          view.show([{ key: ally.key, text: "Sent in!", color: "#e8b94a" }]);
+          if (o.onAction) o.onAction(ally, ally.def.skills[0], "command");
+          await view.perform(ally, 0, ct);
+          const r3 = b.use(ally, 0, tgt, ct);
+          view.show(r3.events);
+          await view.sleep(r3.events.some((e) => e.out) ? 2.0 : 0.8);
+        }
+      }
       // A friend with good Zeal may jump in.
       const bk = b.outcome() ? null : b.backup(u, pick.i, targets);
       if (bk) {
@@ -407,7 +468,8 @@ const Battle = (() => {
         const total = e.dmg * (e.hits || 1);
         const size = total < 0.9 ? "Light hit" : total < 1.4 ? "Hit" : total < 2.2 ? "Strong hit" : total < 3.5 ? "Heavy hit" : "Crushing hit";
         let t = (e.hits > 1 ? e.hits + " quick hits, " + size.toLowerCase() + " in all" : size) + " on Composure";
-        if (e.vs) t += e.vs[0] === "guarded" ? ", harder against a shield" : ", harder against " + (e.vs[0] === "doubting" ? "the Doubting" : e.vs[0]);
+        if (e.vs) t += e.vs[0] === "guarded" ? ", harder against a shield or podium" : ", harder against " + (e.vs[0] === "doubting" ? "the Doubting" : e.vs[0]);
+        if ((sk.pierce || []).includes("cover")) t += ", straight past any podium";
         if (e.splash) t += ", with some for everyone else";
         out.push(t);
       }
@@ -419,7 +481,8 @@ const Battle = (() => {
       if (e.cleanse) out.push("Examen: clears every setback");
       if (e.purge) out.push(pct(e) + (e.purge === "all" ? "Fact-Checks every boost" : "Fact-Checks a boost") + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.shield) out.push("Shield of Faith");
-      if (e.citation) out.push("Citation: blocks most of the next hit");
+      if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
+      if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
       if (e.counter || e.selfCounter) out.push("Rebuttal: answers back when addressed");
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this hero");
@@ -474,6 +537,7 @@ const BattleView = (() => {
           if (!u) continue;
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
+          if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.side === "foe" ? o.coverKind || "podium" : "podium");
           const x = a.x - 30;
           const y = a.y + 6;
           // Composure.
@@ -494,7 +558,6 @@ const BattleView = (() => {
           if (u.statuses.muted > 0) tags.push(["M", "#de5e55"]);
           if (u.statuses.examined > 0) tags.push(["X", "#e8b94a"]);
           if (u.called) tags.push(["!", "#de5e55"]);
-          if (u.citation) tags.push(["C", "#7ea4e6"]);
           if (u.counter > 0) tags.push(["R", "#e8b94a"]);
           if (Object.values(u.immune).some((v) => v > 0)) tags.push(["◆", "#7ea4e6"]);
           if (u.buffs.some((b) => b.amt > 0)) tags.push(["▲", "#74c07a"]);
@@ -523,6 +586,42 @@ const BattleView = (() => {
     theater.setTeam(battle.heroes().map((u) => u.id));
     theater.setFoes(battle.foes().map((u) => u.id));
     theater.onDone(() => { if (done) { const d = done; done = null; d(); } });
+
+    // What stands in front of a fighter depends on where the debate is: a
+    // podium in a studio, a soapbox on the street, a stepladder at Speakers'
+    // Corner, a pulpit in a Reformed church, a streamer's desk online.
+    function barrier(ctx, bx, by, c, kind) {
+      // Drawn half again as large as the figures' pixels, so it reads on a phone.
+      ctx.save(); ctx.translate(bx, by); ctx.scale(1.5, 1.5);
+      const x = 0, y = 0;
+      const px = (dx, dy, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(Math.round(x + dx), Math.round(y + dy), w, h); };
+      if (kind === "soapbox") {
+        px(-17, -26, 34, 26, "#1a1326"); px(-15, -24, 30, 22, "#a8743e");
+        for (let i = 0; i < 3; i++) px(-15, -22 + i * 8, 30, 2, "#7e5228");
+        px(-9, -18, 18, 5, "#f7f1de"); ctx.fillStyle = "#1a1326"; ctx.font = "700 5px " + FONT; ctx.textAlign = "center"; ctx.fillText("SOAP", x, y - 14);
+      } else if (kind === "stepladder") {
+        px(-14, -40, 4, 40, "#1a1326"); px(10, -40, 4, 40, "#1a1326");
+        px(-13, -40, 2, 40, "#c9ccd4"); px(11, -40, 2, 40, "#c9ccd4");
+        for (let i = 0; i < 4; i++) px(-13, -36 + i * 10, 26, 3, "#8a8e99");
+      } else if (kind === "pulpit") {
+        px(-18, -44, 36, 44, "#1a1326"); px(-16, -42, 32, 40, "#5a3620"); px(-16, -42, 32, 5, "#7a4a2c");
+        // An open Bible on the desk of the pulpit.
+        px(-12, -48, 24, 7, "#1a1326"); px(-11, -47, 10, 5, "#f7f1de"); px(1, -47, 10, 5, "#f7f1de"); px(-1, -47, 2, 5, "#7a2a2a");
+      } else if (kind === "desk") {
+        px(-20, -30, 40, 30, "#1a1326"); px(-18, -28, 36, 6, "#3a3f4a"); px(-16, -22, 4, 22, "#2a2f3a"); px(12, -22, 4, 22, "#2a2f3a");
+        px(-8, -40, 16, 12, "#1a1326"); px(-7, -39, 14, 9, "#5aa0e0");
+        ctx.strokeStyle = "#f7f1de"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x - 24, y - 38, 5, 0, Math.PI * 2); ctx.stroke();
+      } else if (kind === "display") {
+        px(-16, -46, 32, 46, "#1a1326"); px(-14, -44, 28, 30, "#f7f1de"); px(-14, -14, 28, 12, "#7e5228");
+        px(-10, -40, 20, 3, "#1f2d4f"); px(-10, -34, 16, 2, "#6a6a88"); px(-10, -30, 18, 2, "#6a6a88");
+      } else {
+        px(-16, -42, 32, 42, "#1a1326"); px(-14, -40, 28, 38, "#7a5236"); px(-14, -40, 28, 4, "#9a6a46");
+        px(-4, -52, 2, 12, "#2a2a33"); px(-6, -54, 6, 4, "#2a2a33");
+      }
+      // The podium's own strength, as a small tan bar.
+      px(-13, -9, 26, 5, "#1a1326"); px(-12, -8, Math.max(1, Math.round(24 * c.hp / c.max)), 3, "#f0dca0");
+      ctx.restore();
+    }
 
     function arrow(ctx, x, y, up, color) {
       ctx.fillStyle = color;
