@@ -614,6 +614,12 @@ const Sound = (() => {
     mix.root = (mix.root + 1) % ROOT_PATH.length;
     retuneDrone();
   }
+  // Outside the debates, every button and every turn of a cut scene moves the
+  // drone on: always to a note that sounds different from the one before.
+  function moveDrone() {
+    const was = rootNote();
+    for (let i = 0; i < ROOT_PATH.length; i++) { shift(); if (rootNote() !== was) break; }
+  }
 
   // ---- Battle sounds -----------------------------------------------------------
   // Little bleeps and boops, each on the next sixteenth and in the key of the
@@ -719,8 +725,9 @@ const Sound = (() => {
   }
 
   return {
-    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play, stir, fx,
+    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play, stir, moveDrone, fx,
     get mode() { return mode; },
     get playing() { return playing; },
+    get droneNote() { return drone ? rootNote() : null; },
   };
 })();
