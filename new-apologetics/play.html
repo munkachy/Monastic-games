@@ -220,14 +220,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927d"></script>
-<script src="audio.js?v=20260927d"></script>
-<script src="art.js?v=20260927d"></script>
-<script src="moves.js?v=20260927d"></script>
-<script src="story.js?v=20260927d"></script>
-<script src="data.js?v=20260927d"></script>
-<script src="lines.js?v=20260927d"></script>
-<script src="battle.js?v=20260927d"></script>
+<script src="chants.js?v=20260927e"></script>
+<script src="audio.js?v=20260927e"></script>
+<script src="art.js?v=20260927e"></script>
+<script src="moves.js?v=20260927e"></script>
+<script src="story.js?v=20260927e"></script>
+<script src="data.js?v=20260927e"></script>
+<script src="lines.js?v=20260927e"></script>
+<script src="battle.js?v=20260927e"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -259,8 +259,16 @@
 
   const SAVE_KEY = "new-apologetics-save";
   function load() {
-    try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.stars) return s; } catch (e) { /* no storage */ }
-    return { stars: {}, seen: {}, team: [], xp: {} };
+    try {
+      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (s && s.stars) {
+        if (!s.xp) s.xp = {};
+        // Who has debated. Older saves kept experience only for heroes who had.
+        if (!s.played) { s.played = {}; for (const id of Object.keys(s.xp)) s.played[id] = true; }
+        return s;
+      }
+    } catch (e) { /* no storage */ }
+    return { stars: {}, seen: {}, team: [], xp: {}, played: {} };
   }
   let save = load();
   if (!save.xp) save.xp = {};
@@ -299,10 +307,11 @@
   // half the experience of the heroes you have been playing (a level or two
   // behind), and stays there until he debates. A guest is only passing
   // through, so he always stands level with the team.
-  // The experience of the team you have been playing: your four most
-  // experienced heroes, on average.
+  // The experience of the team you have been playing: the four most
+  // experienced heroes who have debated, on average. (Newcomers who have only
+  // sat on the bench don't count, or each would pull the next one down.)
   const averageXp = () => {
-    const known = roster().filter((h) => save.xp[h] !== undefined).map((h) => save.xp[h]).sort((a, b) => b - a).slice(0, 4);
+    const known = roster().filter((h) => save.played[h] && save.xp[h] !== undefined).map((h) => save.xp[h]).sort((a, b) => b - a).slice(0, 4);
     return known.length ? known.reduce((a, b) => a + b, 0) / known.length : 0;
   };
   function xpOf(id) {
@@ -980,6 +989,7 @@
     const caught = [];
     if (gain) team.forEach((id, i) => {
       if (HEROES[id].guest) return;
+      save.played[id] = true;
       save.xp[id] = start[i] + Math.round(gain * boost[i]);
       if (boost[i] > 1) caught.push(HEROES[id].name + " +" + Math.round(gain * boost[i]));
       const after = Battle.levelOf(save.xp[id]);
@@ -1121,7 +1131,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [], xp: {}, music: save.music, difficulty: save.difficulty }; store(); paintTest();
+    save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, music: save.music, difficulty: save.difficulty }; store(); paintTest();
     resetArmed = false; $("reset").textContent = "Progress erased";
   });
   if (Object.keys(save.stars).length) $("play").textContent = "Continue";
