@@ -15,6 +15,9 @@ const Theater = (() => {
   const FIG_W = 40 * SCALE;
   const FIG_H = 52 * SCALE;
   const FONT = "'Pixelify Sans', 'Courier New', monospace";
+  // Words the debaters say, in the clearer face, large enough to read when
+  // the stage is shrunk to fit a phone.
+  const CLEAR = "'Jersey 15', 'Pixelify Sans', 'Courier New', monospace";
 
   // ---- Little helpers ------------------------------------------------------------
 
@@ -44,9 +47,12 @@ const Theater = (() => {
   // A pixel speech bubble with its tail pointing down at (x, y).
   function bubble(ctx, str, x, y, opts) {
     const o = opts || {};
-    ctx.font = "600 " + (o.size || 14) + "px " + FONT;
+    // Large enough to read on a phone, but never wider than the stage.
+    let size = (o.size || 14) + 11;
+    ctx.font = "400 " + size + "px " + CLEAR;
+    while (size > 16 && ctx.measureText(str).width > W - 40) { size--; ctx.font = "400 " + size + "px " + CLEAR; }
     const w = Math.ceil(ctx.measureText(str).width) + 16;
-    const h = (o.size || 14) + 14;
+    const h = size + 12;
     const bx = Math.round(clamp(x - w / 2, 4, W - w - 4));
     const by = Math.round(y - h - 8);
     ctx.fillStyle = "#1a1326";
@@ -58,7 +64,8 @@ const Theater = (() => {
     ctx.fillStyle = o.bg || "#fdfaf2";
     ctx.fillRect(Math.round(x) - 1, by + h, 4, 4);
     ctx.fillRect(Math.round(x) + 1, by + h + 4, 2, 4);
-    text(ctx, str, bx + w / 2, by + h - 9, o.size || 14, o.color || "#1a1326", "center", 600);
+    ctx.textAlign = "center"; ctx.fillStyle = o.color || "#1a1326";
+    ctx.fillText(str, bx + w / 2, by + h - 9);
   }
 
   function px(ctx, x, y, s, color) { ctx.fillStyle = color; ctx.fillRect(Math.round(x), Math.round(y), s, s); }
@@ -239,11 +246,11 @@ const Theater = (() => {
     }
 
     function banner(name) {
-      ctx.font = "700 18px " + FONT;
+      ctx.font = "400 30px " + CLEAR;
       const w = ctx.measureText(name).width + 28;
-      ctx.fillStyle = "rgba(20,23,42,0.92)"; ctx.fillRect(W / 2 - w / 2, 10, w, 30);
-      ctx.strokeStyle = "#e8b94a"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - w / 2, 10, w, 30);
-      text(ctx, name, W / 2, 31, 18, "#ece4d0");
+      ctx.fillStyle = "rgba(20,23,42,0.92)"; ctx.fillRect(W / 2 - w / 2, 8, w, 38);
+      ctx.strokeStyle = "#e8b94a"; ctx.lineWidth = 2; ctx.strokeRect(W / 2 - w / 2, 8, w, 38);
+      ctx.textAlign = "center"; ctx.fillStyle = "#ece4d0"; ctx.fillText(name, W / 2, 36);
     }
 
     function play(hero, index, now) {

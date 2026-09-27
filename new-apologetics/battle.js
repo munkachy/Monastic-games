@@ -854,6 +854,9 @@ const Battle = (() => {
 
 const BattleView = (() => {
   const FONT = "'Pixelify Sans', 'Courier New', monospace";
+  // Floating words and status letters: the clearer face, drawn large, since
+  // the stage is shrunk to about half size on a phone.
+  const CLEAR = "'Jersey 15', 'Pixelify Sans', 'Courier New', monospace";
 
   function create(canvas, battle, opts) {
     const o = opts || {};
@@ -941,8 +944,8 @@ const BattleView = (() => {
           if (Object.values(u.immune).some((v) => v > 0)) tags.push(["◆", "#7ea4e6"]);
           if (u.buffs.some((b) => b.amt > 0)) tags.push(["▲", "#74c07a"]);
           if (u.buffs.some((b) => b.amt < 0)) tags.push(["▼", "#de5e55"]);
-          ctx.font = "700 10px " + FONT; ctx.textAlign = "left";
-          tags.forEach(([g, c], i) => { ctx.fillStyle = "#1a1326"; ctx.fillRect(x + i * 11 - 1, y + 19, 11, 11); ctx.fillStyle = c; ctx.fillText(g, x + i * 11 + 1, y + 28); });
+          ctx.font = "400 15px " + CLEAR; ctx.textAlign = "center";
+          tags.forEach(([g, c], i) => { ctx.fillStyle = "#1a1326"; ctx.fillRect(x + i * 15 - 1, y + 18, 15, 15); ctx.fillStyle = c; ctx.fillText(g, x + i * 15 + 6.5, y + 30); });
           // Whose turn it is, and who can be chosen.
           const top = a.y - 108;
           if (active === a.key) { const b = Math.sin(t * 6) * 3; ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.moveTo(a.x - 7, top - 10 + b); ctx.lineTo(a.x + 7, top - 10 + b); ctx.lineTo(a.x, top - 2 + b); ctx.fill(); }
@@ -955,8 +958,8 @@ const BattleView = (() => {
           if (!a) continue;
           const k = (now - f.t0) / 2.2;
           ctx.globalAlpha = Math.min(1, (1 - k) * 3);
-          ctx.font = "700 17px " + FONT; ctx.textAlign = "center"; ctx.lineWidth = 4; ctx.strokeStyle = "#1a1326";
-          const y = a.y - 112 - k * 20 - f.row * 18;
+          ctx.font = "400 30px " + CLEAR; ctx.textAlign = "center"; ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.strokeStyle = "#1a1326";
+          const y = a.y - 112 - k * 20 - f.row * 28;
           ctx.strokeText(f.text, a.x, y); ctx.fillStyle = f.color; ctx.fillText(f.text, a.x, y);
           ctx.globalAlpha = 1;
         }
