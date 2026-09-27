@@ -158,7 +158,7 @@
     <span class="label">A team battler</span>
     <h1 id="title-name">New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
-    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Conversions are rare, and they're worth watching for.</p>
+    <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on five chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
     <div class="row">
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
@@ -221,14 +221,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927f"></script>
-<script src="audio.js?v=20260927f"></script>
-<script src="art.js?v=20260927f"></script>
-<script src="moves.js?v=20260927f"></script>
-<script src="story.js?v=20260927f"></script>
-<script src="data.js?v=20260927f"></script>
-<script src="lines.js?v=20260927f"></script>
-<script src="battle.js?v=20260927f"></script>
+<script src="chants.js?v=20260927g"></script>
+<script src="audio.js?v=20260927g"></script>
+<script src="art.js?v=20260927g"></script>
+<script src="moves.js?v=20260927g"></script>
+<script src="story.js?v=20260927g"></script>
+<script src="data.js?v=20260927g"></script>
+<script src="lines.js?v=20260927g"></script>
+<script src="battle.js?v=20260927g"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1042,14 +1042,28 @@
     const row = document.createElement("div");
     row.className = "row";
     box.append(h, s, dn, p, xp);
-    // The rare conversion: a note the player will remember.
-    for (const u of r.converted) {
+    // Conversions. Joe Schmid's is the rare one, and he joins the roster; the
+    // rank and file go to OCIA, each by the road that fits where he started.
+    const ROAD = {
+      atheist: "Unbaptized, he enters the catechumenate, and at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
+      protestant: "His baptism was already valid, so he is not baptized again: he makes a profession of faith, is confirmed, and is received into full communion.",
+      lds: "The Church does not recognize Latter-day Saint baptism as valid, so at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
+      islam: "He enters the catechumenate, freely, and at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
+    };
+    for (const u of r.converted.filter((x) => x.def.secretConvert)) {
       const c = document.createElement("p");
       c.className = "coach";
       c.innerHTML = "<b>" + u.name + " has come home.</b> ";
-      c.append(u.def.sign && u.def.sign[0] === "CONFESSION"
-        ? "Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one. He joins your roster."
-        : "Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one.");
+      c.append("Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. He joins your roster.");
+      box.append(c);
+    }
+    const flock = r.converted.filter((x) => !x.def.secretConvert);
+    if (flock.length) {
+      const c = document.createElement("p");
+      c.className = "coach";
+      const who = flock.length === 1 ? (/^[AEIOU]/.test(flock[0].name) ? "An " : "A ") + flock[0].name + " signs" : flock.length + " of them sign";
+      c.innerHTML = "<b>" + who + " up for OCIA.</b> ";
+      c.append((flock.length === 1 ? ROAD[flock[0].faction] || "" : "Each will be received by the road that fits where he started.") + " The argument only cleared the ground; the rest was the Holy Spirit's work.");
       box.append(c);
     }
     for (const g of r.grew) {
