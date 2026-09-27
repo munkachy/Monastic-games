@@ -25,7 +25,7 @@ const Story = (() => {
     heschmeyer: "Joe Heschmeyer", hahn: "Scott Hahn", oconnor: "Alex O'Connor", ryan: "Ryan (NeedGod.net)", white: "James White",
     hansen: "Jacob Hansen", speaker: "Speakers' Corner Champion", elder: "Elder Missionary", skeptic: "Skeptic Streamer",
     preacher: "Street Preacher", seminarian: "Seminarian", martins: "Fr. Carlos Martins", witch: "WitchTok Influencer",
-    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", "": "",
+    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", ehrman: "Bart Ehrman", pitre: "Brant Pitre", student: "Religion 101 Student", mythicist: "Mythicist YouTuber", "": "",
   };
 
   // ---- The chapters ------------------------------------------------------------------
@@ -270,6 +270,39 @@ const Story = (() => {
       ],
     },
     {
+      id: "scholars", title: "Misquoting Jesus?", group: "Skeptical Scholars", boss: "ehrman", place: "library", mystery: "If the manuscripts disagree and the Gospels were anonymous, how can anyone trust them?",
+      scenes: [
+        { when: "Before the first battle", place: "library", left: ["akin","heschmeyer"], right: ["ehrman"], lines: [
+          ["ehrman","There are more differences among our manuscripts than there are words in the New Testament."],
+          ["akin","True. And the great majority are spelling slips and word order. Let's talk about the ones that matter."],
+          ["ehrman","And the Gospels are anonymous. The names came later."],
+        ] },
+        { when: "After the first battle", place: "library", left: ["akin","heschmeyer","+pitre"], right: ["ehrman","mythicist"], lines: [
+          ["mythicist","Jesus never even existed!"],
+          ["ehrman","No, he did. Every serious historian agrees on that. I wrote a whole book saying so.","…"],
+          ["pitre","I'm Brant. Bart, you and I agree on more than people think. But you still read the Gospels the way you were taught at Moody: every detail has to line up, or the whole thing falls."],
+          ["ehrman","I went to Moody, and Wheaton, and then Princeton. And the details didn't add up."],
+        ] },
+        { when: "After the second battle", place: "studio", left: ["pitre","hahn","pine"], right: [], lines: [
+          ["pitre","Step back and look at the whole picture. Jesus is a first-century Jew. Read him against the Scriptures of Israel, and his claims come into focus: the Bridegroom, the new Passover, the Son of Man.","idea"],
+          ["hahn","It's covenant, all the way through! The Old is fulfilled in the New!"],
+          ["pine","And the Church never staked the faith on every detail being a stenographer's record. Scripture teaches without error the truth God wanted there for our salvation. That's Dei Verbum."],
+        ] },
+        { when: "After the third battle", place: "studio", left: ["pitre","heschmeyer","akin"], right: [], lines: [
+          ["pitre","And the anonymous Gospels? Not one copy has ever turned up without a name. Every manuscript that keeps its opening says Matthew, Mark, Luke or John.","idea"],
+          ["heschmeyer","And the Fathers name them too. Irenaeus lists all four, around the year 180."],
+          ["akin","So the question isn't whether the evidence exists. It's whether he'll look at the whole of it."],
+        ] },
+        { when: "The last conversation", place: "library", left: ["pitre","akin","schmitz"], right: ["ehrman"], lines: [
+          ["ehrman","Fine. The titles are early. That doesn't make them true."],
+          ["pitre","No. But now we're weighing evidence, not propping up a house of cards. You lost a brittle literalism the Church never asked anyone to hold. The faith was never that fragile."],
+          ["ehrman","Even so. The suffering in this world. That's what I can't get past.","…"],
+          ["schmitz","Neither could Job, for a while. Let's keep talking, Bart. We're praying for you."],
+          ["","He leaves with a copy of The Case for Jesus. He says he'll read it critically. Brant says that's exactly how it should be read."],
+        ] },
+      ],
+    },
+    {
       id: "reformed", title: "Scripture Alone?", group: "Reformed", boss: "white", place: "library", mystery: "How do you answer sola scriptura in a way James White hasn't heard a thousand times?",
       scenes: [
         { when: "Before the first battle", place: "library", left: ["horn","bertuzzi","akin"], right: ["white"], lines: [
@@ -315,13 +348,14 @@ const Story = (() => {
           ["witch","I threw out the cards. I still have questions.","?"],
         ] },
         { when: "After the second battle", place: "studio", left: ["hahn","pine","marygrace"], right: [], lines: [
-          ["hahn","One more. And it's the man who taught us all to argue carefully."],
+          ["hahn","One more table: the pastor, the scholar, and the man who taught us all to argue carefully."],
           ["pine","Grant everything true in what he says. Then show him the rest.","idea"],
           ["marygrace","And remember why we came. Not to win them. To love them."],
         ] },
-        { when: "The last conversation", place: "studio", left: ["heschmeyer","akin","schmitz"], right: ["white","oconnor","destiny"], lines: [
+        { when: "The last conversation", place: "studio", left: ["heschmeyer","akin","schmitz"], right: ["white","ehrman","pastor"], lines: [
           ["white","Well. That was a debate.","…"],
-          ["heschmeyer","It was. Thank you for taking every one of us seriously."],
+          ["ehrman","I read the book, Brant. I have notes."],
+          ["heschmeyer","Thank you, all of you, for taking every one of us seriously."],
           ["schmitz","You're all welcome at our table, any time. And we'll keep praying for you."],
           ["","No argument converts a soul. “I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6). Tonight the ground is clear, and the seed is in the soil."],
         ] },
@@ -330,6 +364,24 @@ const Story = (() => {
     {
       id: "epilogue", title: "One Fold", group: "Epilogue", place: "church",
       scenes: [
+        { when: "After the last debate", place: "studio", left: ["horn","akin","schmitz"], right: [], lines: [
+          ["","Every debate won, on the hardest setting there is. Along the way, you saw {conversions}."],
+          ["horn","And then I went online.","…"],
+          ["akin","New heresies every week. And the people we debated? Their channels are bigger than ever, still repeating the arguments we answered."],
+          ["horn","More evidence than any generation has ever had. And still so many far from faith. Why are we doing this?","?"],
+        ] },
+        { when: "An answer", place: "church", left: ["horn","akin"], right: ["+hahn","+pine"], lines: [
+          ["hahn","Give thanks! Every heresy in history made the Church think harder. Arius pushed us all the way to Nicaea."],
+          ["pine","Augustine said it. The restlessness of heretics forces us to investigate the faith more carefully, understand it more clearly, and proclaim it more earnestly. City of God, book sixteen."],
+          ["hahn","That's how God exercises our understanding, and our charity. Every age has its battle. This one is ours."],
+          ["pine","And the Church comes to know God better for it. Not a new faith: the same faith, seen from new angles, understood more deeply.","idea"],
+        ] },
+        { when: "Signs of hope", place: "church", left: ["marygrace","rose","zember"], right: [], lines: [
+          ["marygrace","And people are hungry. More and more are asking spiritual questions again."],
+          ["rose","In 2023 the Church grew to 1.406 billion Catholics: over fifteen million more in a single year."],
+          ["zember","In France, 10,384 adults were baptized at Easter 2025, a record. At Easter 2026, more than 13,000."],
+          ["marygrace","“Seek, and you will find.” Everyone who truly seeks him finds him."],
+        ] },
         { when: "The Easter Vigil", place: "church", left: ["schmitz","horn","akin"], right: ["oconnor","ryan","+white"], lines: [
           ["schmitz","Friends, welcome home."],
           ["oconnor","I'm still thinking about the fawn. But I'm thinking about it here.","…"],
@@ -440,6 +492,13 @@ const Story = (() => {
     return lines;
   }
 
+  // Words filled in from the player's own game, like {conversions} in the
+  // epilogue. Anything not given reads in a general way.
+  let VARS = {};
+  const DEFAULTS = { conversions: "so many conversions" };
+  const fill = (t) => String(t).replace(/\{(\w+)\}/g, (m, k) => (VARS[k] !== undefined ? VARS[k] : DEFAULTS[k] !== undefined ? DEFAULTS[k] : m));
+  function setVars(v) { VARS = Object.assign({}, v); }
+
   function create(canvas) {
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
@@ -469,7 +528,8 @@ const Story = (() => {
     function frame(t) {
       now = t;
       const sc = current();
-      const [speaker, text, mark] = sc.lines[line];
+      const [speaker, raw, mark] = sc.lines[line];
+      const text = fill(raw);
       PLACES[sc.place](ctx, t);
       // The cast: heroes on the left facing right, others on the right facing left.
       const cast = onStage(sc).filter((c) => c.here);
@@ -579,10 +639,10 @@ const Story = (() => {
       get scene() { return scene; },
       get line() { return line; },
       // The line being spoken now, as [name, text], for showing outside the canvas.
-      get spoken() { const [who, text] = chapter.scenes[scene].lines[line]; return [NAMES[who] || "", text]; },
+      get spoken() { const [who, text] = chapter.scenes[scene].lines[line]; return [NAMES[who] || "", fill(text)]; },
       onChange(fn) { listeners.push(fn); },
     };
   }
 
-  return { create, CHAPTERS, NAMES };
+  return { create, CHAPTERS, NAMES, setVars };
 })();

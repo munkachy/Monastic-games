@@ -164,6 +164,16 @@ const GameData = (() => {
       H("Here I Am", "self", 3, 1, [{ tauntAll: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
       H("Child of God", "allies", 4, 2, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
     ] },
+    // Brant Pitre: Scripture scholar (The Case for Jesus; Jesus and the Jewish
+    // Roots of the Eucharist). Modelled on Saru: Phaser, Tricorder Scan (Scan,
+    // Defense Down Major), We Are Starfleet (Tech Up Major, Morale up),
+    // Vahar'ai Quills (heavy hit, Wound).
+    pitre: { name: "Brant Pitre", about: "A scholar who reads Jesus in his own world, the Judaism of the first century, and so sees the big picture where others get lost in details. Quick to act. The Big Picture exposes an opponent and lowers his guard. The New Passover lifts the team's arguments and Zeal. The Case for Jesus lands a heavy blow and leaves the opponent doubting. He joins after the chapter Misquoting Jesus?", stats: [250, 64, 4, 163], traits: { care: 90, glance: [0.06, 0.2], crit: [0.04, 1.34], resolve: 0.08 }, passive: { allies: { atk: 0.05 } }, skills: [
+      H("Jewish Roots", "foe", 0, 0, [{ dmg: 1.0 }]),
+      H("The Big Picture", "foe", 3, 0, [{ status: "examined", turns: 3 }, { buff: "def", amt: -0.5, turns: 3 }]),
+      H("The New Passover", "allies", 3, 1, [{ buff: "atk", amt: 0.5, turns: 3 }, { zeal: 1 }]),
+      H("The Case for Jesus", "foe", 4, 2, [{ dmg: 3.0 }, { status: "doubting", turns: 3 }]),
+    ] },
   };
 
   // ---- Books ---------------------------------------------------------------------------
@@ -232,6 +242,14 @@ const GameData = (() => {
       H("Deconstructing", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["Deconstructing…"], "#9fd0ff") }),
       H("Purity Culture", "foe", 3, 1, [{ status: "doubting", turns: 2 }], { anim: X("That's just purity culture.", "doubting") }),
     ] },
+    student: { name: "Religion 101 Student", grunt: true, faction: "secular", stats: [112, 60, 10, 98], traits: { care: 55, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Contradiction!", "foe", 0, 0, [{ dmg: 1.05 }], { anim: V(["Contradiction!"], "#de5e55") }),
+      H("Telephone Game", "foe", 3, 1, [{ status: "doubting", turns: 2 }], { anim: X("It's a game of telephone!", "doubting") }),
+    ] },
+    mythicist: { name: "Mythicist YouTuber", grunt: true, faction: "secular", stats: [108, 64, 10, 102], traits: { care: 50, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Never Existed", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["Jesus never existed!"], "#c69ae8") }),
+      H("Copycat Savior", "foe", 3, 1, [{ status: "muted", turns: 1 }], { anim: X("Horus did it first!", "muted") }),
+    ] },
 
     // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
     // animal suffering first led him away from the Church; in August 2026 he
@@ -291,6 +309,15 @@ const GameData = (() => {
       H("Jesus Never Mentioned It", "foes", 3, 0, [{ zeal: -1 }, { buff: "atk", amt: -0.2, turns: 2 }], { anim: X("Jesus never mentioned it!", ["pipDown", "down"]) }),
       H("Born This Way", "foe", 3, 1, [{ dmg: 0.8 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("God made them this way!", "dumbfounded") }),
       H("Radical Welcome", "self", 4, 2, [{ heal: 0.3 }, { buff: "def", amt: 0.5, turns: 3 }], { anim: U("All are welcome here.", ["heal", "up"]) }),
+    ] },
+    // Bart Ehrman: his own public case, fairly put. Textual variants, anonymous
+    // Gospels, a divinity that developed; raised evangelical (Moody, Wheaton),
+    // he lost his faith over suffering.
+    ehrman: { name: "Bart Ehrman", boss: true, faction: "secular", stats: [335, 80, 20, 104], traits: { care: 85, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
+      H("Misquoting Jesus", "foe", 0, 0, [{ dmg: 0.45, hits: 3 }], { anim: V(["A variant…", "…another…", "…and another."], "#9fd0ff") }),
+      H("More Variants Than Words", "foes", 3, 0, [{ status: "doubting", turns: 2 }, { zeal: -1 }], { anim: X("More variants than words!", ["doubting", "pipDown"]) }),
+      H("Anonymous Gospels", "foes", 3, 1, [{ purge: 1 }, { buff: "atk", amt: -0.2, turns: 2 }], { anim: X("Who really wrote them?", ["factcheck", "down"]) }),
+      H("How Jesus Became God", "foe", 4, 2, [{ dmg: 1.2 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("A divinity that developed.", "dumbfounded") }),
     ] },
     white: { name: "James White", boss: true, faction: "protestant", stats: [320, 80, 22, 108], traits: { care: 88, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
       H("Greek Exegesis", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
@@ -352,7 +379,13 @@ const GameData = (() => {
       { name: "Love Is Love", foes: ["ally", "podcaster", "ally2"] },
       { name: "Who Do You Say You Are?", foes: ["ally", "pastor", "podcaster"], boss: "pastor" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["zember"] },
-    { id: "reformed", par: 8.5, power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
+    { id: "scholars", par: 8.5, power: [3.0, 2.3], title: "Misquoting Jesus?", group: "Skeptical Scholars", missions: [
+      { name: "Religion 101", foes: ["student", "mythicist"] },
+      { name: "The Mythicists", foes: ["mythicist", "student", "mythicist2"] },
+      { name: "A Game of Telephone", foes: ["student", "mythicist", "student2"] },
+      { name: "Misquoting Jesus?", foes: ["student", "ehrman", "mythicist"], boss: "ehrman" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pitre"] },
+    { id: "reformed", par: 8.7, power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
@@ -363,7 +396,7 @@ const GameData = (() => {
     { id: "finale", power: [1.35, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
       { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
       { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
-      { name: "The Last Table", foes: ["destiny", "white", "oconnor"], boss: "white" },
+      { name: "The Last Table", foes: ["pastor", "white", "ehrman"], boss: "white" },
     ], scenes: { before: 0, after: [1, 2, 3] }, unlocks: [] },
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
@@ -371,7 +404,7 @@ const GameData = (() => {
   const START = ["horn", "akin"];
 
   // Variants share a kit with the original, with a different look.
-  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"]]) FOES[copy] = FOES[of];
+  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"], ["student2", "student"], ["mythicist2", "mythicist"]]) FOES[copy] = FOES[of];
 
   return { HEROES, FOES, CAMPAIGN, START, BOOKS };
 })();

@@ -78,6 +78,10 @@ const Lines = (() => {
     "Boldly Beloved": ["You are loved. Boldly.", "He wants all of you.", "You're not a label.", "You were made for more."],
     "Here I Am": ["Here I am. Ask me anything.", "I lived it. Ask away.", "I've been where you are.", "I'm not afraid of the question."],
 
+    // Brant Pitre
+    "The Big Picture": ["Step back. Look at the whole picture.", "Read him as a first-century Jew.", "You're lost in the details.", "Zoom out. It's all there."],
+    "The New Passover": ["This is the new Passover.", "The Lamb, the bread, the covenant.", "Do this in memory of me.", "Exodus, fulfilled."],
+
     // Opponents
     "Where's the Evidence?": ["Source?", "Extraordinary claims…", "That's just, like, faith.", "Peer-reviewed?"],
     "Turn or Burn": [["Turn or burn!"], ["Sinner!"], ["Not too late!"], ["Hellfire!"]],
@@ -122,6 +126,14 @@ const Lines = (() => {
     "Jesus Never Mentioned It": ["Jesus never mentioned it!", "Red letters only, please.", "That's Paul, not Jesus.", "Wrong translation!"],
     "Born This Way": ["God made them this way!", "Born this way!", "You can't choose who you love.", "It's who they are!"],
     "Radical Welcome": ["All are welcome here.", "Radical inclusion!", "No one is turned away.", "Come as you are."],
+    // Misquoting Jesus?
+    "Contradiction!": [["Contradiction!"], ["That's in Mark, not John!"], ["Which was it?"], ["It doesn't add up."]],
+    "Telephone Game": ["It's a game of telephone!", "Oral tradition, so…", "Stories grow in the telling.", "Who wrote these, really?"],
+    "Never Existed": [["Jesus never existed!"], ["Pure myth!"], ["Where's the evidence?"], ["Legend, bro."]],
+    "Copycat Savior": ["Horus did it first!", "Mithras, anyone?", "Dying gods everywhere!", "It's all borrowed!"],
+    "More Variants Than Words": ["More variants than words!", "Which text is original?", "We don't have the originals.", "Scribes changed things."],
+    "Anonymous Gospels": ["Who really wrote them?", "The titles came later.", "Anonymous, all four.", "Not eyewitnesses."],
+    "How Jesus Became God": ["A divinity that developed.", "He never called himself God.", "Exalted later on.", "Mark's Jesus isn't God."],
     "Within Reason": [["Right, but…"], ["Fair, but…"], ["I'm not sure…", "…that follows."], ["Mm. Okay."]],
     "The Fawn in the Forest": ["Why the burning fawn?", "Whom does its pain serve?", "Alone. In the forest.", "No one sees. No one learns."],
     "Euthyphro": ["Good because commanded?", "Arbitrary, or above God?", "Plato's old question…", "Which horn will you take?"],
