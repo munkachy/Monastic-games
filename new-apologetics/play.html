@@ -159,6 +159,31 @@
   .order canvas.foe { border-color: var(--crimson); }
   .order canvas.now { border-color: var(--gold); width: 42px; height: 42px; }
 
+  /* Team and battle screens: the clearer face, large enough to read on a phone */
+  #s-team .label, #s-battle .label { font: 400 19px/1.2 var(--clear); letter-spacing: 0.02em; text-transform: none; }
+  #s-team h2 { font: 400 32px/1.1 var(--clear); }
+  #s-team button, #s-battle button { font: 400 21px/1.1 var(--clear); }
+  #s-team .roster { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  #s-team .roster button { font: 400 19px/1.05 var(--clear); }
+  #s-team .roster button small { font: 400 16px/1.1 var(--clear); text-transform: none; letter-spacing: 0.02em; }
+  #s-team .hero-info h3 { font: 400 24px/1.1 var(--clear); }
+  #s-team .hero-info ul { font-size: 16px; }
+  #s-team .hero-info .about { font-size: 16px; }
+  #s-team .hero-info li { font: 400 20px/1.15 var(--clear); }
+  #s-team .hero-info li .what { font: 16px/1.4 var(--body); }
+  #s-team .hero-info li small { font: 400 16px/1 var(--clear); text-transform: none; letter-spacing: 0.02em; }
+  #s-team .diff-row button { font: 400 21px/1.1 var(--clear); padding: 10px 4px; }
+  #s-team .diff-row button .st { font: 400 18px/1 var(--clear); letter-spacing: 2px; }
+  #s-team .diff-row button .won { font: 400 14px/1 var(--clear); padding: 3px 5px; letter-spacing: 0.02em; }
+  #turn { font: 400 26px/1.2 var(--clear); }
+  #log { font-size: 16px; }
+  #s-battle .moves button small { font: 400 16px/1.15 var(--clear); text-transform: none; letter-spacing: 0.02em; }
+  #s-battle .moves button.info { font-size: 19px; }
+  #s-battle .explain { font-size: 16px; }
+  #s-battle .explain h4 { font: 400 24px/1.1 var(--clear); }
+  #s-battle .explain .kind { font: 400 16px/1.2 var(--clear); text-transform: none; letter-spacing: 0.02em; }
+  #s-battle .controls button { font: 400 19px/1.1 var(--clear); }
+
   /* Results and cards */
   .result h2 { font-size: 36px; }
   .result .stars { font-size: 34px; color: var(--gold); letter-spacing: 6px; }
@@ -268,14 +293,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928k"></script>
-<script src="audio.js?v=20260928k"></script>
-<script src="art.js?v=20260928k"></script>
-<script src="moves.js?v=20260928k"></script>
-<script src="story.js?v=20260928k"></script>
-<script src="data.js?v=20260928k"></script>
-<script src="lines.js?v=20260928k"></script>
-<script src="battle.js?v=20260928k"></script>
+<script src="chants.js?v=20260928l"></script>
+<script src="audio.js?v=20260928l"></script>
+<script src="art.js?v=20260928l"></script>
+<script src="moves.js?v=20260928l"></script>
+<script src="story.js?v=20260928l"></script>
+<script src="data.js?v=20260928l"></script>
+<script src="lines.js?v=20260928l"></script>
+<script src="battle.js?v=20260928l"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
