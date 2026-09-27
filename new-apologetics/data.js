@@ -183,7 +183,7 @@ const GameData = (() => {
     // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
     // animal suffering first led him away from the Church; in August 2026 he
     // announced his return. Wear down his Zeal and he comes home.
-    schmid: { name: "Joe Schmid", faction: "atheist", secretConvert: true, sign: ["CONFESSION", "WELCOME HOME"], stats: [120, 82, 16, 104], traits: { care: 82, glance: [0.06, 0.18], crit: [0.05, 1.3], resolve: 0.05 }, skills: [
+    schmid: { name: "Joe Schmid", faction: "atheist", secretConvert: true, podium: "gunner", sign: ["CONFESSION", "WELCOME HOME"], stats: [120, 82, 16, 104], traits: { care: 82, glance: [0.06, 0.18], crit: [0.05, 1.3], resolve: 0.05 }, skills: [
       H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.2 }], { anim: V(["Consider…", "…a dilemma."], "#9fd0ff") }),
       H("Evolutionary Suffering", "foes", 3, 0, [{ status: "doubting", turns: 2 }, { zeal: -1, chance: 0.5 }], { anim: X("Millions of years of it?", ["doubting", "pipDown"]) }),
       H("Modal Collapse", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }], { anim: X("Then everything is necessary.", "dumbfounded") }),

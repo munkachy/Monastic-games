@@ -92,7 +92,8 @@ const Battle = (() => {
     // meant for them until it falls.
     const avgHp = units.reduce((n, u) => n + u.maxHp, 0) / units.length;
     const cover = opts.cover || {};
-    for (const u of units) if (((u.side === "hero" ? cover.hero : cover.foe) || []).includes(u.slot)) {
+    // Some debaters always bring their own (def.podium names its look).
+    for (const u of units) if (u.def.podium || ((u.side === "hero" ? cover.hero : cover.foe) || []).includes(u.slot)) {
       const hp = Math.round(avgHp * (cover.size || 0.4));
       u.cover = { hp, max: hp };
     }
@@ -600,7 +601,7 @@ const BattleView = (() => {
           if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
           if (a.hidden) continue;
           if (u.shield) shieldAura(ctx, a.x + (a.dx || 0), a.y + (a.dy || 0), t, u.slot * 1.7 + (u.side === "foe" ? 0.9 : 0));
-          if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.side === "foe" ? o.coverKind || "podium" : "podium");
+          if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.def.podium || (u.side === "foe" ? o.coverKind || "podium" : "podium"));
           const x = a.x - 30;
           const y = a.y + 6;
           // Composure, with any Shield of Faith added on the end in white, as
@@ -680,6 +681,14 @@ const BattleView = (() => {
         px(-20, -30, 40, 30, "#1a1326"); px(-18, -28, 36, 6, "#3a3f4a"); px(-16, -22, 4, 22, "#2a2f3a"); px(12, -22, 4, 22, "#2a2f3a");
         px(-8, -40, 16, 12, "#1a1326"); px(-7, -39, 14, 9, "#5aa0e0");
         ctx.strokeStyle = "#f7f1de"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x - 24, y - 38, 5, 0, Math.PI * 2); ctx.stroke();
+      } else if (kind === "gunner") {
+        // Joe Schmid's own podium: football-club red, white trim, a little gold cannon.
+        px(-16, -42, 32, 42, "#1a1326"); px(-14, -40, 28, 38, "#d8232a"); px(-14, -40, 28, 3, "#f4f4f4"); px(-14, -5, 28, 3, "#f4f4f4");
+        px(-11, -32, 3, 6, "#e8b94a");                                           // muzzle
+        px(-9, -31, 16, 4, "#e8b94a"); px(-9, -31, 16, 1, "#fff0b0");            // barrel
+        px(6, -32, 4, 6, "#b8862a");                                             // breech
+        for (const wx of [-5, 3]) { px(wx - 1, -27, 7, 7, "#7a5a1a"); px(wx, -26, 5, 5, "#e8b94a"); px(wx + 2, -24, 1, 1, "#7a5a1a"); }   // wheels
+        px(-4, -52, 2, 12, "#2a2a33"); px(-6, -54, 6, 4, "#2a2a33");
       } else if (kind === "display") {
         px(-16, -46, 32, 46, "#1a1326"); px(-14, -44, 28, 30, "#f7f1de"); px(-14, -14, 28, 12, "#7e5228");
         px(-10, -40, 20, 3, "#1f2d4f"); px(-10, -34, 16, 2, "#6a6a88"); px(-10, -30, 18, 2, "#6a6a88");
