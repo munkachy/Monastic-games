@@ -34,20 +34,20 @@ const GameData = (() => {
   const H = (name, target, cd, start, effects, extra) => Object.assign({ name, target, cd, start: start || 0, effects }, extra || {});
 
   const HEROES = {
-    akin: { name: "Jimmy Akin", about: "Slow to act, but thorough. Senior Apologist is the move for breaking down a podium or a shield, and it can leave the speaker dumbfounded. Logical Paradox and Mysterious World wear down the whole other side's Zeal and leave the strongest opponents exposed. Bring him when the other side hides behind podiums, and keep someone fast in front of him.", stats: [225, 78, 25, 58], traits: { care: 90, glance: [0.04, 0.22], crit: [0.05, 1.3], resolve: 0.08 }, skills: [
+    akin: { name: "Jimmy Akin", about: "Careful and thorough: he takes his time and gets it right. Senior Apologist is the move for breaking down a podium or a shield, and it can leave the speaker dumbfounded. Logical Paradox and Mysterious World wear down the whole other side's Zeal and leave the strongest opponents exposed. Bring him when the other side hides behind podiums, and pair him with a quick friend who can move before him.", stats: [225, 78, 25, 58], traits: { care: 90, glance: [0.04, 0.22], crit: [0.05, 1.3], resolve: 0.08 }, skills: [
       H("Precise Distinction", "foe", 0, 0, [{ dmg: 1.0 }]),
       H("Senior Apologist", "foe", 3, 0, [{ dmg: 1.5, vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.25 }]),
       H("Logical Paradox", "foes", 3, 0, [{ buff: "atk", amt: -0.2, turns: 3 }, { zeal: -1, chance: 0.5 }]),
       H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { zeal: -1 }]),
     ] },
-    muse: { name: "Ethan Muse", about: "The one who stands in front. Open Challenge makes every opponent answer him instead of his friends, and Steelman Stance lets him answer back when they do. Camera Mog is the hardest single blow on the roster: save it for an opponent who is already doubting. Good for protecting fragile teammates and finishing a boss.", stats: [288, 76, 18, 88], traits: { care: 45, glance: [0.03, 0.2], crit: [0.06, 1.3], resolve: 0.09 }, skills: [
+    muse: { name: "Ethan Muse", about: "The one who stands in front. Open Challenge makes every opponent answer him instead of his friends, and Steelman Stance lets him answer back when they do. Camera Mog is the hardest single blow on the roster: save it for an opponent who is already doubting. Good for protecting teammates who shine from the back row, and for finishing a boss.", stats: [288, 76, 18, 88], traits: { care: 45, glance: [0.03, 0.2], crit: [0.06, 1.3], resolve: 0.09 }, skills: [
       H("Pointed Question", "foe", 0, 0, [{ dmg: 1.25 }, { status: "doubting", turns: 3, chance: 0.5 }]),
       H("Open Challenge", "foes", 3, 0, [{ taunt: 3 }, { zeal: -1 }]),
       H("Steelman Stance", "self", 3, 1, [{ counter: 3 }, { buff: "atk", amt: 0.5, turns: 3 }]),
       H("Camera Mog", "foe", 4, 2, [{ dmg: 4.0, vs: ["doubting", 1.5] }, { zeal: -1 }, { onBreak: 1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "spitzer" }),
     ] },
-    schmitz: { name: "Fr. Mike Schmitz", about: "A quick, gentle leader who makes everyone else better. His best trick is I'm Praying for You, which sends a friend in to answer at once, out of turn: perfect for a slow heavy hitter like Scott Hahn. The Bible in a Year steadies the team, and the Catechism in a Year clears every setback and shields them. He fits almost any team.", stats: [250, 58, 12, 125], traits: { care: 105, glance: [0.09, 0.1], crit: [0.05, 1.22], resolve: 0.12 }, skills: [
+    schmitz: { name: "Fr. Mike Schmitz", about: "A quick, gentle leader who makes everyone else better. His best trick is I'm Praying for You, which sends a friend in to answer at once, out of turn: perfect for a heavy hitter like Scott Hahn, who likes to take his time. The Bible in a Year steadies the team, and the Catechism in a Year clears every setback and shields them. He fits almost any team.", stats: [250, 58, 12, 125], traits: { care: 105, glance: [0.09, 0.1], crit: [0.05, 1.22], resolve: 0.12 }, skills: [
       H("Two-Minute Homily", "foe", 0, 0, [{ dmg: 1.5 }]),
       H("I'm Praying for You", "ally", 3, 0, [{ command: true }, { buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.25, turns: 3 }]),
       H("The Bible in a Year", "allies", 3, 1, [{ zeal: 1 }, { buff: "def", amt: 0.5, turns: 3 }]),
@@ -59,7 +59,7 @@ const GameData = (() => {
       H("Point of Order", "foes", 3, 1, [{ zeal: -1 }, { purge: 1 }]),
       H("Bayesian Update", "allies", 4, 2, [{ heal: 0.3 }, { cleanse: true }, { buff: "def", amt: 0.5, turns: 3 }]),
     ] },
-    horn: { name: "Trent Horn", about: "Fast, sharp and not very sturdy. Free-for-All Friday lifts the whole team's Zeal, so friends back each other up more often. Is That in the Bible? gets through Faith Alone and Eternal Security, which makes him the answer to James White. The Case for Catholicism hits every opponent at once, and hits shields and podiums even harder.", stats: [250, 82, 15, 140], traits: { care: 15, glance: [0.09, 0.11], crit: [0.06, 1.25], resolve: 0.09 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
+    horn: { name: "Trent Horn", about: "Quick-witted and first to the microphone, he does his best work before the other side gets going. Free-for-All Friday lifts the whole team's Zeal, so friends back each other up more often. Is That in the Bible? gets through Faith Alone and Eternal Security, which makes him the answer to James White. The Case for Catholicism hits every opponent at once, and hits shields and podiums even harder.", stats: [250, 82, 15, 140], traits: { care: 15, glance: [0.09, 0.11], crit: [0.06, 1.25], resolve: 0.09 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Deadpan", "foe", 0, 0, [{ dmg: 1.5 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.5 }]),
       H("Free-for-All Friday", "allies", 3, 0, [{ zeal: 1 }, { randomLift: true }]),
       H("Is That in the Bible?", "foes", 3, 1, [{ purge: 1 }, { zeal: -1 }], { pierce: ["security", "faith"] }),
@@ -71,7 +71,7 @@ const GameData = (() => {
       H("Australian Charm", "ally", 3, 0, [{ buff: "atk", amt: 0.5, turns: 3 }, { zeal: 2 }]),
       H("Summa Session", "allies", 4, 2, [{ cleanse: true }, { buff: "def", amt: 0.5, turns: 3 }]),
     ] },
-    godlogic: { name: "GodLogic", about: "A guest in the Islam chapter, and the best builder there is: quick, a little fragile, and his shields are among the strongest. Smooth Pivot puts a podium in front of a friend, and Stay Smooth shields the whole team. Common Ground strips every boost from the other side and hits the Islam chapter's opponents where they stand.", guest: true, stats: [163, 135, 15, 125], traits: { care: 135, glance: [0.06, 0.21], crit: [0.04, 1.34], resolve: 0.08 }, skills: [
+    godlogic: { name: "GodLogic", about: "A guest in the Islam chapter, and the best builder there is: quick on his feet, and his shields are among the strongest. Keep a Defender near him and he will keep the whole team covered. Smooth Pivot puts a podium in front of a friend, and Stay Smooth shields the whole team. Common Ground strips every boost from the other side and hits the Islam chapter's opponents where they stand.", guest: true, stats: [163, 135, 15, 125], traits: { care: 135, glance: [0.06, 0.21], crit: [0.04, 1.34], resolve: 0.08 }, skills: [
       H("Smooth Question", "foe", 0, 0, [{ dmg: 1.0 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.1 }]),
       H("Smooth Pivot", "ally", 3, 0, [{ podium: 0.6 }, { buff: "atk", amt: 0.3, turns: 3 }]),
       H("Stay Smooth", "allies", 3, 0, [{ shield: 0.3, turns: 3 }, { zeal: 1 }]),
@@ -100,8 +100,8 @@ const GameData = (() => {
       H("Let Love", "allies", 3, 0, [{ buff: "def", amt: 0.5, turns: 3 }, { zeal: 1 }]),
       H("Every Life Is Good", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1, chance: 0.5 }]),
     ] },
-    // Modelled on Sela: the fastest and most fragile, striking from cover.
-    rose: { name: "Lila Rose", about: "The fastest debater on the roster, and the most fragile. She works Undercover: hard to single out, and hits barely reach her. From there, Live Action strikes all over the room. Anyone who Fact-Checks or Exposes blows her cover, so be careful with her against James White.", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
+    // Modelled on Sela: the quickest, working from cover.
+    rose: { name: "Lila Rose", about: "The quickest debater on the roster, and she works best unseen. She goes Undercover: hard to single out, and hits barely reach her. From there, Live Action strikes all over the room. Anyone who Fact-Checks or Exposes blows her cover, so be careful with her against James White.", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
       H("Every Life", "foe", 0, 0, [{ dmg: 1.25 }, { onBreakCloak: 2 }]),
       H("Live Action", "random4", 3, 0, [{ dmg: 1.5 }, { zeal: -1, chance: 0.5 }]),
       H("Undercover", "self", 3, 0, [{ status: "cloaked", turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { heal: 0.15 }]),
@@ -112,20 +112,20 @@ const GameData = (() => {
       H("Cultural Diagnosis", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "def", amt: -0.5, turns: 3 }]),
       H("Authentic Catholic Culture", "allies", 4, 2, [{ cleanse: true }, { shield: 0.35, turns: 3 }, { zeal: 1 }, { immune: "steadfast", turns: 3 }]),
     ] },
-    jurado: { name: "Alex Jurado", about: "Slow, sturdy and blunt. Deep Cut leaves an opponent doubting, off guard and shaken. Stallone Voice is a heavy blow that smashes podiums and can leave someone dumbfounded. Voice of Reason strips every boost from the other side and knocks their Zeal down hard. Good for breaking up a crowd.", stats: [288, 100, 15, 88], traits: { care: 30, glance: [0.03, 0.17], crit: [0.04, 1.38], resolve: 0.11 }, skills: [
+    jurado: { name: "Alex Jurado", about: "Deliberate, unshakable and direct: he gets straight to the point. Deep Cut leaves an opponent doubting, off guard and shaken. Stallone Voice is a heavy blow that smashes podiums and can leave someone dumbfounded. Voice of Reason strips every boost from the other side and knocks their Zeal down hard. Good for breaking up a crowd.", stats: [288, 100, 15, 88], traits: { care: 30, glance: [0.03, 0.17], crit: [0.04, 1.38], resolve: 0.11 }, skills: [
       H("One-Two", "foe", 0, 0, [{ dmg: 0.5, hits: 2 }]),
       H("Deep Cut", "foe", 3, 0, [{ status: "doubting", turns: 3 }, { buff: "def", amt: -0.5, turns: 3 }, { zeal: -1 }]),
       H("Stallone Voice", "foe", 3, 1, [{ dmg: 2.5, vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.5 }]),
       H("Voice of Reason", "foes", 4, 2, [{ purge: "all" }, { zeal: -2 }]),
     ] },
-    spitzer: { name: "Fr. Robert Spitzer", about: "Slow and fragile, but his shields are among the strongest on the roster. The Four Levels of Happiness clears every setback and shields the whole team. Borde–Guth–Vilenkin takes a long time to come around, and then it lands a heavy blow, silences the opponent and splashes the rest. Protect him while it charges. With Ethan Muse on the team, he shares a duo move.", stats: [188, 135, 18, 73], traits: { care: 135, glance: [0.05, 0.21], crit: [0.04, 1.42], resolve: 0.07 }, skills: [
+    spitzer: { name: "Fr. Robert Spitzer", about: "A patient scholar who builds his case carefully, and his shields are among the strongest on the roster. The Four Levels of Happiness clears every setback and shields the whole team. Borde–Guth–Vilenkin takes a long time to come around, and then it lands a heavy blow, silences the opponent and splashes the rest. Let the Defenders draw the fire while it charges. With Ethan Muse on the team, he shares a duo move.", stats: [188, 135, 18, 73], traits: { care: 135, glance: [0.05, 0.21], crit: [0.04, 1.42], resolve: 0.07 }, skills: [
       H("Fine-Tuning", "foe", 0, 0, [{ dmg: 0.6, hits: 2 }, { purge: 1, chance: 0.25 }]),
       H("The Four Levels of Happiness", "allies", 3, 0, [{ cleanse: true }, { shield: 0.25, turns: 3 }]),
       H("Borde–Guth–Vilenkin", "foe", 4, 2, [{ dmg: 2.5, splash: 1.0 }, { status: "muted", turns: 3 }, { zeal: -1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
-    // Modelled on the Gorn: the slowest and sturdiest, with the heaviest blows.
-    hahn: { name: "Scott Hahn", about: "The slowest on the roster and the hardest to shake, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }, skills: [
+    // Modelled on the Gorn: unhurried and unshakable, with the heaviest blows.
+    hahn: { name: "Scott Hahn", about: "Unhurried, and the hardest to shake on the roster, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }, skills: [
       H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
       H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
@@ -140,7 +140,7 @@ const GameData = (() => {
       H("Contingency Argument", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "atk", amt: -0.5, turns: 3 }]),
       H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid"] }]),
     ] },
-    heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, and he never stops talking. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
+    heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, with a case file for every occasion. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
       H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
       H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),

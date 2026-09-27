@@ -26,6 +26,7 @@ const Battle = (() => {
   // A hero's level raises Composure and the strength of his arguments; each
   // chapter's opponents grow tougher to match.
   const HERO_GROWTH = 0.07;
+  const GRUNT_CONVERT = 0.5;    // chance a rank-and-file opponent converts as he goes out
   let FOE_GROWTH = 0.12;
   let FOE_ZEAL_GROWTH = 0;      // extra Zeal depth per chapter (tuned below)
 
@@ -461,10 +462,8 @@ const Battle = (() => {
       const d = t.zeal - before;
       if (d) events.push({ key: t.key, text: (d > 0 ? "▲".repeat(d) : "▼".repeat(-d)) + " Zeal", color: d > 0 ? "#7ea4e6" : "#de5e55" });
       if (t.zeal > t.floor) return false;
-      if (t.side === "foe" && t.def.secretConvert) {
-        t.state = "converted"; t.since = 0;
-        events.push({ key: t.key, text: "Converted!", color: "#e8b94a", out: "converted" });
-      } else if (t.side === "foe") {
+      if (t.side === "foe" && (t.def.secretConvert || mayConvert(t))) convert(t, events);
+      else if (t.side === "foe") {
         t.state = "left"; t.since = 0;
         events.push({ key: t.key, text: "Leaves the debate", color: "#a9a6bd", out: "left" });
       } else {
@@ -495,9 +494,21 @@ const Battle = (() => {
       if (removed) events.push({ key: t.key, text: "Fact-Checked", color: "#de5e55" });
     }
 
+    // The rank and file: when one goes out of the debate, whether he concedes
+    // or leaves, there is an even chance he converts instead. The argument
+    // only clears the ground; the rest is the Holy Spirit's work, so the game
+    // leaves it to chance, not to the player. Bosses never convert (Joe
+    // Schmid has his own way home).
+    function mayConvert(t) { return t.def.grunt && rnd() < GRUNT_CONVERT; }
+    function convert(t, events) {
+      t.state = "converted"; t.since = 0;
+      events.push({ key: t.key, text: "Converted!", color: "#e8b94a", out: "converted" });
+    }
+
     function checkOut(t, events) {
       if (t.hp > 0 || !inPlay(t)) return;
-      if (t.side === "foe") { t.state = "walked"; t.since = 0; events.push({ key: t.key, text: "Concedes", color: "#a9a6bd", out: "walked" }); }
+      if (t.side === "foe" && mayConvert(t)) convert(t, events);
+      else if (t.side === "foe") { t.state = "walked"; t.since = 0; events.push({ key: t.key, text: "Concedes", color: "#a9a6bd", out: "walked" }); }
       else { t.state = "discouraged"; t.downs++; events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" }); }
     }
 
@@ -769,7 +780,7 @@ const BattleView = (() => {
         for (const a of actors) {
           const u = units[a.key];
           if (!u) continue;
-          if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign); continue; }
+          if (u.state === "converted" && now - u.outAt > 1.4) { sign(ctx, a.x, a.y, Math.min(1, (now - u.outAt - 1.4) * 2), u.def.sign || SIGNS[u.faction]); continue; }
           if (a.hidden) continue;
           if (u.statuses.dumbfounded > 0) stunStars(ctx, a.x + (a.dx || 0), a.y, t, Math.min(3, u.statuses.dumbfounded));
           // A new shield shows only once its "Shield of Faith" has popped up,
@@ -947,13 +958,21 @@ const BattleView = (() => {
       ctx.fill();
     }
 
+    // What each kind of convert's sign says, exact for where he's coming from:
+    // the unbaptized are baptized at the Easter Vigil; a baptized Protestant
+    // is received into full communion, not baptized again; Latter-day Saint
+    // baptism is not recognized as valid (CDF, 2001), so he is baptized.
+    const SIGNS = { atheist: ["OCIA", "EASTER VIGIL"], protestant: ["OCIA", "FULL COMMUNION"], lds: ["OCIA", "BAPTISM AT THE VIGIL"], islam: ["OCIA", "EASTER VIGIL"] };
+
     // The sign a converted opponent leaves behind. Someone baptized who comes
     // back to the Church goes to confession, not to OCIA; his entry says so.
     function sign(ctx, x, y, a, words) {
       const [big, small] = words || ["OCIA", "TUES · 7 PM"];
       ctx.globalAlpha = a;
+      ctx.font = "600 9px " + FONT;
+      const sw = ctx.measureText(small).width;
       ctx.font = "700 16px " + FONT;
-      const w = Math.max(72, ctx.measureText(big).width + 14);
+      const w = Math.max(72, ctx.measureText(big).width + 14, sw + 12);
       ctx.fillStyle = "#8a5a2b"; ctx.fillRect(x - 3, y - 40, 6, 40);
       ctx.fillStyle = "#1a1326"; ctx.fillRect(x - w / 2 - 2, y - 78, w + 4, 42);
       ctx.fillStyle = "#f7f1de"; ctx.fillRect(x - w / 2, y - 76, w, 38);
