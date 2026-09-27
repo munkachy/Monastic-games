@@ -407,9 +407,21 @@ const Art = (() => {
     if (s.outfit === "suit" || s.outfit === "clerical" || s.outfit === "whiteshirt") for (let y = 31; y < 39; y++) { g.put(X + 15, y, s.tie || dark); }
     // Arms at the sides: sleeves, then hands.
     const armL = pose === "raise" ? null : [[1, 3]];
-    for (let y = 29; y < 39; y++) { g.put(X + 1, y, dark); g.put(X + 2, y, clothes); g.put(X + 3, y, dark); }
-    g.put(X + 1, 39, s.skin); g.put(X + 2, 39, s.skin); g.put(X + 2, 40, s.skin);
-    if (pose === "reach") {
+    if (pose === "guard") {
+      // Arms folded across the chest, ready for whatever comes: the stance of
+      // someone who will answer back.
+      for (let y = 29; y < 35; y++) { g.put(X + 1, y, dark); g.put(X + 2, y, clothes); g.put(X + 3, y, dark); g.put(X + 28, y, dark); g.put(X + 29, y, clothes); g.put(X + 30, y, dark); }
+      for (let x = 1; x < 25; x++) { g.put(X + x, 35, clothes); g.put(X + x, 36, dark); }
+      for (let x = 8; x < 31; x++) { g.put(X + x, 33, clothes); g.put(X + x, 34, dark); }
+      g.put(X + 25, 35, s.skin); g.put(X + 26, 35, s.skin); g.put(X + 25, 36, s.skin);
+      g.put(X + 6, 33, s.skin); g.put(X + 7, 33, s.skin); g.put(X + 7, 34, s.skin);
+    } else {
+      for (let y = 29; y < 39; y++) { g.put(X + 1, y, dark); g.put(X + 2, y, clothes); g.put(X + 3, y, dark); }
+      g.put(X + 1, 39, s.skin); g.put(X + 2, 39, s.skin); g.put(X + 2, 40, s.skin);
+    }
+    if (pose === "guard") {
+      // (drawn above)
+    } else if (pose === "reach") {
       for (let x = 28; x < 38; x++) { g.put(X + x - 4, 31, clothes); g.put(X + x - 4, 32, clothes); g.put(X + x - 4, 33, dark); }
       g.put(X + 34, 31, s.skin); g.put(X + 35, 31, s.skin); g.put(X + 34, 32, s.skin); g.put(X + 35, 32, s.skin);
     } else if (pose === "raise") {
@@ -420,8 +432,8 @@ const Art = (() => {
       g.put(X + 29, 39, s.skin); g.put(X + 30, 39, s.skin); g.put(X + 29, 40, s.skin);
     }
     // Legs, or a robe to the ground.
-    const stepL = pose === "walkA" ? -2 : pose === "walkB" ? 1 : 0;
-    const stepR = pose === "walkA" ? 1 : pose === "walkB" ? -2 : 0;
+    const stepL = pose === "walkA" ? -2 : pose === "walkB" ? 1 : pose === "guard" ? -1 : 0;
+    const stepR = pose === "walkA" ? 1 : pose === "walkB" ? -2 : pose === "guard" ? 1 : 0;
     if (robe) {
       for (let y = 39; y < 50; y++) {
         const half = 11 + Math.floor((y - 39) / 4);
