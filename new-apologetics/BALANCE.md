@@ -264,3 +264,22 @@ about ±9 points from their mission's average, within noise for most), and
 what does show favours stacking attackers: Builders and Encouragers come out
 slightly below average, because debates of about five rounds leave little
 time for shields and healing to pay off.
+
+## Test: stronger hero shields (and healing)
+
+New knobs HERO_SHIELD and HERO_HEAL (tune "heroShield", "heroHeal"; both 1,
+so no change in play) scale only the heroes' own shields, podiums and
+healing. Normal, smart bot, 40 runs per debate:
+
+| Setting | Regular | Boss | Spitzer | Fradd | Zember | Mary Grace |
+|---|---|---|---|---|---|---|
+| As now | 87 | 76 | −13 | −6 | −5 | +24 |
+| Shields ×1.5 | 90 | 82 | −7 | −3 | +1 | +20 |
+| Shields ×2 | 88 | 80 | −7 | −4 | +2 | +16 |
+| Shields ×2, healing ×1.5 | 91 | 87 | −8 | −2 | +1 | +18 |
+
+(Hero columns: win % above or below that debate's average with the hero on
+the team; about ±4 is noise.) Stronger shields make the game easier and pull
+the support heroes up a few points, but not level: teams without a Builder
+still do no worse. Debates are decided by how fast the other side is worn
+down, and a shield only buys time. Sr. Mary Grace is the real outlier.
