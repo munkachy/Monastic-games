@@ -276,10 +276,12 @@ const Battle = (() => {
           if (e.allyZeal && !done.has("allyZeal")) { done.add("allyZeal"); for (const f of friends(u).filter(inPlay)) zeal(f, e.allyZeal, s, events); }
           if (e.friendsCleanse && !done.has("fc")) { done.add("fc"); for (const f of friends(u)) f.statuses[e.friendsCleanse] = 0; }
           if (e.randomLift) {
-            const lifts = [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.25, turns: 3 }, { heal: 0.2 }];
+            const lifts = [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.2, turns: 3 }, { heal: 0.2 }];
             const l = lifts[Math.floor(rnd() * lifts.length)];
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
-            if (l.shield) { t.shield = { amt: Math.round(u.care * l.shield * CARE_K), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+            // Free-for-All Friday's shield is sized from the one receiving it,
+            // not from Trent's Care (he has almost none): a fifth of his Composure.
+            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1 }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -553,7 +555,7 @@ const Battle = (() => {
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
       if (e.onBreak) out.push("Zeal up if it puts someone out");
       if (e.onBreakCloak) out.push("Goes Undercover if it puts someone out");
-      if (e.randomLift) out.push("A random lift for each");
+      if (e.randomLift) out.push("A lift for each, picked at random: Attack Up, Crit Up, a Shield of Faith, or Composure back");
       if (e.friendsCleanse) out.push("Frees friends from being " + (LABELS[e.friendsCleanse] || e.friendsCleanse));
       if (e.summon) out.push("Calls in help");
     }
