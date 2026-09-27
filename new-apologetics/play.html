@@ -52,6 +52,7 @@
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel-2); border: 2px solid var(--gold); color: var(--text); font: 600 14px/1.2 var(--display); padding: 10px 14px; border-radius: 6px; z-index: 10; }
   .bar button.test-tag { min-height: 32px; border: none; margin-left: 0; cursor: pointer; }
   .bar .test-tag { font: 600 11px/1 var(--display); color: var(--night); background: var(--green); padding: 4px 6px; border-radius: 3px; }
+  .bar .test-tag.off { background: var(--panel-2); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
   .coach { margin: 0; padding: 12px 14px; background: #2e2a18; border: 2px solid var(--gold); border-radius: 6px; font-size: 15px; }
   .coach b { font-family: var(--display); color: var(--gold); font-weight: 600; }
   .hero-info { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
@@ -65,6 +66,16 @@
   .hero-info .about { margin: 0; font-size: 14px; }
   .hero-info li .what { font-size: 13px; color: var(--muted); margin: 2px 0 4px 20px; }
   .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
+  .who { margin: 0; font-size: 15px; }
+  .who b { color: var(--gold); }
+  .profiles { display: grid; gap: 8px; width: 100%; }
+  .profiles button { display: grid; gap: 3px; text-align: left; }
+  .profiles button small { font: 600 10px/1.3 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+  .new-player { display: grid; gap: 8px; width: 100%; }
+  .new-player label { display: grid; gap: 4px; font: 600 12px/1.2 var(--display); color: var(--muted); }
+  .new-player input { font: 400 16px/1.2 var(--body); padding: 10px 12px; border-radius: 4px; border: 2px solid var(--line); background: var(--panel-2); color: var(--text); }
+  .record { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+  .record b { color: var(--text); }
   .diff-pick { display: grid; gap: 8px; }
   .diff-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
   .diff-row button { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; font-size: 12px; position: relative; }
@@ -154,7 +165,7 @@
 <header class="bar">
   <a class="home" href="./">New Apologetics</a>
   <span class="wip">Work in progress · under review</span>
-  <button class="test-tag" id="test-tag" hidden title="Developer mode is on. Tap to turn it off.">Dev ✕</button>
+  <button class="test-tag" id="test-tag" hidden aria-pressed="false" title="Developer mode: every chapter, hero, move and book open; nothing earned is kept.">Dev: off</button>
   <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
 </header>
 
@@ -164,8 +175,10 @@
     <h1 id="title-name">New Apologetics</h1>
     <canvas id="title-cast" width="640" height="130" aria-hidden="true"></canvas>
     <p>A new era in Catholic apologetics has begun, and these are the apologists leading the way. Build your team, take on seven chapters of debates, and watch the story unfold between battles. Every debater starts at level 1; play them to discover what each one does best. Wear down an opponent's Composure or his Zeal and he's out of the debate. Your part is to clear the ground; the conversions are the Holy Spirit's work, so watch for them.</p>
+    <p class="who" id="who"></p>
     <div class="row">
       <button class="primary" id="play">Play</button>
+      <button id="switch-player">Switch player</button>
       <button id="reset">Start over</button>
     </div>
     <div style="justify-self:stretch">
@@ -176,10 +189,26 @@
   </div>
 </section>
 
+<section id="s-profile" class="screen" hidden>
+  <div class="title-card">
+    <span class="label">New Apologetics</span>
+    <h2>Who's playing?</h2>
+    <div class="profiles" id="profiles"></div>
+    <form id="new-player" class="new-player">
+      <span class="label">New player</span>
+      <label>Name <input id="np-name" required maxlength="40" autocomplete="name"></label>
+      <label>Email <input id="np-email" type="email" maxlength="80" autocomplete="email"></label>
+      <p class="note" style="margin:0">Your name and email stay on this device. Each player has a separate saved game.</p>
+      <button class="primary" type="submit">Start</button>
+    </form>
+  </div>
+</section>
+
 <section id="s-map" class="screen" hidden>
   <div>
     <span class="label">Chapters</span>
     <h2>Choose a mission</h2>
+    <p class="record" id="record"></p>
   </div>
   <p class="coach" id="map-coach" hidden></p>
   <div id="chapters" class="screen" style="padding:0"></div>
@@ -226,14 +255,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927s"></script>
-<script src="audio.js?v=20260927s"></script>
-<script src="art.js?v=20260927s"></script>
-<script src="moves.js?v=20260927s"></script>
-<script src="story.js?v=20260927s"></script>
-<script src="data.js?v=20260927s"></script>
-<script src="lines.js?v=20260927s"></script>
-<script src="battle.js?v=20260927s"></script>
+<script src="chants.js?v=20260927u2"></script>
+<script src="audio.js?v=20260927u2"></script>
+<script src="art.js?v=20260927u2"></script>
+<script src="moves.js?v=20260927u2"></script>
+<script src="story.js?v=20260927u2"></script>
+<script src="data.js?v=20260927u2"></script>
+<script src="lines.js?v=20260927u2"></script>
+<script src="battle.js?v=20260927u2"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -264,15 +293,30 @@
       ["g-doctrine", "Doctrine", "The body is not a product: it is the person, made a gift. Pornography does grave injury to the dignity of everyone involved, and makes them objects of pleasure and profit for others (CCC 2354; 1 Corinthians 6:19–20)."]],
     reformed: [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]],
+    finale: [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
+      ["g-doctrine", "Scripture", "“I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6)."]],
     epilogue: [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]],
   };
 
   // ---- Saving ------------------------------------------------------------------------
 
-  const SAVE_KEY = "new-apologetics-save";
+  // Players: several on one device, each with a separate saved game. A
+  // profile is a name and an email, kept only in this browser.
+  const PROFILES_KEY = "new-apologetics-profiles";
+  const LEGACY_KEY = "new-apologetics-save";      // the single save from before profiles
+  function loadProfiles() {
+    try { const p = JSON.parse(localStorage.getItem(PROFILES_KEY)); if (p && Array.isArray(p.list)) return p; } catch (e) { /* no storage */ }
+    return { list: [], current: null };
+  }
+  let profiles = loadProfiles();
+  const storeProfiles = () => { try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); } catch (e) { /* no storage */ } };
+  const me = () => profiles.list.find((x) => x.id === profiles.current) || null;
+  const keyOf = (id) => "new-apologetics-save:" + id;
+  const SAVE_KEY_NOW = () => keyOf(profiles.current);
   function load() {
+    if (!profiles.current) return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true };
     try {
-      const s = JSON.parse(localStorage.getItem(SAVE_KEY));
+      const s = JSON.parse(localStorage.getItem(SAVE_KEY_NOW()));
       if (s && s.stars) {
         if (!s.xp) s.xp = {};
         // Who has debated. Older saves kept experience only for heroes who had.
@@ -293,10 +337,10 @@
     try {
       let out = save;
       if (save.test) {
-        out = JSON.parse(localStorage.getItem(SAVE_KEY)) || { stars: {}, seen: {}, team: [], xp: {} };
+        out = JSON.parse(localStorage.getItem(SAVE_KEY_NOW())) || { stars: {}, seen: {}, team: [], xp: {} };
         out.test = true; out.music = save.music; out.difficulty = save.difficulty;
       }
-      localStorage.setItem(SAVE_KEY, JSON.stringify(out));
+      if (profiles.current) localStorage.setItem(SAVE_KEY_NOW(), JSON.stringify(out));
     } catch (e) { /* no storage */ }
   }
 
@@ -307,7 +351,17 @@
     return ch.missions.length ? stars(ci, ch.missions.length - 1) > 0 : !!save.seen[ch.id + ":before"];
   }
   // Testing mode opens every chapter, hero and move, for trying things out.
-  const chapterOpen = (ci) => save.test || ci === 0 || chapterDone(ci - 1);
+  // After the tutorial every story is open, in any order. The final chapter
+  // opens once all of them are done, and the epilogue after it.
+  const STORIES = C.map((ch, ci) => ci).filter((ci) => ci > 0 && !C[ci].final && C[ci].id !== "epilogue");
+  const FINAL = C.findIndex((ch) => ch.final);
+  const storiesDone = () => STORIES.filter(chapterDone).length;
+  function chapterOpen(ci) {
+    if (save.test || ci === 0) return true;
+    if (C[ci].final) return storiesDone() === STORIES.length;
+    if (C[ci].id === "epilogue") return FINAL >= 0 ? chapterDone(FINAL) : storiesDone() === STORIES.length;
+    return chapterDone(0);
+  }
   const missionOpen = (ci, mi) => chapterOpen(ci) && (save.test || mi === 0 || stars(ci, mi - 1) > 0);
   function roster() {
     if (save.test) return Object.keys(HEROES).filter((h) => !HEROES[h].guest);
@@ -440,10 +494,15 @@
   paintMusic();
 
   // Developer mode: every chapter, hero, move and book open, and nothing
-  // earned is kept. A secret switch: tap the title on the first screen seven
-  // times, quickly. The same again turns it off.
+  // earned is kept. A developer profile has a Dev switch in the top bar. To
+  // make a profile a developer's, tap the title on the first screen seven
+  // times, quickly (once; after that the switch is always there).
   function paintTest() {
-    $("test-tag").hidden = !save.test;
+    const dev = !!(me() && me().dev);
+    $("test-tag").hidden = !dev;
+    $("test-tag").textContent = "Dev: " + (save.test ? "on" : "off");
+    $("test-tag").setAttribute("aria-pressed", String(!!save.test));
+    $("test-tag").classList.toggle("off", !save.test);
   }
   function toast(msg) {
     const t = document.createElement("div");
@@ -457,14 +516,15 @@
     taps = taps.filter((x) => now - x < 3000).concat(now);
     if (taps.length < 7) return;
     taps = [];
+    if (!me()) return;
+    if (!me().dev) { me().dev = true; storeProfiles(); }
+    toggleTest();
+    toast(save.test ? "Developer mode on: every chapter, hero, move and book is open. Progress isn't saved. The Dev switch at the top turns it off." : "Developer mode off. Your real progress is back.");
+  });
+  // The Dev switch in the top bar, for a developer profile.
+  $("test-tag").addEventListener("click", () => {
     toggleTest();
     toast(save.test ? "Developer mode on: every chapter, hero, move and book is open. Progress isn't saved." : "Developer mode off. Your real progress is back.");
-  });
-  // The green Dev tag in the top bar turns it straight off.
-  $("test-tag").addEventListener("click", () => {
-    if (!save.test) return;
-    toggleTest();
-    toast("Developer mode off. Your real progress is back.");
     if (!$("s-map").hidden) showMap();
   });
   function toggleTest() {
@@ -481,7 +541,7 @@
 
   // ---- Screens and the clock -----------------------------------------------------------
 
-  const screens = ["s-title", "s-map", "s-scene", "s-team", "s-battle", "s-result", "s-cards"];
+  const screens = ["s-title", "s-profile", "s-map", "s-scene", "s-team", "s-battle", "s-result", "s-cards"];
   function show(id) {
     for (const s of screens) $(s).hidden = s !== id;
     window.scrollTo(0, 0);
@@ -522,6 +582,68 @@
     });
   }
 
+  // ---- Players and their record --------------------------------------------------------
+
+  function recordOf(sv) {
+    const r = (sv && sv.record) || null;
+    if (!r || !(r.won + r.lost)) return "";
+    const n = (x, one, many) => x + " " + (x === 1 ? one : many);
+    return n(r.won, "debate won", "debates won") + " · " + n(r.converted, "conversion", "conversions") + " · " + n(r.conceded, "argument won", "arguments won") + " (conceded) · " + n(r.left, "opponent", "opponents") + " left the debate · " + n(r.discouraged, "hero", "heroes") + " Discouraged";
+  }
+  function paintRecord() {
+    const t = recordOf(save);
+    $("record").hidden = !t || !!save.test;
+    $("record").innerHTML = "";
+    if (t) { const b = document.createElement("b"); b.textContent = "Your record: "; $("record").append(b, t); }
+  }
+  function paintWho() {
+    const p = me();
+    $("who").textContent = "";
+    if (!p) return;
+    $("who").append("Playing as ");
+    const b = document.createElement("b"); b.textContent = p.name; $("who").append(b);
+    const r = recordOf(save);
+    if (r) $("who").append(". " + r + ".");
+    $("play").textContent = Object.keys(save.stars).length ? "Continue" : "Play";
+  }
+  function usePlayer(id) {
+    profiles.current = id; storeProfiles();
+    save = load(); if (!save.xp) save.xp = {};
+    if (!save.music || !Sound.MODES.includes(save.music)) save.music = "both";
+    Sound.setMode(save.music); paintMusic(); paintTest(); paintWho();
+    show("s-title");
+  }
+  function showProfiles() {
+    const box = $("profiles");
+    box.textContent = "";
+    for (const p of profiles.list) {
+      const b = document.createElement("button");
+      let sv = null; try { sv = JSON.parse(localStorage.getItem(keyOf(p.id))); } catch (e) { /* none */ }
+      b.innerHTML = "<span></span><small></small>";
+      b.children[0].textContent = p.name + (p.id === profiles.current ? " (playing)" : "");
+      b.children[1].textContent = (p.email ? p.email + " · " : "") + (recordOf(sv) || "No debates yet");
+      b.addEventListener("click", () => usePlayer(p.id));
+      box.append(b);
+    }
+    $("np-name").value = ""; $("np-email").value = "";
+    show("s-profile");
+  }
+  $("new-player").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("np-name").value.trim();
+    if (!name) return;
+    const id = "p" + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+    profiles.list.push({ id, name, email: $("np-email").value.trim() });
+    // The first player on a device takes over the saved game from before
+    // there were players, so no progress is lost.
+    if (!profiles.migrated) {
+      profiles.migrated = true;
+      try { const old = localStorage.getItem(LEGACY_KEY); if (old) localStorage.setItem(keyOf(id), old); } catch (err) { /* no storage */ }
+    }
+    usePlayer(id);
+  });
+  $("switch-player").addEventListener("click", showProfiles);
+
   // ---- The map --------------------------------------------------------------------------
 
   function showMap() {
@@ -532,7 +654,7 @@
       const el = document.createElement("article");
       el.className = "chapter" + (open ? "" : " locked");
       el.innerHTML = `<span class="label"></span><h3></h3><div class="missions"></div><div class="row extra"></div>`;
-      el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
+      el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.final ? "Final chapter" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
       el.querySelector("h3").textContent = ch.title;
       const list = el.querySelector(".missions");
       ch.missions.forEach((m, mi) => {
@@ -569,6 +691,12 @@
         b.addEventListener("click", async () => { await showCards(ch.id); showMap(); });
         extra.append(b);
       }
+      if (ch.final && !open) {
+        const n = document.createElement("span");
+        n.className = "note";
+        n.textContent = "Opens when all " + STORIES.length + " stories are done (" + storiesDone() + " of " + STORIES.length + "). Every boss comes back, and it is the hardest debate in the game.";
+        extra.append(n);
+      }
       if (ch.guest && open) {
         const n = document.createElement("span");
         n.className = "note";
@@ -580,9 +708,10 @@
     const played = Object.keys(save.stars).length;
     coach("map-coach", save.test ? "" : !played
       ? "<b>Start here.</b> Tap <b>Tutorial</b> in the Prologue below. It walks you through your first debate, one step at a time."
-      : played === 1 && !stars(1, 0)
-        ? "<b>Well done!</b> New heroes have joined your roster. Tap <b>Mission 1</b> of Chapter 1 to begin the story."
+      : played === 1 && !storiesDone() && !STORIES.some((ci) => stars(ci, 0))
+        ? "<b>Well done!</b> New heroes have joined your roster, and every story is open now. Start with whichever you like: tap <b>Mission 1</b> of any chapter. When all " + STORIES.length + " are done, the final chapter opens."
         : "");
+    paintRecord();
     music("vespers", 0);
     show("s-map");
   }
@@ -989,7 +1118,11 @@
     // Chapter 1 gets only half the difficulty's extra toughness and at most
     // one reinforcement, before the team has its great moves.
     const reserve = ci === 0 || !grunts.length ? [] : Array.from({ length: ci === 1 ? Math.min(1, D.reserve) : D.reserve }, (_, k) => grunts[k % grunts.length]);
-    const b = Battle.create({ difficulty: dIdx, power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: foeIds, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
+    // Below the chapter's par level, the opponents come down to meet the team.
+    const own = team.filter((h) => !HEROES[h].guest);
+    const teamLevel = own.length ? own.reduce((t, h) => t + levels[h], 0) / own.length : 1;
+    const scaled = Battle.catchDown(m.level !== undefined ? m.level : ci, power, C[ci].par, teamLevel);
+    const b = Battle.create({ difficulty: dIdx, power: scaled.power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: foeIds, level: scaled.level, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");
@@ -1030,6 +1163,12 @@
     const st = out === "win" ? dIdx + 1 : 0;
     if (!save.converted) save.converted = {};
     for (const u of converted) save.converted[u.id] = true;
+    // The player's lifetime record (a stopped debate counts for nothing).
+    if (out === "win" || out === "lose") {
+      const rec = save.record || (save.record = { won: 0, lost: 0, converted: 0, conceded: 0, left: 0, discouraged: 0 });
+      rec[out === "win" ? "won" : "lost"]++;
+      rec.converted += converted.length; rec.conceded += walked.length; rec.left += left.length; rec.discouraged += downs;
+    }
     // Experience: only a win teaches, a boss most of all. A lost debate earns
     // nothing, so a team that isn't ready goes back and wins earlier debates.
     const gain = Math.round((out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : 0) * D.xp);
@@ -1201,10 +1340,9 @@
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
     save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, music: save.music, difficulty: save.difficulty }; store(); paintTest();
-    resetArmed = false; $("reset").textContent = "Progress erased";
+    resetArmed = false; $("reset").textContent = "Progress erased"; paintWho();
   });
-  if (Object.keys(save.stars).length) $("play").textContent = "Continue";
-  show("s-title");
+  if (me()) { paintWho(); show("s-title"); } else showProfiles();
   requestAnimationFrame(loop);
 })();
 </script>

@@ -195,7 +195,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260927s">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260927u2">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -220,6 +220,7 @@
           <tr><td><strong>Composure</strong></td><td>How long a debater keeps his cool. At zero, a hero is <b>Discouraged</b> and sits out until a friend encourages him back. Only a move that restores Composure can reach him: Matt Fradd’s Pints with Aquinas, Brian Holdsworth’s Beauty Will Save the World, or Cameron Bertuzzi’s Bayesian Update. Shields, boosts and Zeal pass him by.</td></tr>
           <tr><td><strong>Zeal</strong></td><td>Everyone starts at 0. Blue arrows up (to +3) when it rises, red arrows down when it falls. At the bottom, an opponent leaves the debate and a hero is <b>Discouraged</b>.</td></tr>
           <tr><td><strong>Backing up</strong></td><td>When someone argues, every teammate with Zeal at 0 or higher may jump in with their basic move, each on his own chance: a quarter at Zeal 0, up to seven in ten at +3. A fired-up team often piles in two or three strong, and the other side does the same. But when a hero is Discouraged, his friends are <b>Shaken</b> and each loses 1 Zeal, so one loss can stall the whole team.</td></tr>
+          <tr><td><strong>Players</strong></td><td>Several people can play on one device: each enters a name and an email and gets a separate saved game, with a lifetime record of debates won, conversions, arguments won, opponents who left, and heroes Discouraged. Names and emails stay on the device.</td></tr>
           <tr><td><strong>Stars</strong></td><td>Each debate remembers the hardest difficulty you have won it on: one star for Gentle, two for Normal, three for Hard, four for Very Hard, five for Crucible.</td></tr>
           <tr><td><strong>Level</strong></td><td>Only heroes who win a debate gain experience: a lost debate earns nothing, and the bench gains nothing. When a chapter is too hard, go back and win earlier debates to level up. Each level adds 7% to a hero’s Composure and to the strength of his arguments, and opens new moves. A hero who joins the roster later starts a level or two behind your regular team. Bring him along and he catches up fast: a hero debating beside higher-level teammates learns half as much again for each level behind the strongest, up to double.</td></tr>
           <tr><td><strong>💡 Move tips</strong></td><td>In a debate, tap the lightbulb on any move to see what it does, how often it can be used, and when it is worth using. It works on locked and waiting moves too, so you can plan ahead.</td></tr>
@@ -274,7 +275,7 @@
     <div class="lede">
       <span class="label">The opposition</span>
       <h2>Seven chapters, seven groups</h2>
-      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters.</p>
+      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. After the tutorial, every story is open: start with whichever interests you, and switch whenever you like. A team that arrives below a chapter’s usual level finds the opponents scaled down to meet it. When all seven are done, the final chapter opens: every boss comes back to the table, and it is the hardest debate in the game.</p>
     </div>
     <div class="factions" id="factions"></div>
   </section>
@@ -305,7 +306,7 @@
   <section>
     <div class="lede">
       <span class="label">The story</span>
-      <h2>Seven mysteries, told in cut scenes</h2>
+      <h2>Eight mysteries, told in cut scenes</h2>
       <p>Each chapter sets the team a mystery: a question they can't answer at first. A short scene after every battle moves the story along, one clue at a time, and the answer comes out only in the boss debate. When the team gets stuck, anyone on the roster can walk on and pitch in, even someone who wasn't in the last battle. Scott Hahn has a habit of arriving at exactly that moment. Tap the scene to read on.</p>
     </div>
     <div class="stage"><canvas id="story" width="640" height="360" tabindex="0" aria-label="A cut scene. Tap or press Enter to continue."></canvas></div>
@@ -339,12 +340,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260927s"></script>
-<script src="moves.js?v=20260927s"></script>
-<script src="story.js?v=20260927s"></script>
-<script src="data.js?v=20260927s"></script>
-<script src="lines.js?v=20260927s"></script>
-<script src="battle.js?v=20260927s"></script>
+<script src="art.js?v=20260927u2"></script>
+<script src="moves.js?v=20260927u2"></script>
+<script src="story.js?v=20260927u2"></script>
+<script src="data.js?v=20260927u2"></script>
+<script src="lines.js?v=20260927u2"></script>
+<script src="battle.js?v=20260927u2"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -666,6 +667,9 @@
     ["Scripture Alone?", "Reformed", "James White", "How do you answer sola scriptura in a way James White hasn't heard a thousand times? Grant him the canon, and ask for the verse that says the rule of faith changes when the last apostle dies.",
       [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
        ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]]],
+    ["The Great Debate", "Everyone", "James White", "Every opponent comes back to the table on one night. What do you say when you can't win them all? Opens once all seven stories are done; the hardest chapter in the game.",
+      [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
+       ["g-doctrine", "Scripture", "“I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6)."]]],
     ["One Fold", "Epilogue", "", "The Easter Vigil. Every opponent you reached comes back, and one of them is just visiting.",
       [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."]]],
   ];
