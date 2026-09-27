@@ -49,7 +49,7 @@ const Battle = (() => {
   // Difficulty, from Gentle to Crucible. Opponents get tougher (Composure)
   // and hit harder, think more sharply (how often they pick their best move
   // and best target), bring podiums more often, and pay more experience,
-  // as Legends' Hard and Doom do. Normal is the game as it was.
+  // Normal is the game as it was.
   // "Crucible": tested like gold in the fire (1 Peter 1:7).
   // hp, atk: multiply the opponents' Composure and Attack; zeal: extra Zeal
   // depth; resolve: extra chance to shrug off a Zeal loss; sharp: how often
@@ -567,7 +567,7 @@ const Battle = (() => {
     }
 
     // Reinforcements: when an opponent goes out, the next one waiting steps
-    // into the empty place (as in Legends' waves). Harder difficulties keep
+    // into the empty place. Harder difficulties keep
     // more in reserve.
     const reserve = (opts.reserve || []).slice();
     function reinforce() {
@@ -856,8 +856,8 @@ const BattleView = (() => {
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.def.podium || (u.side === "foe" ? o.coverKind || "podium" : "podium"));
           const x = a.x - 30;
           const y = a.y + 6;
-          // Composure, with any Shield of Faith added on the end in white, as
-          // Legends does it: when the two together pass full, the bar grows
+          // Composure, with any Shield of Faith added on the end in white:
+          // when the two together pass full, the bar grows
           // longer (up to half again), so the shield's strength is plain.
           const hpW = Math.round(60 * u.hp / u.maxHp);
           const shW = shield ? Math.min(90 - hpW, Math.max(2, Math.round(60 * shield.amt / u.maxHp))) : 0;

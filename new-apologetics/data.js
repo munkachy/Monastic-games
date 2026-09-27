@@ -100,7 +100,7 @@ const GameData = (() => {
       H("Let Love", "allies", 3, 0, [{ buff: "def", amt: 0.5, turns: 3 }, { zeal: 1 }]),
       H("Every Life Is Good", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1, chance: 0.5 }]),
     ] },
-    // Modelled on Sela: the quickest, working from cover.
+    // The quickest, working from cover.
     rose: { name: "Lila Rose", about: "The quickest debater on the roster, and she works best unseen. She goes Undercover: hard to single out, and hits barely reach her. From there, Live Action strikes all over the room. Anyone who Fact-Checks or Exposes blows her cover, so be careful with her against James White.", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
       H("Every Life", "foe", 0, 0, [{ dmg: 1.25 }, { onBreakCloak: 2 }]),
       H("Live Action", "random4", 3, 0, [{ dmg: 1.5 }, { zeal: -1, chance: 0.5 }]),
@@ -124,16 +124,14 @@ const GameData = (() => {
       H("Borde–Guth–Vilenkin", "foe", 4, 2, [{ dmg: 2.5, splash: 1.0 }, { status: "muted", turns: 3 }, { zeal: -1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "muse" }),
     ] },
-    // Modelled on the Gorn: unhurried and unshakable, with the heaviest blows.
+    // Unhurried and unshakable, with the heaviest blows.
     hahn: { name: "Scott Hahn", about: "Unhurried, and the hardest to shake on the roster, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }, skills: [
       H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
       H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
     ] },
-    // Joe Schmid, once he has come home. Modelled on Soji, who discovers who
-    // she really is and changes sides: Punch, Fighting Posture (Counter), Insightful
-    // Scan, Synthetic Beacon (cover and Zeal, more for a fellow synthetic; here, a
-    // fellow convert).
+    // Joe Schmid, once he has come home: a hit, a Rebuttal stance, a scan, and
+    // cover and Zeal for the team (more for a fellow convert).
     schmid: { name: "Joe Schmid", about: "Back home and arguing for the Church now. A builder who reasons from first principles: Steelman lets him answer back every objection while he braces himself, and the Contingency Argument exposes an opponent and blunts his arguments. Welcome Home puts a podium in front of a friend and fires him up, and fires up a fellow convert even more.", stats: [213, 73, 17, 110], traits: { care: 83, glance: [0.07, 0.21], crit: [0.04, 1.38], resolve: 0.07 }, skills: [
       H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.5 }]),
       H("Steelman", "self", 3, 0, [{ counter: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
@@ -145,9 +143,8 @@ const GameData = (() => {
       H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
       H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
     ] },
-    // Fr. Carlos Martins, exorcist. Modelled on Captain Pike: Phaser, Protect
-    // (taunt, and Morale for the team), Stand Up (heal, cleanse, Morale),
-    // Call to Action (Attack, Crit and Morale for everyone).
+    // Fr. Carlos Martins, exorcist: a hit, a call-out that lifts the team's
+    // Zeal, a team heal and cleanse, and Attack, Crit and Zeal for everyone.
     martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. Bring him to the New Age chapter, and to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
       H("Holy Water", "foe", 0, 0, [{ dmg: 1.0 }]),
       H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 3 }, { allyZeal: 1 }]),
@@ -155,9 +152,8 @@ const GameData = (() => {
       H("Treasures of the Church", "allies", 4, 2, [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { zeal: 2 }]),
     ] },
     // Kim Zember: Catholic speaker and author (Restless Heart), host of EWTN's
-    // Here I AM Stories. Modelled on Sylvia Tilly: Phaser, Antimatter Shield
-    // (shield for all), Nervous Ramble (taunt, Defense Up), Group Hug (heal,
-    // cleanse, Morale up).
+    // Here I AM Stories: a hit, a shield for all, a call-out with Defense Up,
+    // and a team heal and cleanse with Zeal up.
     zember: { name: "Kim Zember", about: "Warm, steady and hard to shake: she has heard every question and answers from her own story. Boldly Beloved shields the whole team. Here I Am steps forward so every opponent answers her, and she braces for it. Child of God brings back a Discouraged friend, clears every setback and fires up the team. She joins after the chapter Who Do You Say You Are?", stats: [350, 48, 15, 69], traits: { care: 113, glance: [0.07, 0.2], crit: [0.05, 1.3], resolve: 0.07 }, passive: { converts: ["zember"] }, skills: [
       H("Restless Heart", "foe", 0, 0, [{ dmg: 1.0 }]),
       H("Boldly Beloved", "allies", 3, 0, [{ shield: 0.3, turns: 3 }]),
@@ -165,9 +161,8 @@ const GameData = (() => {
       H("Child of God", "allies", 4, 2, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
     ] },
     // Brant Pitre: Scripture scholar (The Case for Jesus; Jesus and the Jewish
-    // Roots of the Eucharist). Tuvok isn't in the Legends data, so: Spock's kit
-    // (Phaser with Attack Down, Tricorder Wide Scan, the Vulcan Nerve Pinch that
-    // always stuns, Mind Meld) on the other Vulcan's numbers, T'Pol's.
+    // Roots of the Eucharist): a hit with Attack Down, Exposed on every
+    // opponent, a stun that never fails, and a crushing blow.
     pitre: { name: "Brant Pitre", about: "A scholar who reads Jesus in his own world, the Judaism of the first century, and so sees the big picture where others get lost in details. Very quick. The Big Picture exposes every opponent at once. The Son of Man never fails to leave an opponent dumbfounded, straight past any podium. The Case for Jesus lands a crushing blow and drains the opponent's Zeal. He joins after the chapter Misquoting Jesus?", stats: [200, 76, 9, 170], traits: { care: 60, glance: [0.12, 0.27], crit: [0.01, 1.14], resolve: 0.09 }, passive: { allies: { atk: 0.05 } }, skills: [
       H("Jewish Roots", "foe", 0, 0, [{ dmg: 1.0 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.25 }]),
       H("The Big Picture", "foes", 3, 0, [{ status: "examined", turns: 3 }]),
