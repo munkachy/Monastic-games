@@ -60,9 +60,9 @@ const Battle = (() => {
 
   // Difficulty, from Gentle to Crucible. Opponents get tougher (Composure)
   // and hit harder, think more sharply (how often they pick their best move
-  // and best target), bring podiums more often, and pay more experience,
-  // Normal is the game as it was.
-  // "Crucible": tested like gold in the fire (1 Peter 1:7).
+  // and best target), bring podiums more often, and pay more experience.
+  // Three steps, one star each: Gentle, Normal (the game as designed), and
+  // Crucible, tested like gold in the fire (1 Peter 1:7).
   // hp, atk: multiply the opponents' Composure and Attack; zeal: extra Zeal
   // depth; resolve: extra chance to shrug off a Zeal loss; sharp: how often
   // they pick their best move and target; cover: chance of each starting
@@ -70,9 +70,7 @@ const Battle = (() => {
   const DIFFICULTY = [
     { name: "Gentle", hp: 0.5, atk: 0.45, zeal: -2, closer: 0.5, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
     { name: "Normal", hp: 1, atk: 1, zeal: 0, resolve: 0, sharp: 0.6, cover: 0.35, reserve: 0, xp: 1, blurb: "The game as designed: you'll win most debates, but not without thinking." },
-    { name: "Hard", hp: 1, atk: 1, zeal: 0, resolve: 0.02, sharp: 0.7, cover: 0.45, reserve: 1, xp: 1.1, blurb: "Opponents pick their targets well, podiums turn up more often, and a fresh opponent waits to step in." },
-    { name: "Very Hard", hp: 1.25, atk: 1.12, zeal: 1, resolve: 0.05, sharp: 0.85, cover: 0.55, reserve: 1, xp: 1.2, blurb: "Every choice matters. Tougher opponents, sharper tactics. Bring the right team." },
-    { name: "Crucible", hp: 1.3, atk: 1.15, zeal: 1, resolve: 0.06, sharp: 0.95, cover: 0.65, reserve: 2, xp: 1.3, blurb: "Tested like gold in the fire (1 Peter 1:7). You may have to lose a few and come back stronger." },
+    { name: "Crucible", hp: 1.15, atk: 1.06, zeal: 1, resolve: 0.04, sharp: 0.8, cover: 0.5, reserve: 1, xp: 1.25, blurb: "Tested like gold in the fire (1 Peter 1:7). Tougher, sharper opponents, more podiums, and a fresh opponent waiting to step in. Win every debate here to open the epilogue." },
   ];
 
   function makeUnit(id, side, slot, def, level, diff) {

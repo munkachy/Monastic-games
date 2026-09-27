@@ -374,3 +374,20 @@ Level-6 jump with the starting six, Normal: 98 78 43 85 55 30 23 50 33
 (below par, and without the heroes who shield; Gentle is the way in).
 Team makeup: Holdsworth +9 (was +2), Fr. Mike +3 (was −3), Spitzer −5.
 Leaving out a Builder still costs nothing measurable.
+
+## Update: three difficulties (stars) instead of five
+
+Gentle ★, Normal ★★, Crucible ★★★. Before the change, measured in story
+order at par with the smart bot: Hard 69 / 57, Very Hard 55 / 41, old
+Crucible 39 / 31 (Gentle, simple bot: 98 / 99). The new Crucible sits
+between Hard and Very Hard: hp 1.15, atk 1.06, Zeal +1, resolve .04, sharp
+.8, podiums .5, one reinforcement, xp 1.25.
+
+New Crucible, smart bot: 62 / 56 at par; 75 / 64 two levels above par (the
+likelier case, after playing the game through on Normal); simple bot two
+levels above: 57 / 42. Normal unchanged: 83 / 77. Destiny's boss power
+2.2 → 2.0 (low at every difficulty: Normal 43–68 across runs).
+
+Saves convert once (threeSteps): Hard wins count as Normal, Very Hard and
+Crucible wins as Crucible; a saved choice of Hard becomes Normal, Very Hard
+or Crucible becomes Crucible. The epilogue needs every debate on Crucible.

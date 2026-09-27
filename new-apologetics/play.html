@@ -77,7 +77,7 @@
   .record { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
   .record b { color: var(--text); }
   .diff-pick { display: grid; gap: 8px; }
-  .diff-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .diff-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .diff-row button { display: grid; gap: 4px; justify-items: center; padding: 8px 4px; font-size: 12px; position: relative; }
   .diff-row button .st { color: var(--gold); font-size: 10px; letter-spacing: 1px; }
   .diff-row button[aria-checked="true"] { border-color: var(--gold); background: #3a3420; }
@@ -263,14 +263,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928h"></script>
-<script src="audio.js?v=20260928h"></script>
-<script src="art.js?v=20260928h"></script>
-<script src="moves.js?v=20260928h"></script>
-<script src="story.js?v=20260928h"></script>
-<script src="data.js?v=20260928h"></script>
-<script src="lines.js?v=20260928h"></script>
-<script src="battle.js?v=20260928h"></script>
+<script src="chants.js?v=20260928i"></script>
+<script src="audio.js?v=20260928i"></script>
+<script src="art.js?v=20260928i"></script>
+<script src="moves.js?v=20260928i"></script>
+<script src="story.js?v=20260928i"></script>
+<script src="data.js?v=20260928i"></script>
+<script src="lines.js?v=20260928i"></script>
+<script src="battle.js?v=20260928i"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -329,7 +329,7 @@
   const keyOf = (id) => "new-apologetics-save:" + id;
   const SAVE_KEY_NOW = () => keyOf(profiles.current);
   function load() {
-    if (!profiles.current) return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true };
+    if (!profiles.current) return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, threeSteps: true };
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY_NOW()));
       if (s && s.stars) {
@@ -338,11 +338,18 @@
         if (!s.played) { s.played = {}; for (const id of Object.keys(s.xp)) s.played[id] = true; }
         // Stars once counted a debate won without anyone Discouraged; now they
         // count the hardest difficulty it was won on. Earlier wins count as Normal.
-        if (!s.starsByDifficulty) { for (const k of Object.keys(s.stars)) if (s.stars[k] > 0) s.stars[k] = 2; s.starsByDifficulty = true; }
+        if (!s.starsByDifficulty) { for (const k of Object.keys(s.stars)) if (s.stars[k] > 0) s.stars[k] = 2; s.starsByDifficulty = true; s.threeSteps = true; }
+        // Five difficulties became three: Hard counts as Normal, Very Hard
+        // and the old Crucible as the new Crucible.
+        if (!s.threeSteps) {
+          for (const k of Object.keys(s.stars)) s.stars[k] = [0, 1, 2, 2, 3, 3][s.stars[k]] || 0;
+          if (s.difficulty !== undefined) s.difficulty = [0, 1, 1, 2, 2][s.difficulty] ?? 1;
+          s.threeSteps = true;
+        }
         return s;
       }
     } catch (e) { /* no storage */ }
-    return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true };
+    return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, threeSteps: true };
   }
   let save = load();
   if (!save.xp) save.xp = {};
@@ -445,18 +452,18 @@
   let coachStep = 0;
 
   // ---- Difficulty ---------------------------------------------------------------------------
-  // Five steps, Gentle to Crucible; it can be changed at any time and takes
+  // Three steps, Gentle, Normal and Crucible; it can be changed at any time and takes
   // effect in the next debate.
-  const difficulty = () => (save.difficulty === undefined ? 1 : save.difficulty);
+  const difficulty = () => Math.min(Battle.DIFFICULTY.length - 1, save.difficulty === undefined ? 1 : save.difficulty);
   // Chosen on the team screen, just before each debate, beside the best
   // difficulty this debate has been won on. The choice carries over to the
   // next debate. The tutorial goes no higher than Normal.
   function paintDifficulty(ci, mi) {
     const row = $("diff-row");
     row.textContent = "";
-    const cap = ci === 0 ? 1 : 4;
+    const cap = ci === 0 ? 1 : Battle.DIFFICULTY.length - 1;
     const best = stars(ci, mi);
-    const now = Math.min(cap, difficulty());
+    const now = Math.min(cap, difficulty(), Battle.DIFFICULTY.length - 1);
     Battle.DIFFICULTY.forEach((d, i) => {
       const b = document.createElement("button");
       b.setAttribute("role", "radio");
@@ -692,7 +699,7 @@
         // Stars: the hardest difficulty this debate has been won on.
         const s = stars(ci, mi);
         const st = b.querySelector(".stars");
-        st.textContent = "★".repeat(s) + "☆".repeat(5 - s);
+        st.textContent = "★".repeat(s) + "☆".repeat(Battle.DIFFICULTY.length - s);
         if (s) {
           const best = document.createElement("em");
           best.textContent = "Best: " + Battle.DIFFICULTY[s - 1].name;
@@ -1223,7 +1230,7 @@
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");
     const left = foes.filter((u) => u.state === "left");
-    // Stars: the difficulty it was won on, one for Gentle up to five for Crucible.
+    // Stars: the difficulty it was won on, one for Gentle up to three for Crucible.
     const downs = b.heroes().reduce((n, u) => n + u.downs, 0);
     const st = out === "win" ? dIdx + 1 : 0;
     if (!save.converted) save.converted = {};
@@ -1267,7 +1274,7 @@
     h.textContent = win ? "Well argued!" : r.out === "stopped" ? "You left the debate" : "Not this time";
     const s = document.createElement("div");
     s.className = "stars";
-    s.textContent = win ? "★".repeat(r.stars) + "☆".repeat(5 - r.stars) : "";
+    s.textContent = win ? "★".repeat(r.stars) + "☆".repeat(Battle.DIFFICULTY.length - r.stars) : "";
     const dn = document.createElement("p");
     dn.className = "label";
     dn.textContent = win ? "Won on " + Battle.DIFFICULTY[r.stars - 1].name + (r.stars > r.best ? (r.best ? " · a new best" : "") : " · best so far: " + Battle.DIFFICULTY[r.best - 1].name) : "";
@@ -1404,7 +1411,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, music: save.music, difficulty: save.difficulty }; store(); paintTest();
+    save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, threeSteps: true, music: save.music, difficulty: save.difficulty }; store(); paintTest();
     resetArmed = false; $("reset").textContent = "Progress erased"; paintWho();
   });
   if (me()) { paintWho(); show("s-title"); } else showProfiles();
