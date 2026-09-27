@@ -349,10 +349,15 @@ const Story = (() => {
         const pose = walking ? (Math.floor(t * 8) % 2 ? "walkA" : "walkB") : talking && mark === "idea" ? "raise" : "stand";
         const bob = talking && !walking ? Math.round(Math.abs(Math.sin(t * 6)) * 2) : 0;
         const g = Art.figure(Art.CAST[c.id], pose);
-        ctx.globalAlpha = talking || !speaker ? 1 : 0.75;
+        // Everyone is drawn solid; the one speaking bobs, and a small gold
+        // arrow over the head marks them.
         ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(x - 30, 246, 60, 6);
         Art.paint(ctx, g, Math.round(x - 40), 250 - 104 - bob, 2, c.side === "right");
-        ctx.globalAlpha = 1;
+        if (talking && !walking) {
+          const ay = 250 - 104 - 14 - bob + Math.round(Math.sin(t * 5) * 2);
+          ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.moveTo(x - 8, ay - 2); ctx.lineTo(x + 8, ay - 2); ctx.lineTo(x, ay + 8); ctx.fill();
+          ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.moveTo(x - 6, ay - 1); ctx.lineTo(x + 6, ay - 1); ctx.lineTo(x, ay + 6); ctx.fill();
+        }
         if (talking && mark) drawMark(mark, x, 250 - 104 - 16, t);
       }
       drawBox(speaker, text, t);

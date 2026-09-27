@@ -50,6 +50,7 @@
   .bar .music + button { margin-left: 0; }
   .bar .music.off { color: var(--muted); }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--panel-2); border: 2px solid var(--gold); color: var(--text); font: 600 14px/1.2 var(--display); padding: 10px 14px; border-radius: 6px; z-index: 10; }
+  .bar button.test-tag { min-height: 32px; border: none; margin-left: 0; cursor: pointer; }
   .bar .test-tag { font: 600 11px/1 var(--display); color: var(--night); background: var(--green); padding: 4px 6px; border-radius: 3px; }
   .coach { margin: 0; padding: 12px 14px; background: #2e2a18; border: 2px solid var(--gold); border-radius: 6px; font-size: 15px; }
   .coach b { font-family: var(--display); color: var(--gold); font-weight: 600; }
@@ -135,7 +136,7 @@
 <header class="bar">
   <a class="home" href="./">New Apologetics</a>
   <span class="wip">Work in progress · under review</span>
-  <span class="test-tag" id="test-tag" hidden>Dev</span>
+  <button class="test-tag" id="test-tag" hidden title="Developer mode is on. Tap to turn it off.">Dev ✕</button>
   <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
 </header>
 
@@ -202,14 +203,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926q"></script>
-<script src="audio.js?v=20260926q"></script>
-<script src="art.js?v=20260926q"></script>
-<script src="moves.js?v=20260926q"></script>
-<script src="story.js?v=20260926q"></script>
-<script src="data.js?v=20260926q"></script>
-<script src="lines.js?v=20260926q"></script>
-<script src="battle.js?v=20260926q"></script>
+<script src="chants.js?v=20260926r"></script>
+<script src="audio.js?v=20260926r"></script>
+<script src="art.js?v=20260926r"></script>
+<script src="moves.js?v=20260926r"></script>
+<script src="story.js?v=20260926r"></script>
+<script src="data.js?v=20260926r"></script>
+<script src="lines.js?v=20260926r"></script>
+<script src="battle.js?v=20260926r"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -370,6 +371,13 @@
     taps = [];
     toggleTest();
     toast(save.test ? "Developer mode on: every chapter, hero, move and book is open. Progress isn't saved." : "Developer mode off. Your real progress is back.");
+  });
+  // The green Dev tag in the top bar turns it straight off.
+  $("test-tag").addEventListener("click", () => {
+    if (!save.test) return;
+    toggleTest();
+    toast("Developer mode off. Your real progress is back.");
+    if (!$("s-map").hidden) showMap();
   });
   function toggleTest() {
     if (save.test) {
