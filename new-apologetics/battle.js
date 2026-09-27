@@ -495,7 +495,7 @@ const Battle = (() => {
       if (e.dmg) {
         const total = e.dmg * (e.hits || 1);
         const size = total < 0.9 ? "Light hit" : total < 1.4 ? "Hit" : total < 2.2 ? "Strong hit" : total < 3.5 ? "Heavy hit" : "Crushing hit";
-        let t = (e.hits > 1 ? e.hits + " quick hits, " + size.toLowerCase() + " in all" : size) + " on Composure";
+        let t = e.hits > 1 ? e.hits + " quick hits on Composure (together, a " + size.toLowerCase() + ")" : size + " on Composure";
         if (e.vs) t += e.vs[0] === "guarded" ? ", harder against a shield or podium" : ", harder against " + (e.vs[0] === "doubting" ? "the Doubting" : e.vs[0]);
         if ((sk.pierce || []).includes("cover")) t += ", straight past any podium";
         if (e.splash) t += ", with some for everyone else";
@@ -518,10 +518,10 @@ const Battle = (() => {
       if (e.onBreak) out.push("Zeal up if it puts someone out");
       if (e.onBreakCloak) out.push("Goes Undercover if it puts someone out");
       if (e.randomLift) out.push("A random lift for each");
-      if (e.friendsCleanse) out.push("Frees friends from " + e.friendsCleanse);
+      if (e.friendsCleanse) out.push("Frees friends from being " + (LABELS[e.friendsCleanse] || e.friendsCleanse));
       if (e.summon) out.push("Calls in help");
     }
-    return out.join(" · ");
+    return [...new Set(out)].join(" · ");
   }
 
   return { create, label, run, levelOf, xpFor, unlockLevel, describe };
