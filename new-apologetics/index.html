@@ -195,7 +195,7 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260928b">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260928c">Play the game ▸</a></p>
   </header>
 
   <section class="spotlight">
@@ -226,6 +226,7 @@
           <tr><td><strong>💡 Move tips</strong></td><td>In a debate, tap the lightbulb on any move to see what it does, how often it can be used, and when it is worth using. It works on locked and waiting moves too, so you can plan ahead.</td></tr>
           <tr><td><strong>Speed</strong></td><td>Everyone acts once a round, fastest first, and speed never changes. Heroes who act early tend to carry less Composure; those who carry the most take longer to act. Going first lets you shield the team or finish off an opponent before he answers.</td></tr>
           <tr><td><strong>Difficulty</strong></td><td>Five steps, chosen just before each debate, beside the best you have won that debate on: Gentle (for the story), Normal, Hard, Very Hard and Crucible (“tested like gold in the fire,” 1 Peter 1:7). Harder steps bring tougher, sharper opponents, more podiums and reinforcements, and a little more experience. Gentle is much softer and earns a quarter less: the way to play a chapter above your level. The tutorial is always gentle.</td></tr>
+          <tr><td><strong>Closing argument</strong></td><td>Every boss has one. On his second turn, and every third turn after, he spends his turn winding up: a red warning flashes over his head. On his next turn it hits your whole team. Put up a Shield of Faith in time, or leave him Dumbfounded or Muted while he winds up, and it never comes. The first bosses’ closing arguments are gentle; James White’s is the hardest.</td></tr>
           <tr><td><strong>Reinforcements</strong></td><td>On Hard and above, fresh opponents wait in reserve. When one goes out, the next walks in to take his place. The round counter shows how many are still waiting.</td></tr>
           <tr><td><strong>Podiums</strong></td><td>Some debaters start behind something: a podium, a soapbox, a stepladder at Speakers' Corner, a pulpit, a streamer's desk. It changes every battle. It takes the hits meant for the debater until it falls. A few moves go straight past it, a few hit it extra hard, and lowering Zeal gets past it every time.</td></tr>
           <tr><td><strong>Sent in</strong></td><td>A few moves send a teammate in to answer at once with their basic move, out of turn. Best used on a friend who hits hard but acts late.</td></tr>
@@ -237,7 +238,7 @@
           <tr><td><strong>Exposed</strong></td><td>Takes harder hits.</td></tr>
           <tr><td><strong>Fact-Check</strong></td><td>Removes a buff.</td></tr>
           <tr><td><strong>Examen</strong></td><td>Removes every debuff.</td></tr>
-          <tr><td><strong>Shield of Faith</strong></td><td>Absorbs hits for 3 turns. How strong it is depends on the hero who gives it. You can see it as a shimmering bubble around the debater, and as a white section added to the end of the Composure bar: the longer the white, the more it can take.</td></tr>
+          <tr><td><strong>Shield of Faith</strong></td><td>Absorbs hits for 3 turns, and while it holds, the debater behind it argues more boldly: his arguments land harder. How strong it is depends on the hero who gives it. You can see it as a shimmering bubble around the debater, and as a white section added to the end of the Composure bar: the longer the white, the more it can take.</td></tr>
           <tr><td><strong>Muted</strong></td><td>Can use only his basic move.</td></tr>
           <tr><td><strong>Rebuttal</strong></td><td>For a few turns, whenever an opponent's move hits this hero, he answers the attacker at once with his basic move, even against a move aimed at the whole team (but not while Dumbfounded). Pair it with a move that makes everyone answer him, as Ethan Muse does.</td></tr>
         </tbody>
@@ -342,12 +343,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260928b"></script>
-<script src="moves.js?v=20260928b"></script>
-<script src="story.js?v=20260928b"></script>
-<script src="data.js?v=20260928b"></script>
-<script src="lines.js?v=20260928b"></script>
-<script src="battle.js?v=20260928b"></script>
+<script src="art.js?v=20260928c"></script>
+<script src="moves.js?v=20260928c"></script>
+<script src="story.js?v=20260928c"></script>
+<script src="data.js?v=20260928c"></script>
+<script src="lines.js?v=20260928c"></script>
+<script src="battle.js?v=20260928c"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -585,6 +586,7 @@
         ["The Fawn in the Forest", "All foes", "3", "Flustered on each, and −1 Zeal. A fawn burns to death in a forest fire, alone. What was the point?"],
         ["Euthyphro", "1 foe", "3 (starts 1)", "Dumbfounded for 2 turns. Is a thing good because God wills it, or does God will it because it is good? Fr. Pine's Distinguo cancels it: God's own nature is the Good."],
         ["Charitable Skeptic", "Self", "4 (starts 2)", "Recovers Composure and gains Major Defense Up.", true],
+        ["The Problem of Evil", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Then why the fawn? Why any of it?” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it. The gentlest of them all."],
       ],
     },
     {
@@ -596,6 +598,7 @@
         ["Are You a Good Person?", "All foes", "3", "Every foe is Exposed. Have you ever told a lie?"],
         ["If You Died Tonight", "All foes", "3 (starts 1)", "−1 Zeal on each. Would you go to heaven?"],
         ["Faith Alone", "Self", "4 (starts 2)", "Arguments from works do nothing to him for 2 turns. Scott Hahn's Covenant Is Family passes through it.", true],
+        ["Judgment Day", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Liars, thieves. Guilty. Judgment Day!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -607,6 +610,7 @@
         ["Great Apostasy", "All foes", "3", "−1 Zeal on each, and Attack Down. The claim that true authority left the earth after the apostles."],
         ["Burning in the Bosom", "Self", "3", "Recovers Composure, and for 2 turns every argument lands at half strength. A personal testimony is not easily argued away."],
         ["Eternal Progression", "Self", "4 (starts 2)", "Attack Up that grows each turn, up to three times.", true],
+        ["The First Vision", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “A pillar of light. A new dispensation.” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -618,6 +622,7 @@
         ["Tahrif", "All foes", "3", "Fact-Checks buffs that came from Scripture. The claim that the Bible was corrupted."],
         ["Tawhid", "Self", "4", "Resists arguments about the Trinity for 2 turns. The absolute oneness of God."],
         ["The Crowd Gathers", "Summon", "4 (starts 2)", "Calls two more debaters from the crowd.", true],
+        ["Three Is Not One", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “One plus one plus one is three!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -629,6 +634,7 @@
         ["Apollo Loves You", "All foes", "3", "Flustered on each, and −1 Zeal. Sweet words about gods who never promised any love."],
         ["Mercury in Retrograde", "All foes", "3 (starts 1)", "Attack Down for 3 turns. Blame the planets."],
         ["Protection Circle", "Self", "4 (starts 2)", "Recovers Composure and gains Major Defense Up.", true],
+        ["Full Moon Ritual", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Feel that? The goddess is here.” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -640,6 +646,7 @@
         ["Define 'Person'", "All foes", "3", "Every foe is Exposed. What exactly is a person?"],
         ["Life Support", "1 foe", "3 (starts 1)", "Hit, and a 50% chance of Dumbfounded for 2 turns. His own analogy: is ending a pregnancy like unplugging life support?"],
         ["No Experiences, No Harm", "All foes", "4 (starts 2)", "−1 Zeal on each, and a 50% chance of Flustered. His criterion: no conscious experience, no one harmed.", true],
+        ["Speed Round", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Twelve points. Sixty seconds. Answer all of them.” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -651,6 +658,7 @@
         ["Jesus Never Mentioned It", "All foes", "3", "−1 Zeal on each, and Attack Down for 2 turns."],
         ["Born This Way", "1 foe", "3 (starts 1)", "Hit, and a 50% chance of Dumbfounded for 2 turns."],
         ["Radical Welcome", "Self", "4 (starts 2)", "Recovers Composure and gains Major Defense Up.", true],
+        ["The Open Letter", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Four hundred pastors signed it.” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -662,6 +670,7 @@
         ["More Variants Than Words", "All foes", "3", "Flustered on each, and −1 Zeal."],
         ["Anonymous Gospels", "All foes", "3 (starts 1)", "Fact-Checks a boost on each, and Attack Down for 2 turns."],
         ["How Jesus Became God", "1 foe", "4 (starts 2)", "Hit, and a 50% chance of Dumbfounded for 2 turns.", true],
+        ["Four Hundred Thousand Variants", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “More variants than words in the New Testament!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it."],
       ],
     },
     {
@@ -673,6 +682,7 @@
         ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Attack Down for 2 turns. Only Scripture counts."],
         ["Eternal Security", "Self", "4", "His Zeal cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Is That in the Bible? passes through it."],
         ["Debate Challenge", "All foes", "4 (starts 2)", "Heavy hit on each, and +1 Zeal to himself.", true],
+        ["Cross-Examination", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it hits your whole team, and −1 Zeal on each. “Yes or no. Yes or no!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, he never lands it. The hardest of them all."],
       ],
     },
   ];
@@ -746,7 +756,7 @@
       if (ult || i === 3) li.className = "ult";
       li.innerHTML = `<span class="name"></span><span class="meta"></span><span class="fx"></span>`;
       li.querySelector(".name").textContent = name;
-      li.querySelector(".meta").textContent = target + " · cd " + cd;
+      li.querySelector(".meta").textContent = target + (/^\d/.test(cd) ? " · cd " + cd : " · " + cd);
       li.querySelector(".fx").textContent = fx;
       ul.append(li);
     });

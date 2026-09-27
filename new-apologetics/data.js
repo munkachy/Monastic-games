@@ -98,7 +98,7 @@ const GameData = (() => {
     marygrace: { name: "Sr. Mary Grace", about: "One of the quickest on the roster, so she sets the tone before most others move. A Word of Truth goes straight past any podium. Let Love steadies the team, and Every Life Is Good weakens every opponent's arguments at once.", stats: [213, 75, 10, 170], traits: { care: 75, glance: [0.06, 0.16], crit: [0.04, 1.28], resolve: 0.11 }, skills: [
       H("A Word of Truth", "foe", 0, 0, [{ dmg: 1.5 }], { pierce: ["cover"] }),
       H("Let Love", "allies", 3, 0, [{ buff: "def", amt: 0.5, turns: 3 }, { zeal: 1 }]),
-      H("Every Life Is Good", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1, chance: 0.5 }]),
+      H("Every Life Is Good", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1, chance: 0.5 }]),
     ] },
     // The quickest, working from cover.
     rose: { name: "Lila Rose", about: "The quickest debater on the roster, and she works best unseen. She goes Undercover: hard to single out, and hits barely reach her. From there, Live Action strikes all over the room. Anyone who Fact-Checks or Exposes blows her cover, so be careful with her against James White.", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
@@ -326,6 +326,30 @@ const GameData = (() => {
 
   // power: [regular debates, boss] — how far each chapter's opponents have
   // come, found by simulation (see BALANCE.md); the tutorial has none.
+  // Every boss has a closing argument. He spends one turn winding up (everyone
+  // can see it coming), then lands it on the whole team on his next turn. A
+  // Shield of Faith soaks it up; leaving him Dumbfounded or Muted while he
+  // winds up stops it altogether. [name, what he says winding up, the blow,
+  // how hard it lands: set boss by boss (BALANCE.md): gentlest from O'Connor,
+  // when the team has few shields and stuns, and hardest from James White]
+  const CLOSERS = {
+    oconnor: ["The Problem of Evil", "Let me put it as plainly as I can…", "Then why the fawn? Why any of it?", 0.7],
+    ryan: ["Judgment Day", "Let me ask you all something…", "Liars, thieves. Guilty. Judgment Day!", 1.6],
+    hansen: ["The First Vision", "In the spring of 1820…", "A pillar of light. A new dispensation.", 1.1],
+    speaker: ["Three Is Not One", "Everyone, gather round. Watch this.", "One plus one plus one is three!", 2.3],
+    witch: ["Full Moon Ritual", "Wait. The moon is almost full…", "Feel that? The goddess is here.", 1.8],
+    destiny: ["Speed Round", "Okay. I'm going to go fast now.", "Twelve points. Sixty seconds. Answer all of them.", 1.3],
+    pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 1.5],
+    ehrman: ["Four Hundred Thousand Variants", "Let me show you the manuscripts.", "More variants than words in the New Testament!", 1.6],
+    white: ["Cross-Examination", "I have a few questions for you.", "Yes or no. Yes or no!", 2.8],
+  };
+  for (const [id, [name, wind, blow, dmg]] of Object.entries(CLOSERS)) {
+    FOES[id].closer = [
+      H("Winding up: " + name, "self", 0, 0, [{ windup: true }], { closer: "wind", anim: U(wind, []) }),
+      H(name, "foes", 0, 0, [{ dmg }, { zeal: -1 }], { closer: "strike", anim: X(blow, ["down"]) }),
+    ];
+  }
+
   const CAMPAIGN = [
     { id: "prologue", title: "The Comment Section", group: "Tutorial", missions: [
       { name: "Tutorial", foes: ["skeptic", "preacher"], team: ["horn", "akin"], level: -3, movesAt: 2, cover: { foe: [1], hero: [], size: 0.2 } },

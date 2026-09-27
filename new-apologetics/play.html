@@ -255,14 +255,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928b"></script>
-<script src="audio.js?v=20260928b"></script>
-<script src="art.js?v=20260928b"></script>
-<script src="moves.js?v=20260928b"></script>
-<script src="story.js?v=20260928b"></script>
-<script src="data.js?v=20260928b"></script>
-<script src="lines.js?v=20260928b"></script>
-<script src="battle.js?v=20260928b"></script>
+<script src="chants.js?v=20260928c"></script>
+<script src="audio.js?v=20260928c"></script>
+<script src="art.js?v=20260928c"></script>
+<script src="moves.js?v=20260928c"></script>
+<script src="story.js?v=20260928c"></script>
+<script src="data.js?v=20260928c"></script>
+<script src="lines.js?v=20260928c"></script>
+<script src="battle.js?v=20260928c"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1157,6 +1157,7 @@
     $("log").textContent = "";
     $("panel").textContent = "";
     show("s-battle");
+    let warned = null;
     const out = await Battle.run(b, view, {
       choose: (u) => playerChoose(b, u),
       onSkip: (u) => {
@@ -1168,6 +1169,12 @@
       stopped: () => stopped,
       onAction: (u, s, backup, line) => {
         paintOrder(b, u);
+        // A boss winding up his closing argument: say so plainly, and what to do.
+        if (s.closer === "wind") {
+          warned = u;
+          const blow = u.def.skills.find((x) => x.closer === "strike");
+          coach("battle-coach", "<b>Watch out.</b> " + u.name + " is winding up his closing argument, <b>" + blow.name + "</b>. On his next turn it hits your whole team. Put up a Shield of Faith, or leave him Dumbfounded or Muted to stop it.");
+        } else if (warned && !warned.windup) { warned = null; coach("battle-coach", ""); }
         $("turn").textContent = u.name + "'s turn" + (u.level ? " · Lv " + u.level : "");
         $("round").textContent = "Round " + b.round + (b.waiting() ? " · " + b.waiting() + " waiting" : "");
         // What the fighter says, in plain text under the stage, easy to read at any speed.

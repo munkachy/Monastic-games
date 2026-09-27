@@ -283,3 +283,37 @@ the team; about ±4 is noise.) Stronger shields make the game easier and pull
 the support heroes up a few points, but not level: teams without a Builder
 still do no worse. Debates are decided by how fast the other side is worn
 down, and a shield only buys time. Sr. Mary Grace is the real outlier.
+
+## Update: closing arguments, bolder shields, Mary Grace fixed
+
+- Every boss has a closing argument (data.js CLOSERS). On his second turn,
+  and every third turn after, he spends his turn winding up (a red warning
+  over his head, and a plain warning under the stage); on his next turn it
+  hits the whole team for heavy damage and −1 Zeal each. Dumbfounded or
+  Muted while winding up stops it. Its strength is set boss by boss to keep
+  each boss near his old win rate: O'Connor 0.7, Ryan 1.6, Hansen 1.1,
+  Speakers' Corner 2.3, WitchTok 1.8, Destiny 1.3, Pastor 1.5, Ehrman 1.6,
+  White 2.8.
+- Heroes' shields and podiums ×1.5 (HERO_SHIELD), and a shielded debater
+  gets +15% Attack (SHIELD_BOLD).
+- Sr. Mary Grace's Every Life Is Good listed its Attack Down twice (−60% on
+  every opponent for three turns). Now once, as the page always said.
+- The smart bot now shields the team or stuns the boss when he winds up.
+
+Normal (smart 60 runs, simple 60, random 40 per debate):
+
+| Hero bot | Regular | Boss | before these changes |
+|---|---|---|---|
+| Smart | 85 | 75 | 86 / 76 |
+| Simple (ignores the warning) | 71 | 45 | 76 / 65 |
+| Random | 48 | 18 | 49 / 34 |
+
+Per boss, smart: O'Connor 75, Ryan 87, Hansen 70, Speakers' Corner 93,
+WitchTok 70, Destiny 68, Pastor 62, Ehrman 73, White 80.
+
+Team makeup (smart): the spread between heroes narrowed from −13…+24 to
+−12…+9. Mary Grace +24 → +5, Spitzer −13 → −5. A team with no Leader does
+about 11 points worse. Teams without a Builder, Defender or Encourager
+still do no worse, so team choice is still not rewarded much: the
+chapter strengths and weaknesses idea is the lever for that.
+Kim Zember came out −12 (only 92 battles, late chapters); worth watching.
