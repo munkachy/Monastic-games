@@ -26,7 +26,9 @@ const Battle = (() => {
   let GREAT_KICK = 1.5;
   // Each point of Zeal below zero takes this much off a debater's arguments
   let ZEAL_SAP = 0.1;
-  let HERO_SHIELD = 1.5;      // extra strength of the heroes' own shields and podiums
+  // Extra strength of the heroes' own shields and podiums (and the Catechism's):
+  // sized so a good shield soaks up most of one heavy opponent's hit
+  let HERO_SHIELD = 3;
   // A debater behind a Shield of Faith argues more boldly: this much more Attack
   let SHIELD_BOLD = 0.15;
   // A boss's closing argument: his first wind-up comes on his second turn,
@@ -44,7 +46,7 @@ const Battle = (() => {
   const CARE_K = 4.5;        // shield or podium strength per point of the caster's Care
   const careK = () => CARE_K / IMPACT;
   const HP_SCALE = { hero: 2.1, grunt: 5.6, boss: 6 };
-  let FOE_PUNCH = 2.15;     // opponents argue harder than their listed stats
+  let FOE_PUNCH = 2.65;     // opponents argue harder than their listed stats
 
   const DEBUFFS = ["dumbfounded", "doubting", "muted", "examined", "called"];
   const floorOf = (def, hero) => (hero ? HERO_FLOOR : def.boss ? BOSS_FLOOR : def.secretConvert ? -4 : GRUNT_FLOOR);
@@ -66,7 +68,7 @@ const Battle = (() => {
   // they pick their best move and target; cover: chance of each starting
   // behind a podium; reserve: reinforcements waiting to step in; xp: reward.
   const DIFFICULTY = [
-    { name: "Gentle", hp: 0.5, atk: 0.55, zeal: -2, closer: 0.5, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
+    { name: "Gentle", hp: 0.5, atk: 0.45, zeal: -2, closer: 0.5, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
     { name: "Normal", hp: 1, atk: 1, zeal: 0, resolve: 0, sharp: 0.6, cover: 0.35, reserve: 0, xp: 1, blurb: "The game as designed: you'll win most debates, but not without thinking." },
     { name: "Hard", hp: 1, atk: 1, zeal: 0, resolve: 0.02, sharp: 0.7, cover: 0.45, reserve: 1, xp: 1.1, blurb: "Opponents pick their targets well, podiums turn up more often, and a fresh opponent waits to step in." },
     { name: "Very Hard", hp: 1.25, atk: 1.12, zeal: 1, resolve: 0.05, sharp: 0.85, cover: 0.55, reserve: 1, xp: 1.2, blurb: "Every choice matters. Tougher opponents, sharper tactics. Bring the right team." },
@@ -111,7 +113,7 @@ const Battle = (() => {
     if (fx.crit) u.crit += fx.crit;
     if (fx.resist) u.resist = fx.resist;
     if (fx.regen) u.regen = { pct: fx.regen[0], n: fx.regen[1] };
-    if (fx.shield) u.shield = { amt: Math.round(u.care * fx.shield * careK()), n: 4 };
+    if (fx.shield) u.shield = { amt: Math.round(u.care * fx.shield * careK() * HERO_SHIELD), n: 4 };
     if (fx.opening) u.buffs.push({ stat: "atk", amt: fx.opening, n: 2 });
     if (u.shield && u.shield.amt <= 0) u.shield = null;
   }
@@ -406,6 +408,7 @@ const Battle = (() => {
           // A Discouraged friend is reached only by the Composure that brings
           // him back; once he is back, the rest of the move applies to him.
           if (t.state === "discouraged" && !e.heal) continue;
+          if (e.share && inPlay(t)) blow(t, e.share, events);
           if (e.dmg) {
             let hurt = false;
             for (let h = 0; h < (e.hits || 1); h++) hurt = hit(u, t, e, s, events, false) || hurt;
@@ -445,7 +448,7 @@ const Battle = (() => {
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
             // Free-for-All Friday's shield is sized from the one receiving it,
             // not from Trent's Care (he has almost none): a fifth of his Composure.
-            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield), n: l.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield * HERO_SHIELD), n: l.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -494,8 +497,6 @@ const Battle = (() => {
     function hit(u, t, e, s, events, quiet) {
       if (!inPlay(t)) return false;
       let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16) * kick(u, s) * sapped(u);
-      // On Gentle a boss's closing argument lands at half strength.
-      if (s && s.closer) d *= diff.closer || 1;
       if (e.vs) {
         const [what, mult] = e.vs;
         if (what === "guarded" ? t.shield || t.cover : t.statuses[what] > 0) d *= mult;
@@ -526,6 +527,25 @@ const Battle = (() => {
       if (t.windup && t.windHp - t.hp >= t.maxHp * RATTLE && t.hp > 0) { t.windup = false; t.closerIn = CLOSER_EVERY; events.push({ key: t.key, text: "Lost his thread!", color: "#74c07a" }); }
       checkOut(t, events);
       return true;
+    }
+
+    // A boss's closing argument: a set share of each hero's Composure (half
+    // on Gentle). A podium or a Shield of Faith soaks it up first; defense
+    // and deflecting don't come into it.
+    function blow(t, share, events) {
+      let d = Math.round(t.maxHp * share * (diff.closer || 1));
+      if (t.cover) {
+        const c = Math.min(t.cover.hp, d); t.cover.hp -= c; d -= c;
+        events.push({ key: t.key, text: "−" + c + " podium", color: "#c9b48a" });
+        if (t.cover.hp <= 0) { t.cover = null; events.push({ key: t.key, text: "Podium falls!", color: "#e8b94a" }); }
+      }
+      if (t.shield && d > 0) {
+        const a = Math.min(t.shield.amt, d); t.shield.amt -= a; d -= a;
+        events.push({ key: t.key, text: "Shield soaks " + a, color: "#7ea4e6" });
+        if (t.shield.amt <= 0) t.shield = null;
+      }
+      if (d > 0) { t.hp = Math.max(0, t.hp - d); events.push({ key: t.key, text: "−" + d, color: "#ece4d0" }); }
+      checkOut(t, events);
     }
 
     // Returns true if the change puts the fighter out.
@@ -768,6 +788,7 @@ const Battle = (() => {
       }
       if (e.zeal) out.push(pct(e) + (e.zeal < 0 ? "Zeal down " + -e.zeal : "Zeal up " + e.zeal) + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.status) out.push(pct(e) + STATUS[e.status]);
+      if (e.share) out.push("Hits each for " + Math.round(e.share * 100) + "% of his Composure; a Shield of Faith or a podium soaks it up first");
       if (e.windup) out.push("Winds up his closing argument: next turn it lands on the whole team. Shield your team, leave him Dumbfounded or Muted, or knock a fifth of his Composure off first to stop it");
       if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero. A spotlight shows who, and a red arrow over each opponent points his way");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));

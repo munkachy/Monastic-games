@@ -345,3 +345,32 @@ Hansen 73, Speakers' Corner 93, WitchTok 73, Destiny 52 before its easing,
 Pastor 78, Ehrman 80, White 77); simple 74 / 39.
 Level 6 jump, Normal, closing arguments on vs off: 98/100, 93/90, 65/83,
 85/85, 55/83, 38/45, 45/63, 65/58, 33/8.
+
+## Update: shields sized against the hits they face
+
+Measured at par, a closing argument hit each hero for about three times his
+whole Composure (White: ~1,300 on Spitzer's 308), and White's basic move
+alone for ~700. The best shields were 160–370, so a shield could not save
+anyone; the smart bot only won by stunning or piling on. Cause: IMPACT 2
+halved shields along with Composure, while opponent punch rose 1.6 → 2.15.
+
+- A closing argument now takes a set share of each hero's Composure (a
+  podium, then a shield, soak it first; no defense or deflecting): O'Connor
+  55%, Ryan 60, Hansen 60, Speakers' Corner 70, WitchTok 70, Destiny 65,
+  Pastor 65, Ehrman 75, White 85. Half on Gentle, and no Zeal loss there.
+- HERO_SHIELD 1.5 → 3 (also the Catechism's shield and Free-for-All
+  Friday's): Spitzer's team shield at par ~355, Holdsworth's ~745, so a
+  team shield soaks a whole closing argument and ~40% of a White hit.
+  (×4.5 tested: 94 / 92 at old punch, too strong.)
+- FOE_PUNCH 2.15 → 2.65; Gentle attack 0.55 → 0.45 to match.
+- Atheists boss power 1.8 → 1.45 (O'Connor fell to 35–53%: Chapter 1 teams
+  have no shield heroes); Islam boss power 3.2 → 3.8 (was 98–100%).
+
+Normal, story order: smart 86 / 79 (O'Connor 75, Ryan 85, Hansen 90,
+Speakers' Corner 93, WitchTok 73, Destiny 67, Pastor 67, Ehrman 78, White
+85), simple 71 / 54, random 48 / 30. Gentle, story order, simple: 99 / 99.
+Gentle jump from the tutorial (smart): 100 98 80 80 90 65 65 88 78.
+Level-6 jump with the starting six, Normal: 98 78 43 85 55 30 23 50 33
+(below par, and without the heroes who shield; Gentle is the way in).
+Team makeup: Holdsworth +9 (was +2), Fr. Mike +3 (was −3), Spitzer −5.
+Leaving out a Builder still costs nothing measurable.
