@@ -317,3 +317,31 @@ about 11 points worse. Teams without a Builder, Defender or Encourager
 still do no worse, so team choice is still not rewarded much: the
 chapter strengths and weaknesses idea is the lever for that.
 Kim Zember came out −12 (only 92 battles, late chapters); worth watching.
+
+## Update: players can start any story, so test jumping ahead too
+
+The campaign harness plays chapters in order, so each chapter sees the
+levels and roster it would have after all the earlier ones. That is the
+right yardstick for Normal (the chapter's par), but a player can go
+straight to any story after the tutorial, with the six starting heroes at
+level 2. New harness jump.js tests each boss that way.
+
+Findings and fixes:
+- Normal at level 2 is nearly unwinnable after Chapter 1 with or without
+  closing arguments, as the game says (jump ahead on Gentle).
+- Gentle, fresh team: closing arguments dropped several bosses from 70–80%
+  to 30–45% (simple bot: to 5–15%), since a fresh team has no shields or
+  stuns. Now on Gentle a closing argument lands at half strength and costs
+  no Zeal: smart 90/95/80/83/83/58/45/78/90, about what it was before.
+- Level 6, starting roster, Normal: closing arguments cost up to 35 points,
+  because the starting six can't answer them. Added a third answer anyone
+  can use: knock a fifth of the boss's Composure off while he winds up
+  (RATTLE 0.2) and he "loses his thread".
+- Re-tuned: Pastor closer 1.5 → 1.1, Destiny 1.3 → 1.1; Islam boss power
+  2.8 → 3.2 and Reformed 1.15 → 1.5 (both had become too easy).
+
+Story order, Normal, 60 runs: smart 87 / 75 (bosses O'Connor 63, Ryan 85,
+Hansen 73, Speakers' Corner 93, WitchTok 73, Destiny 52 before its easing,
+Pastor 78, Ehrman 80, White 77); simple 74 / 39.
+Level 6 jump, Normal, closing arguments on vs off: 98/100, 93/90, 65/83,
+85/85, 55/83, 38/45, 45/63, 65/58, 33/8.

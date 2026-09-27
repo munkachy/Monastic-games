@@ -32,6 +32,9 @@ const Battle = (() => {
   // A boss's closing argument: his first wind-up comes on his second turn,
   // and each one after that three turns after the last
   const CLOSER_FIRST = 2, CLOSER_EVERY = 3;
+  let CLOSERS_ON = true;       // off only for testing
+  // Knock this share of a boss's Composure off while he winds up and he loses his thread
+  let RATTLE = 0.2;
   let HERO_HEAL = 1;          // extra strength of the heroes' own healing
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   // Impact: every debater's Composure, and every shield and podium, is divided
@@ -63,7 +66,7 @@ const Battle = (() => {
   // they pick their best move and target; cover: chance of each starting
   // behind a podium; reserve: reinforcements waiting to step in; xp: reward.
   const DIFFICULTY = [
-    { name: "Gentle", hp: 0.5, atk: 0.55, zeal: -2, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
+    { name: "Gentle", hp: 0.5, atk: 0.55, zeal: -2, closer: 0.5, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
     { name: "Normal", hp: 1, atk: 1, zeal: 0, resolve: 0, sharp: 0.6, cover: 0.35, reserve: 0, xp: 1, blurb: "The game as designed: you'll win most debates, but not without thinking." },
     { name: "Hard", hp: 1, atk: 1, zeal: 0, resolve: 0.02, sharp: 0.7, cover: 0.45, reserve: 1, xp: 1.1, blurb: "Opponents pick their targets well, podiums turn up more often, and a fresh opponent waits to step in." },
     { name: "Very Hard", hp: 1.25, atk: 1.12, zeal: 1, resolve: 0.05, sharp: 0.85, cover: 0.55, reserve: 1, xp: 1.2, blurb: "Every choice matters. Tougher opponents, sharper tactics. Bring the right team." },
@@ -265,7 +268,7 @@ const Battle = (() => {
     // A simple opponent: its best ready move, most of the time.
     function think(u) {
       // A boss winds up his closing argument, then lands it.
-      if (u.def.closer && (u.windup || u.closerIn <= 0)) return { i: u.def.skills.findIndex((x) => x.closer === (u.windup ? "strike" : "wind")), target: null };
+      if (CLOSERS_ON && u.def.closer && (u.windup || u.closerIn <= 0)) return { i: u.def.skills.findIndex((x) => x.closer === (u.windup ? "strike" : "wind")), target: null };
       if (u.side === "hero" && opts.randomHeroes) {
         // For testing only: any ready move, any target.
         const ready = usable(u);
@@ -321,6 +324,7 @@ const Battle = (() => {
           if (e.podium) sc += winding ? 3 : 1.5;
           if (winding && e.shield) sc += team.filter((x) => x.state === "in" && !x.shield).length * (sk.target === "allies" ? 2 : 0.8);
           if (winding && stops(e)) sc += 6 * p;
+          if (winding && e.dmg && sk.target === "foe") sc += e.dmg * (e.hits || 1) * 0.8;
           if (winding && e.buff === "def" && e.amt > 0) sc += many * 0.8;
           if (e.cleanse) sc += team.reduce((n, x) => n + setbacks(x), 0) * 1.2;
           if (e.zeal < 0) sc += -e.zeal * p * many * (opp.some((x) => nearZealFloor(x) <= 2) ? 1.8 : 1.1);
@@ -344,7 +348,7 @@ const Battle = (() => {
         const zealMove = sk.effects.some((e) => e.zeal < 0);
         const pierce = (sk.pierce || []).includes("cover") || sk.effects.some((e) => e.vs && e.vs[0] === "guarded");
         const score = (x) => (zealMove ? nearZealFloor(x) * 0.25 : x.hp / x.maxHp) + (x.cover && !pierce && !zealMove ? 0.6 : 0) + (x.statuses.cloaked > 0 ? 0.5 : 0);
-        target = winding && c.includes(winding) && sk.effects.some(stops) ? winding : c.slice().sort((a, b) => score(a) - score(b))[0];
+        target = winding && c.includes(winding) && sk.effects.some((e) => stops(e) || e.dmg) ? winding : c.slice().sort((a, b) => score(a) - score(b))[0];
       } else if (sk.target === "ally" && c.length) {
         const heals = sk.effects.some((e) => e.heal || e.cleanse);
         const cmd = sk.effects.some((e) => e.command);
@@ -410,7 +414,8 @@ const Battle = (() => {
             // opponent's move (a podium's hit doesn't count), answers once.
             if (hurt && !answering && t.side !== u.side && t.counter > 0 && !(t.statuses.dumbfounded > 0) && !rebuttals.includes(t)) rebuttals.push(t);
           }
-          if (e.zeal) { if (zeal(t, e.zeal, s, events)) broke = true; }
+          // (and costs no Zeal)
+          if (e.zeal && !(s.closer && (diff.closer || 1) < 1)) { if (zeal(t, e.zeal, s, events)) broke = true; }
           if (e.status && t.resist && t.resist[e.status] && rnd() < t.resist[e.status]) events.push({ key: t.key, text: "Resisted", color: "#a9a6bd" });
           else if (e.status) {
             t.statuses[e.status] = Math.max(t.statuses[e.status] || 0, e.turns);
@@ -418,7 +423,7 @@ const Battle = (() => {
             // Dumbfounded or Muted mid wind-up: the closing argument never comes.
             if (t.windup && (e.status === "dumbfounded" || e.status === "muted")) { t.windup = false; t.closerIn = CLOSER_EVERY; events.push({ key: t.key, text: "Closing argument stopped!", color: "#74c07a" }); }
           }
-          if (e.windup) { u.windup = true; events.push({ key: u.key, text: "Winding up!", color: "#ff5a4e" }); }
+          if (e.windup) { u.windup = true; u.windHp = u.hp; events.push({ key: u.key, text: "Winding up!", color: "#ff5a4e" }); }
           if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
@@ -489,6 +494,8 @@ const Battle = (() => {
     function hit(u, t, e, s, events, quiet) {
       if (!inPlay(t)) return false;
       let d = stat(u, "atk") * e.dmg * (0.92 + rnd() * 0.16) * kick(u, s) * sapped(u);
+      // On Gentle a boss's closing argument lands at half strength.
+      if (s && s.closer) d *= diff.closer || 1;
       if (e.vs) {
         const [what, mult] = e.vs;
         if (what === "guarded" ? t.shield || t.cover : t.statuses[what] > 0) d *= mult;
@@ -515,6 +522,8 @@ const Battle = (() => {
       t.hp = Math.max(0, t.hp - d);
       events.push({ key: t.key, text: (crit ? "Crit! " : glance ? "Deflected " : "") + "−" + d, color: crit ? "#ffd84a" : glance ? "#9fd0ff" : "#ece4d0" });
       if (crit) zeal(t, -1, s, events);
+      // Hit hard enough while winding up, a boss loses his thread.
+      if (t.windup && t.windHp - t.hp >= t.maxHp * RATTLE && t.hp > 0) { t.windup = false; t.closerIn = CLOSER_EVERY; events.push({ key: t.key, text: "Lost his thread!", color: "#74c07a" }); }
       checkOut(t, events);
       return true;
     }
@@ -759,7 +768,7 @@ const Battle = (() => {
       }
       if (e.zeal) out.push(pct(e) + (e.zeal < 0 ? "Zeal down " + -e.zeal : "Zeal up " + e.zeal) + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.status) out.push(pct(e) + STATUS[e.status]);
-      if (e.windup) out.push("Winds up his closing argument: next turn it lands on the whole team. Shield your team, or leave him Dumbfounded or Muted to stop it");
+      if (e.windup) out.push("Winds up his closing argument: next turn it lands on the whole team. Shield your team, leave him Dumbfounded or Muted, or knock a fifth of his Composure off first to stop it");
       if (e.taunt || e.tauntAll) out.push("Calls them out: they must answer this hero. A spotlight shows who, and a red arrow over each opponent points his way");
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
       if (e.heal) out.push("Restores Composure (and encourages the Discouraged)");
@@ -819,7 +828,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------

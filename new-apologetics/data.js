@@ -338,8 +338,8 @@ const GameData = (() => {
     hansen: ["The First Vision", "In the spring of 1820…", "A pillar of light. A new dispensation.", 1.1],
     speaker: ["Three Is Not One", "Everyone, gather round. Watch this.", "One plus one plus one is three!", 2.3],
     witch: ["Full Moon Ritual", "Wait. The moon is almost full…", "Feel that? The goddess is here.", 1.8],
-    destiny: ["Speed Round", "Okay. I'm going to go fast now.", "Twelve points. Sixty seconds. Answer all of them.", 1.3],
-    pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 1.5],
+    destiny: ["Speed Round", "Okay. I'm going to go fast now.", "Twelve points. Sixty seconds. Answer all of them.", 1.1],
+    pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 1.1],
     ehrman: ["Four Hundred Thousand Variants", "Let me show you the manuscripts.", "More variants than words in the New Testament!", 1.6],
     white: ["Cross-Examination", "I have a few questions for you.", "Yes or no. Yes or no!", 2.8],
   };
@@ -374,7 +374,7 @@ const GameData = (() => {
       { name: "Ignatius of Antioch", foes: ["elder", "elder2", "elder"] },
       { name: "The Great Apostasy", foes: ["elder", "hansen", "elder2"], boss: "hansen" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["marygrace", "rose", "jurado"], book: "apologia" },
-    { id: "islam", par: 6.3, power: [3.9, 2.8], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
+    { id: "islam", par: 6.3, power: [3.9, 3.2], title: "People of the Book", group: "Islam", guest: "godlogic", missions: [
       { name: "Speakers' Corner", foes: ["dai", "dai2"] },
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
@@ -404,7 +404,7 @@ const GameData = (() => {
       { name: "A Game of Telephone", foes: ["student", "mythicist", "student2"] },
       { name: "Misquoting Jesus?", foes: ["student", "ehrman", "mythicist"], boss: "ehrman" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["pitre"] },
-    { id: "reformed", par: 8.7, power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
+    { id: "reformed", par: 8.7, power: [3.0, 1.5], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
