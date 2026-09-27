@@ -85,6 +85,7 @@
   .mission { display: grid; gap: 4px; text-align: left; }
   .mission small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
   .mission .stars { color: var(--gold); letter-spacing: 2px; }
+  .mission .stars em { margin-left: 8px; font: 600 10px/1.2 var(--display); font-style: normal; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
   .mission.boss { border-color: var(--crimson); }
 
   /* Team */
@@ -220,14 +221,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260927e"></script>
-<script src="audio.js?v=20260927e"></script>
-<script src="art.js?v=20260927e"></script>
-<script src="moves.js?v=20260927e"></script>
-<script src="story.js?v=20260927e"></script>
-<script src="data.js?v=20260927e"></script>
-<script src="lines.js?v=20260927e"></script>
-<script src="battle.js?v=20260927e"></script>
+<script src="chants.js?v=20260927f"></script>
+<script src="audio.js?v=20260927f"></script>
+<script src="art.js?v=20260927f"></script>
+<script src="moves.js?v=20260927f"></script>
+<script src="story.js?v=20260927f"></script>
+<script src="data.js?v=20260927f"></script>
+<script src="lines.js?v=20260927f"></script>
+<script src="battle.js?v=20260927f"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -265,10 +266,13 @@
         if (!s.xp) s.xp = {};
         // Who has debated. Older saves kept experience only for heroes who had.
         if (!s.played) { s.played = {}; for (const id of Object.keys(s.xp)) s.played[id] = true; }
+        // Stars once counted a debate won without anyone Discouraged; now they
+        // count the hardest difficulty it was won on. Earlier wins count as Normal.
+        if (!s.starsByDifficulty) { for (const k of Object.keys(s.stars)) if (s.stars[k] > 0) s.stars[k] = 2; s.starsByDifficulty = true; }
         return s;
       }
     } catch (e) { /* no storage */ }
-    return { stars: {}, seen: {}, team: [], xp: {}, played: {} };
+    return { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true };
   }
   let save = load();
   if (!save.xp) save.xp = {};
@@ -511,8 +515,16 @@
         b.innerHTML = `<small></small><span></span><span class="stars"></span>`;
         b.querySelector("small").textContent = m.boss ? "Boss · " + FOES[m.boss].name : "Mission " + (mi + 1);
         b.querySelector("span").textContent = m.name;
+        // Stars: the hardest difficulty this debate has been won on.
         const s = stars(ci, mi);
-        b.querySelector(".stars").textContent = "★".repeat(s) + "☆".repeat(3 - s);
+        const st = b.querySelector(".stars");
+        st.textContent = "★".repeat(s) + "☆".repeat(5 - s);
+        if (s) {
+          const best = document.createElement("em");
+          best.textContent = "Best: " + Battle.DIFFICULTY[s - 1].name;
+          st.append(best);
+          b.setAttribute("aria-label", m.name + ", best won on " + Battle.DIFFICULTY[s - 1].name);
+        }
         b.addEventListener("click", () => startMission(ci, mi));
         list.append(b);
       });
@@ -975,14 +987,14 @@
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");
     const left = foes.filter((u) => u.state === "left");
-    // Stars: for how well the team held together.
+    // Stars: the difficulty it was won on, one for Gentle up to five for Crucible.
     const downs = b.heroes().reduce((n, u) => n + u.downs, 0);
-    let st = 0;
-    if (out === "win") st = downs === 0 ? 3 : downs === 1 ? 2 : 1;
+    const st = out === "win" ? dIdx + 1 : 0;
     if (!save.converted) save.converted = {};
     for (const u of converted) save.converted[u.id] = true;
-    // Experience: a win teaches more than a loss, a boss most of all. Leaving early earns nothing.
-    const gain = Math.round((out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : out === "lose" ? 40 : 0) * Battle.DIFFICULTY[difficulty()].xp);
+    // Experience: only a win teaches, a boss most of all. A lost debate earns
+    // nothing, so a team that isn't ready goes back and wins earlier debates.
+    const gain = Math.round((out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : 0) * D.xp);
     const grew = [];
     const start = team.map(xpOf);
     const boost = team.map((id) => catchUp(id, team));
@@ -1002,7 +1014,7 @@
     coach("battle-coach", "");
     Sound.play(out === "win" ? "star" : out === "lose" ? "lost" : "hour");
     if (grew.length) setTimeout(() => Sound.play("tier"), 1600);
-    return { out, converted, walked, left, stars: st, gain, grew, downs, caught };
+    return { out, converted, walked, left, stars: st, best: stars(ci, mi), gain, grew, downs, caught };
   }
 
   function showResult(ci, mi, r) {
@@ -1013,20 +1025,23 @@
     h.textContent = win ? "Well argued!" : r.out === "stopped" ? "You left the debate" : "Not this time";
     const s = document.createElement("div");
     s.className = "stars";
-    s.textContent = win ? "★".repeat(r.stars) + "☆".repeat(3 - r.stars) : "";
+    s.textContent = win ? "★".repeat(r.stars) + "☆".repeat(5 - r.stars) : "";
+    const dn = document.createElement("p");
+    dn.className = "label";
+    dn.textContent = win ? "Won on " + Battle.DIFFICULTY[r.stars - 1].name + (r.stars > r.best ? (r.best ? " · a new best" : "") : " · best so far: " + Battle.DIFFICULTY[r.best - 1].name) : "";
     const p = document.createElement("p");
     const names = (list) => list.map((u) => u.name).join(", ");
     p.textContent = win
       ? (r.walked.length ? "Conceded the debate: " + names(r.walked) + ". " : "") + (r.left.length ? "Left the debate: " + names(r.left) + ". " : "") +
-        (r.stars < 3 ? "Win without anyone on your team getting Discouraged for three stars." : "Nobody on your team was ever Discouraged.")
-      : "Your whole team was Discouraged. Try a different team, raise your Zeal, or lean on your Encouragers.";
+        (r.downs ? "" : "Nobody on your team was ever Discouraged.")
+      : "Your whole team was Discouraged, and a lost debate earns no experience. Try a different team, or go back and win earlier debates to level up.";
     if (r.out === "stopped") p.textContent = "No harm done. You can come back to this debate any time.";
     const xp = document.createElement("p");
     xp.className = "label";
     xp.textContent = r.gain ? "+" + r.gain + " experience for each debater" + (r.caught && r.caught.length ? ". Catching up faster: " + r.caught.join(", ") + "." : ".") : "";
     const row = document.createElement("div");
     row.className = "row";
-    box.append(h, s, p, xp);
+    box.append(h, s, dn, p, xp);
     // The rare conversion: a note the player will remember.
     for (const u of r.converted) {
       const c = document.createElement("p");
@@ -1131,7 +1146,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, music: save.music, difficulty: save.difficulty }; store(); paintTest();
+    save = { stars: {}, seen: {}, team: [], xp: {}, played: {}, starsByDifficulty: true, music: save.music, difficulty: save.difficulty }; store(); paintTest();
     resetArmed = false; $("reset").textContent = "Progress erased";
   });
   if (Object.keys(save.stars).length) $("play").textContent = "Continue";
