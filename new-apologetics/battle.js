@@ -26,14 +26,33 @@ const Battle = (() => {
   // A hero's level raises Composure and the strength of his arguments; each
   // chapter's opponents grow tougher to match.
   const HERO_GROWTH = 0.07;
-  const FOE_GROWTH = 0.12;
+  let FOE_GROWTH = 0.12;
+  let FOE_ZEAL_GROWTH = 0;      // extra Zeal depth per chapter (tuned below)
 
-  function makeUnit(id, side, slot, def, level) {
+  // Difficulty, from Gentle to Crucible. Opponents get tougher (Composure)
+  // and hit harder, think more sharply (how often they pick their best move
+  // and best target), bring podiums more often, and pay more experience,
+  // as Legends' Hard and Doom do. Normal is the game as it was.
+  // "Crucible": tested like gold in the fire (1 Peter 1:7).
+  // hp, atk: multiply the opponents' Composure and Attack; zeal: extra Zeal
+  // depth; resolve: extra chance to shrug off a Zeal loss; sharp: how often
+  // they pick their best move and target; cover: chance of each starting
+  // behind a podium; reserve: reinforcements waiting to step in; xp: reward.
+  const DIFFICULTY = [
+    { name: "Gentle", hp: 0.6, atk: 0.65, zeal: -2, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.9, blurb: "For the story. Opponents are softer and slower to find your weak spots." },
+    { name: "Normal", hp: 1, atk: 1, zeal: 0, resolve: 0, sharp: 0.6, cover: 0.35, reserve: 0, xp: 1, blurb: "The game as designed: you'll win most debates, but not without thinking." },
+    { name: "Hard", hp: 1, atk: 1, zeal: 0, resolve: 0.02, sharp: 0.7, cover: 0.45, reserve: 1, xp: 1.1, blurb: "Opponents pick their targets well, podiums turn up more often, and a fresh opponent waits to step in." },
+    { name: "Very Hard", hp: 1.25, atk: 1.12, zeal: 1, resolve: 0.05, sharp: 0.85, cover: 0.55, reserve: 1, xp: 1.2, blurb: "Every choice matters. Tougher opponents, sharper tactics. Bring the right team." },
+    { name: "Crucible", hp: 1.3, atk: 1.15, zeal: 1, resolve: 0.06, sharp: 0.95, cover: 0.65, reserve: 2, xp: 1.3, blurb: "Tested like gold in the fire (1 Peter 1:7). You may have to lose a few and come back stronger." },
+  ];
+
+  function makeUnit(id, side, slot, def, level, diff) {
     const hero = side === "hero";
     const kind = hero ? "hero" : def.boss ? "boss" : "grunt";
+    const d = hero ? { hp: 1, atk: 1, zeal: 0, resolve: 0 } : diff || DIFFICULTY[1];
     const grow = hero ? 1 + HERO_GROWTH * Math.max(0, (level || 1) - 1) : 1 + FOE_GROWTH * (level || 0);
-    const punch = hero ? grow : FOE_PUNCH * grow * (def.boss ? 1.3 : 1);
-    const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow);
+    const punch = (hero ? grow : FOE_PUNCH * grow * (def.boss ? 1.3 : 1)) * d.atk;
+    const maxHp = Math.round(def.stats[0] * HP_SCALE[kind] * grow * d.hp);
     const t = def.traits || { care: 60, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 };
     return {
       id, side, key: (hero ? "h" : "f") + slot, slot, def, kind,
@@ -43,9 +62,10 @@ const Battle = (() => {
       bonus: { atk: 0, def: 0 },
       // Care makes this fighter's shields and podiums stronger; glance is the
       // chance to deflect part of a hit; resolve, to shrug off a loss of Zeal.
-      care: t.care * grow, glance: t.glance[0], glanceCut: t.glance[1], crit: t.crit[0], critDmg: t.crit[1], resolve: t.resolve,
+      care: t.care * grow, glance: t.glance[0], glanceCut: t.glance[1], crit: t.crit[0], critDmg: t.crit[1], resolve: t.resolve + (d.resolve || 0),
       cover: null, tie: 0,
-      zeal: 0, floor: floorOf(def, hero), downs: 0,
+      // Later chapters' opponents, and harder difficulties, hold out longer on Zeal.
+      zeal: 0, floor: floorOf(def, hero) - (hero ? 0 : (d.zeal || 0) + Math.floor(Math.max(0, level || 0) * FOE_ZEAL_GROWTH)), downs: 0,
       cd: def.skills.map((s) => s.start || 0),
       statuses: {}, called: null, buffs: [], shield: null, counter: 0, immune: {},
       state: "in", since: 0,
@@ -71,6 +91,17 @@ const Battle = (() => {
     const F = GameData.FOES;
     const rnd = opts.random || Math.random;
     const levels = opts.levels || {};
+    // The difficulty, combined with this chapter's power (how far the
+    // opponents have come since Chapter 1): Composure, Attack, Zeal depth.
+    const base = DIFFICULTY[opts.difficulty === undefined ? 1 : opts.difficulty] || DIFFICULTY[1];
+    // A chapter's power k scales Composure by k, Attack by √k, and adds Zeal
+    // depth: tuned so Normal wins about nine regular debates in ten and three
+    // boss debates in four (see BALANCE.md).
+    const k = typeof opts.power === "number" ? opts.power : 1;
+    const pw = { hp: k, atk: Math.sqrt(k), zeal: Math.max(0, Math.round((k - 1) * 2)) };
+    // ease (0 to 1) softens the difficulty's extra toughness, for early chapters.
+    const e = opts.ease || 0, soft = (v, n) => n + (v - n) * (1 - e);
+    const diff = { ...base, hp: soft(base.hp, 1) * (pw.hp || 1), atk: soft(base.atk, 1) * (pw.atk || 1), zeal: Math.round(soft(base.zeal || 0, 0)) + (pw.zeal || 0), resolve: soft(base.resolve || 0, 0) };
     // Moves unlock as a hero levels up. Without levels (the design page) or in
     // testing mode, every move is open.
     const gated = !!opts.levels && !opts.unlockAll;
@@ -83,7 +114,7 @@ const Battle = (() => {
       if (book) readBook(u, book.fx);
       return u;
     })
-      .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level)));
+      .concat(opts.foes.map((id, i) => makeUnit(id, "foe", i, F[id], opts.level, diff)));
     let queue = [];
     let round = 0;
     units.forEach((u) => { u.tie = rnd(); });
@@ -199,9 +230,12 @@ const Battle = (() => {
 
     // A simple opponent: its best ready move, most of the time.
     function think(u) {
+      if (u.side === "hero" && !opts.simpleHeroes) return thinkHero(u);
       const ready = usable(u);
+      // How sharp an opponent is depends on the difficulty (Normal: 0.6).
+      const sharp = u.side === "foe" ? diff.sharp : 0.6;
       let i = 0;
-      for (const j of ready.slice().sort((a, b) => b - a)) if (j > 0 && rnd() < 0.7) { i = j; break; }
+      for (const j of ready.slice().sort((a, b) => b - a)) if (j > 0 && rnd() < 0.4 + 0.5 * sharp) { i = j; break; }
       // Anyone who can go Undercover does so whenever they're in the open.
       const hide = ready.find((j) => u.def.skills[j].effects.some((e) => e.status === "cloaked"));
       if (hide !== undefined && !(u.statuses.cloaked > 0)) i = hide;
@@ -210,11 +244,66 @@ const Battle = (() => {
       const c = choices(u, i);
       if (s.target === "foe" && c.length) {
         const score = (x) => x.hp / x.maxHp + (x.zeal - x.floor) * 0.1 + (x.cover && !(s.pierce || []).includes("cover") ? 0.5 : 0) + (x.statuses.cloaked > 0 ? 1 : 0);
-        target = c.slice().sort((a, b) => score(a) - score(b))[rnd() < 0.6 ? 0 : Math.floor(rnd() * c.length)];
+        target = c.slice().sort((a, b) => score(a) - score(b))[rnd() < sharp ? 0 : Math.floor(rnd() * c.length)];
       } else if (s.target === "ally" && c.length) {
         target = c.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
       }
       return { i, target };
+    }
+
+    // Auto for the heroes: weigh each ready move by what the team needs now,
+    // bring back the Discouraged, heal the hurt, shield, clear setbacks, and
+    // otherwise press the attack on the opponent nearest to giving way.
+    function thinkHero(u) {
+      const ready = usable(u);
+      const team = friends(u).filter((x) => x.state === "in" || x.state === "discouraged");
+      const down = team.filter((x) => x.state === "discouraged");
+      const hurt = team.filter((x) => x.state === "in" && x.hp / x.maxHp < 0.5);
+      const opp = others(u).filter(inPlay);
+      const setbacks = (x) => DEBUFFS.filter((k) => x.statuses[k] > 0).length + x.buffs.filter((b) => b.amt < 0).length;
+      const nearZealFloor = (x) => x.zeal - x.floor;
+      let best = 0, bestScore = -1;
+      for (const i of ready) {
+        const sk = u.def.skills[i];
+        const many = sk.target === "foes" || sk.target === "allies" || sk.target === "random4" ? Math.max(1, sk.target === "allies" ? team.length : opp.length) : sk.target === "two" ? 2 : 1;
+        let sc = i === 0 ? 1 : 1.5;
+        for (const e of sk.effects) {
+          const p = e.chance === undefined ? 1 : e.chance;
+          if (e.dmg) sc += e.dmg * (e.hits || 1) * (sk.target === "random4" ? 4 : many) * 0.9;
+          if (e.heal) sc += (down.length * 5 + hurt.length * 2.5) * (sk.target === "allies" ? 1 : 0.8);
+          if (e.shield) sc += team.filter((x) => x.state === "in" && !x.shield).length * (sk.target === "allies" ? 0.8 : 1) + (hurt.length ? 1.5 : 0);
+          if (e.podium) sc += 1.5;
+          if (e.cleanse) sc += team.reduce((n, x) => n + setbacks(x), 0) * 1.2;
+          if (e.zeal < 0) sc += -e.zeal * p * many * (opp.some((x) => nearZealFloor(x) <= 2) ? 1.8 : 1.1);
+          if (e.zeal > 0 || e.allyZeal || e.selfZeal) sc += 1;
+          if (e.status === "dumbfounded") sc += 2.5 * p * many;
+          if (e.status === "muted" || e.status === "examined" || e.status === "doubting") sc += 1.2 * p * many;
+          if (e.status === "cloaked") sc += u.statuses.cloaked > 0 ? -5 : 4;
+          if (e.buff) sc += (e.amt > 0 ? 0.8 : 0.9) * many * p;
+          if (e.purge) sc += opp.some((x) => x.shield || x.buffs.some((b) => b.amt > 0)) ? 1.5 : 0.2;
+          if (e.taunt || e.tauntAll) sc += hurt.length ? 2.5 : 1;
+          if (e.counter || e.selfCounter) sc += 1.5;
+          if (e.command) sc += 2.5;
+        }
+        sc *= 0.85 + rnd() * 0.3;
+        if (sc > bestScore) { bestScore = sc; best = i; }
+      }
+      const sk = u.def.skills[best];
+      const c = choices(u, best);
+      let target = null;
+      if (sk.target === "foe" && c.length) {
+        const zealMove = sk.effects.some((e) => e.zeal < 0);
+        const pierce = (sk.pierce || []).includes("cover") || sk.effects.some((e) => e.vs && e.vs[0] === "guarded");
+        const score = (x) => (zealMove ? nearZealFloor(x) * 0.25 : x.hp / x.maxHp) + (x.cover && !pierce && !zealMove ? 0.6 : 0) + (x.statuses.cloaked > 0 ? 0.5 : 0);
+        target = c.slice().sort((a, b) => score(a) - score(b))[0];
+      } else if (sk.target === "ally" && c.length) {
+        const heals = sk.effects.some((e) => e.heal || e.cleanse);
+        const cmd = sk.effects.some((e) => e.command);
+        const pool = c.filter((x) => x !== u || !cmd);
+        target = (heals ? pool.slice().sort((a, b) => (a.state === "discouraged" ? -1 : a.hp / a.maxHp) - (b.state === "discouraged" ? -1 : b.hp / b.maxHp))
+          : pool.filter((x) => x.state === "in").sort((a, b) => stat(b, "atk") - stat(a, "atk")))[0] || c[0];
+      }
+      return { i: best, target };
     }
 
     // ---- Doing --------------------------------------------------------------------------
@@ -248,6 +337,7 @@ const Battle = (() => {
         for (const e of s.effects) {
           if (e.chance !== undefined && rnd() > e.chance) continue;
           if (e.faction && t.faction !== e.faction) continue;
+          if (e.onlyFor && !e.onlyFor.includes(t.id)) continue;
           if (t.state === "converted" || t.state === "walked" || t.state === "left") break;
           if (e.dmg) {
             let hurt = false;
@@ -289,8 +379,8 @@ const Battle = (() => {
             const free = [0, 1, 2].find((sl) => !units.some((x) => x.side === "foe" && x.slot === sl && inPlay(x)));
             if (free !== undefined) {
               const old = units.findIndex((x) => x.side === "foe" && x.slot === free);
-              const nu = makeUnit(e.summon, "foe", free, F[e.summon], opts.level);
-              if (old >= 0) units.splice(old, 1, nu); else units.push(nu);
+              const nu = makeUnit(e.summon, "foe", free, F[e.summon], opts.level, diff);
+              if (old >= 0) { gone.push(units[old]); units.splice(old, 1, nu); } else units.push(nu);
               events.push({ key: nu.key, text: "Joins in", color: "#de5e55", summon: true });
             }
           }
@@ -411,14 +501,39 @@ const Battle = (() => {
       else { t.state = "discouraged"; t.downs++; events.push({ key: t.key, text: "Discouraged", color: "#a9a6bd" }); }
     }
 
+    // Reinforcements: when an opponent goes out, the next one waiting steps
+    // into the empty place (as in Legends' waves). Harder difficulties keep
+    // more in reserve.
+    const reserve = (opts.reserve || []).slice();
+    function reinforce() {
+      const events = [];
+      for (const sl of [0, 1, 2]) {
+        if (!reserve.length) break;
+        const here = units.find((x) => x.side === "foe" && x.slot === sl);
+        if (here && here.state === "in") continue;
+        if (!here && !units.some((x) => x.side === "foe" && x.slot === sl) && sl >= opts.foes.length) continue;
+        const id = reserve.shift();
+        const nu = makeUnit(id, "foe", sl, F[id], opts.level, diff);
+        nu.tie = rnd();
+        const old = units.indexOf(here);
+        if (old >= 0) { gone.push(here); units.splice(old, 1, nu); } else units.push(nu);
+        events.push({ key: nu.key, text: "Joins the debate", color: "#de5e55", summon: true });
+      }
+      return events;
+    }
+    const waiting = () => reserve.length;
+    // Everyone who has faced the team, including those since replaced.
+    const gone = [];
+    const allFoes = () => gone.concat(foes());
+
     function outcome() {
-      if (!foes().some(inPlay)) return "win";
+      if (!foes().some(inPlay) && !reserve.length) return "win";
       if (!heroes().some(inPlay)) return "lose";
       return null;
     }
 
     return {
-      units, heroes, foes, nextUnit, upcoming, startTurn, usable, choices, think, aim, use, backup, commandTarget, outcome, stat,
+      units, heroes, foes, allFoes, nextUnit, upcoming, reinforce, waiting, startTurn, usable, choices, think, aim, use, backup, commandTarget, outcome, stat,
       get round() { return round; },
     };
   }
@@ -462,6 +577,8 @@ const Battle = (() => {
       if (o.stopped && o.stopped()) return "stopped";
       const out = b.outcome();
       if (out) return out;
+      const r0 = b.reinforce();
+      if (r0.length) { view.show(r0); if (o.onReinforce) o.onReinforce(); await view.sleep(1.0); }
       const u = b.nextUnit();
       if (!u) return b.outcome();
       view.setActive(u.key);
@@ -480,6 +597,8 @@ const Battle = (() => {
       view.show(r.events);
       await view.sleep(r.events.some((e) => e.out) ? 2.0 : 0.9);
       await rebut(r, u);
+      const ri = b.reinforce();
+      if (ri.length) { view.show(ri); if (o.onReinforce) o.onReinforce(); await view.sleep(1.0); }
       // A commanded ally answers at once.
       if (r.commanded && !b.outcome() && r.commanded.state === "in") {
         const ally = r.commanded, tgt = b.commandTarget(ally);
@@ -562,7 +681,7 @@ const Battle = (() => {
     return [...new Set(out)].join(" · ");
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
@@ -594,6 +713,11 @@ const BattleView = (() => {
           return { alpha: 1 - k / 1.2, dx: a.side === "foe" ? k * 60 : -k * 60, flip: a.side !== "foe" };
         }
         if (u.state === "discouraged") return { alpha: 0.4 };
+        // A reinforcement walks in from the side.
+        if (u.joinedAt !== undefined && now - u.joinedAt < 0.8) {
+          const k = (now - u.joinedAt) / 0.8;
+          return { dx: Math.round((1 - k) * 160), pose: Math.floor(now * 8) % 2 ? "walkA" : "walkB" };
+        }
         // Dumbfounded: swaying on his feet.
         if (u.statuses.dumbfounded > 0) return { dx: Math.round(Math.sin(now * 5 + u.slot) * 3) };
         return null;
@@ -826,6 +950,7 @@ const BattleView = (() => {
         floaters.push({ key: e.key, text: e.text, color: e.color, t0: now + rows[e.key] * 0.12, row: rows[e.key] });
         rows[e.key]++;
         if (e.out) { const u = byKey()[e.key]; if (u) u.outAt = now; }
+        if (e.summon) { const nu = byKey()[e.key]; if (nu) nu.joinedAt = now; }
         if (e.summon) theater.setFoes([0, 1, 2].map((s) => { const x = battle.units.find((v) => v.side === "foe" && v.slot === s); return x ? x.id : "skeptic"; }));
       }
     }

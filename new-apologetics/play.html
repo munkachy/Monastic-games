@@ -65,6 +65,8 @@
   .hero-info .about { margin: 0; font-size: 14px; }
   .hero-info li .what { font-size: 13px; color: var(--muted); margin: 2px 0 4px 20px; }
   .hero-info li small { font: 600 10px/1 var(--display); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; }
+  .difficulty input[type=range] { flex: 1; min-width: 160px; accent-color: var(--gold); height: 32px; }
+  .difficulty b { font: 600 16px/1 var(--display); color: var(--gold); min-width: 7em; }
   .music-modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .music-modes button { min-height: 40px; padding: 6px 10px; font-size: 13px; }
   .music-modes button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
@@ -150,6 +152,11 @@
       <button class="primary" id="play">Play</button>
       <button id="reset">Start over</button>
     </div>
+    <div style="justify-self:stretch" class="difficulty">
+      <label class="label" for="difficulty">Difficulty</label>
+      <div class="row" style="margin-top:8px"><input type="range" id="difficulty" min="0" max="4" step="1" value="1"><b id="difficulty-name">Normal</b></div>
+      <p class="note" id="difficulty-note" style="margin:4px 0 0"></p>
+    </div>
     <div style="justify-self:stretch">
       <span class="label">Music</span>
       <div class="music-modes" id="music-modes" style="margin-top:8px"></div>
@@ -203,21 +210,21 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260926r"></script>
-<script src="audio.js?v=20260926r"></script>
-<script src="art.js?v=20260926r"></script>
-<script src="moves.js?v=20260926r"></script>
-<script src="story.js?v=20260926r"></script>
-<script src="data.js?v=20260926r"></script>
-<script src="lines.js?v=20260926r"></script>
-<script src="battle.js?v=20260926r"></script>
+<script src="chants.js?v=20260926u"></script>
+<script src="audio.js?v=20260926u"></script>
+<script src="art.js?v=20260926u"></script>
+<script src="moves.js?v=20260926u"></script>
+<script src="story.js?v=20260926u"></script>
+<script src="data.js?v=20260926u"></script>
+<script src="lines.js?v=20260926u"></script>
+<script src="battle.js?v=20260926u"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = GameData.CAMPAIGN;
   const HEROES = GameData.HEROES;
   const FOES = GameData.FOES;
-  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", heschmeyer: "Leader" };
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader" };
   const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", random4: "Four strikes at random opponents", ally: "One friend", allies: "Whole team", self: "Self" };
 
   // The teaching cards each chapter unlocks.
@@ -254,7 +261,7 @@
       let out = save;
       if (save.test) {
         out = JSON.parse(localStorage.getItem(SAVE_KEY)) || { stars: {}, seen: {}, team: [], xp: {} };
-        out.test = true; out.music = save.music;
+        out.test = true; out.music = save.music; out.difficulty = save.difficulty;
       }
       localStorage.setItem(SAVE_KEY, JSON.stringify(out));
     } catch (e) { /* no storage */ }
@@ -272,6 +279,7 @@
   function roster() {
     if (save.test) return Object.keys(HEROES).filter((h) => !HEROES[h].guest);
     const r = new Set(GameData.START);
+    if (save.converted && save.converted.schmid) r.add("schmid");     // he joins once he has come home
     C.forEach((ch, ci) => { if (chapterDone(ci)) ch.unlocks.forEach((h) => r.add(h)); });
     return [...r];
   }
@@ -309,6 +317,19 @@
   }
   let tutorial = false;
   let coachStep = 0;
+
+  // ---- Difficulty ---------------------------------------------------------------------------
+  // Five steps, Gentle to Crucible; it can be changed at any time and takes
+  // effect in the next debate.
+  const difficulty = () => (save.difficulty === undefined ? 1 : save.difficulty);
+  function paintDifficulty() {
+    const d = Battle.DIFFICULTY[difficulty()];
+    $("difficulty").value = String(difficulty());
+    $("difficulty-name").textContent = d.name;
+    $("difficulty-note").textContent = d.blurb;
+    $("difficulty").setAttribute("aria-valuetext", d.name);
+  }
+  $("difficulty").addEventListener("input", () => { save.difficulty = +$("difficulty").value; store(); paintDifficulty(); });
 
   // ---- Music ------------------------------------------------------------------------------
 
@@ -350,6 +371,7 @@
   // Browsers allow sound only after a tap, so the first tap anywhere starts it.
   document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
   paintMusic();
+  paintDifficulty();
 
   // Developer mode: every chapter, hero, move and book open, and nothing
   // earned is kept. A secret switch: tap the title on the first screen seven
@@ -523,7 +545,7 @@
     const m = ch.missions[mi];
     const fixed = m.team ? m.team.slice() : ch.guest ? [ch.guest] : [];
     const size = m.team ? m.team.length : 4;
-    const available = m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : []);
+    const available = (m.team ? m.team : roster().concat(ch.guest ? [ch.guest] : [])).filter((h) => !m.foes.includes(h));
     let picked = fixed.slice();
     for (const id of save.team || []) if (picked.length < size && available.includes(id) && !picked.includes(id)) picked.push(id);
     tutorial = !!m.team && ci === 0;
@@ -654,7 +676,8 @@
   function coverFor(ci, m) {
     if (m.cover) return m.cover;
     const foe = [], hero = [];
-    m.foes.forEach((f, i) => { if (foe.length < 2 && Math.random() < 0.35) foe.push(i); });
+    const chance = Battle.DIFFICULTY[difficulty()].cover;
+    m.foes.forEach((f, i) => { if (foe.length < 2 && Math.random() < chance) foe.push(i); });
     for (let i = 0; i < 4; i++) if (hero.length < 1 && Math.random() < 0.15) hero.push(i);
     return { foe, hero, size: 0.4 };
   }
@@ -824,7 +847,16 @@
     for (const id of team) levels[id] = levelOfHero(id);
     const books = {};
     for (const id of team) { const bk = bookOf(id); if (bk) books[id] = bk; }
-    const b = Battle.create({ books, team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
+    // The tutorial is always gentle; everywhere else the chosen difficulty and
+    // the chapter's power apply, with reinforcements drawn from the rank and file.
+    const dIdx = ci === 0 ? Math.min(1, difficulty()) : difficulty();
+    const D = Battle.DIFFICULTY[dIdx];
+    const power = C[ci].power ? C[ci].power[m.boss ? 1 : 0] : 1;
+    const grunts = m.foes.filter((f) => !FOES[f].boss && !FOES[f].secretConvert);
+    // Chapter 1 gets only half the difficulty's extra toughness and at most
+    // one reinforcement, before the team has its great moves.
+    const reserve = ci === 0 || !grunts.length ? [] : Array.from({ length: ci === 1 ? Math.min(1, D.reserve) : D.reserve }, (_, k) => grunts[k % grunts.length]);
+    const b = Battle.create({ difficulty: dIdx, power, reserve, ease: ci === 1 ? 0.5 : 0, books, team, foes: m.foes, level: m.level !== undefined ? m.level : ci, levels, movesAt: m.movesAt, unlockAll: !!save.test, cover: coverFor(ci, m) });
     music(m.boss ? "sext" : "vigils", m.boss ? 2 : 1);
     coachStep = 0;
     coach("battle-coach", "");
@@ -847,7 +879,7 @@
       onAction: (u, s, backup, line) => {
         paintOrder(b, u);
         $("turn").textContent = u.name + "'s turn" + (u.level ? " · Lv " + u.level : "");
-        $("round").textContent = "Round " + b.round;
+        $("round").textContent = "Round " + b.round + (b.waiting() ? " · " + b.waiting() + " waiting" : "");
         // What the fighter says, in plain text under the stage, easy to read at any speed.
         const i = u.def.skills.indexOf(s);
         const mv = { ...(u.side === "hero" ? Theater.MOVES[u.id][i] : s.anim || {}), ...(line || {}) };
@@ -856,7 +888,7 @@
         $("panel").textContent = "";
       },
     });
-    const foes = b.units.filter((u) => u.side === "foe");
+    const foes = b.allFoes();
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");
     const left = foes.filter((u) => u.state === "left");
@@ -867,7 +899,7 @@
     if (!save.converted) save.converted = {};
     for (const u of converted) save.converted[u.id] = true;
     // Experience: a win teaches more than a loss, a boss most of all. Leaving early earns nothing.
-    const gain = out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : out === "lose" ? 40 : 0;
+    const gain = Math.round((out === "win" ? 120 + (foes.some((u) => u.kind === "boss") ? 60 : 0) : out === "lose" ? 40 : 0) * Battle.DIFFICULTY[difficulty()].xp);
     const grew = [];
     const start = team.map(xpOf);
     if (gain) team.forEach((id, i) => {
@@ -913,7 +945,7 @@
       c.className = "coach";
       c.innerHTML = "<b>" + u.name + " has come home.</b> ";
       c.append(u.def.sign && u.def.sign[0] === "CONFESSION"
-        ? "Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one."
+        ? "Baptized a Catholic and away for years, he doesn't need OCIA: he goes to confession and back to the altar. Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one. He joins your roster."
         : "Conversions are rare. A few opponents can be won over when their Zeal gives way, and you just found one.");
       box.append(c);
     }
@@ -1011,7 +1043,7 @@
   let resetArmed = false;
   $("reset").addEventListener("click", () => {
     if (!resetArmed) { resetArmed = true; $("reset").textContent = "Tap again to erase progress"; return; }
-    save = { stars: {}, seen: {}, team: [], xp: {}, music: save.music }; store(); paintTest();
+    save = { stars: {}, seen: {}, team: [], xp: {}, music: save.music, difficulty: save.difficulty }; store(); paintTest();
     resetArmed = false; $("reset").textContent = "Progress erased";
   });
   if (Object.keys(save.stars).length) $("play").textContent = "Continue";
