@@ -173,7 +173,7 @@
 <header class="bar">
   <a class="home" href="./">New Apologetics</a>
   <span class="wip">Work in progress · under review</span>
-  <button class="test-tag" id="test-tag" hidden aria-pressed="false" title="Developer mode: every chapter, hero, move and book open; nothing earned is kept.">Dev: off</button>
+  <button class="test-tag" id="test-tag" hidden aria-pressed="false" title="Developer mode: every chapter, evangelist, move and book open; nothing earned is kept.">Dev: off</button>
   <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
 </header>
 
@@ -263,14 +263,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928f"></script>
-<script src="audio.js?v=20260928f"></script>
-<script src="art.js?v=20260928f"></script>
-<script src="moves.js?v=20260928f"></script>
-<script src="story.js?v=20260928f"></script>
-<script src="data.js?v=20260928f"></script>
-<script src="lines.js?v=20260928f"></script>
-<script src="battle.js?v=20260928f"></script>
+<script src="chants.js?v=20260928g"></script>
+<script src="audio.js?v=20260928g"></script>
+<script src="art.js?v=20260928g"></script>
+<script src="moves.js?v=20260928g"></script>
+<script src="story.js?v=20260928g"></script>
+<script src="data.js?v=20260928g"></script>
+<script src="lines.js?v=20260928g"></script>
+<script src="battle.js?v=20260928g"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -392,10 +392,9 @@
   }
 
   // ---- Levels: every hero starts at level 1 and grows by debating --------------------------
-  // Only heroes who debate gain experience. A hero who joins later starts with
-  // half the experience of the heroes you have been playing (a level or two
-  // behind), and stays there until he debates. A guest is only passing
-  // through, so he always stands level with the team.
+  // Only heroes who debate gain experience. A hero who joins later starts at
+  // level 1 and catches up by debating beside the veterans (see catchUp). A
+  // guest is only passing through, so he always stands level with the team.
   // The experience of the team you have been playing: the four most
   // experienced heroes who have debated, on average. (Newcomers who have only
   // sat on the bench don't count, or each would pull the next one down.)
@@ -405,16 +404,16 @@
   };
   function xpOf(id) {
     if (HEROES[id].guest) return Math.round(averageXp());
-    if (save.xp[id] === undefined && !save.test) { save.xp[id] = Math.round(averageXp() / 2); store(); }
+    if (save.xp[id] === undefined && !save.test) { save.xp[id] = 0; store(); }
     return save.xp[id] || 0;
   }
   // Catching up: a hero debating alongside higher-level teammates learns
   // faster, half as much again for each level behind the strongest, up to
-  // double. Bringing a newcomer along is how he grows.
-  const MENTOR = 0.5;
+  // triple. Bringing a newcomer along is how he grows.
+  const MENTOR = 0.5, MENTOR_MAX = 2;
   const catchUp = (id, team) => {
     const top = Math.max(...team.filter((h) => !HEROES[h].guest).map(levelOfHero));
-    return 1 + Math.min(1, MENTOR * Math.max(0, top - levelOfHero(id)));
+    return 1 + Math.min(MENTOR_MAX, MENTOR * Math.max(0, top - levelOfHero(id)));
   };
   const levelOfHero = (id) => Battle.levelOf(xpOf(id));
 
@@ -542,12 +541,12 @@
     if (!me()) return;
     if (!me().dev) { me().dev = true; storeProfiles(); }
     toggleTest();
-    toast(save.test ? "Developer mode on: every chapter, hero, move and book is open. Progress isn't saved. The Dev switch at the top turns it off." : "Developer mode off. Your real progress is back.");
+    toast(save.test ? "Developer mode on: every chapter, evangelist, move and book is open. Progress isn't saved. The Dev switch at the top turns it off." : "Developer mode off. Your real progress is back.");
   });
   // The Dev switch in the top bar, for a developer profile.
   $("test-tag").addEventListener("click", () => {
     toggleTest();
-    toast(save.test ? "Developer mode on: every chapter, hero, move and book is open. Progress isn't saved." : "Developer mode off. Your real progress is back.");
+    toast(save.test ? "Developer mode on: every chapter, evangelist, move and book is open. Progress isn't saved." : "Developer mode off. Your real progress is back.");
     if (!$("s-map").hidden) showMap();
   });
   function toggleTest() {
@@ -611,7 +610,7 @@
     const r = (sv && sv.record) || null;
     if (!r || !(r.won + r.lost)) return "";
     const n = (x, one, many) => x + " " + (x === 1 ? one : many);
-    return n(r.won, "debate won", "debates won") + " · " + n(r.converted, "conversion", "conversions") + " · " + n(r.conceded, "argument won", "arguments won") + " (conceded) · " + n(r.left, "opponent", "opponents") + " left the debate · " + n(r.discouraged, "hero", "heroes") + " Discouraged";
+    return n(r.won, "debate won", "debates won") + " · " + n(r.converted, "conversion", "conversions") + " · " + n(r.conceded, "argument won", "arguments won") + " (conceded) · " + n(r.left, "opponent", "opponents") + " left the debate · " + n(r.discouraged, "evangelist", "evangelists") + " Discouraged";
   }
   function paintRecord() {
     const t = recordOf(save);
@@ -708,7 +707,7 @@
         j.className = "joins" + (done ? " done" : "");
         const lab = document.createElement("span");
         lab.className = "label";
-        lab.textContent = done ? "Joined your roster" : "Finish this chapter and " + (joining.length === 1 ? "this hero joins" : "these heroes join") + " your roster";
+        lab.textContent = done ? "Joined your roster" : "Finish this chapter and " + (joining.length === 1 ? "this evangelist joins" : "these evangelists join") + " your roster";
         j.append(lab);
         for (const h of joining) {
           const f = document.createElement("div");
@@ -769,7 +768,7 @@
     coach("map-coach", save.test ? "" : !played
       ? "<b>Start here.</b> Tap <b>Tutorial</b> in the Prologue below. It walks you through your first debate, one step at a time."
       : played === 1 && !storiesDone() && !STORIES.some((ci) => stars(ci, 0))
-        ? "<b>Well done!</b> New heroes have joined your roster, and every story is open now. Start with whichever you like: tap <b>Mission 1</b> of any chapter. The later chapters are built for a stronger team, so try them on Gentle at first. When all " + STORIES.length + " are done, the final chapter opens."
+        ? "<b>Well done!</b> New evangelists have joined your roster, and every story is open now. Start with whichever you like: tap <b>Mission 1</b> of any chapter. The later chapters are built for a stronger team, so try them on Gentle at first. When all " + STORIES.length + " are done, the final chapter opens."
         : "");
     paintRecord();
     music("vespers", 0);
@@ -824,7 +823,7 @@
     coach("team-coach", tutorial
       ? "<b>Step 1 of 4 · Your team.</b> For the tutorial, Trent Horn and Jimmy Akin are already on your team: you can see them under “Your team” above. Tap either one below to see his moves. Then tap <b>Begin</b>."
       : !save.stars[mkey(ci, mi)] && ci === 1 && mi === 0
-        ? "<b>Choose your team.</b> Tap up to four heroes below to add them. Tap a chosen hero again to take them off. Each tap also shows that hero's moves underneath, and the books on your shelf: tap <b>The Catechism</b> there to give it to that hero. Only heroes who debate gain experience, and a newcomer catches up fast beside veterans. When your team is full, tap <b>Begin</b>."
+        ? "<b>Choose your team.</b> Tap up to four evangelists below to add them. Tap a chosen evangelist again to take them off. Each tap also shows that evangelist's moves underneath, and the books on your shelf: tap <b>The Catechism</b> there to give it to that evangelist. Only evangelists who debate gain experience, and a newcomer catches up fast beside veterans. When your team is full, tap <b>Begin</b>."
         : "");
     const info = $("hero-info");
     info.hidden = true;
@@ -1347,7 +1346,7 @@
     }
     if (ch.book) {
       const n = document.createElement("p");
-      n.textContent = "New on your shelf: " + BOOKS[ch.book].name + " (" + BOOKS[ch.book].by + "). " + BOOKS[ch.book].text + " Give it to a hero on the team screen.";
+      n.textContent = "New on your shelf: " + BOOKS[ch.book].name + " (" + BOOKS[ch.book].by + "). " + BOOKS[ch.book].text + " Give it to an evangelist on the team screen.";
       box.append(n);
     }
     if (ch.unlocks.length) {
