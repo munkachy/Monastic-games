@@ -153,3 +153,24 @@ Zeal −2 made Normal 77 / 58, too hard; down to −1, 88 / 71; the same rule as
 the heroes (from 0) with the higher hero chances kept the old curve. Final,
 30 runs per mission: Gentle 100 / 99, Normal 92 / 77, Very Hard 58 / 38,
 Crucible 46 / 31 (before: 100 / 99, 93 / 81, 56 / 37, 39 / 31).
+
+## Update: two new chapters and Fr. Carlos Martins
+
+Chapter 5, Apollo Loves You (New Age; an invented WitchTok influencer; tarot
+readers and crystal healers), and Chapter 6, My Body, My Brand (Online
+Culture; Destiny; content creators and campus activists), come before James
+White, who stays the final boss. Fr. Carlos Martins joins after the Islam
+chapter, modelled on Captain Pike (base × 10: Health 25, Attack 5.2,
+Defense 2.09, Tech 10.5, Speed 9.5): Holy Water (Phaser), Stand Behind Me
+(Protect: taunt, Morale up for the team), Prayer of Deliverance (Stand Up:
+major heal that brings back the Discouraged, cleanse, 50% Morale up),
+Treasures of the Church (Call to Action). He makes a fourth reviver.
+
+Tuning, smart bot, Normal: the first cut was too hard (the new rank and file
+had team-wide second moves; the old ones are single-target), so Crystal
+Grid, It's Empowering and Clump of Cells became single-target, The Tower
+hits lighter, Destiny's Attack 84 → 78 and Speed 118 → 112, and the powers
+settled at New Age [3.0, 2.6], Body [3.1, 2.2], Reformed boss 1.3 → 1.15.
+Final, 30 runs: New Age 97 / 90 / 73 / boss 93; Body 97 / 83 / 80 / boss 70;
+Reformed 100 / 87 / 87 / boss 77; whole campaign grunt 92, boss 79 (Normal),
+grunt 41 (Crucible).

@@ -17,6 +17,11 @@ apologists are sent for evaluation shows only the game itself.
 - **The likenesses are mostly drawn from photographs.** A few are still best
   guesses and will be redrawn as better photographs come in.
 
+- **Destiny's lines state his own public case** (personhood begins with
+  conscious experience; his sleeping-person and life-support analogies), not
+  a caricature. The chapter ends without his conversion. The WitchTok
+  influencer is an invented character.
+
 ## Writing about real people
 
 The people in this game may read it. Every description of a hero (the `about`

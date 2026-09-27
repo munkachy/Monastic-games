@@ -1037,7 +1037,7 @@ const BattleView = (() => {
     // the unbaptized are baptized at the Easter Vigil; a baptized Protestant
     // is received into full communion, not baptized again; Latter-day Saint
     // baptism is not recognized as valid (CDF, 2001), so he is baptized.
-    const SIGNS = { atheist: ["OCIA", "EASTER VIGIL"], protestant: ["OCIA", "FULL COMMUNION"], lds: ["OCIA", "BAPTISM AT THE VIGIL"], islam: ["OCIA", "EASTER VIGIL"] };
+    const SIGNS = { atheist: ["OCIA", "EASTER VIGIL"], protestant: ["OCIA", "FULL COMMUNION"], lds: ["OCIA", "BAPTISM AT THE VIGIL"], islam: ["OCIA", "EASTER VIGIL"], newage: ["OCIA", "ALL WELCOME"], secular: ["OCIA", "EASTER VIGIL"] };
 
     // The sign a converted opponent leaves behind. Someone baptized who comes
     // back to the Church goes to confession, not to OCIA; his entry says so.

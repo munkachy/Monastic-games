@@ -370,6 +370,16 @@ const Art = (() => {
       for (let y = 2; y < 13; y++) { g.put(7, y + 0, y > 9 ? "#2b2b33" : g.get(7, y)); }
       for (let y = 10; y < 15; y++) { g.put(6, y, "#2b2b33"); g.put(25, y, "#2b2b33"); }
       for (let x = 7; x < 13; x++) g.put(x, 16 + Math.floor((x - 7) / 3), "#2b2b33");
+    } else if (s.prop === "cards") {
+      // A fan of three tarot cards, held low at the side.
+      for (const [dx, c] of [[0, "#3a2a5a"], [3, "#5a3a7a"], [6, "#3a2a5a"]]) {
+        for (let y = 22 + (dx === 3 ? -1 : 0); y < 31; y++) for (let x = 1 + dx; x < 5 + dx; x++) g.put(x, y, c);
+        g.put(2 + dx, 25 + (dx === 3 ? -1 : 0), "#e8b94a"); g.put(3 + dx, 26 + (dx === 3 ? -1 : 0), "#e8b94a");
+      }
+    } else if (s.prop === "phone") {
+      // A phone held up, screen lit, as if filming.
+      for (let y = 20; y < 30; y++) for (let x = 25; x < 31; x++) g.put(x, y, "#1d1d24");
+      for (let y = 21; y < 29; y++) for (let x = 26; x < 30; x++) g.put(x, y, (x + y) % 3 ? "#ff9ac8" : "#ffd0e4");
     } else if (s.prop === "sign") {
       for (let y = 12; y < 24; y++) for (let x = 0; x < 9; x++) g.put(x, y, "#f7f1de");
       for (const y of [14, 16, 18, 20]) for (let x = 1; x < 8; x++) if ((x + y) % 3) g.put(x, y, "#b3261e");
@@ -586,6 +596,19 @@ const Art = (() => {
     elder: { skin: "#f4d0b3", shade: "#d7a98a", hair: "#d9b25a", hairLight: "#f0cf7a", style: "side", outfit: "whiteshirt", clothes: "#f7f5ee", tie: "#243a66", prop: "nametag", smile: true },
     preacher: { skin: "#e9b896", shade: "#c78f70", hair: "#6b4a2f", style: "short", beard: "chin", beardColor: "#6b4a2f", outfit: "shirt", clothes: "#7a6a4f", trim: "#e9e2d0", prop: "sign" },
     speaker: { skin: "#b98563", shade: "#976746", hair: "#1c140f", style: "kufi", cap: "#f2efe6", capTrim: "#c9c3b4", beard: "chin", beardColor: "#1c140f", brow: "#1c140f", outfit: "shirt", clothes: "#4f5a3a", trim: "#d8d2bf" },
+    // Fr. Carlos Martins: bald, a short white beard, a wide smile, clerics.
+    martins: { skin: "#cf9a72", shade: "#ae7a54", hair: "#8a7a6a", style: "bald", faceW: 8.2, beard: "short", beardColor: "#dcd8d0", brow: "#7a6a5a", outfit: "clerical", clothes: "#1b1b22", grin: true },
+    // Destiny: curly blue hair, a dark beard, blue-grey eyes, a dark T-shirt.
+    destiny: { skin: "#f0c8aa", shade: "#d0a086", hair: "#2a62d8", hairLight: "#4a86f2", style: "curly", beard: "full", beardColor: "#3a2a20", brow: "#3a2a20", eyeColor: "#6a8aa8", outfit: "shirt", clothes: "#1a2230", trim: "#1a2230" },
+    witch: { skin: "#f4d2ba", shade: "#d4aa92", hair: "#2a1a34", hairLight: "#4a2e5a", style: "long", part: true, browThin: true, brow: "#2a1a24", mouth: "#9a3a6a", outfit: "blouse", clothes: "#3a1a4a", skirt: "#2a1236", prop: "pendant", smile: true },
+    tarot: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#8a3a22", hairLight: "#a8502e", style: "long", browThin: true, brow: "#6a2a18", mouth: "#b45a5a", outfit: "blouse", clothes: "#2f5a4a", skirt: "#24463a", prop: "cards", smile: true },
+    tarot2: { skin: "#c89068", shade: "#a87050", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#8a4a4a", outfit: "blouse", clothes: "#6a3a5a", skirt: "#4a2a42", prop: "cards" },
+    crystal: { skin: "#efc6a8", shade: "#cf9e84", hair: "#c8a060", hairLight: "#e0c080", style: "shaggy", beard: "short", beardColor: "#b08a50", outfit: "sweater", clothes: "#8a6a3a", trim: "#6a4e2a", prop: "pendant", smile: true },
+    crystal2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#5a3a26", hairLight: "#7a5a44", style: "curly", outfit: "sweater", clothes: "#5a7a5a", trim: "#46624a", prop: "pendant", smile: true },
+    creator: { skin: "#f4d4bc", shade: "#d6ae96", hair: "#e0c070", hairLight: "#f4dc98", style: "long", browThin: true, brow: "#a0804a", mouth: "#d06a8a", outfit: "blouse", clothes: "#d86a9a", skirt: "#b04a7a", prop: "phone", smile: true },
+    creator2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#9a4a5a", outfit: "blouse", clothes: "#2a2a34", skirt: "#1e1e28", prop: "phone" },
+    activist: { skin: "#f0c8aa", shade: "#cf9f82", hair: "#3a8a6a", hairLight: "#5aaa8a", style: "side", browThin: true, brow: "#4a3a2a", outfit: "hoodie", clothes: "#6a3a8a", trim: "#52306a", prop: "sign" },
+    activist2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2a5a4a", trim: "#224a3c", prop: "sign" },
     skeptic: { skin: "#f3cdb2", shade: "#d3a58a", hair: "#9a5a2e", style: "curly", outfit: "hoodie", clothes: "#5d6470", trim: "#434955", prop: "headset" },
     skeptic2: { skin: "#d9a882", shade: "#b98862", hair: "#2a1e16", style: "short", beard: "stubble", beardColor: "#4a3628", glasses: "#2a2a33", outfit: "hoodie", clothes: "#2f3a4a", trim: "#23303e" },
     preacher2: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#c8a060", hairLight: "#e0c080", style: "side", outfit: "shirt", clothes: "#8a2a2a", trim: "#e9e2d0", prop: "sign" },

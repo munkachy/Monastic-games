@@ -24,7 +24,8 @@ const Story = (() => {
     marygrace: "Sr. Mary Grace", rose: "Lila Rose", holdsworth: "Brian Holdsworth", jurado: "Alex Jurado", spitzer: "Fr. Spitzer",
     heschmeyer: "Joe Heschmeyer", hahn: "Scott Hahn", oconnor: "Alex O'Connor", ryan: "Ryan (NeedGod.net)", white: "James White",
     hansen: "Jacob Hansen", speaker: "Speakers' Corner Champion", elder: "Elder Missionary", skeptic: "Skeptic Streamer",
-    preacher: "Street Preacher", seminarian: "Seminarian", "": "",
+    preacher: "Street Preacher", seminarian: "Seminarian", martins: "Fr. Carlos Martins", witch: "WitchTok Influencer",
+    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", "": "",
   };
 
   // ---- The chapters ------------------------------------------------------------------
@@ -176,6 +177,67 @@ const Story = (() => {
       ],
     },
     {
+      id: "newage", title: "Apollo Loves You", group: "New Age", boss: "witch", place: "shop", mystery: "Why would anyone say “Apollo loves you,” when no one in the ancient world ever did?",
+      scenes: [
+        { when: "Before the first battle", place: "shop", left: ["hicks","barron"], right: ["witch"], lines: [
+          ["witch","Apollo loves you. Hecate protects you. The gods want you to thrive, babe."],
+          ["barron","Which Apollo? In the Iliad he sends a plague on the whole Greek camp because a priest was insulted."],
+          ["hicks","And the cards, the circles, the spirit guides… Some doors are easier to open than to close.","…"],
+        ] },
+        { when: "After the first battle", place: "shop", left: ["hicks","barron"], right: ["witch","+martins"], lines: [
+          ["witch","That's so fear-based. It's just energy."],
+          ["martins","I'm Fr. Carlos. I'm an exorcist. I've met what comes through those doors. It isn't energy, and it doesn't love anyone."],
+        ] },
+        { when: "After the second battle", place: "shop", left: ["barron","martins","hicks"], right: [], lines: [
+          ["barron","Here's what's strange. No Greek ever said Apollo loved him. Homer says the gods spin sorrow for mortals and have no sorrows themselves.","?"],
+          ["hicks","And Aristotle said you can't be friends with a god at all. The distance is too great.","idea"],
+          ["barron","So where does “the gods love you” come from? From us. From “God is love.” She has borrowed the Gospel and pinned it on Apollo."],
+        ] },
+        { when: "After the third battle", place: "shop", left: ["martins","hicks","marygrace"], right: [], lines: [
+          ["martins","Don't mock her. She's looking for a love that's real. Show her where it is."],
+          ["marygrace","And don't be afraid for us. Christ has authority over every spirit. We only have to stay close to him."],
+          ["hicks","The peace she's chasing doesn't come from the cards. Let's help her tell the difference."],
+        ] },
+        { when: "The last conversation", place: "shop", left: ["barron","martins","marygrace"], right: ["witch"], lines: [
+          ["witch","So my gods don't love me?","?"],
+          ["barron","They never claimed to. Homer's gods play with men like pieces on a board. The God who made you became a man and died for you. That is a different kind of love."],
+          ["martins","And he isn't a force you manage with salt and candles. He's a Father. You can just talk to him."],
+          ["witch","I need to think. And maybe get rid of some stuff.","…"],
+          ["","She keeps the rosary Sr. Mary Grace leaves on the counter. That night the tarot deck goes in the bin."],
+        ] },
+      ],
+    },
+    {
+      id: "body", title: "My Body, My Brand", group: "Online Culture", boss: "destiny", place: "stream", mystery: "If it's my body and my choice, whose body is the child's? And what happens to a person who becomes a product?",
+      scenes: [
+        { when: "Before the first battle", place: "stream", left: ["rose","fradd"], right: ["destiny"], lines: [
+          ["destiny","Bodily autonomy. Nobody is owed the use of your body. Not a fan, not a fetus."],
+          ["rose","Then we agree the body matters. Let's talk about whose body is whose."],
+        ] },
+        { when: "After the first battle", place: "stream", left: ["fradd","holdsworth"], right: ["creator"], lines: [
+          ["creator","It's empowering. I'm my own boss, and nobody's getting hurt."],
+          ["fradd","I've sat down with people who got out of that industry. Nearly every one says it took more than it gave. You're worth more than a subscription."],
+        ] },
+        { when: "After the second battle", place: "square", left: ["marygrace","rose","pine"], right: [], lines: [
+          ["marygrace","The creators and the activists are saying the same thing: my body is mine to use, and no one else counts.","?"],
+          ["pine","But the body isn't something you have, like a phone. It's you. That's why selling it hurts, and why the child's body isn't the mother's.","idea"],
+        ] },
+        { when: "After the third battle", place: "square", left: ["rose","pine","schmitz"], right: [], lines: [
+          ["rose","Destiny's line is consciousness. No experiences, no person, no harm."],
+          ["pine","Then ask what he is when he's asleep. Not conscious, and still himself. A person is a living being of a rational nature, not a stream of experiences. Boethius put it that way in the sixth century."],
+          ["schmitz","And say it with love. He's a person too, and so is everyone watching."],
+        ] },
+        { when: "The last conversation", place: "stream", left: ["rose","pine","marygrace"], right: ["destiny"], lines: [
+          ["destiny","A sleeping person has had experiences, and they'll resume. A ten-week fetus hasn't had any. That's the difference."],
+          ["rose","Then a newborn has had very few. What makes her count? It's what she is, not what she's done."],
+          ["pine","You don't become someone by thinking. You think because you're already someone."],
+          ["destiny","Interesting. I'll take it apart on stream tonight.","…"],
+          ["marygrace","We'll be watching, and praying for you. Every life is a gift. Yours too."],
+          ["","No one converts today. But the chat fills up with people asking questions they've never asked before."],
+        ] },
+      ],
+    },
+    {
       id: "reformed", title: "Scripture Alone?", group: "Reformed", boss: "white", place: "library", mystery: "How do you answer sola scriptura in a way James White hasn't heard a thousand times?",
       scenes: [
         { when: "Before the first battle", place: "library", left: ["horn","bertuzzi","akin"], right: ["white"], lines: [
@@ -274,6 +336,24 @@ const Story = (() => {
       for (let i = 0; i < 8; i++) { ctx.fillStyle = "#3a6a3a"; ctx.beginPath(); ctx.arc(i * 90 + 30, 150, 50, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#5a3a22"; ctx.fillRect(i * 90 + 26, 170, 8, 70); }
       ctx.fillStyle = "#6a4a2a"; ctx.fillRect(300, 200, 40, 30); ctx.fillStyle = "#fdfaf2"; ctx.font = "700 12px " + FONT; ctx.textAlign = "center"; ctx.fillText("SPEAKERS' CORNER", 320, 190);
       floor(ctx, "#5a8a4a", "#4f7a42");
+    },
+    shop(ctx, t) {
+      ctx.fillStyle = "#1c1226"; ctx.fillRect(0, 0, W, H);
+      // Shelves of crystals and candles, and a neon moon in the window.
+      for (let r = 0; r < 3; r++) { ctx.fillStyle = "#3a2a2a"; ctx.fillRect(0, 70 + r * 50, 230, 5); ctx.fillRect(410, 70 + r * 50, 230, 5); for (let b = 0; b < 12; b++) { const x = (b < 6 ? 14 : 424) + (b % 6) * 36; ctx.fillStyle = ["#b48ae8", "#ff9ac8", "#9fe0c0", "#ffe07a"][(b + r) % 4]; ctx.beginPath(); ctx.moveTo(x, 70 + r * 50); ctx.lineTo(x + 8, 50 + r * 50); ctx.lineTo(x + 16, 70 + r * 50); ctx.fill(); } }
+      ctx.fillStyle = "#0b0714"; ctx.fillRect(250, 40, 140, 110);
+      ctx.strokeStyle = Math.sin(t * 3) > -0.6 ? "#c69ae8" : "#6a4a8a"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(320, 95, 30, 0.6, Math.PI * 2 - 0.6); ctx.stroke();
+      for (let i = 0; i < 6; i++) { const x = 250 + i * 28; ctx.fillStyle = "#f3ead2"; ctx.fillRect(x, 198, 6, 16); ctx.fillStyle = Math.sin(t * 8 + i) > 0 ? "#ffcf5a" : "#ffe07a"; ctx.fillRect(x + 1, 190, 4, 8); }
+      floor(ctx, "#2a1c30", "#24182a");
+    },
+    stream(ctx, t) {
+      ctx.fillStyle = "#0c0e18"; ctx.fillRect(0, 0, W, H);
+      // A streaming room: a strip of light along the wall, monitors, a mic arm.
+      for (let x = 0; x < W; x += 8) { const h = (x / W + t * 0.2) % 1; ctx.fillStyle = `hsl(${Math.round(h * 360)},70%,55%)`; ctx.fillRect(x, 30, 8, 4); }
+      for (const x of [180, 330]) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 4, 66, 128, 80); ctx.fillStyle = "#1f3b6b"; ctx.fillRect(x, 70, 120, 72); for (let i = 0; i < 5; i++) { ctx.fillStyle = "#9fd0ff"; ctx.fillRect(x + 8, 78 + i * 12, 60 + ((i * 37) % 44), 4); } }
+      ctx.fillStyle = "#b3261e"; ctx.fillRect(500, 70, 52, 22); ctx.fillStyle = "#fdfaf2"; ctx.font = "700 14px " + FONT; ctx.textAlign = "center"; ctx.fillText("LIVE", 526, 86);
+      ctx.fillStyle = "#2b2b33"; ctx.fillRect(160, 150, 4, 60); ctx.fillRect(140, 146, 24, 4);
+      floor(ctx, "#171a28", "#141724");
     },
     church(ctx, t) {
       ctx.fillStyle = "#0e0c16"; ctx.fillRect(0, 0, W, H);

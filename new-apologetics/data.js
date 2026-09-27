@@ -145,6 +145,15 @@ const GameData = (() => {
       H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
       H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
     ] },
+    // Fr. Carlos Martins, exorcist. Modelled on Captain Pike: Phaser, Protect
+    // (taunt, and Morale for the team), Stand Up (heal, cleanse, Morale),
+    // Call to Action (Attack, Crit and Morale for everyone).
+    martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. Bring him to the New Age chapter, and to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
+      H("Holy Water", "foe", 0, 0, [{ dmg: 1.0 }]),
+      H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 3 }, { allyZeal: 1 }]),
+      H("Prayer of Deliverance", "allies", 4, 1, [{ heal: 0.3 }, { cleanse: true }, { zeal: 1, chance: 0.5 }]),
+      H("Treasures of the Church", "allies", 4, 2, [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { zeal: 2 }]),
+    ] },
   };
 
   // ---- Books ---------------------------------------------------------------------------
@@ -189,6 +198,22 @@ const GameData = (() => {
       H("In the Greek…", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["In the Greek…"], "#7ea4e6") }),
       H("TULIP", "foe", 3, 1, [{ status: "muted", turns: 1 }], { anim: X("Total depravity.", "muted") }),
     ] },
+    tarot: { name: "Tarot Reader", grunt: true, faction: "newage", stats: [108, 62, 10, 102], traits: { care: 55, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Card Pull", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["The cards say…"], "#c69ae8") }),
+      H("The Tower", "foe", 3, 1, [{ dmg: 0.5 }, { status: "dumbfounded", turns: 1, chance: 0.35 }], { anim: X("The Tower. Upheaval!", "dumbfounded") }),
+    ] },
+    crystal: { name: "Crystal Healer", grunt: true, faction: "newage", stats: [118, 58, 12, 92], traits: { care: 60, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Good Vibes", "foe", 0, 0, [{ dmg: 1.05 }], { anim: V(["Good vibes!"], "#9fe0c0") }),
+      H("Crystal Grid", "self", 3, 1, [{ shield: 0.3, turns: 2 }], { anim: U("Amethyst protects me.", ["shield"]) }),
+    ] },
+    creator: { name: "Content Creator", grunt: true, faction: "secular", stats: [105, 64, 10, 106], traits: { care: 50, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Link in Bio", "foe", 0, 0, [{ dmg: 1.1 }], { anim: V(["Link in bio!"], "#ff8ac0") }),
+      H("It's Empowering", "self", 3, 1, [{ buff: "atk", amt: 0.3, turns: 2 }], { anim: U("It's empowering!", ["up"]) }),
+    ] },
+    activist: { name: "Campus Activist", grunt: true, faction: "secular", stats: [120, 60, 12, 90], traits: { care: 55, glance: [0.05, 0.15], crit: [0.05, 1.3], resolve: 0.06 }, skills: [
+      H("Chant", "foe", 0, 0, [{ dmg: 1.05 }], { anim: V(["My body!"], "#de5e55") }),
+      H("Clump of Cells", "foe", 3, 1, [{ zeal: -1, chance: 0.5 }], { anim: X("It's just a clump of cells!", "pipDown") }),
+    ] },
 
     // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
     // animal suffering first led him away from the Church; in August 2026 he
@@ -225,6 +250,22 @@ const GameData = (() => {
       H("Tahrif", "foes", 3, 0, [{ purge: "all" }], { anim: X("Your Bible was corrupted.", "factcheck") }),
       H("Tawhid", "self", 4, 1, [{ immune: "steadfast", turns: 2 }], { anim: U("God is one!", ["shield"]) }),
       H("The Crowd Gathers", "self", 4, 2, [{ summon: "dai" }], { anim: U("Brothers, come!", ["up"]) }),
+    ] },
+    // An invented WitchTok influencer: no real person.
+    witch: { name: "WitchTok Influencer", boss: true, faction: "newage", stats: [330, 80, 20, 108], traits: { care: 80, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
+      H("Manifest It", "foe", 0, 0, [{ dmg: 1.25 }], { anim: V(["Manifest it!"], "#c69ae8") }),
+      H("Apollo Loves You", "foes", 3, 0, [{ status: "doubting", turns: 2 }, { zeal: -1 }], { anim: X("Apollo loves you, babe.", ["doubting", "pipDown"]) }),
+      H("Mercury in Retrograde", "foes", 3, 1, [{ buff: "atk", amt: -0.3, turns: 3 }], { anim: X("Mercury's in retrograde!", "down") }),
+      H("Protection Circle", "self", 4, 2, [{ heal: 0.3 }, { buff: "def", amt: 0.5, turns: 3 }], { anim: U("Salt circle. Protected.", ["heal", "up"]) }),
+    ] },
+    // Destiny (Steven Bonnell): his public case, fairly put. Personhood begins
+    // with conscious experience; the sleeping person and life support are his
+    // own analogies. He talks fast.
+    destiny: { name: "Destiny", boss: true, faction: "secular", stats: [330, 78, 18, 112], traits: { care: 70, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
+      H("Rapid Fire", "foe", 0, 0, [{ dmg: 0.45, hits: 3 }], { anim: V(["No.", "Wrong.", "Next."], "#4a8af0") }),
+      H("Define 'Person'", "foes", 3, 0, [{ status: "examined", turns: 3 }], { anim: X("Define “person.”", "examined") }),
+      H("Life Support", "foe", 3, 1, [{ dmg: 1.0 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("Would you unplug him or not?", "dumbfounded") }),
+      H("No Experiences, No Harm", "foes", 4, 2, [{ zeal: -1 }, { status: "doubting", turns: 2, chance: 0.5 }], { anim: X("No conscious experience, no one harmed.", ["pipDown", "doubting"]) }),
     ] },
     white: { name: "James White", boss: true, faction: "protestant", stats: [320, 80, 22, 108], traits: { care: 88, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
       H("Greek Exegesis", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
@@ -265,8 +306,20 @@ const GameData = (() => {
       { name: "The Crowd", foes: ["dai2", "dai", "dai2"] },
       { name: "The Islamic Dilemma", foes: ["dai", "dai2", "dai"] },
       { name: "God Is One", foes: ["dai", "speaker", "dai2"], boss: "speaker" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [], book: "rule" },
-    { id: "reformed", power: [3.0, 1.3], title: "Scripture Alone?", group: "Reformed", missions: [
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["martins"], book: "rule" },
+    { id: "newage", power: [3.0, 2.6], title: "Apollo Loves You", group: "New Age", missions: [
+      { name: "The Crystal Shop", foes: ["tarot", "crystal"] },
+      { name: "The Full Moon Circle", foes: ["crystal", "tarot", "crystal2"] },
+      { name: "Mercury in Retrograde", foes: ["tarot", "crystal", "tarot2"] },
+      { name: "Apollo Loves You", foes: ["tarot", "witch", "crystal"], boss: "witch" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    { id: "body", power: [3.1, 2.2], title: "My Body, My Brand", group: "Online Culture", missions: [
+      { name: "Link in Bio", foes: ["creator", "activist"] },
+      { name: "The Campus Rally", foes: ["activist", "creator", "activist2"] },
+      { name: "Bodily Autonomy", foes: ["creator", "activist", "creator2"] },
+      { name: "The Debate Stream", foes: ["activist", "destiny", "creator"], boss: "destiny" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
+    { id: "reformed", power: [3.0, 1.15], title: "Scripture Alone?", group: "Reformed", missions: [
       { name: "The Seminary Library", foes: ["seminarian", "seminarian2"] },
       { name: "Reformed Podcasters", foes: ["seminarian2", "seminarian", "seminarian2"] },
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
@@ -278,7 +331,7 @@ const GameData = (() => {
   const START = ["horn", "akin"];
 
   // Variants share a kit with the original, with a different look.
-  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"]]) FOES[copy] = FOES[of];
+  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"]]) FOES[copy] = FOES[of];
 
   return { HEROES, FOES, CAMPAIGN, START, BOOKS };
 })();
