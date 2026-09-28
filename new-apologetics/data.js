@@ -449,7 +449,7 @@ const GameData = (() => {
     ["Shield of Faith", "Absorbs hits for 3 turns, and while it holds, the debater behind it argues more boldly: his arguments land harder. How strong it is depends on the evangelist who gives it. You can see it as a shimmering bubble around the debater, and as a white section added to the end of the Composure bar: the longer the white, the more it can take. Shields stack: a second one adds to the first and lasts as long as the longer, up to the debater’s full Composure."],
     ["Boosts and setbacks", "Attack, Defense and Crit Chance Up and Down stack: two Attack Downs count twice, and an Attack Up and an Attack Down cancel out, though no one falls below a fifth of his strength. The mark under the debater shows what is left over: <b>ATK▼2</b>, or nothing at all when they cancel."],
     ["Muted", "Can use only his basic move."],
-    ["Rebuttal", "For a few turns, whenever an opponent's move hits this evangelist, he answers the attacker at once with his basic move, even against a move aimed at the whole team (but not while Dumbfounded). Pair it with a move that makes everyone answer him, as Ethan Muse does."],
+    ["Rebuttal", "For a few turns, whenever an opponent's move does anything to this evangelist (a hit, even one his podium takes, a setback like Attack Down, a stun, a call-out, a loss of Zeal), he answers the attacker at once with his basic move, even against a move aimed at the whole team (but not while Dumbfounded). Pair it with a move that makes everyone answer him, as Ethan Muse does."],
   ];
 
   const START = ["horn", "akin"];
