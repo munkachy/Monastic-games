@@ -424,13 +424,14 @@ const Battle = (() => {
           // him back; once he is back, the rest of the move applies to him.
           if (t.state === "discouraged" && !e.heal) continue;
           if (e.share && inPlay(t)) blow(t, e.share, events);
+          // Rebuttal: anyone ready to answer back answers once any opponent's
+          // move that does something to him: a hit (even one his podium takes),
+          // a setback, a stun, a call-out, a loss of Zeal or of a boost.
+          const aimedAt = e.dmg || e.share || e.zeal < 0 || e.status || (e.buff && e.amt < 0) || e.purge || e.taunt || e.tauntAll;
+          if (aimedAt && !answering && t.side !== u.side && inPlay(t) && t.counter > 0 && !(t.statuses.dumbfounded > 0) && !rebuttals.includes(t)) rebuttals.push(t);
           if (e.dmg) {
-            let hurt = false;
-            for (let h = 0; h < (e.hits || 1); h++) hurt = hit(u, t, e, s, events, false) || hurt;
+            for (let h = 0; h < (e.hits || 1); h++) hit(u, t, e, s, events, false);
             if (e.splash) for (const o of others(u).filter((x) => inPlay(x) && x !== t)) hit(u, o, { ...e, dmg: e.dmg * 0.4 }, s, events, true);
-            // Rebuttal: anyone ready to answer back, and actually hurt by an
-            // opponent's move (a podium's hit doesn't count), answers once.
-            if (hurt && !answering && t.side !== u.side && t.counter > 0 && !(t.statuses.dumbfounded > 0) && !rebuttals.includes(t)) rebuttals.push(t);
           }
           // (and costs no Zeal)
           if (e.zeal && !(s.closer && (diff.closer || 1) < 1)) { if (zeal(t, e.zeal, s, events)) broke = true; }
@@ -845,7 +846,7 @@ const Battle = (() => {
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");
-      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move hits this evangelist, the evangelist answers back at once with the basic move (not while Dumbfounded)" + (e.counter && sk.target === "self" ? ". Arms folded and a ring of steel show the stance, and it can't be taken again while it holds" : ""));
+      if (e.counter || e.selfCounter) out.push("Rebuttal: whenever an opponent's move does anything to this evangelist (a hit, a setback, a stun, a call-out), the evangelist answers back at once with the basic move (not while Dumbfounded)" + (e.counter && sk.target === "self" ? ". Arms folded and a ring of steel show the stance, and it can't be taken again while it holds" : ""));
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this evangelist");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
