@@ -952,15 +952,44 @@ const BattleView = (() => {
           if (targetable.has(a.key)) { ctx.strokeStyle = `rgba(232,185,74,${0.5 + Math.sin(t * 8) * 0.4})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(a.x, a.y, 38, 9, 0, 0, Math.PI * 2); ctx.stroke(); }
         }
         // Numbers and words that float up from the fighters.
+        // A long one wraps onto more lines, and every one is kept inside the
+        // stage, so nothing runs off the edge over the right-hand debaters.
         floaters = floaters.filter((f) => now - f.t0 < 2.2);
+        ctx.font = "400 28px " + CLEAR;
+        const LINE = 24, MAX_W = 160, SW = ctx.canvas.width;
+        for (const f of floaters) if (!f.lines) {
+          f.lines = [];
+          for (const word of String(f.text).split(" ")) {
+            const last = f.lines[f.lines.length - 1];
+            if (last !== undefined && ctx.measureText(last + " " + word).width <= MAX_W) f.lines[f.lines.length - 1] = last + " " + word;
+            else f.lines.push(word);
+          }
+          f.width = Math.max(...f.lines.map((l) => ctx.measureText(l).width));
+        }
+        // Stack each debater's words by how many lines the ones below take up.
+        const lift = new Map(), used = {};
+        for (const f of floaters.slice().sort((a, b) => a.row - b.row)) { lift.set(f, used[f.key] || 0); used[f.key] = (used[f.key] || 0) + f.lines.length; }
+        // Two neighbours' words that would overlap: the later one rises above.
+        const placed = [];
         for (const f of floaters) {
           const a = actors.find((x) => x.key === f.key);
           if (!a) continue;
           const k = (now - f.t0) / 2.2;
           ctx.globalAlpha = Math.min(1, (1 - k) * 3);
-          ctx.font = "400 30px " + CLEAR; ctx.textAlign = "center"; ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.strokeStyle = "#1a1326";
-          const y = a.y - 112 - k * 20 - f.row * 28;
-          ctx.strokeText(f.text, a.x, y); ctx.fillStyle = f.color; ctx.fillText(f.text, a.x, y);
+          ctx.font = "400 28px " + CLEAR; ctx.textAlign = "center"; ctx.lineWidth = 6; ctx.lineJoin = "round"; ctx.strokeStyle = "#1a1326";
+          const x = Math.max(f.width / 2 + 8, Math.min(SW - f.width / 2 - 8, a.x));
+          let base = a.y - 112 - k * 20 - lift.get(f) * LINE;
+          const box = () => ({ l: x - f.width / 2 - 4, r: x + f.width / 2 + 4, t: base - f.lines.length * LINE, b: base + 6 });
+          for (let tries = 0; tries < 6; tries++) {
+            const me = box(), hit = placed.find((o) => o.key !== f.key && me.l < o.r && o.l < me.r && me.t < o.b && o.t < me.b);
+            if (!hit) break;
+            base -= me.b - hit.t + 2;
+          }
+          placed.push({ key: f.key, ...box() });
+          f.lines.forEach((l, i) => {
+            const y = base - (f.lines.length - 1 - i) * LINE;
+            ctx.strokeText(l, x, y); ctx.fillStyle = f.color; ctx.fillText(l, x, y);
+          });
           ctx.globalAlpha = 1;
         }
       },
