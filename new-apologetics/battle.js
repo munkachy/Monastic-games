@@ -697,10 +697,12 @@ const Battle = (() => {
     if (u.counter > 0) tags.push(["REBUTTAL", "#e8b94a"]);
     for (const [k, v] of Object.entries(u.immune)) if (v > 0) tags.push([GUARDS[k] || "GUARDED", "#7ea4e6"]);
     if (u.regen && u.regen.n > 0) tags.push(["RENEW", "#74c07a"]);
+    // Boosts and setbacks on the same stat cancel out: two Attack Ups and one
+    // Attack Down show as a single ATK▲.
     for (const st of ["atk", "def", "crit", "spd"]) {
-      const up = u.buffs.filter((b) => b.stat === st && b.amt > 0).length, down = u.buffs.filter((b) => b.stat === st && b.amt < 0).length;
-      if (up) tags.push([STAT_TAG[st] + "▲" + (up > 1 ? up : ""), "#74c07a"]);
-      if (down) tags.push([STAT_TAG[st] + "▼" + (down > 1 ? down : ""), "#ff6a5e"]);
+      const net = u.buffs.filter((b) => b.stat === st).reduce((n, b) => n + (b.amt > 0 ? 1 : b.amt < 0 ? -1 : 0), 0);
+      if (net > 0) tags.push([STAT_TAG[st] + "▲" + (net > 1 ? net : ""), "#74c07a"]);
+      if (net < 0) tags.push([STAT_TAG[st] + "▼" + (net < -1 ? -net : ""), "#ff6a5e"]);
     }
     return tags;
   }
