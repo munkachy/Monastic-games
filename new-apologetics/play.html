@@ -185,7 +185,9 @@
   #s-battle .controls button { font: 400 19px/1.1 var(--clear); }
 
   /* Under the stage: every mark on every debater, spelled out */
-  .marks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font: 400 18px/1.25 var(--clear); }
+  .marks { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; font: 400 18px/1.25 var(--clear); }
+  .marks ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; align-content: start; }
+  .marks ul + ul { border-left: 1px solid var(--line); padding-left: 12px; }
   .marks li b { font-weight: 400; }
   .marks li b.hero { color: var(--marian); }
   .marks li b.foe { color: #ff8a80; }
@@ -304,7 +306,7 @@
   <div class="order-row"><span class="label">Next</span><div class="order" id="order" aria-label="Turn order, fastest first"></div></div>
   <canvas id="battle" width="640" height="360" aria-label="The battle. Tap an opponent or a friend to choose a target."></canvas>
   <p id="log" aria-live="polite"></p>
-  <ul class="marks" id="marks" aria-label="What is on each debater right now"></ul>
+  <div class="marks" id="marks" aria-label="What is on each debater right now"><ul id="marks-hero"></ul><ul id="marks-foe"></ul></div>
   <p class="coach" id="battle-coach" hidden></p>
   <div id="panel" style="display:grid;gap:10px"></div>
   <div class="controls">
@@ -318,14 +320,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928r"></script>
-<script src="audio.js?v=20260928r"></script>
-<script src="art.js?v=20260928r"></script>
-<script src="moves.js?v=20260928r"></script>
-<script src="story.js?v=20260928r"></script>
-<script src="data.js?v=20260928r"></script>
-<script src="lines.js?v=20260928r"></script>
-<script src="battle.js?v=20260928r"></script>
+<script src="chants.js?v=20260928s"></script>
+<script src="audio.js?v=20260928s"></script>
+<script src="art.js?v=20260928s"></script>
+<script src="moves.js?v=20260928s"></script>
+<script src="story.js?v=20260928s"></script>
+<script src="data.js?v=20260928s"></script>
+<script src="lines.js?v=20260928s"></script>
+<script src="battle.js?v=20260928s"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1284,8 +1286,7 @@
     let warned = null;
     // Every mark on every debater, listed under the stage in full.
     const paintMarks = () => {
-      const list = $("marks");
-      list.textContent = "";
+      $("marks-hero").textContent = ""; $("marks-foe").textContent = "";
       for (const u of b.units) {
         if (u.state !== "in") continue;
         const tags = Battle.marks(u);
@@ -1296,7 +1297,7 @@
         who.textContent = u.name + ": ";
         li.append(who);
         for (const [g, c] of tags) { const sp = document.createElement("span"); sp.textContent = g; sp.style.color = c; li.append(sp); }
-        list.append(li);
+        $(u.side === "hero" ? "marks-hero" : "marks-foe").append(li);
       }
     };
     paintMarks();
@@ -1329,7 +1330,7 @@
       },
     });
     clearInterval(markTimer);
-    $("marks").textContent = "";
+    $("marks-hero").textContent = ""; $("marks-foe").textContent = "";
     const foes = b.allFoes();
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");
