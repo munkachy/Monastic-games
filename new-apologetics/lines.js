@@ -26,7 +26,7 @@ const Lines = (() => {
     "Free-for-All Friday": ["So… I finally got glasses.", "I once filmed a zombie movie.", "My favorite last meals…", "The weirdest phobias. Mine too.", "Let's talk YouTube algorithms.", "Why do millennials look so young?", "Someone tried to steal $4,000!", "So I've looked into dieting.", "Remote-work hacks, anyone?", "Good things from the pandemic?", "My all-time favorite movies…", "Crew Resource Management!", "What happened to bowling alleys?"],
     "Is That in the Bible?": ["Where does it say that?", "Show me that verse.", "Is that in the Bible, though?", "Book, chapter, verse?"],
     // Matt Fradd
-    "Cheeky Question": [["Hang on, mate."], ["Crikey…"], ["Good question…", "…but why?"], ["Righto…", "…but why?"], ["Mate.", "Mate."]],
+    "Cheeky Question": [["Hang on,", "mate,", "why?"], ["Crikey…", "really?", "why?"], ["Good question…", "but…", "why?"], ["Righto…", "and…", "why?"], ["Mate.", "Mate.", "Mate."]],
     "Pints with Aquinas": ["Pull up a stool.", "This one's on me.", "Aquinas would've loved this.", "Get this man a pint!"],
     // "My name is obviously Matt Fradd" is how he opens Pints with Aquinas;
     // "That's beautiful" is his usual response to a guest's good point.

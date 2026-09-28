@@ -184,6 +184,23 @@
   #s-battle .explain .kind { font: 400 16px/1.2 var(--clear); text-transform: none; letter-spacing: 0.02em; }
   #s-battle .controls button { font: 400 19px/1.1 var(--clear); }
 
+  /* Under the stage: every mark on every debater, spelled out */
+  .marks { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font: 400 18px/1.25 var(--clear); }
+  .marks li b { font-weight: 400; }
+  .marks li b.hero { color: var(--marian); }
+  .marks li b.foe { color: #ff8a80; }
+  .marks li span + span::before { content: " · "; color: var(--muted); }
+
+  /* The rules, one tap away from anywhere in the game */
+  #rules { width: min(640px, calc(100% - 24px)); max-height: 86vh; padding: 16px 18px; background: var(--panel); color: var(--text); border: 2px solid var(--gold); border-radius: 8px; }
+  #rules::backdrop { background: rgba(10, 12, 24, 0.75); }
+  #rules .rules-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: -16px; background: var(--panel); padding: 4px 0 8px; }
+  #rules h2 { font: 400 28px/1.1 var(--clear); color: var(--gold); }
+  #rules .rules-head button { font: 400 20px/1 var(--clear); }
+  #rules p { margin: 4px 0 8px; font-size: 16px; line-height: 1.45; }
+  #rules dt { margin-top: 14px; font: 400 22px/1.1 var(--clear); color: var(--gold); }
+  #rules dd { margin: 4px 0 0; font-size: 16px; line-height: 1.45; }
+
   /* Results and cards */
   .result h2 { font-size: 36px; }
   .result .stars { font-size: 34px; color: var(--gold); letter-spacing: 6px; }
@@ -205,7 +222,13 @@
   <span class="wip">Work in progress · under review</span>
   <button class="test-tag" id="test-tag" hidden aria-pressed="false" title="Developer mode: every chapter, evangelist, move and book open; nothing earned is kept.">Dev: off</button>
   <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
+  <button class="rules-open" aria-haspopup="dialog">Rules</button>
 </header>
+<dialog id="rules" aria-labelledby="rules-title">
+  <div class="rules-head"><h2 id="rules-title">How the game works</h2><button id="rules-close">Close</button></div>
+  <p id="rules-intro"></p>
+  <dl id="rules-list"></dl>
+</dialog>
 
 <section id="s-title" class="screen">
   <div class="title-card">
@@ -281,26 +304,28 @@
   <div class="order-row"><span class="label">Next</span><div class="order" id="order" aria-label="Turn order, fastest first"></div></div>
   <canvas id="battle" width="640" height="360" aria-label="The battle. Tap an opponent or a friend to choose a target."></canvas>
   <p id="log" aria-live="polite"></p>
+  <ul class="marks" id="marks" aria-label="What is on each debater right now"></ul>
   <p class="coach" id="battle-coach" hidden></p>
   <div id="panel" style="display:grid;gap:10px"></div>
   <div class="controls">
     <button id="speed" aria-pressed="false">Speed ×1</button>
     <button id="auto" aria-pressed="false">Auto</button>
     <button id="retreat">Leave the debate</button>
+    <button class="rules-open" aria-haspopup="dialog">Rules</button>
   </div>
 </section>
 
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928q"></script>
-<script src="audio.js?v=20260928q"></script>
-<script src="art.js?v=20260928q"></script>
-<script src="moves.js?v=20260928q"></script>
-<script src="story.js?v=20260928q"></script>
-<script src="data.js?v=20260928q"></script>
-<script src="lines.js?v=20260928q"></script>
-<script src="battle.js?v=20260928q"></script>
+<script src="chants.js?v=20260928r"></script>
+<script src="audio.js?v=20260928r"></script>
+<script src="art.js?v=20260928r"></script>
+<script src="moves.js?v=20260928r"></script>
+<script src="story.js?v=20260928r"></script>
+<script src="data.js?v=20260928r"></script>
+<script src="lines.js?v=20260928r"></script>
+<script src="battle.js?v=20260928r"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -508,10 +533,7 @@
       row.append(b);
     });
     const d = Battle.DIFFICULTY[now];
-    // Jumping ahead: a chapter's par is the team level it was built for.
-    const par = C[ci].par, yours = Battle.levelOf(averageXp());
-    const ahead = par && yours < par - 1 && now > 0 ? " This chapter is built for about level " + Math.round(par) + ", and your team is level " + yours + ": Gentle makes it winnable." : "";
-    $("diff-note").textContent = (best ? "Best won here: " + Battle.DIFFICULTY[best - 1].name + ". " : "Not won yet. ") + d.name + ": " + d.blurb + (ci === 0 ? " The tutorial goes no higher than Normal." : "") + ahead;
+    $("diff-note").textContent = (best ? "Best won here: " + Battle.DIFFICULTY[best - 1].name + ". " : "Not won yet. ") + d.name + ": " + d.blurb + (ci === 0 ? " The tutorial goes no higher than Normal." : "");
   }
 
   // ---- Music ------------------------------------------------------------------------------
@@ -550,6 +572,24 @@
       box.append(b);
     }
   }
+ // ---- Rules: the same list as the design page, behind a button on every screen ----
+  (() => {
+    const dlg = $("rules");
+    $("rules-intro").innerHTML = GameData.RULES_INTRO;
+    for (const [name, text] of GameData.RULES) {
+      const dt = document.createElement("dt"); dt.textContent = name;
+      const dd = document.createElement("dd"); dd.innerHTML = text;
+      $("rules-list").append(dt, dd);
+    }
+    for (const b of document.querySelectorAll(".rules-open")) b.addEventListener("click", () => { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", ""); });
+    $("rules-close").addEventListener("click", () => dlg.close());
+    // A tap outside the panel closes it too.
+    dlg.addEventListener("click", (e) => {
+      const r = dlg.getBoundingClientRect();
+      if (e.target === dlg && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dlg.close();
+    });
+  })();
+
   $("music").addEventListener("click", () => setMusic(Sound.MODES[(Sound.MODES.indexOf(save.music) + 1) % Sound.MODES.length]));
   // Browsers allow sound only after a tap, so the first tap anywhere starts it.
   document.addEventListener("pointerdown", () => { Sound.unlock(); if (save.music !== "off" && !Sound.playing) music(tune.chant, tune.intensity); }, { capture: true });
@@ -1242,6 +1282,25 @@
     $("panel").textContent = "";
     show("s-battle");
     let warned = null;
+    // Every mark on every debater, listed under the stage in full.
+    const paintMarks = () => {
+      const list = $("marks");
+      list.textContent = "";
+      for (const u of b.units) {
+        if (u.state !== "in") continue;
+        const tags = Battle.marks(u);
+        if (!tags.length) continue;
+        const li = document.createElement("li");
+        const who = document.createElement("b");
+        who.className = u.side === "hero" ? "hero" : "foe";
+        who.textContent = u.name + ": ";
+        li.append(who);
+        for (const [g, c] of tags) { const sp = document.createElement("span"); sp.textContent = g; sp.style.color = c; li.append(sp); }
+        list.append(li);
+      }
+    };
+    paintMarks();
+    const markTimer = setInterval(paintMarks, 300);
     const out = await Battle.run(b, view, {
       choose: (u) => playerChoose(b, u),
       onSkip: (u) => {
@@ -1269,6 +1328,8 @@
         $("panel").textContent = "";
       },
     });
+    clearInterval(markTimer);
+    $("marks").textContent = "";
     const foes = b.allFoes();
     const converted = foes.filter((u) => u.state === "converted");
     const walked = foes.filter((u) => u.state === "walked");

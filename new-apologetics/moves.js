@@ -155,8 +155,8 @@ const Theater = (() => {
   // ---- The stage --------------------------------------------------------------------
 
   // Where each fighter stands: feet position. Heroes on the left, foes on the right.
-  const HERO_SLOTS = [[190, 324], [80, 324], [135, 194], [245, 194]];
-  const FOE_SLOTS = [[450, 324], [560, 324], [505, 194]];
+  const HERO_SLOTS = [[190, 316], [80, 316], [135, 194], [245, 194]];
+  const FOE_SLOTS = [[450, 316], [560, 316], [505, 194]];
 
   // opts.state(actor) may return { hidden, alpha, pose } for each fighter, and
   // opts.hud(ctx, actors, t) draws over the stage (bars, pips, numbers).
@@ -930,7 +930,7 @@ const Theater = (() => {
       { name: "The Case for Catholicism", kind: cinematic, who: "Trent Horn", color: "#7a1f2b", scene: SCENES.books, to: "all", mark: ["pipDown"], impact: impactOn("#e8b94a") },
     ],
     fradd: [
-      { name: "Cheeky Question", kind: volley, glyphs: ["Mate…"], color: "#e8b94a" },
+      { name: "Cheeky Question", kind: volley, glyphs: ["Mate…", "but…", "why?"], color: "#e8b94a" },
       { name: "Pints with Aquinas", kind: approach, to: "ally", item: "pint", say: "Cheers, mate!", mark: "heal", mark2: "pipUp" },
       { name: "Australian Charm", kind: approach, to: "ally", say: "G'day! You've got this.", mark: "up", mark2: "hearts" },
       { name: "Summa Session", kind: cinematic, who: "Matt Fradd", color: "#1f4a2e", scene: SCENES.pub, to: "allies", mark: ["up", "heal"] },
