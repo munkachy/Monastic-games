@@ -391,3 +391,16 @@ levels above: 57 / 42. Normal unchanged: 83 / 77. Destiny's boss power
 Saves convert once (threeSteps): Hard wins count as Normal, Very Hard and
 Crucible wins as Crucible; a saved choice of Hard becomes Normal, Very Hard
 or Crucible becomes Crucible. The epilogue needs every debate on Crucible.
+
+## Update: shields stack; stacked boosts shown
+
+Legends' effect types (scripts/data/GSEffectType.json) give maxStacks −1
+(no limit) for Attack, Defense, Crit, Speed buffs and debuffs and for
+Shield; only Scan (3), Regenerate, Silence and Resistance (10) are capped.
+Our buffs already added together (floor at 20% of the stat). Shields used to
+replace each other; now a second adds to the first, lasts the longer
+duration, and the total is capped at the debater's full Composure. The
+status row shows stacked boosts as ▲2 / ▼2. Normal, story order, 40 runs:
+smart 85 / 78, simple 68 / 56 (unchanged within noise). A single team
+shield at par already covers most of a Composure bar, so stacking rarely
+adds much before the cap; Spitzer −5 → 0.
