@@ -65,8 +65,8 @@ const GameData = (() => {
       H("Is That in the Bible?", "foes", 3, 1, [{ purge: 1 }, { zeal: -1 }], { pierce: ["security", "faith"] }),
       H("The Case for Catholicism", "foes", 4, 2, [{ dmg: 3.0, vs: ["guarded", 1.5] }]),
     ] },
-    fradd: { name: "Matt Fradd", about: "The friend who gets people back on their feet. Pints with Aquinas brings back a Discouraged teammate, and Australian Charm fires one friend up for the next few turns. Summa Session clears every setback from the team. Bring him to long fights and to opponents who fluster.", stats: [225, 61, 14, 125], traits: { care: 105, glance: [0.1, 0.22], crit: [0.04, 1.18], resolve: 0.09 }, skills: [
-      H("Cheeky Question", "foe", 0, 0, [{ dmg: 1.5 }]),
+    fradd: { name: "Matt Fradd", about: "The friend who gets people back on their feet. Cheeky Question asks three quick questions in a row. Pints with Aquinas brings back a Discouraged teammate, and Australian Charm fires one friend up for the next few turns. Summa Session clears every setback from the team. Bring him to long fights and to opponents who fluster.", stats: [225, 61, 14, 125], traits: { care: 105, glance: [0.1, 0.22], crit: [0.04, 1.18], resolve: 0.09 }, skills: [
+      H("Cheeky Question", "foe", 0, 0, [{ dmg: 0.5, hits: 3 }]),
       H("Pints with Aquinas", "ally", 3, 0, [{ heal: 0.5 }, { zeal: 2, chance: 0.5 }]),
       H("Australian Charm", "ally", 3, 0, [{ buff: "atk", amt: 0.5, turns: 3 }, { zeal: 2 }]),
       H("Summa Session", "allies", 4, 2, [{ cleanse: true }, { buff: "def", amt: 0.5, turns: 3 }]),
@@ -420,10 +420,42 @@ const GameData = (() => {
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
 
+  // The rules, shown on the design page and behind the Rules button in the game.
+  // Each is [name, explanation]; the explanation may use <b>.
+  const RULES_INTRO = "Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every evangelist has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. A great move lands half again as hard as the rest, so reaching it is a real upgrade. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.";
+  const RULES = [
+    ["Marks under each debater", "Short words under each Composure bar say what is on that debater right now, and the game lists them all in full under the stage: <b>STUN</b> Dumbfounded · <b>DOUBTING</b> or <b>FLUSTERED</b> · <b>MUTED</b> · <b>EXPOSED</b> · <b>HIDDEN</b> Undercover · <b>CALLED OUT</b> · <b>REBUTTAL</b> ready · <b>STEADY</b> can’t lose Zeal · <b>SECURE</b> Eternal Security · <b>FAITH ALONE</b> · <b>HALF DMG</b> a testimony · <b>RENEW</b> regains Composure each turn · <b>ATK▲</b>, <b>DEF▼</b>, <b>CRIT▲</b> boosts and setbacks, with a number when they stack (<b>ATK▼2</b>). A red warning over a boss means he is winding up his closing argument."],
+    ["Composure", "How long a debater keeps his cool. At zero, an evangelist is <b>Discouraged</b> and sits out until a friend encourages him back. Only a move that restores Composure can reach him: Matt Fradd’s Pints with Aquinas, Brian Holdsworth’s Beauty Will Save the World, Cameron Bertuzzi’s Bayesian Update, Fr. Carlos Martins’ Prayer of Deliverance, or Kim Zember’s Child of God. Shields, boosts and Zeal pass him by."],
+    ["Zeal", "Everyone starts at 0. Blue arrows up (to +3) when it rises, red arrows down when it falls. Every red arrow takes a tenth off the strength of his arguments, so a flagging debater hits softer. At the bottom, an opponent leaves the debate and an evangelist is <b>Discouraged</b>."],
+    ["Backing up", "When someone argues, every teammate with Zeal at 0 or higher may jump in with their basic move, each on his own chance: a quarter at Zeal 0, up to seven in ten at +3. A fired-up team often piles in two or three strong, and the other side does the same. But when an evangelist is Discouraged, his friends are <b>Shaken</b> and each loses 1 Zeal, so one loss can stall the whole team."],
+    ["Players", "Several people can play on one device: each enters a name and an email and gets a separate saved game, with a lifetime record of debates won, conversions, arguments won, opponents who left, and evangelists Discouraged. Names and emails stay on the device."],
+    ["Stars", "Each debate remembers the hardest difficulty you have won it on: one star for Gentle, two for Normal, three for Crucible."],
+    ["Level", "Only evangelists who win a debate gain experience: a lost debate earns nothing, and the bench gains nothing. When a chapter is too hard, go back and win earlier debates to level up. Each level adds 7% to an evangelist’s Composure and to the strength of his arguments, and opens new moves. A new evangelist joins the roster at level 1. Bring them along, even on Gentle, and they catch up fast: an evangelist debating beside higher-level teammates learns half as much again for each level behind the strongest, up to three times as much."],
+    ["💡 Move tips", "In a debate, tap the lightbulb on any move to see what it does, how often it can be used, and when it is worth using. It works on locked and waiting moves too, so you can plan ahead."],
+    ["Speed", "Everyone acts once a round, fastest first, and speed never changes. Evangelists who act early tend to carry less Composure; those who carry the most take longer to act. Going first lets you shield the team or finish off an opponent before he answers."],
+    ["Difficulty", "Three steps, chosen just before each debate, beside the best you have won that debate on: Gentle (for the story), Normal (the game as designed) and Crucible (“tested like gold in the fire,” 1 Peter 1:7). Crucible brings tougher, sharper opponents, more podiums, a reinforcement, and a little more experience. Gentle is much softer and earns a quarter less: the way to play a chapter above your level. The tutorial is always gentle."],
+    ["Closing argument", "Every boss has one. On his second turn, and every third turn after, he spends his turn winding up: a red warning flashes over his head. On his next turn it takes a large share of every evangelist’s Composure at once (from 55% for O’Connor to 85% for James White), and 1 Zeal from each. Three ways to answer it: put up a Shield of Faith in time, and it soaks up the blow; leave him Dumbfounded or Muted while he winds up; or pile on and knock a fifth of his Composure off before he speaks, and he loses his thread. The first bosses’ closing arguments are gentle, James White’s is the hardest, and on Gentle every one lands at half strength and costs no Zeal."],
+    ["Reinforcements", "On Crucible, a fresh opponent waits in reserve. When one goes out, he walks in to take his place. The round counter shows when someone is still waiting."],
+    ["Podiums", "Some debaters start behind something: a podium, a soapbox, a stepladder at Speakers' Corner, a pulpit, a streamer's desk. It changes every battle. It takes the hits meant for the debater until it falls. A few moves go straight past it, a few hit it extra hard, and lowering Zeal gets past it every time."],
+    ["Sent in", "A few moves send a teammate in to answer at once with their basic move, out of turn. Best used on a friend who hits hard but acts late."],
+    ["Deflect · Crit · Resilience", "Every debater has a small chance to deflect part of a hit, to land a critical hit (which also knocks the other's Zeal down), and to shrug off a loss of Zeal. Exposed debaters can't deflect."],
+    ["Hidden strengths", "Some evangelists hit harder, some take a hit better, some build stronger shields and podiums for their friends. The game never shows these numbers. You learn each evangelist's gifts by playing them."],
+    ["Dumbfounded", "Stunned: loses turns while he thinks it over. Stars circle his head, one for each turn he still has to lose, and he sways on his feet. Some moves only stun some of the time: the stars show when it has really happened."],
+    ["Called Out", "Must answer one particular apologist and no one else."],
+    ["Doubting · Flustered", "Loses a little Composure each turn. An opponent is left Doubting his position, and some skills hit him harder for it. An apologist never doubts his faith: the same hard question leaves him Flustered."],
+    ["Exposed", "Takes harder hits."],
+    ["Fact-Check", "Removes a buff."],
+    ["Examen", "Removes every debuff."],
+    ["Shield of Faith", "Absorbs hits for 3 turns, and while it holds, the debater behind it argues more boldly: his arguments land harder. How strong it is depends on the evangelist who gives it. You can see it as a shimmering bubble around the debater, and as a white section added to the end of the Composure bar: the longer the white, the more it can take. Shields stack: a second one adds to the first and lasts as long as the longer, up to the debater’s full Composure."],
+    ["Boosts and setbacks", "Attack, Defense and Crit Chance Up and Down stack: two Attack Downs count twice, shown as ▼2 under the debater, though no one falls below a fifth of his strength."],
+    ["Muted", "Can use only his basic move."],
+    ["Rebuttal", "For a few turns, whenever an opponent's move hits this evangelist, he answers the attacker at once with his basic move, even against a move aimed at the whole team (but not while Dumbfounded). Pair it with a move that makes everyone answer him, as Ethan Muse does."],
+  ];
+
   const START = ["horn", "akin"];
 
   // Variants share a kit with the original, with a different look.
   for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"], ["student2", "student"], ["mythicist2", "mythicist"]]) FOES[copy] = FOES[of];
 
-  return { HEROES, FOES, CAMPAIGN, START, BOOKS };
+  return { HEROES, FOES, CAMPAIGN, START, BOOKS, RULES, RULES_INTRO };
 })();

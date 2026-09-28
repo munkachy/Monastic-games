@@ -681,6 +681,30 @@ const Battle = (() => {
   // status (it wears on Composure) takes a different name on the heroes' side.
   const label = (s, u) => (s === "doubting" && u && u.side === "hero" ? "Flustered" : LABELS[s] || s);
   const statName = (s) => ({ atk: "Attack", def: "Defense", crit: "Crit" }[s] || s);
+  // Everything that is on a debater, spelled out in short words: statuses,
+  // protections, renewal, and boosts and setbacks by stat (stacked ones
+  // counted). The stage shows these under each bar; the game lists them too.
+  const GUARDS = { steadfast: "STEADY", security: "SECURE", faith: "FAITH ALONE", testimony: "HALF DMG" };
+  const STAT_TAG = { atk: "ATK", def: "DEF", crit: "CRIT", spd: "SPD" };
+  function marks(u) {
+    const tags = [];
+    if (u.statuses.dumbfounded > 0) tags.push(["STUN", "#ffd84a"]);
+    if (u.statuses.doubting > 0) tags.push(u.side === "hero" ? ["FLUSTERED", "#e89a4a"] : ["DOUBTING", "#c69ae8"]);
+    if (u.statuses.muted > 0) tags.push(["MUTED", "#de5e55"]);
+    if (u.statuses.examined > 0) tags.push(["EXPOSED", "#e8b94a"]);
+    if (u.statuses.cloaked > 0) tags.push(["HIDDEN", "#9fd0ff"]);
+    if (u.called) tags.push(["CALLED OUT", "#de5e55"]);
+    if (u.counter > 0) tags.push(["REBUTTAL", "#e8b94a"]);
+    for (const [k, v] of Object.entries(u.immune)) if (v > 0) tags.push([GUARDS[k] || "GUARDED", "#7ea4e6"]);
+    if (u.regen && u.regen.n > 0) tags.push(["RENEW", "#74c07a"]);
+    for (const st of ["atk", "def", "crit", "spd"]) {
+      const up = u.buffs.filter((b) => b.stat === st && b.amt > 0).length, down = u.buffs.filter((b) => b.stat === st && b.amt < 0).length;
+      if (up) tags.push([STAT_TAG[st] + "▲" + (up > 1 ? up : ""), "#74c07a"]);
+      if (down) tags.push([STAT_TAG[st] + "▼" + (down > 1 ? down : ""), "#ff6a5e"]);
+    }
+    return tags;
+  }
+
   const immuneName = (k) => ({ steadfast: "Steadfast", testimony: "Testimony", faith: "Faith Alone", security: "Eternal Security" }[k] || k);
 
   // Fight to the end. `choose(u)` returns a promise of { i, target } for a hero
@@ -825,8 +849,6 @@ const Battle = (() => {
       if (e.friendsCleanse) out.push("Frees friends from being " + (LABELS[e.friendsCleanse] || e.friendsCleanse));
       if (e.summon) out.push("Calls in help");
     }
-    // Every hit can land as a critical hit, which also knocks Zeal down.
-    if (sk.effects.some((e) => e.dmg)) out.push("A critical hit also knocks Zeal down 1 (not through a podium)");
     return [...new Set(out)].join(" · ");
   }
 
@@ -866,7 +888,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, marks, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
@@ -951,27 +973,25 @@ const BattleView = (() => {
           if (u.zeal > 0) for (let i = 0; i < u.zeal; i++) arrow(ctx, x + 5 + i * 14, y + 9, true, "#7ea4e6");
           else if (u.zeal < 0) for (let i = 0; i < -u.floor; i++) arrow(ctx, x + 5 + i * step, y + 9, false, i < -u.zeal ? "#ff5a4e" : "#4a3040");
           else { ctx.fillStyle = "#8a8aa8"; ctx.fillRect(x, y + 12, 12, 3); }
-          // Statuses, as small letters.
-          const tags = [];
-          if (u.statuses.dumbfounded > 0) tags.push(["Z", "#ffd84a"]);
-          if (u.statuses.doubting > 0) tags.push(u.side === "hero" ? ["!", "#e89a4a"] : ["?", "#c69ae8"]);
-          if (u.statuses.muted > 0) tags.push(["M", "#de5e55"]);
-          if (u.statuses.examined > 0) tags.push(["X", "#e8b94a"]);
-          if (u.statuses.cloaked > 0) tags.push(["U", "#9fd0ff"]);
-          if (u.called) tags.push(["!", "#de5e55"]);
-          if (u.counter > 0) tags.push(["R", "#e8b94a"]);
-          if (Object.values(u.immune).some((v) => v > 0)) tags.push(["◆", "#7ea4e6"]);
-          // Buffs and debuffs stack: two Attack Downs show as ▼2.
-          const ups = u.buffs.filter((b) => b.amt > 0).length, downs = u.buffs.filter((b) => b.amt < 0).length;
-          if (ups) tags.push(["▲" + (ups > 1 ? ups : ""), "#74c07a"]);
-          if (downs) tags.push(["▼" + (downs > 1 ? downs : ""), "#de5e55"]);
+          const tags = Battle.marks(u);
           ctx.font = "400 15px " + CLEAR; ctx.textAlign = "center";
+          // One row under the bar, as many as fit, then "+2" for the rest (the
+          // game lists them all in full under the stage).
           let tx = x;
-          for (const [g, c] of tags) {
-            const w = Math.max(15, Math.ceil(ctx.measureText(g).width) + 6);
-            ctx.fillStyle = "#1a1326"; ctx.fillRect(tx - 1, y + 18, w, 15); ctx.fillStyle = c; ctx.fillText(g, tx - 1 + w / 2, y + 30);
-            tx += w;
-          }
+          const ty = y + 18, room = 112;
+          tags.forEach(([g, c], i) => {
+            if (tx === null) return;
+            const w = Math.ceil(ctx.measureText(g).width) + 8;
+            const more = "+" + (tags.length - i), mw = Math.ceil(ctx.measureText(more).width) + 8;
+            const last = i === tags.length - 1;
+            if (tx + w > x + room || (!last && tx + w + 2 + mw > x + room)) {
+              if (tx + mw > x + room && tx > x) return;
+              ctx.fillStyle = "#1a1326"; ctx.fillRect(tx - 1, ty, mw, 16); ctx.fillStyle = "#ece4d0"; ctx.fillText(more, tx - 1 + mw / 2, ty + 12);
+              tx = null; return;
+            }
+            ctx.fillStyle = "#1a1326"; ctx.fillRect(tx - 1, ty, w, 16); ctx.fillStyle = c; ctx.fillText(g, tx - 1 + w / 2, ty + 12);
+            tx += w + 2;
+          });
           // Whose turn it is, and who can be chosen.
           const top = a.y - 108;
           if (active === a.key) { const b = Math.sin(t * 6) * 3; ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.moveTo(a.x - 7, top - 10 + b); ctx.lineTo(a.x + 7, top - 10 + b); ctx.lineTo(a.x, top - 2 + b); ctx.fill(); }
