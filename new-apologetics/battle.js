@@ -443,8 +443,8 @@ const Battle = (() => {
             if (t.windup && (e.status === "dumbfounded" || e.status === "muted")) { t.windup = false; t.closerIn = CLOSER_EVERY; events.push({ key: t.key, text: "Closing argument stopped!", color: "#74c07a" }); }
           }
           if (e.windup) { u.windup = true; u.windHp = u.hp; events.push({ key: u.key, text: "Winding up!", color: "#ff5a4e" }); }
-          if (e.taunt) { t.called = { by: u.key, n: e.taunt }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
-          if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
+          if (e.taunt) { t.called = { by: u.key, n: e.taunt + 1 }; events.push({ key: t.key, text: "Called Out", color: "#de5e55" }); }
+          if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll + 1 }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
           if (e.heal) heal(t, e.heal * kick(u, s) * (u.side === "hero" ? HERO_HEAL : 1), events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }

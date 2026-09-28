@@ -42,8 +42,8 @@ const GameData = (() => {
     ] },
     muse: { name: "Ethan Muse", about: "The one who stands in front. Open Challenge makes every opponent answer him instead of his friends, and Steelman Stance lets him answer back when they do. Close Reading is the hardest single blow on the roster: save it for an opponent who is already doubting. Good for protecting teammates who shine from the back row, and for finishing a boss.", stats: [288, 76, 18, 88], traits: { care: 45, glance: [0.03, 0.2], crit: [0.06, 1.3], resolve: 0.09 }, skills: [
       H("Pointed Question", "foe", 0, 0, [{ dmg: 1.25 }, { status: "doubting", turns: 3, chance: 0.5 }]),
-      H("Open Challenge", "foes", 3, 0, [{ taunt: 3 }, { zeal: -1 }]),
-      H("Steelman Stance", "self", 3, 1, [{ counter: 3 }, { buff: "atk", amt: 0.5, turns: 3 }]),
+      H("Open Challenge", "foes", 3, 0, [{ taunt: 4 }, { zeal: -1 }]),
+      H("Steelman Stance", "self", 3, 1, [{ counter: 4 }, { buff: "atk", amt: 0.5, turns: 3 }]),
       H("Close Reading", "foe", 4, 2, [{ dmg: 4.0, vs: ["doubting", 1.5] }, { zeal: -1 }, { onBreak: 1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "spitzer" }),
     ] },
@@ -80,7 +80,7 @@ const GameData = (() => {
     barron: { name: "Bishop Barron", about: "Made for crowds. Word on Fire hits every opponent at once. The Way of Beauty makes them all answer him while he stands behind his own podium, which keeps the others safe. No Beige Catholicism silences one opponent's best moves.", stats: [262, 82, 11, 110], traits: { care: 60, glance: [0.1, 0.23], crit: [0.04, 1.18], resolve: 0.08 }, skills: [
       H("Sunday Sermon", "foe", 0, 0, [{ dmg: 1.25 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.5 }]),
       H("Word on Fire", "foes", 3, 0, [{ dmg: 2.5 }]),
-      H("The Way of Beauty", "self", 3, 1, [{ tauntAll: 3 }, { podium: 0.6 }, { buff: "atk", amt: 0.3, turns: 3 }]),
+      H("The Way of Beauty", "self", 3, 1, [{ tauntAll: 4 }, { podium: 0.6 }, { buff: "atk", amt: 0.3, turns: 3 }]),
       H("No Beige Catholicism", "foe", 4, 2, [{ status: "muted", turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1 }]),
     ] },
     hicks: { name: "Fr. Boniface Hicks", about: "Quiet and piercing. Discernment of Spirits exposes every opponent: they can't deflect and they take harder hits. Obsculta goes straight past any podium to leave one opponent dumbfounded and shaken. Spiritual Direction drains an opponent's Zeal and strengthens his own. He is best at making opponents leave the debate rather than concede it.", stats: [200, 128, 14, 110], traits: { care: 128, glance: [0.1, 0.11], crit: [0.06, 1.18], resolve: 0.1 }, skills: [
@@ -134,20 +134,20 @@ const GameData = (() => {
     // cover and Zeal for the team (more for a fellow convert).
     schmid: { name: "Joe Schmid", about: "Back home and arguing for the Church now. A builder who reasons from first principles: Steelman lets him answer back every objection while he braces himself, and the Contingency Argument exposes an opponent and blunts his arguments. Welcome Home puts a podium in front of a friend and fires him up, and fires up a fellow convert even more.", stats: [213, 73, 17, 110], traits: { care: 83, glance: [0.07, 0.21], crit: [0.04, 1.38], resolve: 0.07 }, skills: [
       H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.5 }]),
-      H("Steelman", "self", 3, 0, [{ counter: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
+      H("Steelman", "self", 3, 0, [{ counter: 4 }, { buff: "def", amt: 0.5, turns: 3 }]),
       H("Contingency Argument", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "atk", amt: -0.5, turns: 3 }]),
       H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }]),
     ] },
     heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, with a case file for every occasion. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
-      H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 3 }]),
+      H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 4 }]),
       H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
     ] },
     // Fr. Carlos Martins, exorcist: a hit, a call-out that lifts the team's
     // Zeal, a team heal and cleanse, and Attack, Crit and Zeal for everyone.
     martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. He joins after the New Age chapter, Apollo Loves You; bring him to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
       H("Holy Water", "foe", 0, 0, [{ dmg: 1.0 }]),
-      H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 3 }, { allyZeal: 1 }]),
+      H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 4 }, { allyZeal: 1 }]),
       H("Prayer of Deliverance", "allies", 4, 1, [{ heal: 0.3 }, { cleanse: true }, { zeal: 1, chance: 0.5 }]),
       H("Treasures of the Church", "allies", 4, 2, [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { zeal: 2 }]),
     ] },
@@ -157,7 +157,7 @@ const GameData = (() => {
     zember: { name: "Kim Zember", about: "Warm, steady and hard to shake: she has heard every question and answers from her own story. Boldly Beloved shields the whole team. Here I Am steps forward so every opponent answers her, and she braces for it. Child of God brings back a Discouraged friend, clears every setback and fires up the team. She joins after the chapter Who Do You Say You Are?", stats: [350, 48, 15, 69], traits: { care: 113, glance: [0.07, 0.2], crit: [0.05, 1.3], resolve: 0.07 }, passive: { converts: ["zember"] }, skills: [
       H("Restless Heart", "foe", 0, 0, [{ dmg: 1.0 }]),
       H("Boldly Beloved", "allies", 3, 0, [{ shield: 0.3, turns: 3 }]),
-      H("Here I Am", "self", 3, 1, [{ tauntAll: 3 }, { buff: "def", amt: 0.5, turns: 3 }]),
+      H("Here I Am", "self", 3, 1, [{ tauntAll: 4 }, { buff: "def", amt: 0.5, turns: 3 }]),
       H("Child of God", "allies", 4, 2, [{ heal: 0.25 }, { cleanse: true }, { zeal: 1 }]),
     ] },
     // Brant Pitre: Scripture scholar (The Case for Jesus; Jesus and the Jewish
