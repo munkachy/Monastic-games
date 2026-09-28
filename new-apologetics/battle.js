@@ -38,6 +38,8 @@ const Battle = (() => {
   // Knock this share of a boss's Composure off while he winds up and he loses his thread
   let RATTLE = 0.2;
   let HERO_HEAL = 1;          // extra strength of the heroes' own healing
+  // An evangelist brought back from Discouraged returns with at least this much Composure
+  let REVIVE = 0.75;
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
   // Impact: every debater's Composure, and every shield and podium, is divided
   // by this, so each hit, heal and shield counts for more and debates end
@@ -601,10 +603,12 @@ const Battle = (() => {
     }
 
     function heal(t, frac, events) {
-      const a = Math.round(t.maxHp * frac);
+      let a = Math.round(t.maxHp * frac);
       if (t.state === "discouraged") {
         t.state = "in"; t.zeal = Math.max(t.zeal, 0); t.hp = Math.max(t.hp, 1);
         events.push({ key: t.key, text: "Encouraged!", color: "#74c07a", back: true });
+        // A friend brought back returns with at least three quarters of his Composure.
+        a = Math.max(a, Math.round(t.maxHp * REVIVE) - t.hp);
       }
       if (t.state !== "in") return;
       t.hp = Math.min(t.maxHp, t.hp + a);
@@ -890,7 +894,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, marks, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, marks, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; if (k === "revive") REVIVE = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
