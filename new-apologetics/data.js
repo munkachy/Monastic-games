@@ -40,11 +40,11 @@ const GameData = (() => {
       H("Logical Paradox", "foes", 3, 0, [{ buff: "atk", amt: -0.2, turns: 3 }, { zeal: -1, chance: 0.5 }]),
       H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { zeal: -1 }]),
     ] },
-    muse: { name: "Ethan Muse", about: "The one who stands in front. Open Challenge makes every opponent answer him instead of his friends, and Steelman Stance lets him answer back when they do. Camera Mog is the hardest single blow on the roster: save it for an opponent who is already doubting. Good for protecting teammates who shine from the back row, and for finishing a boss.", stats: [288, 76, 18, 88], traits: { care: 45, glance: [0.03, 0.2], crit: [0.06, 1.3], resolve: 0.09 }, skills: [
+    muse: { name: "Ethan Muse", about: "The one who stands in front. Open Challenge makes every opponent answer him instead of his friends, and Steelman Stance lets him answer back when they do. Close Reading is the hardest single blow on the roster: save it for an opponent who is already doubting. Good for protecting teammates who shine from the back row, and for finishing a boss.", stats: [288, 76, 18, 88], traits: { care: 45, glance: [0.03, 0.2], crit: [0.06, 1.3], resolve: 0.09 }, skills: [
       H("Pointed Question", "foe", 0, 0, [{ dmg: 1.25 }, { status: "doubting", turns: 3, chance: 0.5 }]),
       H("Open Challenge", "foes", 3, 0, [{ taunt: 3 }, { zeal: -1 }]),
       H("Steelman Stance", "self", 3, 1, [{ counter: 3 }, { buff: "atk", amt: 0.5, turns: 3 }]),
-      H("Camera Mog", "foe", 4, 2, [{ dmg: 4.0, vs: ["doubting", 1.5] }, { zeal: -1 }, { onBreak: 1 }]),
+      H("Close Reading", "foe", 4, 2, [{ dmg: 4.0, vs: ["doubting", 1.5] }, { zeal: -1 }, { onBreak: 1 }]),
       H("Vindicatory Miracles", "foes", 5, 3, [{ purge: 1 }, { zeal: -1 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { duo: "spitzer" }),
     ] },
     schmitz: { name: "Fr. Mike Schmitz", about: "A quick, gentle leader who makes everyone else better. His best trick is I'm Praying for You, which sends a friend in to answer at once, out of turn: perfect for a heavy hitter like Scott Hahn, who likes to take his time. The Bible in a Year steadies the team, and the Catechism in a Year clears every setback and shields them. He fits almost any team.", stats: [250, 58, 12, 125], traits: { care: 105, glance: [0.09, 0.1], crit: [0.05, 1.22], resolve: 0.12 }, skills: [

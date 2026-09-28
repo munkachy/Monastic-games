@@ -462,7 +462,11 @@ const Battle = (() => {
         }
       }
       for (const t of targets) if (!inPlay(t) && t.side !== u.side) broke = true;
-      for (const e of s.effects) if (e.onBreak && broke) zeal(u, e.onBreak, s, events);
+      // Zeal for putting someone out; already at full Zeal, some Composure back instead.
+      for (const e of s.effects) if (e.onBreak && broke && inPlay(u)) {
+        if (u.zeal >= ZEAL_MAX) { events.push({ key: u.key, text: "Zeal full", color: "#7ea4e6" }); heal(u, 0.15, events); }
+        else zeal(u, e.onBreak, s, events);
+      }
       for (const e of s.effects) if (e.onBreakCloak && broke && inPlay(u)) { u.statuses.cloaked = e.onBreakCloak; events.push({ key: u.key, text: "Undercover", color: "#9fd0ff" }); }
       return { skill: s, targets, events, commanded, rebuttals: rebuttals.filter((t) => inPlay(t) && inPlay(u)) };
     }
@@ -800,7 +804,7 @@ const Battle = (() => {
       if (e.immune) out.push({ steadfast: "Steadfast: no Zeal loss", testimony: "Testimony: hits land at half strength", faith: "Faith Alone", security: "Eternal Security" }[e.immune]);
       if (e.selfZeal) out.push("Zeal up " + e.selfZeal + " for this evangelist");
       if (e.allyZeal) out.push("Zeal up " + e.allyZeal + " for the whole team");
-      if (e.onBreak) out.push("Zeal up if it puts someone out");
+      if (e.onBreak) out.push("Zeal up if it puts someone out (already at full Zeal: some Composure back instead)");
       if (e.onBreakCloak) out.push("Goes Undercover if it puts someone out");
       if (e.randomLift) out.push("A lift for each, picked at random: Attack Up, Crit Up, a Shield of Faith, or Composure back");
       if (e.friendsCleanse) out.push("Frees friends from being " + (LABELS[e.friendsCleanse] || e.friendsCleanse));

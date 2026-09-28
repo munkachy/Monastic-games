@@ -2,7 +2,7 @@
 //
 // Every character is built from one recipe: a 32×32 bust (head, hair, beard,
 // glasses, clothes and a prop) so the whole cast shares one style. The same
-// recipe draws the 48×48 "Camera Mog" close-up, and the full-length figures
+// recipe draws the 48×48 "Close Reading" close-up, and the full-length figures
 // (40×52, with walking and reaching poses) that act out the moves in battle.
 
 const Art = (() => {
@@ -484,11 +484,11 @@ const Art = (() => {
     return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
   }
 
-  // ---- Camera Mog -------------------------------------------------------------
+  // ---- Close Reading -------------------------------------------------------------
   // The debater leans right into the lens and peers over the top of his
   // glasses. `t` runs 0 → 1 as the glasses slide down and the brows go up.
   function mog(s, t) {
-    // Drawn from Ethan Muse's own Camera Mog: the head tipped down toward the
+    // Drawn from Ethan Muse's own Close Reading: the head tipped down toward the
     // lens, a shaggy fringe hanging over the forehead, heavy brows, and eyes
     // looking up over glasses that have slid down the nose.
     const g = grid(48, 48);
