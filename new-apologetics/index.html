@@ -61,6 +61,7 @@
   .stage { border: 3px solid var(--line); background: #0e1122; border-radius: 6px; overflow: hidden; }
   .stage canvas { width: 100%; height: auto; }
   .status { font-size: 13px; color: var(--muted); }
+  .fair { max-width: 70ch; padding: 12px 16px; border-left: 3px solid var(--gold); background: var(--panel); font-size: 15px; }
 
   /* Rulebook table */
   .scroll { overflow-x: auto; }
@@ -191,7 +192,8 @@
     <div class="stage"><canvas id="battle" width="640" height="360" aria-label="A battle playing out: Jimmy Akin, Ethan Muse, Matt Fradd and Cameron Bertuzzi face a missionary, a street preacher and a skeptic streamer."></canvas></div>
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
-    <p><a class="play-link" href="play.html?v=20260928o">Play the game ▸</a></p>
+    <p class="fair">Every real person in this game has been portrayed as fairly as possible, and in charity. The aim is to explore ideas, not to shame anyone. If you are portrayed here and are unhappy with how, please leave a comment, and I will take it into consideration.</p>
+    <p><a class="play-link" href="play.html?v=20260928p">Play the game ▸</a></p>
   </header>
 
   <section>
@@ -332,12 +334,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260928o"></script>
-<script src="moves.js?v=20260928o"></script>
-<script src="story.js?v=20260928o"></script>
-<script src="data.js?v=20260928o"></script>
-<script src="lines.js?v=20260928o"></script>
-<script src="battle.js?v=20260928o"></script>
+<script src="art.js?v=20260928p"></script>
+<script src="moves.js?v=20260928p"></script>
+<script src="story.js?v=20260928p"></script>
+<script src="data.js?v=20260928p"></script>
+<script src="lines.js?v=20260928p"></script>
+<script src="battle.js?v=20260928p"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -364,7 +366,7 @@
         ["Pointed Question", "1 foe", "0", "Hit. 50% chance to leave him Doubting."],
         ["Open Challenge", "All foes", "3", "Every foe is Called Out for 3 turns and must answer Ethan. −1 Zeal on each. “I'll debate any of you. Right now.”"],
         ["Steelman Stance", "Self", "3 (starts 1)", "Rebuttal, and Major Attack Up for 3 turns. He states your case better than you did, then answers it."],
-        ["Camera Mog", "1 foe", "4 (starts 2)", "Crushing hit, harder still if the target is Doubting. If this puts the target out of the debate, Ethan gains +1 Zeal.", true],
+        ["Close Reading", "1 foe", "4 (starts 2)", "Crushing hit, harder still if the target is Doubting. If this puts the target out of the debate, Ethan gains +1 Zeal, or, if his Zeal is already full, some Composure back.", true],
       ],
       duo: ["Vindicatory Miracles", "with Fr. Spitzer", "All foes", "A duo great move, unlocked when both men are on the team. Fatima, Lanciano, Guadalupe and Lourdes appear one by one, each stamped VINDICATED: miracles that confirm specifically Catholic teaching. Fact-Checks every foe, −1 Zeal on each, and a 50% chance to leave each one Dumbfounded."],
       flavor: "The one who stands in front. Open Challenge draws every argument onto him, and he is glad to take them.",

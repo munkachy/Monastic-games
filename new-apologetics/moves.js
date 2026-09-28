@@ -862,7 +862,7 @@ const Theater = (() => {
       }
       if (k > 1.4) outlinedText(ctx, "ROME SWEET HOME", 470, 140, 26, "#fdfaf2", "#7a4a1a");
     },
-    // Ethan Muse's Camera Mog: a recording frame, and the lean-in.
+    // Ethan Muse's Close Reading: a recording frame, and the lean-in.
     mog(ctx, k) {
       ctx.fillStyle = "#0e1122"; ctx.fillRect(0, 0, W, H);
       speedLines(ctx, k, "#1b2146");
@@ -892,7 +892,7 @@ const Theater = (() => {
       { name: "Pointed Question", kind: volley, glyphs: ["?"], color: "#de5e55", mark: "doubting" },
       { name: "Open Challenge", kind: hex, to: "all", pose: "raise", say: "I'll debate any of you. Right now.", mark: ["called", "pipDown"], fx: (ctx, api, h, targets, t, k) => waves(ctx, api, h, targets, t, k, "#de5e55") },
       { name: "Steelman Stance", kind: aura, to: "self", mark: ["stance", "up"], say: "Let me put your case better.", color: "#cfd6dc" },
-      { name: "Camera Mog", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 136, faceScale: 7, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
+      { name: "Close Reading", kind: cinematic, who: "Ethan Muse", color: "#de5e55", scene: SCENES.mog, face: (k) => Art.mog(Art.CAST.muse, ease(span(k, 0.5, 1.3))), faceX: 136, faceScale: 7, faceDrop: 0, to: "one", mark: ["dumbfounded", "pipDown"] },
       { name: "Vindicatory Miracles", duo: "spitzer", kind: cinematic, who: "Ethan Muse & Fr. Spitzer", color: "#5a3a8a", scene: SCENES.miracles, front: SCENES.miraclesFront, closeUp: false, to: "all", mark: ["factcheck", "pipDown", "dumbfounded"], impact: impactOn("#e8b94a") },
     ],
     schmitz: [
