@@ -386,6 +386,21 @@ const Battle = (() => {
       return s.duo || s === own[own.length - 1] ? GREAT_KICK : 1;
     }
 
+    // Shields of Faith stack, as in Legends: a second one adds to the first and
+    // lasts as long as the longer of the two. All together they can hold no
+    // more than the debater's full Composure: a second bar, never a wall.
+    function addShield(t, amount, turns, events) {
+      const add = Math.round(amount);
+      if (t.shield) {
+        t.shield.amt = Math.min(t.maxHp, t.shield.amt + add);
+        t.shield.n = Math.max(t.shield.n, turns);
+        events.push({ key: t.key, text: "Shield grows", color: "#7ea4e6" });
+      } else {
+        t.shield = { amt: Math.min(t.maxHp, add), n: turns, fresh: true };
+        events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" });
+      }
+    }
+
     // `answering` marks a Rebuttal: it can't set off another one.
     function use(u, i, chosen, fixed, answering) {
       const s = u.def.skills[i];
@@ -431,7 +446,7 @@ const Battle = (() => {
           if (e.heal) heal(t, e.heal * kick(u, s) * (u.side === "hero" ? HERO_HEAL : 1), events);
           if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
-          if (e.shield) { t.shield = { amt: Math.round(u.care * e.shield * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1)), n: e.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+          if (e.shield) addShield(t, u.care * e.shield * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1), e.turns + 1, events);
           if (e.podium) { const hp = Math.round(u.care * e.podium * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1)); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
           if (e.command && t !== u && inPlay(t)) commanded = t;
           if (e.counter) { t.counter = e.counter + 1; events.push({ key: t.key, text: "Rebuttal ready", color: "#e8b94a" }); }
@@ -446,7 +461,7 @@ const Battle = (() => {
             if (l.buff) { t.buffs.push({ stat: l.buff, amt: l.amt, n: l.turns + 1 }); events.push({ key: t.key, text: "▲ " + statName(l.buff), color: "#74c07a" }); }
             // Free-for-All Friday's shield is sized from the one receiving it,
             // not from Trent's Care (he has almost none): a fifth of his Composure.
-            if (l.shield) { t.shield = { amt: Math.round(t.maxHp * l.shield * HERO_SHIELD), n: l.turns + 1, fresh: !t.shield }; events.push({ key: t.key, text: "Shield of Faith", color: "#7ea4e6" }); }
+            if (l.shield) addShield(t, t.maxHp * l.shield * HERO_SHIELD, l.turns + 1, events);
             if (l.heal) heal(t, l.heal, events);
           }
           if (e.summon && !done.has("summon")) {
@@ -946,10 +961,17 @@ const BattleView = (() => {
           if (u.called) tags.push(["!", "#de5e55"]);
           if (u.counter > 0) tags.push(["R", "#e8b94a"]);
           if (Object.values(u.immune).some((v) => v > 0)) tags.push(["◆", "#7ea4e6"]);
-          if (u.buffs.some((b) => b.amt > 0)) tags.push(["▲", "#74c07a"]);
-          if (u.buffs.some((b) => b.amt < 0)) tags.push(["▼", "#de5e55"]);
+          // Buffs and debuffs stack: two Attack Downs show as ▼2.
+          const ups = u.buffs.filter((b) => b.amt > 0).length, downs = u.buffs.filter((b) => b.amt < 0).length;
+          if (ups) tags.push(["▲" + (ups > 1 ? ups : ""), "#74c07a"]);
+          if (downs) tags.push(["▼" + (downs > 1 ? downs : ""), "#de5e55"]);
           ctx.font = "400 15px " + CLEAR; ctx.textAlign = "center";
-          tags.forEach(([g, c], i) => { ctx.fillStyle = "#1a1326"; ctx.fillRect(x + i * 15 - 1, y + 18, 15, 15); ctx.fillStyle = c; ctx.fillText(g, x + i * 15 + 6.5, y + 30); });
+          let tx = x;
+          for (const [g, c] of tags) {
+            const w = Math.max(15, Math.ceil(ctx.measureText(g).width) + 6);
+            ctx.fillStyle = "#1a1326"; ctx.fillRect(tx - 1, y + 18, w, 15); ctx.fillStyle = c; ctx.fillText(g, tx - 1 + w / 2, y + 30);
+            tx += w;
+          }
           // Whose turn it is, and who can be chosen.
           const top = a.y - 108;
           if (active === a.key) { const b = Math.sin(t * 6) * 3; ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.moveTo(a.x - 7, top - 10 + b); ctx.lineTo(a.x + 7, top - 10 + b); ctx.lineTo(a.x, top - 2 + b); ctx.fill(); }
