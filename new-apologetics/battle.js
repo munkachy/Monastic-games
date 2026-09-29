@@ -624,14 +624,22 @@ const Battle = (() => {
       events.push({ key: t.key, text: "+" + a, color: "#74c07a" });
     }
 
+    // A Fact-Check. purge "all" strips every boost, the shield, Undercover and
+    // any protection. A number strips that many boosts: Attack, Defense or Crit
+    // Ups first, oldest first, and the Shield of Faith only when none are
+    // left. The words over the debater say what went.
     function purge(t, n, events) {
       const good = t.buffs.filter((b) => b.amt > 0);
-      const drop = n === "all" ? good.length : n;
-      let removed = 0;
-      for (const b of good.slice(0, drop)) { t.buffs.splice(t.buffs.indexOf(b), 1); removed++; }
-      if (n === "all") { if (t.shield) removed++; if (t.statuses.cloaked > 0) removed++; t.shield = null; t.statuses.cloaked = 0; for (const k of Object.keys(t.immune)) { if (t.immune[k]) removed++; t.immune[k] = 0; } }
-      else if (removed < drop && t.shield) { t.shield = null; removed++; }
-      if (removed) events.push({ key: t.key, text: "Fact-Checked", color: "#de5e55" });
+      const gone = [];
+      if (n === "all") {
+        if (good.length || t.shield || t.statuses.cloaked > 0 || Object.values(t.immune).some((v) => v > 0)) gone.push("everything");
+        t.buffs = t.buffs.filter((b) => b.amt <= 0);
+        t.shield = null; t.statuses.cloaked = 0; for (const k of Object.keys(t.immune)) t.immune[k] = 0;
+      } else {
+        for (const b of good.slice(0, n)) { t.buffs.splice(t.buffs.indexOf(b), 1); gone.push(statName(b.stat) + " Up"); }
+        if (gone.length < n && t.shield) { t.shield = null; gone.push("Shield"); }
+      }
+      if (gone.length) events.push({ key: t.key, text: "Fact-Checked: " + gone.join(", "), color: "#de5e55" });
     }
 
     // The rank and file: when one goes out of the debate, whether he concedes
@@ -862,7 +870,7 @@ const Battle = (() => {
       if (e.buff) out.push(pct(e) + statName(e.buff) + (e.amt > 0 ? " Up" : " Down"));
       if (e.heal) out.push("Restores Composure (and encourages the Discouraged)");
       if (e.cleanse) out.push("Examen: clears every setback");
-      if (e.purge) out.push(pct(e) + (e.purge === "all" ? "Fact-Checks every boost" : "Fact-Checks a boost") + (e.faction ? " (" + e.faction + " only)" : ""));
+      if (e.purge) out.push(pct(e) + (e.purge === "all" ? "Full Fact-Check: strips every boost, the Shield of Faith and any protection" : "Fact-Checks one boost (an Attack, Defense or Crit Up first; the Shield of Faith only if there is none)") + (e.faction ? " (" + e.faction + " only)" : ""));
       if (e.shield) out.push("Shield of Faith");
       if (e.podium) out.push("Sets up a podium that takes the hits (stronger with more Care)");
       if (e.command) out.push("Sends this friend in: they answer at once with their basic move");

@@ -193,7 +193,7 @@
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
     <p class="fair">Every real person in this game has been portrayed as fairly as possible, and in charity. The aim is to explore ideas, not to shame anyone. If you are portrayed here and are unhappy with how, please leave a comment, and I will take it into consideration.</p>
-    <p><a class="play-link" href="play.html?v=20260929b">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260929c">Play the game ▸</a></p>
   </header>
 
   <section>
@@ -310,12 +310,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260929b"></script>
-<script src="moves.js?v=20260929b"></script>
-<script src="story.js?v=20260929b"></script>
-<script src="data.js?v=20260929b"></script>
-<script src="lines.js?v=20260929b"></script>
-<script src="battle.js?v=20260929b"></script>
+<script src="art.js?v=20260929c"></script>
+<script src="moves.js?v=20260929c"></script>
+<script src="story.js?v=20260929c"></script>
+<script src="data.js?v=20260929c"></script>
+<script src="lines.js?v=20260929c"></script>
+<script src="battle.js?v=20260929c"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -375,7 +375,7 @@
       skills: [
         ["Deadpan", "1 foe", "0", "Two quick hits (together, a strong hit), and a 50% chance of Attack Down for 2 turns. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
         ["Free-for-All Friday", "All allies", "3", "+1 Zeal on each, and each ally gets one lift, picked at random, the way the week’s topics come up on his own podcast (glasses, zombie movies, last meals, bowling alleys): Attack Up, Crit Chance Up, a solid Shield of Faith, or some Composure back."],
-        ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks every foe and −1 Zeal on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
+        ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks one boost on every foe, and −1 Zeal on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
         ["The Case for Catholicism", "All foes", "4 (starts 2)", "Heavy hit on each (harder against a shield or podium).", true],
       ],
       flavor: "The quickest mind in the game, with the driest sense of humor. His moves come from his books, his podcast and his favorite question: where does the Bible actually say that?",
@@ -473,7 +473,7 @@
         ["One-Two", "1 foe", "0", "Two light hits."],
         ["Deep Cut", "1 foe", "3", "Doubting, Major Defense Down, and −1 Zeal."],
         ["Stallone Voice", "1 foe", "3 (starts 1)", "Heavy hit (harder against a shield or podium), with a 50% chance of leaving him Dumbfounded. Nobody expected that voice."],
-        ["Voice of Reason", "All foes", "4 (starts 2)", "Fact-Checks every foe, and −2 Zeal on each.", true],
+        ["Voice of Reason", "All foes", "4 (starts 2)", "A Full Fact-Check on every foe (every boost, shield and protection), and −2 Zeal on each.", true],
       ],
       flavor: "The hardest single hitter in the game, with the biggest voice to match.",
     },
@@ -494,7 +494,7 @@
       skills: [
         ["Covenant Is Family", "1 foe", "0", "Two quick hits (together, a strong hit), with a 50% chance of leaving him Doubting. Passes through Faith Alone."],
         ["Wide-Eyed Wonder", "1 foe", "3", "Heavy hit and −1 Zeal. Nobody can keep a debate face against that much delight."],
-        ["Rome Sweet Home", "1 foe", "4 (starts 2)", "Crushing hit, and Dumbfounded for 3 turns. Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
+        ["Rome Sweet Home", "1 foe", "4 (starts 2)", "Crushing hit, and Dumbfounded for 3 turns. Protestant foes get a Full Fact-Check too. The road he walked himself, from Presbyterian minister to Catholic.", true],
       ],
       flavor: "The elder statesman. Unhurried, and the hardest to shake on the roster, with the heaviest blows. Pair him with Fr. Mike, who can send him in out of turn. In the story he shows up when the team is stuck, and he usually has the key.",
     },
@@ -598,7 +598,7 @@
       blurb: "The boss of Chapter 4, People of the Book, where GodLogic joins as a guest. Rank and file: street debaters from Speakers' Corner and comment-section brothers.",
       skills: [
         ["Crowd Question", "1 foe", "0", "Hit."],
-        ["Tahrif", "All foes", "3", "Fact-Checks buffs that came from Scripture. The claim that the Bible was corrupted."],
+        ["Tahrif", "All foes", "3", "A Full Fact-Check on every foe: every boost and every Shield of Faith is gone. The claim that the Bible was corrupted."],
         ["Tawhid", "Self", "4", "Resists arguments about the Trinity for 2 turns. The absolute oneness of God."],
         ["The Crowd Gathers", "Summon", "4 (starts 2)", "Calls two more debaters from the crowd.", true],
         ["Three Is Not One", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it takes 70% of every evangelist’s Composure, and −1 Zeal on each. “One plus one plus one is three!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, or hit hard enough, he never lands it."],
@@ -647,7 +647,7 @@
       skills: [
         ["Misquoting Jesus", "1 foe", "0", "Three quick hits: variant after variant."],
         ["More Variants Than Words", "All foes", "3", "Flustered on each, and −1 Zeal."],
-        ["Anonymous Gospels", "All foes", "3 (starts 1)", "Fact-Checks a boost on each, and Attack Down for 2 turns."],
+        ["Anonymous Gospels", "All foes", "3 (starts 1)", "Fact-Checks one boost on each (an Attack, Defense or Crit Up first; the shield only if there is none), and Attack Down for 2 turns."],
         ["How Jesus Became God", "1 foe", "4 (starts 2)", "Hit, and a 50% chance of Dumbfounded for 2 turns.", true],
         ["Four Hundred Thousand Variants", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it takes 75% of every evangelist’s Composure, and −1 Zeal on each. “More variants than words in the New Testament!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, or hit hard enough, he never lands it."],
       ],
@@ -658,7 +658,7 @@
       blurb: "The boss of Chapter 9, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
       skills: [
         ["Greek Exegesis", "1 foe", "0", "Two quick hits (together, a strong hit). 25% chance to leave him Flustered."],
-        ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Attack Down for 2 turns. Only Scripture counts."],
+        ["Sola Scriptura", "All foes", "3", "A Full Fact-Check on your whole team (every boost and every Shield of Faith), and Attack Down for 2 turns. Only Scripture counts."],
         ["Eternal Security", "Self", "4", "His Zeal cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Is That in the Bible? passes through it."],
         ["Debate Challenge", "All foes", "4 (starts 2)", "Heavy hit on each, and +1 Zeal to himself.", true],
         ["Cross-Examination", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it takes 85% of every evangelist’s Composure, and −1 Zeal on each. “Yes or no. Yes or no!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, or hit hard enough, he never lands it. The hardest of them all."],
