@@ -223,7 +223,7 @@
   <a class="home" href="./">New Apologetics</a>
   <span class="wip">Work in progress · under review</span>
   <button class="test-tag" id="test-tag" hidden aria-pressed="false" title="Developer mode: every chapter, evangelist, move and book open; nothing earned is kept.">Dev: off</button>
-  <button class="music" id="music" aria-label="Change the music">♪ Chant + Techno</button>
+  <button class="music" id="music" aria-label="Change the music">♪ Illuminated</button>
   <button class="rules-open" aria-haspopup="dialog">Rules</button>
 </header>
 <dialog id="rules" aria-labelledby="rules-title">
@@ -320,14 +320,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260928v"></script>
-<script src="audio.js?v=20260928v"></script>
-<script src="art.js?v=20260928v"></script>
-<script src="moves.js?v=20260928v"></script>
-<script src="story.js?v=20260928v"></script>
-<script src="data.js?v=20260928v"></script>
-<script src="lines.js?v=20260928v"></script>
-<script src="battle.js?v=20260928v"></script>
+<script src="chants.js?v=20260929a"></script>
+<script src="audio.js?v=20260929a"></script>
+<script src="art.js?v=20260929a"></script>
+<script src="moves.js?v=20260929a"></script>
+<script src="story.js?v=20260929a"></script>
+<script src="data.js?v=20260929a"></script>
+<script src="lines.js?v=20260929a"></script>
+<script src="battle.js?v=20260929a"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -541,10 +541,9 @@
   // ---- Music ------------------------------------------------------------------------------
 
   const MUSIC_NAMES = {
-    both: "Chant + Techno", "dubstep-chant": "Chant + Dubstep", "electro-chant": "Chant + Electro",
-    chant: "Chant", techno: "Techno", dubstep: "Dubstep", electro: "Electro", off: "Silence",
+    illuminated: "Illuminated", vigil: "Vigil", chant: "Chant", off: "Silence",
   };
-  if (!save.music || !Sound.MODES.includes(save.music)) save.music = "both";
+  if (!save.music || !Sound.MODES.includes(save.music)) save.music = "illuminated";
   Sound.setMode(save.music);
   let tune = { chant: "vespers", intensity: 0 };
   // Each part of the game has its chant: Ave Maris Stella on the map, the Te Deum
@@ -718,7 +717,7 @@
   function usePlayer(id) {
     profiles.current = id; storeProfiles();
     save = load(); if (!save.xp) save.xp = {};
-    if (!save.music || !Sound.MODES.includes(save.music)) save.music = "both";
+    if (!save.music || !Sound.MODES.includes(save.music)) save.music = "illuminated";
     Sound.setMode(save.music); paintMusic(); paintTest(); paintWho();
     show("s-title");
   }
@@ -1315,10 +1314,12 @@
         paintOrder(b, u);
         // A boss winding up his closing argument: say so plainly, and what to do.
         if (s.closer === "wind") {
+          Sound.cue("windup");
           warned = u;
           const blow = u.def.skills.find((x) => x.closer === "strike");
           coach("battle-coach", "<b>Watch out.</b> " + u.name + " is winding up his closing argument, <b>" + blow.name + "</b>. On his next turn it hits your whole team. Put up a Shield of Faith, leave him Dumbfounded or Muted, or hit him hard before he speaks.");
-        } else if (warned && !warned.windup) { warned = null; coach("battle-coach", ""); }
+        } else if (s.closer === "strike") { Sound.cue("strike"); warned = null; coach("battle-coach", ""); }
+        else if (warned && !warned.windup) { Sound.cue("clear"); warned = null; coach("battle-coach", ""); }
         $("turn").textContent = u.name + "'s turn" + (u.level ? " · Lv " + u.level : "");
         $("round").textContent = "Round " + b.round + (b.waiting() ? " · " + b.waiting() + " waiting" : "");
         // What the fighter says, in plain text under the stage, easy to read at any speed.
@@ -1330,6 +1331,7 @@
       },
     });
     clearInterval(markTimer);
+    Sound.cue("clear");
     $("marks-hero").textContent = ""; $("marks-foe").textContent = "";
     const foes = b.allFoes();
     const converted = foes.filter((u) => u.state === "converted");
