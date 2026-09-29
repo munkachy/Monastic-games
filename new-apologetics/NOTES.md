@@ -79,3 +79,8 @@ The old Techno, Dubstep and Electro beats, and chant sung over them, are gone.
 - Fr. Augustine Wetta, OSB joins after Are You a Good Person? He surfs into cut scenes (cast entries starting with "~"), including the theology-of-the-body lesson in My Body, My Brand.
 - New chapter, Nothing in Particular (the Nones): opponents who drain Zeal rather than Composure; boss the Master of None, whose closing argument takes 30% Composure and 2 Zeal. He also takes Pastor's seat at the final table and is the finale's last boss.
 - Balance (Normal, 40 runs a mission, campaign order): smart bot 84 / 78, simple 70 / 58. Nones at level 10 with random teams, smart bot: boss 41% with no Encourager, 67% with one, 86% with two.
+
+## Voices, and louder battle effects (2026-09-29)
+
+- Voices: little synthesized shouts (a pulse wave through three formant filters, with a breath for "h" and a hum for "m"). Each named character has a voice of their own (pitch, throat size, buzz, rasp, wobble, pace); the rank and file get one from their name. Shouts: attack, great, backup, hurt (a crit), down, cheer; the Nones say "meh". At most three voices in half a second.
+- The effects were buried under the rebuilt music. The effect channel is now twice as loud (about half that in Chant mode), the effects built from the music's own notes play louder again, a little of every effect goes into the music's reverb, and the music dips for a moment under each effect. A limiter at the end catches peaks.

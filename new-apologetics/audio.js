@@ -105,7 +105,12 @@ const Sound = (() => {
     ac = new Ctx();
     master = ac.createGain();
     master.gain.value = mode === "off" ? 0 : 0.8;
-    master.connect(ac.destination);
+    // A limiter at the very end: it only catches the rare peak when a loud
+    // effect lands on a loud bar, so nothing clips.
+    const limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -4; limiter.knee.value = 0; limiter.ratio.value = 20;
+    limiter.attack.value = 0.002; limiter.release.value = 0.1;
+    master.connect(limiter).connect(ac.destination);
     // The music passes through a filter that a boss's wind-up closes.
     musicFilter = ac.createBiquadFilter();
     musicFilter.type = "lowpass";
@@ -117,8 +122,9 @@ const Sound = (() => {
     musicGain = ac.createGain();
     musicGain.gain.value = 0.6;
     musicGain.connect(musicFilter);
+    // The effects: loud enough to be heard over the compressed music.
     sfxGain = ac.createGain();
-    sfxGain.gain.value = 0.7;
+    sfxGain.gain.value = mode === "chant" ? 1.6 : 3;
     sfxGain.connect(master);
 
     // A stone church: a long, soft reverb made from decaying noise.
@@ -134,6 +140,11 @@ const Sound = (() => {
     reverbSend.gain.value = 0.5;
     reverbSend.connect(reverb);
     reverb.connect(master);
+    // A little of every effect goes into the same room as the music, so it
+    // sounds played in the same place rather than pasted on top.
+    const room = ac.createGain();
+    room.gain.value = 0.22;
+    sfxGain.connect(room).connect(reverbSend);
 
     // Echo: the music repeating itself a dotted eighth later, a little darker
     // each time, as Follin did by giving the echo a channel of its own.
@@ -181,6 +192,8 @@ const Sound = (() => {
     mode = MODES.includes(m) ? m : "illuminated";
     if (STYLES[mode]) SIXTEENTH = 60 / STYLES[mode].bpm / 4;
     if (master) { master.gain.setTargetAtTime(mode === "off" ? 0 : 0.8, ac.currentTime, 0.05); setEcho(); }
+    // The chant is quiet and bare: the effects come down to meet it.
+    if (sfxGain) sfxGain.gain.setTargetAtTime(mode === "chant" ? 1.6 : 3, ac.currentTime, 0.05);
     if (playing) {
       const key = chantKey;
       stopMusic();
@@ -355,7 +368,7 @@ const Sound = (() => {
     filt.type = type;
     filt.frequency.value = freq;
     const g = ac.createGain();
-    g.gain.setValueAtTime(level, t);
+    g.gain.setValueAtTime(level * (out === sfxGain ? fxLevel : 1), t);
     g.gain.exponentialRampToValueAtTime(0.001, t + length);
     src.connect(filt).connect(g).connect(out || musicGain);
     src.start(t, Math.random() * 0.5);
@@ -390,9 +403,11 @@ const Sound = (() => {
   }
 
   // Sound effects' own instruments.
+  // How loud the battle effect now playing is, beside the rest (see fx).
+  let fxLevel = 1;
   function stab(midi, t, length, level) {
     const g = ac.createGain();
-    g.gain.setValueAtTime(level, t);
+    g.gain.setValueAtTime(level * fxLevel, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + length);
     const filt = ac.createBiquadFilter();
     filt.type = "bandpass";
@@ -417,7 +432,7 @@ const Sound = (() => {
       const o = ac.createOscillator();
       o.frequency.value = base * ratio;
       const g = ac.createGain();
-      g.gain.setValueAtTime(level * amp, t);
+      g.gain.setValueAtTime(level * amp * fxLevel, t);
       g.gain.exponentialRampToValueAtTime(0.0005, t + decay);
       o.connect(g);
       g.connect(out || sfxGain);
@@ -432,7 +447,7 @@ const Sound = (() => {
     o.frequency.setValueAtTime(freq, t);
     if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + length);
     const g = ac.createGain();
-    g.gain.setValueAtTime(level, t);
+    g.gain.setValueAtTime(level * fxLevel, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + length);
     o.connect(g).connect(sfxGain);
     o.start(t);
@@ -891,10 +906,27 @@ const Sound = (() => {
   const key = (i, oct) => arpNotes[((i % arpNotes.length) + arpNotes.length) % arpNotes.length] + 12 * (oct || 0) + (i >= arpNotes.length ? 12 : 0);
   const hz = (i, oct) => mtof(key(i, oct));
   function blip(t, f, type, level, len, end) { tone(t, f, type, level, len, end); }
+  // The music leans back for a moment under an effect or a voice, then comes
+  // straight back: the effect is heard, and the groove never stops.
+  function duck(t, depth) {
+    if (!musicGain) return;
+    const g = musicGain.gain;
+    g.cancelScheduledValues(t);
+    g.setTargetAtTime(0.6 * (1 - (depth || 0.3)), t, 0.015);
+    g.setTargetAtTime(0.6, t + 0.12, 0.12);
+  }
   function fx(name, n, delay) {
     if (!ac || mode === "off") return;
     const S = SIXTEENTH;
     const t = onBeat() + (delay || 0) * S;
+    duck(t, name === "hit" || name === "crit" || name === "great" ? 0.35 : 0.2);
+    // Effects built from the music's own notes and sounds hide inside it, so
+    // they play louder; the bright ones (a crit's bell) stand out already.
+    fxLevel = FX_LEVEL[name] || 1;
+    try { fxSwitch(name, n, t, S); } finally { fxLevel = 1; }
+  }
+  const FX_LEVEL = { hit: 1.5, bleep: 1.9, zealDown: 2.2, zealUp: 1.5, great: 1.8, concede: 2, left: 1.9, discouraged: 1.9, encouraged: 1.6, stun: 1.5, muted: 1.9, step: 1.6, hex: 1.9, backup: 1.6, command: 1.5, rebuttal: 1.3, crit: 0.75, podiumFall: 1.7, deflect: 1.3, podium: 1.3 };
+  function fxSwitch(name, n, t, S) {
     switch (name) {
       case "bleep":      // words flying: a quick run of square-wave bleeps, rising
         for (let i = 0; i < Math.min(6, n || 2); i++) blip(t + i * S, hz(i, 1), "square", 0.07, S * 0.8);
@@ -948,6 +980,133 @@ const Sound = (() => {
     }
   }
 
+  // ---- Voices --------------------------------------------------------------------
+  // Little shouts, made the way a speaking toy makes them: a buzzing pulse wave
+  // (the chip sound of the music) shaped by three resonances, the formants,
+  // that turn a buzz into a vowel. A breath of noise gives an "h", a hum an
+  // "m". Everyone has a voice of their own: a pitch, a size of throat (the
+  // formants sit higher in a smaller one), a buzz (the pulse width), a rasp,
+  // a wobble, and a pace. No words, only the sound of a shout.
+
+  // Vowels: the first three formants (Hz) of an adult man's voice.
+  const VOWELS = {
+    a: [730, 1090, 2440], e: [530, 1840, 2480], i: [270, 2290, 3010], o: [570, 840, 2410],
+    u: [300, 870, 2240], ae: [660, 1720, 2410], uh: [520, 1190, 2390], ay: [480, 2000, 2600],
+  };
+  // f0: pitch (Hz); fs: throat (formants x); duty: pulse width (the buzz);
+  // rasp: noise in the voice; vib: wobble; pace: speed (1 = normal).
+  const VOICES = {
+    horn: { f0: 118, fs: 1.0, duty: 0.25, rasp: 0.05, vib: 0.01, pace: 1.15 },
+    akin: { f0: 108, fs: 0.98, duty: 0.3, rasp: 0.04, vib: 0.01, pace: 0.9 },
+    muse: { f0: 128, fs: 1.04, duty: 0.2, rasp: 0.03, vib: 0.015, pace: 1.1 },
+    schmitz: { f0: 124, fs: 1.02, duty: 0.35, rasp: 0.03, vib: 0.02, pace: 1.2 },
+    bertuzzi: { f0: 116, fs: 1.0, duty: 0.4, rasp: 0.04, vib: 0.01, pace: 1.05 },
+    fradd: { f0: 132, fs: 1.03, duty: 0.18, rasp: 0.06, vib: 0.03, pace: 1.1 },
+    godlogic: { f0: 98, fs: 0.95, duty: 0.45, rasp: 0.03, vib: 0.02, pace: 0.85 },
+    barron: { f0: 96, fs: 0.93, duty: 0.4, rasp: 0.04, vib: 0.03, pace: 0.85 },
+    hicks: { f0: 104, fs: 0.97, duty: 0.45, rasp: 0.02, vib: 0.01, pace: 0.75 },
+    pine: { f0: 122, fs: 1.02, duty: 0.3, rasp: 0.03, vib: 0.01, pace: 1.1 },
+    marygrace: { f0: 228, fs: 1.18, duty: 0.4, rasp: 0.02, vib: 0.03, pace: 1.05 },
+    rose: { f0: 212, fs: 1.16, duty: 0.3, rasp: 0.03, vib: 0.02, pace: 1.2 },
+    holdsworth: { f0: 100, fs: 0.96, duty: 0.4, rasp: 0.03, vib: 0.01, pace: 0.9 },
+    jurado: { f0: 88, fs: 0.92, duty: 0.2, rasp: 0.14, vib: 0.01, pace: 0.9 },
+    spitzer: { f0: 112, fs: 0.99, duty: 0.35, rasp: 0.05, vib: 0.05, pace: 0.7 },
+    hahn: { f0: 142, fs: 1.02, duty: 0.25, rasp: 0.04, vib: 0.04, pace: 1.3 },
+    schmid: { f0: 126, fs: 1.04, duty: 0.3, rasp: 0.03, vib: 0.02, pace: 1.15 },
+    heschmeyer: { f0: 120, fs: 1.01, duty: 0.22, rasp: 0.03, vib: 0.01, pace: 1.25 },
+    martins: { f0: 94, fs: 0.95, duty: 0.35, rasp: 0.06, vib: 0.02, pace: 0.9 },
+    zember: { f0: 218, fs: 1.17, duty: 0.35, rasp: 0.02, vib: 0.02, pace: 1.0 },
+    pitre: { f0: 114, fs: 1.0, duty: 0.3, rasp: 0.03, vib: 0.02, pace: 1.2 },
+    wetta: { f0: 136, fs: 1.03, duty: 0.15, rasp: 0.04, vib: 0.03, pace: 1.3 },
+    oconnor: { f0: 126, fs: 1.05, duty: 0.4, rasp: 0.02, vib: 0.01, pace: 0.95 },
+    ryan: { f0: 134, fs: 1.06, duty: 0.2, rasp: 0.03, vib: 0.02, pace: 1.2 },
+    hansen: { f0: 112, fs: 1.0, duty: 0.35, rasp: 0.02, vib: 0.01, pace: 0.95 },
+    speaker: { f0: 110, fs: 0.98, duty: 0.25, rasp: 0.08, vib: 0.02, pace: 1.1 },
+    witch: { f0: 200, fs: 1.15, duty: 0.2, rasp: 0.04, vib: 0.06, pace: 0.9 },
+    destiny: { f0: 124, fs: 1.03, duty: 0.25, rasp: 0.03, vib: 0.0, pace: 1.5 },
+    pastor: { f0: 116, fs: 1.0, duty: 0.4, rasp: 0.02, vib: 0.03, pace: 0.9 },
+    ehrman: { f0: 110, fs: 0.99, duty: 0.35, rasp: 0.04, vib: 0.02, pace: 1.0 },
+    white: { f0: 100, fs: 0.96, duty: 0.25, rasp: 0.05, vib: 0.01, pace: 1.1 },
+    master: { f0: 112, fs: 1.02, duty: 0.45, rasp: 0.03, vib: 0.0, pace: 0.7 },
+  };
+  // Anyone else (the rank and file) gets a voice from their name: the same
+  // voice every time, and no two quite alike.
+  function voiceOf(id, female) {
+    if (VOICES[id]) return VOICES[id];
+    let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const r = (k) => ((h >>> k) % 1000) / 1000;
+    return female
+      ? { f0: 190 + r(1) * 60, fs: 1.12 + r(3) * 0.1, duty: 0.15 + r(5) * 0.3, rasp: 0.02 + r(7) * 0.05, vib: r(9) * 0.04, pace: 0.85 + r(11) * 0.4 }
+      : { f0: 95 + r(1) * 50, fs: 0.94 + r(3) * 0.12, duty: 0.15 + r(5) * 0.3, rasp: 0.02 + r(7) * 0.1, vib: r(9) * 0.04, pace: 0.85 + r(11) * 0.4 };
+  }
+  // Each shout is a few syllables: [onset, vowel(s), length, pitch from, to].
+  // Onsets: "h" a breath, "m" a hum, "w"/"y" a glide from u/i, "" none.
+  const SHOUTS = {
+    attack: [[["h", ["a"], 0.14, 1.1, 0.9]], [["h", ["e", "i"], 0.15, 1.15, 0.95]], [["h", ["uh"], 0.1, 1.05, 0.9]], [["y", ["a"], 0.15, 1.1, 0.95]], [["h", ["o"], 0.13, 1.1, 0.9]]],
+    great: [[["h", ["a", "i"], 0.09, 1.0, 1.1], ["y", ["a"], 0.08, 1.1, 1.15], ["h", ["a"], 0.26, 1.35, 1.1]], [["h", ["e"], 0.08, 1.0, 1.05], ["y", ["a"], 0.24, 1.3, 1.2]]],
+    backup: [[["h", ["ay"], 0.16, 1.2, 1.3]], [["y", ["e", "ae"], 0.2, 1.1, 1.25]]],
+    hurt: [[["", ["u"], 0.14, 1.1, 0.8]], [["", ["uh"], 0.13, 1.0, 0.75]], [["h", ["uh"], 0.12, 1.05, 0.8]]],
+    down: [[["", ["a", "o", "u"], 0.5, 1.05, 0.7]], [["h", ["uh", "o"], 0.45, 1.0, 0.72]]],
+    cheer: [[["w", ["u"], 0.28, 1.0, 1.45]], [["y", ["e", "ae"], 0.3, 1.0, 1.35]], [["y", ["a"], 0.1, 1.1, 1.2], ["y", ["a"], 0.2, 1.3, 1.4]]],
+    // The Nones shrug instead of shouting.
+    meh: [[["m", ["e"], 0.22, 1.0, 0.85]], [["m", ["uh"], 0.08, 1.0, 1.0], ["h", ["uh"], 0.14, 1.05, 0.95]]],
+  };
+  const lastShout = {};
+  function shout(id, kind, female) {
+    if (!ac || mode === "off" || !SHOUTS[kind]) return;
+    const now = ac.currentTime;
+    if (lastShout[id] && now - lastShout[id] < 0.35) return;   // one at a time each
+    lastShout[id] = now;
+    const v = voiceOf(id, female);
+    const pick = SHOUTS[kind][Math.floor(Math.random() * SHOUTS[kind].length)];
+    const bump = kind === "great" || kind === "cheer" ? 1.08 : 1;
+    let t = now + 0.01;
+    const out = ac.createGain();
+    out.gain.value = kind === "down" ? 0.3 : 0.38;
+    out.connect(sfxGain);
+    duck(t, 0.2);
+    for (const [onset, vs, len0, p0, p1] of pick) {
+      const len = len0 / v.pace;
+      const f = v.f0 * bump;
+      // The voice: a pulse wave through three formant filters in parallel.
+      const src = ac.createOscillator();
+      src.setPeriodicWave(pulseWave(v.duty));
+      src.frequency.setValueAtTime(f * p0, t);
+      src.frequency.exponentialRampToValueAtTime(f * p1, t + len);
+      if (v.vib) { const lfo = ac.createOscillator(); lfo.frequency.value = 6; const d = ac.createGain(); d.gain.value = f * v.vib; lfo.connect(d).connect(src.frequency); lfo.start(t); lfo.stop(t + len + 0.05); }
+      const env = ac.createGain();
+      const start = onset === "h" ? t + 0.03 : t;
+      env.gain.setValueAtTime(0.0001, t);
+      env.gain.exponentialRampToValueAtTime(1, start + (onset === "m" ? 0.05 : 0.012));
+      env.gain.setValueAtTime(1, start + len * 0.6);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + len);
+      const glide = onset === "w" ? VOWELS.u : onset === "y" ? VOWELS.i : onset === "m" ? [250, 1200, 2300] : null;
+      [[1, 0.9], [2, 0.55], [3, 0.3]].forEach(([n, amp]) => {
+        const bp = ac.createBiquadFilter();
+        bp.type = "bandpass";
+        const at = (vw) => vw[n - 1] * v.fs;
+        bp.frequency.setValueAtTime(at(glide || VOWELS[vs[0]]), t);
+        if (glide) bp.frequency.setTargetAtTime(at(VOWELS[vs[0]]), start, 0.03);
+        vs.forEach((vw, k) => { if (k) bp.frequency.setTargetAtTime(at(VOWELS[vw]), start + (len * k) / vs.length, len / vs.length / 3); });
+        bp.Q.value = at(VOWELS[vs[0]]) / (60 + 40 * n);
+        const g = ac.createGain(); g.gain.value = amp * 1.6;
+        env.connect(bp).connect(g).connect(out);
+      });
+      src.connect(env);
+      src.start(t); src.stop(start + len + 0.03);
+      // Breath: an "h" before the voice, and a little rasp through it.
+      const breath = (from, until, level) => {
+        const n = ac.createBufferSource(); n.buffer = noise;
+        const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = VOWELS[vs[0]][1] * v.fs; bp.Q.value = 1.2;
+        const g = ac.createGain(); g.gain.setValueAtTime(level, from); g.gain.exponentialRampToValueAtTime(0.0001, until);
+        n.connect(bp).connect(g).connect(out); n.start(from, Math.random() * 0.5); n.stop(until + 0.02);
+      };
+      if (onset === "h") breath(t, start + 0.02, 0.35);
+      if (v.rasp) breath(start, start + len, v.rasp * 3);
+      t = start + len + 0.02;
+    }
+  }
+
   // ---- Effects ------------------------------------------------------------------
 
   function play(name, size) {
@@ -989,7 +1148,7 @@ const Sound = (() => {
   }
 
   return {
-    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play, stir, moveDrone, fx, cue,
+    MODES, unlock, setMode, startMusic, stopMusic, setChant, setIntensity, play, stir, moveDrone, fx, cue, shout,
     get mode() { return mode; },
     get playing() { return playing; },
     get droneNote() { return centre(); },
