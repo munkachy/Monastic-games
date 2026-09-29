@@ -14,7 +14,7 @@ const Lines = (() => {
     "Open Challenge": ["Any of you. Right now.", "Livestream. Tonight. Let's go.", "Bring your best argument.", "Who's first?"],
     "Steelman Stance": ["Your best argument is this…", "I'll grant that. Now…", "Steelman first. Then answer.", "Let me say it better for you."],
     // Fr. Mike Schmitz
-    "Two-Minute Homily": [["Real quick…"], ["Hey, friends…"], ["Okay, so…", "…this matters."], ["God loves you.", "Really."], ["Here's the deal."]],
+    "Two-Minute Homily": [["Real quick…"], ["Hey, friends…"], ["Okay, so, this matters."], ["God loves you. Really."], ["Here's the deal."]],
     "I'm Praying for You": ["Please pray for me.", "You've got this. He's got you.", "Go get 'em. I'll pray.", "My name is Fr. Mike, and…"],
     "The Bible in a Year": ["Day 47. Keep going!", "Leviticus. You can do it.", "Day 212. Still here!", "Day 365. We made it!"],
     // Cameron Bertuzzi
@@ -42,15 +42,16 @@ const Lines = (() => {
     "Discernment of Spirits": ["Consolation or desolation?", "Where is this coming from?", "Test the spirits.", "Is this peace, or noise?"],
     "Obsculta": ["Listen, my son.", "Incline the ear of your heart.", "Obsculta.", "Be still, and listen."],
     // Fr. Gregory Pine
-    "Distinguo": [["Concedo…", "…nego."], ["Yeah…", "…it depends."], ["Well,", "two senses."], ["Transeat…", "…but distinguo."], ["In one sense,", "yes."]],
-    "Sed Contra": ["On the contrary…", "But against this…", "Augustine says otherwise.", "Yeah, no. Sed contra."],
-    "The Five Ways": ["Second, from causation…", "Third, from contingency…", "Fourth, from gradation…", "Fifth, from governance…"],
+    // His dry, self-deprecating friar's wit: distinctions played for laughs.
+    "Distinguo": [["Concedo…", "…nego."], ["Yeah…", "…it depends."], ["Well,", "two senses."], ["Transeat…", "…but distinguo."], ["In one sense,", "yes."], ["Yes and no.", "Mostly no."], ["Great question.", "Wrong, though."], ["Short answer:", "it depends."]],
+    "Sed Contra": ["On the contrary…", "But against this…", "Augustine says otherwise.", "Yeah, no. Sed contra.", "Sed contra. Sorry. Not sorry.", "Thomas has entered the chat.", "Hold my Summa.", "I object. Article three."],
+    "The Five Ways": ["Second, from causation…", "Third, from contingency…", "Fourth, from gradation…", "Fifth, from governance…", "Five ways. Get comfortable.", "Aquinas did this in one page.", "Last way, I promise. Mostly."],
     // Sr. Mary Grace
     "Let Love": ["Be not afraid.", "Every life is a gift.", "He is with you.", "Love wins. Really."],
     // Lila Rose
     "Undercover": ["Camera's rolling.", "Just a few questions…", "Act natural.", "They'll never know."],
     // Brian Holdsworth
-    "Ten-Minute Essay": [["Consider this."], ["Let me explain."], ["Beauty matters."], ["Culture follows", "cult."], ["Here's the thing:"]],
+    "Ten-Minute Essay": [["Consider this.", "Beauty matters.", "Here's why."], ["Let me explain.", "Culture", "follows cult."], ["Here's the thing:", "modernity", "is tired."], ["Look closer.", "See the pattern?", "Right."]],
     "Beauty Will Save the World": ["Look at a cathedral.", "Beauty points beyond itself.", "Dostoevsky was right.", "Chant, incense, gold."],
     "Cultural Diagnosis": ["Here's what's really going on.", "Notice the pattern?", "That's modernity talking.", "Let's zoom out."],
     // Alex Jurado
@@ -60,11 +61,17 @@ const Lines = (() => {
     // Fr. Robert Spitzer
     "The Four Levels of Happiness": ["Level one: pleasure.", "Level two: achievement.", "Level three: love.", "Aim higher. Level four."],
     // Scott Hahn
-    "Covenant Is Family": [["Covenant!", "Family!"], ["Kinship", "by oath!"], ["Father!", "Son!"], ["Amazing!"], ["It's a family!"]],
+    "Covenant Is Family": [["Covenant!", "Family!"], ["Kinship", "by oath!"], ["Father!", "Son!"], ["Amazing!", "Just amazing!"], ["It's a family!", "God's family!"]],
     "Wide-Eyed Wonder": ["Wow. Just… wow!", "Look at this passage!", "It's all right there!", "That blew my mind!", "The Lamb! The Supper!"],
-    // Joe Heschmeyer
-    "Ignatius of Antioch": [["“The Eucharist…", "…is the flesh”"], ["“Follow", "the bishop”"], ["Irenaeus,", "c. 180"], ["Clement,", "c. 96"]],
-    "Former Litigator": ["Leading the witness!", "Asked and answered.", "No further questions.", "Sustained!"],
+    // Joe Heschmeyer: the former litigator. Blunt, charitable, and never
+    // without a question that finds the weak spot.
+    "Ignatius of Antioch": [["“The Eucharist…", "…is the flesh”"], ["“Follow", "the bishop”"], ["Irenaeus,", "c. 180"], ["Clement,", "c. 96"], ["Exhibit A:", "Ignatius."], ["The Fathers", "testify."]],
+    "Objection!": ["Objection! Begging the question.", "Objection! Leading the witness.", "Straw man, Your Honor.", "Strike that from the record.", "Objection: non sequitur.", "That's special pleading. Sustained?"],
+    "Burden of Proof": ["Where does the Bible say that?", "Show me the verse. I'll wait.", "You made the claim. Prove it.", "If the Papacy is true, everyone should be Catholic.", "Blunt answer: that's not an argument.", "Respectfully: no. Here's why."],
+
+    // Fr. Augustine Wetta: the surfing monk, once a lifeguard.
+    "Lifeguard on Duty": ["I was a lifeguard. Grab on!", "Galveston Beach Patrol, reporting!", "Don't panic. Float.", "I've pulled out bigger guys than you."],
+    "Humility Rules": ["Nobody's that important. Least of all me.", "Step one: fear of God. Step two: relax.", "Humility: you're not the main character.", "Twelve steps. Take the first.", "I had an enormous ego once. Ask me."],
 
     // Joe Schmid, once he has come home
     "Contingency Argument": ["What explains the whole chain?", "Contingent things need a ground.", "Why this, and not nothing?", "Pruss would like a word."],
@@ -98,8 +105,16 @@ const Lines = (() => {
     "Steelman": ["Charitably construed…", "Your best version is…", "Fair. Very fair.", "Let me grant that."],
     // Joe Schmid does Slavoj Žižek.
     "Žižek Impression": ["Pure ideology! *sniff*", "This is, eh, ideology!", "Even your coffee is ideology!", "German toilets! Ideology!", "I am, eh, a Christian atheist!", "*sniff* And so on. Beautiful!", "Like, eh… nothing is simple!"],
+    // The Nones
+    "Scroll Past": [["*scroll*"], ["lol"], ["brb"], ["*likes a post*"]],
+    "Phone Out": ["Sorry, what? I was on my phone.", "Hold that thought. Notification.", "One sec, my group chat.", "Wait, say that again? I missed it."],
+    "Meh": [["Meh."], ["Sure."], ["Whatever."], ["If it works for you."]],
+    "Flippant Response": ["Cool story.", "That's, like, your truth.", "I'm more spiritual than religious.", "lol. anyway.", "Religion's just not my thing."],
+    "k.": [["k."], ["ok."], ["sure."], ["cool."]],
+    "Seen, No Reply": ["Seen 11:42 PM.", "Seen. No reply.", "*leaves you on read*", "*typing…* *stops typing*"],
+    "Good Vibes, No Doctrine": ["I'm good, thanks.", "I just try to be a good person.", "All paths, you know?", "Not religious. Just vibes."],
     // The New Age
-    "Card Pull": [["The cards say…"], ["Three of Swords."], ["The Moon…", "…reversed."], ["Pull again."]],
+    "Card Pull": [["The cards say…"], ["Three of Swords."], ["The Moon, reversed."], ["Pull again."]],
     "The Tower": ["The Tower. Upheaval!", "The Devil card. Hm.", "Ten of Swords. Yikes.", "Death card! It's fine."],
     "Good Vibes": [["Good vibes!"], ["High vibration!"], ["Namaste."], ["Raise your frequency."]],
     "Crystal Grid": ["Amethyst protects me.", "Rose quartz, for love.", "Charged in moonlight.", "The grid is set."],
@@ -134,7 +149,7 @@ const Lines = (() => {
     "More Variants Than Words": ["More variants than words!", "Which text is original?", "We don't have the originals.", "Scribes changed things."],
     "Anonymous Gospels": ["Who really wrote them?", "The titles came later.", "Anonymous, all four.", "Not eyewitnesses."],
     "How Jesus Became God": ["A divinity that developed.", "He never called himself God.", "Exalted later on.", "Mark's Jesus isn't God."],
-    "Within Reason": [["Right, but…"], ["Fair, but…"], ["I'm not sure…", "…that follows."], ["Mm. Okay."]],
+    "Within Reason": [["Right, but…"], ["Fair, but…"], ["I'm not sure that follows."], ["Mm. Okay."]],
     "The Fawn in the Forest": ["Why the burning fawn?", "Whom does its pain serve?", "Alone. In the forest.", "No one sees. No one learns."],
     "Euthyphro": ["Good because commanded?", "Arbitrary, or above God?", "Plato's old question…", "Which horn will you take?"],
     "Charitable Skeptic": ["I take that seriously.", "Genuinely interesting.", "I'll have to think about that.", "Good point. Truly."],
@@ -165,7 +180,9 @@ const Lines = (() => {
     const extra = EXTRA[move.name];
     if (!extra || (!words && !move.say)) return null;
     const own = words ? move.glyphs : move.say;
-    const all = [own].concat(extra.filter((x) => Array.isArray(x) === words));
+    // Each phrase that flies is a strike, so an alternative always has as
+    // many phrases as the move has hits.
+    const all = [own].concat(extra.filter((x) => Array.isArray(x) === words && (!words || x.length === move.glyphs.length)));
     let i = Math.floor(Math.random() * all.length);
     if (all.length > 1 && i === last[move.name]) i = (i + 1) % all.length;
     last[move.name] = i;

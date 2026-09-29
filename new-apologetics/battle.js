@@ -229,6 +229,9 @@ const Battle = (() => {
         checkOut(u, events);
       }
       const skip = inPlay(u) && u.statuses.dumbfounded > 0;
+      // Muted holds through the turn it was counting down to: a one-turn Mute
+      // means one turn of basic moves only, not a mark that fades as he moves.
+      u.hushed = u.statuses.muted > 0;
       for (const k of Object.keys(u.statuses)) if (u.statuses[k] > 0) u.statuses[k]--;
       if (u.called && --u.called.n <= 0) u.called = null;
       u.buffs = u.buffs.filter((b) => --b.n > 0);
@@ -250,7 +253,7 @@ const Battle = (() => {
     const inStance = (u, s) => s.target === "self" && s.effects.some((e) => e.counter) && u.counter > 0;
     function usable(u) {
       return u.def.skills.map((s, i) => ({ s, i })).filter(({ s, i }) =>
-        !s.closer && u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0)) && partnerHere(u, s) && !inStance(u, s)).map(({ i }) => i);
+        !s.closer && u.cd[i] === 0 && !(u.locked && u.locked[i]) && (i === 0 || !(u.statuses.muted > 0 || u.hushed)) && partnerHere(u, s) && !inStance(u, s)).map(({ i }) => i);
     }
     // Who can be picked for a move that asks for one target.
     function choices(u, i) {
@@ -330,7 +333,11 @@ const Battle = (() => {
           if (winding && e.buff === "def" && e.amt > 0) sc += many * 0.8;
           if (e.cleanse) sc += team.reduce((n, x) => n + setbacks(x), 0) * 1.2;
           if (e.zeal < 0) sc += -e.zeal * p * many * (opp.some((x) => nearZealFloor(x) <= 2) ? 1.8 : 1.1);
-          if (e.zeal > 0 || e.allyZeal || e.selfZeal) sc += 1;
+          // Zeal up counts for more when friends are flagging: below 0 they
+          // hit softer and edge toward being Discouraged.
+          const low = team.filter((x) => x.state === "in" && x.zeal < 0);
+          if (e.zeal > 0 || e.allyZeal || e.selfZeal) sc += 1 + low.reduce((n, x) => n + Math.min(2, -x.zeal), 0) * (sk.target === "allies" || e.allyZeal ? 0.5 : 0.3);
+          if (e.immune === "steadfast") sc += team.filter((x) => x.state === "in" && x.zeal - x.floor <= 2).length * 0.8;
           if (e.status === "dumbfounded") sc += 2.5 * p * many;
           if (e.status === "muted" || e.status === "examined" || e.status === "doubting") sc += 1.2 * p * many;
           if (e.status === "cloaked") sc += u.statuses.cloaked > 0 ? -5 : 4;
@@ -413,6 +420,7 @@ const Battle = (() => {
       let commanded = null;
       const rebuttals = [];            // who was hurt and will answer back
       u.cd[i] = s.cd;
+      u.hushed = false;
       if (s.closer === "strike") { u.windup = false; u.closerIn = CLOSER_EVERY; }
       for (const t of targets) {
         for (const e of s.effects) {
@@ -447,7 +455,7 @@ const Battle = (() => {
           if (e.tauntAll && !done.has("tauntAll")) { done.add("tauntAll"); for (const o of others(u).filter(inPlay)) { o.called = { by: u.key, n: e.tauntAll + 1 }; events.push({ key: o.key, text: "Called Out", color: "#de5e55" }); } }
           if (e.buff) { t.buffs.push({ stat: e.buff, amt: e.amt, n: e.turns + 1 }); events.push({ key: t.key, text: (e.amt > 0 ? "▲ " : "▼ ") + statName(e.buff), color: e.amt > 0 ? "#74c07a" : "#de5e55" }); }
           if (e.heal) heal(t, e.heal * kick(u, s) * (u.side === "hero" ? HERO_HEAL : 1), events);
-          if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
+          if (e.cleanse) { for (const k of DEBUFFS) t.statuses[k] = 0; t.hushed = false; t.called = null; t.buffs = t.buffs.filter((b) => b.amt > 0); events.push({ key: t.key, text: "Examen", color: "#74c07a" }); }
           if (e.purge) purge(t, e.purge, events);
           if (e.shield) addShield(t, u.care * e.shield * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1), e.turns + 1, events);
           if (e.podium) { const hp = Math.round(u.care * e.podium * careK() * kick(u, s) * (u.side === "hero" ? HERO_SHIELD : 1)); t.cover = { hp, max: hp }; events.push({ key: t.key, text: "Podium up", color: "#7ea4e6" }); }
@@ -457,7 +465,7 @@ const Battle = (() => {
           if (e.immune) { t.immune[e.immune] = e.turns + 1; events.push({ key: t.key, text: immuneName(e.immune), color: "#7ea4e6" }); }
           if (e.selfZeal && !done.has("selfZeal")) { done.add("selfZeal"); zeal(u, e.selfZeal, s, events); }
           if (e.allyZeal && !done.has("allyZeal")) { done.add("allyZeal"); for (const f of friends(u).filter(inPlay)) zeal(f, e.allyZeal, s, events); }
-          if (e.friendsCleanse && !done.has("fc")) { done.add("fc"); for (const f of friends(u)) f.statuses[e.friendsCleanse] = 0; }
+          if (e.friendsCleanse && !done.has("fc")) { done.add("fc"); for (const f of friends(u)) { f.statuses[e.friendsCleanse] = 0; if (e.friendsCleanse === "muted") f.hushed = false; } }
           if (e.randomLift) {
             const lifts = [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { shield: 0.2, turns: 3 }, { heal: 0.2 }];
             const l = lifts[Math.floor(rnd() * lifts.length)];
@@ -691,23 +699,35 @@ const Battle = (() => {
   // counted). The stage shows these under each bar; the game lists them too.
   const GUARDS = { steadfast: "STEADY", security: "SECURE", faith: "FAITH ALONE", testimony: "HALF DMG" };
   const STAT_TAG = { atk: "ATK", def: "DEF", crit: "CRIT", spd: "SPD" };
-  function marks(u) {
+  // full: the list under the stage, which also says how long each lasts.
+  function marks(u, full) {
     const tags = [];
     if (u.statuses.dumbfounded > 0) tags.push(["STUN", "#ffd84a"]);
     if (u.statuses.doubting > 0) tags.push(u.side === "hero" ? ["FLUSTERED", "#e89a4a"] : ["DOUBTING", "#c69ae8"]);
-    if (u.statuses.muted > 0) tags.push(["MUTED", "#de5e55"]);
+    if (u.statuses.muted > 0 || u.hushed) tags.push(["MUTED", "#de5e55"]);
     if (u.statuses.examined > 0) tags.push(["EXPOSED", "#e8b94a"]);
     if (u.statuses.cloaked > 0) tags.push(["HIDDEN", "#9fd0ff"]);
     if (u.called) tags.push(["CALLED OUT", "#de5e55"]);
     if (u.counter > 0) tags.push(["REBUTTAL", "#e8b94a"]);
     for (const [k, v] of Object.entries(u.immune)) if (v > 0) tags.push([GUARDS[k] || "GUARDED", "#7ea4e6"]);
     if (u.regen && u.regen.n > 0) tags.push(["RENEW", "#74c07a"]);
+    // A Shield of Faith, with how much it can still take, as a share of his
+    // full Composure: it climbs when a second shield stacks on the first.
+    if (u.shield && u.shield.amt > 0) tags.push(["SHIELD " + Math.max(1, Math.round(100 * u.shield.amt / u.maxHp)) + "%", "#f4f6ff"]);
     // Boosts and setbacks on the same stat cancel out: two Attack Ups and one
     // Attack Down show as a single ATK▲.
     for (const st of ["atk", "def", "crit", "spd"]) {
-      const net = u.buffs.filter((b) => b.stat === st).reduce((n, b) => n + (b.amt > 0 ? 1 : b.amt < 0 ? -1 : 0), 0);
-      if (net > 0) tags.push([STAT_TAG[st] + "▲" + (net > 1 ? net : ""), "#74c07a"]);
-      if (net < 0) tags.push([STAT_TAG[st] + "▼" + (net < -1 ? -net : ""), "#ff6a5e"]);
+      const mine = u.buffs.filter((b) => b.stat === st);
+      const net = mine.reduce((n, b) => n + (b.amt > 0 ? 1 : b.amt < 0 ? -1 : 0), 0);
+      // How many of his turns each one that is left over still holds for
+      // (each wears off on its own clock, so a stack can shrink one at a time).
+      const left = (up) => {
+        if (!full) return "";
+        const ns = mine.filter((b) => (up ? b.amt > 0 : b.amt < 0)).map((b) => Math.max(1, b.n - 1)).sort((a, b) => a - b).slice(-Math.abs(net));
+        return " (" + ns.join(" & ") + (ns.length === 1 && ns[0] === 1 ? " turn" : " turns") + ")";
+      };
+      if (net > 0) tags.push([STAT_TAG[st] + "▲" + (net > 1 ? net : "") + left(true), "#74c07a"]);
+      if (net < 0) tags.push([STAT_TAG[st] + "▼" + (net < -1 ? -net : "") + left(false), "#ff6a5e"]);
     }
     return tags;
   }
@@ -964,16 +984,15 @@ const BattleView = (() => {
           if (u.cover) barrier(ctx, a.x + (u.side === "hero" ? 30 : -30), a.y, u.cover, u.def.podium || (u.side === "foe" ? o.coverKind || "podium" : "podium"));
           const x = a.x - 30;
           const y = a.y + 6;
-          // Composure, with any Shield of Faith added on the end in white:
-          // when the two together pass full, the bar grows
-          // longer (up to half again), so the shield's strength is plain.
+          // Composure, and over it a thin white bar for any Shield of Faith, on
+          // the same scale: a shield as big as his full Composure runs the whole
+          // width. Shields stack, so a second one plainly lengthens the white.
           const hpW = Math.round(60 * u.hp / u.maxHp);
-          const shW = shield ? Math.min(90 - hpW, Math.max(2, Math.round(60 * shield.amt / u.maxHp))) : 0;
-          const barW = Math.max(60, hpW + shW);
-          ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 1, barW + 2, 7);
+          const shW = shield ? Math.min(60, Math.max(2, Math.round(60 * shield.amt / u.maxHp))) : 0;
+          ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 1, 62, 7);
           ctx.fillStyle = "#2a2f55"; ctx.fillRect(x, y, 60, 5);
           ctx.fillStyle = u.hp / u.maxHp > 0.3 ? "#74c07a" : "#de8a4a"; ctx.fillRect(x, y, hpW, 5);
-          if (shW) { ctx.fillStyle = "#f4f6ff"; ctx.fillRect(x + hpW, y, shW, 5); ctx.fillStyle = "#9fb8ee"; ctx.fillRect(x + hpW, y + 4, shW, 1); }
+          if (shW) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, y - 6, shW + 2, 6); ctx.fillStyle = "#f4f6ff"; ctx.fillRect(x, y - 5, shW, 4); }
           // Zeal: blue arrows up when it is good; red arrows down when it
           // falls, with dim ones showing how far until the floor.
           const step = Math.min(14, Math.floor(62 / Math.max(3, -u.floor)));
@@ -1215,7 +1234,7 @@ const BattleView = (() => {
     // the unbaptized are baptized at the Easter Vigil; a baptized Protestant
     // is received into full communion, not baptized again; Latter-day Saint
     // baptism is not recognized as valid (CDF, 2001), so he is baptized.
-    const SIGNS = { atheist: ["OCIA", "EASTER VIGIL"], protestant: ["OCIA", "FULL COMMUNION"], lds: ["OCIA", "BAPTISM AT THE VIGIL"], islam: ["OCIA", "EASTER VIGIL"], newage: ["OCIA", "ALL WELCOME"], secular: ["OCIA", "EASTER VIGIL"] };
+    const SIGNS = { atheist: ["OCIA", "EASTER VIGIL"], protestant: ["OCIA", "FULL COMMUNION"], lds: ["OCIA", "BAPTISM AT THE VIGIL"], islam: ["OCIA", "EASTER VIGIL"], newage: ["OCIA", "ALL WELCOME"], secular: ["OCIA", "EASTER VIGIL"], none: ["OCIA", "RESTLESS NO MORE"] };
 
     // The sign a converted opponent leaves behind. Someone baptized who comes
     // back to the Church goes to confession, not to OCIA; his entry says so.

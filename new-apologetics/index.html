@@ -193,7 +193,7 @@
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
     <p class="fair">Every real person in this game has been portrayed as fairly as possible, and in charity. The aim is to explore ideas, not to shame anyone. If you are portrayed here and are unhappy with how, please leave a comment, and I will take it into consideration.</p>
-    <p><a class="play-link" href="play.html?v=20260929a">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20260929b">Play the game ▸</a></p>
   </header>
 
   <section>
@@ -219,8 +219,8 @@
   <section>
     <div class="lede">
       <span class="label">The roster</span>
-      <h2>Twenty evangelists, each with a style of their own</h2>
-      <p>Every evangelist has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends, and <b>Builders</b> put up shields. Each evangelist's moves come from what that apologist is known for. Their strengths stay out of sight: play them and find out.</p>
+      <h2>Twenty-one evangelists, each with a style of their own</h2>
+      <p>Every evangelist has a role on the team. <b>Leaders</b> lift everyone around them, <b>Scholars</b> weaken the other side, <b>Defenders</b> draw the fire, <b>Encouragers</b> restore their friends (and land critical hits more often than anyone), and <b>Builders</b> put up shields. Each evangelist's moves come from what that apologist is known for. Their strengths stay out of sight: play them and find out.</p>
     </div>
     <div class="roster" id="roster"></div>
   </section>
@@ -228,8 +228,8 @@
   <section>
     <div class="lede">
       <span class="label">The opposition</span>
-      <h2>Nine chapters, nine groups</h2>
-      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. After the tutorial, every story is open: start with whichever interests you, and switch whenever you like. The later chapters are built for a stronger team: jump ahead on Gentle, which makes them winnable at a little less experience, or level up first. When all nine are done, the final chapter opens: all nine bosses come back to the table, and it is the hardest debate in the game. The epilogue opens only when every debate, the final chapter’s included, has been won on Crucible.</p>
+      <h2>Ten chapters, ten groups</h2>
+      <p>Each chapter pits the team against one group, with its own rank-and-file debaters and a boss. The rank and file are invented characters. After the tutorial, every story is open: start with whichever interests you, and switch whenever you like. The later chapters are built for a stronger team: jump ahead on Gentle, which makes them winnable at a little less experience, or level up first. When all ten are done, the final chapter opens: nine of the bosses come back to the table, and it is the hardest debate in the game. The epilogue opens only when every debate, the final chapter’s included, has been won on Crucible.</p>
     </div>
     <div class="factions" id="factions"></div>
   </section>
@@ -310,12 +310,12 @@
   </section>
 </main>
 
-<script src="art.js?v=20260929a"></script>
-<script src="moves.js?v=20260929a"></script>
-<script src="story.js?v=20260929a"></script>
-<script src="data.js?v=20260929a"></script>
-<script src="lines.js?v=20260929a"></script>
-<script src="battle.js?v=20260929a"></script>
+<script src="art.js?v=20260929b"></script>
+<script src="moves.js?v=20260929b"></script>
+<script src="story.js?v=20260929b"></script>
+<script src="data.js?v=20260929b"></script>
+<script src="lines.js?v=20260929b"></script>
+<script src="battle.js?v=20260929b"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -328,7 +328,7 @@
       id: "akin", name: "Jimmy Akin", tag: "Senior Apologist, Catholic Answers", role: "Scholar",
       passive: ["Since 1993", "+3% Composure. The longest-serving apologist on the staff."],
       skills: [
-        ["Precise Distinction", "1 foe", "0", "Hit."],
+        ["Precise Distinction", "1 foe", "0", "Two quick hits: first this, second that."],
         ["Senior Apologist", "1 foe", "3", "Strong hit (harder against a shield or podium). 50% chance to leave him Dumbfounded for 2 turns. “Well, actually, there are three views on that…”"],
         ["Logical Paradox", "All foes", "3", "Minor Attack Down for 3 turns. 50% chance of −1 Zeal on each."],
         ["Mysterious World", "2 random foes", "3", "Exposed, and a 50% chance of a Fact-Check. He weighs the strangest claims calmly and on the evidence."],
@@ -373,7 +373,7 @@
       id: "horn", name: "Trent Horn", tag: "Staff Apologist, Catholic Answers · The Council of Trent", role: "Leader",
       passive: ["The Council of Trent", "+5% Attack to Catholic Answers allies. With Jimmy Akin or Joe Heschmeyer on the team, they all get it."],
       skills: [
-        ["Deadpan", "1 foe", "0", "Strong hit, and a 50% chance of Attack Down for 1 turn. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
+        ["Deadpan", "1 foe", "0", "Two quick hits (together, a strong hit), and a 50% chance of Attack Down for 2 turns. A dry, melancholy one-liner that lands harder than it sounds: “Wonderful… and yet here we are.”"],
         ["Free-for-All Friday", "All allies", "3", "+1 Zeal on each, and each ally gets one lift, picked at random, the way the week’s topics come up on his own podcast (glasses, zombie movies, last meals, bowling alleys): Attack Up, Crit Chance Up, a solid Shield of Faith, or some Composure back."],
         ["Is That in the Bible?", "All foes", "3 (starts 1)", "Fact-Checks every foe and −1 Zeal on each. Chapter and verse, please: on many moral questions the Bible alone leaves a Christian guessing, so Christ left a Church to spell it out. Passes through Eternal Security and Sola Scriptura."],
         ["The Case for Catholicism", "All foes", "4 (starts 2)", "Heavy hit on each (harder against a shield or podium).", true],
@@ -384,7 +384,7 @@
       id: "fradd", name: "Matt Fradd", tag: "Host, Pints with Aquinas", role: "Encourager",
       passive: ["That's Beautiful", "+10% resistance to being Flustered."],
       skills: [
-        ["Cheeky Question", "1 foe", "0", "Three quick questions, each a light hit. Easy-going, but they add up."],
+        ["Cheeky Question", "1 foe", "0", "Three quick questions, each a light hit, and each a fresh chance at a critical hit: like every Encourager, he lands them often. Easy-going, but they add up."],
         ["Pints with Aquinas", "1 ally", "3", "A major encouragement: restores most of his Composure, with a 50% chance of +2 Zeal. A Discouraged ally comes back into the fight."],
         ["Australian Charm", "1 ally", "3", "Major Attack Up for 3 turns and +2 Zeal. Nobody can stay tense around him."],
         ["Summa Session", "All allies", "4 (starts 2)", "Examen, Major Defense Up, and immunity to being Flustered for 3 turns.", true],
@@ -395,7 +395,7 @@
       id: "godlogic", name: "GodLogic", tag: "Street and livestream apologist · guest ally", role: "Builder", guest: true,
       passive: ["Smooth", "+3% Attack."],
       skills: [
-        ["Smooth Question", "1 foe", "0", "Hit. 10% chance of Attack Down."],
+        ["Smooth Question", "1 foe", "0", "Two quick hits. 10% chance of Attack Down."],
         ["Smooth Pivot", "1 ally", "3", "Sets up a podium in front of a friend, and Attack Up."],
         ["Stay Smooth", "All allies", "3", "A major Shield of Faith for 3 turns and +1 Zeal on each."],
         ["Common Ground", "All foes", "4", "Removes every buff and gives Major Attack Down for 3 turns. −1 Zeal on any foe from the Islam storyline.", true],
@@ -406,7 +406,7 @@
       id: "barron", name: "Bishop Robert Barron", tag: "Word on Fire", role: "Leader",
       passive: ["Media Veteran", "+3% Composure."],
       skills: [
-        ["Sunday Sermon", "1 foe", "0", "Hit. 50% chance of Attack Down for 1 turn."],
+        ["Sunday Sermon", "1 foe", "0", "Hit. 50% chance of Attack Down for 2 turns."],
         ["Word on Fire", "All foes", "3", "Heavy hit on every foe at once. One broadcast that reaches everybody."],
         ["The Way of Beauty", "Self", "3 (starts 1)", "Calls out every foe to answer him for 4 turns, sets up a podium in front of himself, and Attack Up for 3 turns. Beauty first, then goodness, then truth."],
         ["No Beige Catholicism", "1 foe", "4 (starts 2)", "Muted for 3 turns, Attack Down, and −1 Zeal.", true],
@@ -417,7 +417,7 @@
       id: "hicks", name: "Fr. Boniface Hicks, OSB", tag: "Monk of Saint Vincent Archabbey · spiritual director", role: "Scholar",
       passive: ["Stability", "+10% resistance to Fact-Check. The Benedictine vow."],
       skills: [
-        ["Gentle Correction", "1 foe", "0", "Hit. 25% chance of Attack Down for 1 turn."],
+        ["Gentle Correction", "1 foe", "0", "Hit. 25% chance of Attack Down for 2 turns."],
         ["Discernment of Spirits", "All foes", "3", "Every foe is Exposed. Which voice is God's, and which is only our own?"],
         ["Obsculta", "1 foe", "3 (starts 1)", "Dumbfounded for 3 turns, straight past any podium, and −2 Zeal. “Listen”: the first word of the Rule."],
         ["Spiritual Direction", "1 foe", "4 (starts 2)", "−2 Zeal on the foe and +2 Zeal for Fr. Boniface. Two souls come to understand each other.", true],
@@ -449,7 +449,7 @@
       id: "rose", name: "Lila Rose", tag: "Founder, Live Action", role: "Scholar",
       passive: ["Empathy", "+5% Defense to every ally."],
       skills: [
-        ["Every Life", "1 foe", "0", "Hit. If it puts someone out of the debate, she goes Undercover."],
+        ["Every Life", "1 foe", "0", "Two quick hits. If they put someone out of the debate, she goes Undercover."],
         ["Live Action", "4 random foes", "3", "Four strong hits on opponents at random, each with a 50% chance of −1 Zeal. The camera was rolling the whole time."],
         ["Undercover", "Self", "3", "Undercover for 3 turns: hard to single out, and hits land at a quarter strength unless she is Exposed. Major Crit Chance Up, and she recovers a little Composure.", true],
       ],
@@ -459,7 +459,7 @@
       id: "holdsworth", name: "Brian Holdsworth", tag: "Commentator and YouTuber, Edmonton", role: "Encourager",
       passive: ["Domestic Church", "+3% Composure. A father of seven knows patience."],
       skills: [
-        ["Ten-Minute Essay", "1 foe", "0", "Strong hit."],
+        ["Ten-Minute Essay", "1 foe", "0", "Three quick points, each a light hit, and each a fresh chance at a critical hit: like every Encourager, he lands them often."],
         ["Beauty Will Save the World", "All allies", "3", "An encouragement for every ally."],
         ["Cultural Diagnosis", "1 foe", "3 (starts 1)", "Exposed, and Major Defense Down for 3 turns."],
         ["Authentic Catholic Culture", "All allies", "4 (starts 2)", "Examen, a major Shield of Faith, and +1 Zeal on each. For 3 turns no ally can lose Zeal.", true],
@@ -492,27 +492,28 @@
       id: "hahn", name: "Scott Hahn", tag: "St. Paul Center · Franciscan University of Steubenville", role: "Defender",
       passive: ["Rome Sweet Home", "At the start of each battle, every convert on the team starts with +1 Zeal: Scott Hahn, Jimmy Akin, Cameron Bertuzzi and Brian Holdsworth."],
       skills: [
-        ["Covenant Is Family", "1 foe", "0", "Strong hit, with a 50% chance of leaving him Doubting. Passes through Faith Alone."],
+        ["Covenant Is Family", "1 foe", "0", "Two quick hits (together, a strong hit), with a 50% chance of leaving him Doubting. Passes through Faith Alone."],
         ["Wide-Eyed Wonder", "1 foe", "3", "Heavy hit and −1 Zeal. Nobody can keep a debate face against that much delight."],
         ["Rome Sweet Home", "1 foe", "4 (starts 2)", "Crushing hit, and Dumbfounded for 3 turns. Protestant foes are Fact-Checked too. The road he walked himself, from Presbyterian minister to Catholic.", true],
       ],
       flavor: "The elder statesman. Unhurried, and the hardest to shake on the roster, with the heaviest blows. Pair him with Fr. Mike, who can send him in out of turn. In the story he shows up when the team is stuck, and he usually has the key.",
     },
     {
-      id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery", role: "Leader",
+      id: "heschmeyer", name: "Joe Heschmeyer", tag: "Staff Apologist, Catholic Answers · Shameless Popery · Pope Peter", role: "Leader",
       passive: ["The Early Church Was the Catholic Church", "+5% Attack to Catholic Answers allies."],
       skills: [
-        ["Ignatius of Antioch", "1 foe", "0", "Two quotations, each a hit. 50% chance to leave him Doubting."],
-        ["Former Litigator", "Self", "3", "Rebuttal for 4 turns, and Major Crit Chance Up for all allies for 3 turns."],
-        ["Shameless Popery", "1 foe", "3 (starts 1)", "Three strong hits, and −1 Zeal."],
+        ["Ignatius of Antioch", "1 foe", "0", "Two quotations from the Fathers, each a hit: Ignatius, Irenaeus, Clement. 50% chance to leave him Doubting."],
+        ["Objection!", "1 foe", "3", "Hit, and the gavel comes down: Muted for 2 turns, basic move only. He spots the fallacy (a false dilemma, a straw man, begging the question) and strikes it from the record."],
+        ["Burden of Proof", "All foes", "3 (starts 1)", "Every opponent is Exposed for 3 turns, a 35% chance of −1 Zeal on each, and a Rebuttal for 4 turns. You made the claim: prove it. Where does the Bible say that?"],
+        ["Shameless Popery", "1 foe", "4 (starts 2)", "Three strong hits, and −1 Zeal. The Fathers are entered as exhibits A, B and C, and the verdict is his own line: “If the Papacy is true, everyone should be Catholic.”", true],
       ],
-      flavor: "A fencer: quick thrusts, a parry, then a flurry, and his blade is the Church Fathers. He is also the third Catholic Answers apologist, which opens a team bonus.",
+      flavor: "A former litigator, and he argues like one: charitable, but blunt, with a question that goes straight to the weak spot. He hands the burden of proof back, picks the logic apart, and calls the early Church as his witness. He is also the third Catholic Answers apologist, which opens a team bonus.",
     },
     {
       id: "martins", name: "Fr. Carlos Martins", tag: "Exorcist · Companions of the Cross · Treasures of the Church", role: "Encourager",
       passive: ["Companions of the Cross", "+5% Defense to every ally."],
       skills: [
-        ["Holy Water", "1 foe", "0", "Hit."],
+        ["Holy Water", "1 foe", "0", "Three quick sprinkles, each a light hit, and each a fresh chance at a critical hit: like every Encourager, he lands them often."],
         ["Stand Behind Me", "Self", "3", "Calls every opponent out for 4 turns, so they must answer him, and +1 Zeal for the whole team. The exorcist takes the attack himself."],
         ["Prayer of Deliverance", "All allies", "4 (starts 1)", "A major encouragement for everyone, bringing back the Discouraged, Examen, and a 50% chance of +1 Zeal on each."],
         ["Treasures of the Church", "All allies", "4 (starts 2)", "Major Attack Up and Major Crit Chance Up for 3 turns, and +2 Zeal on each. The relics come out, and at the centre the wood of the True Cross.", true],
@@ -534,12 +535,23 @@
       id: "pitre", name: "Brant Pitre", tag: "Scripture scholar · The Case for Jesus · Jesus and the Jewish Roots of the Eucharist", role: "Scholar",
       passive: ["Second Temple Context", "+5% Attack to every ally: the whole team reads the texts in their setting."],
       skills: [
-        ["Jewish Roots", "1 foe", "0", "Hit. 25% chance of Attack Down."],
+        ["Jewish Roots", "1 foe", "0", "Two quick hits. 25% chance of Attack Down."],
         ["The Big Picture", "All foes", "3", "Every opponent is Exposed for 3 turns. Step back and read Jesus as a first-century Jew."],
         ["The Son of Man", "1 foe", "3 (starts 1)", "Always leaves him Dumbfounded for 2 turns, straight past any podium, and −2 Zeal. Daniel 7: the claim that silences the room."],
         ["The Case for Jesus", "1 foe", "4 (starts 2)", "A crushing hit, −2 Zeal, and Doubting for 3 turns. No anonymous copy of a Gospel has ever been found.", true],
       ],
       flavor: "Very quick, and he sees the whole picture where others get lost in details. He joins after the chapter Misquoting Jesus?",
+    },
+    {
+      id: "wetta", name: "Fr. Augustine Wetta, OSB", tag: "Monk of Saint Louis Abbey · Humility Rules · the surfing monk", role: "Encourager",
+      passive: ["Ora et Labora", "Hard to deflate: he shrugs off a loss of Zeal more often than most."],
+      skills: [
+        ["Flying Fettuccine", "1 foe", "0", "Three juggled hits, each a light one, and each a fresh chance at a critical hit: like every Encourager, he lands them often. He once juggled professionally."],
+        ["Lifeguard on Duty", "1 ally", "3", "Throws a friend the ring buoy: a major encouragement that brings back the Discouraged, and +1 Zeal. He was a lifeguard on the Galveston beach patrol."],
+        ["Humility Rules", "All allies", "3 (starts 1)", "+1 Zeal on each, and for 2 turns no one's Zeal can fall. It is hard to deflate someone who doesn't take himself too seriously."],
+        ["Surf's Up", "All allies", "4 (starts 2)", "He surfs right across the screen: an encouragement for everyone, bringing back the Discouraged, Examen, and +2 Zeal on each.", true],
+      ],
+      flavor: "A Benedictine monk, teacher, rugby coach and surfer, with a wacky sense of humor and a book on humility (Humility Rules, from the Rule of St. Benedict). He joins after the chapter Are You a Good Person?, surfs in wherever a lesson gets heavy, and is the best friend the team has against the Nones, who win by wearing a team's Zeal down.",
     },
   ];
 
@@ -643,13 +655,25 @@
     {
       id: "white", name: "James White", tag: "Alpha and Omega Ministries · The Dividing Line", faction: "Reformed",
       grunts: ["seminarian"],
-      blurb: "The final boss, in Chapter 9, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
+      blurb: "The boss of Chapter 9, Scripture Alone? He has heard every canon argument a thousand times, so the team has to find one he hasn't. Rank and file: seminarians and Reformed podcasters.",
       skills: [
-        ["Greek Exegesis", "1 foe", "0", "Strong hit. 25% chance to leave him Flustered."],
+        ["Greek Exegesis", "1 foe", "0", "Two quick hits (together, a strong hit). 25% chance to leave him Flustered."],
         ["Sola Scriptura", "All foes", "3", "Fact-Checks every buff on your team, and Attack Down for 2 turns. Only Scripture counts."],
         ["Eternal Security", "Self", "4", "His Zeal cannot fall for 2 turns, and he recovers Composure. This is the Reformed doctrine of the perseverance of the saints. Trent Horn's Is That in the Bible? passes through it."],
         ["Debate Challenge", "All foes", "4 (starts 2)", "Heavy hit on each, and +1 Zeal to himself.", true],
         ["Cross-Examination", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn, then it takes 85% of every evangelist’s Composure, and −1 Zeal on each. “Yes or no. Yes or no!” A Shield of Faith soaks it up; Dumbfounded or Muted while he winds up, or hit hard enough, he never lands it. The hardest of them all."],
+      ],
+    },
+    {
+      id: "master", name: "Master of None", tag: "An invented character", faction: "The Nones",
+      grunts: ["scroller", "shrugger"],
+      blurb: "The boss of Chapter 10, Nothing in Particular, and the last opponent at the table in the final chapter. Not hostile, just not interested: he hardly touches Composure, and wins by wearing a team's Zeal down. Bring Encouragers. Rank and file: doomscrollers, and people of no religion in particular.",
+      skills: [
+        ["k.", "1 foe", "0", "Light hit, and a 50% chance of −1 Zeal."],
+        ["Seen, No Reply", "All foes", "3", "−1 Zeal on each, and a 35% chance of Muted."],
+        ["Flippant Response", "1 foe", "3 (starts 1)", "−2 Zeal. “lol. anyway.”"],
+        ["Good Vibes, No Doctrine", "Self", "4 (starts 2)", "Recovers Composure, and his Zeal cannot fall for 2 turns.", true],
+        ["Whatever", "All foes", "every 3rd turn", "Closing argument. He winds up for a turn (“Hold on, I'm just going to check this real quick…”), then it takes only 30% of every evangelist’s Composure, but −2 Zeal on each. A Shield of Faith soaks up the Composure; Humility Rules and Sed Contra hold the Zeal; Dumbfounded or Muted while he winds up, or hit hard enough, he never lands it."],
       ],
     },
   ];
@@ -698,7 +722,11 @@
     ["Scripture Alone?", "Reformed", "James White", "How do you answer sola scriptura in a way James White hasn't heard a thousand times? Grant him the canon, and ask for the verse that says the rule of faith changes when the last apostle dies.",
       [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
        ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]]],
-    ["The Great Debate", "Everyone", "James White", "Every opponent comes back to the table on one night, all nine bosses in three debates. What do you say when you can't win them all? Opens once all nine stories are done; the hardest chapter in the game.",
+    ["Nothing in Particular", "The Nones", "Master of None", "How do you reach someone who isn't against God, just not interested? Nearly three in ten American adults now say they have no religion. These opponents seldom argue: they check their phones, shrug, and wear the team's Zeal down, so the usual strategy fails. Bring Encouragers. Fr. Augustine Wetta surfs in with joy, the only thing a shrug can't answer.",
+      [["g-doctrine", "Doctrine", "“The desire for God is written in the human heart, because man is created by God and for God” (CCC 27)."],
+       ["g-argument", "Argument", "“You have made us for yourself, and our heart is restless until it rests in you” (St. Augustine, Confessions I.1)."],
+       ["g-doctrine", "Doctrine", "Acedia, the spiritual sloth that refuses the joy that comes from God, is a sin against the love of God (CCC 2094; the Rule of St. Benedict watches for the brother who is “acediosus,” RB 48.18)."]]],
+    ["The Great Debate", "Everyone", "Master of None", "Every opponent comes back to the table on one night: nine bosses in three debates, and last of all the Master of None, who doesn't care to argue at all. What do you say when you can't win them all? Opens once all ten stories are done; the hardest chapter in the game.",
       [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
        ["g-doctrine", "Scripture", "“I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6)."]]],
     ["One Fold", "Epilogue", "", "Opens only when every debate has been won on Crucible. The team counts your conversions, then goes online: new heresies, and the people they debated still drawing crowds. Why keep going? Because every heresy has made the Church understand the faith more deeply, and because more people are seeking God than in a long time. It ends at the Easter Vigil.",

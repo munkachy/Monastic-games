@@ -626,6 +626,15 @@ const Art = (() => {
     // Brant Pitre: dark hair going grey at the temples, a trimmed beard, thick
     // black rectangular glasses, a tan jacket over a navy shirt.
     pitre: { skin: "#e8b99a", shade: "#c8957a", hair: "#2a1e16", hairLight: "#4a3a2e", style: "receding", quiff: true, temples: "#9a948c", beard: "short", beardColor: "#3a2e26", brow: "#2a1e16", glasses: "#141418", outfit: "suit", clothes: "#b09a78", lapel: "#94805e", shirt: "#1f2f5a", smile: true },
+    // Fr. Augustine Wetta, OSB: the black Benedictine habit, a big grin.
+    // A first draft, to be checked against photographs.
+    wetta: { skin: "#eec2a2", shade: "#cd9a7c", hair: "#4a3424", style: "crew", brow: "#3a2a1e", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", grin: true },
+    // The Nones, invented for the game: phones out, earbuds in.
+    scroller: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#6a4a2f", style: "shaggy", outfit: "hoodie", clothes: "#8a8e96", trim: "#6e727a", prop: "phone" },
+    scroller2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#9a4a5a", outfit: "blouse", clothes: "#c8b89a", skirt: "#a8987a", prop: "phone" },
+    shrugger: { skin: "#efc6a8", shade: "#cf9e84", hair: "#b8a070", hairLight: "#d8c090", style: "side", beard: "stubble", beardColor: "#9a8458", outfit: "sweater", clothes: "#7a8a6a", trim: "#62705a", prop: "headset" },
+    shrugger2: { skin: "#d9a882", shade: "#b98862", hair: "#3a2a1e", style: "curly", browThin: true, brow: "#3a2a1e", outfit: "hoodie", clothes: "#d8d2c8", trim: "#b8b2a8", prop: "headset" },
+    master: { skin: "#f0c8aa", shade: "#d0a086", hair: "#2a1e16", hairLight: "#4a3a2e", style: "shaggy", beard: "stubble", beardColor: "#4a3628", glasses: "#141418", outfit: "hoodie", clothes: "#3a3a42", trim: "#2a2a30", prop: "phone" },
     student: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#3a2a1e", style: "side", brow: "#3a2a1e", outfit: "hoodie", clothes: "#8a2a2a", trim: "#6a2020", prop: "book", bookColor: "#1f3b6b" },
     student2: { skin: "#c89068", shade: "#a87050", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#8a4a4a", outfit: "blouse", clothes: "#3a6a8a", skirt: "#2e566e", prop: "book", bookColor: "#6b1e22" },
     mythicist: { skin: "#efc6a8", shade: "#cf9e84", hair: "#1c1410", style: "crew", beard: "goatee", beardColor: "#1c1410", outfit: "hoodie", clothes: "#1a1a24", trim: "#2a2a34", prop: "mic" },
