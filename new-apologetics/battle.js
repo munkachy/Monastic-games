@@ -41,6 +41,7 @@ const Battle = (() => {
   // An evangelist brought back from Discouraged returns with at least this much Composure
   let REVIVE = 0.75;
   let SHAKEN = 1;             // Zeal each friend loses when a hero is Discouraged
+  let RALLY = 1;              // Zeal everyone gains when a Discouraged hero is brought back
   // Impact: every debater's Composure, and every shield and podium, is divided
   // by this, so each hit, heal and shield counts for more and debates end
   // sooner, the same for both sides (tuned in BALANCE.md).
@@ -618,6 +619,9 @@ const Battle = (() => {
         events.push({ key: t.key, text: "Encouraged!", color: "#74c07a", back: true });
         // A friend brought back returns with at least three quarters of his Composure.
         a = Math.max(a, Math.round(t.maxHp * REVIVE) - t.hp);
+        // And it heartens the whole team, the one brought back included: the
+        // mirror of being Shaken when he went down.
+        if (RALLY && t.side === "hero") for (const f of friends(t).filter(inPlay)) { events.push({ key: f.key, text: "Heartened", color: "#74c07a" }); zeal(f, RALLY, null, events); }
       }
       if (t.state !== "in") return;
       t.hp = Math.min(t.maxHp, t.hp + a);
@@ -923,7 +927,7 @@ const Battle = (() => {
     return tips.slice(0, 2);
   }
 
-  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, marks, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; if (k === "revive") REVIVE = v; } };
+  return { create, label, run, levelOf, xpFor, unlockLevel, describe, advise, marks, DIFFICULTY, tune(k, v) { if (k === "zealGrowth") FOE_ZEAL_GROWTH = v; if (k === "growth") FOE_GROWTH = v; if (k === "backup") BACKUP = v; if (k === "foeFrom") FOE_BACKUP_FROM = v; if (k === "shaken") SHAKEN = v; if (k === "impact") IMPACT = v; if (k === "punch") FOE_PUNCH = v; if (k === "kick") GREAT_KICK = v; if (k === "sap") ZEAL_SAP = v; if (k === "heroShield") HERO_SHIELD = v; if (k === "heroHeal") HERO_HEAL = v; if (k === "bold") SHIELD_BOLD = v; if (k === "closers") CLOSERS_ON = v; if (k === "rattle") RATTLE = v; if (k === "revive") REVIVE = v; if (k === "rally") RALLY = v; } };
 })();
 
 // ---- The stage --------------------------------------------------------------------------
