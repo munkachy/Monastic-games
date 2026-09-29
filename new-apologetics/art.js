@@ -94,6 +94,8 @@ const Art = (() => {
       // A monk's hood lies in folds around the neck.
       for (let y = 21; y < 27; y++) { g.put(9, y, s.trim); g.put(10, y, s.trim); g.put(21, y, s.trim); g.put(22, y, s.trim); }
       for (let x = 11; x < 21; x++) g.put(x, 26, s.trim);
+      // A white clerical collar showing at the neck of the habit.
+      if (s.collar) { g.put(15, 23, "#f7f5ee"); g.put(16, 23, "#f7f5ee"); }
       if (s.outfit === "dominican") {
         // The black cappa over the white habit.
         for (let y = 25; y < 32; y++) {
@@ -626,9 +628,10 @@ const Art = (() => {
     // Brant Pitre: dark hair going grey at the temples, a trimmed beard, thick
     // black rectangular glasses, a tan jacket over a navy shirt.
     pitre: { skin: "#e8b99a", shade: "#c8957a", hair: "#2a1e16", hairLight: "#4a3a2e", style: "receding", quiff: true, temples: "#9a948c", beard: "short", beardColor: "#3a2e26", brow: "#2a1e16", glasses: "#141418", outfit: "suit", clothes: "#b09a78", lapel: "#94805e", shirt: "#1f2f5a", smile: true },
-    // Fr. Augustine Wetta, OSB: the black Benedictine habit, a big grin.
-    // A first draft, to be checked against photographs.
-    wetta: { skin: "#eec2a2", shade: "#cd9a7c", hair: "#4a3424", style: "crew", brow: "#3a2a1e", outfit: "habit", clothes: "#16161c", trim: "#2a2a33", grin: true },
+    // Fr. Augustine Wetta, OSB, from a photograph: short light-brown hair
+    // swept up, dark rectangular glasses, clean-shaven with a ruddy face and
+    // a wide smile, the navy-black habit with a white collar at the neck.
+    wetta: { skin: "#eeb898", shade: "#cc9274", hair: "#9a7650", hairLight: "#bc9a70", style: "side", brow: "#7a5a3a", glasses: "#2a1e18", faceW: 7.8, outfit: "habit", clothes: "#1c2030", trim: "#2c3246", collar: true, grin: true },
     // The Nones, invented for the game: phones out, earbuds in.
     scroller: { skin: "#f2cdb2", shade: "#d2a58a", hair: "#6a4a2f", style: "shaggy", outfit: "hoodie", clothes: "#8a8e96", trim: "#6e727a", prop: "phone" },
     scroller2: { skin: "#b07a56", shade: "#8e5c3e", hair: "#1c140f", hairLight: "#3a2a20", style: "long", part: true, browThin: true, brow: "#1c140f", mouth: "#9a4a5a", outfit: "blouse", clothes: "#c8b89a", skirt: "#a8987a", prop: "phone" },
