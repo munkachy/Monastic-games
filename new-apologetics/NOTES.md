@@ -84,3 +84,7 @@ The old Techno, Dubstep and Electro beats, and chant sung over them, are gone.
 
 - Voices: little synthesized shouts (a pulse wave through three formant filters, with a breath for "h" and a hum for "m"). Each named character has a voice of their own (pitch, throat size, buzz, rasp, wobble, pace); the rank and file get one from their name. Shouts: attack, great, backup, hurt (a crit), down, cheer; the Nones say "meh". At most three voices in half a second.
 - The effects were buried under the rebuilt music. The effect channel is now twice as loud (about half that in Chant mode), the effects built from the music's own notes play louder again, a little of every effect goes into the music's reverb, and the music dips for a moment under each effect. A limiter at the end catches peaks.
+
+## Heartened (2026-09-29)
+
+- Bringing back a Discouraged evangelist heartens the team: everyone in play, the one brought back included, gains 1 Zeal (RALLY, the mirror of SHAKEN). Campaign on Normal, 40 runs: smart 84 / 80, simple 71 / 59 (barely moved). The Nones chapter lost its edge (Heartened answers its Zeal drain), so its power went from [3.2, 2.5] to [3.4, 2.9]: smart bot about 62–69%.
