@@ -320,14 +320,14 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260929d"></script>
-<script src="audio.js?v=20260929d"></script>
-<script src="art.js?v=20260929d"></script>
-<script src="moves.js?v=20260929d"></script>
-<script src="story.js?v=20260929d"></script>
-<script src="data.js?v=20260929d"></script>
-<script src="lines.js?v=20260929d"></script>
-<script src="battle.js?v=20260929d"></script>
+<script src="chants.js?v=20260929e"></script>
+<script src="audio.js?v=20260929e"></script>
+<script src="art.js?v=20260929e"></script>
+<script src="moves.js?v=20260929e"></script>
+<script src="story.js?v=20260929e"></script>
+<script src="data.js?v=20260929e"></script>
+<script src="lines.js?v=20260929e"></script>
+<script src="battle.js?v=20260929e"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1076,11 +1076,35 @@
     if (/^−\d/.test(x)) return "hit";
     return null;
   }
-  function withSound(v) {
+  // Voices: a little shout for each moment worth one. The women and girls
+  // of the cast (a veil, or the finer brow of the drawings) get higher voices.
+  const femaleOf = (id) => { const c = Art.CAST[id] || {}; return !!(c.browThin || c.style === "veil"); };
+  function voiceOfEvent(e) {
+    const x = e.text;
+    if (x.startsWith("Crit!")) return "hurt";
+    if (x === "Concedes" || x === "Leaves the debate" || x === "Discouraged") return "down";
+    if (x === "Converted!" || x === "Encouraged!") return "cheer";
+    if (x === "Backs you up!" || x === "Piles on!" || x === "Sent in!" || x === "Rebuttal!") return "backup";
+    return null;
+  }
+  let shoutTimes = [];
+  function shout(u, kind) {
+    if (!u) return;
+    // Never a crowd: at most three voices in any half second.
+    const now = performance.now();
+    shoutTimes = shoutTimes.filter((t) => now - t < 500);
+    if (shoutTimes.length >= 3) return;
+    shoutTimes.push(now);
+    if (u.faction === "none" && (kind === "attack" || kind === "backup")) kind = "meh";
+    Sound.shout(u.id, kind, femaleOf(u.id));
+  }
+  function withSound(v, b) {
     const show = v.show, perform = v.perform;
+    const unitAt = (key) => b.units.find((x) => x.key === key);
     v.show = (events) => {
       const seen = new Set();
       let slot = 0;
+      for (const e of events) { const k = voiceOfEvent(e); if (k) shout(unitAt(e.key), k); }
       for (const e of events) {
         const snd = soundOfEvent(e);
         if (!snd || seen.has(snd)) continue;     // one of each kind per moment is plenty
@@ -1098,7 +1122,9 @@
         : mv.kind === Theater.kinds.hex || mv.kind === "hex" ? "hex"
         : mv.kind === Theater.kinds.cinematic || mv.kind === "cinematic" ? "great" : null;
       Sound.stir(false);
-      if (u.def.skills[i].name === "Žižek Impression") Sound.fx("sniff");
+      const sk = u.def.skills[i];
+      shout(u, kind === "great" ? "great" : /^(ally|allies|self)$/.test(sk.target) ? "backup" : "attack");
+      if (sk.name === "Žižek Impression") Sound.fx("sniff");
       else if (kind) Sound.fx(kind, (mv.glyphs || []).length || 2);
       return perform(u, i, targets, line);
     };
@@ -1279,7 +1305,7 @@
     coachStep = 0;
     coach("battle-coach", "");
     view = BattleView.create($("battle"), b, { coverKind: COVER_KIND[C[ci].id] });
-    withSound(view);
+    withSound(view, b);
     paintOrder(b, null);
     stopped = false;
     $("log").textContent = "";
