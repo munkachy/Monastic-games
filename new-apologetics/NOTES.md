@@ -44,3 +44,28 @@ whom to pair him with.
   is hinted at in the story but never stated.
 - The reason for the coin toss: apologetics clears the ground, and conversion
   is the Holy Spirit's work, so the game keeps it out of the player's hands.
+
+## Music (2026-09-29)
+
+Three choices on the music button: Illuminated, Vigil, Chant (and Silence).
+The old Techno, Dubstep and Electro beats, and chant sung over them, are gone.
+
+- Chant stands alone: one legato voice per phrase (a filtered sawtooth, the
+  sound the Techno bass had), with oblique organum below (a fourth, or a fifth
+  where the fourth leaves the mode; never below the step under the final;
+  unison at each cadence), a swept-pulse drone on the final, and a shimmer of
+  open fifths at each breath. Free rhythm, 0.42 s a note; rests of 0.5 / 0.75
+  / 1.5 / 2.5 notes at quarter, half, full and double bars.
+- Illuminated (138 bpm) and Vigil (92 bpm) are chip music in Tim Follin's
+  manner, built from the mode of the screen's chant as it is actually sung
+  (Ave maris stella's B flat included): chords as 50 Hz arpeggios, swept-pulse
+  lead with bends, trills and late vibrato, echo, filter or triangle bass,
+  noise drums. A round is four 8-bar sections (groove, lead, breakdown, and a
+  lift up a tone in Illuminated or a modal shift in Vigil). Map: no drums;
+  debate: drums; boss: more. A boss's wind-up muffles the music; the blow
+  opens it with a crash.
+- The final is taken from the mode (D, E, F, G), not the excerpt's last note.
+- Ave maris stella is now the Antiphonale Monasticum's (GregoBase 9733) rather
+  than the Dominican processional's; `node tools/gabc2js.js new-apologetics`
+  regenerates chants.js from new-apologetics/music/gabc/. Benedictine Bricks
+  keeps its own chants.
