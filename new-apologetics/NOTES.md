@@ -69,3 +69,13 @@ The old Techno, Dubstep and Electro beats, and chant sung over them, are gone.
   than the Dominican processional's; `node tools/gabc2js.js new-apologetics`
   regenerates chants.js from new-apologetics/music/gabc/. Benedictine Bricks
   keeps its own chants.
+
+## Fixes, Joe Heschmeyer, Fr. Augustine Wetta and the Nones (2026-09-29)
+
+- Muted now holds through the muted debater's next turn (it used to count down just before he chose, so a one-turn Mute did nothing). The MUTED mark stays up until that turn is over.
+- Shields: a thin white bar above Composure on the same scale, and a SHIELD n% tag, so stacking is visible. One-turn Attack Downs now last two turns; the list under the stage shows how many turns each boost or setback has left.
+- Every flying phrase or sign is a hit: basic moves that showed two or three strikes now deal two or three hits (same total). Line alternatives keep the same count. Encouragers (Fradd, Holdsworth, Martins, Wetta) crit about 12% of the time, with multi-hit basic moves.
+- Joe Heschmeyer: Objection! (gavel, Muted), Burden of Proof (all Exposed, Rebuttal), Shameless Popery as a courtroom with the Fathers as exhibits and his line on the Papacy.
+- Fr. Augustine Wetta, OSB joins after Are You a Good Person? He surfs into cut scenes (cast entries starting with "~"), including the theology-of-the-body lesson in My Body, My Brand.
+- New chapter, Nothing in Particular (the Nones): opponents who drain Zeal rather than Composure; boss the Master of None, whose closing argument takes 30% Composure and 2 Zeal. He also takes Pastor's seat at the final table and is the finale's last boss.
+- Balance (Normal, 40 runs a mission, campaign order): smart bot 84 / 78, simple 70 / 58. Nones at level 10 with random teams, smart bot: boss 41% with no Encourager, 67% with one, 86% with two.

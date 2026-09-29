@@ -320,21 +320,21 @@
 <section id="s-result" class="screen result" hidden></section>
 <section id="s-cards" class="screen" hidden></section>
 
-<script src="chants.js?v=20260929a"></script>
-<script src="audio.js?v=20260929a"></script>
-<script src="art.js?v=20260929a"></script>
-<script src="moves.js?v=20260929a"></script>
-<script src="story.js?v=20260929a"></script>
-<script src="data.js?v=20260929a"></script>
-<script src="lines.js?v=20260929a"></script>
-<script src="battle.js?v=20260929a"></script>
+<script src="chants.js?v=20260929b"></script>
+<script src="audio.js?v=20260929b"></script>
+<script src="art.js?v=20260929b"></script>
+<script src="moves.js?v=20260929b"></script>
+<script src="story.js?v=20260929b"></script>
+<script src="data.js?v=20260929b"></script>
+<script src="lines.js?v=20260929b"></script>
+<script src="battle.js?v=20260929b"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const C = GameData.CAMPAIGN;
   const HEROES = GameData.HEROES;
   const FOES = GameData.FOES;
-  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader", martins: "Encourager", zember: "Defender", pitre: "Scholar" };
+  const ROLES = { akin: "Scholar", muse: "Defender", schmitz: "Leader", bertuzzi: "Leader", horn: "Leader", fradd: "Encourager", godlogic: "Builder", barron: "Leader", hicks: "Scholar", pine: "Leader", marygrace: "Scholar", rose: "Scholar", holdsworth: "Encourager", jurado: "Leader", spitzer: "Builder", hahn: "Defender", schmid: "Builder", heschmeyer: "Leader", martins: "Encourager", zember: "Defender", pitre: "Scholar", wetta: "Encourager" };
   const TARGET_WORDS = { foe: "One opponent", foes: "All opponents", two: "Two opponents", random4: "Four strikes at random opponents", ally: "One friend", allies: "Whole team", self: "Self" };
 
   // The teaching cards each chapter unlocks.
@@ -364,6 +364,9 @@
       ["g-argument", "Argument", "No anonymous manuscript of a Gospel has ever been found: every copy that keeps its opening names Matthew, Mark, Luke or John, and Irenaeus names all four around 180 (Against Heresies 3.1.1; Brant Pitre, The Case for Jesus)."]],
     reformed: [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
       ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]],
+    nones: [["g-doctrine", "Doctrine", "“The desire for God is written in the human heart, because man is created by God and for God” (CCC 27). Indifference does not remove the desire; it only leaves it unnamed."],
+      ["g-argument", "Argument", "“You have made us for yourself, and our heart is restless until it rests in you” (St. Augustine, Confessions I.1). Restlessness is the question already asking itself."],
+      ["g-doctrine", "Doctrine", "Acedia, the spiritual sloth that refuses the joy that comes from God, is a sin against the love of God (CCC 2094). The Rule of St. Benedict watches for the brother who is “acediosus” (RB 48.18)."]],
     finale: [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
       ["g-doctrine", "Scripture", "“I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6)."]],
     epilogue: [["g-doctrine", "Scripture", "“There shall be one fold, and one shepherd” (John 10:16)."],
@@ -1037,7 +1040,7 @@
   let pending = null;
   // Podiums: which fighters start behind one. Not everyone gets one, and it
   // changes from battle to battle. What they look like depends on the chapter.
-  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", newage: "display", body: "desk", identity: "desk", scholars: "desk", reformed: "pulpit" };
+  const COVER_KIND = { prologue: "soapbox", atheists: "desk", evangelicals: "soapbox", lds: "display", islam: "stepladder", newage: "display", body: "desk", identity: "desk", scholars: "desk", reformed: "pulpit", nones: "desk" };
   function coverFor(ci, m) {
     if (m.cover) return m.cover;
     const foe = [], hero = [];
@@ -1288,7 +1291,7 @@
       $("marks-hero").textContent = ""; $("marks-foe").textContent = "";
       for (const u of b.units) {
         if (u.state !== "in") continue;
-        const tags = Battle.marks(u);
+        const tags = Battle.marks(u, true);
         if (!tags.length) continue;
         const li = document.createElement("li");
         const who = document.createElement("b");
@@ -1406,6 +1409,7 @@
       lds: "The Church does not recognize Latter-day Saint baptism as valid, so at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
       islam: "He enters the catechumenate, freely, and at the Easter Vigil he is baptized, confirmed and receives his First Communion.",
       newage: "The parish meets this one where the journey started: the catechumenate if never baptized, confession if baptized and drifted. Either way the tarot deck and the spells are renounced for good.",
+      none: "No religion in particular, and never baptized: the catechumenate, then baptism, confirmation and First Communion at the Easter Vigil. It began with a question he couldn't scroll past.",
       secular: "Like many of this generation, never baptized: the catechumenate, then baptism, confirmation and First Communion at the Easter Vigil.",
     };
     for (const u of r.converted.filter((x) => x.def.secretConvert)) {

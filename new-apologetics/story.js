@@ -27,7 +27,7 @@ const Story = (() => {
     heschmeyer: "Joe Heschmeyer", hahn: "Scott Hahn", oconnor: "Alex O'Connor", ryan: "Ryan (NeedGod.net)", white: "James White",
     hansen: "Jacob Hansen", speaker: "Speakers' Corner Champion", elder: "Elder Missionary", skeptic: "Skeptic Streamer",
     preacher: "Street Preacher", seminarian: "Seminarian", martins: "Fr. Carlos Martins", witch: "WitchTok Influencer",
-    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", ehrman: "Bart Ehrman", pitre: "Brant Pitre", student: "Religion 101 Student", mythicist: "Mythicist YouTuber", "": "",
+    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", ehrman: "Bart Ehrman", pitre: "Brant Pitre", wetta: "Fr. Augustine", scroller: "Doomscroller", shrugger: "Nothing in Particular", master: "Master of None", student: "Religion 101 Student", mythicist: "Mythicist YouTuber", "": "",
   };
 
   // ---- The chapters ------------------------------------------------------------------
@@ -65,6 +65,7 @@ const Story = (() => {
           ["pine","“If all evil were prevented, much good would be absent from the universe. A lion would cease to live if there were no slaying of animals.” Summa, first part, question 22."],
           ["bertuzzi","Next on the livestream: Joe Schmid. Majesty of Reason. He knows every version of this argument, including the ones nobody's thought of yet."],
           ["akin","Funny thing, though. Word is he's been taking theism seriously lately. Contingency arguments, mostly. They keep him up at night.","idea"],
+          ["pine","Lions, for the record. Not fawns. Thomas was a big-picture guy. Very big. Some say the biggest.","…"],
           ["pine","Then maybe don't try to beat him on points. When a man's old certainties are already slipping… sometimes the kindest thing is to let them go."],
           ["muse","Noted. Let's see where his heart is."],
         ] },
@@ -108,7 +109,7 @@ const Story = (() => {
           ["fradd","Then what do we say when he asks, “If you died tonight”?"],
           ["hahn","“I trust my Father completely, and myself not at all.” That's not doubt. That's hope."],
         ] },
-        { when: "The last conversation", place: "square", left: ["schmitz","heschmeyer","+horn"], right: ["ryan"], lines: [
+        { when: "The last conversation", place: "square", left: ["schmitz","heschmeyer","+horn","~wetta"], right: ["ryan"], lines: [
           ["ryan","But if you can lose it, how can you ever have peace?"],
           ["schmitz","The way a child has peace in his father's arms. Not because he couldn't fall, but because he's being held."],
           ["heschmeyer","The Council of Trent said it plainly: without a special revelation, no one can know with absolute certainty that he'll persevere. But everyone can hope in God with complete confidence."],
@@ -117,6 +118,9 @@ const Story = (() => {
           ["ryan","It doesn't spell that out, no.","…"],
           ["horn","So on some of the most personal moral questions there are, the Bible alone leaves a Christian guessing. Wonderful. It's almost as if Christ left us a Church to spell it out."],
           ["","Ryan offers the team a gospel tract. The team offers him a Catechism. Both are accepted."],
+          ["wetta","Sorry! Coming through! Fr. Augustine, Saint Louis Abbey. Did I miss the part about grace?"],
+          ["horn","You missed all of it. Also, you're dripping on the Catechism."],
+          ["wetta","Then I'll stay for the next one. I'm a monk. We're very good at staying."],
         ] },
       ],
     },
@@ -197,7 +201,7 @@ const Story = (() => {
         ] },
         { when: "After the third battle", place: "shop", left: ["martins","hicks","marygrace"], right: [], lines: [
           ["martins","Don't mock her. She's looking for a love that's real. Show her where it is."],
-          ["marygrace","And don't be afraid for us. Christ has authority over every spirit. We only have to stay close to him."],
+          ["marygrace","And we go in without fear. Whatever she has been talking to, Christ has authority over every spirit. We only have to stay close to him."],
           ["hicks","The peace she's chasing doesn't come from the cards. Let's help her tell the difference."],
         ] },
         { when: "The last conversation", place: "shop", left: ["barron","martins","marygrace"], right: ["witch"], lines: [
@@ -220,9 +224,13 @@ const Story = (() => {
           ["creator","It's empowering. I'm my own boss, and nobody's getting hurt."],
           ["fradd","I've sat down with people who got out of that industry. Nearly every one says it took more than it gave. You're worth more than a subscription."],
         ] },
-        { when: "After the second battle", place: "square", left: ["marygrace","rose","pine"], right: [], lines: [
+        { when: "After the second battle", place: "square", left: ["marygrace","rose","pine","~wetta"], right: [], lines: [
           ["marygrace","The creators and the activists are saying the same thing: my body is mine to use, and no one else counts.","?"],
           ["pine","But the body isn't something you have, like a phone. It's you. That's why selling it hurts, and why the child's body isn't the mother's.","idea"],
+          ["wetta","Excuse me! Is this the talk on the theology of the body?","?"],
+          ["pine","It is. You're standing on it. Also, you're wet."],
+          ["wetta","Carry on, Father! The body is a gift. So is a good wave. Different talk.","!"],
+          ["marygrace","Anyway. Where were we?"],
         ] },
         { when: "After the third battle", place: "square", left: ["rose","pine","schmitz"], right: [], lines: [
           ["rose","Destiny's line is consciousness. No experiences, no person, no harm."],
@@ -337,7 +345,42 @@ const Story = (() => {
       ],
     },
     {
-      id: "finale", title: "The Great Debate", group: "Everyone", boss: "white", place: "studio", mystery: "Every opponent comes back to the table on one night. What do you say when you can't win them all?",
+      id: "nones", title: "Nothing in Particular", group: "The Nones", boss: "master", place: "cafe", mystery: "How do you reach someone who isn't against God, just not interested?",
+      scenes: [
+        { when: "Before the first battle", place: "cafe", left: ["barron","~wetta"], right: ["scroller"], lines: [
+          ["barron","Friends, nearly three in ten American adults now say they have no religion. Not atheist. Not anything. Nothing in particular."],
+          ["scroller","Sorry, were you talking to me?","?"],
+          ["wetta","He isn't hostile. He just isn't here. That's harder."],
+          ["barron","They don't argue. They shrug. And a shrug wears a team down faster than any argument."],
+        ] },
+        { when: "After the first battle", place: "cafe", left: ["wetta","fradd"], right: ["shrugger"], lines: [
+          ["shrugger","I'm not against it. I just don't really think about it."],
+          ["fradd","Mate, that's somehow worse for my morale than yelling.","…"],
+          ["wetta","Then bring people who don't run out of joy. Encouragers. When the room goes flat, somebody has to lift it.","idea"],
+        ] },
+        { when: "After the second battle", place: "cafe", left: ["wetta","hicks","marygrace"], right: [], lines: [
+          ["hicks","Saint Benedict's Rule warns about the brother who is acediosus: idle, chatting when he should be reading. The old writers called it the noonday devil. Not hatred of God. Boredom with him."],
+          ["wetta","And no one was ever argued into wonder. But you can be surprised into it. That's why I carry a surfboard.","idea"],
+          ["marygrace","So we don't try to win. We try to be glad. Really glad. Joy is hard to scroll past."],
+        ] },
+        { when: "After the third battle", place: "cafe", left: ["wetta","barron","pine"], right: [], lines: [
+          ["barron","Next is the Master of None. He has heard every argument, and he cares about none of them."],
+          ["pine","Then don't give him a syllogism. Give him a question he can't swipe away."],
+          ["wetta","And keep your chins up. He wins if we get bored first."],
+        ] },
+        { when: "The last conversation", place: "cafe", left: ["wetta","barron","fradd"], right: ["master"], lines: [
+          ["master","Look, I'm happy. I don't need religion. I try to be a good person."],
+          ["barron","I believe you. So why are you still here, talking with three religious guys, at eleven at night?"],
+          ["master","Honestly? I don't know.","?"],
+          ["wetta","Then you're still looking. That's the most religious thing I've heard all week."],
+          ["master","Okay. If I read one thing, what should it be?","…"],
+          ["fradd","Augustine's Confessions. First page. “Our heart is restless until it rests in you.”"],
+          ["","He puts his phone face down on the table. For the first time tonight, he is listening."],
+        ] },
+      ],
+    },
+    {
+      id: "finale", title: "The Great Debate", group: "Everyone", boss: "master", place: "studio", mystery: "Every opponent comes back to the table on one night. What do you say when you can't win them all?",
       scenes: [
         { when: "Before the first battle", place: "studio", left: ["horn","akin","schmitz"], right: ["oconnor","ryan","hansen"], lines: [
           ["horn","One debate night, and everyone who has ever sat across from us."],
@@ -350,13 +393,16 @@ const Story = (() => {
           ["witch","I threw out the cards. I still have questions.","?"],
         ] },
         { when: "After the second battle", place: "studio", left: ["hahn","pine","marygrace"], right: [], lines: [
-          ["hahn","One more table: the pastor, the scholar, and the man who taught us all to argue carefully."],
+          ["hahn","One more table: the scholar, the man who taught us all to argue carefully, and the one who doesn't care to argue at all."],
           ["pine","Grant everything true in what he says. Then show him the rest.","idea"],
+          ["pine","And if that fails, make a distinction. If that fails, make a smaller one."],
           ["marygrace","And remember why we came. Not to win them. To love them."],
         ] },
-        { when: "The last conversation", place: "studio", left: ["heschmeyer","akin","schmitz"], right: ["white","ehrman","pastor"], lines: [
+        { when: "The last conversation", place: "studio", left: ["heschmeyer","schmitz","~wetta"], right: ["white","ehrman","master"], lines: [
           ["white","Well. That was a debate.","…"],
           ["ehrman","I read the book, Brant. I have notes."],
+          ["master","I didn't check my phone once. That's… new.","!"],
+          ["wetta","That's how it starts. Next thing you know, you're a monk with a surfboard."],
           ["heschmeyer","Thank you, all of you, for taking every one of us seriously."],
           ["schmitz","You're all welcome at our table, any time. And we'll keep praying for you."],
           ["","No argument converts a soul. “I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6). Tonight the ground is clear, and the seed is in the soil."],
@@ -468,6 +514,16 @@ const Story = (() => {
       ctx.fillStyle = "#2b2b33"; ctx.fillRect(160, 150, 4, 60); ctx.fillRect(140, 146, 24, 4);
       floor(ctx, "#171a28", "#141724");
     },
+    // A coffee shop: a chalkboard menu, pendant lights, everyone on a phone.
+    cafe(ctx, t) {
+      ctx.fillStyle = "#2a2220"; ctx.fillRect(0, 0, W, H);
+      for (let x = 0; x < W; x += 20) { ctx.fillStyle = x % 40 ? "#352a26" : "#30262a"; ctx.fillRect(x, 0, 20, 220); }
+      ctx.fillStyle = "#1a1a1e"; ctx.fillRect(40, 40, 200, 110); ctx.fillStyle = "#e9e2d0"; ctx.font = "700 14px " + FONT; ctx.textAlign = "left";
+      ["OAT LATTE ....... 6", "COLD BREW ....... 5", "VIBES ........ FREE", "MEANING ..... ???"].forEach((l, i) => ctx.fillText(l, 52, 66 + i * 22));
+      for (const x of [340, 440, 540]) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 1, 0, 2, 50); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 10, 50, 20, 10); ctx.fillStyle = Math.sin(t * 2 + x) > -0.9 ? "#ffe7a0" : "#c8a860"; ctx.fillRect(x - 6, 60, 12, 4); }
+      ctx.fillStyle = "#5a3a26"; ctx.fillRect(300, 170, 300, 12); ctx.fillStyle = "#e9e2d0"; for (const x of [330, 420, 520]) { ctx.fillRect(x, 158, 12, 12); ctx.fillStyle = "#9fd0ff"; ctx.fillRect(x + 30, 164, 10, 6); ctx.fillStyle = "#e9e2d0"; }
+      floor(ctx, "#3a2e28", "#342a24");
+    },
     church(ctx, t) {
       ctx.fillStyle = "#0e0c16"; ctx.fillRect(0, 0, W, H);
       for (let i = 0; i < 3; i++) { const x = 140 + i * 180; ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 32, 30, 64, 150); const cs = ["#c33a3a", "#2f5ad8", "#e8b94a", "#2f8a4a"]; for (let j = 0; j < 12; j++) { ctx.fillStyle = cs[(i + j) % 4]; ctx.fillRect(x - 28 + (j % 3) * 19, 36 + Math.floor(j / 3) * 34, 17, 32); } }
@@ -521,9 +577,11 @@ const Story = (() => {
     function onStage(sc) {
       const said = new Set(sc.lines.slice(0, line + 1).map((l) => l[0]));
       const place = (list, side) => list.map((raw, i) => {
-        const id = raw.replace(/^\+/, "");
-        const walkOn = raw.startsWith("+");
-        return { id, side, i, n: list.length, walkOn, here: !walkOn || said.has(id) };
+        const id = raw.replace(/^[+~]/, "");
+        // "~" surfs on: Fr. Augustine rides in on his board, whatever the room.
+        const surf = raw.startsWith("~");
+        const walkOn = surf || raw.startsWith("+");
+        return { id, side, i, n: list.length, walkOn, surf, here: !walkOn || said.has(id) };
       });
       return place(sc.left, "left").concat(place(sc.right, "right"));
     }
@@ -549,11 +607,19 @@ const Story = (() => {
         const walking = c.walkOn && sinceIn < 0.7;
         const pose = walking ? (Math.floor(t * 8) % 2 ? "walkA" : "walkB") : talking && mark === "idea" ? "raise" : "stand";
         const bob = talking && !walking ? Math.round(Math.abs(Math.sin(t * 6)) * 2) : 0;
-        const g = Art.figure(Art.CAST[c.id], pose);
+        const g = Art.figure(Art.CAST[c.id], c.surf ? (sinceIn < 1 ? "raise" : pose === "walkA" || pose === "walkB" ? "stand" : pose) : pose);
+        if (c.surf) {
+          // The board, a curl of water under it as he rides in, and a few drips after.
+          const ride = sinceIn < 1;
+          if (ride) { ctx.fillStyle = "#3a9ad0"; ctx.beginPath(); ctx.moveTo(x - 90, 252); ctx.quadraticCurveTo(x - 40, 214, x + 40, 236); ctx.lineTo(x + 40, 252); ctx.fill(); for (let i = 0; i < 6; i++) { ctx.fillStyle = "#f4fbff"; ctx.fillRect(x - 70 + i * 16, 226 + ((i * 7) % 12), 5, 5); } }
+          else for (let i = 0; i < 3; i++) { const q = (t * 1.2 + i / 3) % 1; ctx.fillStyle = "#9fd0ff"; ctx.fillRect(x - 20 + i * 18, 200 + q * 44, 3, 4); }
+        }
         // Everyone is drawn solid; the one speaking bobs, and a small gold
         // arrow over the head marks them.
         ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(x - 30, 246, 60, 6);
         Art.paint(ctx, g, Math.round(x - 40), 250 - 104 - bob, 2, c.side === "right");
+        // His board, drawn over his shins, since the dialogue box hides everyone's feet.
+        if (c.surf) { const tilt = sinceIn < 1 ? Math.round(Math.sin(t * 10) * 2) : 0; ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 46, 234 + tilt, 92, 10); ctx.fillStyle = "#ffcf5a"; ctx.fillRect(x - 44, 236 + tilt, 88, 6); ctx.fillStyle = "#de5e55"; ctx.fillRect(x - 44, 239 + tilt, 88, 1); }
         if (talking && !walking) {
           const ay = 250 - 104 - 14 - bob + Math.round(Math.sin(t * 5) * 2);
           ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.moveTo(x - 8, ay - 2); ctx.lineTo(x + 8, ay - 2); ctx.lineTo(x, ay + 8); ctx.fill();

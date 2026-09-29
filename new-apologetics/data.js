@@ -35,7 +35,7 @@ const GameData = (() => {
 
   const HEROES = {
     akin: { name: "Jimmy Akin", about: "Careful and thorough: he takes his time and gets it right. Senior Apologist is the move for breaking down a podium or a shield, and it can leave the speaker dumbfounded. Logical Paradox and Mysterious World wear down the whole other side's Zeal and leave the strongest opponents exposed. Bring him when the other side hides behind podiums, and pair him with a quick friend who can move before him.", stats: [225, 78, 25, 58], traits: { care: 90, glance: [0.04, 0.22], crit: [0.05, 1.3], resolve: 0.08 }, skills: [
-      H("Precise Distinction", "foe", 0, 0, [{ dmg: 1.0 }]),
+      H("Precise Distinction", "foe", 0, 0, [{ dmg: 0.5, hits: 2 }]),
       H("Senior Apologist", "foe", 3, 0, [{ dmg: 1.5, vs: ["guarded", 1.5] }, { status: "dumbfounded", turns: 2, chance: 0.5 }]),
       H("Logical Paradox", "foes", 3, 0, [{ buff: "atk", amt: -0.2, turns: 3 }, { zeal: -1, chance: 0.5 }]),
       H("Mysterious World", "two", 4, 2, [{ status: "examined", turns: 3 }, { purge: 1, chance: 0.5 }, { zeal: -1 }]),
@@ -60,31 +60,31 @@ const GameData = (() => {
       H("Bayesian Update", "allies", 4, 2, [{ heal: 0.3 }, { cleanse: true }, { buff: "def", amt: 0.5, turns: 3 }]),
     ] },
     horn: { name: "Trent Horn", about: "Quick-witted and first to the microphone, he does his best work before the other side gets going. Free-for-All Friday lifts the whole team's Zeal, so friends back each other up more often. Is That in the Bible? gets through Faith Alone and Eternal Security, which makes him the answer to James White. The Case for Catholicism hits every opponent at once, and hits shields and podiums even harder.", stats: [250, 82, 15, 140], traits: { care: 15, glance: [0.09, 0.11], crit: [0.06, 1.25], resolve: 0.09 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
-      H("Deadpan", "foe", 0, 0, [{ dmg: 1.5 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.5 }]),
+      H("Deadpan", "foe", 0, 0, [{ dmg: 0.75, hits: 2 }, { buff: "atk", amt: -0.2, turns: 2, chance: 0.5 }]),
       H("Free-for-All Friday", "allies", 3, 0, [{ zeal: 1 }, { randomLift: true }]),
       H("Is That in the Bible?", "foes", 3, 1, [{ purge: 1 }, { zeal: -1 }], { pierce: ["security", "faith"] }),
       H("The Case for Catholicism", "foes", 4, 2, [{ dmg: 3.0, vs: ["guarded", 1.5] }]),
     ] },
-    fradd: { name: "Matt Fradd", about: "The friend who gets people back on their feet. Cheeky Question asks three quick questions in a row. Pints with Aquinas brings back a Discouraged teammate, and Australian Charm fires one friend up for the next few turns. Summa Session clears every setback from the team. Bring him to long fights and to opponents who fluster.", stats: [225, 61, 14, 125], traits: { care: 105, glance: [0.1, 0.22], crit: [0.04, 1.18], resolve: 0.09 }, skills: [
+    fradd: { name: "Matt Fradd", about: "The friend who gets people back on their feet. Cheeky Question asks three quick questions in a row. Pints with Aquinas brings back a Discouraged teammate, and Australian Charm fires one friend up for the next few turns. Summa Session clears every setback from the team. Bring him to long fights and to opponents who fluster.", stats: [225, 61, 14, 125], traits: { care: 105, glance: [0.1, 0.22], crit: [0.12, 1.25], resolve: 0.09 }, skills: [
       H("Cheeky Question", "foe", 0, 0, [{ dmg: 0.5, hits: 3 }]),
       H("Pints with Aquinas", "ally", 3, 0, [{ heal: 0.5 }, { zeal: 2, chance: 0.5 }]),
       H("Australian Charm", "ally", 3, 0, [{ buff: "atk", amt: 0.5, turns: 3 }, { zeal: 2 }]),
       H("Summa Session", "allies", 4, 2, [{ cleanse: true }, { buff: "def", amt: 0.5, turns: 3 }]),
     ] },
     godlogic: { name: "GodLogic", about: "A guest in the Islam chapter, and the best builder there is: quick on his feet, and his shields are among the strongest. Keep a Defender near him and he will keep the whole team covered. Smooth Pivot puts a podium in front of a friend, and Stay Smooth shields the whole team. Common Ground strips every boost from the other side and hits the Islam chapter's opponents where they stand.", guest: true, stats: [163, 135, 15, 125], traits: { care: 135, glance: [0.06, 0.21], crit: [0.04, 1.34], resolve: 0.08 }, skills: [
-      H("Smooth Question", "foe", 0, 0, [{ dmg: 1.0 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.1 }]),
+      H("Smooth Question", "foe", 0, 0, [{ dmg: 0.5, hits: 2 }, { buff: "atk", amt: -0.2, turns: 2, chance: 0.1 }]),
       H("Smooth Pivot", "ally", 3, 0, [{ podium: 0.6 }, { buff: "atk", amt: 0.3, turns: 3 }]),
       H("Stay Smooth", "allies", 3, 0, [{ shield: 0.3, turns: 3 }, { zeal: 1 }]),
       H("Common Ground", "foes", 4, 0, [{ purge: "all" }, { buff: "atk", amt: -0.5, turns: 3 }, { zeal: -1, faction: "islam" }]),
     ] },
     barron: { name: "Bishop Barron", about: "Made for crowds. Word on Fire hits every opponent at once. The Way of Beauty makes them all answer him while he stands behind his own podium, which keeps the others safe. No Beige Catholicism silences one opponent's best moves.", stats: [262, 82, 11, 110], traits: { care: 60, glance: [0.1, 0.23], crit: [0.04, 1.18], resolve: 0.08 }, skills: [
-      H("Sunday Sermon", "foe", 0, 0, [{ dmg: 1.25 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.5 }]),
+      H("Sunday Sermon", "foe", 0, 0, [{ dmg: 1.25 }, { buff: "atk", amt: -0.2, turns: 2, chance: 0.5 }]),
       H("Word on Fire", "foes", 3, 0, [{ dmg: 2.5 }]),
       H("The Way of Beauty", "self", 3, 1, [{ tauntAll: 4 }, { podium: 0.6 }, { buff: "atk", amt: 0.3, turns: 3 }]),
       H("No Beige Catholicism", "foe", 4, 2, [{ status: "muted", turns: 3 }, { buff: "atk", amt: -0.3, turns: 3 }, { zeal: -1 }]),
     ] },
     hicks: { name: "Fr. Boniface Hicks", about: "Quiet and piercing. Discernment of Spirits exposes every opponent: they can't deflect and they take harder hits. Obsculta goes straight past any podium to leave one opponent dumbfounded and shaken. Spiritual Direction drains an opponent's Zeal and strengthens his own. He is best at making opponents leave the debate rather than concede it.", stats: [200, 128, 14, 110], traits: { care: 128, glance: [0.1, 0.11], crit: [0.06, 1.18], resolve: 0.1 }, skills: [
-      H("Gentle Correction", "foe", 0, 0, [{ dmg: 1.25 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.25 }]),
+      H("Gentle Correction", "foe", 0, 0, [{ dmg: 1.25 }, { buff: "atk", amt: -0.2, turns: 2, chance: 0.25 }]),
       H("Discernment of Spirits", "foes", 3, 0, [{ status: "examined", turns: 3 }]),
       H("Obsculta", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }, { zeal: -2 }], { pierce: ["cover"] }),
       H("Spiritual Direction", "foe", 4, 2, [{ zeal: -2 }, { selfZeal: 2 }]),
@@ -102,12 +102,12 @@ const GameData = (() => {
     ] },
     // The quickest, working from cover.
     rose: { name: "Lila Rose", about: "The quickest debater on the roster, and she works best unseen. She goes Undercover: hard to single out, and hits barely reach her. From there, Live Action strikes all over the room. Anyone who Fact-Checks or Exposes blows her cover, so be careful with her against James White.", stats: [138, 128, 6, 200], traits: { care: 128, glance: [0.07, 0.18], crit: [0.06, 1.34], resolve: 0.06 }, passive: { allies: { def: 0.05 } }, skills: [
-      H("Every Life", "foe", 0, 0, [{ dmg: 1.25 }, { onBreakCloak: 2 }]),
+      H("Every Life", "foe", 0, 0, [{ dmg: 0.63, hits: 2 }, { onBreakCloak: 2 }]),
       H("Live Action", "random4", 3, 0, [{ dmg: 1.5 }, { zeal: -1, chance: 0.5 }]),
       H("Undercover", "self", 3, 0, [{ status: "cloaked", turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { heal: 0.15 }]),
     ] },
-    holdsworth: { name: "Brian Holdsworth", about: "An encourager and a builder in one. Beauty Will Save the World restores the whole team. Cultural Diagnosis exposes an opponent and lowers his guard for the others. Authentic Catholic Culture clears every setback, shields the team, and keeps their Zeal from falling. Good for long, grinding debates.", stats: [200, 135, 12, 125], traits: { care: 135, glance: [0.07, 0.18], crit: [0.03, 1.22], resolve: 0.12 }, skills: [
-      H("Ten-Minute Essay", "foe", 0, 0, [{ dmg: 1.5 }]),
+    holdsworth: { name: "Brian Holdsworth", about: "An encourager and a builder in one. Beauty Will Save the World restores the whole team. Cultural Diagnosis exposes an opponent and lowers his guard for the others. Authentic Catholic Culture clears every setback, shields the team, and keeps their Zeal from falling. Good for long, grinding debates.", stats: [200, 135, 12, 125], traits: { care: 135, glance: [0.07, 0.18], crit: [0.12, 1.25], resolve: 0.12 }, skills: [
+      H("Ten-Minute Essay", "foe", 0, 0, [{ dmg: 0.5, hits: 3 }]),
       H("Beauty Will Save the World", "allies", 3, 0, [{ heal: 0.25 }]),
       H("Cultural Diagnosis", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "def", amt: -0.5, turns: 3 }]),
       H("Authentic Catholic Culture", "allies", 4, 2, [{ cleanse: true }, { shield: 0.35, turns: 3 }, { zeal: 1 }, { immune: "steadfast", turns: 3 }]),
@@ -126,27 +126,31 @@ const GameData = (() => {
     ] },
     // Unhurried and unshakable, with the heaviest blows.
     hahn: { name: "Scott Hahn", about: "Unhurried, and the hardest to shake on the roster, with the heaviest blows. Covenant Is Family can leave an opponent doubting, Wide-Eyed Wonder hits hard and shakes his Zeal, and Rome Sweet Home crushes one opponent and leaves him dumbfounded. He passes straight through Faith Alone. Pair him with Fr. Mike, who can send him in out of turn.", stats: [350, 94, 18, 50], traits: { care: 0, glance: [0.05, 0.21], crit: [0.06, 1.44], resolve: 0.04 }, passive: { converts: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }, skills: [
-      H("Covenant Is Family", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
+      H("Covenant Is Family", "foe", 0, 0, [{ dmg: 0.75, hits: 2 }, { status: "doubting", turns: 2, chance: 0.5 }], { pierce: ["faith"] }),
       H("Wide-Eyed Wonder", "foe", 3, 0, [{ dmg: 3.0 }, { zeal: -1 }]),
       H("Rome Sweet Home", "foe", 4, 2, [{ dmg: 5.0 }, { status: "dumbfounded", turns: 3 }, { purge: "all", faction: "protestant" }], { pierce: ["faith"] }),
     ] },
     // Joe Schmid, once he has come home: a hit, a Rebuttal stance, a scan, and
     // cover and Zeal for the team (more for a fellow convert).
     schmid: { name: "Joe Schmid", about: "Back home and arguing for the Church now. A builder who reasons from first principles: Steelman lets him answer back every objection while he braces himself, and the Contingency Argument exposes an opponent and blunts his arguments. Welcome Home puts a podium in front of a friend and fires him up, and fires up a fellow convert even more.", stats: [213, 73, 17, 110], traits: { care: 83, glance: [0.07, 0.21], crit: [0.04, 1.38], resolve: 0.07 }, skills: [
-      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.5 }]),
+      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 0.75, hits: 2 }]),
       H("Steelman", "self", 3, 0, [{ counter: 4 }, { buff: "def", amt: 0.5, turns: 3 }]),
       H("Contingency Argument", "foe", 3, 1, [{ status: "examined", turns: 3 }, { buff: "atk", amt: -0.5, turns: 3 }]),
       H("Welcome Home", "ally", 4, 2, [{ podium: 0.6 }, { zeal: 2 }, { zeal: 1, onlyFor: ["hahn", "akin", "bertuzzi", "holdsworth", "schmid", "zember"] }]),
     ] },
-    heschmeyer: { name: "Joe Heschmeyer", about: "Very quick, with a case file for every occasion. His moves come in several hits, which chip through deflections and leave opponents doubting. Former Litigator sharpens the whole team and lets him answer back. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.04, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
+    // Joe Heschmeyer, once a litigator: sharp questions and courtroom tactics.
+    // Charitable, but blunt. He hands the burden of proof back, strikes a
+    // fallacy from the record, and brings the Fathers as his witnesses.
+    heschmeyer: { name: "Joe Heschmeyer", about: "Once a litigator, and it shows: very quick, blunt but charitable, with a question that goes straight to the weak spot. Ignatius of Antioch calls the early Fathers as witnesses in two quick hits. Objection! strikes a fallacy from the record: the opponent is left Muted and can use only his basic move. Burden of Proof hands the burden back to every opponent at once: they are Exposed, and Joe answers back whenever they come at him. Shameless Popery ends in a flurry of strong blows.", stats: [188, 88, 10, 170], traits: { care: 88, glance: [0.11, 0.13], crit: [0.05, 1.42], resolve: 0.05 }, passive: { group: ["akin", "horn", "heschmeyer"], atk: 0.05 }, skills: [
       H("Ignatius of Antioch", "foe", 0, 0, [{ dmg: 0.65, hits: 2 }, { status: "doubting", turns: 3, chance: 0.5 }]),
-      H("Former Litigator", "allies", 3, 0, [{ buff: "crit", amt: 0.5, turns: 3 }, { selfCounter: 4 }]),
-      H("Shameless Popery", "foe", 3, 1, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
+      H("Objection!", "foe", 3, 0, [{ dmg: 1.2 }, { status: "muted", turns: 2 }]),
+      H("Burden of Proof", "foes", 3, 1, [{ status: "examined", turns: 3 }, { zeal: -1, chance: 0.35 }, { selfCounter: 4 }]),
+      H("Shameless Popery", "foe", 4, 2, [{ dmg: 1.2, hits: 3 }, { zeal: -1 }]),
     ] },
     // Fr. Carlos Martins, exorcist: a hit, a call-out that lifts the team's
     // Zeal, a team heal and cleanse, and Attack, Crit and Zeal for everyone.
-    martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. He joins after the New Age chapter, Apollo Loves You; bring him to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.03, 1.26], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
-      H("Holy Water", "foe", 0, 0, [{ dmg: 1.0 }]),
+    martins: { name: "Fr. Carlos Martins", about: "An exorcist, and a steadying presence: nothing on the other side rattles him. Stand Behind Me draws every opponent's attention onto himself while it lifts the team's Zeal. Prayer of Deliverance brings back a Discouraged friend, clears every setback and restores the whole team. Treasures of the Church, from his relic ministry, fires up everyone at once. He joins after the New Age chapter, Apollo Loves You; bring him to any long, hard debate.", stats: [250, 52, 21, 95], traits: { care: 105, glance: [0.07, 0.16], crit: [0.12, 1.28], resolve: 0.11 }, passive: { allies: { def: 0.05 } }, skills: [
+      H("Holy Water", "foe", 0, 0, [{ dmg: 0.34, hits: 3 }]),
       H("Stand Behind Me", "self", 3, 0, [{ tauntAll: 4 }, { allyZeal: 1 }]),
       H("Prayer of Deliverance", "allies", 4, 1, [{ heal: 0.3 }, { cleanse: true }, { zeal: 1, chance: 0.5 }]),
       H("Treasures of the Church", "allies", 4, 2, [{ buff: "atk", amt: 0.5, turns: 3 }, { buff: "crit", amt: 0.5, turns: 3 }, { zeal: 2 }]),
@@ -164,10 +168,19 @@ const GameData = (() => {
     // Roots of the Eucharist): a hit with Attack Down, Exposed on every
     // opponent, a stun that never fails, and a crushing blow.
     pitre: { name: "Brant Pitre", about: "A scholar who reads Jesus in his own world, the Judaism of the first century, and so sees the big picture where others get lost in details. Very quick. The Big Picture exposes every opponent at once. The Son of Man never fails to leave an opponent dumbfounded, straight past any podium. The Case for Jesus lands a crushing blow and drains the opponent's Zeal. He joins after the chapter Misquoting Jesus?", stats: [200, 76, 9, 170], traits: { care: 60, glance: [0.12, 0.27], crit: [0.01, 1.14], resolve: 0.09 }, passive: { allies: { atk: 0.05 } }, skills: [
-      H("Jewish Roots", "foe", 0, 0, [{ dmg: 1.0 }, { buff: "atk", amt: -0.2, turns: 1, chance: 0.25 }]),
+      H("Jewish Roots", "foe", 0, 0, [{ dmg: 0.5, hits: 2 }, { buff: "atk", amt: -0.2, turns: 2, chance: 0.25 }]),
       H("The Big Picture", "foes", 3, 0, [{ status: "examined", turns: 3 }]),
       H("The Son of Man", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }, { zeal: -2 }], { pierce: ["cover"] }),
       H("The Case for Jesus", "foe", 4, 2, [{ dmg: 3.0 }, { zeal: -2 }, { status: "doubting", turns: 3 }]),
+    ] },
+    // Fr. Augustine Wetta, OSB: monk of Saint Louis Abbey, the surfing monk,
+    // once a Galveston lifeguard (with, he says, an enormous ego) and a
+    // professional juggler; author of Humility Rules. An Encourager.
+    wetta: { name: "Fr. Augustine Wetta", about: "The surfing monk, and an Encourager: nothing lifts a flagging team like him. Flying Fettuccine juggles three quick hits, and like every Encourager he lands critical hits often. Lifeguard on Duty pulls a friend out of the water: it brings back the Discouraged and fires them up. Humility Rules keeps the whole team's Zeal from falling: it is hard to deflate someone who doesn't take himself too seriously. Surf's Up rides in on a wave, clears every setback and lifts everyone's Zeal. Bring him against anyone who wins by wearing a team down.", stats: [213, 70, 12, 115], traits: { care: 100, glance: [0.08, 0.18], crit: [0.12, 1.28], resolve: 0.12 }, skills: [
+      H("Flying Fettuccine", "foe", 0, 0, [{ dmg: 0.4, hits: 3 }]),
+      H("Lifeguard on Duty", "ally", 3, 0, [{ heal: 0.45 }, { zeal: 1 }]),
+      H("Humility Rules", "allies", 3, 1, [{ zeal: 1 }, { immune: "steadfast", turns: 2 }]),
+      H("Surf's Up", "allies", 4, 2, [{ heal: 0.2 }, { cleanse: true }, { zeal: 2 }]),
     ] },
   };
 
@@ -246,11 +259,30 @@ const GameData = (() => {
       H("Copycat Savior", "foe", 3, 1, [{ status: "muted", turns: 1 }], { anim: X("Horus did it first!", "muted") }),
     ] },
 
+    // The Nones: people of no religion in particular. Not hostile, just not
+    // interested, and hard to reach. They seldom argue back; they wear the
+    // team's Zeal down instead. Invented for the game: no real people.
+    scroller: { name: "Doomscroller", grunt: true, faction: "none", stats: [115, 52, 10, 104], traits: { care: 50, glance: [0.14, 0.25], crit: [0.05, 1.3], resolve: 0.1 }, skills: [
+      H("Scroll Past", "foe", 0, 0, [{ dmg: 0.75 }, { zeal: -1, chance: 0.4 }], { anim: V(["*scroll*"], "#9fd0ff") }),
+      H("Phone Out", "foe", 3, 1, [{ zeal: -1 }, { status: "muted", turns: 1, chance: 0.5 }], { anim: X("Sorry, what? I was on my phone.", ["pipDown", "muted"]) }),
+    ] },
+    shrugger: { name: "Nothing in Particular", grunt: true, faction: "none", stats: [120, 50, 12, 96], traits: { care: 55, glance: [0.14, 0.25], crit: [0.05, 1.3], resolve: 0.1 }, skills: [
+      H("Meh", "foe", 0, 0, [{ dmg: 0.75 }, { zeal: -1, chance: 0.4 }], { anim: V(["Meh."], "#a9a6bd") }),
+      H("Flippant Response", "foes", 3, 1, [{ zeal: -1, chance: 0.65 }], { anim: X("Cool story.", "pipDown") }),
+    ] },
+    // The Master of None: invented, the Nones' champion of shrugging.
+    master: { name: "Master of None", boss: true, faction: "none", stats: [330, 62, 20, 106], traits: { care: 70, glance: [0.16, 0.3], crit: [0.06, 1.35], resolve: 0.14 }, skills: [
+      H("k.", "foe", 0, 0, [{ dmg: 0.9 }, { zeal: -1, chance: 0.5 }], { anim: V(["k."], "#a9a6bd") }),
+      H("Seen, No Reply", "foes", 3, 0, [{ zeal: -1 }, { status: "muted", turns: 1, chance: 0.35 }], { anim: X("Seen 11:42 PM.", ["pipDown", "muted"]) }),
+      H("Flippant Response", "foe", 3, 1, [{ zeal: -2 }], { anim: X("lol. anyway.", "pipDown") }),
+      H("Good Vibes, No Doctrine", "self", 4, 2, [{ heal: 0.25 }, { immune: "steadfast", turns: 2 }], { anim: U("I'm good, thanks.", ["heal", "shield"]) }),
+    ] },
+
     // Joe Schmid, philosopher of religion (Majesty of Reason). Evolutionary
     // animal suffering first led him away from the Church; in August 2026 he
     // announced his return. Wear down his Zeal and he comes home.
     schmid: { name: "Joe Schmid", faction: "atheist", secretConvert: true, podium: "gunner", sign: ["CONFESSION", "WELCOME HOME"], stats: [120, 82, 16, 104], traits: { care: 82, glance: [0.06, 0.18], crit: [0.05, 1.3], resolve: 0.05 }, skills: [
-      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 1.2 }], { anim: V(["Consider…", "…a dilemma."], "#9fd0ff") }),
+      H("Majesty of Reason", "foe", 0, 0, [{ dmg: 0.6, hits: 2 }], { anim: V(["Consider…", "…a dilemma."], "#9fd0ff") }),
       H("Evolutionary Suffering", "foes", 3, 0, [{ status: "doubting", turns: 2 }, { zeal: -1, chance: 0.5 }], { anim: X("Millions of years of it?", ["doubting", "pipDown"]) }),
       H("Modal Collapse", "foe", 3, 1, [{ status: "dumbfounded", turns: 2 }], { anim: X("Then everything is necessary.", "dumbfounded") }),
       H("Steelman", "self", 3, 1, [{ heal: 0.2 }, { selfZeal: 1 }], { anim: U("Let me steelman that.", ["heal", "pipUp"]) }),
@@ -315,7 +347,7 @@ const GameData = (() => {
       H("How Jesus Became God", "foe", 4, 2, [{ dmg: 1.2 }, { status: "dumbfounded", turns: 2, chance: 0.5 }], { anim: X("A divinity that developed.", "dumbfounded") }),
     ] },
     white: { name: "James White", boss: true, faction: "protestant", stats: [320, 80, 22, 108], traits: { care: 88, glance: [0.07, 0.18], crit: [0.06, 1.35], resolve: 0.1 }, skills: [
-      H("Greek Exegesis", "foe", 0, 0, [{ dmg: 1.5 }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
+      H("Greek Exegesis", "foe", 0, 0, [{ dmg: 0.75, hits: 2 }, { status: "doubting", turns: 2, chance: 0.25 }], { anim: V(["In the Greek…", "…aorist."], "#7ea4e6") }),
       H("Sola Scriptura", "foes", 3, 0, [{ purge: "all" }, { buff: "atk", amt: -0.3, turns: 2 }], { anim: X("Scripture alone!", ["factcheck", "down"]) }),
       H("Eternal Security", "self", 5, 2, [{ immune: "security", turns: 2 }, { heal: 0.15 }], { anim: U("Perseverance of the saints.", ["shield", "heal"]) }),
       H("Debate Challenge", "foes", 4, 2, [{ dmg: 1.4 }, { selfZeal: 1 }], { anim: X("Let's debate. Right now.", ["down"]) }),
@@ -342,11 +374,13 @@ const GameData = (() => {
     pastor: ["The Open Letter", "We've prepared a statement.", "Four hundred pastors signed it.", 0.65],
     ehrman: ["Four Hundred Thousand Variants", "Let me show you the manuscripts.", "More variants than words in the New Testament!", 0.75],
     white: ["Cross-Examination", "I have a few questions for you.", "Yes or no. Yes or no!", 0.85],
+    // The Master of None hardly dents Composure: he drains Zeal instead.
+    master: ["Whatever", "Hold on, I'm just going to check this real quick…", "Sorry, what? Anyway. Whatever works for you.", 0.3, -2],
   };
-  for (const [id, [name, wind, blow, share]] of Object.entries(CLOSERS)) {
+  for (const [id, [name, wind, blow, share, zeal]] of Object.entries(CLOSERS)) {
     FOES[id].closer = [
       H("Winding up: " + name, "self", 0, 0, [{ windup: true }], { closer: "wind", anim: U(wind, []) }),
-      H(name, "foes", 0, 0, [{ share }, { zeal: -1 }], { closer: "strike", anim: X(blow, ["down"]) }),
+      H(name, "foes", 0, 0, [{ share }, { zeal: zeal || -1 }], { closer: "strike", anim: X(blow, ["down"]) }),
     ];
   }
 
@@ -367,7 +401,7 @@ const GameData = (() => {
       { name: "Tracts at the Corner", foes: ["preacher2", "preacher", "preacher2"] },
       { name: "Faith Alone?", foes: ["preacher", "preacher2", "preacher"] },
       { name: "If You Died Tonight", foes: ["preacher", "ryan", "preacher2"], boss: "ryan" },
-    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["hahn"], book: "summa" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["hahn", "wetta"], book: "summa" },
     { id: "lds", par: 5.3, power: [3.6, 4.0], title: "The Restoration", group: "Latter-day Saints", missions: [
       { name: "A Knock at the Door", foes: ["elder", "elder2"] },
       { name: "The Visitors' Center", foes: ["elder2", "elder", "elder2"] },
@@ -410,12 +444,21 @@ const GameData = (() => {
       { name: "The Upper Room", foes: ["seminarian", "seminarian2", "seminarian"] },
       { name: "The Dividing Line", foes: ["seminarian", "white", "seminarian2"], boss: "white" },
     ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: ["barron"] },
+    // The Nones: no religion in particular. Harder than the chapters around
+    // it, and it asks for a different team: these opponents hardly touch
+    // Composure, and wear down Zeal instead.
+    { id: "nones", par: 9, power: [3.2, 2.5], title: "Nothing in Particular", group: "The Nones", missions: [
+      { name: "The Group Chat", foes: ["scroller", "shrugger"] },
+      { name: "Sunday Brunch", foes: ["shrugger", "scroller", "shrugger2"] },
+      { name: "Left on Read", foes: ["scroller", "shrugger", "scroller2"] },
+      { name: "Master of None", foes: ["scroller", "master", "shrugger"], boss: "master" },
+    ], scenes: { before: 0, after: [1, 2, 3, 4] }, unlocks: [] },
     // The final chapter: open once every story is done, and the hardest in
     // the game. Every boss comes back to the table.
     { id: "finale", power: [1.25, 0.7], title: "The Great Debate", group: "Everyone", final: true, missions: [
       { name: "Old Opponents", foes: ["oconnor", "ryan", "hansen"] },
       { name: "New Rivals", foes: ["speaker", "witch", "destiny"] },
-      { name: "The Last Table", foes: ["pastor", "white", "ehrman"], boss: "white" },
+      { name: "The Last Table", foes: ["white", "master", "ehrman"], boss: "master" },
     ], scenes: { before: 0, after: [1, 2, 3] }, unlocks: [] },
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
@@ -424,8 +467,8 @@ const GameData = (() => {
   // Each is [name, explanation]; the explanation may use <b>.
   const RULES_INTRO = "Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every evangelist has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. A great move lands half again as hard as the rest, so reaching it is a real upgrade. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.";
   const RULES = [
-    ["Marks under each debater", "Short words under each Composure bar say what is on that debater right now, and the game lists them all in full under the stage: <b>STUN</b> Dumbfounded · <b>DOUBTING</b> or <b>FLUSTERED</b> · <b>MUTED</b> · <b>EXPOSED</b> · <b>HIDDEN</b> Undercover · <b>CALLED OUT</b> · <b>REBUTTAL</b> ready · <b>STEADY</b> can’t lose Zeal · <b>SECURE</b> Eternal Security · <b>FAITH ALONE</b> · <b>HALF DMG</b> a testimony · <b>RENEW</b> regains Composure each turn · <b>ATK▲</b>, <b>DEF▼</b>, <b>CRIT▲</b> boosts and setbacks: a boost and a setback on the same stat cancel out, and a number shows how many are left over (<b>ATK▼2</b>). Your evangelists are listed on the left under the stage, the opponents on the right. A red warning over a boss means he is winding up his closing argument."],
-    ["Composure", "How long a debater keeps his cool. At zero, an evangelist is <b>Discouraged</b> and sits out until a friend encourages him back. Only a move that restores Composure can reach him: Matt Fradd’s Pints with Aquinas, Brian Holdsworth’s Beauty Will Save the World, Cameron Bertuzzi’s Bayesian Update, Fr. Carlos Martins’ Prayer of Deliverance, or Kim Zember’s Child of God. He comes back with three quarters of his Composure. Shields, boosts and Zeal pass him by."],
+    ["Marks under each debater", "Short words under each Composure bar say what is on that debater right now, and the game lists them all in full under the stage: <b>STUN</b> Dumbfounded · <b>DOUBTING</b> or <b>FLUSTERED</b> · <b>MUTED</b> · <b>EXPOSED</b> · <b>HIDDEN</b> Undercover · <b>CALLED OUT</b> · <b>REBUTTAL</b> ready · <b>STEADY</b> can’t lose Zeal · <b>SECURE</b> Eternal Security · <b>FAITH ALONE</b> · <b>HALF DMG</b> a testimony · <b>RENEW</b> regains Composure each turn · <b>ATK▲</b>, <b>DEF▼</b>, <b>CRIT▲</b> boosts and setbacks: a boost and a setback on the same stat cancel out, and a number shows how many are left over (<b>ATK▼2</b>). The list under the stage also says how many more turns each one lasts: they wear off one at a time. <b>SHIELD 40%</b> shows how much a Shield of Faith can still take, as a share of full Composure; a second shield stacks on and the number climbs. Your evangelists are listed on the left under the stage, the opponents on the right. A red warning over a boss means he is winding up his closing argument."],
+    ["Composure", "How long a debater keeps his cool. At zero, an evangelist is <b>Discouraged</b> and sits out until a friend encourages him back. Only a move that restores Composure can reach him: Matt Fradd’s Pints with Aquinas, Brian Holdsworth’s Beauty Will Save the World, Cameron Bertuzzi’s Bayesian Update, Fr. Carlos Martins’ Prayer of Deliverance, Kim Zember’s Child of God, or Fr. Augustine Wetta’s Lifeguard on Duty and Surf’s Up. He comes back with three quarters of his Composure. Shields, boosts and Zeal pass him by."],
     ["Zeal", "Everyone starts at 0. Blue arrows up (to +3) when it rises, red arrows down when it falls. Every red arrow takes a tenth off the strength of his arguments, so a flagging debater hits softer. At the bottom, an opponent leaves the debate and an evangelist is <b>Discouraged</b>."],
     ["Backing up", "When someone argues, every teammate with Zeal at 0 or higher may jump in with their basic move, each on his own chance: a quarter at Zeal 0, up to seven in ten at +3. A fired-up team often piles in two or three strong, and the other side does the same. But when an evangelist is Discouraged, his friends are <b>Shaken</b> and each loses 1 Zeal, so one loss can stall the whole team."],
     ["Players", "Several people can play on one device: each enters a name and an email and gets a separate saved game, with a lifetime record of debates won, conversions, arguments won, opponents who left, and evangelists Discouraged. Names and emails stay on the device."],
@@ -434,7 +477,7 @@ const GameData = (() => {
     ["💡 Move tips", "In a debate, tap the lightbulb on any move to see what it does, how often it can be used, and when it is worth using. It works on locked and waiting moves too, so you can plan ahead."],
     ["Speed", "Everyone acts once a round, fastest first, and speed never changes. Evangelists who act early tend to carry less Composure; those who carry the most take longer to act. Going first lets you shield the team or finish off an opponent before he answers."],
     ["Difficulty", "Three steps, chosen just before each debate, beside the best you have won that debate on: Gentle (for the story), Normal (the game as designed) and Crucible (“tested like gold in the fire,” 1 Peter 1:7). Crucible brings tougher, sharper opponents, more podiums, a reinforcement, and a little more experience. Gentle is much softer and earns a quarter less: the way to play a chapter above your level. The tutorial is always gentle."],
-    ["Closing argument", "Every boss has one. On his second turn, and every third turn after, he spends his turn winding up: a red warning flashes over his head. On his next turn it takes a large share of every evangelist’s Composure at once (from 55% for O’Connor to 85% for James White), and 1 Zeal from each. Three ways to answer it: put up a Shield of Faith in time, and it soaks up the blow; leave him Dumbfounded or Muted while he winds up; or pile on and knock a fifth of his Composure off before he speaks, and he loses his thread. The first bosses’ closing arguments are gentle, James White’s is the hardest, and on Gentle every one lands at half strength and costs no Zeal."],
+    ["Closing argument", "Every boss has one. On his second turn, and every third turn after, he spends his turn winding up: a red warning flashes over his head. On his next turn it takes a large share of every evangelist’s Composure at once (from 55% for O’Connor to 85% for James White), and 1 Zeal from each. The Master of None is the exception: his takes only 30% of Composure, but 2 Zeal from each. Three ways to answer it: put up a Shield of Faith in time, and it soaks up the blow; leave him Dumbfounded or Muted while he winds up; or pile on and knock a fifth of his Composure off before he speaks, and he loses his thread. The first bosses’ closing arguments are gentle, James White’s is the hardest, and on Gentle every one lands at half strength and costs no Zeal."],
     ["Reinforcements", "On Crucible, a fresh opponent waits in reserve. When one goes out, he walks in to take his place. The round counter shows when someone is still waiting."],
     ["Podiums", "Some debaters start behind something: a podium, a soapbox, a stepladder at Speakers' Corner, a pulpit, a streamer's desk. It changes every battle. It takes the hits meant for the debater until it falls. A few moves go straight past it, a few hit it extra hard, and lowering Zeal gets past it every time."],
     ["Sent in", "A few moves send a teammate in to answer at once with their basic move, out of turn. Best used on a friend who hits hard but acts late."],
@@ -446,16 +489,16 @@ const GameData = (() => {
     ["Exposed", "Takes harder hits."],
     ["Fact-Check", "Removes a buff."],
     ["Examen", "Removes every debuff."],
-    ["Shield of Faith", "Absorbs hits for 3 turns, and while it holds, the debater behind it argues more boldly: his arguments land harder. How strong it is depends on the evangelist who gives it. You can see it as a shimmering bubble around the debater, and as a white section added to the end of the Composure bar: the longer the white, the more it can take. Shields stack: a second one adds to the first and lasts as long as the longer, up to the debater’s full Composure."],
+    ["Shield of Faith", "Absorbs hits for 3 turns, and while it holds, the debater behind it argues more boldly: his arguments land harder. How strong it is depends on the evangelist who gives it. You can see it as a shimmering bubble around the debater, and as a white bar just above the Composure bar, on the same scale: the longer the white, the more it can take (white all the way across means a shield as big as his full Composure). Shields stack: a second one adds to the first and lasts as long as the longer, up to the debater’s full Composure."],
     ["Boosts and setbacks", "Attack, Defense and Crit Chance Up and Down stack: two Attack Downs count twice, and an Attack Up and an Attack Down cancel out, though no one falls below a fifth of his strength. The mark under the debater shows what is left over: <b>ATK▼2</b>, or nothing at all when they cancel."],
-    ["Muted", "Can use only his basic move."],
+    ["Muted", "Can use only his basic move, for as many of his own turns as the move says: a one-turn Mute holds through his next turn, and the mark stays up until that turn is over."],
     ["Rebuttal", "For a few turns, whenever an opponent's move does anything to this evangelist (a hit, even one his podium takes, a setback like Attack Down, a stun, a call-out, a loss of Zeal), he answers the attacker at once with his basic move, even against a move aimed at the whole team (but not while Dumbfounded). Pair it with a move that makes everyone answer him, as Ethan Muse does."],
   ];
 
   const START = ["horn", "akin"];
 
   // Variants share a kit with the original, with a different look.
-  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"], ["student2", "student"], ["mythicist2", "mythicist"]]) FOES[copy] = FOES[of];
+  for (const [copy, of] of [["skeptic2", "skeptic"], ["preacher2", "preacher"], ["elder2", "elder"], ["dai2", "dai"], ["seminarian2", "seminarian"], ["tarot2", "tarot"], ["crystal2", "crystal"], ["creator2", "creator"], ["activist2", "activist"], ["ally2", "ally"], ["podcaster2", "podcaster"], ["student2", "student"], ["mythicist2", "mythicist"], ["scroller2", "scroller"], ["shrugger2", "shrugger"]]) FOES[copy] = FOES[of];
 
   return { HEROES, FOES, CAMPAIGN, START, BOOKS, RULES, RULES_INTRO };
 })();

@@ -79,6 +79,10 @@ const Theater = (() => {
     phone(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 7, y - 12, 14, 24); ctx.fillStyle = "#9fd0ff"; ctx.fillRect(x - 5, y - 10, 10, 17); ctx.fillStyle = "#de5e55"; ctx.fillRect(x - 3, y - 8, 3, 3); },
     timer(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 8, y - 12, 16, 24); ctx.fillStyle = "#c9b27a"; ctx.fillRect(x - 8, y - 12, 16, 3); ctx.fillRect(x - 8, y + 9, 16, 3); ctx.fillStyle = "#e8d9a8"; ctx.fillRect(x - 5, y - 8, 10, 4); ctx.fillRect(x - 2, y - 4, 4, 6); ctx.fillRect(x - 5, y + 3, 10, 5); },
     clipboard(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 9, y - 12, 18, 24); ctx.fillStyle = "#8a5a2b"; ctx.fillRect(x - 7, y - 10, 14, 20); ctx.fillStyle = "#fdfaf2"; ctx.fillRect(x - 5, y - 7, 10, 15); ctx.fillStyle = "#3a6ad8"; for (let i = 0; i < 4; i++) ctx.fillRect(x - 3, y - 4 + i * 3, 6 - (i % 2) * 2, 1); },
+    // A judge's gavel, head up.
+    gavel(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 12, y - 14, 24, 12); ctx.fillRect(x - 3, y - 4, 6, 18); ctx.fillStyle = "#8a4a22"; ctx.fillRect(x - 10, y - 12, 20, 8); ctx.fillStyle = "#c9884a"; ctx.fillRect(x - 10, y - 12, 20, 2); ctx.fillStyle = "#e8b94a"; ctx.fillRect(x - 6, y - 12, 2, 8); ctx.fillRect(x + 4, y - 12, 2, 8); ctx.fillStyle = "#6a3a1a"; ctx.fillRect(x - 1, y - 4, 2, 16); },
+    // A lifeguard's ring buoy.
+    buoy(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.fill(); for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? "#f4f1ea" : "#de3a2e"; ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, 11, (i * Math.PI) / 4, ((i + 1) * Math.PI) / 4); ctx.fill(); } ctx.fillStyle = "#1a1326"; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); },
     mute(ctx, x, y) { ctx.fillStyle = "#1a1326"; ctx.fillRect(x - 11, y - 11, 22, 22); ctx.fillStyle = "#de5e55"; ctx.fillRect(x - 9, y - 9, 18, 18); ctx.fillStyle = "#fff"; ctx.fillRect(x - 6, y - 3, 4, 6); ctx.fillRect(x - 2, y - 5, 2, 10); for (let i = 0; i < 5; i++) { ctx.fillRect(x + 2 + i, y - 3 + i, 1, 1); ctx.fillRect(x + 6 - i, y - 3 + i, 1, 1); } },
   };
 
@@ -778,22 +782,57 @@ const Theater = (() => {
       if (k > 1.2) outlinedText(ctx, "REASON", 470, 262, 54 + span(k, 1.2, 1.4) * 8, "#e8b94a");
       ctx.restore();
     },
-    // Joe Heschmeyer: three quick thrusts, each one a Church Father.
+    // Joe Heschmeyer: a courtroom. Three Church Fathers are entered as
+    // exhibits, the gavel comes down, and the verdict is his famous line.
     fathers(ctx, k) {
-      ctx.fillStyle = "#1a1f38"; ctx.fillRect(0, 0, W, H);
-      speedLines(ctx, k, "#252c50");
-      const names = [["IGNATIUS OF ANTIOCH", "c. 107"], ["IRENAEUS OF LYONS", "c. 180"], ["CLEMENT OF ROME", "c. 96"]];
+      // Wood panelling, the bench, and the seal of the court.
+      ctx.fillStyle = "#3a2214"; ctx.fillRect(0, 0, W, H);
+      for (let x = 0; x < W; x += 64) { ctx.fillStyle = "#4a2c1a"; ctx.fillRect(x + 4, 20, 56, 200); ctx.fillStyle = "#56341e"; ctx.fillRect(x + 8, 24, 48, 90); ctx.fillRect(x + 8, 122, 48, 90); }
+      ctx.fillStyle = "#2a180e"; ctx.fillRect(0, 230, W, 130); ctx.fillStyle = "#6a3e22"; ctx.fillRect(0, 230, W, 8);
+      ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.arc(470, 58, 30, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#3a2214"; ctx.beginPath(); ctx.arc(470, 58, 24, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e8b94a"; ctx.save(); ctx.translate(470, 58); ctx.rotate(0.6); ctx.fillRect(-18, -2, 36, 4); ctx.rotate(-1.2); ctx.fillStyle = "#cfd6dc"; ctx.fillRect(-18, -2, 36, 4); ctx.restore();
+      const names = [["EXHIBIT A: IGNATIUS", "“the Catholic Church,” c. 107"], ["EXHIBIT B: IRENAEUS", "the see of Rome, c. 180"], ["EXHIBIT C: CLEMENT", "writing from Rome, c. 96"]];
       names.forEach(([n, d], i) => {
-        const q = ease(span(k, 0.25 + i * 0.4, 0.45 + i * 0.4));
+        const q = ease(span(k, 0.2 + i * 0.3, 0.4 + i * 0.3));
         if (q <= 0) return;
-        const y = 110 + i * 70;
-        ctx.save(); ctx.translate(lerp(W + 300, 470, q), y); ctx.rotate(-0.08);
-        ctx.fillStyle = "#1a1326"; ctx.fillRect(-160, -26, 320, 48); ctx.fillStyle = "#f3e6c4"; ctx.fillRect(-156, -22, 312, 40);
-        text(ctx, "“" + n + "”", 0, 2, 16, "#7a1f2b"); text(ctx, d, 0, 14, 10, "#6a5a3a", "center", 600);
+        const y = 120 + i * 46;
+        ctx.save(); ctx.translate(lerp(W + 300, 470, q), y); ctx.rotate(-0.05);
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(-160, -22, 320, 42); ctx.fillStyle = "#f3e6c4"; ctx.fillRect(-156, -18, 312, 34);
+        text(ctx, n, 0, 0, 15, "#7a1f2b"); text(ctx, d, 0, 12, 10, "#6a5a3a", "center", 600);
         ctx.restore();
       });
-      // The keys of Peter, crossed.
-      if (k > 1.6) { ctx.fillStyle = "#e8b94a"; ctx.save(); ctx.translate(470, 330); ctx.rotate(0.6); ctx.fillRect(-40, -3, 80, 6); ctx.restore(); ctx.save(); ctx.translate(470, 330); ctx.rotate(-0.6); ctx.fillStyle = "#cfd6dc"; ctx.fillRect(-40, -3, 80, 6); ctx.restore(); }
+      // The gavel comes down.
+      const g = span(k, 1.2, 1.35);
+      if (k > 1.1) {
+        ctx.save(); ctx.translate(270, 262); ctx.rotate(-0.9 * (1 - g));
+        ctx.fillStyle = "#1a1326"; ctx.fillRect(-4, -70, 10, 70); ctx.fillRect(-30, -86, 62, 28);
+        ctx.fillStyle = "#8a4a22"; ctx.fillRect(-2, -68, 6, 66); ctx.fillRect(-28, -84, 58, 24); ctx.fillStyle = "#e8b94a"; ctx.fillRect(-16, -84, 4, 24); ctx.fillRect(14, -84, 4, 24);
+        ctx.restore();
+        if (g >= 1 && k < 1.5) { ctx.fillStyle = "#fdfaf2"; for (let i = 0; i < 6; i++) { const a = (i * Math.PI) / 3; ctx.fillRect(270 + Math.cos(a) * 44 - 3, 262 + Math.sin(a) * 18 - 3, 6, 6); } }
+      }
+      if (k > 1.4) {
+        ctx.fillStyle = "rgba(20,12,8,0.9)"; ctx.fillRect(250, 280, 380, 60);
+        text(ctx, "“IF THE PAPACY IS TRUE,", 440, 304, 15, "#fdfaf2"); text(ctx, "EVERYONE SHOULD BE CATHOLIC.”", 440, 326, 15, "#e8b94a");
+      }
+    },
+    // Fr. Augustine Wetta rides a wave right across the screen.
+    surf(ctx, k, api) {
+      ctx.fillStyle = "#7ec8e8"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#fff6c0"; ctx.beginPath(); ctx.arc(540, 60, 30, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 5; i++) { ctx.fillStyle = "#f4fbff"; ctx.fillRect((i * 173 + k * 30) % (W + 100) - 60, 40 + (i % 3) * 22, 60, 8); }
+      // The sea, and the curling wave he rides.
+      ctx.fillStyle = "#2a7ab0"; ctx.fillRect(0, 210, W, H - 210);
+      const x = lerp(-120, W + 80, clamp(k / 2.3, 0, 1));
+      ctx.fillStyle = "#3a9ad0"; ctx.beginPath(); ctx.moveTo(x - 260, 360); ctx.quadraticCurveTo(x - 60, 150, x + 70, 170); ctx.quadraticCurveTo(x + 10, 200, x + 20, 360); ctx.fill();
+      ctx.fillStyle = "#f4fbff"; for (let i = 0; i < 14; i++) px(ctx, x + 40 + Math.sin(k * 20 + i) * 20 - i * 4, 166 + (i % 4) * 6, 5, "#f4fbff");
+      for (let i = 0; i < 20; i++) { ctx.fillStyle = i % 2 ? "#5ab0e0" : "#1f6a9a"; ctx.fillRect((i * 67 + k * 200) % W, 240 + (i % 5) * 24, 30, 4); }
+      // The board, and the monk on it, habit flying.
+      const by = 262 + Math.sin(k * 6) * 6;
+      ctx.save(); ctx.translate(x, by); ctx.rotate(-0.12);
+      ctx.fillStyle = "#1a1326"; ctx.fillRect(-72, -4, 144, 14); ctx.fillStyle = "#ffcf5a"; ctx.fillRect(-70, -2, 140, 10); ctx.fillStyle = "#de5e55"; ctx.fillRect(-70, 2, 140, 2);
+      Art.paint(ctx, Art.figure(Art.CAST.wetta, "raise"), -80, -208, 4);
+      ctx.restore();
+      if (k > 0.6 && k < 2.3) outlinedText(ctx, "COWABUNGA, BROTHERS!", 320, 340, 24, "#fdfaf2", "#1f6a9a");
     },
     // Fr. Spitzer: the universe expands from a single point. It had a beginning.
     bigbang(ctx, k) {
@@ -970,7 +1009,7 @@ const Theater = (() => {
       { name: "Undercover", kind: aura, to: "self", say: "Nobody knows who I am.", mark: ["crit", "heal"] },
     ],
     holdsworth: [
-      { name: "Ten-Minute Essay", kind: volley, glyphs: ["Here's why."], color: "#e8b94a" },
+      { name: "Ten-Minute Essay", kind: volley, glyphs: ["Here's why.", "First,", "second."], color: "#e8b94a" },
       { name: "Beauty Will Save the World", kind: aura, to: "allies", mark: "heal", say: "Beauty will save the world." },
       { name: "Cultural Diagnosis", kind: approach, to: "foe", item: "clipboard", say: "Let's look at the culture.", mark: "examined", mark2: "down" },
       { name: "Authentic Catholic Culture", kind: cinematic, who: "Brian Holdsworth", color: "#7a4a2a", scene: SCENES.house, to: "allies", mark: ["shield", "pipUp"] },
@@ -999,7 +1038,7 @@ const Theater = (() => {
       { name: "Welcome Home", kind: approach, to: "ally", say: "Welcome home.", mark: "up", mark2: "pipUp" },
     ],
     martins: [
-      { name: "Holy Water", kind: volley, glyphs: ["✚"], color: "#9fd0ff" },
+      { name: "Holy Water", kind: volley, glyphs: ["✚", "✚", "✚"], color: "#9fd0ff" },
       { name: "Stand Behind Me", kind: aura, to: "allies", mark: ["pipUp"], foes: "called", say: "Stand behind me. I've seen worse.", color: "#e8b94a" },
       { name: "Prayer of Deliverance", kind: aura, to: "allies", mark: ["heal", "up"], say: "Deliver us from evil.", color: "#ffe07a" },
       { name: "Treasures of the Church", kind: cinematic, who: "Fr. Carlos Martins", color: "#5a1420", scene: SCENES.relics, to: "allies", mark: ["up", "crit"] },
@@ -1018,8 +1057,41 @@ const Theater = (() => {
     ],
     heschmeyer: [
       { name: "Ignatius of Antioch", kind: volley, glyphs: ["“Catholic Church”", "c. 107"], color: "#e8b94a", mark: "doubting" },
-      { name: "Former Litigator", kind: aura, to: "allies", mark: "crit", say: "Objection!", color: "#e8b94a" },
+      { name: "Objection!", kind: hex, to: "one", pose: "raise", say: "Objection! That's a false dilemma.", mark: ["muted"],
+        fx: (ctx, api, h, targets, t, k) => {
+          // A gavel swings down over the one who argued badly: SUSTAINED.
+          for (const a of targets) {
+            const p = api.head(a);
+            const q = span(t, 0.5, 0.95);
+            if (t < 0.3 || t > 1.9) continue;
+            ctx.save(); ctx.translate(p.x - 20, p.y - 16); ctx.rotate(-1.1 * (1 - ease(q)));
+            ctx.fillStyle = "#1a1326"; ctx.fillRect(-3, -54, 8, 54); ctx.fillRect(-22, -66, 46, 22);
+            ctx.fillStyle = "#8a4a22"; ctx.fillRect(-1, -52, 4, 50); ctx.fillRect(-20, -64, 42, 18); ctx.fillStyle = "#e8b94a"; ctx.fillRect(-12, -64, 3, 18); ctx.fillRect(10, -64, 3, 18);
+            ctx.restore();
+            if (q >= 1) outlinedText(ctx, "SUSTAINED", p.x, p.y - 70, 18, "#e8b94a");
+          }
+        } },
+      { name: "Burden of Proof", kind: hex, to: "all", say: "The burden of proof is on you.", mark: ["examined"],
+        fx: (ctx, api, h, targets, t, k) => {
+          // The scales of the court tip, and the weight lands on the other side.
+          if (t < 0.2 || t > 2.0) return;
+          const cx = 320, cy = 96, tip = 0.35 * ease(span(t, 0.4, 1.1));
+          ctx.fillStyle = "#1a1326"; ctx.fillRect(cx - 4, cy, 8, 80); ctx.fillRect(cx - 24, cy + 76, 48, 8);
+          ctx.fillStyle = "#e8b94a"; ctx.fillRect(cx - 2, cy + 2, 4, 76); ctx.fillRect(cx - 22, cy + 78, 44, 4);
+          ctx.save(); ctx.translate(cx, cy); ctx.rotate(tip);
+          ctx.fillStyle = "#e8b94a"; ctx.fillRect(-90, -3, 180, 6);
+          for (const s of [-1, 1]) { const px2 = s * 86; ctx.fillStyle = "#cfd6dc"; ctx.fillRect(px2 - 1, 0, 2, 26); ctx.fillStyle = "#e8b94a"; ctx.fillRect(px2 - 20, 26, 40, 6); }
+          ctx.fillStyle = "#1a1326"; ctx.fillRect(66, 12, 40, 14); ctx.fillStyle = "#de5e55"; ctx.fillRect(68, 14, 36, 10);
+          ctx.restore();
+          if (t > 1.0) outlinedText(ctx, "BURDEN: YOURS", cx + 90, cy + 130, 14, "#de5e55");
+        } },
       { name: "Shameless Popery", kind: cinematic, who: "Joe Heschmeyer", color: "#3a4356", scene: SCENES.fathers, to: "one", mark: ["pipDown", "doubting"], impact: impactOn("#e8b94a") },
+    ],
+    wetta: [
+      { name: "Flying Fettuccine", kind: volley, glyphs: ["●", "●", "●"], color: "#e8b94a" },
+      { name: "Lifeguard on Duty", kind: approach, to: "ally", item: "buoy", say: "Lifeguard on duty! Grab on.", mark: "heal", mark2: "pipUp" },
+      { name: "Humility Rules", kind: aura, to: "allies", mark: ["up", "pipUp"], say: "Relax. None of us is that important.", color: "#e8b94a" },
+      { name: "Surf's Up", kind: cinematic, who: "Fr. Augustine Wetta, OSB", color: "#1f6a9a", scene: SCENES.surf, closeUp: false, to: "allies", mark: ["heal", "pipUp"] },
     ],
   };
 
