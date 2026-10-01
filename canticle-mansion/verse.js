@@ -55,23 +55,37 @@ const STYLE = {
   // Spelled in stars on the night sky, each star twinkling in its turn.
   stars: { size: 18, lh: 1.2, font: (s) => "700 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx, t) {
-      for (const [px0, py0, r] of textPoints(tx, L, 1.6)) { const a = 0.45 + 0.55 * Math.abs(Math.sin(t * (1 + r) + r * 20)); c.fillStyle = "rgba(255,250,230," + a + ")"; c.fillRect(x + px0 - 0.5, y + py0 - 0.5, r > 0.92 ? 1.6 : 1, r > 0.92 ? 1.6 : 1); }
+      c.shadowColor = "rgba(200,220,255,0.9)"; c.shadowBlur = 6; c.fillStyle = tx.color || "rgba(250,248,235,0.92)";
+      L.lines.forEach((l, i) => c.fillText(l, x, y + i * L.lh)); c.shadowBlur = 0;
+      for (const [px0, py0, r] of textPoints(tx, L, 1.6)) { if (r > 0.12) continue; const a = Math.max(0, Math.sin(t * (1 + r * 8) + r * 60)); c.fillStyle = "rgba(255,255,255," + a + ")"; c.fillRect(x + px0 - 1, y + py0 - 0.2, 2, 0.4); c.fillRect(x + px0 - 0.2, y + py0 - 1, 0.4, 2); }
     } },
   // Set out in a flower-bed: each stroke of each letter a little bloom.
   flowers: { size: 16, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx, t) {
+      // Letters of green leaves, edged dark, with blossoms opening along them.
+      c.lineJoin = "round"; c.lineWidth = 2.4; c.strokeStyle = "#1e4a1a"; c.fillStyle = "#5aa846";
+      L.lines.forEach((l, i) => { c.strokeText(l, x, y + i * L.lh); c.fillText(l, x, y + i * L.lh); });
       const cols = ["#ff7aa8", "#ffffff", "#ffe08a", "#c8a0ff", "#ff9a5a"];
-      for (const [px0, py0, r] of textPoints(tx, L, 2)) { const sway = Math.sin(t * 1.4 + px0 * 0.1) * 0.4; c.fillStyle = "#3a7a2e"; c.fillRect(x + px0 + sway, y + py0 + 0.8, 0.6, 1.4); c.fillStyle = cols[Math.floor(r * 5)]; c.fillRect(x + px0 - 0.9 + sway, y + py0 - 0.9, 1.8, 1.8); }
+      for (const [px0, py0, r] of textPoints(tx, L, 2)) { if (r > 0.16) continue; const b = 0.8 + Math.sin(t * 1.4 + r * 40) * 0.2; c.fillStyle = cols[Math.floor(r * 31) % 5]; c.fillRect(x + px0 - b, y + py0 - b, b * 2, b * 2); }
     } },
   // Pieces of silver laid out in letters, each catching the light in its turn.
   coins: { size: 16, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx, t) {
-      for (const [px0, py0, r] of textPoints(tx, L, 1.5)) { const g = Math.max(0, Math.sin(t * 2 - px0 * 0.03 + r * 6)); c.fillStyle = "#4a4a54"; c.fillRect(x + px0 - 0.6, y + py0 - 0.3, 1.5, 1.5); c.fillStyle = g > 0.95 ? "#ffffff" : "#d8dce4"; c.fillRect(x + px0 - 0.7, y + py0 - 0.7, 1.3, 1.3); if (g > 0.98) { c.fillStyle = "rgba(255,255,255,0.8)"; c.fillRect(x + px0 - 2.5, y + py0, 5, 0.5); c.fillRect(x + px0, y + py0 - 2.5, 0.5, 5); } }
+      // Letters of silver, edged dark, with a glint passing along them.
+      c.lineJoin = "round"; c.lineWidth = 2; c.strokeStyle = "#3a3a48"; c.fillStyle = "#dfe3ea";
+      L.lines.forEach((l, i) => { c.strokeText(l, x, y + i * L.lh); c.fillText(l, x, y + i * L.lh); });
+      for (const [px0, py0, r] of textPoints(tx, L, 1.5)) { if (r > 0.2) continue; const g = Math.sin(t * 2 - px0 * 0.03 + r * 6); if (g < 0.9) continue; c.fillStyle = "rgba(255,255,255,0.9)"; c.fillRect(x + px0 - 2, y + py0 - 0.25, 4, 0.5); c.fillRect(x + px0 - 0.25, y + py0 - 2, 0.5, 4); }
     } },
   // Letters of living fire: "the lamps thereof are fire and flames."
   flame: { size: 18, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx, t) {
-      for (const [px0, py0, r] of textPoints(tx, L, 1.3)) { const f = Math.sin(t * 9 + r * 40) * 0.5 + 0.5, h = 0.8 + f * 1.2; c.fillStyle = r > 0.6 ? "#ffcf5a" : r > 0.25 ? "#ff8a3a" : "#e8402a"; c.fillRect(x + px0 - 0.6, y + py0 - h, 1.2, h + 0.5); if (r > 0.93) { c.fillStyle = "rgba(255,240,180," + f + ")"; c.fillRect(x + px0 - 0.4, y + py0 - h - 2 - f * 3, 0.8, 1.2); } }
+      // Letters of fire: a dark ember edge, a hot gold heart, and flames licking up from them.
+      c.lineJoin = "round"; c.lineWidth = 2.2; c.strokeStyle = "#5a0e08";
+      const g = c.createLinearGradient(0, y, 0, y + L.lines.length * L.lh); g.addColorStop(0, "#ffe25a"); g.addColorStop(1, "#ff6a2a");
+      c.shadowColor = "rgba(255,120,40,0.8)"; c.shadowBlur = 5;
+      L.lines.forEach((l, i) => c.strokeText(l, x, y + i * L.lh)); c.shadowBlur = 0; c.fillStyle = g;
+      L.lines.forEach((l, i) => c.fillText(l, x, y + i * L.lh));
+      for (const [px0, py0, r] of textPoints(tx, L, 1.6)) { if (r > 0.1) continue; const f = Math.sin(t * 9 + r * 400) * 0.5 + 0.5; c.fillStyle = "rgba(255,200,80," + f + ")"; c.fillRect(x + px0 - 0.4, y + py0 - 2 - f * 3, 0.8, 1.5 + f); }
     } },
   // Cut into stone: dark in the cut, light on its lower lip.
   carved: { size: 9, upper: true, lh: 1.45, font: (s) => "600 " + s + "px " + FONT.carved,
@@ -95,29 +109,17 @@ const STYLE = {
     draw(c, L, x, y, tx, t) { c.shadowColor = tx.shadow || "rgba(20,30,70,0.55)"; c.shadowBlur = 4; c.fillStyle = tx.color || "rgba(255,255,255,0.55)"; L.lines.forEach((l, i) => c.fillText(l, x + Math.sin(t * 0.3 + i) * 2, y + i * L.lh)); c.shadowBlur = 0; } },
   // Pressed into the sand: flattened, shadowed.
   sand: { size: 13, lh: 1.1, font: (s) => "italic 600 " + s + "px " + FONT.book,
-    draw(c, L, x, y, tx) { c.translate(x, y); c.scale(1, 0.55); L.lines.forEach((l, i) => { c.fillStyle = "rgba(255,240,200,0.35)"; c.fillText(l, 0, i * L.lh + 1); c.fillStyle = tx.color || "rgba(110,70,30,0.65)"; c.fillText(l, 0, i * L.lh); }); } },
+    draw(c, L, x, y, tx) { c.translate(x, y); c.scale(1, 0.75); L.lines.forEach((l, i) => { c.fillStyle = "rgba(255,244,210,0.6)"; c.fillText(l, 0, i * L.lh + 1); c.fillStyle = tx.color || "rgba(90,52,20,0.9)"; c.fillText(l, 0, i * L.lh); }); } },
   // Stitched into a curtain or a rug.
   embroidered: { size: 9, lh: 1.35, font: (s) => "700 " + s + "px " + FONT.book,
-    draw(c, L, x, y, tx, t) { c.setLineDash([1.2, 0.8]); c.lineWidth = 0.9; L.lines.forEach((l, i) => { const yy = y + i * L.lh + Math.sin(t * 1.5 + i) * 0.6; c.strokeStyle = tx.color || "#ffd27a"; c.strokeText(l, x, yy); c.fillStyle = "rgba(255,220,140,0.35)"; c.fillText(l, x, yy); }); } },
-  // Little labels on bottles and crates.
-  label: { size: 5.5, lh: 1.25, font: (s) => "700 " + s + "px " + FONT.book,
-    draw(c, L, x, y, tx) { c.fillStyle = tx.color || "#3a2410"; L.lines.forEach((l, i) => c.fillText(l, x, y + i * L.lh)); } },
-  // Letters of light that kindle one by one as the monk draws near.
-  kindle: { size: 11, lh: 1.35, font: (s) => "italic 600 " + s + "px " + FONT.book,
-    draw(c, L, x, y, tx, t, near) {
-      const total = L.lines.join("").length, lit = clamp((tx.reach || 200) - near, 0, 1e9) / ((tx.reach || 200) * 0.6) * total;
-      let n = 0;
+    draw(c, L, x, y, tx, t) {
+      // Worked in wool on the cloth: a dark under-stitch, solid thread, and the grain of the stitches.
       L.lines.forEach((l, i) => {
-        const yy = y + i * L.lh, w = c.measureText(l).width;
-        let xx = c.textAlign === "center" ? x - w / 2 : x; c.textAlign = "left";
-        for (const ch of l) {
-          const a = clamp(lit - n, 0, 1); n++;
-          if (a > 0) { c.shadowColor = tx.glow || "rgba(255,220,140,0.9)"; c.shadowBlur = 6 * a; c.fillStyle = "rgba(255,246,214," + a + ")"; c.fillText(ch, xx, yy - (1 - a) * 4); }
-          xx += c.measureText(ch).width;
-        }
-        c.textAlign = tx.align || "center";
+        const yy = y + i * L.lh;
+        c.fillStyle = "rgba(0,0,0,0.55)"; c.fillText(l, x + 0.5, yy + 0.6);
+        c.fillStyle = tx.color || "#ffd27a"; c.fillText(l, x, yy);
+        c.save(); c.globalAlpha = 0.35; c.setLineDash([0.6, 0.9]); c.lineWidth = 0.35; c.strokeStyle = "#ffffff"; c.strokeText(l, x, yy); c.restore();
       });
-      c.shadowBlur = 0;
     } },
   // Rising like the smoke of incense: each word floats on its own.
   smoke: { size: 11, lh: 1.4, font: (s) => "italic 500 " + s + "px " + FONT.sky,

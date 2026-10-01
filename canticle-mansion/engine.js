@@ -809,5 +809,11 @@ function drawLight(cx, cy, t) {
   for (const it of World.items) if (it.kind === "power" || it.kind === "lily") hole(it.x + 6, it.y + 8, 36, 0.8);
   if (Game.angel) hole(Game.angel.x + 6, Game.angel.y + 8, 50, 0.8);
   if (R.lightHoles) R.lightHoles(hole, World, t);
+  // Every verse carries a little light of its own, so the dark never swallows the words.
+  for (const tx of R.texts || []) {
+    if (tx.x - cx > W + 40 || tx.x + (tx.w || 200) - cx < -40) continue;
+    const L = VERSE.layout(lx, R, tx), h = Math.max(L.size, L.lines.length * L.lh), w = tx.w || 200;
+    for (let k = 0; k <= w; k += 30) hole(tx.x + k, tx.y + h / 2, Math.max(36, h * 0.9), 0.55);
+  }
   lx.globalCompositeOperation = "source-over";
 }
