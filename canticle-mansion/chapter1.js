@@ -260,7 +260,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     map: g.rows(), doors: { 1: { to: "c1_vineyard", door: "2" }, 2: { to: "c1_throne", door: "1", locked: () => Game.flags.fed } },
     texts: [
       { v: 6, style: "sky", x: 120, y: 12, w: 520, size: 15, color: "rgba(255,255,255,0.75)" },
-      { v: 7, style: "embroidered", x: 1004, y: 94, w: 128, size: 8, color: "#e8d8a0" },
+      { v: 7, style: "embroidered", x: 954, y: 84, w: 182, size: 9.5, color: "#e8cf8a" },
     ],
     init(Wd) {
       const sh = shepherd(6 * T, 12 * T - 26);
@@ -287,9 +287,14 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
       hintOnce("goats", "The kids follow you. A wall too high for them? Set a crate beside it as a step.", Game.flock.length && near(39 * T, 11 * T, 110));
     },
     paint(c) {
-      SCENE.tent(c, 976, 64, 168, 128, { col: "#2a2226", door: false });
-      px(c, 996, 88, 132, 100, "#3a2e2a");
-      for (let i = 0; i < 9; i++) px(c, 1000 + i * 15, 88, 1, 100, "#2a201c");
+      // The shepherds' tent of black goat hair; the verse is woven into its front cloth,
+      // between two bands of red and ochre such as the tent-weavers set in.
+      SCENE.tent(c, 924, 36, 244, 156, { col: "#2a2226", door: false });
+      px(c, 946, 66, 200, 126, "#3a2e2a");
+      for (let i = 0; i < 14; i++) px(c, 946 + i * 15, 66, 1, 126, "#2e2420");
+      for (let r = 0; r < 126; r += 3) px(c, 946, 66 + r, 200, 1, "rgba(0,0,0,0.12)");
+      for (const by of [70, 160]) { px(c, 946, by, 200, 6, "#7a2a1e"); for (let i = 0; i < 200; i += 6) { px(c, 946 + i, by + 1, 3, 2, "#c8963a"); px(c, 949 + i, by + 3, 3, 2, "#c8963a"); } }
+      px(c, 946, 66, 200, 1, "#4a3c36"); px(c, 945, 66, 1, 126, "#1a1416"); px(c, 1146, 66, 1, 126, "#1a1416");
       SCENE.cypress(c, 260, 192, 50); SCENE.cypress(c, 700, 192, 64);
       for (let i = 0; i < 12; i++) SCENE.flowers(c, 60 + i * 80, 190, 4, 0);
     },
@@ -357,14 +362,19 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
 
 // ---- 11. Chains of Gold ---------------------------------------------------------------------------------------
 // A giant bride sits enthroned. Up her lap, her hand, her arm to her shoulder
-// the monk climbs, and the little goldsmiths climb with him, carrying jewels,
-// and the chain of gold is made about her neck as they go.
+// the monk climbs. The little goldsmiths go about their own work: each takes a
+// link of gold or silver from the heap at her feet, carries it up to her neck,
+// sets it in the chain, and goes down for another. The verse is the chain.
 {
   const g = G(30, 28).walls().floor(26).door(0, 23, 25, "1").door(29, 2, 4, "2");
   g.ledge(5, 12, 23, "k").ledge(13, 17, 20, "k").ledge(17, 21, 17, "k").ledge(21, 25, 14, "k").ledge(20, 24, 11, "k").ledge(9, 21, 8, "k").ledge(24, 28, 5, "k");
   g.climb(8, 9, 22);
   const path = [[40, 410], [120, 360], [220, 312], [300, 264], [360, 216], [340, 168], [240, 120], [170, 120]];
-  const made = () => clamp((410 - Game.monk.y) / 300, 0, 1);
+  // Distance along the goldsmiths' road, and the point at a given distance.
+  const segs = path.slice(1).map((q, i) => Math.hypot(q[0] - path[i][0], q[1] - path[i][1])), road = segs.reduce((a, b) => a + b, 0);
+  const at = (d) => { d = clamp(d, 0, road); for (let i = 0; i < segs.length; i++) { if (d <= segs[i]) { const f = d / segs[i]; return [lerp(path[i][0], path[i + 1][0], f), lerp(path[i][1], path[i + 1][1], f)]; } d -= segs[i]; } return path[path.length - 1]; };
+  const LINKS = 14;
+  const made = () => clamp((Game.flags.links || 0) / LINKS, 0, 1);
   room1("c1_necklace", {
     name: "Chains of Gold", song: "festival", wall: "palace", paper: "#1a1428", sky: "none", tiles: { 1: "stone", 2: "marble" }, legend: { k: ONEWAY }, dark: 0.3,
     climb: { kind: "chain" },
@@ -374,7 +384,33 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
       { v: 10, part: [0, 5], style: "chain", x: 190, y: 200, path: [[110, 168], [150, 196], [196, 206], [240, 196], [272, 170]], made: () => clamp(made() * 1.6, 0, 1), reach: 400 },
       { v: 10, part: [5, 99], style: "chain", x: 190, y: 210, path: [[96, 182], [140, 224], [196, 238], [252, 224], [288, 184]], made: () => clamp(made() * 1.6 - 0.5, 0, 1), reach: 400 },
     ],
-    init() { this.path = path; },
+    init() {
+      this.path = path;
+      if (Game.flags.links === undefined) Game.flags.links = 1;
+      // Five goldsmiths, already about their work at different points of the road.
+      this.smiths = [0, 1, 2, 3, 4].map((i) => ({ d: road * [0.05, 0.3, 0.55, 0.8, 0.95][i], up: i % 2 === 0, carry: i % 2 === 0 ? (i % 4 ? "silver" : "gold") : null, wait: i * 0.4, speed: 34 + i * 5 }));
+    },
+    update(Wd, dt) {
+      for (const g of this.smiths) {
+        if (g.wait > 0) { g.wait -= dt; continue; }
+        if (g.up) {
+          g.d += g.speed * dt;
+          if (g.d >= road) {
+            // At her neck: the link is set in the chain.
+            g.d = road; g.up = false; g.wait = 0.8;
+            if ((Game.flags.links || 0) < LINKS) { Game.flags.links = (Game.flags.links || 0) + 1; const [x, y] = at(road); Wd.glows.push({ x, y, r: 24, c: "rgba(255,230,140,0.6)", life: 0.5, max: 0.5 }); if (near(x, y, 160)) Snd.sfx("neume"); }
+            g.carry = null;
+          }
+        } else {
+          g.d -= g.speed * 1.6 * dt;
+          if (g.d <= 0) {
+            // At the heap: stoop, choose a link, and start up again.
+            g.d = 0; g.up = true; g.wait = 0.9;
+            g.carry = (Game.flags.links || 0) >= LINKS ? "jewel" : Math.random() < 0.5 ? "gold" : "silver";
+          }
+        }
+      }
+    },
     paint(c) {
       // The bride, enthroned: robe of blue and purple, a veil, a calm face.
       c.fillStyle = "#2a2a6a"; c.beginPath(); c.moveTo(60, 430); c.quadraticCurveTo(40, 280, 120, 200); c.quadraticCurveTo(190, 150, 300, 190); c.quadraticCurveTo(380, 230, 400, 300); c.lineTo(330, 300); c.quadraticCurveTo(300, 380, 200, 380); c.lineTo(120, 430); c.fill();
@@ -388,14 +424,15 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
       c.fillStyle = "#e0b898"; c.beginPath(); c.ellipse(240, 330, 34, 10, 0, 0, 7); c.fill();
     },
     back(c, Wd, t) {
-      // The goldsmiths, climbing with the monk, each with a jewel.
-      const p = made();
-      for (let i = 0; i < 5; i++) {
-        const u = clamp(p - i * 0.07, 0, 1) * (path.length - 1), k = Math.min(path.length - 2, Math.floor(u)), f = u - k;
-        const x = lerp(path[k][0], path[k + 1][0], f) + i * 3, y = lerp(path[k][1], path[k + 1][1], f) - 14;
-        figure(c, x, y, { robe: ["#7a3a2a", "#3a5a2a", "#5a3a6a", "#2a4a6a", "#6a5a2a"][i], skin: "#e0b090", beard: "#e8e0d0", h: 14, w: 7, face: 1 }, t + i);
-        px(c, x + 1, y - 5, 5, 4, i % 2 ? "#5ad0e8" : "#e83a6a"); px(c, x + 2, y - 5, 2, 1, "#ffffff");
-      }
+      // The heap of links at her feet, gold and silver.
+      for (let i = 0; i < 26; i++) { const x = 30 + (i * 7) % 44, y = 420 - Math.floor(i / 7) * 3 - (i % 3); c.strokeStyle = i % 3 ? "#e8b94a" : "#cfd6dc"; c.lineWidth = 1.2; c.beginPath(); c.ellipse(x, y, 2.5, 1.6, i, 0, 7); c.stroke(); }
+      // The goldsmiths on their road, going up laden and coming down empty-handed.
+      (this.smiths || []).forEach((g, i) => {
+        const [x0, y0] = at(g.d), x = x0 - 3, y = y0 - 14, working = g.wait > 0;
+        figure(c, x, y + (working ? 2 : 0), { robe: ["#7a3a2a", "#3a5a2a", "#5a3a6a", "#2a4a6a", "#6a5a2a"][i], skin: "#e0b090", beard: "#e8e0d0", h: 14, w: 7, face: g.up ? (at(g.d + 4)[0] >= x0 ? 1 : -1) : (at(g.d - 4)[0] >= x0 ? 1 : -1), still: working }, t + i);
+        if (g.carry === "jewel") { px(c, x + 1, y - 5, 5, 4, i % 2 ? "#5ad0e8" : "#e83a6a"); px(c, x + 2, y - 5, 2, 1, "#ffffff"); }
+        else if (g.carry) { c.strokeStyle = g.carry === "gold" ? "#ffd04a" : "#e8eef4"; c.lineWidth = 1.5; c.beginPath(); c.ellipse(x + 3.5, y - 4, 3, 2, 0.3, 0, 7); c.stroke(); }
+      });
     },
   });
 }

@@ -173,7 +173,7 @@ function houseFronts(c, spans, t) {
       { v: 9, style: "gilded", x: 200, y: 366, w: 160, size: 9 },
       { v: 10, part: [0, 7], style: "carved", x: 30, y: 340, w: 120, size: 8, color: "rgba(30,30,40,0.9)", panel: "plaque", panelColor: "#c8ccd4" },
       { v: 10, part: [7, 11], style: "gilded", x: 150, y: 296, w: 120, size: 8.5 },
-      { v: 10, part: [11, 16], style: "embroidered", x: 36, y: 188, w: 110, size: 9, color: "#e8c0ff" },
+      { v: 10, part: [11, 16], style: "embroidered", x: 36, y: 188, w: 110, size: 10, color: "#ffe08a" },
       { v: 10, part: [16, 99], style: "embroidered", x: 160, y: 30, w: 150, size: 8.5, color: "#ffe8b0" },
     ],
     paint(c) {
