@@ -346,7 +346,7 @@ function stepMonk(m, dt) {
   input.throwAt = null;
 
   if (m.dash > 0) {
-    m.dash -= dt; m.vy = 0; m.vx = m.dashDir * 270;
+    m.dash = Math.max(0, m.dash - dt); m.vy = 0; m.vx = m.dashDir * 270;
     if (Math.random() < 0.8) World.parts.push({ x: m.x + m.w / 2, y: m.y + 6 + Math.random() * 16, vx: -m.dashDir * 30, vy: 0, g: 0, life: 0.25, c: "#ffcf5a", s: 2 });
   } else if (m.climbing) {
     m.vx = dir * 50; m.vy = input.up ? -P.climb : 30;
