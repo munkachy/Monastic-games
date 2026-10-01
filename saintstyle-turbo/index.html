@@ -872,13 +872,19 @@ function drawFigure(L, x, y, f, opt) {
 // For each mansion: best time, best style, most neumes, and whether its demon
 // has been beaten. `open` is how many mansions may be entered. `tutorial`:
 // the Novitiate is done. `done`: the tricks landed at least once.
-let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] } };
+let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {} };
 try {
   const old = JSON.parse(localStorage.getItem("run-the-way") || "{}");
   // The first Run the Way had six zones of the Psalms; keep only the saint and the sound.
   if (old.v === 2) save = Object.assign(save, old);
   else { if (old.saint !== undefined) save.saint = old.saint; if (old.sound !== undefined) save.sound = old.sound; }
 } catch (e) { }
+// Start again from nothing: every mansion, saint, trick, combo and record forgotten (the sound setting kept).
+function resetProgress() {
+  const sound = save.sound;
+  save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {} };
+  store();
+}
 function store() { try { localStorage.setItem("run-the-way", JSON.stringify(save)); } catch (e) { } }
 const hms = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") + "." + Math.floor((t * 10) % 10);
 const commas = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -1026,9 +1032,9 @@ const NOVITIATE = { id: "novitiate", num: "The Novitiate", name: "Ausculta", son
 // in the air is read as a swipe to the right.)
 const TRICKS = [
   { id: "flourish", keys: "R", quick: true, name: "Flourish", dur: 0.3, pts: 100, boost: 0.12, learn: 0, about: "One tap, for a little air: each saint has his own." },
-  { id: "leap", keys: "U", name: "Leap of Joy", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe up: a star jump, arms high and legs wide, as David danced before the ark." },
-  { id: "kneel", keys: "D", name: "Genuflection", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe down: down on one knee in the air, hands joined, as before the tabernacle." },
-  { id: "heel", keys: "L", name: "Heel Click", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe left: both heels kicked up behind and clicked together, for joy." },
+  { id: "leap", keys: "U", name: "Leap of Joy", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "A star jump, as David danced before the ark. Keep the swipe held to hold it, for more points; let go before you land!" },
+  { id: "kneel", keys: "D", name: "Genuflection", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "On one knee in the air, as before the tabernacle. Keep the swipe held to hold it; let go before you land!" },
+  { id: "heel", keys: "L", name: "Heel Click", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "Both heels kicked up and clicked, for joy. Keep the swipe held to hold it; let go before you land!" },
   { id: "front", keys: "UU", name: "Front Flip", rot: Math.PI * 2, dur: 0.45, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, forward." },
   { id: "back", keys: "DD", name: "Back Flip", rot: -Math.PI * 2, dur: 0.5, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, backward." },
   { id: "barrel", keys: "DU", name: "Barrel Roll", roll: true, dur: 0.55, pts: 400, boost: 0.45, learn: 1, about: "Turn over sideways in the air." },
@@ -1383,10 +1389,19 @@ const draftAt = (x) => { for (const d of level.drafts) if (x >= d.x0 && x <= d.x
 // landed, makes him surge past it: the saint's feet become a wheel, and then,
 // little by little, he is running again.
 const BASE = 160, RUN_TOP = 440, ACCEL = 420, LOOP_G = 0.6, BLAST = 380;
-// How hard each saint jumps: St. Joseph of Cupertino, who flew, highest of all;
-// St. Peter, the Rock, lowest. The demon beats his wings.
-const LEAP = { cupertino: 520, therese: 470, cecilia: 470, lucy: 470, hildegard: 460, benedict: 450, maurus: 450, scholastica: 440, augustine: 440, peter: 420 };
-const jumpOf = (A) => (A.player ? LEAP[game.saint.id] || 450 : 450);
+// How hard a saint jumps grows with practice: every point of style earned
+// with a saint is experience, and each level jumps higher, up to level 10.
+// Level L needs 200 × L × (L + 1) experience. The demon beats his wings.
+const xpLevel = (xp) => Math.min(10, Math.floor((Math.sqrt(1 + (8 * (xp || 0)) / 400) - 1) / 2));
+const xpFor = (L) => 200 * L * (L + 1);
+const leapOf = (s) => 410 + 15 * xpLevel(save.xp[s.id]);
+const jumpOf = (A) => (A.player ? leapOf(game.saint) : 450);
+function gainXp(n) {
+  const id = game.saint.id, before = xpLevel(save.xp[id]);
+  save.xp[id] = Math.round((save.xp[id] || 0) + n);
+  const after = xpLevel(save.xp[id]);
+  if (after > before) { pop(game.saint.name.toUpperCase() + ": LEVEL " + after, "#8ae86a", 11, "Jumps higher now"); Snd.sfx("gift"); store(); }
+}
 // The voices: each saint's pitch, high or low, and what each cries out at his own trick.
 const VOICE = { therese: 300, scholastica: 290, hildegard: 280, cecilia: 320, lucy: 310, cupertino: 210, benedict: 170, maurus: 200, peter: 160, augustine: 180 };
 const CRY = { benedict: "Vade retro!", therese: "Shower of roses!", cupertino: "Alleluia!", maurus: "Deo gratias!", scholastica: "Fiat!",
@@ -1844,18 +1859,27 @@ function runTricks(A, dt) {
     if (k.quick) flourishFx(A);
   }
   if (A.trick) {
-    const T = A.trick; T.t += dt;
+    const T = A.trick;
+    // A one-swipe move held (the finger kept down, the key held): it stays at its fullest,
+    // worth more the longer it is held; let go before landing, or it is a crash.
+    if (A.player && T.k.keys.length === 1 && !T.k.quick && T.t >= T.k.dur * 0.5 && dirHeld(T.k.keys)) {
+      T.held = (T.held || 0) + dt;
+      if ((T.showT = (T.showT || 0) - dt) <= 0) { T.showT = 0.1; comboShow(A); }
+      if (Math.random() < 0.4) parts.push({ x: A.x + (Math.random() - 0.5) * 16, y: A.y - 14 + (Math.random() - 0.5) * 16, vx: 0, vy: -20, g: 0, life: 0.3, c: "#fff4a0" });
+    } else T.t += dt;
     trickFx(A, dt, T);
     if (T.t >= T.k.dur) finishTrick(A);
   }
 }
+// The bonus for holding a one-swipe move: 300 points a second.
+const heldPts = (T) => Math.round(((T.held || 0) * 300) / 10) * 10;
 // A trick done goes into the combo, at its worth.
 function finishTrick(A) {
   const T = A.trick; if (!T) return;
   A.trick = null;
   if (T.t < T.k.dur * 0.88) return;
-  const w = worth(A, T.k);
-  A.chain.push({ id: T.k.id, name: nameOf(T.k, A), pts: Math.round((T.k.pts * w) / 10) * 10, boost: T.k.boost * w, sig: T.k.sig });
+  const w = worth(A, T.k), bonus = heldPts(T);
+  A.chain.push({ id: T.k.id, name: nameOf(T.k, A), pts: Math.round(((T.k.pts + bonus) * w) / 10) * 10, boost: (T.k.boost + bonus / 1000) * w, sig: T.k.sig });
   A.lastDone = game.time;
   if (A.player) comboShow(A);
 }
@@ -1865,7 +1889,7 @@ function comboShow(A, st) {
   const names = A.chain.map((e) => e.name), base = A.chain.reduce((a, e) => a + e.pts, 0) + (A.mode === "grind" ? Math.round(A.grindPts / 10) * 10 : 0);
   let n = A.chain.length;
   if (A.mode === "grind") { names.push("Rail Grind"); n++; }
-  const live = A.trick ? { name: nameOf(A.trick.k, A), pts: A.trick.k.pts } : null;
+  const live = A.trick ? { name: nameOf(A.trick.k, A) + (A.trick.held > 0.2 ? " (held)" : ""), pts: A.trick.k.pts + heldPts(A.trick) } : null;
   // A combo that ends with a trick unfinished: that trick is named too, among the lost.
   if (st && live) names.push(live.name);
   if (!names.length && !live) { if (!st) A.combo = null; return; }
@@ -1910,6 +1934,7 @@ function landTricks(A) {
     D.gsp = Math.min(D.gsp, 120); D.surge = 0; D.stun = 1; label(D, "VADE RETRO!", "#ffffff"); pop("THE DEMON REELS BACK", "#ff9ab0", 8);
   }
   recordCombo(A.chain, pts);
+  gainXp(pts / 10);
   if (n >= 3 || pts >= 2500) say("combo", 0.5);
   lessonEvent("land", { n, ids, perfect });
   A.chain = [];
@@ -2022,7 +2047,7 @@ function flourishFx(A) {
   const rnd = Math.random;
   if (!A.player) { for (let i = 0; i < 6; i++) parts.push({ x: A.x, y: A.y - 10, vx: (rnd() - 0.5) * 120, vy: -60 - rnd() * 80, g: 200, life: 0.5, c: A.sin.colors.y }); return; }
   const id = game.saint.id;
-  if (id === "scholastica") parts.push({ dove: true, x: A.x, y: A.y - 20, vx: 40, vy: -120, g: -40, life: 1.4, c: "#ffffff" });
+  if (id === "scholastica") parts.push({ dove: true, x: A.x + 10, y: A.y - 20, vx: Math.max(0, A.vx) + 240, vy: A.vy - 70, g: 780, life: 1.4, c: "#ffffff" });
   else if (id === "therese") for (let i = 0; i < 6; i++) parts.push({ x: A.x + 4, y: A.y - 20, vx: (rnd() - 0.5) * 80, vy: -120 - rnd() * 60, g: 160, life: 1, c: rnd() < 0.5 ? "#ff7a9a" : "#d8324a" });
   else if (id === "cecilia") for (let i = 0; i < 3; i++) parts.push({ note: true, x: A.x + (rnd() - 0.5) * 16, y: A.y - 24, vx: (rnd() - 0.5) * 60, vy: -70 - rnd() * 30, g: -10, life: 1, c: "#ffe08a" });
   else if (id === "cupertino") { A.vy = Math.min(A.vy, A.vy - 70); for (let i = 0; i < 6; i++) parts.push({ x: A.x + (rnd() - 0.5) * 20, y: A.y, vx: 0, vy: 80, g: 0, life: 0.4, c: "#fff4a0" }); }
@@ -2080,7 +2105,7 @@ function slowWanted() {
 const DEMON_AI = {
   pride: { run: 0.93, use: 0.55, err: 0.4, react: 0.35, tricks: ["front", "back", "double"], way: "biggest" },
   sloth: { run: 0.95, use: 1, err: 0.05, react: 0.45, tricks: ["quick", "front", "back"], way: "lazy" },
-  avarice: { run: 0.93, use: 0.65, err: 0.14, react: 0.25, tricks: ["quick", "front", "back", "barrel", "double"], way: "most", grabs: true },
+  avarice: { run: 0.95, use: 0.65, err: 0.14, react: 0.25, tricks: ["quick", "front", "back", "barrel", "double"], way: "most", grabs: true },
   envy: { run: 0.99, use: 0.75, err: 0.14, react: 0.22, tricks: ["quick", "front", "back", "barrel", "double", "dback"], way: "copy" },
   gluttony: { run: 0.96, use: 1, err: 0.08, react: 0.15, tricks: ["quick", "front", "back", "barrel", "double"], way: "many" },
   wrath: { run: 1.13, use: 1, err: 0.15, react: 0.12, tricks: ["front", "back", "double", "dback", "triple"], way: "biggest" },
@@ -2251,7 +2276,7 @@ function endFree() {
   const b = save.free || (save.free = { style: 0, dist: 0, combo: 0 });
   game.newStyle = game.style > b.style; game.newBest = (game.dist || 0) > b.dist;
   b.style = Math.max(b.style, game.style); b.dist = Math.max(b.dist, game.dist || 0); b.combo = Math.max(b.combo, game.bestChain);
-  store(); Snd.sting("win");
+  gainXp(100); store(); Snd.sting("win");
 }
 function finish() {
   state = "done"; Snd.stop();
@@ -2266,6 +2291,7 @@ function finish() {
   if (game.newStyle) save.style[k] = game.style;
   save.neumes[k] = Math.max(save.neumes[k] || 0, game.neumes);
   // Beat the demon, and the way into the next mansion is open, and a new trick is learned.
+  gainXp(game.won ? 300 : 100);
   if (game.won) { save.wins[k] = true; save.open = Math.max(save.open, Math.min(ZONES.length, game.zone + 2)); }
   store();
   game.newTricks = TRICKS.filter((tr) => tr.learn > game.learnedBefore && tr.learn <= learned());
@@ -2673,12 +2699,14 @@ const MOVING = {
   // Triple flip: tucked tight, arms windmilling.
   triple: (u) => { const k = Math.min(1, Math.min(u, 1 - u) * 8); return pose({ t: 0.5 * k, lL: 2.3 * k + 0.15, lR: 2.5 * k - 0.1, leg: 1 - 0.4 * k, aL: u * 14, aR: u * 14 + PI, arm: 1 + 0.3 * k }); },
 };
+// St. Scholastica throws her dove forward, ahead of her.
+const DOVE_THROW = [[0, {}], [0.15, { aR: PI / 2 + 0.5, arm: 1.6, aL: -0.7, lL: 0.4, lR: -0.35, leg: 1.15, t: 0.15 }], [0.75, { aR: PI / 2 + 0.2, arm: 1.5, aL: -0.9, lL: 0.4, lR: -0.35, leg: 1.15, t: 0.1 }], [1, {}]];
 // St. Maurus grabs his board instead: crouched, one hand down to it.
 const BOARD_GRAB = hold(0.2, 0.8, { t: 0.3, aR: 0.25, arm: 1.6, aL: -1.2, lL: 0.9, lR: 0.7, leg: 0.75 });
 function poseOf(T, s) {
   const u = clamp(T.t / T.k.dur, 0, 1), id = T.k.quick ? "flourish" : T.k.id;
   if (MOVING[id]) return MOVING[id](u);
-  const keys = T.k.quick && s.id === "maurus" ? BOARD_GRAB : POSES[id];
+  const keys = T.k.quick && s.id === "maurus" ? BOARD_GRAB : T.k.quick && s.id === "scholastica" ? DOVE_THROW : POSES[id];
   if (!keys) return pose({});
   let i = 0; while (i < keys.length - 2 && u > keys[i + 1][0]) i++;
   const [u0, a] = keys[i], [u1, b] = keys[i + 1], k = clamp((u - u0) / Math.max(0.001, u1 - u0), 0, 1), e = k * k * (3 - 2 * k);
@@ -2725,7 +2753,8 @@ function drawRig(s, p, T, t) {
   // In the near hand, what the trick wants held up.
   if (!T) return;
   const k = T.k, u = clamp(T.t / k.dur, 0, 1), lift = Math.sin(u * PI);
-  if (k.quick || k.sig) drawProp(s.id, hand[0], hand[1], p.aR, k.sig ? 1.3 : 1.15, lift, t);
+  // (St. Scholastica's dove has flown: her hand is empty.)
+  if ((k.quick && s.id !== "scholastica") || k.sig) drawProp(s.id, hand[0], hand[1], p.aR, k.sig ? 1.3 : 1.15, lift, t);
   if (k.pose === "thurible") drawProp("thurible", hand[0], hand[1], p.aR, 1.2, 1, t);
   if (k.quick && s.id === "maurus") { rect(-11, 1, 22, 2, ink); rect(-10, 0, 20, 2, "#ffcf5a"); rect(-1, 0, 2, 2, "#3a8ad0"); }
 }
@@ -3061,7 +3090,8 @@ function drawTitle(t) {
   ctx.save(); ctx.translate(W / 2 + 98, 16); ctx.transform(1, 0, -0.3, 1, 0, 0);
   text("TURBO", 0, 0, { align: "center", color: "#ff6a2a", size: 15 }); ctx.restore();
   text("through the Interior Castle", W / 2, 36, { align: "center", color: "#ffffff", size: 9, serif: true });
-  text("“I have run the way of thy commandments, when thou didst enlarge my heart.”  Psalm 118:32", W / 2, 49, { align: "center", color: "#fff0c8", size: 7, serif: true });
+  text("“I have run the way of thy commandments,", W / 2, 45, { align: "center", color: "#fff0c8", size: 7, serif: true });
+  text("when thou didst enlarge my heart.”  Psalm 118:32", W / 2, 53, { align: "center", color: "#fff0c8", size: 7, serif: true });
   // The saint doing his tricks, the demon at his shoulder doing his.
   const s = game.saint, show = TRICKS.filter((k) => knows(k) && !k.pose), k = show[Math.floor(t / 1.6) % show.length];
   drawDemon(SINS.pride, W / 2 + 46, 82 + Math.sin(t * 5) * 2, t, 1.4, Math.floor(t / 2.3) % 3 === 1 ? ((t % 2.3) / 2.3) * Math.PI * 2 : 0);
@@ -3101,9 +3131,11 @@ function drawSaints(t) {
     }
     rect(x - 1, y - 1, 60, 64, "#140c1c"); rect(x, y, 58, 62, hot ? "#e8b94a" : "#2a2240");
     drawFigure(s.look, x + 23, y + 4, Math.floor(t * 6), {});
-    // How high he jumps: a bar of gold.
-    const lh = Math.round((LEAP[s.id] - 380) / 7);
+    // How high he jumps, from practice: a bar of gold, and the level.
+    const lv = xpLevel(save.xp[s.id]), lh = Math.round((leapOf(s) - 395) / 8);
     rect(x + 4, y + 25 - lh, 4, lh, hot ? "#7a4a10" : "#ffcf5a"); text("↑", x + 6, y + 25 - lh - 8, { align: "center", size: 6, color: hot ? "#7a4a10" : "#ffcf5a", edge: null });
+    text("LV " + lv, x + 54, y + 3, { align: "right", size: 6, color: hot ? "#7a1a2e" : "#8ae86a", edge: null });
+    if (lv < 10) { const a = xpFor(lv), b = xpFor(lv + 1), f = clamp(((save.xp[s.id] || 0) - a) / (b - a), 0, 1); rect(x + 40, y + 11, 15, 2, "#00000055"); rect(x + 40, y + 11, 15 * f, 2, hot ? "#7a1a2e" : "#8ae86a"); }
     const n = s.short || s.name.replace("St. ", "");
     text(n, x + 29, y + 28, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 7 });
     text(s.double ? "double jump" : s.hold === "levitate" ? "rises" : s.hold === "surf" ? "skims gaps" : "floats", x + 29, y + 37, { align: "center", color: hot ? "#3a2a1a" : "#c8b8ff", edge: null, size: 6 });
@@ -3111,7 +3143,7 @@ function drawSaints(t) {
     text(sigOf(s).name, x + 29, y + 53, { align: "center", color: hot ? "#7a1a2e" : "#ffcf5a", edge: null, size: 6 });
     boxes.push({ x, y, w: 58, h: 62, s, i });
   });
-  text("Beat a demon to win a saint.   Gold bar: how high each jumps.", W / 2, 150, { align: "center", color: "#ffffff", size: 7 });
+  text("Beat a demon to win a saint. The more you play a saint, the higher they jump.", W / 2, 150, { align: "center", color: "#ffffff", size: 7 });
   const back = button("BACK", W / 2 - 40, 160, 80, 16, true, 8);
   for (const tp of input.taps) {
     const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
@@ -3121,6 +3153,7 @@ function drawSaints(t) {
   }
   input.taps = [];
 }
+let resetAsk = 0, resetDone = 0;
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 function drawZones(t) {
   menuSky(t);
@@ -3139,10 +3172,18 @@ function drawZones(t) {
       const b = save.best[Z.id];
       text(save.wins[Z.id] ? "WON " + (b ? hms(b) : "") : b ? "LOST TO " + Z.demon.name.toUpperCase() : "vs " + Z.demon.name, x + 36, y + 44, { align: "center", color: save.wins[Z.id] ? "#fff4a0" : "#fff0c8", size: 6 });
       if (save.style[Z.id]) text("STYLE " + commas(save.style[Z.id]), x + 36, y + 52, { align: "center", color: "#c8f0ff", size: 6 });
-    } else text("beat the demon before", x + 36, y + 34, { align: "center", color: "#c8b8ff", size: 6, edge: null });
+    } else { text("beat the demon", x + 36, y + 32, { align: "center", color: "#c8b8ff", size: 6, edge: null }); text("before this one", x + 36, y + 40, { align: "center", color: "#c8b8ff", size: 6, edge: null }); }
     boxes.push({ x, y, w: 72, h: 60, i, open });
   });
   const back = button("BACK", W / 2 - 40, 152, 80, 18, false);
+  const sure = resetAsk > clock, reset = button(sure ? "TAP AGAIN TO ERASE ALL" : "RESET PROGRESS", sure ? 4 : 6, 154, sure ? 112 : 78, 14, false, 6);
+  if (resetDone > clock) text("Progress erased. Start again from the Novitiate.", W / 2, 143, { align: "center", color: "#ff8a7a", size: 7 });
+  for (const tp of input.taps) if (tp.x !== undefined && inBox(tp, reset)) {
+    if (sure) { resetProgress(); game.saint = SAINTS.find(saintOpen); resetAsk = 0; Snd.sfx("hurt"); resetDone = clock + 2.5; }
+    else { resetAsk = clock + 3; Snd.sfx("select"); }
+    tp.used = true;
+  }
+  input.taps = input.taps.filter((tp) => !tp.used);
   for (const tp of input.taps) {
     const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
     if (b && b.open) { Snd.sfx("select"); startZone(b.i); }
@@ -3382,7 +3423,8 @@ addEventListener("pointermove", (ev) => {
   if (Math.hypot(dx, dy) < SWIPE) return;
   q.ax = p.x; q.ay = p.y;
   if (!airborne()) return;
-  swipe(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : dy > 0 ? "D" : "U");
+  q.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : dy > 0 ? "D" : "U";
+  swipe(q.dir);
   q.swiped = true; held();
 });
 const release = (ev) => {
@@ -3396,6 +3438,12 @@ addEventListener("pointerup", release); addEventListener("pointercancel", releas
 addEventListener("contextmenu", (e) => e.preventDefault());
 const JUMP_KEYS = ["Space", "ArrowUp", "KeyW", "KeyZ"], RUSH_KEYS = ["ArrowRight", "KeyD", "KeyX"];
 const KEY_DIRS = { ArrowUp: "U", ArrowDown: "D", ArrowLeft: "L", ArrowRight: "R" };
+// Is the swipe in this direction still held: its finger still down, or its arrow key?
+function dirHeld(d) {
+  for (const [code, k] of Object.entries(KEY_DIRS)) if (k === d && keys.has(code)) return true;
+  for (const q of pointers.values()) if (q.dir === d) return true;
+  return false;
+}
 const keys = new Set();
 addEventListener("keydown", (e) => {
   Snd.init();
@@ -3453,7 +3501,7 @@ if (Q.has("unlock")) window.__unlock = true;
 if (Q.has("saint")) game.saint = SAINTS[+Q.get("saint")] || game.saint;
 if (Q.has("zone")) startZone(+Q.get("zone") - 1);
 if (Q.has("novice")) startTutorial();
-window.RW = { get cam() { return cam; }, get P() { return P; }, get D() { return D; }, get level() { return level; }, get state() { return state; }, set state(v) { state = v; }, get game() { return game; }, get tutor() { return tutor; }, get slow() { return slow; },
+window.RW = { get parts() { return parts; }, get cam() { return cam; }, get P() { return P; }, get D() { return D; }, get level() { return level; }, get state() { return state; }, set state(v) { state = v; }, get game() { return game; }, get tutor() { return tutor; }, get slow() { return slow; },
   set poseU(v) { poseU = v; }, input, startZone, startTutorial, startFree, endFree, swipe, predictLand, step(dt) { if (state === "play") tick(dt); }, ZONES, SAINTS, TRICKS, get save() { return save; }, learned };
 
 Snd.on = save.sound !== false;
