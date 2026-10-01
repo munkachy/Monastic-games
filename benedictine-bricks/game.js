@@ -360,7 +360,8 @@ let bubble = null;
 let banner = null;
 let tierPopup = null;
 let camY = 0;
-let towerTop = FOUND_Y;
+let towerTop = FOUND_Y;   // top of the standing tower: stones at rest only (for the score)
+let stackTop = FOUND_Y;   // top of everything laid, settled or not (for the camera and the falling stone)
 let mode = "title";       // title | play | paused | over | shop
 let time = 0;
 let blessAnim = 0;
@@ -469,6 +470,7 @@ function newTower() {
   banner = null;
   tierPopup = null;
   towerTop = FOUND_Y;
+  stackTop = FOUND_Y;
   camY = cameraTarget();
   effects = [];
   demon.present = false;
@@ -510,7 +512,8 @@ function spawn() {
   const tile = curse === "huge" ? TILE * HUGE_FACTOR : TILE;
   const x = VIEW_W / 2;
   // Start well above the tower, but not so far that the wait is tedious.
-  const y = Math.max(camY + VIEW_H * 0.12, towerTop - 380);
+  // Well above the top of the tower, always with a long fall below it, and on screen.
+  const y = Math.min(stackTop - 320, Math.max(camY + VIEW_H * 0.1, stackTop - Math.max(440, VIEW_H * 0.4)));
   const material = STONE;
   const parts = shape.cells.map(([cx, cy]) =>
     Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
@@ -1004,6 +1007,15 @@ function gameLogic(dt) {
     if (still && body.bounds.min.y < towerTop) towerTop = body.bounds.min.y;
   }
   height = Math.max(0, (FOUND_Y - towerTop) / TILE);
+  // The camera follows every stone laid, settled or still settling, so a tower
+  // that sways never makes the view drop away. It rises at once and falls slowly.
+  let top = FOUND_Y;
+  for (const body of landed) {
+    if (body.position.y > FOUND_Y + TILE * 2 || body.velocity.y > 4) continue;
+    if (body.bounds.min.y < top) top = body.bounds.min.y;
+  }
+  top = Math.min(top, towerTop);
+  stackTop = top < stackTop ? top : stackTop + Math.min(top - stackTop, 120 * dt);
   stats.height = Math.max(stats.height, height);
   if (stats.rotations === 0) stats.heightNoTurn = Math.max(stats.heightNoTurn, height);
   if (lost === 0) stats.heightNoLoss = Math.max(stats.heightNoLoss, height);
@@ -1017,7 +1029,7 @@ function gameLogic(dt) {
     tier = reached;
     multiplier = tier + 1;
     prayer = Math.min(prayerMax, prayer + PRAYER_PER_TIER);
-    tierPopup = { level: tier + 1, t: 2.6, y: towerTop - 40 };
+    tierPopup = { level: tier + 1, t: 2.6, y: stackTop - 40 };
     Sound.play("tier");
     Sound.setIntensity(Math.min(2, tier));
   }
@@ -1034,7 +1046,9 @@ function gameLogic(dt) {
     if (spawnTimer <= 0) spawn();
   }
 
-  camY += (cameraTarget() - camY) * Math.min(1, dt * 3);
+  // Up quickly, so the falling stone always has room; down gently.
+  const camGoal = cameraTarget();
+  camY += (camGoal - camY) * Math.min(1, dt * (camGoal < camY ? 5 : 2));
   updateHud();
 }
 
@@ -1063,7 +1077,7 @@ function startFinale() {
   let top = null;
   for (const body of landed) if (!top || body.bounds.min.y < top.bounds.min.y) top = body;
   const x = top ? top.position.x : VIEW_W / 2;
-  const topY = top ? Math.min(top.bounds.min.y, towerTop) : towerTop;
+  const topY = top ? Math.min(top.bounds.min.y, stackTop) : stackTop;
   const [, h] = artSize(images.roof, ROOF_PX);
   finale = { t: 0, x, fromY: camY - h, toY: topY - h + 6, startFocus: camY + VIEW_H / 2 };
 }
@@ -1071,13 +1085,13 @@ function startFinale() {
 function updateFinale(dt) {
   finale.t += dt;
   // Pull back until the whole tower, foundation to roof, fits on screen.
-  const towerSpan = GROUND_Y + 40 - (towerTop - 140);
+  const towerSpan = GROUND_Y + 40 - (stackTop - 140);
   const fit = Math.min(1, (VIEW_H * 0.85) / towerSpan);
   const p = Math.min(1, Math.max(0, (finale.t - 1) / 1.3));
   const ease = p * p * (3 - 2 * p);
   zoom = 1 + (fit - 1) * ease;
   // Centre on the tower, but never show more ground below it than play does.
-  const target = Math.min((towerTop - 140 + GROUND_Y + 40) / 2, GROUND_Y + 40 - VIEW_H / (2 * fit));
+  const target = Math.min((stackTop - 140 + GROUND_Y + 40) / 2, GROUND_Y + 40 - VIEW_H / (2 * fit));
   focusY = finale.startFocus + (target - finale.startFocus) * ease;
   if (finale.t > 3.6) finish();
 }
@@ -1125,7 +1139,7 @@ function updateDemon(dt) {
   }
   // Hover back and forth above the building site.
   demon.x = VIEW_W / 2 + Math.sin(time * 0.9) * (VIEW_W / 2 - 110);
-  demon.y = Math.max(camY + VIEW_H * 0.1, towerTop - 520) + Math.sin(time * 2.3) * 12;
+  demon.y = Math.max(camY + VIEW_H * 0.1, stackTop - 520) + Math.sin(time * 2.3) * 12;
 }
 
 function updateBubble(dt) {
@@ -1228,7 +1242,7 @@ const SKY_FONT = 34;
 function setSkyVerse(index) {
   skyVerseIndex = index;
   const [text, ref] = SKY_VERSES[index % SKY_VERSES.length];
-  const width = 520;
+  const width = 470;
   const c = document.createElement("canvas").getContext("2d");
   c.font = "bold " + SKY_FONT + "px Georgia, 'Times New Roman', serif";
   const lines = [];
@@ -1392,7 +1406,7 @@ $("title-shop").addEventListener("click", openShop);
 // then keep the top of the tower a little below the middle of the screen.
 function cameraTarget() {
   const rest = MIN_VIEW_H - VIEW_H;
-  return Math.min(rest, towerTop - VIEW_H * TOWER_TOP_AT);
+  return Math.min(rest, stackTop - VIEW_H * TOWER_TOP_AT);
 }
 
 // How far the camera has climbed above its resting place (zero or negative).
