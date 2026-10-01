@@ -27,7 +27,7 @@ const Story = (() => {
     heschmeyer: "Joe Heschmeyer", hahn: "Scott Hahn", oconnor: "Alex O'Connor", ryan: "Ryan (NeedGod.net)", white: "James White",
     hansen: "Jacob Hansen", speaker: "Speakers' Corner Champion", elder: "Elder Missionary", skeptic: "Skeptic Streamer",
     preacher: "Street Preacher", seminarian: "Seminarian", martins: "Fr. Carlos Martins", witch: "WitchTok Influencer",
-    destiny: "Destiny", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", ehrman: "Bart Ehrman", pitre: "Brant Pitre", wetta: "Fr. Augustine", scroller: "Doomscroller", shrugger: "Nothing in Particular", master: "Master of None", student: "Religion 101 Student", mythicist: "Mythicist YouTuber", "": "",
+    destiny: "Destiny", schmid: "Joe Schmid", tarot: "Tarot Reader", crystal: "Crystal Healer", creator: "Content Creator", activist: "Campus Activist", zember: "Kim Zember", pastor: "Affirming Pastor", ally: "Campus Ally", podcaster: "Deconstruction Podcaster", ehrman: "Bart Ehrman", pitre: "Brant Pitre", wetta: "Fr. Augustine", scroller: "Doomscroller", shrugger: "Nothing in Particular", master: "Master of None", student: "Religion 101 Student", mythicist: "Mythicist YouTuber", "": "",
   };
 
   // ---- The chapters ------------------------------------------------------------------
@@ -699,7 +699,7 @@ const Story = (() => {
     let single = false;
     function open(id, sceneIndex, only) {
       single = !!only;
-      chapter = CHAPTERS.find((c) => c.id === id) || CHAPTERS[0];
+      chapter = (id.startsWith("crucible:") && CRUCIBLE.find((c) => "crucible:" + c.id === id)) || CHAPTERS.find((c) => c.id === id) || CHAPTERS[0];
       scene = sceneIndex || 0; line = 0; page = 0; lineStart = now;
       for (const k in entered) delete entered[k];
     }
@@ -715,5 +715,11 @@ const Story = (() => {
     };
   }
 
-  return { create, CHAPTERS, NAMES, setVars };
+  // The Crucible stories (crucible.js): a new story for each chapter on the
+  // hardest setting. Opened as "crucible:" + the chapter's id.
+  const CRUCIBLE = [];
+  function addCrucible(list) { CRUCIBLE.push(...list); }
+  const hasCrucible = (id) => CRUCIBLE.some((c) => c.id === id);
+
+  return { create, CHAPTERS, CRUCIBLE, NAMES, setVars, addCrucible, hasCrucible };
 })();
