@@ -245,7 +245,8 @@ held high; and the Te Deum is everything at once. In the air, tap the right
 side for each saint's quick flourish, holding up what that saint carries
 (St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
 St. Lucy her lamp; St. Maurus grabs his board), or swipe anywhere, up, down, left and right, for
-the others: ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
+the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
+genuflection in the air, a single ← a heel click; ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
 ↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
 light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
 incense), ↓↓↑↑← each saint's own trick (which drives the demon back), ↑↑↑↑
@@ -263,6 +264,14 @@ Alleluia, Hosanna, and the saint sings out the word in a little voice of
 his own, high or low. Each saint cries out at his own trick ("Vade retro!",
 "Tolle, lege!", "Tu es Petrus!", "Viriditas!", "Lux!"). The demon growls
 his taunts. Harder tricks make a faster and a longer surge.
+
+**The book of combos.** Every chain of two or more tricks landed is written
+down in order, with how many times it has been landed and its best score.
+The records are kept too: the longest chain ever and the best combo ever.
+A new combo, or a new record, is announced the moment it is landed, and the
+end of each race counts the new combos found. The book is the COMBOS page of
+the book of tricks. Between tricks, in plain flight, the saint jumps with
+knees up and arms back, and comes down with arms out.
 
 **The demon.** He runs the same way by the same rules: round the loops,
 along the rails, off the ramps and up on the wind, doing tricks in the air

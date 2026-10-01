@@ -872,7 +872,7 @@ function drawFigure(L, x, y, f, opt) {
 // For each mansion: best time, best style, most neumes, and whether its demon
 // has been beaten. `open` is how many mansions may be entered. `tutorial`:
 // the Novitiate is done. `done`: the tricks landed at least once.
-let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {} };
+let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] } };
 try {
   const old = JSON.parse(localStorage.getItem("run-the-way") || "{}");
   // The first Run the Way had six zones of the Psalms; keep only the saint and the sound.
@@ -1026,6 +1026,9 @@ const NOVITIATE = { id: "novitiate", num: "The Novitiate", name: "Ausculta", son
 // in the air is read as a swipe to the right.)
 const TRICKS = [
   { id: "flourish", keys: "R", quick: true, name: "Flourish", dur: 0.3, pts: 100, boost: 0.12, learn: 0, about: "One tap, for a little air: each saint has his own." },
+  { id: "leap", keys: "U", name: "Leap of Joy", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe up: a star jump, arms high and legs wide, as David danced before the ark." },
+  { id: "kneel", keys: "D", name: "Genuflection", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe down: down on one knee in the air, hands joined, as before the tabernacle." },
+  { id: "heel", keys: "L", name: "Heel Click", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "One swipe left: both heels kicked up behind and clicked together, for joy." },
   { id: "front", keys: "UU", name: "Front Flip", rot: Math.PI * 2, dur: 0.45, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, forward." },
   { id: "back", keys: "DD", name: "Back Flip", rot: -Math.PI * 2, dur: 0.5, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, backward." },
   { id: "barrel", keys: "DU", name: "Barrel Roll", roll: true, dur: 0.55, pts: 400, boost: 0.45, learn: 1, about: "Turn over sideways in the air." },
@@ -1412,7 +1415,7 @@ function startTutorial() { begin(buildNovitiate(), -1); }
 function startFree() { begin(buildFree(Math.floor(Math.random() * 1e6)), -2); }
 function begin(lv, zi) {
   level = lv; game.zone = zi; game.tutorial = zi === -1; game.free = zi === -2;
-  Object.assign(game, { time: 0, neumes: 0, style: 0, bestChain: 0, count: game.tutorial || game.free ? 0 : COUNT, dist: 0, demonTime: 0, won: false, learnedBefore: learned(), newTricks: [], newSaints: [], lastChain: [], stolen: 0 });
+  Object.assign(game, { time: 0, neumes: 0, style: 0, bestChain: 0, count: game.tutorial || game.free ? 0 : COUNT, dist: 0, demonTime: 0, won: false, learnedBefore: learned(), newTricks: [], newSaints: [], newCombos: [], lastChain: [], stolen: 0 });
   P = newRunner(40, true);
   level.check = { x: 40, y: P.y };
   // The demon starts beside him.
@@ -1906,9 +1909,27 @@ function landTricks(A) {
     // A saint's own trick, landed: the demon reels back.
     D.gsp = Math.min(D.gsp, 120); D.surge = 0; D.stun = 1; label(D, "VADE RETRO!", "#ffffff"); pop("THE DEMON REELS BACK", "#ff9ab0", 8);
   }
+  recordCombo(A.chain, pts);
   if (n >= 3 || pts >= 2500) say("combo", 0.5);
   lessonEvent("land", { n, ids, perfect });
   A.chain = [];
+}
+// The book of combos: every chain of two or more tricks landed, in order,
+// how often, and its best score; and the records: the longest chain and the
+// best combo ever. Anything new is announced as it is landed.
+function recordCombo(chain, pts) {
+  const ids = chain.map((e) => e.id), names = chain.map((e) => e.name), R = save.rec, news = [];
+  if (ids.length >= 2) {
+    const key = ids.join(">"), c = save.combos[key];
+    if (!c) { save.combos[key] = { names, n: 1, best: pts, at: Date.now() }; game.newCombos.push(names); news.push(["NEW COMBO!", names.join(" + ")]); }
+    else { c.n++; c.names = names; if (pts > c.best) c.best = pts; }
+  }
+  if (ids.length >= 2 && ids.length > R.longest) { if (R.longest) news.push(["LONGEST CHAIN EVER: " + ids.length + " TRICKS", null]); R.longest = ids.length; }
+  if (pts > R.best) { if (R.best) news.push(["BEST COMBO EVER: " + commas(pts), null]); R.best = pts; R.bestNames = names; }
+  if (!news.length) return;
+  store();
+  setTimeout(() => news.forEach(([a, b], i) => setTimeout(() => pop(a, "#8ae86a", 10, b), i * 500)), 600);
+  if (news.length) Snd.sfx("gift");
 }
 // Down on his head, or his back: a crash. He tumbles, slows, loses the combo and the surge.
 function crash(A) {
@@ -2585,7 +2606,12 @@ function drawSaint(A, t) {
   if (A.crash > 0) rot = -Math.PI / 2 + Math.sin(A.crash * 20) * 0.2;
   ctx.translate(0, -11); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(0, 11);
   if (T) drawRig(s, poseOf(T, s), T, t);
-  else {
+  else if (A.mode === "air" && !A.crash) {
+    // Jumping and falling: knees up and arms back going up, arms out and legs long coming down.
+    const k = clamp(0.5 - A.vy / 900, 0, 1), up = pose({ aL: -1.3, aR: 0.9, lL: 1.3, lR: 0.5, leg: 0.85, t: 0.1 }), down = pose({ aL: -1.9, aR: 1.9, arm: 1.15, lL: 0.35, lR: -0.3, leg: 1.1, t: -0.05 }), p = {};
+    for (const key in up) p[key] = down[key] + (up[key] - down[key]) * k;
+    drawRig(s, p, null, t);
+  } else {
     const ground = A.mode === "ground" && !A.crash, wheel = ground && A.surge > 0;
     // Running: the faster, the quicker the steps, up to a point.
     const rate = ground ? Math.min(16, 6 + sp / 40) : 0;
@@ -2617,6 +2643,10 @@ const hold = (a, b, p) => [[0, {}], [a, p], [b, p], [1, {}]];
 const POSES = {
   // The flourish: the thing he carries, held up high, legs kicked apart.
   flourish: hold(0.25, 0.8, { aR: PI - 0.1, aL: PI + 0.5, arm: 1.4, lL: 0.6, lR: -0.5, leg: 1.2 }),
+  // The one-swipe moves: a star jump; a genuflection, hands joined; a heel click.
+  leap: hold(0.2, 0.8, { aL: PI - 0.65, aR: PI + 0.65, arm: 1.35, lL: 0.95, lR: -0.95, leg: 1.35 }),
+  kneel: hold(0.2, 0.8, { t: 0.2, aL: 1.05, aR: 1.2, arm: 0.9, lL: 1.55, lR: -0.35, leg: 0.95 }),
+  heel: hold(0.2, 0.8, { t: 0.1, aL: -1.0, aR: PI - 0.3, arm: 1.3, lL: -1.25, lR: -1.45, leg: 1.2 }),
   // Front flip: a tight tuck, knees to the chest.
   front: hold(0.18, 0.8, TUCK),
   // Back flip: laid out straight, arms flung back, legs long.
@@ -2693,6 +2723,7 @@ function drawRig(s, p, T, t) {
   limb(hip[0], hip[1], p.lR, legLen, 3, legC, ink, 4, 2.5);
   const hand = limb(sh[0], sh[1], p.aR, armLen, 2.6, L.robe, L.skin, 3, 3);
   // In the near hand, what the trick wants held up.
+  if (!T) return;
   const k = T.k, u = clamp(T.t / k.dur, 0, 1), lift = Math.sin(u * PI);
   if (k.quick || k.sig) drawProp(s.id, hand[0], hand[1], p.aR, k.sig ? 1.3 : 1.15, lift, t);
   if (k.pose === "thurible") drawProp("thurible", hand[0], hand[1], p.aR, 1.2, 1, t);
@@ -3120,19 +3151,51 @@ function drawZones(t) {
   input.taps = [];
 }
 // The book of tricks: every one, how it is swiped, what it is worth, and when it is learned.
-let bookSel = 1, bookBack = "title";
+let bookSel = 1, bookBack = "title", bookPage = 0, comboTop = 0;
+// The combos found so far, best first.
+const comboList = () => Object.values(save.combos).sort((a, b) => b.best - a.best);
+function drawCombos(t) {
+  const R = save.rec, list = comboList();
+  text("Combos found: " + list.length + "    Longest chain: " + (R.longest || 0) + " tricks    Best combo: " + commas(R.best || 0), W / 2, 17, { align: "center", size: 7, color: "#c8f0ff" });
+  if (R.bestNames && R.bestNames.length) text("Best: " + R.bestNames.join(" + "), W / 2, 27, { align: "center", size: 6, color: "#fff4a0" });
+  if (!list.length) wrapText("No combos yet. Do two or more tricks in one jump and land them: each new chain is written here, with how often you have landed it and its best score.", 8, 260, true).forEach((l, i) => text(l, W / 2, 60 + i * 11, { align: "center", size: 8, serif: true, color: "#ffffff" }));
+  const per = 11;
+  comboTop = clamp(comboTop, 0, Math.max(0, list.length - per));
+  list.slice(comboTop, comboTop + per).forEach((c, i) => {
+    const y = 38 + i * 10.5, s = c.names.join(" + ");
+    text((comboTop + i + 1) + ".", 14, y, { size: 6, align: "right", color: "#7a6a9a" });
+    text(s.length > 62 ? s.slice(0, 60) + "…" : s, 18, y, { size: 6, color: "#ffffff" });
+    text("×" + c.n, 268, y, { size: 6, align: "right", color: "#c8b8ff" });
+    text(commas(c.best), 308, y, { size: 6, align: "right", color: "#ffe08a" });
+  });
+  if (list.length > per) text((comboTop + 1) + "–" + Math.min(list.length, comboTop + per) + " of " + list.length + "  (▲ ▼)", W / 2, 155, { align: "center", size: 6, color: "#c8b8ff" });
+}
 function drawBook(t) {
   menuSky(t);
   rect(0, 0, W, H, "#140c1c88");
-  text("THE BOOK OF TRICKS", W / 2, 2, { align: "center", color: "#ffe08a", size: 11 });
+  const tabT = button("TRICKS", 6, 2, 60, 12, bookPage === 0, 7), tabC = button("COMBOS", 70, 2, 60, 12, bookPage === 1, 7);
+  text(bookPage ? "THE BOOK OF COMBOS" : "THE BOOK OF TRICKS", W / 2 + 70, 2, { align: "center", color: "#ffe08a", size: 10 });
+  if (bookPage === 1) {
+    drawCombos(t);
+    const up = button("▲", 6, 160, 30, 16, false, 8), dn = button("▼", 40, 160, 30, 16, false, 8), back = button("BACK", W / 2 + 50, 158, 70, 16, true, 8);
+    for (const tp of input.taps) {
+      if (tp.x !== undefined && inBox(tp, tabT)) bookPage = 0;
+      else if ((tp.x !== undefined && inBox(tp, up)) || tp.key === "ArrowUp") comboTop -= 5;
+      else if ((tp.x !== undefined && inBox(tp, dn)) || tp.key === "ArrowDown") comboTop += 5;
+      else if (tp.key === "ArrowLeft" || tp.key === "ArrowRight" || tp.key === "Tab") bookPage = 0;
+      else if (tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, back))) state = bookBack;
+    }
+    input.taps = [];
+    return;
+  }
   const rows = [];
   TRICKS.forEach((k, i) => {
-    const y = 17 + i * 11.5, on = knows(k), hot = i === bookSel;
-    if (hot) rect(4, y - 1, 168, 11, "#e8b94a55");
+    const y = 17 + i * 9.6, on = knows(k), hot = i === bookSel;
+    if (hot) rect(4, y - 1, 168, 9.6, "#e8b94a55");
     text(k.quick ? "tap" : arrows(k.keys), 8, y, { size: 7, color: on ? "#ffe08a" : "#7a6a9a" });
     text(nameOf(k, P), 64, y, { size: 7, color: on ? "#ffffff" : "#7a6a9a" });
     text(on ? String(k.pts) : "locked", 170, y, { size: 6, align: "right", color: on ? "#c8f0ff" : "#7a6a9a" });
-    rows.push({ x: 4, y: y - 1, w: 168, h: 11, i });
+    rows.push({ x: 4, y: y - 1, w: 168, h: 9.6, i });
   });
   // The one chosen: shown, and described.
   const k = TRICKS[bookSel], on = knows(k);
@@ -3147,10 +3210,11 @@ function drawBook(t) {
   text(k.pts + " points · " + k.dur.toFixed(2) + "s in the air", 246, 132, { align: "center", size: 6, color: "#c8f0ff" });
   if (!on) text("Beat the demon of " + ZONES[k.learn - 1].demon.name + " to learn it", 246, 141, { align: "center", size: 6, color: "#ff9a7a" });
   const back = button("BACK", W / 2 + 50, 158, 70, 16, true, 8);
-  text("Tricks in one jump make a combo: points × tricks.", 90, 162, { align: "center", size: 6, color: "#ffffff" });
+  text("A combo pays points × tricks.", 246, 147, { align: "center", size: 6, color: "#ffffff" });
   for (const tp of input.taps) {
     const r = tp.x !== undefined && rows.find((q) => inBox(tp, q));
     if (r) { bookSel = r.i; Snd.sfx("select"); }
+    else if ((tp.x !== undefined && inBox(tp, tabC)) || tp.key === "ArrowLeft" || tp.key === "ArrowRight" || tp.key === "Tab") { bookPage = 1; comboTop = 0; Snd.sfx("select"); }
     else if (tp.key === "ArrowDown") bookSel = (bookSel + 1) % TRICKS.length;
     else if (tp.key === "ArrowUp") bookSel = (bookSel + TRICKS.length - 1) % TRICKS.length;
     else if (tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, back))) state = bookBack;
@@ -3179,7 +3243,7 @@ function drawDone(t) {
     text("FREESTYLE", W / 2, 8, { align: "center", color: "#ffe08a", size: 14 });
     text("STYLE " + commas(game.style) + (game.newStyle ? "  NEW BEST!" : "  best " + commas(b.style)), W / 2, 34, { align: "center", color: game.newStyle ? "#8ae86a" : "#c8f0ff", size: 9 });
     text(commas(game.dist || 0) + " PACES" + (game.newBest ? "  NEW BEST!" : "  best " + commas(b.dist)) + "   ·   " + hms(game.time), W / 2, 48, { align: "center", color: game.newBest ? "#8ae86a" : "#ffffff", size: 8 });
-    text("BEST COMBO " + commas(game.bestChain) + "   ·   NEUMES " + game.neumes, W / 2, 60, { align: "center", color: "#ffcf5a", size: 8 });
+    text("BEST COMBO " + commas(game.bestChain) + "   ·   NEUMES " + game.neumes + (game.newCombos.length ? "   ·   NEW COMBOS " + game.newCombos.length : ""), W / 2, 60, { align: "center", color: "#ffcf5a", size: 8 });
     raceVerse(true, 84);
     const again = button("AGAIN", W / 2 - 104, 128, 100, 20, true), menu = button("TITLE", W / 2 + 4, 128, 100, 20, false);
     for (const tp of input.taps) {
@@ -3201,7 +3265,7 @@ function drawDone(t) {
   }
   text("TIME " + hms(game.time) + (game.newBest ? "  NEW BEST!" : save.best[k] ? "  best " + hms(save.best[k]) : ""), W / 2, 53, { align: "center", color: game.newBest ? "#8ae86a" : "#ffffff", size: 8 });
   text("STYLE " + commas(game.style) + (game.newStyle ? "  NEW BEST!" : "  best " + commas(save.style[k] || 0)) + "   ·   BEST COMBO " + commas(game.bestChain), W / 2, 64, { align: "center", color: game.newStyle ? "#8ae86a" : "#c8f0ff", size: 8 });
-  text("NEUMES " + game.neumes + (game.stolen ? "   (Avarice stole " + game.stolen + ")" : ""), W / 2, 75, { align: "center", color: "#ffcf5a", size: 7 });
+  text("NEUMES " + game.neumes + (game.stolen ? "   (Avarice stole " + game.stolen + ")" : "") + (game.newCombos.length ? "   ·   NEW COMBOS " + game.newCombos.length : ""), W / 2, 75, { align: "center", color: "#ffcf5a", size: 7 });
   if (game.newTricks.length) {
     // A new trick learned: shown, with how to do it.
     const nk = game.newTricks[0];
@@ -3375,9 +3439,9 @@ let poseU = 0.5;
 function drawPoses() {
   rect(0, 0, W, H, "#2a2240");
   TRICKS.forEach((k, i) => {
-    const x = 26 + (i % 6) * 53, y = 70 + Math.floor(i / 6) * 86, R = demoRunner(x, y, null, 0);
+    const x = 26 + (i % 6) * 53, y = 52 + Math.floor(i / 6) * 60, R = demoRunner(x, y, null, 0);
     R.mode = "air"; R.trick = { k, t: k.dur * poseU };
-    ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1.6); ctx.translate(-x, -y); drawSaint(R, 1); ctx.restore();
+    ctx.save(); ctx.translate(x, y); ctx.scale(1.3, 1.3); ctx.translate(-x, -y); drawSaint(R, 1); ctx.restore();
     text(nameOf(k, P).slice(0, 13), x, y + 8, { align: "center", size: 6 });
   });
 }
