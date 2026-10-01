@@ -1642,12 +1642,28 @@ let selectIndex = save.saint || 0, psalmIndex = 0, bookIndex = 0;
 function newPlayer(s) {
   return { x: 0, y: GROUND - 22, w: 10, h: 22, vy: 0, ground: true, float: s.floatTime, jumps: s.double ? 2 : 1, hearts: s.hearts, inv: 0, cd: 0, f: 0, ft: 0, floating: false, shield: 0, reach: 0 };
 }
+// Every stretch of world is half again as long as it was first built: the
+// stretch itself, then the first half of a fresh building of the same place
+// joined on after it (cut at the seam, so nothing overlaps).
+const LONGER = 1.5;
+function longer(P, r1, r2) {
+  const L = P.len, more = L * (LONGER - 1);
+  const a = P.build(r1), b = P.build(r2);
+  const segs = [], plats = [], ents = [];
+  for (const s of a.segs) if (s.x0 < L) segs.push(Object.assign({}, s, { x1: Math.min(s.x1, L) }));
+  for (const s of b.segs) if (s.x1 > 0 && s.x0 < more + 300) segs.push(Object.assign({}, s, { x0: Math.max(s.x0, 0) + L, x1: s.x1 + L }));
+  for (const q of a.plats) if (q.x0 < L) plats.push(Object.assign({}, q, { x1: Math.min(q.x1, L) }));
+  for (const q of b.plats) if (q.x1 > 0 && q.x0 < more + 300) plats.push(Object.assign({}, q, { x0: Math.max(q.x0, 0) + L, x1: q.x1 + L }));
+  for (const e of a.ents) if (e.x < L - 60) ents.push(e);
+  for (const e of b.ents) if (e.x >= 60 && e.x < more) { e.x += L; if (e.wait !== undefined) e.wait += L; ents.push(e); }
+  return { segs, plats, ents, len: L * LONGER };
+}
 function startPhase(pi, ph, keepHearts) {
   game.psalm = pi; game.phase = ph;
   const P = phasesOf(pi)[ph];
   Snd.play(P.song);
-  const built = P.build(rng(pi * 100 + ph * 7 + 3));
-  world = { P, segs: built.segs, plats: built.plats, ents: built.ents, t: 0 };
+  const built = longer(P, rng(pi * 100 + ph * 7 + 3), rng(pi * 100 + ph * 7 + 51));
+  world = { P, len: built.len, segs: built.segs, plats: built.plats, ents: built.ents, t: 0 };
   const hearts = player && keepHearts ? player.hearts : game.saint.hearts;
   const shield = player && keepHearts ? player.shield : 0;
   player = newPlayer(game.saint); player.hearts = hearts; player.shield = shield;
@@ -1715,23 +1731,23 @@ function attack(kind) {
   player.cd = s.cd; player.reach = 0.15;
   if (window.__kinds) window.__kinds[kind] = (window.__kinds[kind] || 0) + 1;   // testing only
   const x = player.x + player.w, y = player.y + 8;
-  if (kind === "rose") shots.push({ kind: "rose", x, y, w: 6, h: 6, vx: 180 + world.P.speed, vy: -130, g: 420, life: 1.4, pierce: 1 });
-  if (kind === "medal") shots.push({ kind: "medal", x, y: y + 2, w: 6, h: 6, vx: 300 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 2 });
+  if (kind === "rose") shots.push({ kind: "rose", x, y, w: 6, h: 6, vx: 180 + runSpeed(), vy: -130, g: 420, life: 1.4, pierce: 1 });
+  if (kind === "medal") shots.push({ kind: "medal", x, y: y + 2, w: 6, h: 6, vx: 300 + runSpeed(), vy: 0, g: 0, life: 1.0, pierce: 2 });
   if (kind === "ecstasy") shots.push({ kind: "ring", x: player.x + 5, y: player.y + 11, r: 4, w: 0, h: 0, life: 0.35, ring: true });
-  if (kind === "wave") shots.push({ kind: "wave", x: x, y: player.y + player.h - 12, w: 14, h: 12, vx: 170 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 3 });
+  if (kind === "wave") shots.push({ kind: "wave", x: x, y: player.y + player.h - 12, w: 14, h: 12, vx: 170 + runSpeed(), vy: 0, g: 0, life: 1.0, pierce: 3 });
   if (kind === "rain") shots.push({ kind: "cloud", x: player.x + 50, y: Math.min(player.y, GROUND - 22) - 60, w: 70, h: 160, vx: world.P.speed, vy: 0, g: 0, life: 1.4, pierce: 99, rain: true, tick: 0 });
   // St. Hildegard: a seed, thrown in an arc, that roots where it lands.
-  if (kind === "seed") shots.push({ kind: "seed", x, y, w: 5, h: 5, vx: 140 + world.P.speed, vy: -150, g: 520, life: 1.6, pierce: 1 });
+  if (kind === "seed") shots.push({ kind: "seed", x, y, w: 5, h: 5, vx: 140 + runSpeed(), vy: -150, g: 520, life: 1.6, pierce: 1 });
   // St. Cecilia: a note that rides a wave through the air, and sounds.
-  if (kind === "note") { shots.push({ kind: "note", x, y, base: y, age: 0, w: 7, h: 8, vx: 210 + world.P.speed, vy: 0, g: 0, life: 1.1, pierce: 2, pitch: Math.floor(Math.random() * 3) }); Snd.note(); }
+  if (kind === "note") { shots.push({ kind: "note", x, y, base: y, age: 0, w: 7, h: 8, vx: 210 + runSpeed(), vy: 0, g: 0, life: 1.1, pierce: 2, pitch: Math.floor(Math.random() * 3) }); Snd.note(); }
   // St. Peter: a rock, heavy, that bounces once and rolls on.
-  if (kind === "rock") shots.push({ kind: "rock", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -170, g: 650, life: 1.6, pierce: 2, heavy: true, bounces: 1 });
+  if (kind === "rock") shots.push({ kind: "rock", x, y, w: 7, h: 7, vx: 150 + runSpeed(), vy: -170, g: 650, life: 1.6, pierce: 2, heavy: true, bounces: 1 });
   // St. Augustine: a flaming heart that seeks the nearest foe.
-  if (kind === "heart") shots.push({ kind: "heart", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -30, g: 0, life: 1.8, pierce: 1, seek: true });
+  if (kind === "heart") shots.push({ kind: "heart", x, y, w: 7, h: 7, vx: 150 + runSpeed(), vy: -30, g: 0, life: 1.8, pierce: 1, seek: true });
   // St. Lucy: an eye that flies ahead, stops, and keeps watch.
-  if (kind === "eye") shots.push({ kind: "eye", x, y: y - 6, w: 8, h: 8, vx: 230 + world.P.speed, vy: 0, g: 0, life: 3, pierce: 0, watch: true, tick: 0, beam: null });
+  if (kind === "eye") shots.push({ kind: "eye", x, y: y - 6, w: 8, h: 8, vx: 230 + runSpeed(), vy: 0, g: 0, life: 3, pierce: 0, watch: true, tick: 0, beam: null });
   // Our Lord: the cross, full of light. Nothing stands against it.
-  if (kind === "cross") shots.push({ kind: "cross", x, y: y - 4, w: 9, h: 13, vx: 240 + world.P.speed, vy: 0, g: 0, life: 1.3, pierce: 99, holy: true });
+  if (kind === "cross") shots.push({ kind: "cross", x, y: y - 4, w: 9, h: 13, vx: 240 + runSpeed(), vy: 0, g: 0, life: 1.3, pierce: 99, holy: true });
   if (kind !== "note") Snd.sfx(kind === "ecstasy" || kind === "rain" ? "shield" : "throw");
 }
 // What even the cross leaves standing: the ground itself, fire below and the teeth above.
@@ -1830,6 +1846,14 @@ function autoMove(dt) {
   }
 }
 
+// The saint's pace now, with any rush.
+const runSpeed = () => world.P.speed * (1 + ((player && player.rush) || 0));
+// At speed, a frame is taken in small steps, so the saint never passes
+// through a wall or a foe between one frame and the next.
+function tick(dt) {
+  const n = Math.max(1, Math.ceil((world ? runSpeed() : 0) * dt / 5));
+  for (let i = 0; i < n && state === "play"; i++) update(dt / n);
+}
 function update(dt) {
   if (window.__bot) window.__bot(dt);   // testing only
   world.t += dt; game.time += dt;
@@ -1840,10 +1864,10 @@ function update(dt) {
   // Running: always forward. In the desert the wind holds you back in the air.
   const wind = P.wind ? P.wind * (0.6 + 0.4 * Math.sin(world.t * 1.3)) : 0;
   // Holding the right side of the screen runs faster: a moment's hold, then the
-  // longer it is held, the faster the saint goes, up to nearly twice the pace.
+  // longer it is held, the faster the saint goes, without any limit.
   // Let go and the pace eases back.
-  if (input.rushHeld && !s.auto) { player.rushHold = (player.rushHold || 0) + dt; player.rush = Math.min(0.9, Math.max(player.rush || 0, (player.rushHold - 0.2) * 0.45)); }
-  else { player.rushHold = 0; player.rush = Math.max(0, (player.rush || 0) - dt * 1.2); }
+  if (input.rushHeld && !s.auto) { player.rushHold = (player.rushHold || 0) + dt; player.rush = Math.max(player.rush || 0, (player.rushHold - 0.2) * 0.5); }
+  else { player.rushHold = 0; player.rush = Math.max(0, (player.rush || 0) - dt * (1.2 + (player.rush || 0) * 0.8)); }
   const vx = P.speed * (1 + (player.rush || 0)) * (player.ground ? 1 : 1 - wind);
   const prevBottom = player.y + player.h;
   player.x += vx * dt;
@@ -1906,7 +1930,7 @@ function update(dt) {
   // The camera keeps the saint a little left of centre, and rises with the land.
   // It follows the ground the saint last stood on, not every jump, and lifts
   // only when a high bounce would carry her off the top.
-  camX = player.x - 90;
+  camX = player.x - 90 + Math.min(55, (player.rush || 0) * 20);   // look further ahead at speed
   if (player.ground) player.level = player.y + player.h;
   let want = Math.min(0, (player.level || GROUND) - GROUND);
   want = Math.min(want, player.y - 14);
@@ -2002,7 +2026,7 @@ function update(dt) {
   parts = parts.filter((p) => p.life > 0);
 
   // The end of the phase: on to the next, through its cut scene.
-  if (player.x >= P.len) {
+  if (player.x >= world.len) {
     const next = game.phase + 1;
     if (next >= phasesOf(game.psalm).length) { finishPsalm(); return; }
     beginTransition(phasesOf(game.psalm)[next].into, next);
@@ -2160,7 +2184,7 @@ function drawPlayer() {
   if (player.inv > 0 && Math.floor(player.inv * 12) % 2) return;
   const x = player.x - camX, y = player.y - camY, s = game.saint;
   // Streaks of light behind a saint who is rushing.
-  if (player.rush > 0.15) { ctx.globalAlpha = Math.min(0.7, player.rush); for (let k = 0; k < 4; k++) { const len = 6 + player.rush * 18 + ((world.t * 60 + k * 7) % 6); rect(x - 4 - len, y + 4 + k * 5, len, 1, k % 2 ? "#ffe8b0" : "#ffffff"); } ctx.globalAlpha = 1; }
+  if (player.rush > 0.15) { ctx.globalAlpha = Math.min(0.7, player.rush); for (let k = 0; k < 4; k++) { const len = 6 + Math.min(4, player.rush) * 18 + ((world.t * 60 + k * 7) % 6); rect(x - 4 - len, y + 4 + k * 5, len, 1, k % 2 ? "#ffe8b0" : "#ffffff"); } ctx.globalAlpha = 1; }
   // Our Lady and Our Lord are borne up on light.
   if (s.auto && !player.ground) {
     const c = s.id === "jesus" ? "#fff4c8" : "#cfe0ff";
@@ -2213,14 +2237,14 @@ function drawHud() {
   if (s.hold && !s.auto) { rect(4, player.shield ? 24 : 14, 30, 3, "#2a2a3a"); rect(4, player.shield ? 24 : 14, 30 * clamp(player.float / s.floatTime, 0, 1), 3, "#9fd0ff"); }
   text(String(game.score).padStart(5, "0"), W - 26, 4, { align: "right", color: "#ffe08a" });
   if (!s.auto) text(hms(game.run), W - 26, 14, { align: "right", color: "#cfe0ff", size: 7 });
-  // The rush: a gauge that fills as the right side is held.
-  if (player.rush > 0.02) { rect(W - 56, 23, 30, 3, "#2a2a3a"); rect(W - 56, 23, 30 * player.rush / 0.9, 3, "#ffcf5a"); }
+  // The rush: how many times the usual pace.
+  if (player.rush > 0.02) text("\u00D7" + (1 + player.rush).toFixed(1), W - 26, 23, { align: "right", color: "#ffcf5a", size: 7 });
   // Pause.
   rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
   // How far through the psalm: one notch for each phase.
   const n = phasesOf(game.psalm).length, bw = 80, bx = W / 2 - bw / 2;
   rect(bx, 6, bw, 3, "#2a2a3a");
-  const prog = (game.phase + clamp(player.x / world.P.len, 0, 1)) / n;
+  const prog = (game.phase + clamp(player.x / world.len, 0, 1)) / n;
   rect(bx, 6, bw * prog, 3, "#ffe08a");
   for (let i = 1; i < n; i++) rect(bx + bw * i / n, 5, 1, 5, "#ffffff");
   // The verse being run, along the bottom.
@@ -2514,7 +2538,7 @@ function frame(now) {
   ctx.setTransform(R, 0, 0, R, 0, 0); ctx.imageSmoothingEnabled = false;
   if (state === "title" || state === "select" || state === "psalms" || state === "done" || state === "read" || state === "pick") Snd.play("title");
   Snd.update();
-  if (state === "play") { for (let k = 0; k < FAST && state === "play"; k++) update(dt); if (state === "play" || state === "trans") drawPlay(); }
+  if (state === "play") { for (let k = 0; k < FAST && state === "play"; k++) tick(dt); if (state === "play" || state === "trans") drawPlay(); }
   if (state === "trans") drawTransition(dt);
   else if (state === "title") drawTitle(clock);
   else if (state === "select") drawSelect(clock);
@@ -2536,7 +2560,7 @@ if (Q.has("psalm")) { game.saint = SAINTS[+(Q.get("saint") || 0)] || SAINTS[0]; 
 if (Q.has("god")) window.__god = true;
 if (Q.has("watch")) { game.mode = "watch"; game.saint = Q.get("watch") === "jesus" ? JESUS : MARY; runPsalm(+(Q.get("psalm") || 1) - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
 if (Q.has("unlock")) { window.__unlock = true; save.open = 151; }
-window.PR = { get save() { return save; }, MARY, JESUS, runPsalm, goPsalm, step(dt) { update(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
+window.PR = { get save() { return save; }, MARY, JESUS, runPsalm, goPsalm, step(dt) { tick(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
 </script>
 </body>
 </html>
