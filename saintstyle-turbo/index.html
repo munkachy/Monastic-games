@@ -808,6 +808,11 @@ const SAINTS = [
   { id: "lucy", name: "St. Lucy", title: "light in the darkness", hearts: 3, jump: 330, hold: "float", floatCap: 45, floatTime: 1.2, attack: "eye", cd: 0.9, book: 4,
     about: "Her eyes fly ahead and keep watch: each hangs in the air and strikes every foe that comes within its gaze.",
     look: { robe: "#f4f0e8", shade: "#d8d0c4", sash: "#c8324a", skin: "#f4d4bc", hair: "#e0c070", candles: true } },
+  // St. Teresa of Ávila, Doctor of the Church, who wrote the Interior Castle
+  // itself: the last saint won, at the centre of the castle.
+  { id: "teresa", name: "St. Teresa of Ávila", short: "Teresa of Ávila", title: "who wrote the Interior Castle", hearts: 3, jump: 330, hold: "float", floatCap: 50, floatTime: 1.4, attack: "quill", cd: 0.4,
+    about: "Holds to float. Her pen flies straight to its mark.",
+    look: { robe: "#5a3a22", shade: "#3e2614", mantle: "#f2ead8", veil: "#1c1418", wimple: "#f7f3ea", skin: "#ecc4a2", quill: true } },
 ];
 
 // A small figure in the style of the game, drawn from blocks: robe, head,
@@ -865,6 +870,7 @@ function drawFigure(L, x, y, f, opt) {
   if (L.sash) { for (let k = 0; k < 6; k++) rect(x + 3 + k, fy + 9 + k, 2, 1, L.sash); }
   if (L.candles) { rect(x + 2, fy - 2, 8, 2, "#3a8a3a"); for (const k of [2, 5, 8]) { rect(x + k, fy - 5, 1, 3, "#f4f0e8"); rect(x + k, fy - 7, 1, 2, "#ffcf5a"); } }
   if (L.dove) { rect(x + 1, fy - 5, 4, 2, "#ffffff"); rect(x - 1, fy - 6, 2, 1, "#ffffff"); }
+  if (L.quill) { rect(x + 10, fy + 10, 3, 3, "#8a2a2a"); rect(x + 12, fy + 3, 1, 8, "#f4f4f4"); rect(x + 13, fy + 2, 1, 4, "#e0e0ea"); }
   if (L.weapon) { rect(x - 3, fy + 6, 1, 14, "#8a8a92"); rect(x - 4, fy + 4, 3, 3, "#c8ccd4"); }
 }
 
@@ -1004,16 +1010,16 @@ const ZONES = [
 for (const Z of ZONES) Z.demon = SINS[Z.sin];
 // The saints: two to begin with, one more for each demon beaten, and when
 // every one of them has been won, St. Benedict, the father of them all.
-const START_SAINTS = ["therese", "maurus"];
+const START_SAINTS = ["therese", "maurus", "benedict"];
 const SAINT_PRIZE = { m1: "scholastica", m2: "cupertino", m3: "peter", m4: "cecilia", m5: "lucy", m6: "hildegard", m7: "augustine" };
 function saintOpen(s) {
   if (window.__unlock || START_SAINTS.includes(s.id)) return true;
-  if (s.id === "benedict") return ZONES.every((Z) => save.wins[Z.id]);
+  if (s.id === "teresa") return ZONES.every((Z) => save.wins[Z.id]);
   const z = Object.keys(SAINT_PRIZE).find((k) => SAINT_PRIZE[k] === s.id);
   return !!(z && save.wins[z]);
 }
 // What must be done to win a saint not yet won.
-const saintHow = (s) => { if (s.id === "benedict") return "beat all seven"; const z = Object.keys(SAINT_PRIZE).find((k) => SAINT_PRIZE[k] === s.id); return z ? "beat " + SINS[ZONES.find((Z) => Z.id === z).sin].name : ""; };
+const saintHow = (s) => { if (s.id === "teresa") return "beat all seven"; const z = Object.keys(SAINT_PRIZE).find((k) => SAINT_PRIZE[k] === s.id); return z ? "beat " + SINS[ZONES.find((Z) => Z.id === z).sin].name : ""; };
 // The Novitiate, where the saint is taught: a cloister, and no demon.
 const NOVITIATE = { id: "novitiate", num: "The Novitiate", name: "Ausculta", song: "novice", tutorial: true,
   sub: "Listen, O my son, to the precepts of thy master, and incline the ear of thy heart.",
@@ -1062,11 +1068,12 @@ const SIGS = {
   peter: { name: "The Keys", c: ["#e8b94a", "#cfd6dc", "#ffffff"], fx: "keys" },
   augustine: { name: "Restless Heart", c: ["#ff6a2a", "#ffcf5a", "#d8324a"], fx: "heart" },
   lucy: { name: "Lamp of Light", c: ["#ffffff", "#fff4a0", "#ffcf5a"], fx: "lamp" },
+  teresa: { name: "Solo Dios Basta", c: ["#ffcf5a", "#ffffff", "#d8324a"], fx: "castle" },
 };
 const sigOf = (s) => SIGS[s.id] || SIGS.benedict;
 // Each saint's flourish: no flip, only a moment, for when there is little air.
 const FLOURISHES = { therese: "Rose Toss", cupertino: "Little Lift", benedict: "Medal Raised", maurus: "Board Grab", scholastica: "Dove Release",
-  hildegard: "Sprig Wave", cecilia: "High Note", peter: "Keys Up", augustine: "Heart Aflame", lucy: "Candle Glow" };
+  hildegard: "Sprig Wave", cecilia: "High Note", peter: "Keys Up", augustine: "Heart Aflame", lucy: "Candle Glow", teresa: "Quill Flourish" };
 const trickName = (k) => nameOf(k, P);
 // How many demons have been beaten: that many sets of tricks have been learned.
 const learned = () => (window.__unlock ? 99 : ZONES.filter((Z) => save.wins[Z.id]).length);
@@ -1403,9 +1410,9 @@ function gainXp(n) {
   if (after > before) { pop(game.saint.name.toUpperCase() + ": LEVEL " + after, "#8ae86a", 11, "Jumps higher now"); Snd.sfx("gift"); store(); }
 }
 // The voices: each saint's pitch, high or low, and what each cries out at his own trick.
-const VOICE = { therese: 300, scholastica: 290, hildegard: 280, cecilia: 320, lucy: 310, cupertino: 210, benedict: 170, maurus: 200, peter: 160, augustine: 180 };
+const VOICE = { teresa: 270, therese: 300, scholastica: 290, hildegard: 280, cecilia: 320, lucy: 310, cupertino: 210, benedict: 170, maurus: 200, peter: 160, augustine: 180 };
 const CRY = { benedict: "Vade retro!", therese: "Shower of roses!", cupertino: "Alleluia!", maurus: "Deo gratias!", scholastica: "Fiat!",
-  hildegard: "Viriditas!", cecilia: "Cantate!", peter: "Tu es Petrus!", augustine: "Tolle, lege!", lucy: "Lux!" };
+  hildegard: "Viriditas!", cecilia: "Cantate!", peter: "Tu es Petrus!", augustine: "Tolle, lege!", lucy: "Lux!", teresa: "Solo Dios basta!" };
 const voice = (words) => Snd.say(words, VOICE[game.saint.id] || 200);
 const EASE = 1.6;          // how quickly extra speed eases back to a run (a share of it a second)
 const AIR_DRAG = 0.0003;
@@ -1996,7 +2003,7 @@ function strike(A, st, sy) {
 // mansion it flies after the demon wherever he is, and when it finds him he
 // tumbles and is a long while getting up. A relic, hidden high in the heavens, gives it back.
 const WEAPON = { therese: "A rose from heaven", cupertino: "A star of joy", benedict: "The medal", maurus: "A wave from the lake", scholastica: "Her dove",
-  hildegard: "A seed of viriditas", cecilia: "A note of praise", peter: "The keys of the kingdom", augustine: "A burning heart", lucy: "Her lamp" };
+  hildegard: "A seed of viriditas", cecilia: "A note of praise", peter: "The keys of the kingdom", augustine: "A burning heart", lucy: "Her lamp", teresa: "Her pen" };
 const canFire = () => state === "play" && D && !D.done && game.shots > 0 && game.count <= 0 && !P.crash;
 // (The F key throws it too, as a quick trick in the air or straight away on the ground.)
 function fireKey() { if (!canFire()) return; if (P.mode === "air" && !P.trick) swipe("R"); else fire(); }
@@ -2284,6 +2291,7 @@ function endFree() {
   game.newStyle = game.style > b.style; game.newBest = (game.dist || 0) > b.dist;
   b.style = Math.max(b.style, game.style); b.dist = Math.max(b.dist, game.dist || 0); b.combo = Math.max(b.combo, game.bestChain);
   gainXp(100); store(); Snd.sting("win");
+  startScene(true);
 }
 function finish() {
   state = "done"; Snd.stop();
@@ -2305,6 +2313,7 @@ function finish() {
   game.newSaints = SAINTS.filter((s) => saintOpen(s) && !had.includes(s));
   if (game.won) { Snd.sting("win"); say("lose"); if (game.newTricks.length) setTimeout(() => Snd.sting("learn"), 1500); }
   else Snd.sting("lose");
+  startScene(game.won);
 }
 function burst(x, y, c, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 220, vy: -Math.random() * 200, life: 0.5 + Math.random() * 0.3, c }); }
 // How much of the band plays, by how fast the saint is going: drums while he
@@ -2675,7 +2684,7 @@ const pose = (o) => Object.assign({}, NEUTRAL, o);
 const hold = (a, b, p) => [[0, {}], [a, p], [b, p], [1, {}]];
 const POSES = {
   // The flourish: the thing he carries, held up high, legs kicked apart.
-  flourish: hold(0.25, 0.8, { aR: PI - 0.1, aL: PI + 0.5, arm: 1.4, lL: 0.6, lR: -0.5, leg: 1.2 }),
+  flourish: hold(0.25, 0.8, { aR: PI - 0.5, aL: PI + 0.5, arm: 1.4, lL: 0.6, lR: -0.5, leg: 1.2 }),
   // The one-swipe moves: a star jump; a genuflection, hands joined; a heel click.
   leap: hold(0.2, 0.8, { aL: PI - 0.65, aR: PI + 0.65, arm: 1.35, lL: 0.95, lR: -0.95, leg: 1.35 }),
   kneel: hold(0.2, 0.8, { t: 0.2, aL: 1.05, aR: 1.2, arm: 0.9, lL: 1.55, lR: -0.35, leg: 0.95 }),
@@ -2789,6 +2798,8 @@ function drawProp(id, x, y, a, k, glow, t) {
     case "augustine":  // The heart, aflame.
       disc(3, 2, "#d8324a"); ctx.save(); ctx.translate(2.2, 0); disc(3, 2, "#d8324a"); ctx.restore(); ctx.fillStyle = "#d8324a"; ctx.beginPath(); ctx.moveTo(-2, 3.5); ctx.lineTo(1, 7.5); ctx.lineTo(4.2, 3.5); ctx.fill();
       rect(0.5, -1 - Math.abs(Math.sin(t * 20)), 1.5, 3, "#ffb030"); break;
+    case "teresa":     // Her pen, and the book she wrote with it.
+      rect(-2, 2, 5, 4, "#8a2a2a"); rect(-1.5, 2.5, 4, 0.6, "#f4e8c8"); rect(0, -4, 1, 7, "#f4f4f4"); rect(1, -5, 1.5, 5, "#e0e0ea"); break;
     case "lucy":       // A lamp, burning.
       rect(-3, 2, 6, 2, "#c89a4a"); rect(-1, 4, 2, 1, "#c89a4a"); rect(-0.5, -1 - Math.abs(Math.sin(t * 18)), 1.5, 3, "#ffcf5a"); disc(0, 1.2, "#fff4a0"); break;
     case "thurible": { // The censer on its chains, and its smoke.
@@ -3151,29 +3162,29 @@ function drawSaints(t) {
   text("CHOOSE A SAINT", W / 2, 3, { align: "center", color: "#ffe08a", size: 11 });
   const boxes = [];
   SAINTS.forEach((s, i) => {
-    const x = 7 + (i % 5) * 62, y = 18 + Math.floor(i / 5) * 66, hot = s === game.saint, open = saintOpen(s);
+    const x = 4 + (i % 6) * 53, y = 18 + Math.floor(i / 6) * 66, hot = s === game.saint, open = saintOpen(s);
     if (!open) {
       // Not yet won: a shadow, and what it takes.
-      rect(x - 1, y - 1, 60, 64, "#140c1c"); rect(x, y, 58, 62, "#1a1430");
-      ctx.globalAlpha = 0.5; drawFigure({ robe: "#0a0810", shade: "#0a0810", skin: "#0a0810", hood: true }, x + 23, y + 4, 0, { still: true }); ctx.globalAlpha = 1;
-      text(s.short || s.name.replace("St. ", ""), x + 29, y + 28, { align: "center", color: "#8a7aaa", size: 7 });
-      text("?", x + 29, y + 10, { align: "center", color: "#c8b8ff", size: 10 });
-      text(saintHow(s), x + 29, y + 41, { align: "center", color: "#ffcf5a", edge: null, size: 6 });
+      rect(x - 1, y - 1, 52, 64, "#140c1c"); rect(x, y, 50, 62, "#1a1430");
+      ctx.globalAlpha = 0.5; drawFigure({ robe: "#0a0810", shade: "#0a0810", skin: "#0a0810", hood: true }, x + 19, y + 4, 0, { still: true }); ctx.globalAlpha = 1;
+      text(s.short || s.name.replace("St. ", ""), x + 25, y + 28, { align: "center", color: "#8a7aaa", size: 6 });
+      text("?", x + 25, y + 10, { align: "center", color: "#c8b8ff", size: 10 });
+      text(saintHow(s), x + 25, y + 41, { align: "center", color: "#ffcf5a", edge: null, size: 5 });
       return;
     }
-    rect(x - 1, y - 1, 60, 64, "#140c1c"); rect(x, y, 58, 62, hot ? "#e8b94a" : "#2a2240");
-    drawFigure(s.look, x + 23, y + 4, Math.floor(t * 6), {});
+    rect(x - 1, y - 1, 52, 64, "#140c1c"); rect(x, y, 50, 62, hot ? "#e8b94a" : "#2a2240");
+    drawFigure(s.look, x + 19, y + 4, Math.floor(t * 6), {});
     // How high he jumps, from practice: a bar of gold, and the level.
     const lv = xpLevel(save.xp[s.id]), lh = Math.round((leapOf(s) - 395) / 8);
     rect(x + 4, y + 25 - lh, 4, lh, hot ? "#7a4a10" : "#ffcf5a"); text("↑", x + 6, y + 25 - lh - 8, { align: "center", size: 6, color: hot ? "#7a4a10" : "#ffcf5a", edge: null });
-    text("LV " + lv, x + 54, y + 3, { align: "right", size: 6, color: hot ? "#7a1a2e" : "#8ae86a", edge: null });
-    if (lv < 10) { const a = xpFor(lv), b = xpFor(lv + 1), f = clamp(((save.xp[s.id] || 0) - a) / (b - a), 0, 1); rect(x + 40, y + 11, 15, 2, "#00000055"); rect(x + 40, y + 11, 15 * f, 2, hot ? "#7a1a2e" : "#8ae86a"); }
+    text("LV " + lv, x + 48, y + 3, { align: "right", size: 6, color: hot ? "#7a1a2e" : "#8ae86a", edge: null });
+    if (lv < 10) { const a = xpFor(lv), b = xpFor(lv + 1), f = clamp(((save.xp[s.id] || 0) - a) / (b - a), 0, 1); rect(x + 35, y + 11, 13, 2, "#00000055"); rect(x + 35, y + 11, 13 * f, 2, hot ? "#7a1a2e" : "#8ae86a"); }
     const n = s.short || s.name.replace("St. ", "");
-    text(n, x + 29, y + 28, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 7 });
-    text(s.double ? "double jump" : s.hold === "levitate" ? "rises" : s.hold === "surf" ? "skims gaps" : "floats", x + 29, y + 37, { align: "center", color: hot ? "#3a2a1a" : "#c8b8ff", edge: null, size: 6 });
-    text("tap: " + FLOURISHES[s.id], x + 29, y + 45, { align: "center", color: hot ? "#3a2a1a" : "#ffffff", edge: null, size: 6 });
-    text(sigOf(s).name, x + 29, y + 53, { align: "center", color: hot ? "#7a1a2e" : "#ffcf5a", edge: null, size: 6 });
-    boxes.push({ x, y, w: 58, h: 62, s, i });
+    text(n, x + 25, y + 28, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 6 });
+    text(s.double ? "double jump" : s.hold === "levitate" ? "rises" : s.hold === "surf" ? "skims gaps" : "floats", x + 25, y + 37, { align: "center", color: hot ? "#3a2a1a" : "#c8b8ff", edge: null, size: 5 });
+    text("→ " + FLOURISHES[s.id], x + 25, y + 45, { align: "center", color: hot ? "#3a2a1a" : "#ffffff", edge: null, size: 5 });
+    text(sigOf(s).name, x + 25, y + 53, { align: "center", color: hot ? "#7a1a2e" : "#ffcf5a", edge: null, size: 5 });
+    boxes.push({ x, y, w: 50, h: 62, s, i });
   });
   text("Beat a demon to win a saint. The more you play a saint, the higher they jump.", W / 2, 150, { align: "center", color: "#ffffff", size: 7 });
   const back = button("BACK", W / 2 - 40, 160, 80, 16, true, 8);
@@ -3292,6 +3303,79 @@ function drawBook(t) {
     else if (tp.key === "ArrowUp") bookSel = (bookSel + TRICKS.length - 1) % TRICKS.length;
     else if (tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, back))) state = bookBack;
   }
+  input.taps = [];
+}
+// ---- After a race: the saint, close up, with something to say ----
+// Three lines for a win and three for a loss, each in the saint's own way.
+const QUIPS = {
+  therese: { win: ["I chose all of it! Even the winning.", "A little way can still be a fast way.", "I will spend my heaven doing tricks on earth!"],
+    lose: ["A little defeat. I offer it up. A very little one.", "I'm only a little flower. He had longer legs.", "Everything is grace. Even that crash."] },
+  cupertino: { win: ["Did I win? I was up near the ceiling the whole time.", "I didn't study for this one either!", "Oh dear, an ecstasy again. Did we finish?"],
+    lose: ["I got distracted. The clouds were so beautiful.", "Brother Ass did his best. Brother Ass is me.", "Could somebody please get me down from here?"] },
+  benedict: { win: ["Ora et labora. Mostly labora, today.", "Vade retro! And stay retro.", "Let all guests be received as Christ. Even the slow ones."],
+    lose: ["Chapter seven: humility. I am reading it again.", "Listen, my son. Next time, run faster.", "Patience. That demon will need a great deal of it."] },
+  maurus: { win: ["Father Benedict said run, so I ran!", "I didn't even notice I was winning. Like the lake.", "Obedience is very fast, actually."],
+    lose: ["I'll go and pull myself out of the water.", "Placidus would have been faster.", "Has anyone seen where the shore went?"] },
+  scholastica: { win: ["I prayed for rain. God sent a tailwind.", "My brother is going to hear about this.", "Stay and talk? No: stay and win!"],
+    lose: ["Don't leave yet. I'll pray up a storm.", "Benedict, do not say a single word.", "The night is young. Rematch until Lauds."] },
+  hildegard: { win: ["Viriditas! Green, growing, and first.", "I saw this in a vision. I have written the hymn.", "Green light, all the way to the door."],
+    lose: ["Dryness of soul. And of legs.", "I shall write that demon a very stern letter.", "That was not in any of my visions."] },
+  cecilia: { win: ["And I sang in my heart the whole way!", "Allegro, allegro, ALLEGRO!", "That is what we call a strong finish."],
+    lose: ["I came in a bar late.", "A minor key today. Only today.", "I'll make it a sad song. A short one."] },
+  peter: { win: ["Upon this rock I built a lead!", "Didn't sink this time!", "Not bad for a fisherman."],
+    lose: ["I took my eyes off the road. Again.", "Lord, save me! From that demon, I mean.", "Three times I fell. I sense a pattern."] },
+  augustine: { win: ["Late have I raced thee... no, early! I won!", "Tolle, lege! Take up and read the scoreboard.", "My heart is restless no longer. It is first."],
+    lose: ["My heart is restless. My legs are tired.", "I'll write thirteen books about this one.", "Lord, make me fast. But not yet."] },
+  lucy: { win: ["I saw that coming. Clearly.", "Light wins. It always does.", "Lux! Someone lend that demon a lamp."],
+    lose: ["I didn't see that coming. Which is odd, for me.", "The light is still on. Next time.", "Even the sun sets now and then."] },
+  teresa: { win: ["Seven mansions? I wrote the book.", "Let nothing disturb you. Not even winning.", "From sour-faced saints, deliver us! That was fun."],
+    lose: ["Lord, if this is how you treat your friends, no wonder you have so few!", "Let nothing disturb you. Not even this.", "Patience obtains all things. Including a rematch."] },
+};
+let scene = null;
+function startScene(won) {
+  const q = QUIPS[game.saint.id] || QUIPS.benedict, list = won ? q.win : q.lose;
+  scene = { won, line: list[Math.floor(Math.random() * list.length)], t0: clock, sin: D ? D.sin : null };
+  state = "scene"; input.taps = [];
+  setTimeout(() => { if (state === "scene") Snd.say(scene.line.split(/[.!?,:]/)[0].split(" ").slice(0, 5).join(" "), VOICE[game.saint.id] || 200); }, 900);
+}
+function drawScene(t) {
+  const u = t - scene.t0, k = Math.min(1, u / 0.5), e = 1 - Math.pow(1 - k, 3), s = game.saint, won = scene.won, G = sigOf(s);
+  // The mansion's own sky behind, darkened.
+  bands(level.Z.sky, 0, H); rect(0, 0, W, H, won ? "#140c28b0" : "#08080ed0");
+  if (won) {
+    // Rays of glory turning behind the saint.
+    ctx.save(); ctx.globalAlpha = 0.22 * e;
+    for (let i = 0; i < 14; i++) { const a = t * 0.4 + (i / 14) * Math.PI * 2; ctx.fillStyle = G.c[i % G.c.length]; ctx.beginPath(); ctx.moveTo(86, 112); ctx.lineTo(86 + Math.cos(a) * 400, 112 + Math.sin(a) * 400); ctx.lineTo(86 + Math.cos(a + 0.12) * 400, 112 + Math.sin(a + 0.12) * 400); ctx.fill(); }
+    ctx.restore();
+    for (let i = 0; i < 12; i++) { const x = (i * 53 + t * 40) % W, y = (i * 37 + t * (60 + i * 7)) % H; rect(x, y, 2, 2, G.c[i % G.c.length]); }
+  } else {
+    // Rain.
+    ctx.globalAlpha = 0.4; for (let i = 0; i < 40; i++) { const x = (i * 29 + t * 30) % W, y = (i * 47 + t * 260) % H; rect(x, y, 1, 6, "#8a9ac8"); } ctx.globalAlpha = 1;
+  }
+  // The demon, across the way: tumbling away dizzy, or crowing over his win.
+  if (scene.sin) {
+    if (won) { drawDemon(scene.sin, W - 46 + Math.sin(u * 3) * 6, 132, t, 1.3, u * 5); text("@#!", W - 46, 108, { align: "center", size: 7, color: scene.sin.colors.r }); }
+    else drawDemon(scene.sin, W - 62, 88 + Math.sin(t * 4) * 4, t, 2.8, Math.sin(t * 3) * 0.15);
+  }
+  // The saint, zooming in.
+  const R = demoRunner(0, 0, null, 0); R.x = 0; R.y = 0; R.mode = "air";
+  const kq = won ? TRICKS.find((q) => q.quick) : TRICKS.find((q) => q.id === "kneel");
+  R.trick = { k: kq, t: kq.dur * (won ? 0.5 : 0.55) };
+  ctx.save(); ctx.translate(-30 + e * 116, 160 + (won ? Math.sin(t * 5) * 2 : 0)); ctx.scale(1 + e * 2.5, 1 + e * 2.5); if (!won) ctx.rotate(0.12); drawSaint(R, t); ctx.restore();
+  // Bars across the top and the foot, as in a film.
+  rect(0, 0, W, 16, "#000000"); rect(0, H - 16, W, 16, "#000000");
+  text(game.free ? "WHAT A RUN!" : won ? "VICTORY!" : "THE DEMON WINS THIS ONE", W / 2, 3, { align: "center", size: 9, color: won ? "#ffe08a" : "#ff8a7a" });
+  // What the saint says, a letter at a time.
+  if (u > 0.45) {
+    const shown = scene.line.slice(0, Math.floor((u - 0.45) * 45)), lines = wrapText(scene.line, 8, 140), bx = 158, by = 34, bh = 18 + lines.length * 11;
+    rect(bx - 1, by - 1, 152, bh + 2, "#140c1c"); rect(bx, by, 150, bh, "#fff8ec");
+    ctx.fillStyle = "#fff8ec"; ctx.beginPath(); ctx.moveTo(bx, by + bh - 12); ctx.lineTo(bx - 12, by + bh + 2); ctx.lineTo(bx + 6, by + bh - 2); ctx.fill();
+    text(s.name.toUpperCase(), bx + 5, by + 3, { size: 7, color: "#7a1a2e", edge: null });
+    let left = shown.length;
+    lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, left)); left -= l.length + 1; text(part, bx + 5, by + 14 + i * 11, { size: 8, color: "#2a1a1a", edge: null, serif: true }); });
+  }
+  if (u > 1.4) { ctx.globalAlpha = 0.6 + Math.sin(t * 5) * 0.4; text("tap to go on", W - 6, H - 13, { align: "right", size: 7, color: "#ffffff" }); ctx.globalAlpha = 1; }
+  if ((u > 0.8 && input.taps.length) || u > 9) state = "done";
   input.taps = [];
 }
 function drawDone(t) {
@@ -3505,6 +3589,7 @@ function frame(now) {
   else if (state === "book") drawBook(clock);
   else if (state === "done") drawDone(clock);
   else if (state === "pause") drawPause(clock);
+  else if (state === "scene") drawScene(clock);
   else if (state === "poses") drawPoses();
   if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
   requestAnimationFrame(frame);
