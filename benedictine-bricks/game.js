@@ -69,24 +69,18 @@ const DOUSE_COST = 2;              // prayer to douse one fire with holy water
 // The seven deadly sins. The demon comes as one of them each time: each looks
 // different, and each does the same mischief.
 const SINS = [
-  { id: "pride", name: "Pride", colors: { m: "#2a0a3a", M: "#4a1a6a", o: "#1a0a20", r: "#a86ad8", R: "#6a2a9a", y: "#ffd83a" },
-    verse: ["Pride goeth before destruction: and the spirit is lifted up before a fall.", "Proverbs 16:18"] },
-  { id: "avarice", name: "Avarice", colors: { m: "#2a3a0a", M: "#4a5a1a", o: "#2a2008", r: "#c8b02a", R: "#6a7a1a", y: "#fff4a0" },
-    verse: ["For the desire of money is the root of all evils.", "1 Timothy 6:10"] },
-  { id: "lust", name: "Lust", colors: { m: "#3a0a2a", M: "#7a1a4a", o: "#2a0818", r: "#e85a9a", R: "#a82a6a", y: "#ffe0f0" },
-    verse: ["Walk in the spirit, and you shall not fulfill the lusts of the flesh.", "Galatians 5:16"] },
-  { id: "envy", name: "Envy", colors: { m: "#0a2a14", M: "#1a5a2a", o: "#082010", r: "#6ad06a", R: "#2a7a3a", y: "#c8ff3a" },
-    verse: ["Soundness of heart is the life of the flesh: but envy is the rottenness of the bones.", "Proverbs 14:30"] },
-  { id: "gluttony", name: "Gluttony", colors: { m: "#3a1a08", M: "#6a3a1a", o: "#2a1408", r: "#f09a4a", R: "#b8682a", y: "#ffe8a0" },
-    verse: ["Take heed to yourselves, lest perhaps your hearts be overcharged with surfeiting and drunkenness.", "Luke 21:34"] },
-  { id: "wrath", name: "Wrath", colors: { m: "#4a0404", M: "#8a0a0a", o: "#1a0404", r: "#ff5a2a", R: "#d01a1a", y: "#ffff6a" },
-    verse: ["For the anger of man worketh not the justice of God.", "James 1:20"] },
-  { id: "sloth", name: "Sloth", colors: { m: "#1a2030", M: "#3a4458", o: "#141820", r: "#9aa8c0", R: "#5a6a88", y: "#d8e0f0" },
-    verse: ["Go to the ant, O sluggard, and consider her ways, and learn wisdom.", "Proverbs 6:6"] },
+  { id: "pride", name: "Pride", colors: { m: "#2a0a3a", M: "#4a1a6a", o: "#1a0a20", r: "#a86ad8", R: "#6a2a9a", y: "#ffd83a" } },
+  { id: "avarice", name: "Avarice", colors: { m: "#2a3a0a", M: "#4a5a1a", o: "#2a2008", r: "#c8b02a", R: "#6a7a1a", y: "#fff4a0" } },
+  { id: "lust", name: "Lust", colors: { m: "#3a0a2a", M: "#7a1a4a", o: "#2a0818", r: "#e85a9a", R: "#a82a6a", y: "#ffe0f0" } },
+  { id: "envy", name: "Envy", colors: { m: "#0a2a14", M: "#1a5a2a", o: "#082010", r: "#6ad06a", R: "#2a7a3a", y: "#c8ff3a" } },
+  { id: "gluttony", name: "Gluttony", colors: { m: "#3a1a08", M: "#6a3a1a", o: "#2a1408", r: "#f09a4a", R: "#b8682a", y: "#ffe8a0" } },
+  { id: "wrath", name: "Wrath", colors: { m: "#4a0404", M: "#8a0a0a", o: "#1a0404", r: "#ff5a2a", R: "#d01a1a", y: "#ffff6a" } },
+  { id: "sloth", name: "Sloth", colors: { m: "#1a2030", M: "#3a4458", o: "#141820", r: "#9aa8c0", R: "#5a6a88", y: "#d8e0f0" } },
 ];
 
-// Scripture over the building site: spelled in stars at night, in clouds by
-// day, and in the light of the sun at its rising and setting. One for each Hour.
+// Scripture over the building site, in large letters: written in cloud by day
+// and in stars by night. It changes now and then: with each new tower, and
+// every few Hours of the day.
 const SKY_VERSES = [
   ["The stone which the builders rejected; the same is become the head of the corner.", "Psalm 117:22"],
   ["Know you not, that you are the temple of God, and that the Spirit of God dwelleth in you?", "1 Corinthians 3:16"],
@@ -101,16 +95,6 @@ const SKY_VERSES = [
   ["Wisdom hath built herself a house, she hath hewn her out seven pillars.", "Proverbs 9:1"],
   ["You are the temple of the living God; as God saith: I will dwell in them, and walk among them.", "2 Corinthians 6:16"],
 ];
-// Words set on a banner across the sky at the height of each new tier.
-const TIER_WORDS = [
-  ["Unless the Lord build the house, they labour in vain that build it.", "Psalm 126:1"],
-  ["The name of the Lord is a strong tower.", "Proverbs 18:10"],
-  ["Which of you having a mind to build a tower, doth not first sit down, and reckon the charges?", "Luke 14:28"],
-  ["The Lord is my firmament, my refuge, and my deliverer.", "Psalm 17:3"],
-];
-const VERSE_REPEL = ["Resist the devil, and he will fly from you.", "James 4:7"];
-const VERSE_SMOTHER = ["The shield of faith, wherewith you may be able to extinguish all the fiery darts of the most wicked one.", "Ephesians 6:16"];
-const VERSE_BURN = ["The fire shall try every man's work, of what sort it is.", "1 Corinthians 3:13"];
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
@@ -136,7 +120,7 @@ const SHAPES = [
 
 // ---------------------------------------------------------------------------
 // The shop: upgrades with levels, rosaries (each starts a tower with a spell),
-// and habits.
+// and Benedictine saints to build as.
 // ---------------------------------------------------------------------------
 
 const PRAYER_BY_LEVEL = [10, 13, 16, 20];
@@ -167,10 +151,16 @@ const ROSARIES = [
   { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: "gild", text: "Every tower starts with Gild." },
 ];
 
-const HABITS = [
-  { id: "black", name: "Benedictine black", price: 0, colors: {}, text: "The black habit of the Order of St. Benedict." },
-  { id: "white", name: "Olivetan white", price: 150, colors: { K: "#e9e6dc", k: "#bdb8aa" }, text: "The white habit of the Olivetan Benedictines." },
-  { id: "blue", name: "Sylvestrine blue", price: 150, colors: { K: "#1f2f5a", k: "#3a4f86" }, text: "The blue habit of the Sylvestrine Benedictines." },
+// The builder: St. Benedict to begin with, and other saints of his Order to
+// buy. Each looks his or her own way (art.js, saintSprite); all build alike.
+const SAINTS = [
+  { id: "benedict", name: "St. Benedict", price: 0, text: "St. Benedict of Nursia (c. 480–547), father of the monks of the West, who wrote the Rule: ora et labora, pray and work." },
+  { id: "scholastica", name: "St. Scholastica", price: 150, text: "St. Benedict's twin sister. At their last meeting she prayed, and a storm kept him talking with her through the night. Three days later he saw her soul rise to heaven as a dove." },
+  { id: "maurus", name: "St. Maurus", price: 200, text: "St. Benedict's young disciple. At his abbot's word he ran out across the lake to save the drowning boy Placid, and only on the shore knew he had walked on the water." },
+  { id: "gertrude", name: "St. Gertrude the Great", price: 300, text: "A nun of Helfta (1256–c. 1302), a mystic of the Sacred Heart, whose prayers and visions have taught Christians to trust the mercy of Christ." },
+  { id: "anselm", name: "St. Anselm", price: 400, text: "Monk and abbot of Bec, Archbishop of Canterbury (1033–1109), and Doctor of the Church: faith seeking understanding." },
+  { id: "hildegard", name: "St. Hildegard of Bingen", price: 500, text: "Abbess, visionary, composer, healer and Doctor of the Church (1098–1179), who saw the “living light” and wrote down what it showed her." },
+  { id: "gregory", name: "St. Gregory the Great", price: 700, text: "Monk and pope (c. 540–604), who wrote the life of St. Benedict and sent monks to England. He is shown with the dove of the Holy Spirit at his ear." },
 ];
 
 // ---------------------------------------------------------------------------
@@ -301,7 +291,7 @@ const save = loadSave();
 function loadSave() {
   const fresh = {
     coins: 0, best: 0, prayerLevel: 0, candle: 0, trowel: 0, foundation: 0, medal: 0,
-    rosaries: ["boxwood"], rosary: "boxwood", habits: ["black"], habit: "black",
+    rosaries: ["boxwood"], rosary: "boxwood", saints: ["benedict"], saint: "benedict",
     missions: {}, active: {}, world: "stbernard", bests: {}, music: "both",
   };
   let stored = {};
@@ -312,6 +302,13 @@ function loadSave() {
     stored.prayerLevel = tier;
     stored.rosaries = ROSARIES.slice(0, tier + 1).map((r) => r.id);
     stored.rosary = stored.rosaries[stored.rosaries.length - 1];
+  }
+  // Habits were once for sale; they gave way to saints. Coins spent on a
+  // habit come back.
+  if (stored.habits) {
+    stored.coins = (stored.coins || 0) + 150 * stored.habits.filter((h) => h !== "black").length;
+    delete stored.habits;
+    delete stored.habit;
   }
   return Object.assign(fresh, stored);
 }
@@ -341,7 +338,6 @@ let targetAngle = 0;
 let landed = [];          // stones that have been laid, oldest first
 let fires = [];           // squares of stone that are burning
 let skyText = null;       // the verse in the sky now, as points to draw
-let verseCard = null;     // a verse shown for a moment under the banner
 let sinIndex = 0;         // which of the seven sins comes next
 let nextShape;
 let pending = null;       // "gild", waiting for the next stone
@@ -440,7 +436,6 @@ function newTower() {
   steering = false;
   landed = [];
   fires = [];
-  verseCard = null;
   pending = null;
   lost = 0;
   lives = 3 + save.candle;
@@ -476,7 +471,7 @@ function newTower() {
   demon.present = false;
   demon.fleeing = 0;
   demon.timer = 0;
-  setSkyVerse(0);
+  setSkyVerse(Math.floor(Math.random() * SKY_VERSES.length));
   nextShape = randomShape();
   mode = "play";
   hideScreens();
@@ -485,11 +480,11 @@ function newTower() {
   updateHud();
 }
 
-// Paint the monk in the habit he wears.
+// Paint the builder as the saint chosen in the shop.
 function paintMonk() {
-  const habit = HABITS.find((h) => h.id === save.habit) || HABITS[0];
+  const saint = SAINTS.find((h) => h.id === save.saint) || SAINTS[0];
   for (const pose of ["monk_idle", "monk_bless"]) {
-    images[pose] = renderSprite({ grid: ART[pose].grid, colors: { ...ART[pose].colors, ...habit.colors } });
+    images[pose] = renderSprite(saintSprite(pose, saint.id));
   }
 }
 
@@ -811,7 +806,6 @@ function updateFires(dt) {
       stats.smothered++;
       steam(p.x, p.y - tile / 2);
       Sound.play("hiss");
-      if (stats.smothered === 1) showVerse(VERSE_SMOTHER);
       continue;
     }
     // Left alone, it spreads: now this way, now that, to any stone that touches it.
@@ -843,7 +837,6 @@ function burnAway(body) {
   removeStone(body);
   stats.burned++;
   Sound.play("burn");
-  if (stats.burned === 1) showVerse(VERSE_BURN);
 }
 
 function nearestFire(x, y, r) {
@@ -972,7 +965,6 @@ function physicsStep() {
 function gameLogic(dt) {
   if (blessAnim > 0) blessAnim -= dt;
   if (banner && (banner.t -= dt) <= 0) banner = null;
-  if (verseCard && (verseCard.t -= dt) <= 0) verseCard = null;
   if (skyText) skyText.t += dt;
   if (tierPopup && (tierPopup.t -= dt) <= 0) tierPopup = null;
 
@@ -1120,7 +1112,6 @@ function updateDemon(dt) {
       demon.timer = 30;
       demon.sin = SINS[sinIndex++ % SINS.length];
       flashBanner("The demon of " + demon.sin.name + "!", 2.2);
-      showVerse(demon.sin.verse);
       Sound.play("demon");
     }
   } else if (demon.wait > 0) {
@@ -1189,7 +1180,6 @@ function updateEffects(dt) {
           stats.repelled++;
           effects.push({ kind: "flash", x: demon.x, y: demon.y, t: 0.6, color: "#bfe8ff" });
           flashBanner("Vade retro, Satana!");
-          showVerse(VERSE_REPEL);
         }
       }
     } else if (e.kind === "fireball") {
@@ -1230,19 +1220,14 @@ function makeBolt(x1, y1, x2, y2, color, core) {
   return { kind: "bolt", points, color, core, t: 0.4 };
 }
 
-// A verse shown for a few seconds under the banner.
-function showVerse(v) {
-  verseCard = { text: v[0], ref: v[1], t: 6 };
-}
-
 // The verse in the sky for this Hour, turned into points to be spelled in
 // stars or clouds.
 let skyVerseIndex = 0;
-const SKY_FONT = 34;
+const SKY_FONT = 30;
 function setSkyVerse(index) {
   skyVerseIndex = index;
   const [text, ref] = SKY_VERSES[index % SKY_VERSES.length];
-  const width = 470;
+  const width = 360;
   const c = document.createElement("canvas").getContext("2d");
   c.font = "bold " + SKY_FONT + "px Georgia, 'Times New Roman', serif";
   const lines = [];
@@ -1479,7 +1464,7 @@ function updateHours(dt) {
       Sound.play("hour");
     }
     Sound.setChant(HOURS[index].chant);
-    setSkyVerse(skyVerseIndex + 1);
+    if (index % 3 === 0) setSkyVerse(skyVerseIndex + 1);   // a new verse every three Hours
   }
 }
 
@@ -1625,21 +1610,8 @@ function drawSkyVerse() {
 }
 
 function drawMarks() {
-  // The next tier is a row of diamonds across the sky, under a banner of scripture.
+  // The next tier is a row of diamonds across the sky.
   const y = Math.round(FOUND_Y - (tier + 1) * TIER_CUBITS * TILE);
-  const [words, ref] = TIER_WORDS[tier % TIER_WORDS.length];
-  ctx.font = "italic bold 17px Georgia, 'Times New Roman', serif";
-  ctx.textAlign = "center";
-  const ww = Math.min(VIEW_W - 40, ctx.measureText(words).width + 40);
-  ctx.fillStyle = "rgba(90,30,30,0.85)";
-  ctx.fillRect(VIEW_W / 2 - ww / 2 - 3, y - 63, ww + 6, 46);
-  ctx.fillStyle = "rgba(244,232,200,0.92)";
-  ctx.fillRect(VIEW_W / 2 - ww / 2, y - 60, ww, 40);
-  ctx.fillStyle = "#4a2a1a";
-  ctx.fillText(words, VIEW_W / 2, y - 42, VIEW_W - 60);
-  ctx.font = "9px 'Press Start 2P', monospace";
-  ctx.fillStyle = "#8a3a2a";
-  ctx.fillText(ref, VIEW_W / 2, y - 26);
   ctx.fillStyle = "rgba(230,255,220,0.85)";
   for (let x = 120; x < VIEW_W - 120; x += 26) {
     ctx.beginPath();
@@ -1688,26 +1660,6 @@ function drawFoundation() {
   ctx.translate(VIEW_W / 2, FOUND_Y);
   MonasteryArt[world.id](ctx);
   ctx.restore();
-
-  // The cornerstone, set in the ground before the monastery, with its psalm cut in it.
-  const cw = 206;
-  const ch = 150;
-  const cx = VIEW_W - cw - 8;
-  const cy = GROUND_Y - ch;
-  ctx.fillStyle = "#5a5048";
-  ctx.fillRect(cx - 3, cy - 3, cw + 6, ch + 3);
-  ctx.fillStyle = "#cfc3ae";
-  ctx.fillRect(cx, cy, cw, ch);
-  ctx.fillStyle = "#e6dcc8";
-  ctx.fillRect(cx, cy, cw, 4);
-  ctx.font = "10px 'Press Start 2P', monospace";
-  ctx.textAlign = "center";
-  ["THE STONE WHICH", "THE BUILDERS", "REJECTED; THE", "SAME IS BECOME", "THE HEAD OF", "THE CORNER.", "PS 117:22"].forEach((l, i) => {
-    ctx.fillStyle = "#f4ecdc";
-    ctx.fillText(l, cx + cw / 2, cy + 24 + i * 19);
-    ctx.fillStyle = i === 6 ? "#8a2a1a" : "#2e261e";
-    ctx.fillText(l, cx + cw / 2, cy + 23 + i * 19);
-  });
 
   // A wider foundation from the shop: wooden platforms out to each side.
   world.base.forEach((b, i) => {
@@ -2038,36 +1990,8 @@ function draw() {
   ctx.restore();
   drawNightTint();
   drawBanner();
-  drawVerseCard();
 }
 
-// A verse on a scroll under the banner, for a few seconds.
-function drawVerseCard() {
-  if (!verseCard) return;
-  ctx.globalAlpha = Math.min(1, verseCard.t * 1.5, (6 - verseCard.t) * 3);
-  ctx.font = "italic 19px Georgia, 'Times New Roman', serif";
-  ctx.textAlign = "center";
-  const words = verseCard.text.split(" ");
-  const lines = [];
-  let line = "";
-  for (const w of words) {
-    const t = line ? line + " " + w : w;
-    if (ctx.measureText(t).width > 520 && line) { lines.push(line); line = w; } else line = t;
-  }
-  lines.push(line);
-  const y = VIEW_H * 0.24 + 34;
-  const h = lines.length * 24 + 34;
-  ctx.fillStyle = "#6a3a1a";
-  ctx.fillRect(VIEW_W / 2 - 283, y - 3, 566, h + 6);
-  ctx.fillStyle = "#f4e8c8";
-  ctx.fillRect(VIEW_W / 2 - 280, y, 560, h);
-  ctx.fillStyle = "#3a2414";
-  lines.forEach((l, i) => ctx.fillText(l, VIEW_W / 2, y + 26 + i * 24));
-  ctx.font = "10px 'Press Start 2P', monospace";
-  ctx.fillStyle = "#8a2a1a";
-  ctx.fillText(verseCard.ref, VIEW_W / 2, y + h - 10);
-  ctx.globalAlpha = 1;
-}
 
 // ---------------------------------------------------------------------------
 // Heads-up display
@@ -2203,20 +2127,20 @@ function shopItems(tab) {
       };
     });
   }
-  const list = tab === "rosaries" ? ROSARIES : HABITS;
-  const owned = tab === "rosaries" ? save.rosaries : save.habits;
-  const worn = tab === "rosaries" ? save.rosary : save.habit;
+  const list = tab === "rosaries" ? ROSARIES : SAINTS;
+  const owned = tab === "rosaries" ? save.rosaries : save.saints;
+  const worn = tab === "rosaries" ? save.rosary : save.saint;
   return list.map((item) => {
     const has = owned.includes(item.id);
     return {
-      key: item.id, name: item.name, icon: (tab === "rosaries" ? "beads_" : "habit_") + item.id,
+      key: item.id, name: item.name, icon: (tab === "rosaries" ? "beads_" : "saint_") + item.id,
       price: has ? null : item.price,
       state: item.id === worn ? "worn" : has ? "own" : "buy",
       text: item.text,
       act: () => {
         if (!has) { save.coins -= item.price; owned.push(item.id); }
         if (tab === "rosaries") save.rosary = item.id;
-        else save.habit = item.id;
+        else save.saint = item.id;
       },
     };
   });
@@ -2264,7 +2188,7 @@ function renderShop() {
     action.textContent = "Buy · " + pick.price;
     action.disabled = save.coins < pick.price;
   } else {
-    action.textContent = shopTab === "rosaries" ? "Use it" : "Wear it";
+    action.textContent = shopTab === "rosaries" ? "Use it" : "Build as " + pick.name.replace(/^St\. /, "");
     action.disabled = false;
   }
   action.onclick = () => {
@@ -2435,13 +2359,11 @@ window.addEventListener("resize", resize);
 
 loadArt((loaded) => {
   images = loaded;
-  // Shop icons: rosaries in their own wood or metal, and the monk in each habit.
+  // Shop icons: rosaries in their own wood or metal, and each saint.
   for (const r of ROSARIES) {
     images["beads_" + r.id] = renderSprite({ grid: ART.beads.grid, colors: { ...ART.beads.colors, b: r.beads } });
   }
-  for (const h of HABITS) {
-    images["habit_" + h.id] = renderSprite({ grid: ART.monk_idle.grid, colors: { ...ART.monk_idle.colors, ...h.colors } });
-  }
+  for (const h of SAINTS) images["saint_" + h.id] = renderSprite(saintSprite("monk_idle", h.id));
   // The demon in the colours of each of the seven sins.
   for (const sin of SINS) {
     for (const f of ["demon_a", "demon_b"]) images[f + "_" + sin.id] = renderSprite({ grid: ART[f].grid, colors: { ...ART[f].colors, ...sin.colors } });
