@@ -354,7 +354,7 @@ function stepMonk(m, dt) {
     if (!dir && ropeX >= 0) m.x = lerp(m.x, ropeX * T + T / 2 - m.w / 2, 0.2);
     const ct = ropeX >= 0 ? ropeX : Math.floor((m.x + m.w / 2) / T);
     // At the top: a little hop up and over, onto the ledge beside.
-    if (input.up && World.at(ct, Math.floor((m.y - 1) / T)) !== CLIMB && World.at(ct, Math.floor((m.y + 6) / T)) !== CLIMB) { m.climbing = false; m.vy = -250; m.climbCd = 0.35; m.cut = true; }
+    if (input.up && World.at(ct, Math.floor((m.y - 1) / T)) !== CLIMB && World.at(ct, Math.floor((m.y + 6) / T)) !== CLIMB) { m.climbing = false; m.vy = -300; m.climbCd = 0.35; m.cut = true; }
     // A jump with a direction held: leap off the side.
     else if (input.jumpPressed && dir) { m.climbing = false; m.vy = -P.jump() * 0.8; m.vx = dir * 120; m.climbCd = 0.35; m.buffer = 0; Snd.sfx("jump"); }
   } else {
