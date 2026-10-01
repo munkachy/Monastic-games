@@ -4,11 +4,19 @@ Small browser games with a monastic theme. Each game lives in its own folder
 and runs as plain HTML and JavaScript, with no build step, so GitHub Pages can
 serve the whole repo as-is.
 
+## ▶ Play
+
+- **[Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/)**: build the abbey tower and drive off the demon
+- **[Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/)**: run Psalms 1 to 3 with the saints (made for phones)
+- **[Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html)**: assemble a squad, level up, light up the world ([about the game](https://munkachy.github.io/Monastic-games/new-apologetics/))
+
+All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/Monastic-games/)**
+
 | Game | Folder | What it is |
 | --- | --- | --- |
-| Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
-| Psalter Runner | `psalter-runner/` | A 16-bit auto-runner for phones through Psalms 1, 2 and 3, with five saints to choose from; a single HTML file with nothing to load |
-| Catholic Truth Squad: Tactics | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
+| [Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/) | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
+| [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through Psalms 1, 2 and 3, with five saints to choose from; a single HTML file with nothing to load |
+| [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
 ## Playing locally
 
