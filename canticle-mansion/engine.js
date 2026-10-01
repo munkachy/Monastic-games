@@ -503,6 +503,9 @@ function spawnAt(ch, x, y, def) {
     case "v": World.foes.push(Foe("crow", x, y)); break;
     case "f": World.foes.push(Foe("fox", x, y + 4)); break;
     case "w": World.foes.push(Foe("watchman", x, y - 10)); break;
+    case "n": World.foes.push(Foe("lion", x, y)); break;
+    case "k": World.foes.push(Foe("leopard", x, y)); break;
+    case "e": World.foes.push(Foe("bee", x, y)); break;
     case "l": if (!(save.lilies[def.chapter] || {})[def.id + x + "," + y]) World.items.push({ kind: "lily", x: x + 3, y: y + 2, w: 10, h: 12, key: def.id + x + "," + y }); break;
     case "h": World.items.push({ kind: "heart", x: x + 3, y: y + 3, w: 10, h: 10 }); break;
     case "P": if (def.power && !save.powers[def.power]) World.items.push({ kind: "power", power: def.power, x: x, y: y - 4, w: 16, h: 20 }); break;
@@ -514,10 +517,10 @@ function spawnAt(ch, x, y, def) {
 // way, hurts by touch, and goes up in light when the holy water finds it.
 function Foe(kind, x, y) {
   const base = { kind, x, y, vx: 0, vy: 0, alive: true, inv: 0, t: Math.random() * 5, hp: 1, home: { x, y }, face: -1 };
-  const size = { bat: [12, 8], rat: [14, 8], scorpion: [16, 10], crow: [14, 10], fox: [20, 12], watchman: [12, 26], lion: [24, 16] }[kind] || [12, 12];
+  const size = { bat: [12, 8], rat: [14, 8], scorpion: [16, 10], crow: [14, 10], fox: [20, 12], watchman: [12, 26], lion: [24, 16], leopard: [24, 14], bee: [8, 7] }[kind] || [12, 12];
   base.w = size[0]; base.h = size[1];
   if (kind === "watchman") base.hp = 3;
-  if (kind === "fox" || kind === "lion") base.hp = 2;
+  if (kind === "fox" || kind === "lion" || kind === "leopard") base.hp = 2;
   return base;
 }
 function stepFoe(f, dt) {
@@ -544,6 +547,8 @@ function stepFoe(f, dt) {
     case "scorpion": if ((f.t % 3) < 2.2) ground(32); else { f.vx = 0; f.vy = Math.min(f.vy + P.grav * dt, P.fall); moveBody(f, dt, { noBodies: true }); } break;
     case "fox": if (dist < 140 && f.ground) f.face = Math.sign(dx) || f.face; ground(dist < 140 ? 95 : 45); if (f.ground && dist < 60 && Math.random() < dt * 2) { f.vy = -260; f.ground = false; } break;
     case "watchman": if (dist < 120) f.face = Math.sign(dx) || f.face; ground(dist < 120 ? 50 : 30); break;
+    case "bee": f.awake = true; f.vx = lerp(f.vx, Math.sign(dx) * 70, dt * 2); f.vy = lerp(f.vy, Math.sign(dy) * 50 + Math.sin(f.t * 9) * 60, dt * 3); if (dist > 200) { f.vx *= 0.9; f.vy = Math.sin(f.t * 3) * 20; } f.x += f.vx * dt; f.y += f.vy * dt; f.face = f.vx > 0 ? 1 : -1; break;
+    case "leopard":
     case "lion": if (dist < 160) f.face = Math.sign(dx) || f.face; ground(dist < 160 ? 110 : 40); if (f.ground && dist < 90 && dist > 30 && Math.random() < dt * 1.5) { f.vy = -300; f.ground = false; } break;
   }
   if (f.inv > 0 && f.kind !== "bat" && f.kind !== "crow") f.x += f.vx * dt * 0.2;

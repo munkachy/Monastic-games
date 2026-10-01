@@ -120,6 +120,7 @@ function paintClimb(c, R, x, y, tx, ty) {
   if (kind === "rope") { px(c, x + 7, y, 2, T, "#b8945a"); for (let i = 0; i < 4; i++) px(c, x + 6 + (i % 2) * 2, y + i * 4, 2, 2, "#8a6a3a"); }
   else if (kind === "chain") { for (let i = 0; i < 4; i++) { px(c, x + 6, y + i * 4, 4, 3, i % 2 ? "#cfd6dc" : "#e8b94a"); px(c, x + 7, y + i * 4 + 1, 2, 1, "#5a4410"); } }
   else if (kind === "myrrh") { for (let i = 0; i < 5; i++) px(c, x + i * 3 + 1, y, 2, T, i % 2 ? "#6a4a2a" : "#8a6a3a"); px(c, x, y + 6, T, 2, "#c8a050"); }
+  else if (kind === "scarlet") { px(c, x + 7, y, 2, T, "#c8202e"); for (let i = 0; i < 4; i++) px(c, x + 6 + (i % 2) * 2, y + i * 4 + 1, 2, 2, "#ff5a6a"); }
   else if (kind === "vine") { px(c, x + 7, y, 2, T, "#4a6a2a"); px(c, x + 3, y + 4, 4, 3, "#5aa040"); px(c, x + 9, y + 10, 4, 3, "#3a8a2e"); }
 }
 const ART = {};
@@ -217,6 +218,7 @@ ART.back = function (c, R, World) {
   const w = World.w * T, h = World.h * T;
   (WALLS[R.wall || "none"] || WALLS.none)(c, R, w, h);
   for (const d of R.decor || []) (DECOR[d.k] || (() => { }))(c, d, R);
+  if (R.paint) R.paint(c, World);
   // A board, plaque, parchment or cloth behind a verse that asks for one.
   for (const tx of R.texts || []) {
     if (!tx.panel) continue;
@@ -224,7 +226,6 @@ ART.back = function (c, R, World) {
     const x = tx.x - padX, y = tx.y - padY, w = (tx.w || 120) + padX * 2;
     (DECOR[tx.panel] || DECOR.plaque)(c, { x, y, w, h: h + padY * 2, c: tx.panelColor });
   }
-  if (R.paint) R.paint(c, World);
 };
 // Small things on walls, placed by rooms.
 const DECOR = {
@@ -386,6 +387,14 @@ ART.foe = function (c, f, t) {
     px(c, x + 2, y + 8, 9, 14, "#3a3a52"); px(c, x + 2, y + 8, 9, 2, "#5a5a72"); px(c, x + 3, y + 1, 6, 7, "#d8a880"); px(c, x + 2, y, 8, 3, "#8a8a9a"); px(c, x + 3, y + 3, 1, 1, "#14121a");
     px(c, x - 2, y + 4, 2, 20, "#8a6a3a"); px(c, x - 3, y + 2, 4, 3, "#c8ccd4"); px(c, x + 3 + fl, y + 22, 3, 4, "#2a2a3a"); px(c, x + 7 - fl, y + 22, 3, 4, "#2a2a3a");
     px(c, x + 10, y + 12, 4, 5, "#3a3030"); px(c, x + 11, y + 13, 2, 3, "#ffcf5a");
+  } else if (k === "bee") {
+    px(c, x + 1, y + 2, 6, 4, "#e8b030"); px(c, x + 2, y + 2, 1, 4, "#2a1a0a"); px(c, x + 5, y + 2, 1, 4, "#2a1a0a"); px(c, x, y + 3, 1, 2, "#2a1a0a");
+    px(c, x + 2, y - (fl ? 1 : 0), 3, 2, "rgba(230,240,255,0.85)"); px(c, x + 5, y - (fl ? 0 : 1), 2, 2, "rgba(230,240,255,0.85)");
+  } else if (k === "leopard") {
+    px(c, x + 6, y + 3, 16, 7, "#d8a84a"); px(c, x + 6, y + 3, 16, 1, "#f0c86a"); px(c, x, y + 1, 8, 8, "#d8a84a"); px(c, x + 2, y + 3, 1, 1, "#14121a"); px(c, x, y + 5, 2, 2, "#14121a");
+    for (let i = 0; i < 7; i++) px(c, x + 7 + (i * 5) % 14, y + 4 + (i % 3) * 2, 2, 2, "#3a2a1a");
+    px(c, x + 22, y + 2, 4, 2, "#d8a84a"); px(c, x + 25, y, 2, 3, "#d8a84a");
+    px(c, x + 7 + fl, y + 10, 3, 4, "#b8883a"); px(c, x + 17 - fl, y + 10, 3, 4, "#b8883a");
   } else if (k === "lion") {
     px(c, x + 6, y + 4, 16, 8, "#c8963a"); px(c, x + 6, y + 4, 16, 2, "#e8b65a"); px(c, x, y, 9, 10, "#8a5a1a"); px(c, x + 1, y + 2, 6, 6, "#d8a64a"); px(c, x + 2, y + 4, 1, 1, "#14121a"); px(c, x, y + 6, 2, 2, "#14121a");
     px(c, x + 22, y + 3, 3, 2, "#c8963a"); px(c, x + 24, y + 1, 2, 3, "#8a5a1a");
