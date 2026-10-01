@@ -1585,11 +1585,11 @@ function follow(dt) {
   }
   low += 10;
   const air = P.mode === "air";
-  const z = clamp(Math.min(1 - Math.abs(vx) / 1800, H * (air ? 0.58 : 0.7) / Math.max(1, low - high)), air ? 0.24 : 0.36, 0.95);
+  const z = clamp(Math.min(1.25 - Math.abs(vx) / 2200, H * (air ? 0.58 : 0.78) / Math.max(1, low - high)), air ? 0.24 : 0.5, 1.15);
   cam.z += (z - cam.z) * Math.min(1, dt * (z < cam.z ? (air ? 8 : 4) : 1.2));
   const vw = W / cam.z, vh = H / cam.z;
   // At speed he sits well to the left, so the way ahead can be seen.
-  const f = clamp(0.4 - vx / 3000, 0.16, 0.4);
+  const f = clamp(0.28 - vx / 4000, 0.12, 0.28);
   cam.f = cam.f === undefined ? f : cam.f + (f - cam.f) * Math.min(1, dt * 2);
   cam.x = P.x - vw * cam.f;
   // Up and down: him a little below the middle, but never so that the ground leaves the screen.
@@ -1857,7 +1857,8 @@ function runTricks(A, dt) {
     if (A.player) { if (k.sig) startSignature(A); else Snd.sfx("trick"); comboShow(A); }
     else label(A, nameOf(k, A).toUpperCase() + "!");
     if (k.pose === "cross") rings.push({ cross: true, who: A, t: 0, dur: k.dur + 0.5 });
-    if (k.quick) flourishFx(A);
+    // The quick trick throws the saint's gift after the demon, while the one shot lasts; otherwise it is only for show.
+    if (k.quick) { if (A.player && canFire()) fire(); else flourishFx(A); }
   }
   if (A.trick) {
     const T = A.trick;
@@ -1997,11 +1998,13 @@ function strike(A, st, sy) {
 const WEAPON = { therese: "A rose from heaven", cupertino: "A star of joy", benedict: "The medal", maurus: "A wave from the lake", scholastica: "Her dove",
   hildegard: "A seed of viriditas", cecilia: "A note of praise", peter: "The keys of the kingdom", augustine: "A burning heart", lucy: "Her lamp" };
 const canFire = () => state === "play" && D && !D.done && game.shots > 0 && game.count <= 0 && !P.crash;
+// (The F key throws it too, as a quick trick in the air or straight away on the ground.)
+function fireKey() { if (!canFire()) return; if (P.mode === "air" && !P.trick) swipe("R"); else fire(); }
 function fire() {
   if (!canFire()) return;
   game.shots--;
   const sp = speedOf(P);
-  shots.push({ x: P.x, y: P.y - 16, vx: P.x < D.x ? Math.max(300, sp) : -300, vy: -260, t: 0, id: game.saint.id, c: sigOf(game.saint).c });
+  shots.push({ x: P.x + 10, y: P.y - 22, vx: P.x < D.x ? Math.max(300, sp) + 200 : -300, vy: -200, t: 0, id: game.saint.id, c: sigOf(game.saint).c });
   Snd.sfx("perfect"); burst(P.x, P.y - 16, "#fff4a0", 10);
   pop(WEAPON[game.saint.id].toUpperCase() + "!", "#fff4a0", 10, "after the demon of " + D.sin.name);
 }
@@ -2913,13 +2916,13 @@ function drawHud(t) {
   rect(W - 20, 1, 13, 13, "#140c1c66"); rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
   if (game.tutorial) button("SKIP", W - 60, 2, 34, 11, false, 6);
   if (D && !D.done && game.count <= 0 && game.shots > 0) {
-    // The one shot at the demon: tap here (or F).
+    // The one shot at the demon, ready: the quick trick (→) in the air throws it.
     const on = canFire(), pulse = 0.6 + Math.sin(t * 6) * 0.3;
     rect(4, 25, 26, 24, "#140c1c"); rect(5, 26, 24, 22, on ? "#5a3a20" : "#3a3048");
     ctx.globalAlpha = pulse; rect(5, 26, 24, 1, "#fff4a0"); ctx.globalAlpha = 1;
     if (game.saint.id === "maurus") { ctx.fillStyle = "#3a8ad0"; ctx.beginPath(); ctx.arc(17, 38, 6, Math.PI, 0); ctx.fill(); rect(11, 38, 12, 2, "#8ad0ff"); }
     else drawProp(game.saint.id, 17, 32, Math.PI, 1.1, 0.8, t);
-    text("F", 27, 41, { align: "right", size: 5, color: "#ffe08a" });
+    text("→", 27, 41, { align: "right", size: 6, color: "#ffe08a" });
   }
   // The surge, and the gifts, and how long they last.
   let gy = 16;
@@ -2964,7 +2967,7 @@ function drawHud(t) {
     text(Z.name.toUpperCase(), W / 2, 46, { align: "center", color: "#ffe08a", size: 15 });
     wrapText(Z.sub, 8, 280, true).forEach((l, i) => text(l, W / 2, 66 + i * 10, { align: "center", color: "#ffffff", size: 8, serif: true }));
     if (game.free) text("Pause and END RUN when you are done", W / 2, 90, { align: "center", color: "#ffe08a", size: 7 });
-    if (D) text("Once in the race, tap the button at the top left (or F) to send " + WEAPON[game.saint.id].toLowerCase() + " after him", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
+    if (D) text("Once in the race, your quick trick (→ in the air) sends " + WEAPON[game.saint.id].toLowerCase() + " after him", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
     if (D) text("Race the demon of " + D.sin.name + " to the door", W / 2, 90, { align: "center", color: D.sin.colors.y, size: 7 });
     ctx.globalAlpha = 1;
   }
@@ -3134,7 +3137,7 @@ function drawTitle(t) {
   const book = button("TRICKS", 194, 143, 58, 16, false, 7), nov = button("NOVITIATE", 256, 143, 58, 16, false, 7);
   text("Tap anywhere to jump (hold to float).   In the air: tap the arrows for tricks", W / 2, 164, { align: "center", color: "#ffffff", size: 7 });
   for (const tp of input.taps) {
-    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); if (!save.tutorial) startTutorial(); else startZone(Math.min(save.open, ZONES.length) - 1); }
+    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); if (!save.tutorial) startTutorial(); else startZone(Math.max(0, ZONES.findIndex((Z) => !save.wins[Z.id]))); }
     else if (tp.x !== undefined && inBox(tp, who)) { Snd.sfx("select"); state = "saints"; }
     else if (tp.x !== undefined && inBox(tp, zones)) { Snd.sfx("select"); state = "zones"; }
     else if (tp.x !== undefined && inBox(tp, book)) { Snd.sfx("select"); bookBack = "title"; state = "book"; }
@@ -3189,7 +3192,7 @@ function drawZones(t) {
   text("THE INTERIOR CASTLE", W / 2, 3, { align: "center", color: "#ffe08a", size: 11 });
   const boxes = [];
   ZONES.forEach((Z, i) => {
-    const row = i < 4 ? 0 : 1, x = row ? 46 + (i - 4) * 78 : 7 + i * 78, y = 19 + row * 64, open = i < save.open || window.__unlock;
+    const row = i < 4 ? 0 : 1, x = row ? 46 + (i - 4) * 78 : 7 + i * 78, y = 19 + row * 64, open = true;
     rect(x - 1, y - 1, 74, 62, "#140c1c");
     const sky = open ? Z.sky : ["#2a2240"];
     sky.forEach((c, k) => rect(x, y + (k * 42) / sky.length, 72, 42 / sky.length + 1, c));
@@ -3301,7 +3304,7 @@ function drawDone(t) {
     text("Beat each demon to learn a new trick. Style: " + commas(game.style), W / 2, 70, { align: "center", color: "#c8f0ff", size: 8 });
     const go = button("ENTER THE CASTLE", W / 2 - 70, 100, 140, 22, true, 10), again = button("AGAIN", W / 2 - 40, 130, 80, 18, false, 8);
     for (const tp of input.taps) {
-      if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) startZone(Math.min(save.open, ZONES.length) - 1);
+      if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) startZone(Math.max(0, ZONES.findIndex((Z) => !save.wins[Z.id])));
       else if (tp.x !== undefined && inBox(tp, again)) startTutorial();
       else if (tp.key === "Escape") state = "title";
     }
@@ -3350,7 +3353,7 @@ function drawDone(t) {
     text("NEW SAINT: " + ns.toUpperCase() + (game.newSaints.some((s) => s.id === "benedict") ? "  (every saint won!)" : ""), W / 2, 123, { align: "center", color: "#8ae86a", size: 7 });
   }
   if (D && D.sayT > 0) bubble(D.say, W - 70, 150, "center");
-  const last = game.zone >= ZONES.length - 1, nextOpen = !last && game.zone + 1 < save.open;
+  const last = game.zone >= ZONES.length - 1, nextOpen = !last;
   const again = button("AGAIN", W / 2 - 154, 132, 100, 20, !nextOpen);
   const next = nextOpen ? button("NEXT MANSION", W / 2 - 50, 132, 100, 20, true) : null;
   const menu = button("CASTLE", W / 2 + 54, 132, 100, 20, false);
@@ -3400,7 +3403,7 @@ function drawPause(t) {
   text("In the air, arrows come up at the bottom right: tap them for tricks (→ alone: the quick one).", W / 2, 41, { align: "center", size: 7, color: "#c8f0ff" });
   text("Finish every trick before you land, or you crash (clouds bounce you; storms throw you down).", W / 2, 52, { align: "center", size: 7 });
   text("Land a combo for points × tricks, and a surge; land again while surging and it stacks.", W / 2, 63, { align: "center", size: 7 });
-  text("Once a race: the button at the top left (or F) sends your saint's gift after the demon.", W / 2, 72, { align: "center", size: 6, color: "#fff4a0" });
+  text("Once a race, your → quick trick throws your saint's gift after the demon, ahead or behind.", W / 2, 72, { align: "center", size: 6, color: "#fff4a0" });
   const go = button("RESUME", W / 2 - 130, 84, 80, 20, true), book = button("TRICKS", W / 2 - 40, 84, 80, 20, false), quit = button(game.free ? "END RUN" : "QUIT", W / 2 + 50, 84, 80, 20, false);
   const skip = game.tutorial ? button("SKIP THE LESSONS", W / 2 - 60, 116, 120, 18, false, 8) : null;
   for (const tp of input.taps) {
@@ -3437,7 +3440,6 @@ addEventListener("pointerdown", (ev) => {
   if (state === "play") {
     if (p.x > W - 24 && p.y < 16) { state = "pause"; input.taps = []; return; }
     if (game.tutorial && p.x > W - 62 && p.x < W - 24 && p.y < 16) { skipTutorial(); return; }
-    if (canFire() && p.x < 32 && p.y > 22 && p.y < 52) { fire(); return; }
     const air = airborne(), d = air ? padDir(p) : null;
     const q = { pad: !!d, dir: d, ax: p.x, ay: p.y, swiped: !!d, t0: performance.now(), air };
     pointers.set(ev.pointerId, q);
@@ -3482,7 +3484,7 @@ addEventListener("keydown", (e) => {
     if (RUSH_KEYS.includes(e.code)) { input.rushHeld = true; e.preventDefault(); }
     if (e.code === "ArrowDown") e.preventDefault();
     if (e.code === "KeyP" || e.code === "Escape") { state = "pause"; input.taps = []; }
-    if (e.code === "KeyF" || e.code === "ShiftLeft" || e.code === "ShiftRight") fire();
+    if (e.code === "KeyF" || e.code === "ShiftLeft" || e.code === "ShiftRight") fireKey();
   } else input.taps.push({ key: e.code });
   if (e.code === "KeyM") Snd.toggle();
 });
