@@ -59,13 +59,6 @@ load. On a phone, tap the left half of the screen to jump and hold to float;
 tap the right half to attack. On a keyboard: Space, Up or W to jump (hold to
 float), X, J or Enter to attack, P to pause, M for sound.
 
-Each saint plays differently: St. Therese floats down like a petal and throws
-roses; St. Joseph of Cupertino levitates and bursts with ecstatic joy; St.
-Benedict throws his medal straight through two foes; St. Maurus, who at St.
-Benedict's word walked on the water to save St. Placidus, surfs across rivers,
-fire and gaps on his board and sends a rolling wave along the ground; St.
-Scholastica jumps twice and calls down a storm.
-
 The title page shows the five books of the Psalter (Psalms 1–41, 42–72,
 73–89, 90–106 and 107–150), all open from the start; within a book any psalm
 can be sung, in any order. Below the books are the other ways to play:
