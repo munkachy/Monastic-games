@@ -8,7 +8,7 @@ serve the whole repo as-is.
 
 - **[Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/)**: build the abbey tower and drive off the demon
 - **[Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/)**: run all 150 psalms with the saints (made for phones)
-- **[Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/)**: the saints at full speed, off ramps and round loops (made for phones)
+- **[Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/)**: the saints race a demon through St. Teresa's Interior Castle, with loops, rails and tricks (made for phones)
 - **[Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/)**: explore a mansion made of the Canticle of Canticles (made for phones)
 - **[Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html)**: assemble a squad, level up, light up the world ([about the game](https://munkachy.github.io/Monastic-games/new-apologetics/))
 
@@ -18,7 +18,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | --- | --- | --- |
 | [Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/) | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
-| [Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/) | `run-the-way/` | A speed runner with the saints of Psalter Runner: slopes, ramps into the sky, springs, loop-the-loops and best times; a single HTML file with nothing to load |
+| [Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/) | `run-the-way/` | A speed runner with the saints of Psalter Runner, racing the seven deadly sins through St. Teresa's seven mansions: loops, rails, ramps, swipe tricks, style points and best times; a single HTML file with nothing to load |
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
@@ -179,24 +179,47 @@ shows.
 ## Run the Way
 
 One file, `run-the-way/index.html`. The saints of Psalter Runner (its screen,
-type, music and figures are copied from there) run six zones: Green
-Pastures, The High Places, Upon Many Waters, The Holy City, The Valley of the
-Shadow and The Courts of the Lord, each about 35,000 to 46,000 pixels long.
+type, music and figures are copied from there) race a demon through the seven
+mansions of St. Teresa of Ávila's *Interior Castle*, from the gate of prayer
+inward to the King's own room at the centre. Each mansion has its own colours
+and country (grey-green outer walls, a torchlit stair at night, a garden at
+noon, the two fountains, a violet dusk of silkworms and butterflies, the fire
+of longing, and the white and gold crystal of the centre) and its own demon, one
+of the seven deadly sins as he looks in Benedictine Bricks: Pride, Sloth,
+Avarice, Envy, Gluttony, Wrath and Lust. The demon flies the course beside the
+saint; a bar at the top shows both, and how many paces one leads the other.
+Beat him to the door and the next mansion opens.
+
 Hold the right half of the screen to run faster, the longer the harder; tap
 or hold the left half to jump (a short tap is a short jump, and holding
 floats, rises, skims a gap or jumps again, as each saint does). Slopes speed
 the saint going down and slow him going up; over a crest at speed he flies;
 boost pads throw him on, ramps throw him into the sky over a gap, springs
-bounce him onto roads of cloud, and loops take him round if he comes in
-fast enough. His feet turn to a blur, then a figure of eight. Neumes are
-the rings: a foe takes them all, or, with none left, sends him back to the
-last lamp; at speed, or landing from above, he bowls the foe over. Each
-zone is timed, with best times kept. Along the foot of the screen a ticker
+bounce him onto roads of cloud, rails carry him grinding along (sometimes over
+a gap), and loops, small and large, take him round if he comes in fast enough.
+Two gifts lie along the way: a mighty wind (Acts 2:2), which doubles his drive
+for a while, and a tongue of fire (Acts 2:3), a burst of speed that bowls over
+anything in his path.
+
+In the air, swipe the screen (the finger holding the right side can swipe
+without letting go) or press the arrow keys to do tricks: ↑↑ front flip,
+↓↓ back flip, ↑↑↑ double flip, ↓↑ barrel roll, ←→ prostration, ↑↓
+genuflection, and ↓↓↑↑← each saint's own trick (St. Therese's Shower of Roses,
+St. Joseph of Cupertino's Ecstasy, St. Benedict's Vade Retro, St. Maurus's Lake
+Skim, St. Scholastica's Thunderstorm, St. Hildegard's Viriditas, St. Cecilia's
+Heavenly Chorus, St. Peter's Keys, St. Augustine's Restless Heart, St. Lucy's
+Lamp of Light), which also drives the demon back. Tricks in one flight make a
+chain worth its points times the number of tricks. Land on your feet and the
+chain is paid in style points and a burst of speed; land before a trick is
+done and the saint crashes, slows and loses the chain, except on a road of
+cloud, which bounces him up for another try. Loops, big air, grinding and
+bowling over foes also earn style. Each mansion keeps its best time, best style
+and whether the demon has been beaten. Along the foot of the screen a ticker
 carries the Douay verses about running (Psalm 118:32, "I have run the way of
 thy commandments"; Isaias 40:31; Hebrews 12:1–2; 1 Corinthians 9:24 and
-more) at a steady reading pace, however fast the saint goes. Every zone can
-be finished without ever holding the right side, in about three minutes;
-driving hard, in under one.
+more) at a steady reading pace, however fast the saint goes. Driving hard all
+the way beats every demon; a saint who never holds the right side still
+reaches the door, in two or three minutes, but well behind him.
 
 ## Canticle Mansion
 
