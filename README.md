@@ -190,9 +190,11 @@ next mansion opens.
 **The saints.** A new player has two, St. Therese and St. Maurus. Each demon
 beaten wins one more: St. Scholastica, St. Joseph of Cupertino, St. Peter,
 St. Cecilia, St. Lucy, St. Hildegard and St. Augustine. When every one of
-them has been won, St. Benedict, the father of them all, comes too. Each
-jumps to his own height (St. Joseph of Cupertino, who flew, highest; St.
-Peter, the Rock, lowest), shown as a gold bar on the saints screen.
+them has been won, St. Benedict, the father of them all, comes too. The
+more you play a saint, the higher that saint jumps: every point of style
+is experience, up to level 10, shown on the saints screen as a level, a
+progress bar and a gold bar for the jump. RESET PROGRESS on the castle
+screen (tap it twice) starts everything again from nothing.
 
 **The one shot.** Once in each race, the button at the top left (or F)
 sends the saint's own gift after the demon: St. Therese's rose, St.
@@ -246,7 +248,9 @@ side for each saint's quick flourish, holding up what that saint carries
 (St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
 St. Lucy her lamp; St. Maurus grabs his board), or swipe anywhere, up, down, left and right, for
 the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
-genuflection in the air, a single ← a heel click; ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
+genuflection in the air, a single ← a heel click (keep the swipe held, or
+the arrow key down, and the move is held, worth more the longer it lasts;
+let go before landing, or it is a crash); ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
 ↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
 light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
 incense), ↓↓↑↑← each saint's own trick (which drives the demon back), ↑↑↑↑
