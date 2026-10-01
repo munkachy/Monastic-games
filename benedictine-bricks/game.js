@@ -38,15 +38,12 @@ const PRAYER_FROM_BUBBLE = 4;
 const SPELLS = {
   repel:    { icon: "aspergillum", cost: 4, name: "Holy water", key: "h" },
   zap:      { icon: "bolt",        cost: 3, name: "Zap",        key: "z" },
-  gild:     { icon: "stone_gold",  cost: 2, name: "Gild",       key: "g" },
 };
 const BUBBLE_EVERY = [16, 28];     // seconds between bubbles (min, max)
-const GOLD_BONUS = 10;             // coins for a gilded stone
 // What each power does, shown when a bubble teaches it.
 const SPELL_HELP = {
   repel: "drives off the demon",
   zap: "breaks the last stone",
-  gild: "gold stone, +" + GOLD_BONUS + " coins",
 };
 
 const DEMON_FIRST_AT = 5;          // cubits of height before his first visit
@@ -119,8 +116,8 @@ const SHAPES = [
 ];
 
 // ---------------------------------------------------------------------------
-// The shop: upgrades with levels, rosaries (each starts a tower with a spell),
-// and Benedictine saints to build as.
+// The shop: upgrades with levels, rosaries (each gives a tower a better
+// start), and Benedictine saints to build as.
 // ---------------------------------------------------------------------------
 
 const PRAYER_BY_LEVEL = [10, 13, 16, 20];
@@ -145,10 +142,10 @@ const UPGRADES = [
 ];
 
 const ROSARIES = [
-  { id: "boxwood", name: "Boxwood rosary", price: 0, beads: "#d8b878", spell: null, text: "A plain rosary. Your towers start with no spell." },
+  { id: "boxwood", name: "Boxwood rosary", price: 0, beads: "#d8b878", spell: null, text: "A plain rosary: every tower starts from nothing." },
   { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: null, prayer: 3, text: "Every tower starts with 3 prayer already said." },
   { id: "silver", name: "Silver rosary", price: 450, beads: "#c8d0d8", spell: null, slowFire: true, text: "The demon's fires smoulder twice as long before they spread." },
-  { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: "gild", text: "Every tower starts with Gild." },
+  { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: null, prayer: 6, text: "Every tower starts with 6 prayer already said." },
 ];
 
 // The builder: St. Benedict to begin with, and other saints of his Order to
@@ -193,35 +190,35 @@ const WORLDS = [
     id: "montecassino", name: "Monte Cassino", rank: "Simple Vows",
     about: "St. Benedict's abbey on the mountain, where he wrote the Rule. Mind the cloister between the wings.",
     base: [{ x: -5.5, w: 4 }, { x: 1.5, w: 4 }],
-    spells: ["gild"],
+    spells: [],
     curses: ["huge"],
   },
   {
     id: "cluny", name: "Cluny", rank: "Solemn Profession",
     about: "The great abbey of Burgundy. Of its church, one octagonal bell tower still stands.",
     base: [{ x: -2.5, w: 5 }],
-    spells: ["gild"],
+    spells: [],
     curses: ["huge", "haste"],
   },
   {
     id: "melk", name: "Melk", rank: "Cellarer",
     about: "The Baroque abbey on its rock above the Danube, with green domes on its towers.",
     base: [{ x: -4, w: 8 }],
-    spells: ["gild"],
+    spells: [],
     curses: ["huge", "haste"],
   },
   {
     id: "montsaintmichel", name: "Mont-Saint-Michel", rank: "Prior",
     about: "The abbey on its rock in the bay of Normandy, under the spire of St. Michael.",
     base: [{ x: -2, w: 4 }],
-    spells: ["gild"],
+    spells: [],
     curses: ["huge", "haste", "tumble"],
   },
   {
     id: "montserrat", name: "Montserrat", rank: "Abbot",
     about: "The abbey among the saw-toothed peaks of Catalonia, home of the Black Madonna.",
     base: [{ x: -5, w: 3, drop: 1 }, { x: -2, w: 6 }],
-    spells: ["gild"],
+    spells: [],
     curses: ["huge", "haste", "tumble"],
   },
 ];
@@ -240,8 +237,7 @@ function makeMissions(world, level) {
     { key: "coins", text: "Earn " + (60 + 40 * level) + " coins in one tower", check: (s) => s.earned >= 60 + 40 * level },
     { key: "bubbles", text: "Catch " + (1 + Math.floor(level / 2)) + " bubble" + (level >= 2 ? "s" : "") + " in one tower", check: (s) => s.bubbles >= 1 + Math.floor(level / 2) },
     level === 0 ? { key: "mortar", text: "Smother a fire with a stone", check: (s) => s.smothered >= 1 }
-      : level <= 2 ? { key: "scaffold", text: "Smother " + (1 + level) + " fires in one tower", check: (s) => s.smothered >= 1 + level }
-      : { key: "gold", text: "Build a tower with " + (level - 1) + " gold stones", check: (s) => s.golds >= level - 1 },
+      : { key: "scaffold", text: "Smother " + (1 + level) + " fires in one tower", check: (s) => s.smothered >= 1 + level },
     { key: "noprayer", text: "Reach " + half + " cubits without using prayer", check: (s) => s.heightNoPrayer >= half },
     world.curses.length
       ? { key: "cursed", text: "Lay " + (2 + level) + " cursed stones on one tower", check: (s) => s.cursedLanded >= 2 + level }
@@ -340,7 +336,6 @@ let fires = [];           // squares of stone that are burning
 let skyText = null;       // the verse in the sky now, as points to draw
 let sinIndex = 0;         // which of the seven sins comes next
 let nextShape;
-let pending = null;       // "gild", waiting for the next stone
 let lost = 0;
 let prayer = 0;
 let prayerMax = 10;
@@ -440,7 +435,6 @@ function newTower() {
   steering = false;
   landed = [];
   fires = [];
-  pending = null;
   lost = 0;
   lives = 3 + save.candle;
   prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
@@ -448,7 +442,7 @@ function newTower() {
   prayer = Math.min(prayerMax, rosary.prayer || 0);
   known = new Set(rosary.spell ? [rosary.spell] : []);
   stats = {
-    height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, golds: 0, smothered: 0, doused: 0, burned: 0,
+    height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, smothered: 0, doused: 0, burned: 0,
     cursedLanded: 0, spellsUsed: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0, heightNoPrayer: 0,
   };
   finale = null;
@@ -503,7 +497,7 @@ function spawn() {
 
   // The demon may curse this stone.
   let curse = null;
-  if (demon.present && !demon.fleeing && demon.wait <= 0 && demon.curses > 0 && world.curses.length && !pending && Math.random() < CURSE_CHANCE) {
+  if (demon.present && !demon.fleeing && demon.wait <= 0 && demon.curses > 0 && world.curses.length && Math.random() < CURSE_CHANCE) {
     curse = world.curses[Math.floor(Math.random() * world.curses.length)];
     demon.curses--;
   }
@@ -536,25 +530,12 @@ function spawn() {
     Body.setVelocity(body, { x: rand(-2, 2), y: 1 });
     Body.setAngularVelocity(body, rand(-0.12, 0.12));
   }
-  if (pending) {
-    enchant(body, pending);
-    pending = null;
-  }
   if (curse) {
     Sound.play("curse");
     effects.push(makeBolt(demon.x, demon.y + 10, body.position.x, body.position.y, "#ff4a3a", "#ffd0f0"));
     effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.4, color: "#ff6a5a" });
   }
   updateHud();
-}
-
-// Turn a stone to gold (worth extra coins).
-function enchant(body, spell) {
-  if (spell === "gild") {
-    body.plugin.gold = true;
-    body.plugin.tex = "stone_gold";
-  }
-  effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.5, color: "#fff2a8" });
 }
 
 function land() {
@@ -566,12 +547,9 @@ function land() {
   Body.setAngularVelocity(body, body.angularVelocity * LANDING_DAMPING);
   body.plugin.laidAt = time;
   Sound.play("land", (body.plugin.tile || TILE) / TILE);
-  let coins = 1;
-  if (body.plugin.gold) coins += GOLD_BONUS;
-  earned += coins * multiplier;
+  earned += multiplier;
   stats.earned = earned;
   stats.laid++;
-  if (body.plugin.gold) stats.golds++;
   if (body.plugin.curse) stats.cursedLanded++;
   landed.push(body);
   prayer = Math.min(prayerMax, prayer + PRAYER_PER_STONE);
@@ -738,9 +716,6 @@ function cast(name) {
   stats.spellsUsed++;
   if (name === "repel") repel();
   else if (name === "zap") zap();
-  else if (active && steering && !active.plugin.gold) enchant(active, name);
-  else pending = name;
-  if (name === "gild") flashBanner("Gold stone: +" + GOLD_BONUS + " coins when it lands");
   drawNextPreview();
   updateHud();
 }
@@ -2059,7 +2034,6 @@ function updateHud() {
     const el = $("spell-" + name);
     el.hidden = !(name === "repel" || name === "zap" || known.has(name));
     el.disabled = !canCast(name);
-    el.classList.toggle("armed", pending === name);
     el.querySelector(".cost").textContent = spellCost(name);
   }
 }
@@ -2096,7 +2070,7 @@ function drawNextPreview() {
   c.imageSmoothingEnabled = false;
   c.clearRect(0, 0, 60, 60);
   if (!nextShape) return;
-  const tex = pending === "gild" ? "stone_gold" : nextShape.tex;
+  const tex = nextShape.tex;
   for (const [cx, cy] of nextShape.cells) {
     c.drawImage(images[tex], 30 + cx * size - size / 2, 30 + cy * size - size / 2, size, size);
   }
