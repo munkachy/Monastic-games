@@ -7,6 +7,8 @@ serve the whole repo as-is.
 | Game | Folder | What it is |
 | --- | --- | --- |
 | Benedictine Bricks | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
+| Psalter Runner | `psalter-runner/` | A 16-bit auto-runner for phones through Psalms 1, 2 and 3, with five saints to choose from; a single HTML file with nothing to load |
+| Catholic Truth Squad: Tactics | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
 ## Playing locally
 
@@ -41,3 +43,30 @@ from [GregoBase](https://gregobase.selapa.net/), kept in
 `benedictine-bricks/music/` that open in any music program. The game sings
 them with a synthesized choir over a drone and a beat, all made in the
 browser (`audio.js`).
+
+## Psalter Runner
+
+One file, `psalter-runner/index.html`, with no libraries, fonts or images to
+load. On a phone, tap the left half of the screen to jump and hold to float;
+tap the right half to attack. On a keyboard: Space, Up or W to jump (hold to
+float), X, J or Enter to attack, P to pause, M for sound.
+
+Each saint plays differently: St. Therese floats down like a petal and throws
+roses; St. Joseph of Cupertino levitates and bursts with ecstatic joy; St.
+Benedict throws his medal straight through two foes; St. Maurice glides on his
+shield and thrusts his lance, with an extra heart; St. Scholastica jumps twice
+and calls down a storm.
+
+Each psalm runs through four stages, with a cut scene between them. Psalm 1:
+the counsel of the ungodly in a dark alley, a reading man whose book opens onto
+a riverside of floating leaves, a windswept desert of chaff, and a fiery abyss.
+Psalm 2: kings of the earth rising out of the ground, the ascent past the One
+enthroned in heaven, the holy mountain where a rod of iron breaks the potter's
+jars, and the divine flames. Psalm 3: the many who rise up, the Lord as shield,
+a dream of beds and mattresses ("I have slept and taken my rest"), and the
+broken teeth of the wicked.
+
+The psalm text that scrolls behind the run is the Douay-Rheims, which is in the
+public domain. The Grail Psalter is still under copyright; to use it, or any
+other translation you have the right to use, replace the verses in `PSALMS` at
+the top of the file.

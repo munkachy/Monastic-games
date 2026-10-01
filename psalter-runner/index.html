@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Psalter Runner</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<canvas id="screen" aria-label="Psalter Runner"></canvas>
+<script>
+"use strict";
+// Psalter Runner: a 16-bit auto-runner through the first three psalms.
+// One file, nothing to load. Left half of the screen: tap to jump, hold to
+// float. Right half: tap to attack. Keys: Space / Up / W to jump (hold to
+// float), X / J / Enter to attack, P or Esc to pause, M for sound.
+
+// ---- The psalms ------------------------------------------------------------------
+// The text in the background, and under the run. This is the Douay-Rheims
+// (public domain), with its own verse numbers. To use another translation,
+// replace the verses here; each phase below names the verses it shows.
+const PSALMS = [
+  { num: 1, verses: [
+    "Blessed is the man who hath not walked in the counsel of the ungodly, nor stood in the way of sinners, nor sat in the chair of pestilence.",
+    "But his will is in the law of the Lord, and on his law he shall meditate day and night.",
+    "And he shall be like a tree which is planted near the running waters, which shall bring forth its fruit in due season. And his leaf shall not fall off: and all whatsoever he shall do shall prosper.",
+    "Not so the wicked, not so: but like the dust, which the wind driveth from the face of the earth.",
+    "Therefore the wicked shall not rise again in judgment: nor sinners in the council of the just.",
+    "For the Lord knoweth the way of the just: and the way of the wicked shall perish.",
+  ] },
+  { num: 2, verses: [
+    "Why have the Gentiles raged, and the people devised vain things?",
+    "The kings of the earth stood up, and the princes met together, against the Lord and against his Christ.",
+    "Let us break their bonds asunder: and let us cast away their yoke from us.",
+    "He that dwelleth in heaven shall laugh at them: and the Lord shall deride them.",
+    "Then shall he speak to them in his anger, and trouble them in his rage.",
+    "But I am appointed king by him over Sion his holy mountain, preaching his commandment.",
+    "The Lord hath said to me: Thou art my son, this day have I begotten thee.",
+    "Ask of me, and I will give thee the Gentiles for thy inheritance, and the utmost parts of the earth for thy possession.",
+    "Thou shalt rule them with a rod of iron, and shalt break them in pieces like a potter's vessel.",
+    "And now, O ye kings, understand: receive instruction, you that judge the earth.",
+    "Serve ye the Lord with fear: and rejoice unto him with trembling.",
+    "Embrace discipline, lest at any time the Lord be angry, and you perish from the just way.",
+    "When his wrath shall be kindled in a short time, blessed are all they that trust in him.",
+  ] },
+  { num: 3, verses: [
+    "The psalm of David when he fled from the face of his son Absalom.",
+    "Why, O Lord, are they multiplied that afflict me? many are they who rise up against me.",
+    "Many say to my soul: There is no salvation for him in his God.",
+    "But thou, O Lord, art my protector, my glory, and the lifter up of my head.",
+    "I have cried to the Lord with my voice: and he hath heard me from his holy hill.",
+    "I have slept and taken my rest: and I have risen up, because the Lord hath protected me.",
+    "I will not fear thousands of the people, surrounding me: arise, O Lord; save me, O my God.",
+    "For thou hast struck all them who are my adversaries without cause: thou hast broken the teeth of sinners.",
+    "Salvation is of the Lord: and thy blessing is upon thy people.",
+  ] },
+];
+
+// ---- The screen -----------------------------------------------------------------
+// A 320 x 180 picture, scaled up with hard edges, as a 16-bit console would.
+const W = 320, H = 180;
+const cv = document.getElementById("screen");
+cv.width = W; cv.height = H;
+const ctx = cv.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+let scale = 1, offX = 0, offY = 0;
+function resize() {
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  const w = Math.floor(W * scale), h = Math.floor(H * scale);
+  offX = Math.floor((innerWidth - w) / 2); offY = Math.floor((innerHeight - h) / 2);
+  cv.style.width = w + "px"; cv.style.height = h + "px";
+  cv.style.left = offX + "px"; cv.style.top = offY + "px";
+}
+addEventListener("resize", resize); resize();
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+
+// ---- Pixel text -----------------------------------------------------------------
+// Letters drawn once into a tiny canvas and cut to hard pixels, so every word
+// on screen has the same crisp, blocky look.
+const glyphCache = new Map();
+function textSprite(str, size, color) {
+  const key = str + "|" + size + "|" + color;
+  let s = glyphCache.get(key);
+  if (s) return s;
+  const c = document.createElement("canvas"), g = c.getContext("2d");
+  const font = "bold " + size + "px 'Courier New', monospace";
+  g.font = font;
+  const w = Math.max(1, Math.ceil(g.measureText(str).width) + 2);
+  c.width = w; c.height = size + 4;
+  g.font = font; g.textBaseline = "top"; g.fillStyle = "#fff"; g.fillText(str, 1, 1);
+  const img = g.getImageData(0, 0, c.width, c.height), d = img.data;
+  const r = parseInt(color.slice(1, 3), 16), gg = parseInt(color.slice(3, 5), 16), b = parseInt(color.slice(5, 7), 16);
+  for (let i = 0; i < d.length; i += 4) { const on = d[i + 3] > 110; d[i] = r; d[i + 1] = gg; d[i + 2] = b; d[i + 3] = on ? 255 : 0; }
+  g.putImageData(img, 0, 0);
+  s = c;
+  if (glyphCache.size > 600) glyphCache.clear();
+  glyphCache.set(key, s);
+  return s;
+}
+function text(str, x, y, o) {
+  o = o || {};
+  const size = o.size || 8, color = o.color || "#ffffff", edge = o.edge === undefined ? "#140c1c" : o.edge;
+  const s = textSprite(str, size, color);
+  let tx = Math.round(o.align === "center" ? x - s.width / 2 : o.align === "right" ? x - s.width : x);
+  const ty = Math.round(y);
+  if (edge) { const e = textSprite(str, size, edge); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [1, 1]]) ctx.drawImage(e, tx + dx, ty + dy); }
+  ctx.drawImage(s, tx, ty);
+  return s.width;
+}
+function wrapText(str, size, width) {
+  const words = str.split(" "), lines = []; let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (textSprite(t, size, "#ffffff").width > width && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// ---- Sound ----------------------------------------------------------------------
+// A little chip sound: square and triangle waves, a psalm tone on loop for
+// each psalm, and bleeps for jumping, throwing and catching.
+const Snd = {
+  ac: null, on: true, master: null, next: 0, step: 0, tune: null,
+  init() {
+    if (this.ac) { if (this.ac.state === "suspended") this.ac.resume(); return; }
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    this.ac = new A(); this.master = this.ac.createGain(); this.master.gain.value = this.on ? 0.5 : 0; this.master.connect(this.ac.destination);
+  },
+  toggle() { this.on = !this.on; if (this.master) this.master.gain.value = this.on ? 0.5 : 0; save.sound = this.on; store(); },
+  tone(f, len, type, vol, slide, at) {
+    if (!this.ac) return;
+    const t = at || this.ac.currentTime, o = this.ac.createOscillator(), g = this.ac.createGain();
+    o.type = type || "square"; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + len);
+    g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.0008, t + len);
+    o.connect(g).connect(this.master); o.start(t); o.stop(t + len + 0.02);
+  },
+  noise(len, vol, freq) {
+    if (!this.ac) return;
+    const t = this.ac.currentTime, n = this.ac.sampleRate * len, b = this.ac.createBuffer(1, n, this.ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = this.ac.createBufferSource(), f = this.ac.createBiquadFilter(), g = this.ac.createGain();
+    s.buffer = b; f.type = "bandpass"; f.frequency.value = freq || 1200; g.gain.setValueAtTime(vol || 0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    s.connect(f).connect(g).connect(this.master); s.start(t);
+  },
+  sfx(n) {
+    switch (n) {
+      case "jump": this.tone(330, 0.12, "square", 0.08, 660); break;
+      case "float": this.tone(880, 0.08, "triangle", 0.05, 990); break;
+      case "bounce": this.tone(220, 0.2, "square", 0.1, 880); break;
+      case "throw": this.tone(990, 0.06, "square", 0.06, 1500); break;
+      case "smite": this.noise(0.15, 0.25, 900); this.tone(180, 0.15, "square", 0.08, 90); break;
+      case "neume": this.tone(1320, 0.08, "triangle", 0.1); this.tone(1980, 0.12, "triangle", 0.08, 0, this.ac && this.ac.currentTime + 0.06); break;
+      case "hurt": this.tone(220, 0.3, "sawtooth", 0.12, 70); this.noise(0.2, 0.15, 400); break;
+      case "shield": [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.3, "triangle", 0.08, 0, this.ac && this.ac.currentTime + i * 0.07)); break;
+      case "block": this.tone(1500, 0.12, "triangle", 0.1, 700); break;
+      case "rod": this.noise(0.5, 0.35, 300); this.tone(90, 0.5, "square", 0.12, 40); break;
+      case "rise": this.noise(0.4, 0.15, 200); break;
+      case "win": [392, 494, 587, 784].forEach((f, i) => this.tone(f, 0.5, "triangle", 0.1, 0, this.ac && this.ac.currentTime + i * 0.15)); break;
+      case "select": this.tone(660, 0.07, "square", 0.07); break;
+    }
+  },
+  // The psalm tones, sung by a square wave over a triangle drone: the
+  // reciting note repeats as a psalm verse is chanted, then the cadence.
+  TUNES: [
+    { bpm: 150, drone: 98, notes: [196, 220, 262, 262, 262, 262, 247, 262, 220, 196, 196, 0, 196, 220, 262, 262, 262, 294, 262, 247, 220, 196, 0, 0] },  // Tone 8
+    { bpm: 160, drone: 110, notes: [220, 262, 294, 294, 294, 330, 294, 262, 294, 0, 220, 262, 294, 294, 294, 262, 247, 220, 0, 0] },                      // Tone 1
+    { bpm: 132, drone: 131, notes: [262, 294, 330, 330, 330, 349, 330, 294, 330, 0, 330, 330, 294, 262, 294, 262, 0, 0] },                                // Tone 5
+  ],
+  play(i) { this.tune = this.TUNES[i]; this.step = 0; if (this.ac) this.next = this.ac.currentTime + 0.1; },
+  stop() { this.tune = null; },
+  update() {
+    if (!this.ac || !this.tune || !this.on) return;
+    const beat = 60 / this.tune.bpm;
+    while (this.next < this.ac.currentTime + 0.2) {
+      const f = this.tune.notes[this.step % this.tune.notes.length];
+      if (f) { this.tone(f * 2, beat * 0.9, "square", 0.035, 0, this.next); this.tone(f, beat * 0.95, "triangle", 0.05, 0, this.next); }
+      if (this.step % 4 === 0) this.tone(this.tune.drone, beat * 4, "triangle", 0.06, 0, this.next);
+      this.next += beat; this.step++;
+    }
+  },
+};
+
+// ---- Saved progress --------------------------------------------------------------
+let save = { best: [0, 0, 0], open: 1, saint: 0, sound: true };
+try { save = Object.assign(save, JSON.parse(localStorage.getItem("psalter-runner") || "{}")); } catch (e) { }
+function store() { try { localStorage.setItem("psalter-runner", JSON.stringify(save)); } catch (e) { } }
+Snd.on = save.sound !== false;
+
+// ---- The saints ------------------------------------------------------------------
+// jump: take-off speed. hold: what holding the jump does in the air. attack:
+// what a tap on the right does, and how soon it can be done again (cd).
+const SAINTS = [
+  { id: "therese", name: "St. Therese", title: "The Little Flower", hearts: 3, jump: 330, hold: "float", floatCap: 36, floatTime: 1.8, attack: "rose", cd: 0.32,
+    about: "Hold to float down like a petal. Throws roses in a gentle arc.",
+    look: { robe: "#6b4226", shade: "#4a2c18", mantle: "#f2ead8", veil: "#1c1418", wimple: "#f7f3ea", skin: "#f2c8a6", hold: "rose" } },
+  { id: "cupertino", name: "St. Joseph", title: "of Cupertino, who flew", hearts: 3, jump: 320, hold: "levitate", floatTime: 1.1, attack: "ecstasy", cd: 0.8,
+    about: "Hold to rise into the air in ecstasy. His joy bursts out all around him.",
+    look: { robe: "#7a6a58", shade: "#5a4c3e", skin: "#efc2a0", hair: "#3a2a1e", tonsure: true, cord: "#efe6d0" } },
+  { id: "benedict", name: "St. Benedict", title: "Father of Monks", hearts: 3, jump: 330, hold: "float", floatCap: 80, floatTime: 0.9, attack: "medal", cd: 0.28,
+    about: "Throws the medal of St. Benedict, straight and fast, through two foes at once.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", skin: "#e8b896", hair: "#c8c2b8", beard: "#d8d4cc", hood: true, staff: true } },
+  { id: "maurice", name: "St. Maurice", title: "of the Theban Legion", hearts: 4, jump: 300, hold: "glide", floatCap: 20, floatTime: 2.6, attack: "lance", cd: 0.25,
+    about: "Rides his shield on the wind, a long low glide. A soldier: one more heart, and a lance.",
+    look: { robe: "#b8322a", shade: "#8a2018", skin: "#6a4228", hair: "#1c140f", armor: "#c8ccd4", helm: true } },
+  { id: "scholastica", name: "St. Scholastica", title: "who prayed for rain", hearts: 3, jump: 320, hold: "float", floatCap: 70, floatTime: 0.8, double: true, attack: "rain", cd: 1.1,
+    about: "Jumps twice: the second is a prayer. Calls down a storm on the foes ahead.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", veil: "#141418", wimple: "#f7f3ea", skin: "#f0c8aa", dove: true } },
+];
+
+// A small figure in the style of the game, drawn from blocks: robe, head,
+// veil or hood, hands. (x, y) is the top-left of a 12 x 22 box; f is the
+// running frame; face is 1 (right) or -1 (left).
+function drawFigure(L, x, y, f, opt) {
+  opt = opt || {};
+  x = Math.round(x); y = Math.round(y);
+  const ink = "#140c1c";
+  const bob = opt.still ? 0 : (f % 2);
+  const fy = y + bob;
+  // Legs and feet, running.
+  if (!opt.seated) {
+    const a = opt.air ? 1 : f % 4 < 2 ? 0 : 1;
+    rect(x + 2 + (a ? 0 : 2), y + 19, 3, 3, ink); rect(x + 7 - (a ? 0 : 2), y + 19, 3, 3, ink);
+  }
+  // Robe.
+  rect(x + 1, fy + 8, 10, 12, ink);
+  rect(x + 2, fy + 9, 8, 10, L.robe);
+  rect(x + 2, fy + 15, 8, 4, L.shade);
+  if (L.mantle) { rect(x + 1, fy + 9, 2, 10, L.mantle); rect(x + 9, fy + 9, 2, 10, L.mantle); }
+  if (L.armor) { rect(x + 2, fy + 9, 8, 6, L.armor); rect(x + 3, fy + 10, 6, 1, "#ffffff"); }
+  if (L.cord) { rect(x + 2, fy + 13, 8, 1, L.cord); rect(x + 4, fy + 14, 1, 4, L.cord); }
+  // Arms.
+  rect(x + (opt.reach ? 10 : 9), fy + 10, 3, 3, L.skin);
+  // Head.
+  rect(x + 2, fy, 8, 9, ink);
+  rect(x + 3, fy + 1, 6, 7, L.skin);
+  rect(x + 7, fy + 3, 1, 1, ink);
+  if (L.veil) { rect(x + 2, fy, 3, 9, L.veil); rect(x + 2, fy, 8, 2, L.veil); rect(x + 4, fy + 1, 5, 1, L.wimple); rect(x + 3, fy + 7, 6, 2, L.wimple); }
+  if (L.hood) { rect(x + 2, fy, 2, 9, L.robe); rect(x + 2, fy, 8, 1, L.robe); }
+  if (L.hair && !L.hood) { rect(x + 3, fy + 1, 6, 1, L.hair); rect(x + 3, fy + 1, 1, 3, L.hair); }
+  if (L.tonsure) { rect(x + 3, fy + 1, 6, 2, L.hair); rect(x + 5, fy + 1, 2, 1, L.skin); }
+  if (L.beard) { rect(x + 4, fy + 5, 5, 3, L.beard); }
+  if (L.helm) { rect(x + 2, fy - 1, 8, 3, "#c8ccd4"); rect(x + 5, fy - 3, 2, 2, "#b8322a"); }
+  if (L.crown) { rect(x + 3, fy - 2, 6, 2, "#e8b94a"); rect(x + 3, fy - 4, 1, 2, "#e8b94a"); rect(x + 5, fy - 4, 2, 2, "#e8b94a"); rect(x + 8, fy - 4, 1, 2, "#e8b94a"); }
+  if (L.eyes) rect(x + 6, fy + 3, 2, 1, L.eyes);
+  // Things held.
+  if (L.hold === "rose") { rect(x + 11, fy + 8, 2, 2, "#d8324a"); rect(x + 11, fy + 10, 1, 3, "#2f7a3a"); }
+  if (L.staff) { rect(x + 12, fy + 2, 1, 18, "#8a5a2b"); rect(x + 11, fy + 2, 3, 1, "#8a5a2b"); }
+  if (L.dove) { rect(x + 1, fy - 5, 4, 2, "#ffffff"); rect(x - 1, fy - 6, 2, 1, "#ffffff"); }
+  if (L.weapon) { rect(x - 3, fy + 6, 1, 14, "#8a8a92"); rect(x - 4, fy + 4, 3, 3, "#c8ccd4"); }
+}
+
+// ---- Input ------------------------------------------------------------------------
+const input = { jumpHeld: false, jumpPressed: false, attackPressed: false, taps: [] };
+const jumpPointers = new Set();
+function toGame(ev) { return { x: (ev.clientX - offX) / scale, y: (ev.clientY - offY) / scale }; }
+// Touches anywhere on the screen count, not only on the picture: on a phone
+// held upright, the black space above and below is part of the controls.
+addEventListener("pointerdown", (ev) => {
+  if (ev.cancelable) ev.preventDefault();
+  Snd.init();
+  const p = toGame(ev);
+  if (state === "play") {
+    if (p.x > W - 22 && p.x <= W && p.y >= 0 && p.y < 20) { pause(); return; }
+    if (ev.clientX < innerWidth / 2) { jumpPointers.add(ev.pointerId); input.jumpHeld = true; input.jumpPressed = true; }
+    else input.attackPressed = true;
+  } else input.taps.push(p);
+}, { passive: false });
+const release = (ev) => { jumpPointers.delete(ev.pointerId); input.jumpHeld = jumpPointers.size > 0; };
+addEventListener("pointerup", release); addEventListener("pointercancel", release);
+addEventListener("contextmenu", (e) => e.preventDefault());
+const JUMP_KEYS = ["Space", "ArrowUp", "KeyW", "KeyZ"], ATTACK_KEYS = ["KeyX", "KeyJ", "Enter", "KeyK"];
+const keys = new Set();
+addEventListener("keydown", (e) => {
+  Snd.init();
+  if (e.repeat) return;
+  keys.add(e.code);
+  if (state === "play") {
+    if (JUMP_KEYS.includes(e.code)) { input.jumpHeld = true; input.jumpPressed = true; e.preventDefault(); }
+    if (ATTACK_KEYS.includes(e.code)) { input.attackPressed = true; e.preventDefault(); }
+    if (e.code === "KeyP" || e.code === "Escape") pause();
+  } else input.taps.push({ key: e.code });
+  if (e.code === "KeyM") Snd.toggle();
+});
+addEventListener("keyup", (e) => { keys.delete(e.code); if (JUMP_KEYS.includes(e.code)) input.jumpHeld = jumpPointers.size > 0 || JUMP_KEYS.some((k) => keys.has(k)); });
+addEventListener("blur", () => { if (state === "play") pause(); });
+
+// ---- Things in the world -------------------------------------------------------------
+// Every level is built from three kinds of thing: ground (solid blocks with
+// walls), platforms (you land on them from above; some bounce), and
+// entities (foes, hazards, neumes to catch). x runs from 0 at the start of a
+// phase to its length; y grows downward, with level ground at 150.
+
+const GROUND = 150;
+function E(type, x, y, w, h, extra) { return Object.assign({ type, x, y, w, h, hp: 1, hostile: true, alive: true, t: 0 }, extra || {}); }
+const neume = (x, y) => E("neume", x, y, 8, 8, { hostile: false, prize: true });
+
+// ---- The phases ------------------------------------------------------------------------
+// Each psalm runs through four phases. A phase builds its stretch of world,
+// paints its own sky, and names the verses shown while it runs. `into` is
+// the cut scene that opens it.
+
+function arcOfNeumes(ents, x, y, n) { for (let i = 0; i < n; i++) ents.push(neume(x + i * 14, y - Math.sin((i / (n - 1 || 1)) * Math.PI) * 22)); }
+
+const PHASES = [
+  // ---------- Psalm 1 ----------
+  [
+    { name: "The Counsel of the Ungodly", verses: [0], speed: 100, len: 2600, sky: "alley", into: "fade",
+      build(r) {
+        const segs = [{ x0: -200, x1: 2800, y: GROUND, kind: "street" }], plats = [], ents = [];
+        let x = 320;
+        while (x < 2400) {
+          const k = r();
+          if (k < 0.55) ents.push(E("councilor", x, GROUND - 22, 14, 22, { seat: true }));
+          else if (k < 0.8) ents.push(E("sinner", x + 60, GROUND - 22, 12, 22, { vx: -22 }));
+          else { ents.push(E("councilor", x, GROUND - 22, 14, 22, { seat: true })); ents.push(E("councilor", x + 34, GROUND - 22, 14, 22, { seat: true })); x += 30; }
+          if (r() < 0.5) arcOfNeumes(ents, x - 20, GROUND - 44, 3);
+          x += 130 + r() * 90;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "Planted Near the Running Waters", verses: [1, 2], speed: 100, len: 3000, sky: "river", into: "book",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        let x = -200;
+        while (x < 3200) {
+          const bank = x < 200 ? 400 : 120 + r() * 160;
+          segs.push({ x0: x, x1: x + bank, y: GROUND, kind: "grass" });
+          if (r() < 0.6) ents.push(E("fruit", x + bank * 0.5, GROUND - 40 - r() * 20, 8, 8, { hostile: false, prize: true }));
+          x += bank;
+          if (x > 2950) continue;
+          const river = 70 + r() * 70;
+          // Giant leaves float on the river: land on one and it throws you high.
+          const leaves = river > 105 ? 2 : 1;
+          for (let i = 0; i < leaves; i++) plats.push({ x0: x + (river / (leaves + 1)) * (i + 1) - 16, x1: x + (river / (leaves + 1)) * (i + 1) + 16, base: GROUND + 6, y: GROUND + 6, bob: 3, ph: r() * 6, kind: "leaf", bounce: 430, aim: true });
+          ents.push(E("river", x, GROUND + 4, river, 30, { hostile: false, decor: true }));
+          if (r() < 0.6) arcOfNeumes(ents, x, GROUND - 70, 4);
+          x += river;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "Like the Dust the Wind Driveth", verses: [3], speed: 100, len: 2800, sky: "desert", into: "shatter", wind: 0.3,
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        let x = -200, y = GROUND;
+        while (x < 3000) { const w = 140 + r() * 140; segs.push({ x0: x, x1: x + w, y, kind: "sand" }); x += w; y = clamp(GROUND + Math.round((r() - 0.5) * 16), GROUND - 8, GROUND + 6); }
+        let cx = 360;
+        while (cx < 2600) {
+          ents.push(E("chaff", cx + 200, GROUND - 30 - r() * 20, 14, 14, { vx: -50 - r() * 40, vy: 0, spin: 0 }));
+          if (r() < 0.25) ents.push(E("chaff", cx + 280, GROUND - 50, 12, 12, { vx: -80, vy: 0, spin: 0 }));
+          if (r() < 0.5) arcOfNeumes(ents, cx, GROUND - 46, 3);
+          cx += 150 + r() * 110;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "The Way of the Wicked Shall Perish", verses: [4, 5], speed: 105, len: 2600, sky: "abyss", into: "fade",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        segs.push({ x0: -200, x1: 300, y: GROUND, kind: "rock" });
+        let x = 300;
+        while (x < 2800) {
+          const gap = 34 + r() * 30; x += gap;
+          ents.push(E("lava", x - gap, GROUND + 14, gap, 30, { hostile: false, decor: true }));
+          if (r() < 0.45) ents.push(E("fireball", x - gap / 2 - 5, GROUND + 20, 10, 10, { base: GROUND + 20, ph: r() * 3, unbreakable: true }));
+          const w = 60 + r() * 90, y = GROUND - Math.round(r() * 3) * 8;
+          segs.push({ x0: x, x1: x + w, y, kind: "rock" });
+          if (r() < 0.5) arcOfNeumes(ents, x + 6, y - 30, 3);
+          x += w;
+        }
+        segs.push({ x0: x, x1: x + 600, y: GROUND, kind: "rock" });
+        return { segs, plats, ents };
+      } },
+  ],
+  // ---------- Psalm 2 ----------
+  [
+    { name: "The Kings of the Earth Stood Up", verses: [0, 1, 2], speed: 102, len: 2800, sky: "dusk", into: "fade",
+      build(r) {
+        const segs = [{ x0: -200, x1: 3000, y: GROUND, kind: "earth" }], plats = [], ents = [];
+        let x = 340;
+        while (x < 2500) {
+          ents.push(E("king", x, GROUND, 14, 24, { rise: 0, hp: 2 }));
+          if (r() < 0.35) ents.push(E("king", x + 26, GROUND, 14, 24, { rise: 0, hp: 2, late: 0.25 }));
+          if (r() < 0.5) arcOfNeumes(ents, x - 30, GROUND - 50, 3);
+          x += 140 + r() * 90;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "He That Dwelleth in Heaven", verses: [3, 4], speed: 100, len: 2800, sky: "heaven", into: "ascend",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        plats.push({ x0: -200, x1: 220, base: GROUND, y: GROUND, kind: "cloud" });
+        let x = 220, y = GROUND;
+        while (x < 2950) {
+          x += 26 + r() * 30;
+          const w = 56 + r() * 60;
+          // The clouds climb as the run goes on, then level out.
+          y = x < 1900 ? y - (8 + r() * 18) : y + (r() - 0.5) * 16;
+          y = Math.max(y, -260);
+          plats.push({ x0: x, x1: x + w, base: y, y, bob: 2, ph: r() * 6, kind: r() < 0.25 ? "bright" : "cloud" });
+          if (r() < 0.55) arcOfNeumes(ents, x + 4, y - 34, 3);
+          x += w;
+        }
+        plats.push({ x0: x, x1: x + 600, base: y, y, kind: "cloud" });
+        return { segs, plats, ents };
+      } },
+    { name: "Sion His Holy Mountain", verses: [5, 6, 7, 8], speed: 95, len: 3000, sky: "mountain", into: "quake",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        let x = -200, y = GROUND;
+        segs.push({ x0: x, x1: 260, y, kind: "stone" }); x = 260;
+        while (x < 3200) {
+          const w = 90 + r() * 80;
+          y -= 10 + Math.round(r() * 16);
+          segs.push({ x0: x, x1: x + w, y, kind: "stone" });
+          if (r() < 0.55 && x < 2800) ents.push(E("jar", x + w * 0.55, y - 26, 18, 26, { struck: false }));
+          if (r() < 0.4) arcOfNeumes(ents, x + 10, y - 40, 3);
+          x += w;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "When His Wrath Shall Be Kindled", verses: [9, 10, 11, 12], speed: 135, len: 3000, sky: "flames", into: "fade",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        let x = -200;
+        while (x < 3200) {
+          const w = x < 300 ? 500 : 160 + r() * 200;
+          segs.push({ x0: x, x1: x + w, y: GROUND, kind: "gold" });
+          if (x > 200) for (let jx = x + 60; jx < x + w - 30; jx += 110 + r() * 80) ents.push(E("jet", jx, GROUND - 46, 10, 46, { ph: r() * 2.4, unbreakable: true }));
+          x += w;
+          if (x > 300 && x < 2900) { const gap = 40 + r() * 30; ents.push(E("lava", x, GROUND + 14, gap, 30, { hostile: false, decor: true, holy: true })); x += gap; }
+        }
+        let nx = 400; while (nx < 2800) { arcOfNeumes(ents, nx, GROUND - 60, 3); nx += 260 + r() * 200; }
+        return { segs, plats, ents };
+      } },
+  ],
+  // ---------- Psalm 3 ----------
+  [
+    { name: "Many Are They Who Rise Up", verses: [1, 2], speed: 98, len: 2800, sky: "field", into: "fade",
+      build(r) {
+        const segs = [{ x0: -200, x1: 3000, y: GROUND, kind: "earth" }], plats = [], ents = [];
+        let x = 300;
+        while (x < 2600) {
+          const wave = 1 + Math.floor(r() * 3);
+          for (let i = 0; i < wave; i++) ents.push(E("foe", x + i * 34, GROUND - 22, 12, 22, { vx: -25 - r() * 20 }));
+          if (r() < 0.45) ents.push(E("arrowman", x + 130, GROUND - 22, 12, 22, { vx: 0, fire: 0.8 + r() }));
+          if (r() < 0.4) arcOfNeumes(ents, x - 40, GROUND - 48, 3);
+          x += 170 + r() * 90;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "Thou, O Lord, Art My Protector", verses: [3, 4], speed: 100, len: 2400, sky: "field2", into: "shield",
+      build(r) {
+        const segs = [{ x0: -200, x1: 2600, y: GROUND, kind: "earth" }], plats = [], ents = [];
+        ents.push(E("shieldgift", 150, GROUND - 40, 14, 14, { hostile: false, prize: true }));
+        let x = 330;
+        while (x < 2200) {
+          const wave = 2 + Math.floor(r() * 3);
+          for (let i = 0; i < wave; i++) ents.push(E("foe", x + i * 30, GROUND - 22, 12, 22, { vx: -30 - r() * 25 }));
+          if (r() < 0.7) ents.push(E("arrowman", x + 150, GROUND - 22, 12, 22, { vx: 0, fire: 0.6 + r() * 0.6 }));
+          x += 160 + r() * 70;
+        }
+        return { segs, plats, ents };
+      } },
+    { name: "I Have Slept and Taken My Rest", verses: [5], speed: 98, len: 3000, sky: "dream", into: "sleep",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        plats.push({ x0: -200, x1: 240, base: GROUND, y: GROUND, kind: "rug" });
+        // Each bed is placed where the bounce off the one before comes down,
+        // since a runner can't steer: the arc carries you to the next bed.
+        // (Holding to float carries you further, so let go over the beds.)
+        const speed = 98, g = 900;
+        let x = 270, y = GROUND - 20, lx = x + 20;
+        let first = true, prevB = 0;
+        while (lx < 2900) {
+          const big = r() < 0.5, w = big ? 60 : 48, B = big ? 470 : 420;
+          if (!first) { const ny = clamp(y + (r() - 0.5) * 60, GROUND - 70, GROUND - 6); const t = (prevB + Math.sqrt(prevB * prevB - 2 * g * (y - ny))) / g; lx += speed * t; y = ny; }
+          first = false; prevB = B;
+          x = lx - w * 0.45;
+          plats.push({ x0: x, x1: x + w, base: y, y, bob: 0, ph: 0, kind: big ? "bed" : "mattress", bounce: B, aim: true });
+          if (r() < 0.6) ents.push(E("sheep", x + w / 2 - 6, y - 80 - r() * 30, 12, 9, { hostile: false, prize: true, ph: r() * 6 }));
+          x += w;
+        }
+        plats.push({ x0: x + 40, x1: x + 700, base: GROUND, y: GROUND, kind: "rug" });
+        return { segs, plats, ents };
+      } },
+    { name: "Thou Hast Broken the Teeth of Sinners", verses: [6, 7, 8], speed: 100, len: 2800, sky: "jaw", into: "wake",
+      build(r) {
+        const segs = [], plats = [], ents = [];
+        segs.push({ x0: -200, x1: 280, y: GROUND, kind: "gum" });
+        let x = 280;
+        while (x < 2900) {
+          const gap = 28 + r() * 34; x += gap;
+          // Shattered stumps of teeth to land on, with jagged shards between.
+          const w = 32 + r() * 44, y = GROUND - Math.round(r() * 2) * 7;
+          segs.push({ x0: x, x1: x + w, y, kind: "tooth" });
+          if (w > 56 && r() < 0.6) ents.push(E("shard", x + w / 2 - 5, y - 10, 10, 10, { unbreakable: true }));
+          if (r() < 0.45) ents.push(E("fang", x + w + 4, -40, 16, 40, { unbreakable: true, top: true }));
+          if (r() < 0.4) arcOfNeumes(ents, x + 4, y - 34, 3);
+          x += w;
+        }
+        segs.push({ x0: x + 30, x1: x + 700, y: GROUND, kind: "gum" });
+        return { segs, plats, ents };
+      } },
+  ],
+];
+
+// ---- Skies and lands ------------------------------------------------------------------
+// Each sky has a far layer, the psalm's text drifting across it, and a near
+// layer of the place itself, all moving at their own speeds.
+
+function bands(colors, y0, y1) { const n = colors.length, h = (y1 - y0) / n; colors.forEach((c, i) => rect(0, y0 + i * h, W, h + 1, c)); }
+let textStrip = null, textStripFor = "";
+// The words behind the run: the verses of this phase, in a long ribbon.
+function psalmStrip(pi, verses) {
+  const key = pi + ":" + (verses || []).join(",");
+  if (textStripFor === key && textStrip) return textStrip;
+  const words = (verses ? verses.map((v) => PSALMS[pi].verses[v]) : PSALMS[pi].verses).join("  +  ") + "  +  ";
+  const c = document.createElement("canvas"); const s = textSprite(words, 14, "#ffffff");
+  c.width = s.width; c.height = s.height; c.getContext("2d").drawImage(s, 0, 0);
+  textStrip = c; textStripFor = key; return c;
+}
+function drawPsalmText(camX, color, alpha, y) {
+  const s = psalmStrip(game.psalm, world && world.P.verses);
+  ctx.globalAlpha = alpha;
+  for (const [par, yy] of [[0.18, y], [0.32, y + 20]]) {
+    const off = ((camX * par) % s.width + s.width) % s.width;
+    for (let x = -off; x < W; x += s.width) ctx.drawImage(s, Math.round(x), yy);
+  }
+  ctx.globalAlpha = 1;
+}
+const par = (camX, k, period) => ((camX * k) % period + period) % period;
+
+const SKY = {
+  alley(camX, camY, t) {
+    bands(["#0a0814", "#120e22", "#1a1430", "#221a3a"], 0, H);
+    drawPsalmText(camX, 0, 0.13, 18);
+    // Far rooftops and a thin moon.
+    ctx.fillStyle = "#e8e0c0"; ctx.beginPath(); ctx.arc(255, 24, 7, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#120e22"; ctx.beginPath(); ctx.arc(259, 22, 6, 0, Math.PI * 2); ctx.fill();
+    for (let i = -1; i < 8; i++) { const x = i * 56 - par(camX, 0.3, 56); const h = 40 + ((i + Math.floor(camX * 0.3 / 56)) * 37 % 30); rect(x, 70 - h + 40, 50, 120, "#1c1630"); for (let w = 0; w < 3; w++) if ((i + w) % 3) rect(x + 8 + w * 14, 90 - h + 40, 5, 6, "#e8b94a55"); }
+    // Brick walls close by, with lamps.
+    for (let i = -1; i < 6; i++) {
+      const x = i * 80 - par(camX, 0.8, 80);
+      rect(x, 60, 80, 90, "#2a1c24");
+      for (let b = 0; b < 9; b++) for (let k = 0; k < 4; k++) rect(x + k * 20 + (b % 2) * 10, 62 + b * 10, 18, 8, "#33222c");
+      rect(x + 38, 84, 4, 66, "#1a1218"); rect(x + 34, 78, 12, 8, "#e8b94a"); ctx.globalAlpha = 0.12; rect(x + 14, 86, 52, 64, "#e8b94a"); ctx.globalAlpha = 1;
+    }
+  },
+  river(camX, camY, t) {
+    bands(["#7ec8e8", "#9ad6ee", "#bfe6f2", "#d8f0f0"], 0, H);
+    drawPsalmText(camX, 0, 0.16, 16);
+    for (let i = -1; i < 7; i++) { const x = i * 70 - par(camX, 0.2, 70); rect(x, 96, 70, 60, "#7ab86a"); rect(x + 10, 90, 50, 10, "#7ab86a"); }
+    // Trees planted by the water, heavy with fruit.
+    for (let i = -1; i < 5; i++) {
+      const x = i * 96 - par(camX, 0.55, 96);
+      rect(x + 40, 70, 8, 80, "#6a4226");
+      rect(x + 20, 40, 48, 36, "#2f7a3a"); rect(x + 26, 34, 36, 10, "#3a8a44"); rect(x + 24, 48, 40, 6, "#46a052");
+      for (let f = 0; f < 4; f++) rect(x + 26 + f * 10, 52 + (f % 2) * 10, 4, 4, "#e05a3a");
+    }
+    // Running water.
+    rect(0, GROUND + 6 - camY, W, H, "#3a8ad0");
+    for (let i = 0; i < 14; i++) rect(((i * 47 - t * 40 - camX * 0.9) % W + W) % W, GROUND + 12 - camY + (i % 4) * 6, 14, 1, "#bfe6f2");
+  },
+  desert(camX, camY, t) {
+    bands(["#e8a868", "#f0b878", "#f6c88a", "#f8d8a0"], 0, H);
+    drawPsalmText(camX, 0, 0.15, 18);
+    rect(240, 30, 18, 18, "#fff0c0");
+    for (let i = -1; i < 6; i++) { const x = i * 90 - par(camX, 0.25, 90); ctx.fillStyle = "#d8985a"; ctx.beginPath(); ctx.moveTo(x, 150); ctx.quadraticCurveTo(x + 45, 90, x + 90, 150); ctx.fill(); }
+    for (let i = -1; i < 6; i++) { const x = i * 70 - par(camX, 0.6, 70); ctx.fillStyle = "#c88848"; ctx.beginPath(); ctx.moveTo(x, 150); ctx.quadraticCurveTo(x + 35, 118, x + 70, 150); ctx.fill(); }
+    // The wind: dust streaking past.
+    for (let i = 0; i < 30; i++) { const x = ((i * 53 - t * 260 - camX) % (W + 40) + W + 40) % (W + 40) - 20; rect(x, (i * 29) % 150 + 5, 10 + (i % 3) * 6, 1, "#fff2d8"); }
+  },
+  abyss(camX, camY, t) {
+    bands(["#1a0808", "#2a0c0a", "#3a120c", "#5a1a0e"], 0, H);
+    drawPsalmText(camX, 0, 0.14, 18);
+    for (let i = -1; i < 7; i++) { const x = i * 60 - par(camX, 0.3, 60); rect(x + 10, 60 + (i % 3) * 14, 30, 120, "#200a08"); }
+    // The fire below.
+    for (let i = 0; i < W; i += 4) { const h = 10 + Math.sin(i * 0.15 + t * 6) * 5 + Math.sin(i * 0.05 - t * 3) * 4; rect(i, H - h - 14, 4, h + 14, "#e0501a"); rect(i, H - h * 0.5 - 8, 4, h, "#ffb030"); }
+  },
+  dusk(camX, camY, t) {
+    bands(["#3a1a3a", "#6a2a4a", "#a8484a", "#d8784a"], 0, H);
+    drawPsalmText(camX, 0, 0.15, 16);
+    for (let i = -1; i < 6; i++) { const x = i * 80 - par(camX, 0.3, 80); rect(x, 110, 80, 50, "#2a1626"); rect(x + 20, 80, 8, 30, "#2a1626"); rect(x + 18, 76, 30, 10, "#7a1a2a"); }
+  },
+  heaven(camX, camY, t) {
+    bands(["#f8f0d0", "#fff6e0", "#fffaf0", "#ffffff"], 0, H);
+    drawPsalmText(camX, 0, 0.12, 14);
+    // The One enthroned: a great throne far off, the figure robed in white,
+    // his face hidden in the light. He moves only a little as you climb.
+    const cx = 230, cy = 62 - camY * 0.08;
+    ctx.globalAlpha = 0.5;
+    for (let r = 0; r < 5; r++) { ctx.fillStyle = "#ffe7a0"; ctx.beginPath(); ctx.arc(cx, cy, 70 - r * 10, 0, Math.PI * 2); ctx.fill(); }
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * 0.15; ctx.strokeStyle = "#ffd860"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * 220, cy + Math.sin(a) * 220); ctx.stroke(); }
+    // The throne.
+    rect(cx - 40, cy - 40, 80, 130, "#d8a840"); rect(cx - 34, cy - 34, 68, 124, "#f0c860");
+    rect(cx - 48, cy + 30, 14, 8, "#d8a840"); rect(cx + 34, cy + 30, 14, 8, "#d8a840");
+    rect(cx - 48, cy + 38, 10, 52, "#d8a840"); rect(cx + 38, cy + 38, 10, 52, "#d8a840");
+    // The figure: shoulders, a robe falling in folds to the footstool, open hands.
+    rect(cx - 20, cy - 4, 40, 40, "#ffffff"); rect(cx - 26, cy + 30, 52, 56, "#fbf6ea");
+    for (let k = -18; k <= 18; k += 9) rect(cx + k, cy + 40, 2, 44, "#e8e0cc");
+    rect(cx - 30, cy + 22, 8, 6, "#f4d0b0"); rect(cx + 22, cy + 22, 8, 6, "#f4d0b0");
+    rect(cx - 34, cy + 86, 68, 8, "#d8a840");
+    ctx.fillStyle = "#fffbe8"; ctx.beginPath(); ctx.arc(cx, cy - 14, 14 + Math.sin(t * 2) * 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Clouds drifting by.
+    for (let i = -1; i < 6; i++) { const x = i * 90 - par(camX, 0.5, 90); rect(x, 140 - camY * 0.2, 60, 14, "#ffffff"); rect(x + 10, 132 - camY * 0.2, 30, 10, "#ffffff"); }
+  },
+  mountain(camX, camY, t) {
+    bands(["#3a4a7a", "#5a6a9a", "#7a8ab8", "#a8b4d0"], 0, H);
+    drawPsalmText(camX, 0, 0.14, 16);
+    ctx.fillStyle = "#4a5070"; ctx.beginPath(); ctx.moveTo(60, H); ctx.lineTo(200, 20 - camY * 0.05); ctx.lineTo(340, H); ctx.fill();
+    ctx.fillStyle = "#e8eef8"; ctx.beginPath(); ctx.moveTo(200, 20 - camY * 0.05); ctx.lineTo(176, 50 - camY * 0.05); ctx.lineTo(224, 50 - camY * 0.05); ctx.fill();
+    // A storm over the summit, now and then a flash.
+    if (Math.sin(t * 1.7) > 0.97) { ctx.globalAlpha = 0.3; rect(0, 0, W, H, "#ffffff"); ctx.globalAlpha = 1; }
+  },
+  flames(camX, camY, t) {
+    bands(["#8a1a0a", "#c83a0a", "#f0701a", "#ffb030"], 0, H);
+    drawPsalmText(camX, 0, 0.18, 16);
+    // Walls of divine fire, far and near.
+    for (const [k, c, h0] of [[0.25, "#e0501a", 70], [0.55, "#ff8a2a", 45]]) for (let i = -1; i < 22; i++) {
+      const x = i * 16 - par(camX, k, 16), h = h0 + Math.sin(i * 1.7 + t * 5) * 14 + Math.sin(i * 0.6 - t * 3) * 10;
+      rect(x, GROUND - camY - h, 12, h + 10, c); rect(x + 3, GROUND - camY - h * 0.6, 6, h * 0.6, "#ffe07a");
+    }
+    for (let i = 0; i < 40; i++) { const x = ((i * 37 - camX * 0.6 - t * 30) % (W + 20) + W + 20) % (W + 20) - 10; const y = H - ((t * 60 + i * 23) % 140); rect(x, y, 3, 3, i % 2 ? "#fff0a0" : "#ffcf5a"); }
+  },
+  field(camX, camY, t) {
+    bands(["#4a2a3a", "#7a3a3a", "#a85a3a", "#d0884a"], 0, H);
+    drawPsalmText(camX, 0, 0.14, 16);
+    // A host on the hills, spears raised.
+    for (let i = -1; i < 40; i++) { const x = i * 9 - par(camX, 0.2, 9); rect(x, 104 + (i % 3), 5, 30, "#3a1a26"); rect(x + 2, 92 + (i % 4) * 2, 1, 14, "#3a1a26"); }
+    for (let i = -1; i < 6; i++) { const x = i * 70 - par(camX, 0.5, 70); rect(x, 128, 70, 30, "#4a2a2a"); }
+  },
+  field2(camX, camY, t) { SKY.field(camX, camY, t); ctx.globalAlpha = 0.15 + Math.sin(t * 3) * 0.05; rect(0, 0, W, H, "#ffe08a"); ctx.globalAlpha = 1; },
+  dream(camX, camY, t) {
+    bands(["#0a0a2a", "#14144a", "#1e1e5a", "#2a2a6a"], 0, H);
+    for (let i = 0; i < 50; i++) rect((i * 71 - camX * 0.05 + W * 9) % W, (i * 37) % 120, 1, 1, i % 5 ? "#ffffff" : "#ffe08a");
+    ctx.fillStyle = "#fff6d0"; ctx.beginPath(); ctx.arc(52, 32, 12, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#0a0a2a"; ctx.beginPath(); ctx.arc(58, 28, 10, 0, Math.PI * 2); ctx.fill();
+    drawPsalmText(camX, 0, 0.16, 50);
+    for (let i = 0; i < 6; i++) { const x = ((i * 70 - camX * 0.3 - t * 6) % (W + 40) + W + 40) % (W + 40) - 20; text("z", x, 60 + (i * 23) % 60 + Math.sin(t * 2 + i) * 4, { color: "#9fb0ff", edge: null, size: 8 + (i % 3) * 3 }); }
+  },
+  jaw(camX, camY, t) {
+    bands(["#2a0a14", "#3a0e1a", "#4a1220", "#5a1a28"], 0, H);
+    drawPsalmText(camX, 0, 0.14, 40);
+    // The upper jaw: a row of broken teeth along the top.
+    for (let i = -1; i < 12; i++) { const x = i * 30 - par(camX, 0.9, 30); ctx.fillStyle = "#e8e0d0"; ctx.beginPath(); ctx.moveTo(x, -camY * 0); ctx.lineTo(x + 26, 0); ctx.lineTo(x + 18, 14 + (i % 3) * 4); ctx.lineTo(x + 10, 10); ctx.fill(); }
+    rect(0, 0, W, 4, "#a83a4a");
+  },
+};
+
+// Ground, drawn by kind.
+const LAND = {
+  street: ["#3a3040", "#2a2232", "#4a4052"], grass: ["#4a9a3a", "#6a4a2a", "#6ab84a"], sand: ["#e8b878", "#c89858", "#f8d8a0"],
+  rock: ["#4a2a22", "#2a1410", "#6a3a2a"], earth: ["#5a3a2a", "#3a2418", "#7a5034"], stone: ["#7a7a8a", "#5a5a6a", "#9a9aaa"],
+  gold: ["#e8b94a", "#a87a1a", "#fff0a0"], gum: ["#a83a4a", "#7a2030", "#c85a6a"], tooth: ["#e8e0d0", "#b8b0a0", "#ffffff"],
+};
+function drawSeg(s, camX, camY) {
+  const [top, body, lip] = LAND[s.kind] || LAND.earth;
+  const x = s.x0 - camX, y = s.y - camY, w = s.x1 - s.x0;
+  if (x > W || x + w < 0) return;
+  rect(x, y, w, H + 400, body);
+  rect(x, y, w, 6, top); rect(x, y, w, 1, lip);
+  if (s.kind === "street") for (let k = Math.floor(s.x0 / 24) * 24; k < s.x1; k += 24) rect(k - camX, y + 10, 12, 2, "#4a4052");
+  if (s.kind === "stone" || s.kind === "rock") for (let k = 0; k < 4; k++) rect(x + 4, y + 10 + k * 10, w - 8, 1, "#00000033");
+  if (s.kind === "tooth") { rect(x + 2, y + 6, w - 4, 400, "#d8d0c0"); rect(x + w / 2, y + 2, 1, 10, "#8a8070"); }
+  if (s.kind === "gold") for (let k = Math.floor(s.x0 / 16) * 16; k < s.x1; k += 16) rect(k - camX, y + 8, 8, 8, "#fff0a0");
+}
+function drawPlat(p, camX, camY) {
+  const x = p.x0 - camX, y = p.y - camY, w = p.x1 - p.x0;
+  if (x > W || x + w < 0) return;
+  const sq = p.squash > 0 ? 3 : 0;
+  if (p.kind === "leaf") {
+    ctx.fillStyle = "#2f8a3a"; ctx.beginPath(); ctx.ellipse(x + w / 2, y + 2 + sq, w / 2, 5 - sq, 0, 0, Math.PI * 2); ctx.fill();
+    rect(x + 4, y + 1 + sq, w - 8, 1, "#7ad86a"); rect(x + w / 2, y - 1 + sq, 1, 5, "#1a5a24");
+  } else if (p.kind === "cloud" || p.kind === "bright") {
+    rect(x, y + sq, w, 8 - sq, p.kind === "bright" ? "#ffe8a0" : "#ffffff"); rect(x + 6, y - 4 + sq, w - 12, 5, p.kind === "bright" ? "#fff4c8" : "#ffffff"); rect(x, y + 7, w, 2, "#d8e0f0");
+  } else if (p.kind === "bed") {
+    rect(x, y + sq, w, 10 - sq, "#f4f0e8"); rect(x, y + 2 + sq, w, 3, "#c8d4f4"); rect(x + 2, y - 4 + sq, 14, 6, "#ffffff"); rect(x - 2, y - 8, 4, 22, "#8a5a2b"); rect(x + w - 2, y - 4, 4, 18, "#8a5a2b"); rect(x, y + 10, w, 3, "#6a4220");
+  } else if (p.kind === "mattress") {
+    rect(x, y + sq, w, 8 - sq, "#e8d0d8"); for (let k = 4; k < w; k += 8) rect(x + k, y + 3 + sq, 2, 2, "#b890a0");
+  } else if (p.kind === "rug") {
+    rect(x, y, w, 40, "#2a2a6a"); rect(x, y, w, 4, "#8a7ad8");
+  }
+}
+
+// ---- The game ----------------------------------------------------------------------------
+let state = "title";
+const game = { psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0 };
+let world = null, player = null, shots = [], parts = [], trans = null, banner = 0, camX = 0, camY = 0;
+let selectIndex = save.saint || 0, psalmIndex = 0;
+
+function newPlayer(s) {
+  return { x: 0, y: GROUND - 22, w: 10, h: 22, vy: 0, ground: true, float: s.floatTime, jumps: s.double ? 2 : 1, hearts: s.hearts, inv: 0, cd: 0, f: 0, ft: 0, floating: false, shield: 0, reach: 0 };
+}
+function startPhase(pi, ph, keepHearts) {
+  game.psalm = pi; game.phase = ph;
+  const P = PHASES[pi][ph];
+  const built = P.build(rng(pi * 100 + ph * 7 + 3));
+  world = { P, segs: built.segs, plats: built.plats, ents: built.ents, t: 0 };
+  const hearts = player && keepHearts ? player.hearts : game.saint.hearts;
+  const shield = player && keepHearts ? player.shield : 0;
+  player = newPlayer(game.saint); player.hearts = hearts; player.shield = shield;
+  const start = solidUnder(0, -999) || { y: GROUND };
+  player.y = start.y - player.h;
+  shots = []; parts = []; camX = -80; camY = 0; banner = 2.6;
+  game.phaseScore = game.score;
+  state = "play";
+}
+function startPsalm(pi) { game.score = 0; player = null; Snd.play(pi); startPhase(pi, 0, false); }
+
+// What a body standing at x stands on (the highest solid whose top is below y).
+function solidUnder(x, yTop) {
+  let best = null;
+  for (const s of world.segs) if (x >= s.x0 && x <= s.x1 && s.y >= yTop && (!best || s.y < best.y)) best = s;
+  for (const p of world.plats) if (x >= p.x0 && x <= p.x1 && p.y >= yTop && (!best || p.y < best.y)) best = p;
+  return best;
+}
+
+// A bed or a leaf throws you toward the middle of the next place to land:
+// the arc is shaped a little so a runner, who can't steer, comes down safe.
+function aimedBounce(p, vx) {
+  let next = null;
+  for (const q of world.plats.concat(world.segs)) if (q !== p && q.x0 > p.x1 - 4 && (!next || q.x0 < next.x0)) next = q;
+  if (!next) return -p.bounce;
+  const tx = Math.min(next.x0 + 26, (next.x0 + next.x1) / 2);
+  const t = (tx - player.x) / Math.max(40, vx);
+  if (t < 0.35 || t > 1.4) return -p.bounce;
+  const dy = next.y - (player.y + player.h);                 // + is down
+  const v = (dy - 450 * t * t) / t;                          // y = v t + g t^2 / 2
+  return clamp(v, -p.bounce * 1.25, -p.bounce * 0.7);
+}
+function hurt(by) {
+  if (player.inv > 0) return;
+  if (window.__hits) window.__hits.push((by || "?") + " @" + Math.round(player.x) + " " + world.P.name.split(" ").slice(-2).join(" "));
+  if (window.__god) { player.inv = 1.6; return; }
+  if (player.shield > 0) { player.shield--; player.inv = 0.8; Snd.sfx("block"); burst(player.x + 5, player.y + 10, "#ffe08a", 10); return; }
+  player.hearts--; player.inv = 1.6; Snd.sfx("hurt"); shake = 0.3;
+  burst(player.x + 5, player.y + 10, "#ff5a4e", 10);
+  if (player.hearts <= 0) { state = "over"; Snd.stop(); }
+}
+function fell() {
+  if (window.__hits) window.__hits.push("fell @" + Math.round(player.x) + " " + world.P.name.split(" ").slice(-2).join(" "));
+  if (!window.__god) { player.hearts--; Snd.sfx("hurt"); shake = 0.3; }
+  if (player.hearts <= 0) { state = "over"; Snd.stop(); return; }
+  // Carried back to safe ground just ahead.
+  let s = null;
+  for (const q of world.segs.concat(world.plats)) if (q.x1 > player.x + 20 && (!s || q.x0 < s.x0)) s = q;
+  if (s) { player.x = Math.max(player.x + 10, s.x0 + 6); player.y = s.y - player.h - 30; }
+  player.vy = 0; player.inv = 2; player.float = game.saint.floatTime;
+}
+
+let shake = 0;
+function burst(x, y, c, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140, life: 0.5 + Math.random() * 0.4, c }); }
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+function attack() {
+  const s = game.saint;
+  if (player.cd > 0) return;
+  player.cd = s.cd; player.reach = 0.15;
+  const x = player.x + player.w, y = player.y + 8;
+  if (s.attack === "rose") shots.push({ kind: "rose", x, y, w: 6, h: 6, vx: 180 + world.P.speed, vy: -130, g: 420, life: 1.4, pierce: 1 });
+  if (s.attack === "medal") shots.push({ kind: "medal", x, y: y + 2, w: 6, h: 6, vx: 300 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 2 });
+  if (s.attack === "ecstasy") shots.push({ kind: "ring", x: player.x + 5, y: player.y + 11, r: 4, w: 0, h: 0, life: 0.35, ring: true });
+  if (s.attack === "lance") shots.push({ kind: "lance", x: x - 2, y: y + 2, w: 30, h: 6, vx: world.P.speed, vy: 0, g: 0, life: 0.14, pierce: 9, melee: true });
+  if (s.attack === "rain") shots.push({ kind: "cloud", x: player.x + 50, y: Math.min(player.y, GROUND - 22) - 60, w: 70, h: 160, vx: world.P.speed, vy: 0, g: 0, life: 1.4, pierce: 99, rain: true, tick: 0 });
+  Snd.sfx(s.attack === "ecstasy" || s.attack === "rain" ? "shield" : "throw");
+}
+function smite(e) {
+  if (e.unbreakable || !e.alive) return false;
+  if (--e.hp > 0) { burst(e.x + e.w / 2, e.y + 6, "#ffffff", 4); Snd.sfx("block"); return true; }
+  e.alive = false;
+  burst(e.x + e.w / 2, e.y + e.h / 2, e.type === "jar" ? "#c87a4a" : "#e8b94a", 12);
+  game.score += 10; Snd.sfx("smite");
+  return true;
+}
+
+function update(dt) {
+  if (window.__bot) window.__bot(dt);   // testing only
+  world.t += dt; game.time += dt;
+  const P = world.P, s = game.saint;
+  if (banner > 0) banner -= dt;
+  if (shake > 0) shake -= dt;
+  // Running: always forward. In the desert the wind holds you back in the air.
+  const wind = P.wind ? P.wind * (0.6 + 0.4 * Math.sin(world.t * 1.3)) : 0;
+  const vx = P.speed * (player.ground ? 1 : 1 - wind);
+  const prevBottom = player.y + player.h;
+  player.x += vx * dt;
+  // Jumping, floating, levitating, gliding, and the second jump.
+  if (input.jumpPressed) {
+    if (player.ground) { player.vy = -s.jump; player.ground = false; Snd.sfx("jump"); player.jumps = s.double ? 1 : 0; }
+    else if (player.jumps > 0 && s.double && !player.carried) { player.vy = -s.jump * 0.85; player.jumps--; Snd.sfx("float"); burst(player.x + 5, player.y + 22, "#9fd0ff", 6); }
+  }
+  input.jumpPressed = false;
+  player.floating = false;
+  // After a bed or a leaf throws you, the arc carries you: no floating off it.
+  if (!player.ground && input.jumpHeld && player.float > 0 && !player.carried) {
+    // Levitation lifts him gently; it never cuts short a jump already rising faster.
+    if (s.hold === "levitate") { if (player.vy > -110) player.vy = Math.max(player.vy - 1300 * dt, -110); player.float -= dt; player.floating = true; }
+    else if (player.vy > 0) { player.vy = Math.min(player.vy, s.floatCap); player.float -= dt; player.floating = true; }
+  }
+  player.vy += 900 * dt;
+  player.y += player.vy * dt;
+  // Landing on ground and platforms; walls to run into.
+  player.ground = false;
+  const feet = player.y + player.h, cx = player.x + player.w / 2;
+  for (const p of world.plats) {
+    if (p.bob) p.y = p.base + Math.sin(world.t * 2 + p.ph) * p.bob;
+    if (p.squash > 0) p.squash -= dt;
+    if (player.vy >= 0 && player.x + player.w > p.x0 && player.x < p.x1 && prevBottom <= p.y + 4 && feet >= p.y) {
+      player.y = p.y - player.h;
+      if (p.bounce) { player.vy = p.aim ? aimedBounce(p, vx) : -p.bounce; p.squash = 0.15; if (p.aim) player.carried = true; Snd.sfx("bounce"); player.jumps = s.double ? 1 : 0; player.float = s.floatTime; }
+      else { player.vy = 0; player.ground = true; }
+    }
+  }
+  for (const g of world.segs) {
+    if (player.x + player.w <= g.x0 || player.x >= g.x1) continue;
+    if (player.vy >= 0 && prevBottom <= g.y + 4 && feet >= g.y) { player.y = g.y - player.h; player.vy = 0; player.ground = true; }
+    else if (feet > g.y + 4 && player.y < g.y + 400 && player.x + player.w - vx * dt <= g.x0 + 1) {
+      // A step low enough is climbed without breaking stride; a wall knocks you.
+      if (feet - g.y <= 12) { player.y = g.y - player.h; player.vy = 0; player.ground = true; }
+      else { hurt("wall"); player.y = g.y - player.h; player.vy = -120; }
+    }
+  }
+  if (player.ground) { player.float = s.floatTime; player.jumps = s.double ? 2 : 1; player.carried = false; }
+  // A fall is judged by the ground, not the camera: nothing left beneath,
+  // and well below where the saint last stood.
+  if (player.ground) player.level = player.y + player.h;
+  if (!solidUnder(player.x + player.w / 2, player.y + player.h - 2) && player.y + player.h > (player.level || GROUND) + 90) fell();
+  if (state !== "play") return;
+  player.inv = Math.max(0, player.inv - dt); player.cd = Math.max(0, player.cd - dt); player.reach = Math.max(0, player.reach - dt);
+  player.ft += dt * (player.ground ? 10 : 4); player.f = Math.floor(player.ft);
+  if (input.attackPressed) attack();
+  input.attackPressed = false;
+
+  // The camera keeps the saint a little left of centre, and rises with the land.
+  // It follows the ground the saint last stood on, not every jump, and lifts
+  // only when a high bounce would carry her off the top.
+  camX = player.x - 90;
+  if (player.ground) player.level = player.y + player.h;
+  let want = Math.min(0, (player.level || GROUND) - GROUND);
+  want = Math.min(want, player.y - 14);
+  camY = Math.min(lerp(camY, want, Math.min(1, dt * 4)), player.y - 10);
+  camY = Math.max(camY, player.y + player.h - H + 20);      // and down with a fall
+
+  // Foes, hazards and gifts.
+  for (const e of world.ents) {
+    if (!e.alive) continue;
+    e.t += dt;
+    const near = e.x - player.x;
+    if (near > W + 60) continue;
+    switch (e.type) {
+      case "sinner": case "foe": e.x += e.vx * dt; break;
+      case "arrowman":
+        if (near < 220 && near > 20) { e.fire -= dt; if (e.fire <= 0) { e.fire = 1.6; world.ents.push(E("arrow", e.x - 6, e.y + 8, 10, 3, { vx: -170 })); } }
+        break;
+      case "arrow": e.x += e.vx * dt; break;
+      case "chaff": e.x += e.vx * dt; e.vy += 600 * dt; e.y += e.vy * dt; e.spin += dt * 10; { const g = solidUnder(e.x + e.w / 2, e.y); if (g && e.y + e.h > g.y) { e.y = g.y - e.h; e.vy = -90 - Math.random() * 70; } } break;
+      case "fireball": e.y = e.base - Math.max(0, Math.sin(world.t * 2.2 + e.ph)) * 90; break;
+      case "king":
+        // A king of the earth rises up out of the ground as you come near.
+        if (near < 150 + (e.late || 0) * 100 && e.rise < 1) { if (e.rise === 0) { Snd.sfx("rise"); burst(e.x + 7, GROUND, "#7a5034", 8); } e.rise = Math.min(1, e.rise + dt * 2.2); }
+        e.y = GROUND - e.h * e.rise;
+        break;
+      case "jar":
+        // The rod of iron comes down on a jar ahead, and it bursts.
+        if (!e.struck && near < 110 && near > 30) { e.struck = true; e.rod = 0; }
+        if (e.struck && e.rod !== undefined) { e.rod += dt; if (e.rod > 0.45 && !e.broke) { e.broke = true; e.alive = false; Snd.sfx("rod"); shake = 0.25; for (let i = 0; i < 5; i++) world.ents.push(E("potshard", e.x + 6, e.y + 6, 6, 6, { vx: -40 - Math.random() * 120, vy: -120 - Math.random() * 160, unbreakable: false })); burst(e.x + 9, e.y + 13, "#c87a4a", 14); } }
+        break;
+      case "potshard": e.x += e.vx * dt; e.vy += 500 * dt; e.y += e.vy * dt; if (e.y > GROUND + 300) e.alive = false; break;
+      case "jet": e.on = ((world.t + e.ph) % 2.4) < 0.9; break;
+      case "pillow": e.y += Math.sin(world.t * 2 + e.ph) * 0.3; break;
+      // The upper teeth hang from the top of the view, whatever its height.
+      case "fang": e.y = camY; e.h = 34; break;
+    }
+    if (e.decor) continue;
+    if (e.prize) {
+      if (overlap(player, e)) {
+        e.alive = false;
+        if (e.type === "shieldgift") { player.shield = 4; Snd.sfx("shield"); banner = Math.max(banner, 0); burst(player.x + 5, player.y + 10, "#ffe08a", 20); }
+        else { game.score += e.type === "sheep" ? 15 : 5; Snd.sfx("neume"); burst(e.x + 4, e.y + 4, "#ffe08a", 5); }
+      }
+      continue;
+    }
+    if (e.type === "jet" && !e.on) continue;
+    if (e.type === "king" && e.rise < 0.5) continue;
+    if (e.type === "jar" && !e.alive) continue;
+    const hb = e.type === "jet" ? { x: e.x, y: e.y, w: e.w, h: e.h } : e.type === "fang" ? { x: e.x + 3, y: e.y, w: e.w - 6, h: e.h - 6 } : e;
+    if (e.hostile && overlap({ x: player.x + 1, y: player.y + 2, w: player.w - 2, h: player.h - 2 }, hb)) hurt(e.type);
+  }
+  world.ents = world.ents.filter((e) => e.alive && e.x > camX - 80);
+
+  // The saint's gifts in flight.
+  for (const sh of shots) {
+    sh.life -= dt;
+    if (sh.ring) { sh.r += 260 * dt; for (const e of world.ents) if (e.alive && !e.prize && !e.decor && Math.hypot(e.x + e.w / 2 - sh.x, e.y + e.h / 2 - sh.y) < sh.r + 6) smite(e); continue; }
+    sh.x += sh.vx * dt; sh.vy += (sh.g || 0) * dt; sh.y += sh.vy * dt;
+    if (sh.melee) sh.x = player.x + player.w - 2, sh.y = player.y + 10;
+    if (sh.rain) { sh.tick -= dt; if (sh.tick <= 0) { sh.tick = 0.25; for (const e of world.ents) if (e.alive && !e.prize && !e.decor && e.x + e.w > sh.x && e.x < sh.x + sh.w && e.y > sh.y) smite(e); } continue; }
+    for (const e of world.ents) if (e.alive && !e.prize && !e.decor && sh.pierce > 0 && overlap(sh, e)) { if (smite(e)) sh.pierce--; else if (e.unbreakable) sh.pierce = 0; }
+    if (sh.pierce <= 0) sh.life = 0;
+  }
+  shots = shots.filter((sh) => sh.life > 0);
+  for (const p of parts) { p.life -= dt; p.vy += 400 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+  parts = parts.filter((p) => p.life > 0);
+
+  // The end of the phase: on to the next, through its cut scene.
+  if (player.x >= P.len) {
+    const next = game.phase + 1;
+    if (next >= PHASES[game.psalm].length) { finishPsalm(); return; }
+    beginTransition(PHASES[game.psalm][next].into, next);
+  }
+}
+
+function finishPsalm() {
+  state = "done"; Snd.stop(); Snd.sfx("win");
+  save.best[game.psalm] = Math.max(save.best[game.psalm] || 0, game.score);
+  save.open = Math.max(save.open, Math.min(3, game.psalm + 2));
+  store();
+}
+
+// ---- Cut scenes -----------------------------------------------------------------------
+// book: the blessed man reading, and a dive into the page. shatter: the
+// picture breaks into pieces. ascend: up into light. quake: the mountain
+// shakes. shield: a golden shield comes down. sleep / wake: night falls, and
+// day breaks. fade: a plain fade through black.
+let snapshot = null;
+function beginTransition(kind, next) {
+  snapshot = document.createElement("canvas"); snapshot.width = W; snapshot.height = H; snapshot.getContext("2d").drawImage(cv, 0, 0);
+  const shards = [];
+  if (kind === "shatter") for (let y = 0; y < H; y += 30) for (let x = 0; x < W; x += 40) shards.push({ x, y, vx: (x - W / 2) * (1 + Math.random()), vy: -60 - Math.random() * 120, r: (Math.random() - 0.5) * 6 });
+  trans = { kind, next, t: 0, len: { book: 3.2, shatter: 1.8, ascend: 2.4, quake: 2, shield: 2.2, sleep: 2.4, wake: 2, fade: 1.4 }[kind] || 1.4, shards };
+  state = "trans";
+  if (kind === "shatter" || kind === "quake") Snd.sfx("rod");
+  if (kind === "shield") Snd.sfx("shield");
+}
+function drawTransition(dt) {
+  trans.t += dt;
+  const k = trans.t / trans.len, T = trans;
+  const verse = PSALMS[game.psalm].verses[PHASES[game.psalm][T.next].verses[0]];
+  if (T.kind === "book") {
+    // A serene man on a bench under a tree, reading by lamplight, his face
+    // calm. The view closes in on the open book in his hands.
+    const z = 1 + Math.pow(Math.max(0, (k - 0.3) / 0.7), 2) * 16;
+    const bx = 163, by = 104;            // the book, where the view dives in
+    ctx.save(); ctx.translate(bx, by); ctx.scale(z, z); ctx.translate(-bx, -by);
+    bands(["#0e0a1a", "#16122a", "#1e1834", "#26203e"], 0, H);
+    for (let i = 0; i < 30; i++) rect((i * 61) % W, (i * 23) % 70, 1, 1, "#ffffff");
+    // The tree, the lamp, the grass.
+    rect(60, 40, 14, 110, "#3a2416"); rect(20, 10, 100, 44, "#1f4a2a"); rect(30, 4, 80, 12, "#2a5a34"); rect(26, 50, 90, 8, "#1a3a22");
+    rect(236, 50, 4, 100, "#2a2230"); rect(230, 42, 16, 10, "#e8b94a");
+    ctx.globalAlpha = 0.07; for (let r = 0; r < 5; r++) { ctx.fillStyle = "#ffe7a0"; ctx.beginPath(); ctx.arc(238, 50, 30 + r * 18, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1;
+    rect(0, 150, W, 30, "#1a2a1a"); rect(0, 150, W, 2, "#2a4a2a");
+    // The bench.
+    rect(120, 126, 90, 6, "#6a4226"); rect(120, 112, 90, 4, "#6a4226"); rect(124, 132, 4, 18, "#3a2416"); rect(202, 132, 4, 18, "#3a2416");
+    // The man, three times the size of a runner, seated with the book.
+    ctx.save(); ctx.translate(150, 66); ctx.scale(3, 3);
+    drawFigure({ robe: "#3a5a8a", shade: "#2a4470", skin: "#efc2a0", hair: "#6a4a30", beard: "#6a4a30" }, 0, 0, 0, { still: true, seated: true });
+    ctx.restore();
+    rect(150, 120, 30, 8, "#2a4470");
+    // The open book.
+    rect(154, 98, 20, 13, "#3a2416"); rect(155, 98, 9, 12, "#f7f0dc"); rect(164, 98, 9, 12, "#f7f0dc"); rect(164, 98, 1, 12, "#8a7a5a");
+    for (let l = 0; l < 4; l++) { rect(156, 100 + l * 2, 6, 1, "#8a7a5a"); rect(166, 100 + l * 2, 6, 1, "#8a7a5a"); }
+    ctx.globalAlpha = 0.35 + Math.sin(T.t * 3) * 0.1; rect(150, 92, 28, 24, "#fff4c8"); ctx.globalAlpha = 1;
+    ctx.restore();
+    if (k < 0.35) text("Blessed is the man... on his law he shall meditate day and night.", W / 2, 162, { align: "center", color: "#ffe8b0", size: 8 });
+    if (k > 0.7) { ctx.globalAlpha = Math.min(1, (k - 0.7) / 0.2); rect(0, 0, W, H, "#f7f0dc"); ctx.globalAlpha = 1; wrapText(verse, 10, 260).forEach((l, i) => text(l, W / 2, 60 + i * 13, { align: "center", color: "#3a2a1a", edge: null, size: 10 })); }
+  } else if (T.kind === "shatter") {
+    rect(0, 0, W, H, "#000");
+    for (const s of T.shards) { ctx.save(); ctx.translate(s.x + 20 + s.vx * k, s.y + 15 + s.vy * k + 300 * k * k); ctx.rotate(s.r * k); ctx.drawImage(snapshot, s.x, s.y, 40, 30, -20, -15, 40, 30); ctx.restore(); }
+  } else {
+    const base = { ascend: "#ffffff", shield: "#fff4c8", sleep: "#0a0a2a", wake: "#fff0c0", quake: "#000000", fade: "#000000" }[T.kind];
+    if (k < 0.5) {
+      ctx.drawImage(snapshot, T.kind === "quake" ? Math.round((Math.random() - 0.5) * 8) : 0, T.kind === "ascend" ? Math.round(k * 120) : 0);
+      ctx.globalAlpha = k * 2; rect(0, 0, W, H, base); ctx.globalAlpha = 1;
+    } else rect(0, 0, W, H, base);
+    if (T.kind === "shield" && k > 0.2) { const s = Math.min(1, (k - 0.2) * 3); rect(W / 2 - 18 * s, 50, 36 * s, 44 * s, "#e8b94a"); rect(W / 2 - 14 * s, 54, 28 * s, 36 * s, "#fff0a0"); rect(W / 2 - 2, 56, 4, 32 * s, "#e8b94a"); rect(W / 2 - 10 * s, 66, 20 * s, 4, "#e8b94a"); }
+    if (T.kind === "sleep") for (let i = 0; i < 30; i++) rect((i * 53) % W, (i * 31) % H, 1, 1, "#ffffff");
+    if (k > 0.45) { const dark = base === "#000000" || base === "#0a0a2a"; wrapText(verse, 10, 260).forEach((l, i) => text(l, W / 2, 104 + i * 13, { align: "center", color: dark ? "#ffe08a" : "#3a2a1a", edge: dark ? "#140c1c" : null, size: 10 })); }
+  }
+  if (trans.t >= trans.len) startPhase(game.psalm, trans.next, true);
+}
+
+// ---- Drawing the world -------------------------------------------------------------------
+function drawEntity(e) {
+  const x = Math.round(e.x - camX), y = Math.round(e.y - camY), t = world.t;
+  switch (e.type) {
+    case "councilor":
+      // One of the wicked, seated in the chair of pestilence, sneering.
+      rect(x - 2, y + 6, 18, 3, "#4a2a1a"); rect(x - 2, y - 4, 3, 26, "#4a2a1a"); rect(x + 13, y + 12, 3, 10, "#4a2a1a"); rect(x, y + 14, 14, 3, "#5a3420");
+      drawFigure({ robe: "#3a1a3a", shade: "#2a102a", skin: "#c8a890", hair: "#1a1018", eyes: "#ff3a3a" }, x + 1, y - 2, 0, { still: true, seated: true });
+      break;
+    case "sinner": drawFigure({ robe: "#4a3a2a", shade: "#3a2a1a", skin: "#c8a890", hair: "#2a1a10", eyes: "#ff6a3a" }, x, y, Math.floor(t * 8), {}); break;
+    case "foe": drawFigure({ robe: "#5a2a1a", shade: "#3a1a10", skin: "#c8a080", helm: true, weapon: true }, x, y, Math.floor(t * 8), {}); break;
+    case "arrowman": drawFigure({ robe: "#3a3a1a", shade: "#2a2a10", skin: "#c8a080", hair: "#2a1a10" }, x, y, 0, { still: true }); rect(x - 4, y + 6, 2, 12, "#8a5a2b"); break;
+    case "arrow": rect(x, y + 1, 10, 1, "#8a5a2b"); rect(x, y, 2, 3, "#c8ccd4"); rect(x + 9, y, 2, 3, "#ffffff"); break;
+    case "king": {
+      ctx.save(); ctx.beginPath(); ctx.rect(x - 4, -999, 30, GROUND - camY - -999); ctx.clip();
+      drawFigure({ robe: "#6a1a6a", shade: "#4a104a", skin: "#d8a888", hair: "#4a2a1a", crown: true, eyes: "#1a1018" }, x + 1, y + 2, Math.floor(t * 3), { still: true });
+      ctx.restore();
+      if (e.rise > 0 && e.rise < 1) for (let i = 0; i < 4; i++) rect(x - 2 + i * 5, GROUND - camY - 2 - Math.random() * 4, 3, 2, "#7a5034");
+      break;
+    }
+    case "chaff": { const r = 6 + (e.w > 12 ? 1 : 0); ctx.strokeStyle = "#c8a050"; ctx.lineWidth = 1; for (let i = 0; i < 5; i++) { const a = e.spin + i; ctx.beginPath(); ctx.moveTo(x + e.w / 2 + Math.cos(a) * r, y + e.h / 2 + Math.sin(a) * r); ctx.lineTo(x + e.w / 2 - Math.cos(a) * r, y + e.h / 2 - Math.sin(a) * r); ctx.stroke(); } rect(x + 3, y + 3, e.w - 6, e.h - 6, "#e8c878"); break; }
+    case "fireball": rect(x, y, 10, 10, "#ff5a1a"); rect(x + 2, y + 2, 6, 6, "#ffcf5a"); rect(x + 3, y + 10, 4, 4, "#ff8a2a"); break;
+    case "lava": for (let i = 0; i < e.w; i += 4) rect(x + i, y + Math.sin(t * 5 + i) * 2, 4, 40, e.holy ? (i % 8 ? "#fff0a0" : "#ffcf5a") : (i % 8 ? "#e0501a" : "#ffb030")); break;
+    case "river": break;
+    case "fruit": rect(x, y + 2, 8, 6, "#e05a3a"); rect(x + 3, y, 2, 3, "#2f7a3a"); rect(x + 1, y + 3, 2, 2, "#ff9a7a"); break;
+    case "neume": { const b = Math.sin(t * 4 + e.x) * 1.5; rect(x + 1, y + b + 1, 6, 6, "#a87a1a"); rect(x + 2, y + b, 5, 5, "#ffe08a"); rect(x + 7, y + b - 4, 1, 6, "#a87a1a"); break; }
+    case "jar": {
+      // A great potter's vessel, and, when it is struck, the rod of iron.
+      rect(x + 2, y + 6, 14, 20, "#a85a2a"); rect(x, y + 10, 18, 12, "#c87a4a"); rect(x + 5, y, 8, 6, "#a85a2a"); rect(x + 3, y + 12, 12, 2, "#e8a878");
+      if (e.struck && !e.broke) { const ry = lerp(-200, y - 10, Math.min(1, e.rod / 0.45)); rect(x + 6, ry - 120, 6, 120, "#4a4a52"); rect(x + 4, ry - 6, 10, 8, "#6a6a72"); }
+      break;
+    }
+    case "potshard": rect(x, y, 6, 4, "#c87a4a"); rect(x + 1, y, 4, 1, "#e8a878"); break;
+    case "jet": {
+      rect(x - 2, GROUND - camY - 4, 14, 4, "#a87a1a");
+      if (e.on) for (let i = 0; i < e.h; i += 4) { const w = 10 - i / e.h * 6 + Math.sin(t * 20 + i) * 2; rect(x + 5 - w / 2, GROUND - camY - 4 - i, w, 4, i % 8 ? "#ffcf5a" : "#ffffff"); }
+      else if (((t + e.ph) % 2.4) > 2.0) rect(x + 3, GROUND - camY - 8, 4, 4, "#ff8a2a");
+      break;
+    }
+    case "shieldgift": { const b = Math.sin(t * 3) * 2; ctx.globalAlpha = 0.4; rect(x - 4, y - 4 + b, 22, 22, "#ffe08a"); ctx.globalAlpha = 1; rect(x, y + b, 14, 16, "#e8b94a"); rect(x + 2, y + 2 + b, 10, 12, "#fff0a0"); rect(x + 6, y + 3 + b, 2, 10, "#e8b94a"); rect(x + 3, y + 6 + b, 8, 2, "#e8b94a"); break; }
+    case "sheep": { const b = Math.sin(t * 3 + e.ph) * 3; rect(x, y + b, 12, 7, "#ffffff"); rect(x + 9, y + 1 + b, 4, 4, "#2a2a2a"); rect(x + 2, y + 7 + b, 2, 2, "#2a2a2a"); rect(x + 8, y + 7 + b, 2, 2, "#2a2a2a"); break; }
+    case "pillow": rect(x, y, 14, 9, "#f4f0ff"); rect(x + 2, y + 2, 10, 1, "#c8c8f0"); break;
+    case "shard": ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.lineTo(x + 3, y); ctx.lineTo(x + 5, y + 6); ctx.lineTo(x + 8, y + 1); ctx.lineTo(x + 10, y + 10); ctx.fill(); break;
+    case "fang": ctx.fillStyle = "#e8e0d0"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 16, y); ctx.lineTo(x + 10, y + 36); ctx.lineTo(x + 6, y + 30); ctx.fill(); rect(x + 2, y, 12, 3, "#a83a4a"); break;
+  }
+}
+
+function drawPlayer() {
+  if (player.inv > 0 && Math.floor(player.inv * 12) % 2) return;
+  const x = player.x - camX, y = player.y - camY, s = game.saint;
+  // The ways each saint keeps aloft.
+  if (player.floating) {
+    if (s.hold === "levitate") { ctx.globalAlpha = 0.5; rect(x - 4, y - 4, 18, 30, "#fff4c8"); ctx.globalAlpha = 1; for (let i = 0; i < 3; i++) rect(x + i * 5, y + 24 + ((world.t * 30 + i * 4) % 8), 2, 2, "#ffe08a"); }
+    else if (s.hold === "glide") { rect(x - 6, y + 22, 22, 4, "#c8ccd4"); rect(x - 4, y + 23, 18, 2, "#b8322a"); for (let i = 0; i < 4; i++) rect(x - 10 - i * 6, y + 20 + i, 4, 1, "#ffffff"); }
+    else { for (let i = 0; i < 3; i++) rect(x - 2 + i * 6, y - 4 + Math.sin(world.t * 8 + i) * 2, 3, 3, s.id === "therese" ? "#ff7a9a" : "#ffffff"); }
+  }
+  drawFigure(s.look, x, y, player.ground ? player.f : 1, { air: !player.ground, reach: player.reach > 0 });
+  if (player.shield > 0) { ctx.globalAlpha = 0.35 + Math.sin(world.t * 6) * 0.1; ctx.strokeStyle = "#ffe08a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + 6, y + 11, 16, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+}
+function drawShots() {
+  for (const sh of shots) {
+    const x = sh.x - camX, y = sh.y - camY;
+    if (sh.kind === "rose") { rect(x, y, 6, 5, "#d8324a"); rect(x + 1, y + 1, 3, 2, "#ff7a9a"); rect(x + 2, y + 5, 1, 3, "#2f7a3a"); }
+    if (sh.kind === "medal") { rect(x, y, 6, 6, "#a87a1a"); rect(x + 1, y + 1, 4, 4, "#e8b94a"); rect(x + 2, y, 2, 6, "#5a3a10"); rect(x, y + 2, 6, 2, "#5a3a10"); }
+    if (sh.kind === "lance") { rect(x, y + 2, 26, 2, "#8a5a2b"); rect(x + 24, y, 6, 6, "#c8ccd4"); }
+    if (sh.kind === "ring") { ctx.globalAlpha = Math.max(0, sh.life / 0.35); ctx.strokeStyle = "#fff4c8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, sh.r, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    if (sh.kind === "cloud") { rect(x, y, sh.w, 12, "#5a6a8a"); rect(x + 8, y - 6, sh.w - 20, 8, "#6a7a9a"); for (let i = 0; i < 14; i++) rect(x + (i * 13) % sh.w, y + 14 + ((world.t * 220 + i * 31) % (GROUND - sh.y)), 1, 5, "#9fd0ff"); }
+  }
+}
+function heart(x, y, full) { const c = full ? "#e8324a" : "#4a2a3a"; rect(x, y + 1, 3, 3, c); rect(x + 4, y + 1, 3, 3, c); rect(x + 1, y, 2, 1, c); rect(x + 4, y, 2, 1, c); rect(x + 1, y + 4, 5, 1, c); rect(x + 2, y + 5, 3, 1, c); rect(x + 3, y + 6, 1, 1, c); }
+function drawHud() {
+  const s = game.saint;
+  for (let i = 0; i < s.hearts; i++) heart(4 + i * 9, 4, i < player.hearts);
+  if (player.shield > 0) text("SHIELD " + player.shield, 4, 13, { color: "#ffe08a", size: 8 });
+  if (s.hold) { rect(4, player.shield ? 24 : 14, 30, 3, "#2a2a3a"); rect(4, player.shield ? 24 : 14, 30 * clamp(player.float / s.floatTime, 0, 1), 3, "#9fd0ff"); }
+  text(String(game.score).padStart(5, "0"), W - 26, 4, { align: "right", color: "#ffe08a" });
+  // Pause.
+  rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
+  // How far through the psalm: one notch for each phase.
+  const n = PHASES[game.psalm].length, bw = 80, bx = W / 2 - bw / 2;
+  rect(bx, 6, bw, 3, "#2a2a3a");
+  const prog = (game.phase + clamp(player.x / world.P.len, 0, 1)) / n;
+  rect(bx, 6, bw * prog, 3, "#ffe08a");
+  for (let i = 1; i < n; i++) rect(bx + bw * i / n, 5, 1, 5, "#ffffff");
+  // The verse being run, along the bottom.
+  const P = world.P, verse = P.verses.map((v) => PSALMS[game.psalm].verses[v]).join("   ");
+  rect(0, H - 13, W, 13, "#000000aa");
+  const s2 = textSprite(verse, 8, "#ffe8b0"), off = (world.t * 28) % (s2.width + 80);
+  ctx.drawImage(s2, Math.round(W - off), H - 11); if (W - off + s2.width + 80 < W) ctx.drawImage(s2, Math.round(W - off + s2.width + 80), H - 11);
+  if (banner > 0) {
+    ctx.globalAlpha = Math.min(1, banner);
+    rect(0, 30, W, 30, "#000000aa");
+    text("PSALM " + PSALMS[game.psalm].num + "  ·  " + (game.phase + 1) + " of " + n, W / 2, 33, { align: "center", color: "#c8b8ff", size: 8 });
+    text(P.name, W / 2, 44, { align: "center", color: "#ffe08a", size: 11 });
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawPlay() {
+  const P = world.P;
+  ctx.save();
+  if (shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 4));
+  SKY[P.sky](camX, camY, world.t);
+  for (const g of world.segs) drawSeg(g, camX, camY);
+  for (const e of world.ents) if (e.type === "lava" || e.type === "river") drawEntity(e);
+  for (const p of world.plats) drawPlat(p, camX, camY);
+  for (const e of world.ents) if (e.type !== "lava" && e.type !== "river" && e.x - camX < W + 20 && e.x - camX > -40) drawEntity(e);
+  drawShots();
+  drawPlayer();
+  for (const p of parts) rect(p.x - camX, p.y - camY, 2, 2, p.c);
+  ctx.restore();
+  drawHud();
+}
+
+// ---- Menus ----------------------------------------------------------------------------------
+function button(label, x, y, w, h, hot) {
+  rect(x - 1, y - 1, w + 2, h + 2, "#140c1c"); rect(x, y, w, h, hot ? "#e8b94a" : "#2a2240"); rect(x, y, w, 2, hot ? "#fff0a0" : "#3a3260");
+  text(label, x + w / 2, y + h / 2 - 5, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 9 });
+  return { x, y, w, h };
+}
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+function titleSky(t) {
+  bands(["#0a0814", "#1a1030", "#2a1a4a", "#3a2a5a", "#5a3a6a"], 0, H);
+  for (let i = 0; i < 40; i++) rect((i * 71 + t * 4) % W, (i * 37) % 100, 1, 1, "#ffffff");
+  const s = psalmStrip(0); ctx.globalAlpha = 0.12; const off = (t * 14) % s.width; ctx.drawImage(s, -off, 120); ctx.drawImage(s, -off + s.width, 120); ctx.globalAlpha = 1;
+  for (let i = 0; i < 12; i++) rect(i * 28 - (t * 30) % 28, 150, 28, 30, i % 2 ? "#2a1a3a" : "#33224a");
+}
+function drawTitle(t) {
+  titleSky(t);
+  text("PSALTER", W / 2, 26, { align: "center", color: "#ffe08a", size: 28 });
+  text("RUNNER", W / 2, 56, { align: "center", color: "#ffffff", size: 28 });
+  text("Run the Psalms with the saints", W / 2, 92, { align: "center", color: "#c8b8ff", size: 9 });
+  drawFigure(SAINTS[Math.floor(t / 2) % SAINTS.length].look, W / 2 - 6, 126, Math.floor(t * 10), {});
+  if (Math.floor(t * 2) % 2) text("TAP TO BEGIN", W / 2, 160, { align: "center", color: "#ffffff", size: 9 });
+  for (const tp of input.taps) { Snd.sfx("select"); state = "select"; }
+  input.taps = [];
+}
+function drawSelect(t) {
+  titleSky(t);
+  text("CHOOSE YOUR SAINT", W / 2, 6, { align: "center", color: "#ffe08a", size: 11 });
+  const boxes = SAINTS.map((s, i) => {
+    const x = 8 + i * 62, y = 24, hot = i === selectIndex;
+    rect(x - 1, y - 1, 58, 76, "#140c1c"); rect(x, y, 56, 74, hot ? "#3a2a5a" : "#221a36");
+    if (hot) { rect(x, y, 56, 2, "#ffe08a"); rect(x, y + 72, 56, 2, "#ffe08a"); }
+    drawFigure(s.look, x + 22, y + 10, hot ? Math.floor(t * 10) : 0, { still: !hot });
+    wrapText(s.name, 8, 54).forEach((l, k) => text(l, x + 28, y + 40 + k * 9, { align: "center", color: hot ? "#ffe08a" : "#ffffff", size: 8 }));
+    for (let h = 0; h < s.hearts; h++) heart(x + 28 - s.hearts * 4 + h * 8 + 1, y + 62, true);
+    return { x, y, w: 56, h: 74, i };
+  });
+  const s = SAINTS[selectIndex];
+  text(s.name + ", " + s.title, W / 2, 104, { align: "center", color: "#ffe08a", size: 9 });
+  wrapText(s.about, 8, 290).forEach((l, k) => text(l, W / 2, 117 + k * 10, { align: "center", color: "#ffffff", size: 8 }));
+  const go = button("CHOOSE", W / 2 - 40, 150, 80, 20, true);
+  for (const tp of input.taps) {
+    if (tp.key === "ArrowLeft") { selectIndex = (selectIndex + SAINTS.length - 1) % SAINTS.length; Snd.sfx("select"); }
+    else if (tp.key === "ArrowRight") { selectIndex = (selectIndex + 1) % SAINTS.length; Snd.sfx("select"); }
+    else if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { game.saint = SAINTS[selectIndex]; save.saint = selectIndex; store(); state = "psalms"; Snd.sfx("select"); }
+    else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (selectIndex === b.i) { game.saint = SAINTS[b.i]; save.saint = b.i; store(); state = "psalms"; } selectIndex = b.i; Snd.sfx("select"); }
+  }
+  input.taps = [];
+}
+const PSALM_BLURB = ["Blessed is the man", "Why have the Gentiles raged?", "Many rise up against me"];
+function drawPsalms(t) {
+  titleSky(t);
+  text("CHOOSE A PSALM", W / 2, 8, { align: "center", color: "#ffe08a", size: 11 });
+  const boxes = [0, 1, 2].map((i) => {
+    const x = 16 + i * 98, y = 30, open = i < save.open, hot = i === psalmIndex;
+    rect(x - 1, y - 1, 92, 100, "#140c1c"); rect(x, y, 90, 98, open ? (hot ? "#3a2a5a" : "#221a36") : "#141020");
+    if (hot) rect(x, y, 90, 2, "#ffe08a");
+    text("PSALM " + (i + 1), x + 45, y + 8, { align: "center", color: open ? "#ffe08a" : "#5a5070", size: 12 });
+    wrapText(open ? PSALM_BLURB[i] : "Finish Psalm " + i + " to open", 8, 80).forEach((l, k) => text(l, x + 45, y + 32 + k * 10, { align: "center", color: open ? "#ffffff" : "#5a5070", size: 8 }));
+    if (open) text("BEST " + (save.best[i] || 0), x + 45, y + 80, { align: "center", color: "#c8b8ff", size: 8 });
+    return { x, y, w: 90, h: 98, i, open };
+  });
+  const back = button("BACK", 16, 150, 60, 20, false);
+  const go = button("RUN", W / 2 - 34, 150, 68, 20, true);
+  text(Snd.on ? "SOUND ON (M)" : "SOUND OFF (M)", W - 16, 156, { align: "right", color: "#8a80a8", size: 8 });
+  const sndBox = { x: W - 90, y: 150, w: 80, h: 20 };
+  for (const tp of input.taps) {
+    if (tp.key === "ArrowLeft") psalmIndex = Math.max(0, psalmIndex - 1);
+    else if (tp.key === "ArrowRight") psalmIndex = Math.min(save.open - 1, psalmIndex + 1);
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = "select";
+    else if (tp.x !== undefined && inBox(tp, sndBox)) Snd.toggle();
+    else if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) startPsalm(psalmIndex);
+    else if (tp.x !== undefined) for (const b of boxes) if (b.open && inBox(tp, b)) { if (psalmIndex === b.i) startPsalm(b.i); psalmIndex = b.i; }
+    Snd.sfx("select");
+  }
+  input.taps = [];
+}
+function pause() { if (state === "play") { state = "pause"; input.taps = []; } }
+function drawPause() {
+  drawPlay();
+  rect(0, 0, W, H, "#000000aa");
+  text("PAUSED", W / 2, 40, { align: "center", color: "#ffe08a", size: 16 });
+  text("Left half: tap to jump, hold to float", W / 2, 66, { align: "center", size: 8 });
+  text("Right half: tap to attack", W / 2, 78, { align: "center", size: 8 });
+  const go = button("RESUME", W / 2 - 40, 100, 80, 20, true);
+  const quit = button("QUIT", W / 2 - 40, 128, 80, 20, false);
+  for (const tp of input.taps) {
+    if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; jumpPointers.clear(); }
+    else if (tp.key === "KeyQ" || (tp.x !== undefined && inBox(tp, quit))) { state = "psalms"; Snd.stop(); }
+  }
+  input.taps = [];
+}
+function drawOver(t) {
+  drawPlay();
+  rect(0, 0, W, H, "#000000bb");
+  text("FALLEN, BUT NOT FORSAKEN", W / 2, 40, { align: "center", color: "#ffe08a", size: 11 });
+  wrapText("“The just man shall fall seven times and shall rise again.” Proverbs 24:16", 8, 260).forEach((l, i) => text(l, W / 2, 62 + i * 10, { align: "center", size: 8 }));
+  const go = button("RISE AGAIN", W / 2 - 50, 100, 100, 20, true);
+  const quit = button("PSALMS", W / 2 - 50, 128, 100, 20, false);
+  for (const tp of input.taps) {
+    if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { game.score = game.phaseScore; player = null; Snd.play(game.psalm); startPhase(game.psalm, game.phase, false); }
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, quit))) state = "psalms";
+  }
+  input.taps = [];
+}
+function drawDone(t) {
+  bands(["#fff4d0", "#ffe8b0", "#ffd890"], 0, H);
+  for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * 0.3; ctx.globalAlpha = 0.25; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(W / 2, 70); ctx.lineTo(W / 2 + Math.cos(a) * 300, 70 + Math.sin(a) * 300); ctx.stroke(); ctx.globalAlpha = 1; }
+  text("PSALM " + PSALMS[game.psalm].num + " SUNG", W / 2, 12, { align: "center", color: "#7a1f2b", edge: "#fff8e0", size: 14 });
+  drawFigure(game.saint.look, W / 2 - 6, 40, Math.floor(t * 4), { still: true });
+  const last = PSALMS[game.psalm].verses[PSALMS[game.psalm].verses.length - 1];
+  wrapText("“" + last + "”", 8, 270).forEach((l, i) => text(l, W / 2, 72 + i * 10, { align: "center", color: "#3a2a1a", edge: null, size: 8 }));
+  text("SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, 108, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
+  const next = game.psalm < 2 ? button("NEXT PSALM", W / 2 - 104, 140, 100, 20, true) : null;
+  const menu = button("PSALMS", W / 2 + 4, 140, 100, 20, !next);
+  for (const tp of input.taps) {
+    if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) { psalmIndex = game.psalm + 1; startPsalm(game.psalm + 1); }
+    else if (tp.key === "Escape" || (!next && tp.key === "Enter") || (tp.x !== undefined && inBox(tp, menu))) { psalmIndex = game.psalm; state = "psalms"; }
+  }
+  input.taps = [];
+}
+
+// ---- The loop ---------------------------------------------------------------------------------
+let last = performance.now(), clock = 0;
+const FAST = Math.max(1, +(new URLSearchParams(location.search).get("fast")) || 1);   // testing only
+function frame(now) {
+  const dt = clamp((now - last) / 1000, 0, 0.05); last = now; clock += dt;
+  Snd.update();
+  if (state === "play") { for (let k = 0; k < FAST && state === "play"; k++) update(dt); if (state === "play" || state === "trans") drawPlay(); }
+  if (state === "trans") drawTransition(dt);
+  else if (state === "title") drawTitle(clock);
+  else if (state === "select") drawSelect(clock);
+  else if (state === "psalms") drawPsalms(clock);
+  else if (state === "pause") drawPause();
+  else if (state === "over") drawOver(clock);
+  else if (state === "done") drawDone(clock);
+  // On a tall screen, a word to turn the phone.
+  if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// For testing: ?psalm=2&phase=3 jumps straight in; ?god keeps the saint safe.
+const Q = new URLSearchParams(location.search);
+if (Q.has("psalm")) { game.saint = SAINTS[+(Q.get("saint") || 0)] || SAINTS[0]; startPsalm(+Q.get("psalm") - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
+if (Q.has("god")) window.__god = true;
+window.PR = { get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
+</script>
+</body>
+</html>
