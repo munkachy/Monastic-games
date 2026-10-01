@@ -53,9 +53,10 @@ float), X, J or Enter to attack, P to pause, M for sound.
 
 Each saint plays differently: St. Therese floats down like a petal and throws
 roses; St. Joseph of Cupertino levitates and bursts with ecstatic joy; St.
-Benedict throws his medal straight through two foes; St. Maurice glides on his
-shield and thrusts his lance, with an extra heart; St. Scholastica jumps twice
-and calls down a storm.
+Benedict throws his medal straight through two foes; St. Maurus, who at St.
+Benedict's word walked on the water to save St. Placidus, surfs across rivers,
+fire and gaps on his board and sends a rolling wave along the ground; St.
+Scholastica jumps twice and calls down a storm.
 
 Each psalm runs through four stages, with a cut scene between them. Psalm 1:
 the counsel of the ungodly in a dark alley, a reading man whose book opens onto
