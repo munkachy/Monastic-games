@@ -133,9 +133,12 @@ driving in the wind and on the mountain; dangerous over the fire and among
 the broken teeth; rolling on the sea, mournful by the rivers of Babylon, and
 festive among the harps and timbrels.
 
-The psalm text that scrolls behind the run is the Douay-Rheims Bible (1899
-American edition, in the public domain, from [eBible.org](https://ebible.org)),
-without the psalm headings, each verse set in lines at its colons and
+The psalm text that scrolls behind the run is the Douay-Rheims Bible
+(Challoner, in the public domain) from the Lumina project
+([munkachy/lumina](https://github.com/munkachy/lumina), `bible-data.js`),
+checked verse by verse against [drbo.org](https://www.drbo.org) and
+[eBible.org](https://ebible.org): where Lumina's copy stood alone against
+both, their reading was taken. It is shown without the psalm headings, each verse set in lines at its colons and
 semicolons. The game counts the psalms by the Hebrew numbering and shows the
 Douay's own Vulgate number beside it where the two differ: Psalm 23 (22). The
 verses sit in `PSALTER` at the top of the file; each stage names the verses it
