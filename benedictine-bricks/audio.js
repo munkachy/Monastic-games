@@ -576,7 +576,9 @@ const Sound = (() => {
         break;
       }
       case "drop": noiseHit(now, "bandpass", 1800, 0.12, 0.15, sfxGain); break;
-      case "mortar": tone(onBeat(), 260, "square", 0.12, 0.08); bell(now + 0.02, 880, 0.08); break;
+      case "fire": noiseHit(now, "bandpass", 900, 0.22, 0.5, sfxGain); tone(now, 180, "sawtooth", 0.06, 0.4, 120); break;
+      case "hiss": noiseHit(now, "highpass", 2500, 0.25, 0.6, sfxGain); break;
+      case "burn": noiseHit(now, "lowpass", 300, 0.35, 0.7, sfxGain); tone(now, 90, "triangle", 0.2, 0.6, 50); break;
       case "zap":
         tone(now, 1100, "square", 0.18, 0.3, 90);
         noiseHit(now, "highpass", 3000, 0.3, 0.25, sfxGain);

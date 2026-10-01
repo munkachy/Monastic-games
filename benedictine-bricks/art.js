@@ -37,8 +37,6 @@ const STONE_RAMPS = {
   slate:     ["#b4cadb", "#7f9bb3", "#5f7a93", "#445a70", "#232f3d"],
   marble:    ["#ffffff", "#f3f0f1", "#ddd8db", "#b9b2b8", "#6f666e"],
   mossy:     ["#dde9ae", "#b6c97a", "#8fa455", "#66773a", "#36401c"],
-  ice:       ["#f4fdff", "#cdeefa", "#a3dcf0", "#6fb4d4", "#2f6f8f"],
-  mortar:    ["#f2f0ec", "#d6d3cd", "#b8b5ae", "#918e88", "#57544f"],
   gold:      ["#fff6c0", "#ffd84a", "#e0a820", "#a87410", "#5a3a08"],
   wood:      ["#f0c890", "#d09a58", "#a8733a", "#7a5024", "#452c12"],
 };
@@ -50,24 +48,6 @@ for (const [name, ramp] of Object.entries(STONE_RAMPS)) {
   };
 }
 
-// Drawn over a mortared stone: a gold rim and a small cross.
-ART.blessed = {
-  grid: [
-    "yyyyyyyyyyyy",
-    "y..........y",
-    "y..........y",
-    "y....gg....y",
-    "y....gg....y",
-    "y..gggggg..y",
-    "y..gggggg..y",
-    "y....gg....y",
-    "y....gg....y",
-    "y..........y",
-    "y..........y",
-    "yyyyyyyyyyyy",
-  ],
-  colors: { y: "#ffd84a", g: "#fff3b0" },
-};
 
 // ---------------------------------------------------------------------------
 // The monk. Black Benedictine habit, tonsure, hands folded in the sleeves.
@@ -140,7 +120,8 @@ ART.monk_bless = {
 };
 
 // ---------------------------------------------------------------------------
-// The demon who hovers over the building site and curses your stones.
+// The demon who hovers over the building site, curses your stones and drops
+// fire on the tower. He comes as each of the seven deadly sins in turn.
 // Two frames: wings up, wings down.
 // ---------------------------------------------------------------------------
 
@@ -244,22 +225,6 @@ ART.aspergillum = {
 
 // Spell icons.
 
-// Mortar: the next stone sets fast wherever it touches.
-ART.mortar = {
-  grid: [
-    "wwwwwwwwwwww",
-    "wGGGGwGGGGGw",
-    "wggggwgggggw",
-    "wwwwwwwwwwww",
-    "wGGwGGGGGwGw",
-    "wggwgggggwgw",
-    "wwwwwwwwwwww",
-    "wGGGGwGGGGGw",
-    "wggggwgggggw",
-    "wwwwwwwwwwww",
-  ],
-  colors: { w: "#ece8df", G: "#a0a4aa", g: "#7a7e86" },
-};
 
 // Zap: a bolt that breaks the last stone you laid.
 ART.bolt = {
@@ -280,24 +245,6 @@ ART.bolt = {
   colors: { y: "#ffe45a" },
 };
 
-// Scaffold: a wooden platform in mid-air.
-ART.scaffold = {
-  grid: [
-    ".p........p.",
-    ".p........p.",
-    "WWWWWWWWWWWW",
-    "wwwwwwwwwwww",
-    ".p........p.",
-    ".p........p.",
-    ".p........p.",
-    "WWWWWWWWWWWW",
-    "wwwwwwwwwwww",
-    ".p........p.",
-    ".p........p.",
-    ".p........p.",
-  ],
-  colors: { W: "#d8a868", w: "#8a5a2a", p: "#6a4424" },
-};
 
 // A coin, for gilding and for money.
 ART.coin = {

@@ -30,6 +30,19 @@ Settings → Pages → Build and deployment → Source: *Deploy from a branch*,
 branch `main`, folder `/ (root)`. The games then appear at
 `https://<your-username>.github.io/Monastic-games/`.
 
+## Benedictine Bricks: the demon and his fire
+
+The demon comes each time as one of the seven deadly sins (Pride, Avarice,
+Lust, Envy, Gluttony, Wrath, Sloth), each in his own colours and with his own
+mark, and a verse of Scripture against that sin is shown as he comes. He
+hovers two seconds before he does anything. Then he drops fire on the tower:
+lay a stone on it at once and it is smothered; leave it and it spreads, in
+any direction, from stone to stone, and burns them away. Tap a fire to douse
+it with holy water for 2 prayer. Scripture about the cornerstone and the
+temple of God is written across the sky (in clouds by day, in stars by
+night), on a banner at each new tier, and on the cornerstone before the
+monastery. Mortar, Scaffold, ice stones and invisible stones are gone.
+
 ## Benedictine Bricks: changing the art
 
 All art is in `benedictine-bricks/art.js`, drawn as grids of characters. Open
