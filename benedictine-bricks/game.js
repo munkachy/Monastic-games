@@ -421,14 +421,18 @@ function newTower() {
 
   Events.on(engine, "collisionStart", (event) => {
     if (!active) return;
+    const touched = [];
     for (const pair of event.pairs) {
       const a = pair.bodyA.parent;
       const b = pair.bodyB.parent;
-      if ((a === active && b !== active) || (b === active && a !== active)) {
-        land();
-        return;
-      }
+      if (a === active && b !== active) touched.push(b);
+      else if (b === active && a !== active) touched.push(a);
     }
+    if (!touched.length) return;
+    // A stone that only catches the very corner of a neighbour slips past it
+    // into the gap below, instead of hanging there.
+    if (slipPast(touched)) return;
+    land();
   });
 
   paintMonk();
@@ -669,6 +673,49 @@ function magnetToEdges() {
   if (!best) return;
   Body.setPosition(active, { x: active.position.x + best, y: active.position.y });
   if (overlapsTower()) Body.setPosition(active, { x: active.position.x - best, y: active.position.y });
+}
+
+// Corner forgiveness. When a falling stone touches down with no more than a
+// sliver of an edge on the stone beside a gap (the tower has shifted a little
+// since the player lined it up), slide it the few pixels it needs and let it
+// fall on. Only when every point of contact is such a sliver, only into clear
+// space, and only a few times for each stone.
+const SLIP = 0.4;           // the largest sliver forgiven, as a share of a square
+function slipPast(touched) {
+  if ((active.plugin.slips || 0) >= 3) return false;
+  const mine = active.parts.length > 1 ? active.parts.slice(1) : [active];
+  let shift = 0;
+  for (const other of touched) {
+    const theirs = other.parts.length > 1 ? other.parts.slice(1) : [other];
+    for (const a of mine) {
+      const A = a.bounds;
+      for (const c of theirs) {
+        const C = c.bounds;
+        const ox = Math.min(A.max.x, C.max.x) - Math.max(A.min.x, C.min.x);
+        const down = A.max.y - C.min.y;   // how far this square has come down onto that one's top
+        if (ox <= 0.5 || down < -2 || down > TILE * 0.5) continue;   // not resting on it (beside it, or apart)
+        if (ox > TILE * SLIP) return false;                         // properly supported: it lands
+        const dir = (A.min.x + A.max.x) < (C.min.x + C.max.x) ? -1 : 1;
+        if (shift && Math.sign(shift) !== dir) return false;        // caught on both sides: it lands
+        if (ox > Math.abs(shift)) shift = dir * ox;
+      }
+    }
+  }
+  if (!shift) return false;
+  // Slide just far enough: a hair past the corner if there is room, or a
+  // little less if the gap is a tight fit (stones may overlap by a pixel or two).
+  const before = { x: active.position.x, y: active.position.y };
+  const dir = Math.sign(shift), size = Math.abs(shift);
+  const fits = [size + 0.8, size, size - 1, size - 2].filter((n) => n > 0).some((n) => {
+    Body.setPosition(active, { x: before.x + dir * n, y: before.y - 1 });
+    Body.setAngle(active, targetAngle);
+    return !overlapsTower();
+  });
+  if (!fits) { Body.setPosition(active, before); Body.setAngle(active, targetAngle); return false; }
+  Body.setAngularVelocity(active, 0);
+  Body.setVelocity(active, { x: 0, y: steering ? activeSpeed : MAX_DROP_SPEED });
+  active.plugin.slips = (active.plugin.slips || 0) + 1;
+  return true;
 }
 
 function drop() {
