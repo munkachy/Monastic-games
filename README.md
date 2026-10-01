@@ -8,7 +8,7 @@ serve the whole repo as-is.
 
 - **[Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/)**: build the abbey tower and drive off the demon
 - **[Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/)**: run all 150 psalms with the saints (made for phones)
-- **[Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/)**: the saints race a demon through St. Teresa's Interior Castle, with loops, rails and tricks (made for phones)
+- **[SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/)**: the saints race the seven deadly sins through St. Teresa's Interior Castle: big air, tricks, combos and funk (made for phones)
 - **[Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/)**: explore a mansion made of the Canticle of Canticles (made for phones)
 - **[Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html)**: assemble a squad, level up, light up the world ([about the game](https://munkachy.github.io/Monastic-games/new-apologetics/))
 
@@ -18,7 +18,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | --- | --- | --- |
 | [Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/) | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
-| [Run the Way](https://munkachy.github.io/Monastic-games/run-the-way/) | `run-the-way/` | A speed runner with the saints of Psalter Runner, racing the seven deadly sins through St. Teresa's seven mansions: loops, rails, ramps, swipe tricks, style points and best times; a single HTML file with nothing to load |
+| [SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/) | `saintstyle-turbo/` | A trick racer with the saints of Psalter Runner: the seven deadly sins race them through St. Teresa's seven mansions, by the same rules; ramps, loops, rails, swipe tricks and combos, surges, a tutorial, and adaptive funk music; a single HTML file with nothing to load |
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
@@ -176,50 +176,87 @@ Douay's own Vulgate number beside it where the two differ: Psalm 23 (22). The
 verses sit in `PSALTER` at the top of the file; each stage names the verses it
 shows.
 
-## Run the Way
+## SaintStyle Turbo
 
-One file, `run-the-way/index.html`. The saints of Psalter Runner (its screen,
-type, music and figures are copied from there) race a demon through the seven
-mansions of St. Teresa of Ávila's *Interior Castle*, from the gate of prayer
-inward to the King's own room at the centre. Each mansion has its own colours
-and country (grey-green outer walls, a torchlit stair at night, a garden at
-noon, the two fountains, a violet dusk of silkworms and butterflies, the fire
-of longing, and the white and gold crystal of the centre) and its own demon, one
-of the seven deadly sins as he looks in Benedictine Bricks: Pride, Sloth,
-Avarice, Envy, Gluttony, Wrath and Lust. The demon flies the course beside the
-saint; a bar at the top shows both, and how many paces one leads the other.
-Beat him to the door and the next mansion opens.
+One file, `saintstyle-turbo/index.html` (it was called Run the Way; the old
+address sends you on, and saved progress is kept). The saints of Psalter
+Runner race the seven deadly sins through the seven mansions of St. Teresa
+of Ávila's *Interior Castle*, from the gate of prayer to the King's own room
+at the centre. Each mansion has its own colours and country, its own funk
+groove, and its own demon, drawn as in Benedictine Bricks: Pride, Sloth,
+Avarice, Envy, Gluttony, Wrath and Lust. Beat the demon to the door and the
+next mansion opens.
 
-Hold the right half of the screen to run faster, the longer the harder; tap
-or hold the left half to jump (a short tap is a short jump, and holding
-floats, rises, skims a gap or jumps again, as each saint does). Slopes speed
-the saint going down and slow him going up; over a crest at speed he flies;
-boost pads throw him on, ramps throw him into the sky over a gap, springs
-bounce him onto roads of cloud, rails carry him grinding along (sometimes over
-a gap), and loops, small and large, take him round if he comes in fast enough.
-Two gifts lie along the way: a mighty wind (Acts 2:2), which doubles his drive
-for a while, and a tongue of fire (Acts 2:3), a burst of speed that bowls over
-anything in his path.
+**Running and surging.** Hold the right half of the screen to run; tap the
+left half to jump (hold it to float, rise, skim or jump again, as each saint
+does). Running only gets a saint so far. Every trick landed on his feet sets
+off a surge: his feet become a wheel and he flies along, faster for more and
+harder tricks and for a perfect landing, and then, little by little, he is
+running again. The surge is the only way to go faster than a run.
 
-In the air, swipe the screen (the finger holding the right side can swipe
-without letting go) or press the arrow keys to do tricks: ↑↑ front flip,
-↓↓ back flip, ↑↑↑ double flip, ↓↑ barrel roll, ←→ prostration, ↑↓
-genuflection, and ↓↓↑↑← each saint's own trick (St. Therese's Shower of Roses,
-St. Joseph of Cupertino's Ecstasy, St. Benedict's Vade Retro, St. Maurus's Lake
-Skim, St. Scholastica's Thunderstorm, St. Hildegard's Viriditas, St. Cecilia's
-Heavenly Chorus, St. Peter's Keys, St. Augustine's Restless Heart, St. Lucy's
-Lamp of Light), which also drives the demon back. Tricks in one flight make a
-chain worth its points times the number of tricks. Land on your feet and the
-chain is paid in style points and a burst of speed; land before a trick is
-done and the saint crashes, slows and loses the chain, except on a road of
-cloud, which bounces him up for another try. Loops, big air, grinding and
-bowling over foes also earn style. Each mansion keeps its best time, best style
-and whether the demon has been beaten. Along the foot of the screen a ticker
-carries the Douay verses about running (Psalm 118:32, "I have run the way of
-thy commandments"; Isaias 40:31; Hebrews 12:1–2; 1 Corinthians 9:24 and
-more) at a steady reading pace, however fast the saint goes. Driving hard all
-the way beats every demon; a saint who never holds the right side still
-reaches the door, in two or three minutes, but well behind him.
+**The way.** Great ramps throw the saint high, and the greatest, Jacob's
+Ladder (Genesis 28:12), stands with angels going up and down it. Columns of
+wind, the breath of the Spirit (John 3:8), lift him and hold him up. There
+are loops small and large, rails to grind, springs up to roads of cloud, and
+two gifts: a mighty wind (Acts 2:2), lighter in the air, and tongues of fire
+(Acts 2:3), tricks counting double. The camera pulls back in big air so the
+ground stays in sight, and a ring marks where he will come down.
+
+**Tricks.** In the air, tap the right side for each saint's quick flourish
+(St. Benedict raises his staff, St. Scholastica lets her dove fly, St.
+Maurus grabs his board), or swipe anywhere, up, down, left and right, for
+the others: ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
+↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
+light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
+incense), ↓↓↑↑← each saint's own trick (which drives the demon back), ↑↑↑↑
+triple flip, and ↑↑↓↓←→ the Te Deum. The flourish and the two flips are known
+from the start; each demon beaten teaches the next, and a new trick is shown
+in slow motion the first time there is air enough for it. A bar over the
+saint's head shows how long until he lands, green when there is time for the
+tricks he has asked for. As on a skate ramp, each trick's name and points go
+by at the foot of the screen, a combo of tricks (and grinds between them) is
+paid times the number of tricks when he lands, the same trick done again too
+soon is worth less, and landing before a trick is finished is a crash that
+loses the combo and the surge, except on clouds, which bounce him up for
+another try. Big chains are hailed in Latin: Bene, Optime, Gloria,
+Alleluia, Hosanna.
+
+**The demon.** He runs the same way by the same rules: round the loops,
+along the rails, off the ramps and up on the wind, doing tricks in the air
+and surging when he lands them, crashing when he misjudges. Nothing helps
+him when he is behind or holds him back when he is ahead. Each sin races in
+character: Pride goes for the biggest trick and often overreaches (and
+"Pride goeth before destruction", Proverbs 16:18), Sloth sometimes cannot be
+bothered and now and then dozes off, Avarice snatches the neumes ahead of
+the saint, Envy copies the saint's last trick, Gluttony crams in one trick
+too many, Wrath is fast and reckless, and Lust, the last, is the steadiest of
+all. He has plenty to say for himself. A bar at the top shows where both
+are and who leads by how many paces; when he is off the screen his face
+waits at its edge, smaller the further away he is. In testing, a saint who
+only runs loses every race; one who does the basic tricks well beats the
+first two demons; one who uses each new trick wins them all, the last by a
+little.
+
+**The music** is funk, made in the browser: a sampled drum kit with ghost
+notes and swing, slap and synth bass, clavinet, chicken-scratch and wah
+guitar, Rhodes and Hammond, disco strings, a gospel choir, a horn section and
+a talk box. Walking, the saint hears only the drums; running, the bass comes
+in, then the keys and guitars; surging, the horns and the tune. High in a big
+jump the band goes muffled, as if heard from far above, and answers each
+landed trick with a crash and a horn stab.
+
+**The Novitiate** ("Ausculta": "Listen, O my son, to the precepts of thy
+master", Rule of St. Benedict, Prologue) is the first thing a new player
+sees: the Novice Master teaches running, jumping, the flourish, the flips, the
+surge, combos, clouds, rails, loops and the wind, one lesson at a time,
+slowing time and showing the swipes when a trick is wanted, and putting the
+saint back to try again when it goes wrong. The book of tricks (from the
+title or the pause screen) shows every trick done, how to swipe it, what it
+is worth and when it is learned.
+
+Along the foot of the screen a ticker carries the Douay verses about running
+(Psalm 118:32, "I have run the way of thy commandments"; Isaias 40:31;
+Hebrews 12:1–2; 1 Corinthians 9:24 and more) at a steady reading pace.
 
 ## Canticle Mansion
 
