@@ -187,14 +187,24 @@ groove, and its own demon, drawn as in Benedictine Bricks: Pride, Sloth,
 Avarice, Envy, Gluttony, Wrath and Lust. Every mansion is open from the
 start; beating a demon teaches new tricks and wins a new saint.
 
-**The saints.** A new player has two, St. Therese and St. Maurus. Each demon
-beaten wins one more: St. Scholastica, St. Joseph of Cupertino, St. Peter,
-St. Cecilia, St. Lucy, St. Hildegard and St. Augustine. When every one of
-them has been won, St. Benedict, the father of them all, comes too. The
-more you play a saint, the higher that saint jumps: every point of style
-is experience, up to level 10, shown on the saints screen as a level, a
-progress bar and a gold bar for the jump. RESET PROGRESS on the castle
-screen (tap it twice) starts everything again from nothing.
+**The saints.** A new player has three: St. Therese, St. Maurus and St.
+Benedict. Each demon beaten wins one more: St. Scholastica, St. Joseph of
+Cupertino, St. Peter, St. Cecilia, St. Lucy, St. Hildegard and St.
+Augustine. When every demon has been beaten, St. Teresa of Ávila comes
+too, she who wrote the *Interior Castle* itself; her gift is her pen, and
+her cry is "Solo Dios basta!" The more you play a saint, the higher that
+saint jumps: every point of style is experience, up to level 10, shown on
+the saints screen as a level, a progress bar and a gold bar for the jump.
+RESET PROGRESS on the castle screen (tap it twice) starts everything again
+from nothing.
+
+**After each race** the camera closes in on the saint, in rays of glory
+for a win or in the rain for a loss, with the demon tumbling away or
+gloating across from them, and the saint says something in character.
+St. Benedict: "Ora et labora. Mostly labora, today." St. Peter: "Three
+times I fell. I sense a pattern." St. Teresa: "Lord, if this is how you
+treat your friends, no wonder you have so few!" Each saint has three lines
+for a win and three for a loss.
 
 **The one shot.** Once in each race, the quick trick (→ in the air, or F)
 throws the saint's own gift after the demon, whether he is ahead or behind: St. Therese's rose, St.
