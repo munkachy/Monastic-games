@@ -20,43 +20,42 @@
 // float), X / J / Enter to attack, P or Esc to pause, M for sound.
 
 // ---- The psalms ------------------------------------------------------------------
-// The text in the background, and under the run. This is the Douay-Rheims
-// (public domain), with its own verse numbers. To use another translation,
-// replace the verses here; each phase below names the verses it shows.
+// The text in the background, and under the run: The Grail Psalms (1963),
+// as chanted in the Divine Office, taken from the Lumina project
+// (github.com/munkachy/lumina). Each phase below names the verses it shows,
+// counting from 0.
 const PSALMS = [
   { num: 1, verses: [
-    "Blessed is the man who hath not walked in the counsel of the ungodly, nor stood in the way of sinners, nor sat in the chair of pestilence.",
-    "But his will is in the law of the Lord, and on his law he shall meditate day and night.",
-    "And he shall be like a tree which is planted near the running waters, which shall bring forth its fruit in due season. And his leaf shall not fall off: and all whatsoever he shall do shall prosper.",
-    "Not so the wicked, not so: but like the dust, which the wind driveth from the face of the earth.",
-    "Therefore the wicked shall not rise again in judgment: nor sinners in the council of the just.",
-    "For the Lord knoweth the way of the just: and the way of the wicked shall perish.",
+    "Happy indeed is the man who follows not the counsel of the wicked, nor lingers in the way of sinners nor sits in the company of scorners,",
+    "but whose delight is the law of the Lord and who ponders his law day and night.",
+    "He is like a tree that is planted beside the flowing waters, that yields its fruit in due season and whose leaves shall never fade; and all that he does shall prosper.",
+    "Not so are the wicked, not so! For they like winnowed chaff shall be driven away by the wind.",
+    "When the wicked are judged they shall not stand, nor find room among those who are just;",
+    "for the Lord guards the way of the just but the way of the wicked leads to doom.",
   ] },
   { num: 2, verses: [
-    "Why have the Gentiles raged, and the people devised vain things?",
-    "The kings of the earth stood up, and the princes met together, against the Lord and against his Christ.",
-    "Let us break their bonds asunder: and let us cast away their yoke from us.",
-    "He that dwelleth in heaven shall laugh at them: and the Lord shall deride them.",
-    "Then shall he speak to them in his anger, and trouble them in his rage.",
-    "But I am appointed king by him over Sion his holy mountain, preaching his commandment.",
-    "The Lord hath said to me: Thou art my son, this day have I begotten thee.",
-    "Ask of me, and I will give thee the Gentiles for thy inheritance, and the utmost parts of the earth for thy possession.",
-    "Thou shalt rule them with a rod of iron, and shalt break them in pieces like a potter's vessel.",
-    "And now, O ye kings, understand: receive instruction, you that judge the earth.",
-    "Serve ye the Lord with fear: and rejoice unto him with trembling.",
-    "Embrace discipline, lest at any time the Lord be angry, and you perish from the just way.",
-    "When his wrath shall be kindled in a short time, blessed are all they that trust in him.",
+    "Why this tumult among nations, among peoples this useless murmuring?",
+    "They arise, the kings of the earth, princes plot against the Lord and his Anointed.",
+    "“Come, let us break their fetters, come, let us cast off their yoke.”",
+    "He who sits in the heavens laughs; the Lord is laughing them to scorn.",
+    "Then he will speak in his anger, his rage will strike them with terror.",
+    "“It is I who have set up my king on Zion, my holy mountain.”",
+    "(I will announce the decree of the Lord:) The Lord said to me: “You are my Son. It is I who have begotten you this day.",
+    "Ask and I shall bequeath you the nations, put the ends of the earth in your possession.",
+    "With a rod of iron you will break them, shatter them like a potter’s jar.”",
+    "Now, O kings, understand, take warning, rulers of the earth;",
+    "serve the Lord with awe and trembling, pay him your homage",
+    "lest he be angry and you perish; for suddenly his anger will blaze. Blessed are they who put their trust in God.",
   ] },
   { num: 3, verses: [
-    "The psalm of David when he fled from the face of his son Absalom.",
-    "Why, O Lord, are they multiplied that afflict me? many are they who rise up against me.",
-    "Many say to my soul: There is no salvation for him in his God.",
-    "But thou, O Lord, art my protector, my glory, and the lifter up of my head.",
-    "I have cried to the Lord with my voice: and he hath heard me from his holy hill.",
-    "I have slept and taken my rest: and I have risen up, because the Lord hath protected me.",
-    "I will not fear thousands of the people, surrounding me: arise, O Lord; save me, O my God.",
-    "For thou hast struck all them who are my adversaries without cause: thou hast broken the teeth of sinners.",
-    "Salvation is of the Lord: and thy blessing is upon thy people.",
+    "How many are my foes, O Lord! How many are rising up against me!",
+    "How many are saying about me: “There is no help for him in God.”",
+    "But you, Lord, are a shield about me, my glory, who lift up my head.",
+    "I cry aloud to the Lord. He answers from his holy mountain.",
+    "I lie down to rest, and I sleep. I wake, for the Lord upholds me.",
+    "I will not fear even thousands of people who are ranged on every side against me.",
+    "Arise, Lord; save me, my God, you who strike my foes on the mouth, you who break the teeth of the wicked!",
+    "O Lord of salvation, bless your people!",
   ] },
 ];
 
@@ -310,7 +309,7 @@ function arcOfNeumes(ents, x, y, n) { for (let i = 0; i < n; i++) ents.push(neum
 const PHASES = [
   // ---------- Psalm 1 ----------
   [
-    { name: "The Counsel of the Ungodly", verses: [0], speed: 100, len: 2600, sky: "alley", into: "fade",
+    { name: "The Counsel of the Wicked", verses: [0], speed: 100, len: 2600, sky: "alley", into: "fade",
       build(r) {
         const segs = [{ x0: -200, x1: 2800, y: GROUND, kind: "street" }], plats = [], ents = [];
         let x = 320;
@@ -324,7 +323,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "Planted Near the Running Waters", verses: [1, 2], speed: 100, len: 3000, sky: "river", into: "book",
+    { name: "Beside the Flowing Waters", verses: [1, 2], speed: 100, len: 3000, sky: "river", into: "book",
       build(r) {
         const segs = [], plats = [], ents = [];
         let x = -200;
@@ -344,7 +343,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "Like the Dust the Wind Driveth", verses: [3], speed: 100, len: 2800, sky: "desert", into: "shatter", wind: 0.3,
+    { name: "Like Winnowed Chaff", verses: [3], speed: 100, len: 2800, sky: "desert", into: "shatter", wind: 0.3,
       build(r) {
         const segs = [], plats = [], ents = [];
         let x = -200, y = GROUND;
@@ -358,7 +357,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "The Way of the Wicked Shall Perish", verses: [4, 5], speed: 105, len: 2600, sky: "abyss", into: "fade",
+    { name: "The Way of the Wicked Leads to Doom", verses: [4, 5], speed: 105, len: 2600, sky: "abyss", into: "fade",
       build(r) {
         const segs = [], plats = [], ents = [];
         segs.push({ x0: -200, x1: 300, y: GROUND, kind: "rock" });
@@ -378,7 +377,7 @@ const PHASES = [
   ],
   // ---------- Psalm 2 ----------
   [
-    { name: "The Kings of the Earth Stood Up", verses: [0, 1, 2], speed: 102, len: 2800, sky: "dusk", into: "fade",
+    { name: "They Arise, the Kings of the Earth", verses: [0, 1, 2], speed: 102, len: 2800, sky: "dusk", into: "fade",
       build(r) {
         const segs = [{ x0: -200, x1: 3000, y: GROUND, kind: "earth" }], plats = [], ents = [];
         let x = 340;
@@ -390,7 +389,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "He That Dwelleth in Heaven", verses: [3, 4], speed: 100, len: 2800, sky: "heaven", into: "ascend",
+    { name: "He Who Sits in the Heavens Laughs", verses: [3, 4], speed: 100, len: 2800, sky: "heaven", into: "ascend",
       build(r) {
         const segs = [], plats = [], ents = [];
         plats.push({ x0: -200, x1: 220, base: GROUND, y: GROUND, kind: "cloud" });
@@ -408,7 +407,7 @@ const PHASES = [
         plats.push({ x0: x, x1: x + 600, base: y, y, kind: "cloud" });
         return { segs, plats, ents };
       } },
-    { name: "Sion His Holy Mountain", verses: [5, 6, 7, 8], speed: 95, len: 3000, sky: "mountain", into: "quake",
+    { name: "Zion, My Holy Mountain", verses: [5, 6, 7, 8], speed: 95, len: 3000, sky: "mountain", into: "quake",
       build(r) {
         const segs = [], plats = [], ents = [];
         let x = -200, y = GROUND;
@@ -423,7 +422,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "When His Wrath Shall Be Kindled", verses: [9, 10, 11, 12], speed: 135, len: 3000, sky: "flames", into: "fade",
+    { name: "Suddenly His Anger Will Blaze", verses: [9, 10, 11], speed: 135, len: 3000, sky: "flames", into: "fade",
       build(r) {
         const segs = [], plats = [], ents = [];
         let x = -200;
@@ -440,7 +439,7 @@ const PHASES = [
   ],
   // ---------- Psalm 3 ----------
   [
-    { name: "Many Are They Who Rise Up", verses: [1, 2], speed: 98, len: 2800, sky: "field", into: "fade",
+    { name: "How Many Are Rising Up Against Me", verses: [0, 1], speed: 98, len: 2800, sky: "field", into: "fade",
       build(r) {
         const segs = [{ x0: -200, x1: 3000, y: GROUND, kind: "earth" }], plats = [], ents = [];
         let x = 300;
@@ -453,7 +452,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "Thou, O Lord, Art My Protector", verses: [3, 4], speed: 100, len: 2400, sky: "field2", into: "shield",
+    { name: "A Shield About Me", verses: [2, 3], speed: 100, len: 2400, sky: "field2", into: "shield",
       build(r) {
         const segs = [{ x0: -200, x1: 2600, y: GROUND, kind: "earth" }], plats = [], ents = [];
         ents.push(E("shieldgift", 150, GROUND - 40, 14, 14, { hostile: false, prize: true }));
@@ -466,7 +465,7 @@ const PHASES = [
         }
         return { segs, plats, ents };
       } },
-    { name: "I Have Slept and Taken My Rest", verses: [5], speed: 98, len: 3000, sky: "dream", into: "sleep",
+    { name: "I Lie Down to Rest, and I Sleep", verses: [4], speed: 98, len: 3000, sky: "dream", into: "sleep",
       build(r) {
         const segs = [], plats = [], ents = [];
         plats.push({ x0: -200, x1: 240, base: GROUND, y: GROUND, kind: "rug" });
@@ -488,7 +487,7 @@ const PHASES = [
         plats.push({ x0: x + 40, x1: x + 700, base: GROUND, y: GROUND, kind: "rug" });
         return { segs, plats, ents };
       } },
-    { name: "Thou Hast Broken the Teeth of Sinners", verses: [6, 7, 8], speed: 100, len: 2800, sky: "jaw", into: "wake",
+    { name: "You Break the Teeth of the Wicked", verses: [5, 6, 7], speed: 100, len: 2800, sky: "jaw", into: "wake",
       build(r) {
         const segs = [], plats = [], ents = [];
         segs.push({ x0: -200, x1: 280, y: GROUND, kind: "gum" });
@@ -965,7 +964,7 @@ function drawTransition(dt) {
     for (let l = 0; l < 4; l++) { rect(156, 100 + l * 2, 6, 1, "#8a7a5a"); rect(166, 100 + l * 2, 6, 1, "#8a7a5a"); }
     ctx.globalAlpha = 0.35 + Math.sin(T.t * 3) * 0.1; rect(150, 92, 28, 24, "#fff4c8"); ctx.globalAlpha = 1;
     ctx.restore();
-    if (k < 0.35) text("Blessed is the man... on his law he shall meditate day and night.", W / 2, 162, { align: "center", color: "#ffe8b0", size: 8 });
+    if (k < 0.35) text("Happy indeed is the man... who ponders his law day and night.", W / 2, 162, { align: "center", color: "#ffe8b0", size: 8 });
     if (k > 0.7) { ctx.globalAlpha = Math.min(1, (k - 0.7) / 0.2); rect(0, 0, W, H, "#f7f0dc"); ctx.globalAlpha = 1; wrapText(verse, 10, 260).forEach((l, i) => text(l, W / 2, 60 + i * 13, { align: "center", color: "#3a2a1a", edge: null, size: 10 })); }
   } else if (T.kind === "shatter") {
     rect(0, 0, W, H, "#000");
@@ -1144,7 +1143,7 @@ function drawSelect(t) {
   }
   input.taps = [];
 }
-const PSALM_BLURB = ["Blessed is the man", "Why have the Gentiles raged?", "Many rise up against me"];
+const PSALM_BLURB = ["Happy indeed is the man", "Why this tumult among nations?", "How many are my foes, O Lord!"];
 function drawPsalms(t) {
   titleSky(t);
   text("CHOOSE A PSALM", W / 2, 8, { align: "center", color: "#ffe08a", size: 11 });
