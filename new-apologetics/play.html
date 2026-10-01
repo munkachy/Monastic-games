@@ -328,10 +328,11 @@
 <script src="audio.js?v=20260929g"></script>
 <script src="art.js?v=20260929g"></script>
 <script src="moves.js?v=20260929g"></script>
-<script src="story.js?v=20260929g"></script>
+<script src="story.js?v=20261001a"></script>
+<script src="crucible.js?v=20261001a"></script>
 <script src="data.js?v=20260929g"></script>
-<script src="lines.js?v=20260929g"></script>
-<script src="battle.js?v=20260929g"></script>
+<script src="lines.js?v=20261001a"></script>
+<script src="battle.js?v=20261001a"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -771,7 +772,9 @@
       el.innerHTML = `<span class="label"></span><h3></h3><p class="setup"></p><div class="missions"></div><div class="joins-slot"></div><div class="row extra"></div>`;
       el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.final ? "Final chapter" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
       el.querySelector("h3").textContent = ch.title;
-      el.querySelector(".setup").textContent = ch.setup || "";
+      // On Crucible a chapter tells its own story: show that story's question.
+      const cru = ci > 0 && difficulty() === Battle.DIFFICULTY.length - 1 && Story.CRUCIBLE.find((x) => x.id === ch.id);
+      el.querySelector(".setup").textContent = cru ? "Crucible story: " + cru.title + ". " + cru.mystery : ch.setup || "";
       const list = el.querySelector(".missions");
       ch.missions.forEach((m, mi) => {
         const b = document.createElement("button");
@@ -1519,9 +1522,13 @@
   async function startMission(ci, mi) {
     const ch = C[ci];
     const last = ch.missions.length - 1;
-    if (mi === 0 && ch.scenes.before !== undefined && !save.seen[ch.id + ":before"]) {
-      await playScene(ch.id, ch.scenes.before);
-      save.seen[ch.id + ":before"] = true; store();
+    // On Crucible, a chapter tells its own new story (crucible.js), with its
+    // own record of which scenes have been seen.
+    const hard = () => ci > 0 && difficulty() === Battle.DIFFICULTY.length - 1 && Story.hasCrucible(ch.id);
+    const sid = () => (hard() ? "crucible:" : "") + ch.id;
+    if (mi === 0 && ch.scenes.before !== undefined && !save.seen[sid() + ":before"]) {
+      await playScene(sid(), ch.scenes.before);
+      save.seen[sid() + ":before"] = true; store();
     }
     for (;;) {
       const team = await chooseTeam(ci, mi);
@@ -1535,9 +1542,9 @@
     }
     // The story moves on a little after every battle won, the first time it is won.
     const beat = ch.scenes.after ? ch.scenes.after[mi] : undefined;
-    const key = ch.id + ":after" + mi;
+    const key = sid() + ":after" + mi;
     if (beat !== undefined && !save.seen[key]) {
-      await playScene(ch.id, beat);
+      await playScene(sid(), beat);
       save.seen[key] = true; store();
     }
     if (mi === last && !save.seen[ch.id + ":cards"]) {

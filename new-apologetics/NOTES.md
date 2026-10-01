@@ -88,3 +88,10 @@ The old Techno, Dubstep and Electro beats, and chant sung over them, are gone.
 ## Heartened (2026-09-29)
 
 - Bringing back a Discouraged evangelist heartens the team: everyone in play, the one brought back included, gains 1 Zeal (RALLY, the mirror of SHAKEN). Campaign on Normal, 40 runs: smart 84 / 80, simple 71 / 59 (barely moved). The Nones chapter lost its edge (Heartened answers its Zeal drain), so its power went from [3.2, 2.5] to [3.4, 2.9]: smart bot about 62–69%.
+
+## Crucible stories (2026-10-01)
+
+- On Crucible every chapter (not the tutorial) tells a new story, in `crucible.js`: a harder question for each, with bosses from other chapters walking on (Bart Ehrman vouching for the crucifixion at Speakers' Corner, James White standing with Lila Rose on abortion, and so on). Gentle and Normal keep the stories in `story.js`. Seen scenes are tracked separately ("crucible:<chapter>:after<n>"), and the map card shows the Crucible story's question when Crucible is chosen.
+- Each Crucible scene stands on its own: a narrator's line says where we are and what the question is, and the scene ends on a settled beat, not a question answered in the next scene. A player who skips around can follow.
+- Alex O'Connor is surprised that Joe Schmid has come home (The Hidden God, and the final chapter). When the two meet in a debate on opposite sides, each now and then says a line to the other before his move (`Lines.meeting` in lines.js), never the same one twice in a debate.
+- The public page has a paragraph on the scope of the stories under "Play the game", and each chapter in the list now describes its people and what makes them hard to reach, not the plot.

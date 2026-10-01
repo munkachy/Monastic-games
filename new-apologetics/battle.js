@@ -73,7 +73,7 @@ const Battle = (() => {
   const DIFFICULTY = [
     { name: "Gentle", hp: 0.5, atk: 0.45, zeal: -2, closer: 0.5, resolve: 0, sharp: 0.3, cover: 0, reserve: 0, xp: 0.75, blurb: "For the story, or to jump ahead to a chapter above your level. Opponents are much softer, and you earn a little less experience." },
     { name: "Normal", hp: 1, atk: 1, zeal: 0, resolve: 0, sharp: 0.6, cover: 0.35, reserve: 0, xp: 1, blurb: "The game as designed: you'll win most debates, but not without thinking." },
-    { name: "Crucible", hp: 1.15, atk: 1.06, zeal: 1, resolve: 0.04, sharp: 0.8, cover: 0.5, reserve: 1, xp: 1.25, blurb: "Tested like gold in the fire (1 Peter 1:7). Tougher, sharper opponents, more podiums, and a fresh opponent waiting to step in. Win every debate here to open the epilogue." },
+    { name: "Crucible", hp: 1.15, atk: 1.06, zeal: 1, resolve: 0.04, sharp: 0.8, cover: 0.5, reserve: 1, xp: 1.25, blurb: "Tested like gold in the fire (1 Peter 1:7). Tougher, sharper opponents, more podiums, and a fresh opponent waiting to step in. Every chapter tells a new story here, with a harder question and old opponents returning. Win every debate on Crucible to open the epilogue." },
   ];
 
   function makeUnit(id, side, slot, def, level, diff) {
@@ -790,6 +790,9 @@ const Battle = (() => {
       if (st.events.length) { view.show(st.events); await view.sleep(0.7); }
       if (st.skip && inPlayNow(u) && o.onSkip) o.onSkip(u);
       if (st.skip || b.outcome()) continue;
+      // Old friends on opposite sides have a word for each other (lines.js).
+      const quip = typeof Lines !== "undefined" && Lines.meeting ? Lines.meeting(u, (u.side === "hero" ? b.foes() : b.heroes()).filter(inPlayNow), b) : null;
+      if (quip) { view.show([{ key: u.key, text: "“" + quip + "”", color: "#ffe08a" }]); await view.sleep(1.8); }
       const pick = u.side === "hero" && o.choose ? await o.choose(u) : b.think(u);
       if (o.stopped && o.stopped()) return "stopped";
       const targets = b.aim(u, pick.i, pick.target);

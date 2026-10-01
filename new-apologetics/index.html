@@ -57,6 +57,7 @@
   .hero-top { display: grid; gap: 14px; }
   .play-link { display: inline-block; padding: 12px 20px; background: var(--gold); color: var(--night); font: 700 20px/1 var(--display); text-decoration: none; border-radius: 4px; }
   .play-link:hover { background: #f2ca66; }
+  .scope { max-width: 70ch; margin-top: 14px; }
   .verse { font-style: italic; color: var(--muted); max-width: 60ch; }
   .verse b { font-style: normal; color: var(--gold); font-weight: 600; }
   .stage { border: 3px solid var(--line); background: #0e1122; border-radius: 6px; overflow: hidden; }
@@ -195,7 +196,8 @@
     <p class="status" id="battle-caption">A turn in progress.</p>
     <p class="status">The real game, playing itself. Still under review: the likenesses, lines and moves are drafts and may change. A fan-made game, not affiliated with or endorsed by the people depicted.</p>
     <p class="fair">Every real person in this game has been portrayed as fairly as possible, and in charity. The aim is to explore ideas, not to shame anyone. If you are portrayed here and are unhappy with how, please leave a comment, and I will take it into consideration.</p>
-    <p><a class="play-link" href="play.html?v=20260929g">Play the game ▸</a></p>
+    <p><a class="play-link" href="play.html?v=20261001a">Play the game ▸</a></p>
+    <p class="scope">Your squad is a team of real Catholic apologists, sent out on missions for the kingdom of God. Across ten chapters they go wherever the questions are: a public dialogue with an atheist about a fawn that dies alone in a forest fire; a street evangelist asking, “If you died tonight, would you go to heaven?”; missionaries at the door with news of a great apostasy; the crowd at Speakers' Corner; a WitchTok influencer who says Apollo loves you; a debate stream on bodily autonomy; a campus panel asking what the Church really teaches about gay people, and why it is not hatred; a scholar who says the Gospels cannot be trusted; a Reformed debater who has heard every Catholic argument; and the Nones, who would rather scroll than argue at all. The squad answers with Scripture, the Fathers, philosophy and their own stories. They level up, earn teaching cards, and sometimes watch an opponent come home. At the end, every boss returns to the table for one last debate. And on Crucible, the hardest setting, every chapter tells a whole new story.</p>
   </header>
 
   <section>
@@ -316,8 +318,8 @@
 <script src="moves.js?v=20260929g"></script>
 <script src="story.js?v=20260929g"></script>
 <script src="data.js?v=20260929g"></script>
-<script src="lines.js?v=20260929g"></script>
-<script src="battle.js?v=20260929g"></script>
+<script src="lines.js?v=20261001a"></script>
+<script src="battle.js?v=20261001a"></script>
 <script>
 (() => {
   const C = Art.CAST;
@@ -689,46 +691,46 @@
   ];
 
   const CHAPTERS = [
-    ["The Comment Section", "Tutorial", "", "A viral clip, a flood of replies, and the first two recruits from Catholic Answers: Trent Horn and Jimmy Akin.",
+    ["The Comment Section", "Tutorial", "", "People who meet the faith in thirty-second clips and three-line replies. The difficulty is speed: nobody in a comment section waits for a careful answer, and the loudest reply usually wins.",
       [["g-doctrine", "Scripture", "1 Peter 3:15: a defense given with gentleness and reverence, never an attack."]]],
-    ["The Fawn in the Forest", "Atheists", "Alex O'Connor", "Why would a good God let a fawn burn to death, alone, where no one will ever know? Fr. Pine brings St. Thomas, Fr. Spitzer brings the laws of nature, and Scott Hahn brings Romans 8. Along the way, Ethan Muse and Fr. Spitzer face skeptic streamers over Fatima and the Shroud, and unlock Vindicatory Miracles.",
+    ["The Fawn in the Forest", "Atheists", "Alex O'Connor", "Thoughtful atheists, many of them young, well read and genuinely kind. They have taken the problem of suffering seriously, often more seriously than believers have, and a quick answer only proves to them that Christians have not thought about it.",
       [["g-doctrine", "Doctrine", "God freely willed a world “in a state of journeying” toward its perfection. Until it arrives, physical evil exists alongside physical good (CCC 310)."],
        ["g-opinion", "Opinion", "The particular answers to the fawn: the good of the whole (Summa I, q. 22, a. 2, ad 2), a law-governed world, creation's coming liberation (Romans 8:21). Faithful Catholics weigh them differently."],
        ["g-dogma", "Dogma", "That miracles happen and can be known with certainty as signs of revelation (Vatican I, Dei Filius, ch. 3, canon 4). Whether Fatima was one is private revelation, which no Catholic is bound to believe (CCC 67)."]]],
-    ["Are You a Good Person?", "Evangelicals", "Ryan Hemelaar", "“If you died tonight, would you go to heaven?” The team has to answer without claiming to earn it, and without claiming a certainty no one has. Scott Hahn, once a Presbyterian minister, shows them the family behind the courtroom.",
+    ["Are You a Good Person?", "Evangelicals", "Ryan Hemelaar", "Evangelical Christians who love Jesus, know their Bibles, and share the Gospel with strangers more boldly than most Catholics ever do. The difficulty: they believe Catholics have added works to grace, and they want a certainty of salvation that the Church says no one has without a special revelation.",
       [["g-dogma", "Dogma", "We are justified freely: nothing that comes before justification, faith or works, merits the grace of it (Trent, Session VI, ch. 8). And without a special revelation, no one can know with absolute certainty that he will persevere (canon 16)."],
        ["g-doctrine", "Doctrine", "What we have instead is hope, a theological virtue: confident trust in God's promises (CCC 1817–1821)."]]],
-    ["The Restoration", "Latter-day Saints", "Jacob Hansen", "If the Church fell away after the apostles died, when did it happen, and why didn't anyone notice? Joe Heschmeyer opens Ignatius of Antioch's letters.",
+    ["The Restoration", "Latter-day Saints", "Jacob Hansen", "Latter-day Saints: courteous, clean-living, devoted to family, and sent out two by two. They believe the Church Christ founded fell away soon after the apostles and was restored only in 1830, so everything the Catholic Church says sounds to them like part of the long night.",
       [["g-doctrine", "Doctrine", "The Church cannot fail: “the gates of Hades shall not prevail against it” (Matthew 16:18; 28:20; Lumen Gentium 8)."],
        ["g-dogma", "Dogma", "God is utterly simple, one in substance, without parts: not an exalted man (Lateran IV, 1215)."]]],
-    ["People of the Book", "Islam", "Speakers' Corner Champion", "If the Bible was corrupted, when? And why does the Qur'an tell Christians to judge by the Gospel? GodLogic joins as a guest, and Catholics and Protestants stand together.",
+    ["People of the Book", "Islam", "Speakers' Corner Champion", "Muslims who debate in public, at Speakers' Corner and online. They honor Jesus as a prophet and his mother as the greatest of women, but they have been taught that the Gospels were corrupted, and that calling Jesus God breaks the oneness of God.",
       [["g-dogma", "Dogma", "The Son is “one in being with the Father”: not a second god, but God's own eternal Word (Nicaea, 325)."],
        ["g-argument", "Argument", "“Let the people of the Gospel judge by what God has revealed in it” (Qur'an 5:47). If the Gospel was intact then, what corrupted it afterward?"],
        ["g-doctrine", "Doctrine", "Muslims “together with us adore the one, merciful God” (CCC 841; Nostra Aetate 3)."]]],
-    ["Apollo Loves You", "New Age", "WitchTok Influencer", "Why would anyone say “Apollo loves you,” when no one in the ancient world ever did? Bishop Barron opens Homer, Fr. Boniface discerns the spirits, and Fr. Carlos Martins, an exorcist, joins the team: some doors are easier to open than to close.",
+    ["Apollo Loves You", "New Age", "WitchTok Influencer", "Seekers of the New Age: tarot readers, crystal healers, and witches with large followings online. They are hungry for the spiritual and long to be loved by something greater than themselves, but they look for it in practices that open doors better left closed.",
       [["g-doctrine", "Doctrine", "All forms of divination are to be rejected: horoscopes, astrology, palm reading, consulting mediums. Magic and sorcery are gravely contrary to the virtue of religion (CCC 2116–2117)."],
        ["g-argument", "Argument", "No ancient Greek thought the gods loved him: they “spun life for unfortunate mortals” and “have no sorrows” themselves (Iliad 24.525–526), and Aristotle held friendship with a god impossible (Nicomachean Ethics VIII.7). “God is love” (1 John 4:8) came with revelation."],
        ["g-doctrine", "Doctrine", "The Church has power over evil spirits in the name of Jesus Christ; a solemn exorcism is done only by a priest, with the bishop's permission (CCC 1673)."]]],
-    ["My Body, My Brand", "Online Culture", "Destiny", "If it's my body and my choice, whose body is the child's? And what happens to a person who becomes a product? Lila Rose, who has debated Destiny, leads; Matt Fradd speaks to the content creators.",
+    ["My Body, My Brand", "Online Culture", "Destiny", "Young people formed by streaming and social media, where the body is a brand and freedom means no one may tell you what to do with it. Many sincerely believe that a person begins only when he can think, and that selling yourself hurts no one.",
       [["g-doctrine", "Doctrine", "Human life must be respected and protected absolutely from the moment of conception; direct abortion is gravely contrary to the moral law (CCC 2270–2271; Evangelium Vitae 62)."],
        ["g-argument", "Argument", "A person is “an individual substance of a rational nature” (Boethius), not a stream of experiences. You were you before you could think, and you are still you asleep."],
        ["g-doctrine", "Doctrine", "The body is the person, made a gift, not a product. Pornography does grave injury to the dignity of everyone involved (CCC 2354; 1 Corinthians 6:19–20)."]]],
-    ["Who Do You Say You Are?", "Identity", "Affirming Pastor", "People say the Church hates gay people. What does it actually teach, and why isn't it hateful at all? Kim Zember tells her own story, Fr. Mike brings the heart of his book Made for Love (your identity is a son or daughter of God, not your experiences), Fr. Pine reads the Church's own words, and Kim joins the team at the end.",
+    ["Who Do You Say You Are?", "Identity", "Affirming Pastor", "Gay and lesbian people and those who love them, with the campus allies and pastors who stand beside them. Many have been hurt, or were told to expect it, and they hear the Church's teaching only as rejection, never as the invitation it is.",
       [["g-doctrine", "Doctrine", "No one is adequately described by their sexual orientation: every person's fundamental identity is “the creature of God, and by grace, his child and heir to eternal life” (CDF, 1986, no. 16)."],
        ["g-doctrine", "Doctrine", "Respect, compassion and sensitivity for every person, with no unjust discrimination (CCC 2358); sexual acts belong within the marriage of a man and a woman, and all the baptized are called to chastity (CCC 2348, 2357, 2359)."],
        ["g-dogma", "Dogma", "Concupiscence remains in the baptized: everyone has disordered desires to fight (Trent, Session V, canon 5; CCC 1264)."]]],
-    ["Misquoting Jesus?", "Skeptical Scholars", "Bart Ehrman", "If the manuscripts disagree and the Gospels were anonymous, how can anyone trust them? Brant Pitre shows Bart the big picture: Jesus read as a first-century Jew, and not one anonymous copy of a Gospel. He joins the team at the end.",
+    ["Misquoting Jesus?", "Skeptical Scholars", "Bart Ehrman", "Students and readers of skeptical scholarship, in Religion 101 and on YouTube, who learned that the Gospels were anonymous and the manuscripts full of changes. Many were raised with a brittle literalism, and when one detail failed, the whole faith seemed to fall with it.",
       [["g-doctrine", "Doctrine", "Scripture teaches “firmly, faithfully and without error that truth which God wanted put into sacred writings for the sake of salvation”; read it with its literary forms in mind (Dei Verbum 11–12)."],
        ["g-doctrine", "Doctrine", "“The New Testament lies hidden in the Old, and the Old is made manifest in the New” (Dei Verbum 16)."],
        ["g-argument", "Argument", "No anonymous Gospel manuscript has ever been found, and Irenaeus names all four around 180 (Against Heresies 3.1.1; Pitre, The Case for Jesus)."]]],
-    ["Scripture Alone?", "Reformed", "James White", "How do you answer sola scriptura in a way James White hasn't heard a thousand times? Grant him the canon, and ask for the verse that says the rule of faith changes when the last apostle dies.",
+    ["Scripture Alone?", "Reformed", "James White", "Reformed Protestants: serious, learned, and devoted to Scripture. They hold that Scripture alone is the Church's only infallible rule, and they have heard the usual Catholic replies so many times that those replies no longer reach them.",
       [["g-dogma", "Dogma", "Revelation is handed on “in written books and unwritten traditions” (Trent, Session IV, 1546), and the canon of Scripture was defined at the same session."],
        ["g-doctrine", "Doctrine", "Scripture and Tradition flow “from the same divine wellspring” (Dei Verbum 9–10). Paul: hold fast to the traditions, “either by word of mouth or by letter” (2 Thessalonians 2:15)."]]],
-    ["Nothing in Particular", "The Nones", "Master of None", "How do you reach someone who isn't against God, just not interested? Nearly three in ten American adults now say they have no religion. These opponents seldom argue: they check their phones, shrug, and wear the team's Zeal down, so the usual strategy fails. Bring Encouragers. Fr. Augustine Wetta surfs in with joy, the only thing a shrug can't answer.",
+    ["Nothing in Particular", "The Nones", "Master of None", "The Nones: nearly three in ten American adults, who name no religion at all. They are not angry at God, just not interested, and indifference is harder to answer than any argument, because there is nothing to push against.",
       [["g-doctrine", "Doctrine", "“The desire for God is written in the human heart, because man is created by God and for God” (CCC 27)."],
        ["g-argument", "Argument", "“You have made us for yourself, and our heart is restless until it rests in you” (St. Augustine, Confessions I.1)."],
        ["g-doctrine", "Doctrine", "Acedia, the spiritual sloth that refuses the joy that comes from God, is a sin against the love of God (CCC 2094; the Rule of St. Benedict watches for the brother who is “acediosus,” RB 48.18)."]]],
-    ["The Great Debate", "Everyone", "Master of None", "Every opponent comes back to the table on one night: nine bosses in three debates, and last of all the Master of None, who doesn't care to argue at all. What do you say when you can't win them all? Opens once all ten stories are done; the hardest chapter in the game.",
+    ["The Great Debate", "Everyone", "Master of None", "Everyone from the year, at one table, on one night. Now the difficulty is the one every apologist meets sooner or later: you cannot win them all, and you were never meant to.",
       [["g-doctrine", "Doctrine", "Faith is a gift of God, a supernatural virtue infused by him. To believe, we need the interior helps of the Holy Spirit (CCC 153)."],
        ["g-doctrine", "Scripture", "“I planted, Apollos watered, but God gave the growth” (1 Corinthians 3:6)."]]],
     ["One Fold", "Epilogue", "", "Opens only when every debate has been won on Crucible. The team counts your conversions, then goes online: new heresies, and the people they debated still drawing crowds. Why keep going? Because every heresy has made the Church understand the faith more deeply, and because more people are seeking God than in a long time. It ends at the Easter Vigil.",

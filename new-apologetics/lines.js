@@ -170,6 +170,35 @@ const Lines = (() => {
     "Debate Challenge": ["The Dividing Line. Tuesday.", "I'll take on anyone.", "Cross-examination time.", "Bring your best scholar."],
   };
 
+  // Old friends on opposite sides. When both are in a debate, each now and
+  // then speaks to the other before his move, a line he says only once a debate.
+  // Alex O'Connor and Joe Schmid argued for years as friends; in this game
+  // Joe has come home, and Alex is still getting used to it.
+  const MEETINGS = [
+    { a: "schmid", b: "oconnor", says: {
+      schmid: ["Alex! Contingency, round two?", "I steelmanned you for years.", "You're in my testimony, Alex.", "Still on the fawn? Me too.", "I'll buy the oat milk, Alex."],
+      oconnor: ["Joe. Of all people. Really?", "I genuinely didn't see it coming.", "Fine. Steelman me, then.", "Is this a very long bit, Joe?", "Contingency got you, didn't it?", "Who will I argue with now?"],
+    } },
+  ];
+  const said = new WeakMap();
+
+  // A line for `u` to say to an old friend across the floor, or null.
+  // `others` are the debaters still in on the other side.
+  function meeting(u, others, battle) {
+    for (const m of MEETINGS) {
+      const friend = u.id === m.a ? m.b : u.id === m.b ? m.a : null;
+      if (!friend || !others.some((o) => o.id === friend)) continue;
+      if (!said.has(battle)) said.set(battle, new Set());
+      const used = said.get(battle);
+      const left = m.says[u.id].filter((l) => !used.has(l));
+      if (!left.length || Math.random() > 0.55) return null;
+      const line = left[Math.floor(Math.random() * left.length)];
+      used.add(line);
+      return line;
+    }
+    return null;
+  }
+
   const last = {};
 
   // A move's words for this use: { glyphs } for words that fly, { say } for
@@ -189,5 +218,5 @@ const Lines = (() => {
     return words ? { glyphs: all[i] } : { say: all[i] };
   }
 
-  return { pick, EXTRA };
+  return { pick, meeting, EXTRA };
 })();
