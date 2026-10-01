@@ -601,31 +601,31 @@ const DEMON_GRIDS = [[
 // demon to outrun. `dsp` is the demon's pace; `kit` is the mix of pieces the
 // way is built from (see buildZone), harder deeper in.
 const ZONES = [
-  { id: "m1", num: "First Mansions", name: "The Gate of Prayer", sin: "pride", dsp: 705, song: "mountain", len: 34000,
+  { id: "m1", num: "First Mansions", name: "The Gate of Prayer", sin: "pride", dsp: 532, song: "mountain", len: 34000,
     sub: "The door into the castle is prayer, and the first room is knowing yourself.",
     sky: ["#9aaa98", "#b0bea8", "#c8d2b8", "#e0e4cc"], sun: "#f4f0d8", far: "#7a8676", near: "#5e6a58", dirt: ["#6e7268", "#5e625a"], grass: "#6a9a4a", grass2: "#a8d070", cloud: "#f0f2e8", rail: "#c8ccc0", bg: "castle",
     kit: { hill: 3, valley: 3, ramp: 2, loop: 3, rail: 2, spring: 1, pit: 1, boost: 2, foes: 0.6 } },
-  { id: "m2", num: "Second Mansions", name: "The Torchlit Stair", sin: "sloth", dsp: 718, song: "alley", len: 36000,
+  { id: "m2", num: "Second Mansions", name: "The Torchlit Stair", sin: "sloth", dsp: 577, song: "alley", len: 36000,
     sub: "The King keeps calling, through good words and good friends. Keep going.",
     sky: ["#0a0a24", "#141638", "#1e2050", "#2a2a62"], sun: "#f4f0d8", far: "#1a1a3a", near: "#24244a", dirt: ["#2e2e4c", "#26263e"], grass: "#e07a2a", grass2: "#ffc070", cloud: "#6a6aa8", rail: "#ffb060", bg: "torches", night: true,
     kit: { hill: 3, valley: 2, ramp: 3, loop: 3, rail: 3, spring: 2, pit: 2, boost: 2, foes: 0.8 } },
-  { id: "m3", num: "Third Mansions", name: "The Ordered Garden", sin: "avarice", dsp: 742, song: "river", len: 38000,
+  { id: "m3", num: "Third Mansions", name: "The Ordered Garden", sin: "avarice", dsp: 548, song: "river", len: 38000,
     sub: "A good and well-ordered life. Now hold nothing back from God.",
     sky: ["#1a8ae8", "#4aa8f4", "#8acaf8", "#d0ecfc"], sun: "#ffffff", far: "#3a8a3a", near: "#2a6a2a", dirt: ["#c8683a", "#b05a30"], grass: "#4ab83a", grass2: "#a8f07a", cloud: "#ffffff", rail: "#f4f0e8", bg: "garden",
     kit: { hill: 2, valley: 3, ramp: 3, loop: 4, rail: 3, spring: 2, pit: 2, boost: 3, foes: 0.9 } },
-  { id: "m4", num: "Fourth Mansions", name: "The Two Fountains", sin: "envy", dsp: 807, song: "sea", len: 40000,
+  { id: "m4", num: "Fourth Mansions", name: "The Two Fountains", sin: "envy", dsp: 637, song: "sea", len: 40000,
     sub: "One basin is filled by pipes and labour; the other from the spring itself.",
     sky: ["#0a5a6a", "#1a7a88", "#3aa0a8", "#7ad0cc"], sun: "#e8fff8", far: "#cfe6e8", near: "#a8d0d4", dirt: ["#e8f4f4", "#cfe2e6"], grass: "#1ab0a8", grass2: "#8af0e8", cloud: "#e8fffc", rail: "#2a8a90", bg: "fountains",
     kit: { hill: 2, valley: 3, ramp: 4, loop: 4, rail: 3, spring: 2, pit: 3, boost: 3, foes: 1.0 } },
-  { id: "m5", num: "Fifth Mansions", name: "The Silkworm's Wings", sin: "gluttony", dsp: 761, song: "festival", len: 42000,
+  { id: "m5", num: "Fifth Mansions", name: "The Silkworm's Wings", sin: "gluttony", dsp: 579, song: "festival", len: 42000,
     sub: "The silkworm spins its house and dies in it; out comes a white butterfly.",
     sky: ["#3a1a5a", "#6a2a7a", "#a84a8a", "#e88ab0"], sun: "#ffe0f0", far: "#4a1a4a", near: "#6a2a5a", dirt: ["#6a2a5a", "#5a2050"], grass: "#f0a0d0", grass2: "#fff0fa", cloud: "#ffe8f4", rail: "#ffd0ec", bg: "silk",
     kit: { hill: 2, valley: 3, ramp: 4, loop: 5, rail: 3, spring: 3, pit: 3, boost: 3, foes: 1.1 } },
-  { id: "m6", num: "Sixth Mansions", name: "The Fire of Longing", sin: "wrath", dsp: 784, song: "flames", len: 44000,
+  { id: "m6", num: "Sixth Mansions", name: "The Fire of Longing", sin: "wrath", dsp: 601, song: "flames", len: 44000,
     sub: "Wounded by love, the soul can hardly bear to wait for the King.",
     sky: ["#100404", "#3a0808", "#8a1a08", "#e0500a"], sun: "#ffd04a", far: "#1a0606", near: "#2a0a08", dirt: ["#2a1a1a", "#1e1212"], grass: "#ff6a1a", grass2: "#ffd04a", cloud: "#c89a90", rail: "#ffcf5a", bg: "fire",
     kit: { hill: 2, valley: 3, ramp: 4, loop: 5, rail: 4, spring: 3, pit: 4, boost: 3, foes: 1.3 } },
-  { id: "m7", num: "Seventh Mansions", name: "The King's Chamber", sin: "lust", dsp: 773, song: "kings", len: 46000,
+  { id: "m7", num: "Seventh Mansions", name: "The King's Chamber", sin: "lust", dsp: 649, song: "kings", len: 46000,
     sub: "At the centre of the soul, in the brightest room of all, the King himself.",
     sky: ["#fffaf0", "#fff4dc", "#fcecc4", "#f4dca0"], sun: "#ffffff", far: "#e8eefc", near: "#f4e4b8", dirt: ["#f8f8ff", "#e4e8f8"], grass: "#e8b94a", grass2: "#fff4a0", cloud: "#ffffff", rail: "#e8b94a", bg: "crystal",
     kit: { hill: 2, valley: 3, ramp: 4, loop: 6, rail: 4, spring: 3, pit: 4, boost: 3, foes: 1.4 } },
@@ -797,9 +797,9 @@ const railY = (R, x) => R.g - R.lift * clamp((x - R.x0) / RAIL_RISE, 0, 1);
 // slopes speed him going down and slow him going up.
 const GRAV = 900, BASE = 150, DRIVE = 300, JUMP = 340, LOOP_G = 0.6, BLAST = 420;
 // The air pushes back harder the faster he goes: on the level, driving with
-// all his might, a saint tops out near ten times his easy pace. Downhill, and
+// all his might, a saint tops out near six times his easy pace. Downhill, and
 // off a boost pad, he goes faster still.
-const DRAG = 0.0006;
+const DRAG = 0.0014, AIR_DRAG = 0.0003;
 // The gifts. Wind: for a while he drives twice as hard and the air hardly
 // holds him back. Fire: a burst of speed, and nothing can stand in his way.
 const WIND_TIME = 8, FIRE_TIME = 4, FIRE_SPEED = 720;
@@ -904,13 +904,39 @@ function update(dt) {
 }
 // The camera: ahead of a fast saint, and further out the faster he goes.
 function follow(dt) {
-  const sp = speedOf(), z = clamp(1.1 - sp / 1800, 0.8, 1);
-  cam.z += (z - cam.z) * Math.min(1, dt * 1.5);
-  const vw = W / cam.z, vh = H / cam.z, lead = clamp((P.mode === "air" ? P.vx : P.gsp * Math.cos(P.ang)) * 0.22, -20, vw * 0.3);
-  cam.x += (P.x - vw * 0.3 + lead - cam.x) * Math.min(1, dt * 6);
-  cam.y += (P.y - vh * 0.6 - cam.y) * Math.min(1, dt * 5);
+  const vx = P.mode === "air" ? P.vx : P.mode === "loop" ? P.gsp : P.gsp * Math.cos(P.ang);
+  // What he stands on, or will come down on: the ground (or cloud, or rail) below him.
+  let below = P.mode === "loop" ? P.loop.y : P.plat ? P.plat.y : groundAt(level.hs, P.x);
+  if (P.mode === "air") {
+    // Over a gap, the ground where he will come down; over a road of clouds, the clouds.
+    for (let k = 1; below === null && k <= 12; k++) below = groundAt(level.hs, P.x + k * 40);
+    for (const pl of level.plats) if (P.x >= pl.x0 - 60 && P.x <= pl.x1 && pl.y > P.y && (below === null || pl.y < below)) below = pl.y;
+  }
+  if (below === null || below < P.y) below = P.y;
+  // On the ground, the lie of the land just ahead too: the foot of the slope he is running down,
+  // the top of the hill he is running up.
+  let low = below, high = P.y - 30;
+  if (P.mode === "ground" && !P.plat) for (let k = 1; k <= 6; k++) {
+    const g = groundAt(level.hs, P.x + k * (W / cam.z) * 0.1);
+    if (g !== null) { low = Math.max(low, Math.min(g, P.y + 260)); high = Math.min(high, Math.max(g - 20, P.y - 200)); }
+  }
+  low += 10;
+  // Out further the faster he goes, and far enough out to keep all of that in sight
+  // between the words at the top and the verses at the foot.
+  const z = clamp(Math.min(0.95 - Math.abs(vx) / 1400, H * 0.66 / Math.max(1, low - high)), 0.4, 0.95);
+  cam.z += (z - cam.z) * Math.min(1, dt * (z < cam.z ? 4 : 1.2));
+  const vw = W / cam.z, vh = H / cam.z;
+  // At speed he sits well to the left, so the way ahead can be seen.
+  const f = clamp(0.4 - vx / 2600, 0.16, 0.4);
+  cam.f = cam.f === undefined ? f : cam.f + (f - cam.f) * Math.min(1, dt * 2);
+  cam.x = P.x - vw * cam.f;
+  // Up and down: him a little below the middle, but never so that the ground leaves the screen.
+  let ty = P.y - vh * 0.6;
+  if (low - ty > vh * 0.88) ty = low - vh * 0.88;
+  if (high - ty < vh * 0.2) ty = high - vh * 0.2;
+  cam.y += (ty - cam.y) * Math.min(1, dt * 10);
   // However fast he goes, keep him clear of the words at the top and the foot.
-  cam.y = clamp(cam.y, P.y - vh * 0.8, P.y - vh * 0.34);
+  cam.y = clamp(cam.y, P.y - vh * 0.84, P.y - vh * 0.22);
 }
 // Into the air, by a jump or a spring (not by running off an edge).
 function takeOff(jumped) {
@@ -926,7 +952,7 @@ function runGround(dt) {
     P.crash -= dt; P.run = 0; P.gsp -= (200 + P.gsp * 0.6) * dt;
     if (Math.random() < 0.5) parts.push({ x: P.x, y: P.y - 2, vx: -P.gsp * 0.2, vy: -40 - Math.random() * 40, life: 0.4, c: level.Z.dirt[0] });
     if (P.crash <= 0) { P.crash = 0; P.inv = 0.8; }
-  } else if (input.rushHeld) { P.run += dt; P.gsp += DRIVE * (P.wind > 0 ? 2 : 1) * (1 + Math.min(2, P.run * 0.4)) * dt; }
+  } else if (input.rushHeld) { P.run += dt; P.gsp += DRIVE * (P.wind > 0 ? 2 : 1) * (1 + Math.min(1.5, P.run * 0.4)) * dt; }
   else { P.run = 0; if (P.gsp > BASE) P.gsp -= (60 + P.gsp * 0.08) * dt; }
   P.gsp -= DRAG * (P.wind > 0 ? 0.5 : 1) * P.gsp * P.gsp * dt;
   if (P.gsp < BASE && !P.crash) P.gsp = Math.min(BASE, P.gsp + 260 * dt);
@@ -1009,7 +1035,7 @@ function runAir(dt, s) {
     else if (P.vy > (s.floatCap || 60)) { P.vy = s.floatCap || 60; P.float -= dt; }
   }
   if (input.rushHeld) P.vx += DRIVE * 0.35 * dt;
-  P.vx -= DRAG * 0.5 * P.vx * Math.abs(P.vx) * dt;
+  P.vx -= AIR_DRAG * P.vx * Math.abs(P.vx) * dt;
   runTricks(dt);
   const py = P.y;
   P.x += P.vx * dt; P.y += P.vy * dt;
@@ -1438,17 +1464,17 @@ function drawSaint(t) {
   if (P.crash > 0) rot = -Math.PI / 2 + Math.sin(P.crash * 20) * 0.2;
   ctx.translate(0, -11); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(0, 11);
   const ground = P.mode === "ground" && !P.crash;
-  const blur = ground ? clamp((sp - 220) / 260, 0, 1) : 0;
-  drawFigure(s.look, -6, -22, Math.floor(P.x / 10), { air: !ground, seated: blur > 0 });
-  if (blur > 0) {
-    // The legs become a wheel, and at full pelt a figure of eight.
-    const spin = t * (20 + sp * 0.06);
-    ctx.globalAlpha = 0.85;
+  // His legs: running, then running faster; only at full pelt a blur, like a wheel.
+  const wheel = ground && sp > 650;
+  const rate = ground ? Math.min(16, 6 + sp / 40) : 0;
+  drawFigure(s.look, -6, -22, Math.floor(t * rate), { air: !ground, seated: wheel });
+  if (wheel) {
+    const spin = t * 30;
+    ctx.globalAlpha = clamp((sp - 650) / 150, 0.4, 0.9);
     ctx.strokeStyle = "#140c1c"; ctx.lineWidth = 1.6;
-    if (blur < 1) { ctx.beginPath(); ctx.ellipse(0, -2, 5, 2.8, 0, 0, Math.PI * 2); ctx.stroke(); }
-    else { for (const dx of [-3.5, 3.5]) { ctx.beginPath(); ctx.ellipse(dx, -2.5, 3.6, 3.2, 0, 0, Math.PI * 2); ctx.stroke(); } }
+    ctx.beginPath(); ctx.ellipse(0, -2.5, 5, 3, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.strokeStyle = s.look.shade; ctx.lineWidth = 1;
-    for (let k = 0; k < 3; k++) { const a = spin + k * 2.1; ctx.beginPath(); ctx.arc(0, -2.5, 4.6, a, a + 0.9); ctx.stroke(); }
+    for (let k = 0; k < 3; k++) { const a = spin + k * 2.1; ctx.beginPath(); ctx.arc(0, -2.5, 4.4, a, a + 0.9); ctx.stroke(); }
     ctx.globalAlpha = 1;
   }
   if (T && T.k.sig && sigOf(s).fx === "keys") {
