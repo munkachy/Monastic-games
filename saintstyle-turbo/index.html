@@ -1032,9 +1032,9 @@ const NOVITIATE = { id: "novitiate", num: "The Novitiate", name: "Ausculta", son
 // in the air is read as a swipe to the right.)
 const TRICKS = [
   { id: "flourish", keys: "R", quick: true, name: "Flourish", dur: 0.3, pts: 100, boost: 0.12, learn: 0, about: "One tap, for a little air: each saint has his own." },
-  { id: "leap", keys: "U", name: "Leap of Joy", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "A star jump, as David danced before the ark. Keep the swipe held to hold it, for more points; let go before you land!" },
-  { id: "kneel", keys: "D", name: "Genuflection", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "On one knee in the air, as before the tabernacle. Keep the swipe held to hold it; let go before you land!" },
-  { id: "heel", keys: "L", name: "Heel Click", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "Both heels kicked up and clicked, for joy. Keep the swipe held to hold it; let go before you land!" },
+  { id: "leap", keys: "U", name: "Leap of Joy", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "A star jump, as David danced before the ark. Hold the arrow down to hold it, for more points; let go before you land!" },
+  { id: "kneel", keys: "D", name: "Genuflection", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "On one knee in the air, as before the tabernacle. Hold the arrow down to hold it; let go before you land!" },
+  { id: "heel", keys: "L", name: "Heel Click", dur: 0.4, pts: 120, boost: 0.14, learn: 0, about: "Both heels kicked up and clicked, for joy. Hold the arrow down to hold it; let go before you land!" },
   { id: "front", keys: "UU", name: "Front Flip", rot: Math.PI * 2, dur: 0.45, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, forward." },
   { id: "back", keys: "DD", name: "Back Flip", rot: -Math.PI * 2, dur: 0.5, pts: 250, boost: 0.35, learn: 0, about: "Head over heels, backward." },
   { id: "barrel", keys: "DU", name: "Barrel Roll", roll: true, dur: 0.55, pts: 400, boost: 0.45, learn: 1, about: "Turn over sideways in the air." },
@@ -1329,22 +1329,22 @@ function growFree(L, px) {
 function buildNovitiate() {
   const B = builder(4242), L = B.L, lessons = [];
   const lesson = (o) => { o.x = B.at(); o.y = B.h; lessons.push(o); return o; };
-  lesson({ title: "Run", say: ["Hold the RIGHT side of the screen to run.", "The longer you hold it, the faster you go."], goal: "speed" });
+  lesson({ title: "Run", say: ["Your saint runs all alone, faster and faster.", "Tap anywhere on the screen to jump."], goal: "speed" });
   B.flat(1760);
   L.lamps.push({ x: 120, passed: true });
-  let o = lesson({ title: "Jump", say: ["Tap the LEFT side to jump the gaps.", "A tap is a hop; hold it down to float."], goal: "pass" });
+  let o = lesson({ title: "Jump", say: ["Tap anywhere to jump the gaps.", "A tap is a hop; keep your finger down to float."], goal: "pass" });
   B.flat(260); B.pit(80); B.flat(320); B.pit(100); B.flat(260); o.until = B.at();
   B.flat(200);
-  o = lesson({ title: "A quick trick", say: ["Jump, and in the air TAP the right side once:", "your saint's own little trick. Good for small jumps."], swipe: "R", goal: "trick", trick: "flourish", from: "jump", how: "Jump, then tap the right side once." });
+  o = lesson({ title: "A quick trick", say: ["In the air, arrows come up at the bottom right.", "Tap → once: your saint's own little trick."], swipe: "R", goal: "trick", trick: "flourish", from: "jump", how: "Jump, then tap → on the arrows." });
   B.flat(1300); o.until = B.at();
   B.flat(200);
   o = lesson({ title: "Big air", say: ["Ramps throw you high into the air.", "The bar over your head shows how long until you land."], goal: "land" });
   B.P.kicker(); o.until = B.at();
-  o = lesson({ title: "Front flip", say: ["In the air, swipe UP twice: ↑ ↑", "Swipe anywhere: your thumb can keep holding the right side."], swipe: "UU", goal: "trick", trick: "front", how: "Swipe ↑ ↑ as soon as you leave the ramp." });
+  o = lesson({ title: "Front flip", say: ["In the air, tap ↑ twice on the arrows: ↑ ↑", "A single ↑, ↓ or ← is a little move of its own."], swipe: "UU", goal: "trick", trick: "front", how: "Tap ↑ ↑ as soon as you leave the ramp." });
   B.P.kicker(); o.until = B.at();
-  o = lesson({ title: "Back flip", say: ["Now swipe DOWN twice: ↓ ↓", "Every trick has its name and its points: watch the bottom."], swipe: "DD", goal: "trick", trick: "back", how: "Swipe ↓ ↓ as soon as you leave the ramp." });
+  o = lesson({ title: "Back flip", say: ["Now tap ↓ twice: ↓ ↓", "Every trick has its name and its points: watch the bottom."], swipe: "DD", goal: "trick", trick: "back", how: "Tap ↓ ↓ as soon as you leave the ramp." });
   B.P.kicker(); o.until = B.at();
-  o = lesson({ title: "The surge", say: ["Land a trick and you SURGE: your feet become a wheel!", "Only tricks do that, and it wears off. So keep landing them."], goal: "time", secs: 4 });
+  o = lesson({ title: "The surge", say: ["Land a trick and you SURGE: your feet become a wheel!", "Land another while surging and the surges STACK. A crash loses them."], goal: "time", secs: 4 });
   B.flat(2600);
   o = lesson({ title: "A combo", say: ["Two tricks in one jump: ↑ ↑ and then ↓ ↓.", "Each trick multiplies the points and the surge."], swipe: "UUDD", goal: "chain", n: 2 });
   B.P.mega(); o.until = B.at();
@@ -1352,7 +1352,7 @@ function buildNovitiate() {
   B.P.spring(); o.until = B.at();
   o = lesson({ title: "Rails", say: ["Run up onto a rail to grind it.", "A grind joins your tricks in one combo, till you touch the ground."], goal: "grind" });
   B.P.rail(false); o.until = B.at();
-  o = lesson({ title: "Loops", say: ["The boost pad throws you round the loop.", "Keep holding the right side."], goal: "loop" });
+  o = lesson({ title: "Loops", say: ["The boost pad throws you round the loop.", "Just keep going."], goal: "loop" });
   B.P.loop(); o.until = B.at();
   o = lesson({ title: "The breath of the Spirit", say: ["The wind of the Spirit lifts you and holds you up.", "Long tricks want a long time in the air."], goal: "land", from: "draft" });
   B.P.updraft(); o.until = B.at();
@@ -1472,7 +1472,6 @@ function update(dt) {
     if (game.count <= 0) {
       Snd.sfx("go"); pop("GO!", "#8ae86a", 22);
       // Already running when the word is given: a flying start.
-      if (input.rushHeld) { P.gsp = 380; pop("FLYING START", "#ffe08a", 9); }
       if (D) D.gsp = 300;
       say("start");
     }
@@ -1482,6 +1481,8 @@ function update(dt) {
     return;
   }
   game.time += dt;
+  // The saint runs by himself, always.
+  input.rushHeld = true;
   stepRunner(P, dt);
   if (D) runDemon(dt);
   if (shots.length) runShots(dt);
@@ -1907,9 +1908,12 @@ function landTricks(A) {
   const pts = Math.round((sum * n * (perfect ? 1.5 : 1) * (fire ? 2 : 1)) / 10) * 10;
   // The surge: faster and longer for more tricks, harder ones, a perfect landing, the fire.
   const b = A.chain.reduce((a, e) => a + e.boost, 0) * (perfect ? 1.25 : 1) * (fire ? 1.5 : 1);
-  const v = RUN_TOP * (A.player ? 1 : A.ai.run) * Math.min(3, 1.3 + 1.2 * b), secs = Math.min(9, 2.2 + 2.2 * b + (perfect ? 1 : 0));
-  A.surgeV = A.surge > 0 ? Math.max(A.surgeV, v) : v;
-  A.surge = Math.max(A.surge + 0.5, secs); A.surgeMax = A.surge;
+  // Landed while still surging: the surges stack, each a little faster, and their time adds up. A crash loses the stack.
+  const stacking = A.surge > 0; A.stack = stacking ? Math.min(5, (A.stack || 0) + 1) : 0;
+  const runF = A.player ? 1 : A.ai.run;
+  const v = RUN_TOP * runF * Math.min(3.6, Math.min(3, 1.3 + 1.2 * b) * (1 + 0.12 * A.stack)), secs = Math.min(9, 2.2 + 2.2 * b + (perfect ? 1 : 0));
+  A.surgeV = stacking ? Math.max(A.surgeV, v) : v;
+  A.surge = stacking ? Math.min(16, A.surge + secs) : secs; A.surgeMax = A.surge;
   A.gsp = Math.max(A.gsp, A.surgeV);
   const ids = A.chain.map((e) => e.id);
   if (!A.player) {
@@ -1921,7 +1925,7 @@ function landTricks(A) {
   addStyle(pts); game.bestChain = Math.max(game.bestChain, pts);
   let word = PRAISE[0][1]; for (const [at, w] of PRAISE) if (pts >= at) word = w;
   comboShow(A, "landed"); A.combo.total = pts; A.combo.perfect = perfect;
-  pop(word, perfect ? "#fff4a0" : n > 1 ? "#ffcf5a" : "#8ae86a", n > 2 || pts >= 3500 ? 16 : 13, perfect ? "PERFECT LANDING" : null);
+  pop(word, perfect ? "#fff4a0" : n > 1 ? "#ffcf5a" : "#8ae86a", n > 2 || pts >= 3500 ? 16 : 13, perfect ? "PERFECT LANDING" : A.stack ? "SURGE STACKED ×" + (A.stack + 1) : null);
   Snd.sfx("land"); Snd.sfx("surge"); Snd.landed(n); if (perfect) Snd.sfx("perfect");
   // A big one: the saint cries out for joy.
   if (pts >= 1500) setTimeout(() => voice(word.replace("!", "")), 120);
@@ -1963,7 +1967,7 @@ function crash(A) {
   A.trick = null; A.queue = []; A.buf = ""; A.coach = null;
   A.chain = [];
   if (A.player && window.__god) { A.mode = "ground"; return; }
-  A.mode = "ground"; A.crash = 0.9; A.gsp = Math.min(A.gsp, 260); A.surge = 0;
+  A.mode = "ground"; A.crash = 0.9; A.gsp = Math.min(A.gsp, 260); A.surge = 0; A.stack = 0;
   if (!A.player) {
     label(A, "CRASHED!", "#ffffff"); burst(A.x, A.y - 6, A.sin.colors.r, 10);
     if (A.sin.id === "pride") pop("PRIDE GOETH BEFORE DESTRUCTION", "#c8a8ff", 8, "Proverbs 16:18");
@@ -1980,7 +1984,7 @@ function strike(A, st, sy) {
   A.trick = null; A.queue = []; A.buf = ""; A.chain = []; A.coach = null;
   if (A.mode === "grind") endGrind(A);
   takeOff(A, false); A.struck = true; A.jumps = 0; A.float = 0;
-  A.vx = Math.min(Math.max(A.vx, A.gsp), 280); A.vy = 260; A.surge = 0; A.inv = 0.6;
+  A.vx = Math.min(Math.max(A.vx, A.gsp), 280); A.vy = 260; A.surge = 0; A.stack = 0; A.inv = 0.6;
   rings.push({ bolt: true, x: st.x, y: A.y + 20, t: 0, dur: 0.3, c: "#fff4a0" });
   if (!A.player) { label(A, "STRUCK!", "#fff4a0"); return; }
   shake = 0.3; Snd.sfx("crash"); burst(A.x, A.y - 10, "#fff4a0", 12);
@@ -2018,7 +2022,7 @@ function runShots(dt) {
 // The demon, hit: down he goes, his tricks and his surge lost, and slow to get up.
 function smite(A) {
   if (A.mode === "grind") endGrind(A);
-  A.trick = null; A.queue = []; A.chain = []; A.surge = 0; A.trail = [];
+  A.trick = null; A.queue = []; A.chain = []; A.surge = 0; A.stack = 0; A.trail = [];
   if (A.mode === "ground" && !A.plat) crash(A);
   else { if (A.mode !== "air") takeOff(A, false); A.vx = Math.min(A.vx, 160); A.vy = Math.max(A.vy, -60); A.crash = 1.4; A.struck = true; }
   A.stun = 2.5; label(A, "SMITTEN!", "#ffffff");
@@ -2106,10 +2110,10 @@ const DEMON_AI = {
   pride: { run: 0.93, use: 0.55, err: 0.4, react: 0.35, tricks: ["front", "back", "double"], way: "biggest" },
   sloth: { run: 0.95, use: 1, err: 0.05, react: 0.45, tricks: ["quick", "front", "back"], way: "lazy" },
   avarice: { run: 0.95, use: 0.65, err: 0.14, react: 0.25, tricks: ["quick", "front", "back", "barrel", "double"], way: "most", grabs: true },
-  envy: { run: 0.99, use: 0.75, err: 0.14, react: 0.22, tricks: ["quick", "front", "back", "barrel", "double", "dback"], way: "copy" },
+  envy: { run: 0.97, use: 0.75, err: 0.14, react: 0.22, tricks: ["quick", "front", "back", "barrel", "double", "dback"], way: "copy" },
   gluttony: { run: 0.96, use: 1, err: 0.08, react: 0.15, tricks: ["quick", "front", "back", "barrel", "double"], way: "many" },
   wrath: { run: 1.13, use: 1, err: 0.15, react: 0.12, tricks: ["front", "back", "double", "dback", "triple"], way: "biggest" },
-  lust: { run: 1.04, use: 1, err: 0.08, react: 0.2, tricks: ["quick", "front", "back", "barrel", "double", "dback", "triple"], way: "most" },
+  lust: { run: 1.02, use: 1, err: 0.08, react: 0.2, tricks: ["quick", "front", "back", "barrel", "double", "dback", "triple"], way: "most" },
 };
 for (const [id, s] of Object.entries(SINS)) s.flourish = { pride: "The Strut", sloth: "Big Yawn", avarice: "Coin Flip", envy: "Side-Eye", gluttony: "Belly Roll", wrath: "Fist Shake", lust: "Look At Me" }[id];
 const trickById = (id) => (id === "quick" ? TRICKS.find((k) => k.quick) : TRICKS.find((k) => k.id === id));
@@ -2198,12 +2202,12 @@ function runTutor(dt) {
   else if (l.goal === "pass" && P.x >= l.until && onFeet(P)) lessonPass();
   else if (l.goal === "time" && tutor.t >= l.secs) lessonPass();
   // Gone past the end of the lesson without doing it: back to try again.
-  if (!tutor.done && l.until && P.x > l.until + 40 && onFeet(P)) lessonRetry(l.goal === "loop" ? "Hold the right side, and let the pad throw you round." : "Let's try that again.");
+  if (!tutor.done && l.until && P.x > l.until + 40 && onFeet(P)) lessonRetry(l.goal === "loop" ? "Don't jump: let the pad throw you round." : "Let's try that again.");
 }
 function lessonEvent(ev, d) {
   if (!tutor) return;
   const l = lessonNow();
-  if (ev === "fall") { lessonRetry(l && l.goal === "pass" ? "Tap the LEFT side to jump the gap." : "Down the gap! Let's try again."); return; }
+  if (ev === "fall") { lessonRetry(l && l.goal === "pass" ? "Tap anywhere to jump the gap." : "Down the gap! Let's try again."); return; }
   if (!l || tutor.done) return;
   // Only the right kind of take-off counts for a lesson: off a ramp, into the wind, or a plain jump.
   if (ev === "ramp" || ev === "draft" || ev === "jump") { if ((l.from || "ramp") === ev) tutor.launched = true; return; }
@@ -2218,7 +2222,7 @@ function lessonEvent(ev, d) {
     case "chain":
       if (!judged) break;
       if (ev === "land") { if (d.n >= l.n) lessonPass(); else lessonRetry("Two tricks in one jump: " + arrows(l.swipe) + ", quickly."); }
-      else if (ev === "crash") lessonRetry("Swipe sooner, so both are done before you land.");
+      else if (ev === "crash") lessonRetry("Tap sooner, so both are done before you land.");
       break;
     case "cloud": if (ev === "cloud") lessonPass(); break;
     case "grind": if (ev === "grind") lessonPass(); break;
@@ -2870,8 +2874,10 @@ function drawPlay(t) {
   drawHud(t);
   drawCombo(t);
   drawTicker(t);
+  if (!tutor && !(P.coach && P.coach.t < 3 && P.mode === "air")) padHint = null;
   if (tutor) drawTutor(t);
   else if (P.coach && P.coach.t < 3 && P.mode === "air") drawCoach(t);
+  drawPad(t);
 }
 // How long the tricks he has asked for still need, in the air.
 function needTime(A) {
@@ -2917,6 +2923,7 @@ function drawHud(t) {
   }
   // The surge, and the gifts, and how long they last.
   let gy = 16;
+  if (P.surge > 0 && P.stack) text("×" + (P.stack + 1), W - 44, gy, { align: "right", color: Math.floor(t * 8) % 2 ? "#ffcf5a" : "#ff6a1a", size: 7 });
   if (P.surge > 0) { text("SURGE", W - 42, gy, { color: "#ffb030", size: 6 }); rect(W - 22, gy + 2, 18 * Math.min(1, P.surge / P.surgeMax), 3, Math.floor(t * 12) % 2 ? "#ffcf5a" : "#ff6a1a"); gy += 9; }
   for (const [k, v, max, c] of [["WIND", P.wind, WIND_TIME, "#e8f8ff"], ["FIRE", P.fire, FIRE_TIME, "#ffb030"]]) if (v > 0) { text(k, W - 42, gy, { color: c, size: 6 }); rect(W - 22, gy + 2, 18 * (v / max), 3, c); gy += 9; }
   if (D) {
@@ -3003,19 +3010,41 @@ function drawCombo(t) {
   text(pts, W / 2, y + 9, { align: "center", size: C.state === "live" ? 10 : 11, color: C.state === "bailed" ? "#ff6a5a" : C.state === "landed" ? "#8ae86a" : "#ffe08a" });
   ctx.globalAlpha = 1;
 }
-// A hand showing the swipes: the arrows, the next one bright, a fingertip moving the way it goes.
+// The arrows to tap: the next one bright.
 function drawGesture(keys, done, x, y, t, big) {
   const size = big ? 14 : 10, gap = size + 4, w = keys.length * gap;
   for (let i = 0; i < keys.length; i++) {
     const cx = x - w / 2 + i * gap + gap / 2, on = i === done, past = i < done;
     text(ARROW[keys[i]], cx, y - size / 2, { align: "center", size, color: past ? "#8ae86a" : on ? "#ffe08a" : "#ffffff" });
   }
-  const k = keys[Math.min(done, keys.length - 1)], u = (t * 1.6) % 1, d = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] }[k];
-  if (!d) return;
-  const fx = x + d[0] * (u - 0.5) * 30, fy = y + 26 + d[1] * (u - 0.5) * 30;
-  ctx.globalAlpha = 1 - u * 0.6; ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(fx, fy, 5, 0, 7); ctx.fill();
-  ctx.strokeStyle = "#140c1c"; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
-  if (k === "R" && keys.length === 1) text("TAP", x, y + 36, { align: "center", size: 7, color: "#ffffff" });
+  // And on the pad itself, the one to tap next.
+  padHint = keys[Math.min(done, keys.length - 1)];
+}
+// ---- The arrows: a pad at the bottom right, there whenever the saint is in the air ----
+const PAD = { x: W - 44, y: H - 50, r: 24, s: 22 };
+const PAD_AT = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+let padHint = null, padShow = 0;
+// Which arrow a point on the screen is on, if any (generously: anywhere within reach of the pad).
+function padDir(p) {
+  const dx = p.x - PAD.x, dy = p.y - PAD.y;
+  if (Math.hypot(dx, dy) > PAD.r + PAD.s * 0.75 || Math.hypot(dx, dy) < 5) return null;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : dy > 0 ? "D" : "U";
+}
+function drawPad(t) {
+  padShow += ((airborne() ? 1 : 0) - padShow) * 0.25;
+  if (padShow < 0.03) { padHint = null; return; }
+  const down = new Set([...pointers.values()].filter((q) => q.pad).map((q) => q.dir));
+  for (const [code, d] of Object.entries(KEY_DIRS)) if (keys.has(code) && airborne()) down.add(d);
+  ctx.globalAlpha = 0.25 * padShow; ctx.fillStyle = "#140c1c"; ctx.beginPath(); ctx.arc(PAD.x, PAD.y, PAD.r + PAD.s * 0.62, 0, 7); ctx.fill();
+  for (const [d, [ox, oy]] of Object.entries(PAD_AT)) {
+    const x = PAD.x + ox * PAD.r - PAD.s / 2, y = PAD.y + oy * PAD.r - PAD.s / 2, on = down.has(d), hint = padHint === d;
+    ctx.globalAlpha = (on ? 0.95 : 0.7) * padShow;
+    rect(x - 1, y - 1, PAD.s + 2, PAD.s + 2, "#140c1c"); rect(x, y, PAD.s, PAD.s, on ? "#ffe08a" : d === "R" ? "#5a3a20" : "#3a3060");
+    if (hint) { ctx.globalAlpha = padShow * (0.5 + Math.sin(t * 12) * 0.4); ctx.strokeStyle = "#8ae86a"; ctx.lineWidth = 2; ctx.strokeRect(x - 2, y - 2, PAD.s + 4, PAD.s + 4); ctx.globalAlpha = padShow; }
+    text(ARROW[d], x + PAD.s / 2, y + 3, { align: "center", size: 13, color: on ? "#140c1c" : "#ffffff", edge: on ? null : "#140c1c" });
+  }
+  ctx.globalAlpha = padShow * 0.8; text("★", PAD.x + PAD.r + PAD.s / 2 - 2, PAD.y - 3 - PAD.s / 2 - 6, { align: "center", size: 6, color: "#ffcf5a" }); ctx.globalAlpha = 1;
+  padHint = null;
 }
 // The Novice Master, and his lesson.
 function drawTutor(t) {
@@ -3029,7 +3058,7 @@ function drawTutor(t) {
   lines.forEach((s, i) => text(s, 34, 37 + i * 9, { size: 7, color: i && lines !== l.say ? "#ff9a7a" : "#ffffff" }));
   if (l.swipe && !tutor.done) {
     const big = slow < 0.6 && P.mode === "air";
-    if (big) { ctx.globalAlpha = 0.35; rect(0, 62, W, 64, "#140c1c"); ctx.globalAlpha = 1; text(l.swipe === "R" ? "SLOW MOTION: TAP THE RIGHT SIDE NOW" : "SLOW MOTION: SWIPE NOW", W / 2, 64, { align: "center", size: 7, color: "#c8f0ff" }); }
+    if (big) { ctx.globalAlpha = 0.35; rect(0, 62, W, 64, "#140c1c"); ctx.globalAlpha = 1; text(l.swipe === "R" ? "SLOW MOTION: TAP → NOW" : "SLOW MOTION: TAP THE ARROWS NOW", W / 2, 64, { align: "center", size: 7, color: "#c8f0ff" }); }
     drawGesture(l.swipe, P.mode === "air" ? Math.min(P.swipes, l.swipe.length - 1) : 0, big ? W / 2 : W - 60, big ? 88 : 80, t, big);
   }
 }
@@ -3038,7 +3067,7 @@ function drawCoach(t) {
   const k = P.coach.k;
   rect(70, 30, W - 140, 21, "#140c1cc8"); rect(70, 30, W - 140, 1, "#e8b94a");
   text("NEW TRICK: " + nameOf(k, P).toUpperCase(), W / 2, 32, { align: "center", size: 8, color: "#ffe08a" });
-  text("You have air enough. Swipe " + arrows(k.keys), W / 2, 42, { align: "center", size: 7, color: "#ffffff" });
+  text("You have air enough. Tap " + arrows(k.keys), W / 2, 42, { align: "center", size: 7, color: "#ffffff" });
   if (P.swipes < k.keys.length) drawGesture(k.keys, Math.min(P.swipes, k.keys.length - 1), W / 2, 104, t, true);
 }
 // The ticker: the running verses go by along the foot of the screen at a
@@ -3103,7 +3132,7 @@ function drawTitle(t) {
   const who = button("SAINT", 6, 143, 58, 16, false, 7), zones = button("CASTLE", 68, 143, 58, 16, false, 7);
   const free = button("FREESTYLE", 130, 143, 60, 16, false, 7);
   const book = button("TRICKS", 194, 143, 58, 16, false, 7), nov = button("NOVITIATE", 256, 143, 58, 16, false, 7);
-  text("Left: jump   Right: hold to run   In the air: tap or swipe for tricks", W / 2, 164, { align: "center", color: "#ffffff", size: 7 });
+  text("Tap anywhere to jump (hold to float).   In the air: tap the arrows for tricks", W / 2, 164, { align: "center", color: "#ffffff", size: 7 });
   for (const tp of input.taps) {
     if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); if (!save.tutorial) startTutorial(); else startZone(Math.min(save.open, ZONES.length) - 1); }
     else if (tp.x !== undefined && inBox(tp, who)) { Snd.sfx("select"); state = "saints"; }
@@ -3233,7 +3262,7 @@ function drawBook(t) {
   TRICKS.forEach((k, i) => {
     const y = 17 + i * 9.6, on = knows(k), hot = i === bookSel;
     if (hot) rect(4, y - 1, 168, 9.6, "#e8b94a55");
-    text(k.quick ? "tap" : arrows(k.keys), 8, y, { size: 7, color: on ? "#ffe08a" : "#7a6a9a" });
+    text(arrows(k.keys), 8, y, { size: 7, color: on ? "#ffe08a" : "#7a6a9a" });
     text(nameOf(k, P), 64, y, { size: 7, color: on ? "#ffffff" : "#7a6a9a" });
     text(on ? String(k.pts) : "locked", 170, y, { size: 6, align: "right", color: on ? "#c8f0ff" : "#7a6a9a" });
     rows.push({ x: 4, y: y - 1, w: 168, h: 9.6, i });
@@ -3246,7 +3275,7 @@ function drawBook(t) {
   drawSaint(demoRunner(246, 70, k, t), t);
   ctx.restore(); ctx.restore();
   text(nameOf(k, P).toUpperCase(), 246, 82, { align: "center", size: 8, color: "#ffe08a" });
-  text(k.quick ? "TAP THE RIGHT SIDE" : arrows(k.keys), 246, 92, { align: "center", size: k.quick ? 7 : 10, color: "#ffffff" });
+  text(arrows(k.keys), 246, 92, { align: "center", size: 10, color: "#ffffff" });
   wrapText(k.about, 6, 130).slice(0, 3).forEach((l, i) => text(l, 246, 106 + i * 8, { align: "center", size: 6, color: "#e8e0ff" }));
   text(k.pts + " points · " + k.dur.toFixed(2) + "s in the air", 246, 132, { align: "center", size: 6, color: "#c8f0ff" });
   if (!on) text("Beat the demon of " + ZONES[k.learn - 1].demon.name + " to learn it", 246, 141, { align: "center", size: 6, color: "#ff9a7a" });
@@ -3367,10 +3396,10 @@ function drawPause(t) {
   drawPlay(t);
   rect(0, 0, W, H, "#000000c0");
   text("PAUSED", W / 2, 8, { align: "center", color: "#ffe08a", size: 14 });
-  text("Left half: tap to jump, hold to float.   Right half: hold to run.", W / 2, 30, { align: "center", size: 7 });
-  text("In the air: tap the right side for a quick trick, or swipe for the others.", W / 2, 41, { align: "center", size: 7, color: "#c8f0ff" });
+  text("Your saint runs alone. Tap anywhere to jump; keep your finger down to float.", W / 2, 30, { align: "center", size: 7 });
+  text("In the air, arrows come up at the bottom right: tap them for tricks (→ alone: the quick one).", W / 2, 41, { align: "center", size: 7, color: "#c8f0ff" });
   text("Finish every trick before you land, or you crash (clouds bounce you; storms throw you down).", W / 2, 52, { align: "center", size: 7 });
-  text("Land a combo for points × tricks, and a surge: the only way past a run.", W / 2, 63, { align: "center", size: 7 });
+  text("Land a combo for points × tricks, and a surge; land again while surging and it stacks.", W / 2, 63, { align: "center", size: 7 });
   text("Once a race: the button at the top left (or F) sends your saint's gift after the demon.", W / 2, 72, { align: "center", size: 6, color: "#fff4a0" });
   const go = button("RESUME", W / 2 - 130, 84, 80, 20, true), book = button("TRICKS", W / 2 - 40, 84, 80, 20, false), quit = button(game.free ? "END RUN" : "QUIT", W / 2 + 50, 84, 80, 20, false);
   const skip = game.tutorial ? button("SKIP THE LESSONS", W / 2 - 60, 116, 120, 18, false, 8) : null;
@@ -3397,7 +3426,7 @@ const airborne = () => state === "play" && P && P.mode === "air";
 function toGame(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) / (r.width / W), y: (ev.clientY - r.top) / (r.height / H) }; }
 function held() {
   let j = false, r = false;
-  for (const q of pointers.values()) { if (q.left && !q.swiped) j = true; if (!q.left) r = true; }
+  for (const q of pointers.values()) if (!q.pad) j = true;
   input.jumpHeld = j || JUMP_KEYS.some((k) => keys.has(k));
   input.rushHeld = r || RUSH_KEYS.some((k) => keys.has(k));
 }
@@ -3409,10 +3438,11 @@ addEventListener("pointerdown", (ev) => {
     if (p.x > W - 24 && p.y < 16) { state = "pause"; input.taps = []; return; }
     if (game.tutorial && p.x > W - 62 && p.x < W - 24 && p.y < 16) { skipTutorial(); return; }
     if (canFire() && p.x < 32 && p.y > 22 && p.y < 52) { fire(); return; }
-    const left = ev.clientX < innerWidth / 2;
-    const q = { left, ax: p.x, ay: p.y, swiped: false, t0: performance.now(), air: airborne() };
+    const air = airborne(), d = air ? padDir(p) : null;
+    const q = { pad: !!d, dir: d, ax: p.x, ay: p.y, swiped: !!d, t0: performance.now(), air };
     pointers.set(ev.pointerId, q);
-    if (left && !q.air) input.jumpPressed = true;
+    if (d) swipe(d);
+    else input.jumpPressed = true;
     held();
   } else input.taps.push(p);
 }, { passive: false });
@@ -3420,18 +3450,14 @@ addEventListener("pointermove", (ev) => {
   const q = pointers.get(ev.pointerId);
   if (!q || state !== "play") return;
   const p = toGame(ev), dx = p.x - q.ax, dy = p.y - q.ay;
+  // Sliding from one arrow onto another counts as tapping it.
+  if (q.pad) { const d = padDir(p); if (d && d !== q.dir && airborne()) { q.dir = d; swipe(d); } return; }
   if (Math.hypot(dx, dy) < SWIPE) return;
   q.ax = p.x; q.ay = p.y;
-  if (!airborne()) return;
-  q.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : dy > 0 ? "D" : "U";
-  swipe(q.dir);
-  q.swiped = true; held();
 });
 const release = (ev) => {
   const q = pointers.get(ev.pointerId);
   pointers.delete(ev.pointerId);
-  // A quick tap in the air, not a swipe: on the left the second jump, on the right the flourish.
-  if (q && q.air && !q.swiped && performance.now() - q.t0 < 280 && airborne()) { if (q.left) input.jumpPressed = true; else swipe("R"); }
   held();
 };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);

@@ -18,7 +18,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | --- | --- | --- |
 | [Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/) | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
-| [SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/) | `saintstyle-turbo/` | A trick racer with the saints of Psalter Runner: the seven deadly sins race them through St. Teresa's seven mansions, by the same rules; ramps, loops, rails, swipe tricks and combos, surges, a tutorial, and adaptive funk music; a single HTML file with nothing to load |
+| [SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/) | `saintstyle-turbo/` | A trick racer with the saints of Psalter Runner: the seven deadly sins race them through St. Teresa's seven mansions, by the same rules; ramps, loops, rails, tricks on an arrow pad, combos, stacking surges, surges, a tutorial, and adaptive funk music; a single HTML file with nothing to load |
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
@@ -211,12 +211,18 @@ the heavens and loops. Every 16,000 paces the sky changes to another
 mansion's colours and song. The pause screen ends the run and shows the
 style, the distance and the best of each.
 
-**Running and surging.** Hold the right half of the screen to run; tap the
-left half to jump (hold it to float, rise, skim or jump again, as each saint
-does). Running only gets a saint so far. Every trick landed on his feet sets
+**Running and surging.** The saint runs alone, always. Tap anywhere to jump
+(keep your finger down to float, rise, skim or jump again, as each saint
+does). In the air, a pad of four arrows comes up at the bottom right: tap
+the arrows for tricks (a finger can slide from one to the next), and → on
+its own is the quick trick. Arrow keys and the space bar work too. Running
+only gets a saint so far. Every trick landed on his feet sets
 off a surge: his feet become a wheel and he flies along, faster for more and
 harder tricks and for a perfect landing, and then, little by little, he is
-running again. The surge is the only way to go faster than a run.
+running again. The surge is the only way to go faster than a run. Land
+again while still surging and the surges stack: up to six deep, each a
+little faster, their time added together. A crash, a storm or the demon's
+own fall loses the whole stack. The same rule holds for the demons.
 
 **The way.** Great ramps throw the saint high, and the greatest, Jacob's
 Ladder (Genesis 28:12), stands with angels going up and down it. The ground
@@ -246,10 +252,10 @@ scissor; each saint's own trick is a Rocket Air with the saint's treasure
 held high; and the Te Deum is everything at once. In the air, tap the right
 side for each saint's quick flourish, holding up what that saint carries
 (St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
-St. Lucy her lamp; St. Maurus grabs his board), or swipe anywhere, up, down, left and right, for
+St. Lucy her lamp; St. Maurus grabs his board), or tap the arrows for
 the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
-genuflection in the air, a single ← a heel click (keep the swipe held, or
-the arrow key down, and the move is held, worth more the longer it lasts;
+genuflection in the air, a single ← a heel click (keep the arrow held down
+and the move is held, worth more the longer it lasts;
 let go before landing, or it is a crash); ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
 ↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
 light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
@@ -312,9 +318,9 @@ landed trick with a crash and a horn stab.
 master", Rule of St. Benedict, Prologue) is the first thing a new player
 sees: the Novice Master teaches running, jumping, the flourish, the flips, the
 surge, combos, clouds, rails, loops and the wind, one lesson at a time,
-slowing time and showing the swipes when a trick is wanted, and putting the
+slowing time and showing the arrows to tap when a trick is wanted, and putting the
 saint back to try again when it goes wrong. The book of tricks (from the
-title or the pause screen) shows every trick done, how to swipe it, what it
+title or the pause screen) shows every trick done, which arrows make it, what it
 is worth and when it is learned.
 
 Along the foot of the screen a ticker carries the Douay verses about running
