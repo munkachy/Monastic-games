@@ -66,6 +66,13 @@ Benedict's word walked on the water to save St. Placidus, surfs across rivers,
 fire and gaps on his board and sends a rolling wave along the ground; St.
 Scholastica jumps twice and calls down a storm.
 
+The title page shows the five books of the Psalter (Psalms 1–41, 42–72,
+73–89, 90–106 and 107–150). Book I is open from the start. Each book closes
+with a doxology ("Blessed be the Lord, the God of Israel... Amen. Amen."), and
+singing that closing psalm opens the next book. Within an open book any psalm
+can be sung, in any order. After each psalm, READ PSALM steps through the whole
+psalm one verse at a time, a tap for each verse.
+
 Five more saints join the run, one for every thirty psalms sung:
 
 - **St. Hildegard** (after Psalm 30) throws seeds. Where a seed lands a green
