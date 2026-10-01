@@ -78,7 +78,7 @@ const room6 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 6 }, def);
     texts: [
       { v: 7, style: "painted", x: 60, y: 30, w: 170, size: 9, color: "#2a1a10", panel: "parchment" },
       { v: 8, part: [0, 25], style: "embroidered", x: 430, y: 24, w: 200, size: 9, color: "#ffe08a" },
-      { v: 8, part: [25, 99], style: "painted", x: 860, y: 110, w: 170, size: 9, color: "#2a1a10", panel: "parchment" },
+      { v: 8, part: [25, 99], style: "painted", x: 881, y: 138, w: 170, size: 9, color: "#2a1a10", panel: "parchment" },
     ],
     decor: [{ k: "banner", x: 420, y: 14, w: 220, h: 66, c: "#5a1a4a" }],
     back(c, Wd, t) {

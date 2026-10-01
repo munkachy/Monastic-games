@@ -46,7 +46,7 @@ const room8 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 8 }, def);
     map: g.rows(), doors: { 1: { to: "c8_house", door: "2" }, 2: { to: "c8_seal", door: "1" } },
     texts: [
       { v: 4, style: "stars", x: 30, y: 12, w: 600, size: 17 },
-      { v: 5, part: [0, 13], style: "sand", x: 740, y: 184, w: 260, size: 12 },
+      { v: 5, part: [0, 13], style: "sand", x: 738, y: 171, w: 260, size: 12 },
       { v: 5, part: [13, 99], style: "painted", x: 880, y: 40, w: 170, size: 9, color: "#2a1a10", panel: "board", panelColor: "#d8b070" },
     ],
     lights: [{ x: 1040, y: 120, r: 120, c: "rgba(255,230,180,0.35)" }],
@@ -114,7 +114,7 @@ const room8 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 8 }, def);
     map: g.rows(), doors: { 1: { to: "c8_waters", door: "2" }, 2: { to: "c8_vineyard", door: "1" } },
     texts: [
       { v: 8, style: "painted", x: 30, y: 30, w: 170, size: 9, color: "#2a1a10", panel: "parchment" },
-      { v: 9, part: [0, 13], style: "carved", x: 225, y: 20, w: 190, size: 8.5, color: "rgba(40,30,20,0.9)", panel: "plaque", panelColor: "#e8e8ec" },
+      { v: 9, part: [0, 13], style: "carved", x: 235, y: 26, w: 190, size: 8.5, color: "rgba(40,30,20,0.9)", panel: "plaque", panelColor: "#e8e8ec" },
       { v: 9, part: [13, 99], style: "painted", x: 525, y: 70, w: 120, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8905a" },
       { v: 10, style: "sky", x: 205, y: 66, w: 230, size: 11, color: "rgba(255,255,255,0.92)", shadow: "rgba(40,60,90,0.5)" },
     ],

@@ -129,16 +129,21 @@ const room2 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 2 }, def);
     map: g.rows(), doors: { 1: { to: "c2_mountains", door: "2" }, 2: { to: "c2_spring", door: "1" } },
     texts: [
       { v: 9, style: "painted", x: 40, y: 70, w: 200, size: 10, color: "#2a1a10", panel: "parchment" },
-      { v: 10, style: "kindle", x: 460, y: 60, w: 280, size: 12, reach: 260 },
+      { v: 10, style: "kindle", x: 470, y: 168, w: 280, size: 12, reach: 260 },
     ],
     paint(c) {
-      // Lattice windows in the wall, and the garden glimpsed through them.
-      for (const y of [110, 190]) { px(c, 368, y, 64, 44, "#2a3a2a"); for (let i = 0; i < 64; i += 8) { px(c, 368 + i, y, 1, 44, "#c8b088"); } for (let j = 0; j < 44; j += 8) px(c, 368, y + j, 64, 1, "#c8b088"); }
       for (let i = 0; i < 20; i++) SCENE.flowers(c, 460 + i * 16, 286, 2, 0);
     },
     front(c, Wd, t) {
-      // A shadow behind the lattice: someone standing there, looking through.
-      c.globalAlpha = 0.35 + Math.sin(t) * 0.1; figure(c, 394, 118, { robe: "#1a1a1a", skin: "#1a1a1a", h: 28, w: 12, still: true }, t); c.globalAlpha = 1;
+      // Lattice windows set in the wall: the garden's green light through them, and
+      // behind the upper one a shadow, someone standing there, looking through the lattices.
+      for (const y of [110, 190]) {
+        px(c, 366, y - 2, 68, 48, "#3a2e22"); px(c, 368, y, 64, 44, "#4a6a3a");
+        for (let k = 0; k < 6; k++) px(c, 370 + k * 11, y + 30 + (k % 2) * 4, 6, 14 - (k % 2) * 4, "#6a9a4a");
+        if (y === 110) { c.globalAlpha = 0.55 + Math.sin(t) * 0.1; figure(c, 394, y + 12, { robe: "#141a14", skin: "#141a14", h: 28, w: 12, still: true }, t); c.globalAlpha = 1; }
+        for (let i = 0; i <= 64; i += 8) px(c, 368 + i, y, 2, 44, "#c8b088");
+        for (let j = 0; j <= 44; j += 8) px(c, 368, y + j, 64, 2, "#c8b088");
+      }
     },
   });
 }
@@ -154,7 +159,7 @@ const room2 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 2 }, def);
     texts: [
       { v: 11, style: "sky", x: 40, y: 22, w: 360, size: 18, color: "rgba(255,255,255,0.85)" },
       { v: 12, style: "flowers", x: 440, y: 22, w: 380, size: 14 },
-      { v: 13, style: "painted", x: 880, y: 70, w: 180, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8a070" },
+      { v: 13, style: "painted", x: 865, y: 51, w: 180, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8a070" },
     ],
     update(Wd) {
       const k = clamp(Game.monk.x / (40 * T), 0, 1);
@@ -186,7 +191,7 @@ const room2 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 2 }, def);
     name: "In the Clefts of the Rock", song: "shield", wall: "cave", sky: "none", tiles: { 1: "rock", 2: "stone" }, legend: { r: ONEWAY }, dark: 0.35,
     map: g.rows(), doors: { 1: { to: "c2_spring", door: "2" }, 2: { to: "c2_foxes", door: "1" } },
     lights: [{ x: 200, y: 40, r: 140, c: "rgba(255,240,200,0.5)" }, { x: 100, y: 380, r: 90 }],
-    texts: [{ v: 14, style: "carved", x: 196, y: 186, w: 168, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#9a8a7a" }],
+    texts: [{ v: 14, style: "carved", x: 178, y: 157, w: 168, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#9a8a7a" }],
     paint(c) {
       // Clefts in the rock, and a dove in each.
       for (const [x, y] of [[40, 270], [330, 200], [60, 140], [300, 90], [120, 60]]) { c.fillStyle = "#0e0a08"; c.beginPath(); c.ellipse(x, y, 16, 9, 0, 0, 7); c.fill(); }

@@ -19,7 +19,7 @@ const room7 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 7 }, def);
     map: g.rows(), doors: { 2: { to: "c7_wheat", door: "1" } },
     texts: [
       { v: 1, part: [0, 12], style: "sky", x: 40, y: 18, w: 340, size: 16, color: "rgba(90,40,20,0.7)", shadow: "rgba(255,240,200,0.6)" },
-      { v: 1, part: [12, 22], style: "sand", x: 420, y: 186, w: 360, size: 13 },
+      { v: 1, part: [12, 22], style: "sand", x: 410, y: 180, w: 360, size: 13 },
       { v: 1, part: [22, 99], style: "painted", x: 940, y: 60, w: 190, size: 9, color: "#3a2410", panel: "board", panelColor: "#d8b070" },
     ],
     paint(c) {
@@ -65,8 +65,8 @@ const room7 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 7 }, def);
     map: g.rows(), doors: { 1: { to: "c7_wheat", door: "2" }, 2: { to: "c7_carmel", door: "1" } },
     lights: [{ x: 200, y: 420, r: 120, c: "rgba(150,200,255,0.3)" }, { x: 340, y: 50, r: 120, c: "rgba(255,240,200,0.5)" }],
     texts: [
-      { v: 4, part: [0, 7], style: "carved", x: 40, y: 200, w: 120, size: 8.5, color: "rgba(60,40,20,0.9)", panel: "plaque", panelColor: "#f4ecd8" },
-      { v: 4, part: [7, 25], style: "painted", x: 210, y: 380, w: 160, size: 8.5, color: "#1a2a4a", panel: "parchment" },
+      { v: 4, part: [0, 7], style: "carved", x: 30, y: 210, w: 120, size: 8.5, color: "rgba(60,40,20,0.9)", panel: "plaque", panelColor: "#f4ecd8" },
+      { v: 4, part: [7, 25], style: "painted", x: 99, y: 373, w: 160, size: 8.5, color: "#1a2a4a", panel: "parchment" },
       { v: 4, part: [25, 99], style: "kindle", x: 30, y: 40, w: 230, size: 10, reach: 200 },
     ],
     paint(c) { px(c, 300, 40, 50, 30, "#8ac0f0"); px(c, 300, 40, 50, 30, "rgba(0,0,0,0)"); for (let i = 0; i < 6; i++) px(c, 304 + i * 8, 58 - (i % 3) * 4, 6, 12 - (i % 3) * 4, "#c8b898"); px(c, 298, 38, 54, 2, "#a89878"); px(c, 298, 70, 54, 2, "#a89878"); },
@@ -103,9 +103,9 @@ const room7 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 7 }, def);
     zones: [{ x0: 0, x1: 0, y0: 0, y1: 41, 1: "rock" }, { x0: 24, x1: 24, y0: 0, y1: 41, 1: "rock" }, { x0: 0, x1: 24, y0: 40, y1: 41, 1: "sand" }],
     map: g.rows(), doors: { 1: { to: "c7_carmel", door: "2" }, 2: { to: "c7_wine", door: "1" } },
     texts: [
-      { v: 7, style: "painted", x: 230, y: 560, w: 140, size: 9, color: "#3a2410", panel: "board", panelColor: "#d8b070" },
+      { v: 7, style: "painted", x: 234, y: 560, w: 140, size: 9, color: "#3a2410", panel: "board", panelColor: "#d8b070" },
       { v: 8, part: [0, 18], style: "kindle", x: 20, y: 30, w: 170, size: 10, reach: 200 },
-      { v: 8, part: [18, 99], style: "kindle", x: 200, y: 52, w: 150, size: 10, reach: 200 },
+      { v: 8, part: [18, 99], style: "kindle", x: 194, y: 37, w: 150, size: 10, reach: 200 },
     ],
     update() { hintOnce("climbpalm", "Jump at the trunk and hold toward it to climb.", save.powers.gloves && Game.monk.x > 8 * T); },
     paint(c) { for (let i = 0; i < 30; i++) px(c, 176 + (i % 3), 150 + i * 16, 48, 2, "#5a3a20"); },
@@ -145,7 +145,7 @@ const room7 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 7 }, def);
     texts: [
       { v: 11, style: "sky", x: 40, y: 22, w: 360, size: 16, color: "rgba(255,250,240,0.9)" },
       { v: 12, part: [0, 15], style: "painted", x: 620, y: 40, w: 170, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8a070" },
-      { v: 12, part: [15, 99], style: "painted", x: 900, y: 40, w: 190, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8a070" },
+      { v: 12, part: [15, 99], style: "painted", x: 910, y: 74, w: 190, size: 9, color: "#3a2410", panel: "board", panelColor: "#c8a070" },
     ],
     paint(c) {
       for (const x of [140, 300]) { px(c, x, 150, 40, 42, "#c8a878"); c.fillStyle = "#8a4a2a"; c.beginPath(); c.moveTo(x - 4, 152); c.lineTo(x + 20, 132); c.lineTo(x + 44, 152); c.fill(); px(c, x + 16, 170, 8, 22, "#4a3020"); }

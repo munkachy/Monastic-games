@@ -79,7 +79,7 @@ const room4 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 4 }, def);
     name: "The Tower of David", song: "foes", wall: "cellar", sky: "none", tiles: { 1: "stone", 2: "gold" }, legend: { s: ONEWAY }, dark: 0.45,
     map: g.rows(), doors: { 1: { to: "c4_scarlet", door: "2" }, 2: { to: "c4_myrrh", door: "1" } },
     lights: [{ x: 200, y: 360, r: 120, flicker: 1 }, { x: 200, y: 160, r: 120, flicker: 1 }, { x: 330, y: 50, r: 90, c: "rgba(255,240,200,0.5)" }],
-    texts: [{ v: 4, style: "carved", x: 24, y: 330, w: 140, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89888" }],
+    texts: [{ v: 4, style: "carved", x: 48, y: 104, w: 140, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89888" }],
     paint(c) {
       // A thousand bucklers hung on the walls, every one a little different.
       for (let i = 0; i < 70; i++) { const x = 30 + hash(i, 5) * 340, y = 30 + hash(i, 6) * 360, r = 6 + hash(i, 7) * 4; c.fillStyle = "#06040a"; c.beginPath(); c.arc(x, y, r + 1, 0, 7); c.fill(); c.fillStyle = ["#a8b0bc", "#c8962a", "#8a6a4a", "#b8322a"][i % 4]; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); px(c, x - 1, y - 1, 2, 2, "#ffffff"); }
@@ -171,13 +171,13 @@ const room4 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 4 }, def);
     updrafts: [],
     winds: [{ x: 40, y: 0, w: 14, h: 6, push: -60, gust: 1.1 }, { x: 56, y: 0, w: 14, h: 6, push: 60, gust: 1.3 }],
     texts: [
-      { v: 12, style: "gilded", x: 10, y: 10, w: 230, size: 10 },
+      { v: 12, style: "gilded", x: 2, y: 4, w: 230, size: 10 },
       { v: 13, part: [0, 13], style: "painted", x: 270, y: 150, w: 120, size: 8, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
       { v: 13, part: [13, 99], style: "label", x: 300, y: 206, w: 60, size: 7, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
-      { v: 14, part: [0, 7], style: "label", x: 588, y: 206, w: 70, size: 7, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
+      { v: 14, part: [0, 7], style: "label", x: 584, y: 204, w: 70, size: 7, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
       { v: 14, part: [7, 13], style: "label", x: 720, y: 206, w: 80, size: 7, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
       { v: 14, part: [13, 99], style: "label", x: 820, y: 206, w: 90, size: 7, color: "#2a1a10", panel: "board", panelColor: "#d8b880" },
-      { v: 15, style: "painted", x: 430, y: 126, w: 160, size: 8.5, color: "#1a2a4a", panel: "parchment" },
+      { v: 15, style: "painted", x: 444, y: 138, w: 160, size: 8.5, color: "#1a2a4a", panel: "parchment" },
       { v: 16, style: "sky", x: 700, y: 14, w: 460, size: 15, color: "rgba(255,255,255,0.9)" },
     ],
     update(Wd) {

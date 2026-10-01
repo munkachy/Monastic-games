@@ -99,8 +99,8 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     lights: [{ x: 40, y: 60, r: 80, flicker: 1 }, { x: 230, y: 40, r: 80, flicker: 1 }, { x: 456, y: 150, r: 70, c: "rgba(255,170,220,0.3)" }, { x: 680, y: 40, r: 90, c: "rgba(255,210,90,0.4)" }, { x: 900, y: 50, r: 90, flicker: 1 }, { x: 1100, y: 60, r: 80, flicker: 1 }],
     texts: [
       { v: 2, part: [0, 6], style: "label", x: 356, y: 128, w: 56, size: 6.5, color: "#3a1030" },
-      { v: 2, part: [6, 99], style: "smoke", x: 470, y: 14, w: 190, size: 11, color: "rgba(255,226,150," },
-      { v: 3, part: [0, 13], style: "painted", x: 880, y: 22, w: 230, size: 11, color: "#3a2410", panel: "parchment" },
+      { v: 2, part: [6, 99], style: "smoke", x: 477, y: 18, w: 190, size: 11, color: "rgba(255,226,150," },
+      { v: 3, part: [0, 13], style: "painted", x: 887, y: 26, w: 230, size: 11, color: "#3a2410", panel: "parchment" },
     ],
     update(Wd, dt) {
       const m = Game.monk;
@@ -505,7 +505,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     name: "Thy Eyes Are as Doves", song: "dream", wall: "mansion", paper: "#26283a", pillar: "#b8a888", sky: "none", tiles: { 1: "marble", 2: "marble" }, legend: { m: ONEWAY }, dark: 0.35,
     map: g.rows(), doors: { 1: { to: "c1_engaddi", door: "2" }, 2: { to: "c1_bed", door: "1" } },
     lights: [{ x: 160, y: 120, r: 80, flicker: 1 }, { x: 640, y: 120, r: 80, flicker: 1 }, { x: 400, y: 90, r: 140, c: "rgba(230,230,255,0.3)" }],
-    texts: [{ v: 14, style: "gilded", x: 214, y: 22, w: 372, size: 9.5, panel: "plaque", panelColor: "#2a2030" }],
+    texts: [{ v: 14, style: "gilded", x: 221, y: 26, w: 372, size: 9.5, panel: "plaque", panelColor: "#2a2030" }],
     paint(c) {
       // The portrait: a fair woman in a gilt frame, dark hair under a blue veil.
       px(c, 226, 40, 348, 156, "#8a6410"); px(c, 230, 44, 340, 148, "#e8b94a"); px(c, 236, 50, 328, 136, "#14142a");
@@ -544,7 +544,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     lights: [{ x: 360, y: 200, r: 160, c: "rgba(255,210,160,0.35)" }, { x: 760, y: 50, r: 110, c: "rgba(200,220,255,0.45)" }, { x: 80, y: 220, r: 80, flicker: 1 }],
     texts: [
       { v: 15, style: "embroidered", x: 244, y: 30, w: 220, size: 10, color: "#ffe8b0" },
-      { v: 16, style: "carved", x: 556, y: 112, w: 196, size: 10, color: "rgba(40,20,8,0.9)", panel: "board", panelColor: "#b07040" },
+      { v: 16, style: "carved", x: 550, y: 107, w: 196, size: 10, color: "rgba(40,20,8,0.9)", panel: "board", panelColor: "#b07040" },
     ],
     update() { hintOnce("bed", "Bounce on the bed: hold the jump as you land to fly higher.", near(22 * T, 14 * T, 90)); },
     paint(c) {
