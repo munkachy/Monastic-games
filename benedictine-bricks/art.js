@@ -120,6 +120,63 @@ ART.monk_bless = {
 };
 
 // ---------------------------------------------------------------------------
+// Benedictine saints. Each is the monk above with his or her own marks: a
+// nun's black veil and white wimple, a dove, a heart, a flame, a mitre, a
+// tiara, water underfoot. Built from the monk's two poses, row by row.
+// ---------------------------------------------------------------------------
+
+const SAINT_COLORS = {
+  V: "#0b0b10", // veil
+  W: "#f4f0e8", // wimple, mitre, dove
+  D: "#ffffff", // dove
+  G: "#e8b94a", // gold
+  R: "#d8324a", // a heart
+  F: "#ffb030", // flame
+  P: "#f4f0e8", // pallium
+  w: "#7fc8f0", // water
+};
+
+// The head of a nun, in each pose (the blessing pose has the arms raised beside it).
+const VEILED = {
+  monk_idle: ["....VVVVVVVV....", "...VVWWWWWWVV...", "...VVWesseWVV...", "...VVWsSSsWVV...", "...VVWWWWWWVV..."],
+  monk_bless: ["..s.VVVVVVVV.s..", "..KVVWWWWWWVVK..", "..KVVWesseWVVK..", "..KVVWsSSsWVVK..", "...KVWWWWWWVK..."],
+};
+
+function saintSprite(pose, id) {
+  const base = ART[pose];
+  let grid = base.grid.slice();
+  const put = (row, col, str) => { const r = grid[row]; grid[row] = r.slice(0, col) + str + r.slice(col + str.length); };
+  const nun = id === "scholastica" || id === "gertrude" || id === "hildegard";
+  if (nun) grid.splice(0, 5, ...VEILED[pose]);
+  if (id === "scholastica") {
+    // The dove: her soul, which Benedict saw rise to heaven.
+    grid.unshift("............DD..", "...........DDDD.");
+  }
+  if (id === "gertrude") {
+    // The Sacred Heart, held to her breast.
+    put(6, 6, "RGR"); put(7, 6, "RRR"); put(8, 7, "R");
+  }
+  if (id === "hildegard") {
+    // A flame of the living light she saw in her visions.
+    grid.unshift(".......FF.......", "......FFFF......", ".......FF.......");
+  }
+  if (id === "maurus") {
+    // Young, and walking on the water to save Placid.
+    grid.push("wwwwwwwwwwwwwwww", ".w..w..w..w..w..");
+  }
+  if (id === "anselm") {
+    // An archbishop's mitre and the pallium of Canterbury.
+    grid.unshift("......WWWW......", ".....WWGGWW.....", ".....WWGGWW.....");
+    put(5 + 3, 4, "PPPPPPPP"); put(6 + 3, 7, "P"); put(7 + 3, 7, "P"); put(8 + 3, 7, "P");
+  }
+  if (id === "gregory") {
+    // The papal tiara, and the dove of the Holy Spirit at his ear.
+    grid.unshift(".......GG.......", "......WWWW......", "......GGGG......", "......WWWW.DD...", "......GGGG.DDD..");
+  }
+  return { grid, colors: { ...base.colors, ...SAINT_COLORS } };
+}
+
+// ---------------------------------------------------------------------------
 // The demon who hovers over the building site, curses your stones and drops
 // fire on the tower. He comes as each of the seven deadly sins in turn.
 // Two frames: wings up, wings down.

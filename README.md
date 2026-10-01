@@ -38,10 +38,19 @@ mark, and a verse of Scripture against that sin is shown as he comes. He
 hovers two seconds before he does anything. Then he drops fire on the tower:
 lay a stone on it at once and it is smothered; leave it and it spreads, in
 any direction, from stone to stone, and burns them away. Tap a fire to douse
-it with holy water for 2 prayer. Scripture about the cornerstone and the
-temple of God is written across the sky (in clouds by day, in stars by
-night), on a banner at each new tier, and on the cornerstone before the
-monastery. Mortar, Scaffold, ice stones and invisible stones are gone.
+it with holy water for 2 prayer. A verse about the cornerstone, or the
+temple of God, is written large across the sky (in clouds by day, in stars
+by night), and changes with each tower and every few Hours. Mortar,
+Scaffold, ice stones and invisible stones are gone.
+
+## Benedictine Bricks: the saints
+
+In place of habits, the shop's Saints tab lets you build as a saint of the
+Order: St. Benedict to begin with, then St. Scholastica (with her dove),
+St. Maurus (on the water), St. Gertrude the Great (with the Sacred Heart),
+St. Anselm (mitre and pallium), St. Hildegard of Bingen (a flame of the
+living light) and St. Gregory the Great (tiara, and the dove at his ear).
+Coins spent on habits before the change were given back.
 
 ## Benedictine Bricks: changing the art
 
