@@ -418,9 +418,24 @@ const Snd = (() => {
 })();
 
 // ---- Saved progress --------------------------------------------------------------
-let save = { best: [], open: 1, saint: 0, sound: true };
+let save = { best: [], open: 1, sung: [], saint: 0, sound: true };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("psalter-runner") || "{}")); } catch (e) { }
+// Older saves kept only how far the player had come: every psalm before that was sung.
+if (!save.sung.length) for (let i = 0; i < save.open - 1; i++) save.sung[i] = true;
 function store() { try { localStorage.setItem("psalter-runner", JSON.stringify(save)); } catch (e) { } }
+const sungCount = () => save.sung.filter(Boolean).length;
+// The five books of the Psalter. Each closes with a doxology; singing that
+// closing psalm opens the next book. Within an open book any psalm may be sung.
+const BOOKS = [
+  { name: "BOOK I", from: 0, to: 41 }, { name: "BOOK II", from: 41, to: 72 }, { name: "BOOK III", from: 72, to: 89 },
+  { name: "BOOK IV", from: 89, to: 106 }, { name: "BOOK V", from: 106, to: 150 },
+];
+const bookOf = (pi) => BOOKS.findIndex((b) => pi >= b.from && pi < b.to);
+const bookOpen = (k) => k === 0 || !!save.sung[BOOKS[k - 1].to - 1] || !!window.__unlock;
+const psalmOpen = (pi) => pi >= 0 && pi < 150 && bookOpen(bookOf(pi));
+const bookSung = (k) => save.sung.slice(BOOKS[k].from, BOOKS[k].to).filter(Boolean).length;
+// The first psalm not yet sung in a book (or its first psalm, when all are sung).
+const firstUnsung = (k) => { for (let i = BOOKS[k].from; i < BOOKS[k].to; i++) if (!save.sung[i]) return i; return BOOKS[k].from; };
 Snd.on = save.sound !== false;
 
 // ---- The saints ------------------------------------------------------------------
@@ -464,7 +479,7 @@ const SAINTS = [
     look: { robe: "#f4f0e8", shade: "#d8d0c4", sash: "#c8324a", skin: "#f4d4bc", hair: "#e0c070", candles: true } },
 ];
 // A saint joins once enough psalms have been sung.
-const unlocked = (s) => !s.unlock || (save.open - 1) >= s.unlock || window.__unlock;
+const unlocked = (s) => !s.unlock || sungCount() >= s.unlock || window.__unlock;
 
 // A small figure in the style of the game, drawn from blocks: robe, head,
 // veil or hood, hands. (x, y) is the top-left of a 12 x 22 box; f is the
@@ -1593,7 +1608,7 @@ function drawPlat(p, camX, camY) {
 let state = "title";
 const game = { psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0 };
 let world = null, player = null, shots = [], parts = [], trans = null, banner = 0, camX = 0, camY = 0;
-let selectIndex = save.saint || 0, psalmIndex = Math.min(save.open, 150) - 1;
+let selectIndex = save.saint || 0, psalmIndex = 0, bookIndex = 0;
 
 function newPlayer(s) {
   return { x: 0, y: GROUND - 22, w: 10, h: 22, vy: 0, ground: true, float: s.floatTime, jumps: s.double ? 2 : 1, hearts: s.hearts, inv: 0, cd: 0, f: 0, ft: 0, floating: false, shield: 0, reach: 0 };
@@ -1866,14 +1881,19 @@ function update(dt) {
 }
 
 let joined = null;     // a saint who has just joined, to announce
+let opened = null;     // a book that has just opened
 function finishPsalm() {
   state = "done"; Snd.stop(); Snd.sfx("win");
   save.best[game.psalm] = Math.max(save.best[game.psalm] || 0, game.score);
-  const before = SAINTS.filter(unlocked).length;
+  const before = SAINTS.filter(unlocked).length, booksBefore = BOOKS.filter((b, k) => bookOpen(k)).length;
+  save.sung[game.psalm] = true;
   save.open = Math.max(save.open, Math.min(151, game.psalm + 2));
-  joined = SAINTS.filter(unlocked).length > before ? SAINTS.find((x) => x.unlock && x.unlock === save.open - 1) : null;
+  joined = SAINTS.filter(unlocked).length > before ? SAINTS.find((x) => x.unlock && x.unlock === sungCount()) : null;
+  opened = BOOKS.filter((b, k) => bookOpen(k)).length > booksBefore ? BOOKS[bookOf(game.psalm) + 1] : null;
   store();
 }
+// Point the menus at a psalm: its book, and the page of the book it is on.
+function goPsalm(i) { psalmIndex = i; bookIndex = bookOf(i); psalmPage = Math.floor((i - BOOKS[bookIndex].from) / 10); }
 
 // ---- Cut scenes -----------------------------------------------------------------------
 // book: the blessed man reading, and a dive into the page. shatter: the
@@ -2094,12 +2114,34 @@ function titleSky(t) {
 }
 function drawTitle(t) {
   titleSky(t);
-  text("PSALTER", W / 2, 26, { align: "center", color: "#ffe08a", size: 28 });
-  text("RUNNER", W / 2, 56, { align: "center", color: "#ffffff", size: 28 });
-  text("Run the Psalms with the saints", W / 2, 92, { align: "center", color: "#c8b8ff", size: 9 });
-  drawFigure(SAINTS[Math.floor(t / 2) % SAINTS.length].look, W / 2 - 6, 126, Math.floor(t * 10), {});
-  if (Math.floor(t * 2) % 2) text("TAP TO BEGIN", W / 2, 160, { align: "center", color: "#ffffff", size: 9 });
-  for (const tp of input.taps) { Snd.sfx("select"); state = "select"; }
+  text("PSALTER RUNNER", W / 2, 13, { align: "center", color: "#ffe08a", size: 20 });
+  text("Run the Psalms with the saints", W / 2, 38, { align: "center", color: "#c8b8ff", size: 9 });
+  { const open = SAINTS.filter(unlocked); drawFigure(open[Math.floor(t / 2) % open.length].look, W / 2 - 6, 50, Math.floor(t * 10), {}); }
+  // The five books of the Psalter.
+  const boxes = BOOKS.map((B, k) => {
+    const x = 7 + k * 62, y = 80, open = bookOpen(k), hot = k === bookIndex, n = B.to - B.from, done = bookSung(k);
+    rect(x - 1, y - 1, 60, 62, "#140c1c"); rect(x, y, 58, 60, open ? (hot ? "#3a2a5a" : "#221a36") : "#141020");
+    if (hot) { rect(x, y, 58, 2, "#ffe08a"); rect(x, y + 58, 58, 2, "#ffe08a"); }
+    text(B.name, x + 29, y + 5, { align: "center", color: open ? "#ffe08a" : "#4a4068", size: 9 });
+    text("Psalms " + (B.from + 1) + "\u2013" + B.to, x + 29, y + 19, { align: "center", color: open ? "#c8b8ff" : "#4a4068", size: 6.5, edge: null });
+    if (open) {
+      text(done + " of " + n, x + 29, y + 31, { align: "center", color: done === n ? "#74c07a" : "#ffffff", size: 7, edge: null });
+      rect(x + 7, y + 45, 44, 4, "#140c1c"); rect(x + 7, y + 45, Math.round(44 * done / n), 4, "#74c07a");
+    } else {
+      // A small padlock, and what opens the book.
+      rect(x + 25, y + 30, 8, 3, "#4a4068"); rect(x + 25, y + 30, 2, 6, "#4a4068"); rect(x + 31, y + 30, 2, 6, "#4a4068"); rect(x + 23, y + 35, 12, 9, "#4a4068");
+      text("Sing Psalm " + BOOKS[k - 1].to, x + 29, y + 47, { align: "center", color: "#6a6088", size: 6, edge: null });
+    }
+    return { x, y, w: 58, h: 60, k, open };
+  });
+  if (Math.floor(t * 2) % 2) text("CHOOSE A BOOK", W / 2, 158, { align: "center", color: "#ffffff", size: 9 });
+  const go = (k) => { if (!bookOpen(k)) return; bookIndex = k; Snd.sfx("select"); state = "select"; };
+  for (const tp of input.taps) {
+    if (tp.key === "ArrowLeft") bookIndex = Math.max(0, bookIndex - 1);
+    else if (tp.key === "ArrowRight") bookIndex = Math.min(4, bookIndex + 1);
+    else if (tp.key === "Enter" || tp.key === "Space") go(bookIndex);
+    else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (b.open) go(b.k); else { bookIndex = b.k; Snd.sfx("select"); } }
+  }
   input.taps = [];
 }
 function drawSelect(t) {
@@ -2111,19 +2153,21 @@ function drawSelect(t) {
     if (hot) { rect(x, y, 56, 2, "#ffe08a"); rect(x, y + 50, 56, 2, "#ffe08a"); }
     if (open) drawFigure(s.look, x + 22, y + 6, hot ? Math.floor(t * 10) : 0, { still: !hot });
     else { ctx.globalAlpha = 0.25; drawFigure(s.look, x + 22, y + 6, 0, { still: true }); ctx.globalAlpha = 1; }
-    text(open ? s.name : "After Ps " + s.unlock, x + 28, y + 34, { align: "center", color: hot ? "#ffe08a" : open ? "#ffffff" : "#6a6088", size: 7.5 });
+    text(open ? s.name : s.unlock + " psalms", x + 28, y + 34, { align: "center", color: hot ? "#ffe08a" : open ? "#ffffff" : "#6a6088", size: 7.5 });
     return { x, y, w: 56, h: 52, i };
   });
   const s = SAINTS[selectIndex], open = unlocked(s);
-  text(s.name + ", " + s.title + "  " + "\u2665".repeat(s.hearts), W / 2, 136, { align: "center", color: "#ffe08a", size: 8.5 });
-  wrapText(open ? s.about : "Sing " + s.unlock + " psalms and " + s.name + " joins you.", 7.5, 300).slice(0, 2).forEach((l, k) => text(l, W / 2, 147 + k * 9, { align: "center", color: "#ffffff", size: 7.5 }));
-  const go = open ? button("CHOOSE", W - 74, 160, 66, 17, true) : null;
-  const choose = (k) => { if (!unlocked(SAINTS[k])) return; game.saint = SAINTS[k]; save.saint = k; store(); psalmIndex = Math.min(save.open, 150) - 1; psalmPage = Math.floor(psalmIndex / 10); state = "psalms"; Snd.sfx("select"); };
+  text(s.name + ", " + s.title + "  " + "\u2665".repeat(s.hearts), W / 2, 132, { align: "center", color: "#ffe08a", size: 8.5 });
+  wrapText(open ? s.about : "Sing " + s.unlock + " psalms and " + s.name + " joins you.", 7.5, 300).slice(0, 2).forEach((l, k) => text(l, W / 2, 143 + k * 9, { align: "center", color: "#ffffff", size: 7.5 }));
+  const go = open ? button("CHOOSE", W - 74, 162, 66, 15, true) : null;
+  const back = button("BACK", 8, 162, 48, 15, false);
+  const choose = (k) => { if (!unlocked(SAINTS[k])) return; game.saint = SAINTS[k]; save.saint = k; store(); goPsalm(firstUnsung(bookIndex)); state = "psalms"; Snd.sfx("select"); };
   for (const tp of input.taps) {
     if (tp.key === "ArrowLeft") selectIndex = (selectIndex + SAINTS.length - 1) % SAINTS.length;
     else if (tp.key === "ArrowRight") selectIndex = (selectIndex + 1) % SAINTS.length;
     else if (tp.key === "ArrowUp" || tp.key === "ArrowDown") selectIndex = (selectIndex + 5) % SAINTS.length;
     else if (tp.key === "Enter" || tp.key === "Space" || (go && tp.x !== undefined && inBox(tp, go))) choose(selectIndex);
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = "title";
     else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (selectIndex === b.i) choose(b.i); selectIndex = b.i; }
     Snd.sfx("select");
   }
@@ -2133,41 +2177,43 @@ let psalmPage = 0;
 const firstLine = (pi) => PSALMS[pi].verses.join("\n").replace(/ALLELUIA!?\n?/g, "").split("\n")[0].replace(/[,;:]$/, "");
 function drawPsalms(t) {
   titleSky(t);
-  text("CHOOSE A PSALM", W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
-  text((save.open - 1) + " of 150 sung", W - 8, 6, { align: "right", color: "#c8b8ff", size: 7.5 });
-  const base = psalmPage * 10;
+  const B = BOOKS[bookIndex], pages = Math.ceil((B.to - B.from) / 10);
+  text(B.name + " \u00B7 PSALMS " + (B.from + 1) + "\u2013" + B.to, W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
+  text(bookSung(bookIndex) + " of " + (B.to - B.from) + " sung", W - 8, 6, { align: "right", color: "#c8b8ff", size: 7.5 });
+  const base = B.from + psalmPage * 10;
   const boxes = [];
   for (let k = 0; k < 10; k++) {
-    const i = base + k; if (i >= 150) break;
-    const x = 22 + (k % 5) * 56, y = 20 + Math.floor(k / 5) * 56, open = i < save.open, hot = i === psalmIndex, done = i < save.open - 1;
-    rect(x - 1, y - 1, 52, 52, "#140c1c"); rect(x, y, 50, 50, open ? (hot ? "#3a2a5a" : "#221a36") : "#141020");
+    const i = base + k; if (i >= B.to) break;
+    const x = 22 + (k % 5) * 56, y = 20 + Math.floor(k / 5) * 56, hot = i === psalmIndex, done = save.sung[i];
+    rect(x - 1, y - 1, 52, 52, "#140c1c"); rect(x, y, 50, 50, hot ? "#3a2a5a" : "#221a36");
     if (hot) rect(x, y, 50, 2, "#ffe08a");
-    text(String(i + 1), x + 25, y + 4, { align: "center", color: open ? "#ffe08a" : "#4a4068", size: 14 });
-    if (open) wrapText(PSALMS[i].title, 6.5, 46).slice(0, 2).forEach((l, n) => text(l, x + 25, y + 23 + n * 8, { align: "center", color: "#c8b8ff", size: 6.5, serif: true, edge: null }));
+    if (i === B.to - 1 && bookIndex < 4) rect(x, y + 48, 50, 2, "#c8b8ff");      // the doxology that opens the next book
+    text(String(i + 1), x + 25, y + 4, { align: "center", color: "#ffe08a", size: 14 });
+    wrapText(PSALMS[i].title, 6.5, 46).slice(0, 2).forEach((l, n) => text(l, x + 25, y + 23 + n * 8, { align: "center", color: "#c8b8ff", size: 6.5, serif: true, edge: null }));
     if (done) text("\u2713 " + (save.best[i] || 0), x + 25, y + 40, { align: "center", color: "#74c07a", size: 6.5, edge: null });
-    boxes.push({ x, y, w: 50, h: 50, i, open });
+    boxes.push({ x, y, w: 50, h: 50, i });
   }
   const prev = psalmPage > 0 ? button("\u25C0", 2, 52, 16, 26, false) : null;
-  const next = psalmPage < 14 ? button("\u25B6", W - 18, 52, 16, 26, false) : null;
+  const next = psalmPage < pages - 1 ? button("\u25B6", W - 18, 52, 16, 26, false) : null;
   const P = PSALMS[psalmIndex];
   text("Psalm " + P.num + " \u00B7 " + P.title, W / 2, 132, { align: "center", color: "#ffe08a", size: 8.5 });
-  text(firstLine(psalmIndex), W / 2, 143, { align: "center", color: "#ffffff", size: 8, serif: true });
+  text(psalmIndex === B.to - 1 && bookIndex < 4 && !bookOpen(bookIndex + 1) ? "Sing this psalm to open " + BOOKS[bookIndex + 1].name.replace("BOOK", "Book") : firstLine(psalmIndex), W / 2, 143, { align: "center", color: "#ffffff", size: 8, serif: true });
   const back = button("BACK", 8, 158, 48, 17, false);
   const go = button("RUN", W / 2 - 30, 158, 60, 17, true);
   text(Snd.on ? "SOUND ON (M)" : "SOUND OFF (M)", W - 10, 162, { align: "right", color: "#8a80a8", size: 7 });
   const sndBox = { x: W - 80, y: 156, w: 72, h: 20 };
-  const pick = (i) => { psalmIndex = i; psalmPage = Math.floor(i / 10); };
+  const pick = (i) => goPsalm(clamp(i, B.from, B.to - 1));
   for (const tp of input.taps) {
-    if (tp.key === "ArrowLeft") pick(Math.max(0, psalmIndex - 1));
-    else if (tp.key === "ArrowRight") pick(Math.min(save.open - 1, 149, psalmIndex + 1));
-    else if (tp.key === "ArrowUp") pick(Math.max(0, psalmIndex - 5));
-    else if (tp.key === "ArrowDown") pick(Math.min(save.open - 1, 149, psalmIndex + 5));
+    if (tp.key === "ArrowLeft") pick(psalmIndex - 1);
+    else if (tp.key === "ArrowRight") pick(psalmIndex + 1);
+    else if (tp.key === "ArrowUp") pick(psalmIndex - 5);
+    else if (tp.key === "ArrowDown") pick(psalmIndex + 5);
     else if (tp.key === "PageUp" || (prev && tp.x !== undefined && inBox(tp, prev))) psalmPage = Math.max(0, psalmPage - 1);
-    else if (tp.key === "PageDown" || (next && tp.x !== undefined && inBox(tp, next))) psalmPage = Math.min(14, psalmPage + 1);
+    else if (tp.key === "PageDown" || (next && tp.x !== undefined && inBox(tp, next))) psalmPage = Math.min(pages - 1, psalmPage + 1);
     else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = "select";
     else if (tp.x !== undefined && inBox(tp, sndBox)) Snd.toggle();
-    else if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { if (psalmIndex < save.open) startPsalm(psalmIndex); }
-    else if (tp.x !== undefined) for (const b of boxes) if (b.open && inBox(tp, b)) { if (psalmIndex === b.i) startPsalm(b.i); psalmIndex = b.i; }
+    else if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { if (psalmOpen(psalmIndex)) startPsalm(psalmIndex); }
+    else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (psalmIndex === b.i) startPsalm(b.i); psalmIndex = b.i; }
     Snd.sfx("select");
   }
   input.taps = [];
@@ -2208,12 +2254,40 @@ function drawDone(t) {
   const last = PSALMS[game.psalm].verses[PSALMS[game.psalm].verses.length - 1];
   wrapText("“" + last + "”", 8, 270).slice(0, 3).forEach((l, i) => text(l, W / 2, 72 + i * 10, { align: "center", color: "#3a2a1a", edge: null, size: 8 }));
   text("SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, 108, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
-  if (joined) { const msg = joined.name + " has joined you!", mw = measure(msg, 10); text(msg, W / 2 + 8, 122, { align: "center", color: "#2f7a3a", edge: "#fff8e0", size: 10 }); drawFigure(joined.look, W / 2 + 8 - mw / 2 - 18, 112, Math.floor(t * 8), {}); }
-  const next = game.psalm < 149 ? button("NEXT PSALM", W / 2 - 104, 140, 100, 20, true) : null;
-  const menu = button("PSALMS", W / 2 + 4, 140, 100, 20, !next);
+  let ny = 122;
+  if (joined) { const msg = joined.name + " has joined you!", mw = measure(msg, 10); ny = opened ? 117 : 122; text(msg, W / 2 + 8, ny, { align: "center", color: "#2f7a3a", edge: "#fff8e0", size: 10 }); drawFigure(joined.look, W / 2 + 8 - mw / 2 - 18, ny - 10, Math.floor(t * 8), {}); ny += 12; }
+  if (opened) text(opened.name.replace("BOOK", "Book") + " of the Psalter is open!", W / 2, ny, { align: "center", color: "#3a4a9a", edge: "#fff8e0", size: 9 });
+  const read = button("READ PSALM", W / 2 - 154, 142, 100, 20, false);
+  const next = psalmOpen(game.psalm + 1) ? button("NEXT PSALM", W / 2 - 50, 142, 100, 20, true) : null;
+  const menu = button("PSALMS", W / 2 + 54, 142, 100, 20, !next);
+  const leave = () => { joined = null; opened = null; };
   for (const tp of input.taps) {
-    if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) { joined = null; psalmIndex = game.psalm + 1; psalmPage = Math.floor(psalmIndex / 10); startPsalm(game.psalm + 1); }
-    else if (tp.key === "Escape" || (!next && tp.key === "Enter") || (tp.x !== undefined && inBox(tp, menu))) { joined = null; psalmIndex = Math.min(game.psalm + 1, 149); psalmPage = Math.floor(psalmIndex / 10); state = "psalms"; }
+    if (tp.key === "KeyR" || (tp.x !== undefined && inBox(tp, read))) { reading = 0; state = "read"; Snd.sfx("select"); }
+    else if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) { leave(); goPsalm(game.psalm + 1); startPsalm(game.psalm + 1); }
+    else if (tp.key === "Escape" || (!next && tp.key === "Enter") || (tp.x !== undefined && inBox(tp, menu))) { leave(); goPsalm(psalmOpen(game.psalm + 1) ? game.psalm + 1 : game.psalm); state = "psalms"; }
+  }
+  input.taps = [];
+}
+// The whole psalm, one verse at a time, read at the player's own pace.
+let reading = 0;
+function drawRead(t) {
+  bands(["#f7f0dc", "#f2e8cc", "#ede0c0"], 0, H);
+  const P = PSALMS[game.psalm], n = P.verses.length;
+  text("PSALM " + P.num + " \u00B7 " + P.title.toUpperCase(), W / 2, 6, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
+  text((reading + 1) + " / " + n, W - 10, 8, { align: "right", color: "#8a7a5a", edge: null, size: 7 });
+  rect(0, 0, Math.round(W * (reading + 1) / n), 2, "#c8a050");
+  // Big enough to read at a glance; smaller only when a verse is long.
+  let size = 12, gap = 16, lines;
+  for ([size, gap] of [[12, 16], [10, 13], [8.5, 11]]) { lines = P.verses[reading].split("\n").flatMap((l) => wrapText(l, size, 290, true)); if (lines.length * gap <= 120) break; }
+  const top = 86 - lines.length * gap / 2;
+  lines.forEach((l, i) => text(l, W / 2, top + i * gap, { align: "center", color: "#3a2a1a", edge: null, size, serif: true }));
+  const back = reading > 0 ? button("\u25C0", 8, 158, 26, 17, false) : null;
+  const done = button("DONE", W - 60, 158, 52, 17, false);
+  text(reading < n - 1 ? "Tap for the next verse  \u25B8" : "Tap to finish  \u25B8", W / 2, 162, { align: "center", color: "#8a7a5a", edge: null, size: 8 });
+  for (const tp of input.taps) {
+    if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, done))) { state = "done"; break; }
+    if (tp.key === "ArrowLeft" || tp.key === "ArrowUp" || (back && tp.x !== undefined && inBox(tp, back))) reading = Math.max(0, reading - 1);
+    else if (++reading >= n) { reading = n - 1; state = "done"; break; }
   }
   input.taps = [];
 }
@@ -2224,7 +2298,7 @@ const FAST = Math.max(1, +(new URLSearchParams(location.search).get("fast")) || 
 function frame(now) {
   const dt = clamp((now - last) / 1000, 0, 0.05); last = now; clock += dt;
   ctx.setTransform(R, 0, 0, R, 0, 0); ctx.imageSmoothingEnabled = false;
-  if (state === "title" || state === "select" || state === "psalms" || state === "done") Snd.play("title");
+  if (state === "title" || state === "select" || state === "psalms" || state === "done" || state === "read") Snd.play("title");
   Snd.update();
   if (state === "play") { for (let k = 0; k < FAST && state === "play"; k++) update(dt); if (state === "play" || state === "trans") drawPlay(); }
   if (state === "trans") drawTransition(dt);
@@ -2234,6 +2308,7 @@ function frame(now) {
   else if (state === "pause") drawPause();
   else if (state === "over") drawOver(clock);
   else if (state === "done") drawDone(clock);
+  else if (state === "read") drawRead(clock);
   // On a tall screen, a word to turn the phone.
   if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
   requestAnimationFrame(frame);
@@ -2242,10 +2317,10 @@ requestAnimationFrame(frame);
 
 // For testing: ?psalm=2&phase=3 jumps straight in; ?god keeps the saint safe.
 const Q = new URLSearchParams(location.search);
-if (Q.has("psalm")) { game.saint = SAINTS[+(Q.get("saint") || 0)] || SAINTS[0]; startPsalm(+Q.get("psalm") - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
+if (Q.has("psalm")) { game.saint = SAINTS[+(Q.get("saint") || 0)] || SAINTS[0]; goPsalm(+Q.get("psalm") - 1); startPsalm(+Q.get("psalm") - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
 if (Q.has("god")) window.__god = true;
 if (Q.has("unlock")) { window.__unlock = true; save.open = 151; }
-window.PR = { step(dt) { update(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
+window.PR = { get save() { return save; }, goPsalm, step(dt) { update(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
 </script>
 </body>
 </html>
