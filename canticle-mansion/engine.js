@@ -367,8 +367,10 @@ function stepMonk(m, dt) {
     if (dir) m.face = dir;
     m.vy = Math.min(m.vy + P.grav * dt, P.fall);
     // Sliding down a wall, slowly, when leaning into it.
-    m.sliding = !m.ground && m.wall && dir === m.wall && m.vy > 0 && !m.carry;
-    if (m.sliding) m.vy = Math.min(m.vy, save.powers.gloves && input.up ? -P.climb : P.slide);
+    // With the gloves, holding toward a wall in the air climbs it; without, he slides down it.
+    const cling = save.powers.gloves && !m.ground && m.wall && dir === m.wall && !m.carry && m.lock <= 0;
+    m.sliding = (!m.ground && m.wall && dir === m.wall && m.vy > 0 && !m.carry) || cling;
+    if (cling) { m.vy = -P.climb; m.cut = true; } else if (m.sliding) m.vy = Math.min(m.vy, P.slide);
     if (wantJump) {
       if (m.ground || m.coyote > 0) { m.vy = -P.jump() * (m.carry ? 0.9 : 1); m.ground = false; m.coyote = 0; m.buffer = 0; m.cut = false; m.jumps = 1; Snd.sfx("jump"); m.riding = null; }
       else if (m.wall && !m.carry) { wallLeap(m); m.buffer = 0; }

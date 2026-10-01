@@ -35,6 +35,8 @@ const TILESET = {
   red:     { base: "#8a2a2a", lay: "blocks", bw: 16, bh: 8, mortar: "#4a1414" },
   dark:    { base: "#2a2430", lay: "blocks", bw: 16, bh: 8, mortar: "#16121a" },
   tent:    { base: "#1e1a1e", lay: "cloth" },
+  palm:    { base: "#7a5a34", lay: "planks", mortar: "#4a3420" },
+  ivory:   { base: "#f0e6cc", lay: "blocks", bw: 16, bh: 8, mortar: "#c8b898" },
 };
 function tileStyleAt(R, tx, ty, kind) {
   for (const z of R.zones || []) if (tx >= z.x0 && tx <= z.x1 && ty >= z.y0 && ty <= z.y1 && z[kind]) return z[kind];
