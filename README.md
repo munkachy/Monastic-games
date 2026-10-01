@@ -8,6 +8,7 @@ serve the whole repo as-is.
 
 - **[Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/)**: build the abbey tower and drive off the demon
 - **[Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/)**: run all 150 psalms with the saints (made for phones)
+- **[Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/)**: explore a mansion made of the Canticle of Canticles (made for phones)
 - **[Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html)**: assemble a squad, level up, light up the world ([about the game](https://munkachy.github.io/Monastic-games/new-apologetics/))
 
 All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/Monastic-games/)**
@@ -16,6 +17,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | --- | --- | --- |
 | [Benedictine Bricks](https://munkachy.github.io/Monastic-games/benedictine-bricks/) | `benedictine-bricks/` | Physics tower builder in the style of 99 Bricks Wizard Academy, built on seven real Benedictine monasteries |
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
+| [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
 ## Playing locally
@@ -143,3 +145,39 @@ semicolons. The game counts the psalms by the Hebrew numbering and shows the
 Douay's own Vulgate number beside it where the two differ: Psalm 23 (22). The
 verses sit in `PSALTER` at the top of the file; each stage names the verses it
 shows.
+
+## Canticle Mansion
+
+A Benedictine monk explores a great house, and the lands about it, made of
+the Canticle of Canticles (Douay-Rheims). Every verse is somewhere in the
+world: carved over a door, gilded on a frieze, written across the sky,
+pressed into sand, stitched into a curtain, lettered on a label, kindled in
+light as he comes near, strung bead by bead on a chain of gold. Pause to read
+the chapter as far as you have found it; finish a chapter to read it whole.
+
+On a phone: hold the lower left of the screen to walk left, the lower right
+to walk right, and tap the top to jump (hold for higher). Double-tap a thing
+to lift it or set it down, to open a door or greet someone; double-tap beside
+a wall to leap off it. Tap a creature to throw holy water at it. On a
+keyboard: arrows or WASD to walk, Up, W or Space to jump, Down, S or E to lift
+and set down, X or J to throw, P to pause, M for sound.
+
+Chapter I, "The Kiss of His Mouth", runs through fifteen rooms: in through a
+great mouth of marble whose lips part as you come; the wine and the perfume,
+whose scent lifts you up a shaft; down into the king's storerooms to stack
+crates and find the staff; the tunnel out into the desert and the black tents
+of Cedar; the curtains of Solomon to climb; the vineyard under the sun, where
+the monk grows brown as he walks; the shepherd, who gives you three kids to
+lead past a stream and a wall to the shepherds' tent, where they graze; up
+Pharaoh's throne room and across a chasm on his chariots; the chains of gold,
+climbing a seated bride with little goldsmiths who climb beside you; the king
+at his repose and a bundle of myrrh as tall as a tower; the vineyards of
+Engaddi; the fair one whose eyes are doves; and the bed beneath the beams of
+cedar. Chapters II to VIII are being built.
+
+The engine is new (`engine.js`): rooms joined by doors, tile physics with
+stackable objects, lighting, and the verses lettered at full resolution
+between the back wall and the figures. The text of the Canticle (`text.js`) is
+the Douay-Rheims (Challoner) from the Lumina project, checked verse by verse
+against drbo.org and eBible.org. The music is Psalter Runner's engine.
+
