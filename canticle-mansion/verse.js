@@ -34,10 +34,26 @@ const VERSE = {
     let x0 = ax, y0 = tx.y;
     if (tx.parallax) { x0 += cx * tx.parallax; y0 += cy * tx.parallax; }
     const m = Game.monk, near = Math.hypot(m.x + m.w / 2 - (tx.x + (tx.w || 0) / 2), m.y - tx.y);
+    // Letters set straight on a patterned wall get a soft ground of shadow (or of
+    // light, for dark letters), so the pattern never runs through the words.
+    if (!tx.panel && R.sky === "none" && BACKED[tx.style]) {
+      const dark = lum(tx.color || BACKED[tx.style]) < 0.45, w = tx.w || 200, h = L.lines.length * L.lh;
+      ctx.fillStyle = dark ? "rgba(235,222,195,0.16)" : "rgba(8,6,12,0.2)";
+      for (let i = 0; i < 4; i++) { const e = 10 - i * 3; ctx.fillRect(tx.x - e, y0 - e - 2, w + e * 2, h + e * 2); }
+    }
     L.st.draw(ctx, L, x0, y0, tx, t, near);
     ctx.restore();
   },
 };
+// Styles that get a soft ground on patterned walls, with each one's usual ink.
+const BACKED = { carved: "#1e140e", gilded: "#e8b94a", painted: "#2a1a10", embroidered: "#ffd27a", kindle: "#fff4d2", smoke: "#ffecfa", label: "#3a2410" };
+// How light a colour is, from 0 (black) to 1 (white).
+function lum(col) {
+  let r = 0, g = 0, b = 0;
+  if (col[0] === "#") { const n = parseInt(col.slice(1, 7), 16); r = n >> 16; g = (n >> 8) & 255; b = n & 255; }
+  else { const v = col.match(/[\d.]+/g) || [0, 0, 0]; [r, g, b] = v.map(Number); }
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
 // The points of a text: drawn once on a small canvas, read back, kept.
 const POINTS = new Map();
 function textPoints(tx, L, step) {
@@ -120,6 +136,28 @@ const STYLE = {
         c.fillStyle = tx.color || "#ffd27a"; c.fillText(l, x, yy);
         c.save(); c.globalAlpha = 0.35; c.setLineDash([0.6, 0.9]); c.lineWidth = 0.35; c.strokeStyle = "#ffffff"; c.strokeText(l, x, yy); c.restore();
       });
+    } },
+  // Little labels on bottles and crates.
+  label: { size: 5.5, lh: 1.25, font: (s) => "700 " + s + "px " + FONT.book,
+    draw(c, L, x, y, tx) { c.fillStyle = tx.color || "#3a2410"; L.lines.forEach((l, i) => c.fillText(l, x, y + i * L.lh)); } },
+  // Letters of light that kindle one by one as the monk draws near.
+  kindle: { size: 11, lh: 1.35, font: (s) => "italic 600 " + s + "px " + FONT.book,
+    draw(c, L, x, y, tx, t, near) {
+      const total = L.lines.join("").length, lit = clamp((tx.reach || 200) - near, 0, 1e9) / ((tx.reach || 200) * 0.6) * total;
+      let n = 0;
+      L.lines.forEach((l, i) => {
+        const yy = y + i * L.lh, w = c.measureText(l).width;
+        let xx = c.textAlign === "center" ? x - w / 2 : x; c.textAlign = "left";
+        for (const ch of l) {
+          // Always glowing softly enough to read; blazing up, letter by letter, as the monk draws near.
+          const a = clamp(lit - n, 0, 1); n++;
+          c.shadowColor = tx.glow || "rgba(255,210,120,0.95)"; c.shadowBlur = 4 + 6 * a;
+          c.fillStyle = "rgba(255,244,210," + (0.62 + 0.38 * a) + ")"; c.fillText(ch, xx, yy - a);
+          xx += c.measureText(ch).width;
+        }
+        c.textAlign = tx.align || "center";
+      });
+      c.shadowBlur = 0;
     } },
   // Rising like the smoke of incense: each word floats on its own.
   smoke: { size: 11, lh: 1.4, font: (s) => "italic 500 " + s + "px " + FONT.sky,

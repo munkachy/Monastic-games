@@ -27,7 +27,7 @@ function houseFronts(c, spans, t) {
     map: g.rows(), doors: { 2: { to: "c3_streets", door: "1" } },
     decor: [{ k: "window", x: 600, y: 40, w: 30, h: 50, night: true }],
     lights: [{ x: 615, y: 70, r: 110, c: "rgba(150,170,255,0.35)" }],
-    texts: [{ v: 1, style: "painted", x: 150, y: 26, w: 150, size: 9, color: "#2a1a10", panel: "parchment" }],
+    texts: [{ v: 1, style: "painted", x: 112, y: 42, w: 150, size: 9, color: "#2a1a10", panel: "parchment" }],
     update() { hintOnce("lantern", "Too dark to see far. Is there a lamp in the room? Bounce on the bed to reach high places.", Game.monk.x > 6 * T); },
     paint(c) { px(c, 120, 140, 12, 50, "#5a3a20"); px(c, 266, 150, 10, 40, "#5a3a20"); px(c, 132, 152, 140, 8, "#c8c0d8"); },
   });
@@ -142,7 +142,7 @@ function houseFronts(c, spans, t) {
     map: g.rows(), doors: { 1: { to: "c3_smoke", door: "2" }, 2: { to: "c3_litter", door: "1" } },
     lights: [{ x: 600, y: 120, r: 150, c: "rgba(255,210,140,0.4)" }, { x: 160, y: 80, r: 90, flicker: 1 }, { x: 1040, y: 80, r: 90, flicker: 1 }],
     texts: [
-      { v: 7, style: "carved", x: 40, y: 22, w: 200, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89070" },
+      { v: 7, style: "carved", x: 47, y: 26, w: 200, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89070" },
       { v: 8, part: [0, 8], style: "painted", x: 880, y: 26, w: 150, size: 9, color: "#3a2410", panel: "parchment" },
       { v: 8, part: [8, 99], style: "painted", x: 1010, y: 70, w: 150, size: 9, color: "#3a2410", panel: "parchment" },
     ],
@@ -171,7 +171,7 @@ function houseFronts(c, spans, t) {
     lights: [{ x: 200, y: 220, r: 160, c: "rgba(255,220,150,0.35)" }, { x: 360, y: 60, r: 100 }],
     texts: [
       { v: 9, style: "gilded", x: 200, y: 366, w: 160, size: 9 },
-      { v: 10, part: [0, 7], style: "carved", x: 30, y: 340, w: 120, size: 8, color: "rgba(30,30,40,0.9)", panel: "plaque", panelColor: "#c8ccd4" },
+      { v: 10, part: [0, 7], style: "carved", x: 26, y: 260, w: 120, size: 8, color: "rgba(30,30,40,0.9)", panel: "plaque", panelColor: "#c8ccd4" },
       { v: 10, part: [7, 11], style: "gilded", x: 150, y: 296, w: 120, size: 8.5 },
       { v: 10, part: [11, 16], style: "embroidered", x: 36, y: 188, w: 110, size: 10, color: "#ffe08a" },
       { v: 10, part: [16, 99], style: "embroidered", x: 160, y: 30, w: 150, size: 8.5, color: "#ffe8b0" },

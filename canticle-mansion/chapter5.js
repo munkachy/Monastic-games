@@ -49,7 +49,7 @@ const room5 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 5 }, def);
       { v: 2, part: [12, 99], style: "kindle", x: 520, y: 26, w: 170, size: 10, reach: 200 },
       { v: 3, style: "painted", x: 250, y: 26, w: 140, size: 8.5, color: "#2a1a10", panel: "parchment" },
       { v: 4, style: "carved", x: 556, y: 120, w: 130, size: 8, color: "rgba(30,20,14,0.9)", panel: "board", panelColor: "#b07a4a" },
-      { v: 5, style: "smoke", x: 340, y: 120, w: 160, size: 9.5, color: "rgba(255,230,210," },
+      { v: 5, style: "smoke", x: 356, y: 120, w: 160, size: 9.5, color: "rgba(255,230,210," },
     ],
     init(Wd) {
       if (!Game.flags.bolt) Wd.movers.push(Gate(44, 9, 3, () => Game.flags.bolt, { lock: true, col: "#5a3a20" }));
@@ -100,8 +100,8 @@ const room5 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 5 }, def);
     map: g.rows(), doors: { 1: { to: "c5_street", door: "2" }, 2: { to: "c5_daughters", door: "1" } },
     lights: [{ x: 80, y: 380, r: 100, flicker: 1 }, { x: 300, y: 300, r: 100, flicker: 1 }, { x: 200, y: 120, r: 100, flicker: 1 }],
     texts: [
-      { v: 7, part: [0, 15], style: "carved", x: 170, y: 360, w: 150, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89888" },
-      { v: 7, part: [15, 99], style: "painted", x: 200, y: 112, w: 150, size: 9, color: "#2a1a10", panel: "parchment" },
+      { v: 7, part: [0, 15], style: "carved", x: 174, y: 362, w: 150, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#a89888" },
+      { v: 7, part: [15, 99], style: "painted", x: 179, y: 47, w: 150, size: 9, color: "#2a1a10", panel: "parchment" },
     ],
     update() { hintOnce("crack", "Cracked stone overhead. With the helmet, jump into it from below to break it.", save.powers.helmet); },
     back(c, Wd, t) {
@@ -144,14 +144,14 @@ const room5 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 5 }, def);
     map: g.rows(), doors: { 1: { to: "c5_daughters", door: "2" }, 2: { to: "c5_whither", door: "1" } },
     lights: [{ x: 200, y: 120, r: 160, c: "rgba(255,220,140,0.45)" }, { x: 200, y: 400, r: 160, c: "rgba(220,220,255,0.3)" }],
     texts: [
-      { v: 15, part: [0, 13], style: "carved", x: 230, y: 560, w: 140, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#e8e0d4" },
-      { v: 14, part: [11, 99], style: "painted", x: 20, y: 440, w: 110, size: 8.5, color: "#2a2a4a", panel: "plaque", panelColor: "#f4ecd8" },
+      { v: 15, part: [0, 13], style: "carved", x: 219, y: 546, w: 140, size: 8.5, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#e8e0d4" },
+      { v: 14, part: [11, 99], style: "painted", x: 28, y: 440, w: 110, size: 8.5, color: "#2a2a4a", panel: "plaque", panelColor: "#f4ecd8" },
       { v: 14, part: [0, 11], style: "gilded", x: 220, y: 360, w: 150, size: 8.5 },
-      { v: 13, part: [0, 12], style: "painted", x: 10, y: 300, w: 120, size: 8.5, color: "#3a1a10", panel: "parchment" },
+      { v: 13, part: [0, 12], style: "painted", x: 26, y: 300, w: 120, size: 8.5, color: "#3a1a10", panel: "parchment" },
       { v: 13, part: [12, 99], style: "painted", x: 240, y: 240, w: 130, size: 8.5, color: "#3a1a10", panel: "parchment" },
-      { v: 12, style: "kindle", x: 10, y: 160, w: 140, size: 9, reach: 180 },
+      { v: 12, style: "kindle", x: 18, y: 162, w: 140, size: 9, reach: 180 },
       { v: 11, style: "gilded", x: 220, y: 110, w: 150, size: 9 },
-      { v: 15, part: [13, 99], style: "carved", x: 20, y: 80, w: 130, size: 8, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#c8a878" },
+      { v: 15, part: [13, 99], style: "carved", x: 28, y: 82, w: 130, size: 8, color: "rgba(30,20,14,0.9)", panel: "plaque", panelColor: "#c8a878" },
       { v: 16, style: "gilded", x: 130, y: 22, w: 170, size: 8.5 },
     ],
     paint(c) {
