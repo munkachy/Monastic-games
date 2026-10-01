@@ -424,17 +424,18 @@ try { save = Object.assign(save, JSON.parse(localStorage.getItem("psalter-runner
 if (!save.sung.length) for (let i = 0; i < save.open - 1; i++) save.sung[i] = true;
 function store() { try { localStorage.setItem("psalter-runner", JSON.stringify(save)); } catch (e) { } }
 const sungCount = () => save.sung.filter(Boolean).length;
-// The five books of the Psalter. Each closes with a doxology; singing that
-// closing psalm opens the next book. Within an open book any psalm may be sung.
+// The five books of the Psalter. All are open from the start; finishing a
+// whole book brings a new saint, and finishing all five brings Our Lord.
 const BOOKS = [
   { name: "BOOK I", from: 0, to: 41 }, { name: "BOOK II", from: 41, to: 72 }, { name: "BOOK III", from: 72, to: 89 },
   { name: "BOOK IV", from: 89, to: 106 }, { name: "BOOK V", from: 106, to: 150 },
 ];
 const bookOf = (pi) => BOOKS.findIndex((b) => pi >= b.from && pi < b.to);
-const bookOpen = (k) => k === 0 || !!save.sung[BOOKS[k - 1].to - 1] || !!window.__unlock;
-const psalmOpen = (pi) => pi >= 0 && pi < 150 && bookOpen(bookOf(pi));
+const bookOpen = () => true;
+const psalmOpen = (pi) => pi >= 0 && pi < 150;
 const bookSung = (k) => save.sung.slice(BOOKS[k].from, BOOKS[k].to).filter(Boolean).length;
 // The first psalm not yet sung in a book (or its first psalm, when all are sung).
+const bookDone = (k) => bookSung(k) === BOOKS[k].to - BOOKS[k].from;
 const firstUnsung = (k) => { for (let i = BOOKS[k].from; i < BOOKS[k].to; i++) if (!save.sung[i]) return i; return BOOKS[k].from; };
 Snd.on = save.sound !== false;
 
@@ -461,25 +462,34 @@ const SAINTS = [
   { id: "scholastica", name: "St. Scholastica", title: "who prayed for rain", hearts: 3, jump: 320, hold: "float", floatCap: 70, floatTime: 0.8, double: true, attack: "rain", cd: 1.1,
     about: "Jumps twice: the second is a prayer. Calls down a storm on the foes ahead.",
     look: { robe: "#1a1a22", shade: "#0e0e14", veil: "#141418", wimple: "#f7f3ea", skin: "#f0c8aa", dove: true } },
-  // Five more, one for every thirty psalms sung.
-  { id: "hildegard", name: "St. Hildegard", title: "of Bingen, the green of God", hearts: 3, jump: 320, hold: "float", floatCap: 40, floatTime: 1.5, attack: "seed", cd: 0.55, unlock: 30,
+  // Five more, one for each book of the Psalter finished.
+  { id: "hildegard", name: "St. Hildegard", title: "of Bingen, the green of God", hearts: 3, jump: 320, hold: "float", floatCap: 40, floatTime: 1.5, attack: "seed", cd: 0.55, book: 0,
     about: "Viriditas: her seed takes root where it lands and springs up in a green vine that catches every foe who touches it.",
     look: { robe: "#1a1a22", shade: "#0e0e14", veil: "#141418", wimple: "#f7f3ea", skin: "#f0c8aa", sprig: true } },
-  { id: "cecilia", name: "St. Cecilia", title: "who sang in her heart to God", hearts: 3, jump: 330, hold: "float", floatCap: 55, floatTime: 1.3, attack: "note", cd: 0.3, unlock: 60,
+  { id: "cecilia", name: "St. Cecilia", title: "who sang in her heart to God", hearts: 3, jump: 330, hold: "float", floatCap: 55, floatTime: 1.3, attack: "note", cd: 0.3, book: 1,
     about: "Her notes ripple through the air, through two foes at once, and every one she sings joins the music.",
     look: { robe: "#a8324a", shade: "#7a1a2e", skin: "#f2cdb2", hair: "#6a3a22", gold: true, wreath: true } },
-  { id: "peter", name: "St. Peter", title: "the Rock", hearts: 4, jump: 310, hold: "surf", floatCap: 30, floatTime: 0.7, attack: "rock", cd: 0.5, unlock: 90,
+  { id: "peter", name: "St. Peter", title: "the Rock", hearts: 4, jump: 310, hold: "surf", floatCap: 30, floatTime: 0.7, attack: "rock", cd: 0.5, book: 2,
     about: "Throws rocks that bounce and roll: twice as heavy, and they smash hailstones and boulders. He can walk on the water, a little, before he sinks.",
     look: { robe: "#3a5a8a", shade: "#2a4470", mantle: "#c89a4a", skin: "#e8b896", hair: "#c8c2b8", beard: "#d8d4cc", keys: true } },
-  { id: "augustine", name: "St. Augustine", title: "whose heart was restless", hearts: 3, jump: 320, hold: "float", floatCap: 80, floatTime: 0.6, double: true, attack: "heart", cd: 0.45, unlock: 120,
+  { id: "augustine", name: "St. Augustine", title: "whose heart was restless", hearts: 3, jump: 320, hold: "float", floatCap: 80, floatTime: 0.6, double: true, attack: "heart", cd: 0.45, book: 3,
     about: "Throws flaming hearts that seek out the nearest foe, as his own heart sought God. Jumps twice.",
     look: { robe: "#1a1a22", shade: "#0e0e14", mantle: "#c8a040", skin: "#c8946a", hair: "#2a1e16", beard: "#2a1e16", mitre: true, heart: true } },
-  { id: "lucy", name: "St. Lucy", title: "light in the darkness", hearts: 3, jump: 330, hold: "float", floatCap: 45, floatTime: 1.2, attack: "eye", cd: 0.9, unlock: 150,
+  { id: "lucy", name: "St. Lucy", title: "light in the darkness", hearts: 3, jump: 330, hold: "float", floatCap: 45, floatTime: 1.2, attack: "eye", cd: 0.9, book: 4,
     about: "Her eyes fly ahead and keep watch: each hangs in the air and strikes every foe that comes within its gaze.",
     look: { robe: "#f4f0e8", shade: "#d8d0c4", sash: "#c8324a", skin: "#f4d4bc", hair: "#e0c070", candles: true } },
 ];
-// A saint joins once enough psalms have been sung.
-const unlocked = (s) => !s.unlock || sungCount() >= s.unlock || window.__unlock;
+// A saint joins once the whole of their book has been sung.
+const unlocked = (s) => s.book === undefined || bookDone(s.book) || !!window.__unlock;
+// The Blessed Virgin Mary and Our Lord are not chosen to be steered: the
+// computer runs for them, and the player watches. Mary may be watched from
+// the start; Our Lord comes when every book has been sung.
+const ALL_WEAPONS = ["rose", "ecstasy", "medal", "wave", "rain", "seed", "note", "rock", "heart", "eye"];
+const MARY = { id: "mary", name: "The Blessed Virgin Mary", title: "Queen of Heaven", hearts: 3, jump: 330, hold: "grace", floatTime: 1, auto: true, arsenal: ALL_WEAPONS, cd: 0.35,
+  look: { robe: "#f4f0e8", shade: "#d8d0c4", mantle: "#3a6ad0", veil: "#2a5ab8", wimple: "#f7f3ea", skin: "#f2cdb2", halo: "stars" } };
+const JESUS = { id: "jesus", name: "Our Lord Jesus Christ", title: "the Way, the Truth and the Life", hearts: 3, jump: 330, hold: "grace", floatTime: 1, auto: true, arsenal: ["cross"], cd: 0.45,
+  look: { robe: "#f4f0e8", shade: "#d8d0c4", mantle: "#b8322a", skin: "#d8a47a", hair: "#4a2e1a", long: true, beard: "#4a2e1a", halo: "cross" } };
+const jesusOpen = () => BOOKS.every((b, k) => bookDone(k)) || !!window.__unlock;
 
 // A small figure in the style of the game, drawn from blocks: robe, head,
 // veil or hood, hands. (x, y) is the top-left of a 12 x 22 box; f is the
@@ -490,6 +500,12 @@ function drawFigure(L, x, y, f, opt) {
   const ink = "#140c1c";
   const bob = opt.still ? 0 : (f % 2);
   const fy = y + bob;
+  // A halo behind the head: a crown of stars for Our Lady, a cross for Our Lord.
+  if (L.halo) {
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = "#ffd84a"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x + 6, fy + 4, 7.5, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    if (L.halo === "cross") { rect(x + 5, fy - 5, 2, 3, "#d8324a"); rect(x - 3, fy + 3, 3, 2, "#d8324a"); rect(x + 12, fy + 3, 3, 2, "#d8324a"); }
+    else for (let k = 0; k < 7; k++) { const a = Math.PI + k * Math.PI / 6; rect(x + 6 + Math.cos(a) * 8 - 0.5, fy + 4 + Math.sin(a) * 8 - 0.5, 1.5, 1.5, "#fff4a0"); }
+  }
   // Legs and feet, running.
   if (!opt.seated) {
     const a = opt.air ? 1 : f % 4 < 2 ? 0 : 1;
@@ -510,6 +526,7 @@ function drawFigure(L, x, y, f, opt) {
   rect(x + 7, fy + 3, 1, 1, ink);
   if (L.veil) { rect(x + 2, fy, 3, 9, L.veil); rect(x + 2, fy, 8, 2, L.veil); rect(x + 4, fy + 1, 5, 1, L.wimple); rect(x + 3, fy + 7, 6, 2, L.wimple); }
   if (L.hood) { rect(x + 2, fy, 2, 9, L.robe); rect(x + 2, fy, 8, 1, L.robe); }
+  if (L.long) rect(x + 2, fy + 1, 2, 9, L.hair);
   if (L.hair && !L.hood) { rect(x + 3, fy + 1, 6, 1, L.hair); rect(x + 3, fy + 1, 1, 3, L.hair); }
   if (L.tonsure) { rect(x + 3, fy + 1, 6, 2, L.hair); rect(x + 5, fy + 1, 2, 1, L.skin); }
   if (L.beard) { rect(x + 4, fy + 5, 5, 3, L.beard); }
@@ -1606,7 +1623,7 @@ function drawPlat(p, camX, camY) {
 
 // ---- The game ----------------------------------------------------------------------------
 let state = "title";
-const game = { psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0 };
+const game = { mode: "book", psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0 };
 let world = null, player = null, shots = [], parts = [], trans = null, banner = 0, camX = 0, camY = 0;
 let selectIndex = save.saint || 0, psalmIndex = 0, bookIndex = 0;
 
@@ -1653,6 +1670,7 @@ function aimedBounce(p, vx) {
   return clamp(v, -p.bounce * 1.25, -p.bounce * 0.7);
 }
 function hurt(by) {
+  if (game.saint.auto) { window.__autoHits = (window.__autoHits || 0) + 1; if (window.__hits) window.__hits.push("AUTO " + (by || "?") + " @" + Math.round(player.x) + " " + world.P.name); return; }
   if (player.inv > 0) return;
   if (window.__hits) window.__hits.push((by || "?") + " @" + Math.round(player.x) + " " + world.P.name.split(" ").slice(-2).join(" "));
   if (window.__god) { player.inv = 1.6; return; }
@@ -1662,6 +1680,7 @@ function hurt(by) {
   if (player.hearts <= 0) { state = "over"; Snd.stop(); }
 }
 function fell() {
+  if (game.saint.auto) { window.__autoHits = (window.__autoHits || 0) + 1; if (window.__hits) window.__hits.push("AUTO fell @" + Math.round(player.x)); player.y = (player.auto ? player.auto.line : GROUND) - player.h; player.vy = 0; return; }
   if (window.__hits) window.__hits.push("fell @" + Math.round(player.x) + " " + world.P.name.split(" ").slice(-2).join(" "));
   if (!window.__god) { player.hearts--; Snd.sfx("hurt"); shake = 0.3; }
   if (player.hearts <= 0) { state = "over"; Snd.stop(); return; }
@@ -1676,30 +1695,37 @@ let shake = 0;
 function burst(x, y, c, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140, life: 0.5 + Math.random() * 0.4, c }); }
 const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-function attack() {
+function attack(kind) {
   const s = game.saint;
+  kind = kind || s.attack;
   if (player.cd > 0) return;
   player.cd = s.cd; player.reach = 0.15;
+  if (window.__kinds) window.__kinds[kind] = (window.__kinds[kind] || 0) + 1;   // testing only
   const x = player.x + player.w, y = player.y + 8;
-  if (s.attack === "rose") shots.push({ kind: "rose", x, y, w: 6, h: 6, vx: 180 + world.P.speed, vy: -130, g: 420, life: 1.4, pierce: 1 });
-  if (s.attack === "medal") shots.push({ kind: "medal", x, y: y + 2, w: 6, h: 6, vx: 300 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 2 });
-  if (s.attack === "ecstasy") shots.push({ kind: "ring", x: player.x + 5, y: player.y + 11, r: 4, w: 0, h: 0, life: 0.35, ring: true });
-  if (s.attack === "wave") shots.push({ kind: "wave", x: x, y: player.y + player.h - 12, w: 14, h: 12, vx: 170 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 3 });
-  if (s.attack === "rain") shots.push({ kind: "cloud", x: player.x + 50, y: Math.min(player.y, GROUND - 22) - 60, w: 70, h: 160, vx: world.P.speed, vy: 0, g: 0, life: 1.4, pierce: 99, rain: true, tick: 0 });
+  if (kind === "rose") shots.push({ kind: "rose", x, y, w: 6, h: 6, vx: 180 + world.P.speed, vy: -130, g: 420, life: 1.4, pierce: 1 });
+  if (kind === "medal") shots.push({ kind: "medal", x, y: y + 2, w: 6, h: 6, vx: 300 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 2 });
+  if (kind === "ecstasy") shots.push({ kind: "ring", x: player.x + 5, y: player.y + 11, r: 4, w: 0, h: 0, life: 0.35, ring: true });
+  if (kind === "wave") shots.push({ kind: "wave", x: x, y: player.y + player.h - 12, w: 14, h: 12, vx: 170 + world.P.speed, vy: 0, g: 0, life: 1.0, pierce: 3 });
+  if (kind === "rain") shots.push({ kind: "cloud", x: player.x + 50, y: Math.min(player.y, GROUND - 22) - 60, w: 70, h: 160, vx: world.P.speed, vy: 0, g: 0, life: 1.4, pierce: 99, rain: true, tick: 0 });
   // St. Hildegard: a seed, thrown in an arc, that roots where it lands.
-  if (s.attack === "seed") shots.push({ kind: "seed", x, y, w: 5, h: 5, vx: 140 + world.P.speed, vy: -150, g: 520, life: 1.6, pierce: 1 });
+  if (kind === "seed") shots.push({ kind: "seed", x, y, w: 5, h: 5, vx: 140 + world.P.speed, vy: -150, g: 520, life: 1.6, pierce: 1 });
   // St. Cecilia: a note that rides a wave through the air, and sounds.
-  if (s.attack === "note") { shots.push({ kind: "note", x, y, base: y, age: 0, w: 7, h: 8, vx: 210 + world.P.speed, vy: 0, g: 0, life: 1.1, pierce: 2, pitch: Math.floor(Math.random() * 3) }); Snd.note(); }
+  if (kind === "note") { shots.push({ kind: "note", x, y, base: y, age: 0, w: 7, h: 8, vx: 210 + world.P.speed, vy: 0, g: 0, life: 1.1, pierce: 2, pitch: Math.floor(Math.random() * 3) }); Snd.note(); }
   // St. Peter: a rock, heavy, that bounces once and rolls on.
-  if (s.attack === "rock") shots.push({ kind: "rock", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -170, g: 650, life: 1.6, pierce: 2, heavy: true, bounces: 1 });
+  if (kind === "rock") shots.push({ kind: "rock", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -170, g: 650, life: 1.6, pierce: 2, heavy: true, bounces: 1 });
   // St. Augustine: a flaming heart that seeks the nearest foe.
-  if (s.attack === "heart") shots.push({ kind: "heart", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -30, g: 0, life: 1.8, pierce: 1, seek: true });
+  if (kind === "heart") shots.push({ kind: "heart", x, y, w: 7, h: 7, vx: 150 + world.P.speed, vy: -30, g: 0, life: 1.8, pierce: 1, seek: true });
   // St. Lucy: an eye that flies ahead, stops, and keeps watch.
-  if (s.attack === "eye") shots.push({ kind: "eye", x, y: y - 6, w: 8, h: 8, vx: 230 + world.P.speed, vy: 0, g: 0, life: 3, pierce: 0, watch: true, tick: 0, beam: null });
-  if (s.attack !== "note") Snd.sfx(s.attack === "ecstasy" || s.attack === "rain" ? "shield" : "throw");
+  if (kind === "eye") shots.push({ kind: "eye", x, y: y - 6, w: 8, h: 8, vx: 230 + world.P.speed, vy: 0, g: 0, life: 3, pierce: 0, watch: true, tick: 0, beam: null });
+  // Our Lord: the cross, full of light. Nothing stands against it.
+  if (kind === "cross") shots.push({ kind: "cross", x, y: y - 4, w: 9, h: 13, vx: 240 + world.P.speed, vy: 0, g: 0, life: 1.3, pierce: 99, holy: true });
+  if (kind !== "note") Snd.sfx(kind === "ecstasy" || kind === "rain" ? "shield" : "throw");
 }
-function smite(e, heavy) {
+// What even the cross leaves standing: the ground itself, fire below and the teeth above.
+const FIXED = new Set(["lava", "river", "pitdark", "fang", "jet"]);
+function smite(e, heavy, holy) {
   if (!e.alive) return false;
+  if (holy && !FIXED.has(e.type)) e.unbreakable = false, e.hp = 1;
   // St. Peter's rocks break what nothing else can: hail, boulders, spray, embers.
   if (e.unbreakable && !(heavy && (e.smashable || e.type === "fireball" || e.type === "spout" || e.type === "potshard" || e.type === "drip"))) return false;
   if (heavy && e.hp > 1) e.hp--;
@@ -1708,6 +1734,87 @@ function smite(e, heavy) {
   burst(e.x + e.w / 2, e.y + e.h / 2, e.type === "jar" ? "#c87a4a" : "#e8b94a", 12);
   game.score += 10; Snd.sfx("smite");
   return true;
+}
+
+// ---- The Blessed Virgin Mary and Our Lord: the computer runs -----------------------
+// Where a foe or hazard will be t seconds from now, as near as can be told
+// from how each one moves. null: it can do no harm then.
+function foresee(e, t) {
+  const T = world.t + t, v = world.P.speed;
+  let x = e.x + (e.vx || 0) * t, y = e.y, w = e.w, h = e.h;
+  switch (e.type) {
+    case "fireball": y = e.base - Math.max(0, Math.sin(T * 2.2 + e.ph)) * 90; break;
+    case "spout": y = e.base - Math.max(0, Math.sin(T * 2.2 + e.ph)) * (e.low ? 50 : 80); break;
+    case "bird": y = e.base + Math.sin(T * 3 + e.ph) * 14; break;
+    case "king": case "net": y = GROUND - e.h; break;
+    case "chaff": y = e.y - 26; h = e.h + 26; break;
+    case "boulder": y = e.y - 16; h = e.h + 16; break;
+    case "chariot": if (!e.vx) { const go = Math.max(0, (e.wait - 200 - player.x) / v); x = e.x + Math.max(0, t - go) * (v + 90); } break;
+    case "potshard": y = e.y + e.vy * t + 250 * t * t; break;
+    case "hail": case "drip": {
+      const ta = e.armed ? 0 : Math.max(0, (e.x - 120 - player.x) / v);
+      if (t > ta) { const u = t - ta; y = e.y + (e.armed ? e.vy : 40) * u + 250 * u * u; }
+      break;
+    }
+    case "jet": { const c = (T + e.ph) % 2.4; if (c >= 1.0 && c < 2.3) return null; break; }     // with a margin either side
+    case "bolt": { const t0 = e.t0 >= 0 ? e.t0 : world.t + Math.max(0, (e.x - 170 - player.x) / v); if (T - t0 < 0.65 || T - t0 > 1.0) return null; break; }
+    case "fang": y = camY; h = 34; break;
+  }
+  return { x, y, w, h };
+}
+// The ground at x, and the line she keeps: the highest ground about her and just ahead.
+function floorAt(x) { let y = null; for (const g of world.segs) if (x >= g.x0 && x <= g.x1 && (y === null || g.y < y)) y = g.y; return y; }
+function lineAt(x) {
+  let y = null; const ahead = 30 + world.P.speed * 0.5;
+  for (const g of world.segs) if (g.x1 >= x - 4 && g.x0 <= x + player.w + ahead && (y === null || g.y < y)) y = g.y;
+  return y;
+}
+// How high to go: try running on the ground, then each height above it, and
+// take the lowest from which nothing ahead can touch her.
+const HEIGHTS = [0, 24, 46, 68, 90, 114, 140];
+function autoPlan() {
+  const v = world.P.speed, pl = player, dangers = [];
+  for (const e of world.ents) if (e.alive && e.hostile && !e.prize && !e.decor && e.x > pl.x - 320 && e.x < pl.x + v + 90) dangers.push(e);
+  let pick = HEIGHTS[HEIGHTS.length - 1], latest = -1;
+  for (const o of HEIGHTS) {
+    let y = pl.y, line = pl.auto.line, hit = Infinity;
+    for (let t = 0.04; t <= 0.84 && hit === Infinity; t += 0.04) {
+      const x = pl.x + v * t, L = lineAt(x); if (L !== null) line = L;
+      y += clamp((line - o - pl.h - y) * 10, -300, 300) * 0.04;
+      const fl = floorAt(x + pl.w);
+      if (fl !== null && y + pl.h > fl + 3) { hit = t; break; }
+      // The whole stretch she covers in this step, with a little to spare.
+      const box = { x: x - v * 0.04 - 3, y: y - 3, w: pl.w + v * 0.04 + 6, h: pl.h + 6 };
+      // Each foe where it will be at both ends of the step.
+      for (const e of dangers) { const b = foresee(e, t), b0 = foresee(e, t - 0.04); if ((b && overlap(box, b)) || (b0 && overlap(box, b0))) { hit = t; break; } }
+    }
+    if (hit === Infinity) return o;
+    if (hit > latest) { latest = hit; pick = o; }
+  }
+  return pick;
+}
+function autoMove(dt) {
+  const pl = player, s = game.saint;
+  const A = pl.auto || (pl.auto = { line: pl.y + pl.h, o: 0, think: 0 });
+  for (const p of world.plats) { if (p.bob) p.y = p.base + Math.sin(world.t * 2 + p.ph) * p.bob; if (p.squash > 0) p.squash -= dt; }
+  A.think -= dt; if (A.think <= 0) { A.o = autoPlan(); A.think = 0.05; }
+  const L = lineAt(pl.x); if (L !== null) A.line = L;
+  pl.vy = clamp((A.line - A.o - pl.h - pl.y) * 10, -300, 300);
+  pl.y += pl.vy * dt;
+  const fl = floorAt(pl.x + pl.w / 2);
+  pl.ground = A.o === 0 && fl !== null && Math.abs(pl.y + pl.h - fl) < 2;
+  if (pl.ground) pl.y = fl - pl.h;
+  pl.floating = !pl.ground; pl.carried = false;
+  // A gift for every foe ahead: Mary's chosen at random from all the saints', Our Lord's the cross.
+  if (pl.cd <= 0) {
+    for (const e of world.ents) {
+      if (!e.alive || !e.hostile || e.prize || e.decor || FIXED.has(e.type)) continue;
+      if (e.unbreakable && s.id !== "jesus") continue;
+      if (e.x < pl.x + 8 || e.x > pl.x + 170 || Math.abs(e.y + e.h / 2 - pl.y - 11) > 70) continue;
+      attack(s.arsenal[Math.floor(Math.random() * s.arsenal.length)]);
+      break;
+    }
+  }
 }
 
 function update(dt) {
@@ -1721,6 +1828,8 @@ function update(dt) {
   const vx = P.speed * (player.ground ? 1 : 1 - wind);
   const prevBottom = player.y + player.h;
   player.x += vx * dt;
+  if (s.auto) autoMove(dt);
+  else {
   // Jumping, floating, levitating, gliding, and the second jump.
   if (input.jumpPressed) {
     if (player.ground) { player.vy = -s.jump; player.ground = false; Snd.sfx("jump"); player.jumps = s.double ? 1 : 0; }
@@ -1763,6 +1872,7 @@ function update(dt) {
       else { hurt("wall"); player.y = g.y - player.h; player.vy = -120; }
     }
   }
+  }
   if (player.ground) { player.float = s.floatTime; player.jumps = s.double ? 2 : 1; player.carried = false; }
   // A fall is judged by the ground, not the camera: nothing left beneath,
   // and well below where the saint last stood.
@@ -1771,7 +1881,7 @@ function update(dt) {
   if (state !== "play") return;
   player.inv = Math.max(0, player.inv - dt); player.cd = Math.max(0, player.cd - dt); player.reach = Math.max(0, player.reach - dt);
   player.ft += dt * (player.ground ? 10 : 4); player.f = Math.floor(player.ft);
-  if (input.attackPressed) attack();
+  if (input.attackPressed && !s.auto) attack();
   input.attackPressed = false;
 
   // The camera keeps the saint a little left of centre, and rises with the land.
@@ -1865,7 +1975,7 @@ function update(dt) {
       continue;
     }
     if (sh.rain) { sh.tick -= dt; if (sh.tick <= 0) { sh.tick = 0.25; for (const e of world.ents) if (e.alive && !e.prize && !e.decor && e.x + e.w > sh.x && e.x < sh.x + sh.w && e.y > sh.y) smite(e); } continue; }
-    for (const e of world.ents) if (e.alive && !e.prize && !e.decor && sh.pierce > 0 && overlap(sh, e)) { if (smite(e, sh.heavy)) sh.pierce--; else if (e.unbreakable) sh.pierce = 0; }
+    for (const e of world.ents) if (e.alive && !e.prize && !e.decor && sh.pierce > 0 && overlap(sh, e)) { if (smite(e, sh.heavy, sh.holy)) sh.pierce--; else if (e.unbreakable) sh.pierce = 0; }
     if (sh.pierce <= 0) sh.life = 0;
   }
   shots = shots.filter((sh) => sh.life > 0);
@@ -1881,17 +1991,25 @@ function update(dt) {
 }
 
 let joined = null;     // a saint who has just joined, to announce
-let opened = null;     // a book that has just opened
+let opened = null;     // a book that has just been sung through
+let alsoJoined = null; // a saint who came in the same moment as Our Lord
 function finishPsalm() {
   state = "done"; Snd.stop(); Snd.sfx("win");
+  joined = null; opened = null;
+  if (game.saint.auto) return;            // Our Lady's run and Our Lord's are watched, not counted
   save.best[game.psalm] = Math.max(save.best[game.psalm] || 0, game.score);
-  const before = SAINTS.filter(unlocked).length, booksBefore = BOOKS.filter((b, k) => bookOpen(k)).length;
+  const before = SAINTS.filter(unlocked), lord = jesusOpen(), k = bookOf(game.psalm), wasDone = bookDone(k);
   save.sung[game.psalm] = true;
   save.open = Math.max(save.open, Math.min(151, game.psalm + 2));
-  joined = SAINTS.filter(unlocked).length > before ? SAINTS.find((x) => x.unlock && x.unlock === sungCount()) : null;
-  opened = BOOKS.filter((b, k) => bookOpen(k)).length > booksBefore ? BOOKS[bookOf(game.psalm) + 1] : null;
+  joined = SAINTS.find((x) => unlocked(x) && !before.includes(x)) || null;
+  alsoJoined = null;
+  if (!lord && jesusOpen()) { alsoJoined = joined; joined = JESUS; }
+  if (!wasDone && bookDone(k)) opened = BOOKS[k];
   store();
 }
+// Start a psalm in the way the chosen mode asks.
+function runPsalm(i) { goPsalm(i); startPsalm(i); }
+const randomPsalm = () => Math.floor(Math.random() * 150);
 // Point the menus at a psalm: its book, and the page of the book it is on.
 function goPsalm(i) { psalmIndex = i; bookIndex = bookOf(i); psalmPage = Math.floor((i - BOOKS[bookIndex].from) / 10); }
 
@@ -2020,8 +2138,13 @@ function drawEntity(e) {
 function drawPlayer() {
   if (player.inv > 0 && Math.floor(player.inv * 12) % 2) return;
   const x = player.x - camX, y = player.y - camY, s = game.saint;
-  // The ways each saint keeps aloft.
-  if (player.floating) {
+  // Our Lady and Our Lord are borne up on light.
+  if (s.auto && !player.ground) {
+    const c = s.id === "jesus" ? "#fff4c8" : "#cfe0ff";
+    ctx.globalAlpha = 0.3; ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x + 6, y + 23, 11, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.15; ctx.beginPath(); ctx.arc(x + 6, y + 11, 16, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    for (let i = 0; i < 3; i++) rect(x + 1 + i * 4, y + 24 + ((world.t * 30 + i * 4) % 8), 2, 2, s.id === "jesus" ? "#ffe08a" : "#ffffff");
+  } else if (player.floating) {
     if (s.hold === "levitate") { ctx.globalAlpha = 0.5; rect(x - 4, y - 4, 18, 30, "#fff4c8"); ctx.globalAlpha = 1; for (let i = 0; i < 3; i++) rect(x + i * 5, y + 24 + ((world.t * 30 + i * 4) % 8), 2, 2, "#ffe08a"); }
     else if (s.hold === "surf") {
       // The surfboard under his feet, and spray behind.
@@ -2041,6 +2164,11 @@ function drawShots() {
     if (sh.kind === "seed") { rect(x, y, 5, 5, "#6a4a2a"); rect(x + 1, y - 2, 2, 2, "#5ac04a"); }
     if (sh.kind === "vine") { const h = 18 * sh.grow; rect(x + 6, y + 18 - h, 2, h, "#2f7a3a"); for (let k = 0; k < h - 3; k += 4) { rect(x + (k % 8 ? 8 : 2), y + 18 - k - 3, 4, 3, "#5ac04a"); } if (sh.grow >= 1) { rect(x + 4, y - 1, 6, 4, "#e05aa0"); rect(x + 6, y, 2, 2, "#ffe08a"); } }
     if (sh.kind === "note") { const c = ["#ffe08a", "#9fd0ff", "#ff9ac8"][sh.pitch]; rect(x, y + 4, 4, 3, c); rect(x + 3, y - 2, 1, 7, c); rect(x + 3, y - 2, 3, 1, c); if (sh.pitch === 1) { rect(x + 5, y - 2, 1, 6, c); rect(x + 4, y + 3, 3, 2, c); } }
+    if (sh.kind === "cross") {
+      ctx.globalAlpha = 0.3; ctx.fillStyle = "#fff4c8"; ctx.beginPath(); ctx.arc(x + 4.5, y + 5, 11, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+      rect(x + 3, y - 1, 3, 14, "#e8b94a"); rect(x - 1, y + 3, 11, 3, "#e8b94a"); rect(x + 4, y, 1, 12, "#fff8d0"); rect(x, y + 4, 9, 1, "#fff8d0");
+      if (Math.random() < 0.5) parts.push({ x: sh.x, y: sh.y + 5, vx: -30, vy: -20 - Math.random() * 30, life: 0.3, c: "#fff4c8" });
+    }
     if (sh.kind === "rock") { rect(x, y + 1, 7, 5, "#8a8a92"); rect(x + 1, y, 5, 7, "#8a8a92"); rect(x + 1, y + 1, 2, 2, "#b8b8c0"); }
     if (sh.kind === "heart") { const fl = Math.floor(world.t * 16) % 2; rect(x, y + 1, 3, 3, "#d8324a"); rect(x + 4, y + 1, 3, 3, "#d8324a"); rect(x + 1, y + 3, 5, 2, "#d8324a"); rect(x + 2, y + 5, 3, 1, "#d8324a"); rect(x + 2 + fl, y - 3, 2, 3, "#ffb030"); rect(x + 3, y - 1, 1, 1, "#fff0a0"); }
     if (sh.kind === "eye") {
@@ -2056,9 +2184,10 @@ function drawShots() {
 function heart(x, y, full) { const c = full ? "#e8324a" : "#4a2a3a"; rect(x, y + 1, 3, 3, c); rect(x + 4, y + 1, 3, 3, c); rect(x + 1, y, 2, 1, c); rect(x + 4, y, 2, 1, c); rect(x + 1, y + 4, 5, 1, c); rect(x + 2, y + 5, 3, 1, c); rect(x + 3, y + 6, 1, 1, c); }
 function drawHud() {
   const s = game.saint;
-  for (let i = 0; i < s.hearts; i++) heart(4 + i * 9, 4, i < player.hearts);
+  if (s.auto) text(s.name.toUpperCase(), 4, 4, { color: s.id === "jesus" ? "#ffe08a" : "#cfe0ff", size: 7 });
+  else for (let i = 0; i < s.hearts; i++) heart(4 + i * 9, 4, i < player.hearts);
   if (player.shield > 0) text("SHIELD " + player.shield, 4, 13, { color: "#ffe08a", size: 8 });
-  if (s.hold) { rect(4, player.shield ? 24 : 14, 30, 3, "#2a2a3a"); rect(4, player.shield ? 24 : 14, 30 * clamp(player.float / s.floatTime, 0, 1), 3, "#9fd0ff"); }
+  if (s.hold && !s.auto) { rect(4, player.shield ? 24 : 14, 30, 3, "#2a2a3a"); rect(4, player.shield ? 24 : 14, 30 * clamp(player.float / s.floatTime, 0, 1), 3, "#9fd0ff"); }
   text(String(game.score).padStart(5, "0"), W - 26, 4, { align: "right", color: "#ffe08a" });
   // Pause.
   rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
@@ -2117,51 +2246,68 @@ function drawTitle(t) {
   text("PSALTER RUNNER", W / 2, 13, { align: "center", color: "#ffe08a", size: 20 });
   text("Run the Psalms with the saints", W / 2, 38, { align: "center", color: "#c8b8ff", size: 9 });
   { const open = SAINTS.filter(unlocked); drawFigure(open[Math.floor(t / 2) % open.length].look, W / 2 - 6, 50, Math.floor(t * 10), {}); }
-  // The five books of the Psalter.
+  // The five books of the Psalter, all open. Each shows the saint who comes
+  // when the whole book has been sung.
   const boxes = BOOKS.map((B, k) => {
-    const x = 7 + k * 62, y = 80, open = bookOpen(k), hot = k === bookIndex, n = B.to - B.from, done = bookSung(k);
-    rect(x - 1, y - 1, 60, 62, "#140c1c"); rect(x, y, 58, 60, open ? (hot ? "#3a2a5a" : "#221a36") : "#141020");
+    const x = 7 + k * 62, y = 78, hot = k === bookIndex, n = B.to - B.from, done = bookSung(k), saint = SAINTS.find((q) => q.book === k);
+    rect(x - 1, y - 1, 60, 62, "#140c1c"); rect(x, y, 58, 60, hot ? "#3a2a5a" : "#221a36");
     if (hot) { rect(x, y, 58, 2, "#ffe08a"); rect(x, y + 58, 58, 2, "#ffe08a"); }
-    text(B.name, x + 29, y + 5, { align: "center", color: open ? "#ffe08a" : "#4a4068", size: 9 });
-    text("Psalms " + (B.from + 1) + "\u2013" + B.to, x + 29, y + 19, { align: "center", color: open ? "#c8b8ff" : "#4a4068", size: 6.5, edge: null });
-    if (open) {
-      text(done + " of " + n, x + 29, y + 31, { align: "center", color: done === n ? "#74c07a" : "#ffffff", size: 7, edge: null });
-      rect(x + 7, y + 45, 44, 4, "#140c1c"); rect(x + 7, y + 45, Math.round(44 * done / n), 4, "#74c07a");
-    } else {
-      // A small padlock, and what opens the book.
-      rect(x + 25, y + 30, 8, 3, "#4a4068"); rect(x + 25, y + 30, 2, 6, "#4a4068"); rect(x + 31, y + 30, 2, 6, "#4a4068"); rect(x + 23, y + 35, 12, 9, "#4a4068");
-      text("Sing Psalm " + BOOKS[k - 1].to, x + 29, y + 47, { align: "center", color: "#6a6088", size: 6, edge: null });
-    }
-    return { x, y, w: 58, h: 60, k, open };
+    text(B.name, x + 29, y + 4, { align: "center", color: "#ffe08a", size: 9 });
+    text("Psalms " + (B.from + 1) + "\u2013" + B.to, x + 29, y + 17, { align: "center", color: "#c8b8ff", size: 6.5, edge: null });
+    text(done + " of " + n, x + 29, y + 27, { align: "center", color: done === n ? "#74c07a" : "#ffffff", size: 7, edge: null });
+    rect(x + 7, y + 38, 44, 4, "#140c1c"); rect(x + 7, y + 38, Math.round(44 * done / n), 4, "#74c07a");
+    text((bookDone(k) ? "\u2713 " : "\u25B8 ") + saint.name, x + 29, y + 46, { align: "center", color: bookDone(k) ? "#74c07a" : "#8a80a8", size: 6, edge: null });
+    return { x, y, w: 58, h: 60, k };
   });
-  if (Math.floor(t * 2) % 2) text("CHOOSE A BOOK", W / 2, 158, { align: "center", color: "#ffffff", size: 9 });
-  const go = (k) => { if (!bookOpen(k)) return; bookIndex = k; Snd.sfx("select"); state = "select"; };
+  // The other ways to play.
+  const modes = [
+    { label: "RANDOM", go: () => { game.mode = "random"; state = "select"; } },
+    { label: "PICK A PSALM", go: () => { game.mode = "pick"; state = "select"; } },
+    { label: "WATCH MARY", go: () => { game.mode = "watch"; game.saint = MARY; state = "pick"; } },
+    { label: jesusOpen() ? "WATCH JESUS" : null, go: () => { if (!jesusOpen()) return; game.mode = "watch"; game.saint = JESUS; state = "pick"; } },
+  ].map((m, i) => {
+    const x = 8 + i * 77, y = 146, w = 73, h = 18;
+    if (m.label) return Object.assign(button(m.label, x, y, w, h, false), { go: m.go });
+    rect(x - 1, y - 1, w + 2, h + 2, "#140c1c"); rect(x, y, w, h, "#141020");
+    text("JESUS", x + w / 2, y + 2, { align: "center", color: "#6a6088", size: 7.5, edge: null });
+    text("sing all five books", x + w / 2, y + 10.5, { align: "center", color: "#6a6088", size: 5.5, edge: null });
+    return { x, y, w, h, go: m.go };
+  });
+  const go = (k) => { bookIndex = k; game.mode = "book"; Snd.sfx("select"); state = "select"; };
   for (const tp of input.taps) {
     if (tp.key === "ArrowLeft") bookIndex = Math.max(0, bookIndex - 1);
     else if (tp.key === "ArrowRight") bookIndex = Math.min(4, bookIndex + 1);
     else if (tp.key === "Enter" || tp.key === "Space") go(bookIndex);
-    else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (b.open) go(b.k); else { bookIndex = b.k; Snd.sfx("select"); } }
+    else if (tp.key === "KeyR") modes[0].go();
+    else if (tp.x !== undefined) {
+      for (const b of boxes) if (inBox(tp, b)) go(b.k);
+      for (const m of modes) if (inBox(tp, m)) { Snd.sfx("select"); m.go(); }
+    }
   }
   input.taps = [];
 }
 function drawSelect(t) {
   titleSky(t);
-  text("CHOOSE YOUR SAINT", W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
+  text(game.mode === "random" ? "CHOOSE A SAINT FOR A RANDOM PSALM" : "CHOOSE YOUR SAINT", W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
   const boxes = SAINTS.map((s, i) => {
     const x = 8 + (i % 5) * 62, y = 20 + Math.floor(i / 5) * 58, hot = i === selectIndex, open = unlocked(s);
     rect(x - 1, y - 1, 58, 54, "#140c1c"); rect(x, y, 56, 52, hot ? "#3a2a5a" : open ? "#221a36" : "#141020");
     if (hot) { rect(x, y, 56, 2, "#ffe08a"); rect(x, y + 50, 56, 2, "#ffe08a"); }
     if (open) drawFigure(s.look, x + 22, y + 6, hot ? Math.floor(t * 10) : 0, { still: !hot });
     else { ctx.globalAlpha = 0.25; drawFigure(s.look, x + 22, y + 6, 0, { still: true }); ctx.globalAlpha = 1; }
-    text(open ? s.name : s.unlock + " psalms", x + 28, y + 34, { align: "center", color: hot ? "#ffe08a" : open ? "#ffffff" : "#6a6088", size: 7.5 });
+    text(open ? s.name : BOOKS[s.book].name.replace("BOOK", "Book"), x + 28, y + 34, { align: "center", color: hot ? "#ffe08a" : open ? "#ffffff" : "#6a6088", size: 7.5 });
     return { x, y, w: 56, h: 52, i };
   });
   const s = SAINTS[selectIndex], open = unlocked(s);
   text(s.name + ", " + s.title + "  " + "\u2665".repeat(s.hearts), W / 2, 132, { align: "center", color: "#ffe08a", size: 8.5 });
-  wrapText(open ? s.about : "Sing " + s.unlock + " psalms and " + s.name + " joins you.", 7.5, 300).slice(0, 2).forEach((l, k) => text(l, W / 2, 143 + k * 9, { align: "center", color: "#ffffff", size: 7.5 }));
+  wrapText(open ? s.about : "Sing all of " + BOOKS[s.book].name.replace("BOOK", "Book") + " and " + s.name + " joins you.", 7.5, 300).slice(0, 2).forEach((l, k) => text(l, W / 2, 143 + k * 9, { align: "center", color: "#ffffff", size: 7.5 }));
   const go = open ? button("CHOOSE", W - 74, 162, 66, 15, true) : null;
   const back = button("BACK", 8, 162, 48, 15, false);
-  const choose = (k) => { if (!unlocked(SAINTS[k])) return; game.saint = SAINTS[k]; save.saint = k; store(); goPsalm(firstUnsung(bookIndex)); state = "psalms"; Snd.sfx("select"); };
+  const choose = (k) => { if (!unlocked(SAINTS[k])) return; game.saint = SAINTS[k]; save.saint = k; store(); Snd.sfx("select");
+    if (game.mode === "random") runPsalm(randomPsalm());
+    else if (game.mode === "pick") state = "pick";
+    else { goPsalm(firstUnsung(bookIndex)); state = "psalms"; }
+  };
   for (const tp of input.taps) {
     if (tp.key === "ArrowLeft") selectIndex = (selectIndex + SAINTS.length - 1) % SAINTS.length;
     else if (tp.key === "ArrowRight") selectIndex = (selectIndex + 1) % SAINTS.length;
@@ -2187,7 +2333,6 @@ function drawPsalms(t) {
     const x = 22 + (k % 5) * 56, y = 20 + Math.floor(k / 5) * 56, hot = i === psalmIndex, done = save.sung[i];
     rect(x - 1, y - 1, 52, 52, "#140c1c"); rect(x, y, 50, 50, hot ? "#3a2a5a" : "#221a36");
     if (hot) rect(x, y, 50, 2, "#ffe08a");
-    if (i === B.to - 1 && bookIndex < 4) rect(x, y + 48, 50, 2, "#c8b8ff");      // the doxology that opens the next book
     text(String(i + 1), x + 25, y + 4, { align: "center", color: "#ffe08a", size: 14 });
     wrapText(PSALMS[i].title, 6.5, 46).slice(0, 2).forEach((l, n) => text(l, x + 25, y + 23 + n * 8, { align: "center", color: "#c8b8ff", size: 6.5, serif: true, edge: null }));
     if (done) text("\u2713 " + (save.best[i] || 0), x + 25, y + 40, { align: "center", color: "#74c07a", size: 6.5, edge: null });
@@ -2197,7 +2342,7 @@ function drawPsalms(t) {
   const next = psalmPage < pages - 1 ? button("\u25B6", W - 18, 52, 16, 26, false) : null;
   const P = PSALMS[psalmIndex];
   text("Psalm " + P.num + " \u00B7 " + P.title, W / 2, 132, { align: "center", color: "#ffe08a", size: 8.5 });
-  text(psalmIndex === B.to - 1 && bookIndex < 4 && !bookOpen(bookIndex + 1) ? "Sing this psalm to open " + BOOKS[bookIndex + 1].name.replace("BOOK", "Book") : firstLine(psalmIndex), W / 2, 143, { align: "center", color: "#ffffff", size: 8, serif: true });
+  text(firstLine(psalmIndex), W / 2, 143, { align: "center", color: "#ffffff", size: 8, serif: true });
   const back = button("BACK", 8, 158, 48, 17, false);
   const go = button("RUN", W / 2 - 30, 158, 60, 17, true);
   text(Snd.on ? "SOUND ON (M)" : "SOUND OFF (M)", W - 10, 162, { align: "right", color: "#8a80a8", size: 7 });
@@ -2229,7 +2374,7 @@ function drawPause() {
   const quit = button("QUIT", W / 2 - 40, 128, 80, 20, false);
   for (const tp of input.taps) {
     if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; jumpPointers.clear(); }
-    else if (tp.key === "KeyQ" || (tp.x !== undefined && inBox(tp, quit))) { state = "psalms"; Snd.stop(); }
+    else if (tp.key === "KeyQ" || (tp.x !== undefined && inBox(tp, quit))) { state = game.mode === "book" ? "psalms" : "title"; Snd.stop(); }
   }
   input.taps = [];
 }
@@ -2239,10 +2384,10 @@ function drawOver(t) {
   text("FALLEN, BUT NOT FORSAKEN", W / 2, 40, { align: "center", color: "#ffe08a", size: 11 });
   wrapText("“The just man shall fall seven times and shall rise again.” Proverbs 24:16", 8, 260).forEach((l, i) => text(l, W / 2, 62 + i * 10, { align: "center", size: 8 }));
   const go = button("RISE AGAIN", W / 2 - 50, 100, 100, 20, true);
-  const quit = button("PSALMS", W / 2 - 50, 128, 100, 20, false);
+  const quit = button(game.mode === "book" ? "PSALMS" : "TITLE", W / 2 - 50, 128, 100, 20, false);
   for (const tp of input.taps) {
     if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { game.score = game.phaseScore; player = null; startPhase(game.psalm, game.phase, false); }
-    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, quit))) state = "psalms";
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, quit))) state = game.mode === "book" ? "psalms" : "title";
   }
   input.taps = [];
 }
@@ -2253,21 +2398,62 @@ function drawDone(t) {
   drawFigure(game.saint.look, W / 2 - 6, 40, Math.floor(t * 4), { still: true });
   const last = PSALMS[game.psalm].verses[PSALMS[game.psalm].verses.length - 1];
   wrapText("“" + last + "”", 8, 270).slice(0, 3).forEach((l, i) => text(l, W / 2, 72 + i * 10, { align: "center", color: "#3a2a1a", edge: null, size: 8 }));
-  text("SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, 108, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
+  text(game.saint.auto ? "SCORE " + game.score : "SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, joined && opened ? 101 : 108, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
   let ny = 122;
-  if (joined) { const msg = joined.name + " has joined you!", mw = measure(msg, 10); ny = opened ? 117 : 122; text(msg, W / 2 + 8, ny, { align: "center", color: "#2f7a3a", edge: "#fff8e0", size: 10 }); drawFigure(joined.look, W / 2 + 8 - mw / 2 - 18, ny - 10, Math.floor(t * 8), {}); ny += 12; }
-  if (opened) text(opened.name.replace("BOOK", "Book") + " of the Psalter is open!", W / 2, ny, { align: "center", color: "#3a4a9a", edge: "#fff8e0", size: 9 });
+  if (joined) { const msg = joined === JESUS ? (alsoJoined ? alsoJoined.name + " joins you, and Our Lord has come!" : "Our Lord has come! Watch Him from the title page.") : joined.name + " has joined you!", mw = measure(msg, 10); ny = opened ? 117 : 122; text(msg, W / 2 + 8, ny, { align: "center", color: "#2f7a3a", edge: "#fff8e0", size: 10 }); drawFigure(joined.look, W / 2 + 8 - mw / 2 - 18, ny - 10, Math.floor(t * 8), {}); ny += 12; }
+  if (opened) text("All of " + opened.name.replace("BOOK", "Book") + " sung!", W / 2, ny, { align: "center", color: "#3a4a9a", edge: "#fff8e0", size: 9 });
   const read = button("READ PSALM", W / 2 - 154, 142, 100, 20, false);
-  const next = psalmOpen(game.psalm + 1) ? button("NEXT PSALM", W / 2 - 50, 142, 100, 20, true) : null;
-  const menu = button("PSALMS", W / 2 + 54, 142, 100, 20, !next);
+  // What comes next depends on the way of playing: in a book, the next psalm;
+  // a random psalm, another or home; a picked psalm, another pick or home.
+  const M = game.mode, final = game.psalm >= 149;
+  const midLabel = M === "random" ? "ANOTHER" : M === "pick" ? "PICK AGAIN" : final ? null : "NEXT PSALM";
+  const mid = midLabel ? button(midLabel, W / 2 - 50, 142, 100, 20, M !== "random") : null;
+  const menu = button(M === "book" ? "PSALMS" : "TITLE", W / 2 + 54, 142, 100, 20, M === "random" || !mid);
   const leave = () => { joined = null; opened = null; };
+  const onMid = () => { leave(); if (M === "random") runPsalm(randomPsalm()); else if (M === "pick") state = "pick"; else runPsalm(game.psalm + 1); };
+  const onMenu = () => { leave(); if (M === "book") { goPsalm(Math.min(game.psalm + 1, BOOKS[bookOf(game.psalm)].to - 1)); state = "psalms"; } else state = "title"; };
   for (const tp of input.taps) {
     if (tp.key === "KeyR" || (tp.x !== undefined && inBox(tp, read))) { reading = 0; state = "read"; Snd.sfx("select"); }
-    else if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) { leave(); goPsalm(game.psalm + 1); startPsalm(game.psalm + 1); }
-    else if (tp.key === "Escape" || (!next && tp.key === "Enter") || (tp.x !== undefined && inBox(tp, menu))) { leave(); goPsalm(psalmOpen(game.psalm + 1) ? game.psalm + 1 : game.psalm); state = "psalms"; }
+    else if (mid && tp.x !== undefined && inBox(tp, mid)) onMid();
+    else if (tp.x !== undefined && inBox(tp, menu)) onMenu();
+    else if (tp.key === "Enter") { if (M === "random" || !mid) onMenu(); else onMid(); }
+    else if (tp.key === "Escape") onMenu();
   }
   input.taps = [];
 }
+// Any psalm at all: a grid of the hundred and fifty.
+let pickIndex = 0;
+function drawPick(t) {
+  titleSky(t);
+  const watch = game.mode === "watch";
+  text(watch ? "WHAT SHALL " + (game.saint === JESUS ? "OUR LORD" : "OUR LADY") + " SING?" : "CHOOSE ANY PSALM", W / 2, 3, { align: "center", color: "#ffe08a", size: 10 });
+  const boxes = [];
+  for (let i = 0; i < 150; i++) {
+    const x = 10 + (i % 15) * 20, y = 17 + Math.floor(i / 15) * 11.5, hot = i === pickIndex;
+    rect(x, y, 19, 10.5, hot ? "#e8b94a" : save.sung[i] ? "#2a4a34" : "#221a36");
+    text(String(i + 1), x + 9.5, y + 1.5, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", size: 6.5, edge: null });
+    boxes.push({ x, y, w: 19, h: 10.5, i });
+  }
+  const P = PSALMS[pickIndex];
+  text("Psalm " + P.num + " \u00B7 " + P.title, W / 2, 134, { align: "center", color: "#ffe08a", size: 8.5 });
+  text(firstLine(pickIndex), W / 2, 145, { align: "center", color: "#ffffff", size: 8, serif: true });
+  const back = button("BACK", 8, 160, 48, 16, false);
+  const rnd = button("RANDOM", W / 2 - 92, 160, 70, 16, false);
+  const go = button(watch ? "WATCH" : "RUN", W / 2 - 14, 160, 70, 16, true);
+  for (const tp of input.taps) {
+    if (tp.key === "ArrowLeft") pickIndex = Math.max(0, pickIndex - 1);
+    else if (tp.key === "ArrowRight") pickIndex = Math.min(149, pickIndex + 1);
+    else if (tp.key === "ArrowUp") pickIndex = Math.max(0, pickIndex - 15);
+    else if (tp.key === "ArrowDown") pickIndex = Math.min(149, pickIndex + 15);
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = watch ? "title" : "select";
+    else if (tp.x !== undefined && inBox(tp, rnd)) pickIndex = randomPsalm();
+    else if (tp.key === "Enter" || tp.key === "Space" || (tp.x !== undefined && inBox(tp, go))) { runPsalm(pickIndex); break; }
+    else if (tp.x !== undefined) for (const b of boxes) if (inBox(tp, b)) { if (pickIndex === b.i) { runPsalm(b.i); break; } pickIndex = b.i; }
+    Snd.sfx("select");
+  }
+  input.taps = [];
+}
+
 // The whole psalm, one verse at a time, read at the player's own pace.
 let reading = 0;
 function drawRead(t) {
@@ -2298,7 +2484,7 @@ const FAST = Math.max(1, +(new URLSearchParams(location.search).get("fast")) || 
 function frame(now) {
   const dt = clamp((now - last) / 1000, 0, 0.05); last = now; clock += dt;
   ctx.setTransform(R, 0, 0, R, 0, 0); ctx.imageSmoothingEnabled = false;
-  if (state === "title" || state === "select" || state === "psalms" || state === "done" || state === "read") Snd.play("title");
+  if (state === "title" || state === "select" || state === "psalms" || state === "done" || state === "read" || state === "pick") Snd.play("title");
   Snd.update();
   if (state === "play") { for (let k = 0; k < FAST && state === "play"; k++) update(dt); if (state === "play" || state === "trans") drawPlay(); }
   if (state === "trans") drawTransition(dt);
@@ -2309,6 +2495,7 @@ function frame(now) {
   else if (state === "over") drawOver(clock);
   else if (state === "done") drawDone(clock);
   else if (state === "read") drawRead(clock);
+  else if (state === "pick") drawPick(clock);
   // On a tall screen, a word to turn the phone.
   if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
   requestAnimationFrame(frame);
@@ -2319,8 +2506,9 @@ requestAnimationFrame(frame);
 const Q = new URLSearchParams(location.search);
 if (Q.has("psalm")) { game.saint = SAINTS[+(Q.get("saint") || 0)] || SAINTS[0]; goPsalm(+Q.get("psalm") - 1); startPsalm(+Q.get("psalm") - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
 if (Q.has("god")) window.__god = true;
+if (Q.has("watch")) { game.mode = "watch"; game.saint = Q.get("watch") === "jesus" ? JESUS : MARY; runPsalm(+(Q.get("psalm") || 1) - 1); if (Q.has("phase")) startPhase(game.psalm, +Q.get("phase") - 1, false); }
 if (Q.has("unlock")) { window.__unlock = true; save.open = 151; }
-window.PR = { get save() { return save; }, goPsalm, step(dt) { update(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
+window.PR = { get save() { return save; }, MARY, JESUS, runPsalm, goPsalm, step(dt) { update(dt); if (state === "play") drawPlay(); else if (state === "trans") drawTransition(dt); }, phasesOf, SAINTS, get state() { return state; }, get game() { return game; }, get player() { return player; }, get world() { return world; }, get camY() { return camY; }, startPhase, input, solidUnder, setState(s) { state = s; } };
 </script>
 </body>
 </html>

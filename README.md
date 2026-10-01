@@ -67,24 +67,46 @@ fire and gaps on his board and sends a rolling wave along the ground; St.
 Scholastica jumps twice and calls down a storm.
 
 The title page shows the five books of the Psalter (Psalms 1–41, 42–72,
-73–89, 90–106 and 107–150). Book I is open from the start. Each book closes
-with a doxology ("Blessed be the Lord, the God of Israel... Amen. Amen."), and
-singing that closing psalm opens the next book. Within an open book any psalm
-can be sung, in any order. After each psalm, READ PSALM steps through the whole
-psalm one verse at a time, a tap for each verse.
+73–89, 90–106 and 107–150), all open from the start; within a book any psalm
+can be sung, in any order. Below the books are the other ways to play:
 
-Five more saints join the run, one for every thirty psalms sung:
+- **Random**: choose a saint, run a psalm chosen at random, then go home to
+  the title page (or straight on to another).
+- **Pick a psalm**: choose a saint, then any of the 150 from a grid.
+- **Watch Mary**: choose a psalm and watch the Blessed Virgin Mary run it. The
+  computer plays her, and she plays perfectly. It looks ahead and foresees
+  where every foe and hazard will be (the swing of a fireball, the fall of the
+  hail, the stroke of the lightning, the chariots coming up from behind), and
+  she runs the lowest path nothing can touch, borne up on light when she must
+  rise. She throws the gifts of every saint, chosen at random: roses, joy,
+  medals, waves, rain, seeds, notes, rocks, hearts and eyes. In tests she ran
+  all 510 stages without being touched once.
+- **Watch Jesus**: comes when every book has been sung. Our Lord runs as Mary
+  does, perfectly, with one weapon: the cross, full of light, which nothing
+  stands against.
 
-- **St. Hildegard** (after Psalm 30) throws seeds. Where a seed lands a green
+After each psalm, READ PSALM steps through the whole psalm one verse at a
+time, a tap for each verse.
+
+Each saint plays differently: St. Therese floats down like a petal and throws
+roses; St. Joseph of Cupertino levitates and bursts with ecstatic joy; St.
+Benedict throws his medal straight through two foes; St. Maurus, who at St.
+Benedict's word walked on the water to save St. Placidus, surfs across rivers,
+fire and gaps on his board and sends a rolling wave along the ground; St.
+Scholastica jumps twice and calls down a storm.
+
+Five more saints join the run, one for each whole book of the Psalter sung:
+
+- **St. Hildegard** (Book I) throws seeds. Where a seed lands a green
   vine springs up and keeps striking whatever walks into it.
-- **St. Cecilia** (after Psalm 60) throws musical notes that weave up and down
+- **St. Cecilia** (Book II) throws musical notes that weave up and down
   and pass through two foes. Each throw sounds a note in the key and on the
   beat of the music that is playing.
-- **St. Peter** (after Psalm 90) throws rocks. They are heavy: they bounce once,
+- **St. Peter** (Book III) throws rocks. They are heavy: they bounce once,
   strike twice as hard, and smash fireballs, falling drops and broken jars.
-- **St. Augustine** (after Psalm 120) throws flaming hearts that turn and seek
+- **St. Augustine** (Book IV) throws flaming hearts that turn and seek
   the nearest foe.
-- **St. Lucy** (after Psalm 150) throws eyes. Each one hangs in the air ahead of
+- **St. Lucy** (Book V) throws eyes. Each one hangs in the air ahead of
   her for a while, watching, and sends a beam of light at any foe that comes
   near.
 
