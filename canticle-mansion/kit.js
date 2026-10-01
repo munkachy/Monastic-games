@@ -157,3 +157,38 @@ function shepherd(x, y, o) {
     draw: (c, n, t) => figure(c, n.x, n.y, { robe: "#8a6a4a", skin: "#d8a47a", beard: "#d8d4cc", headcloth: "#e8dcc0", staff: true, face: n.face, still: false }, t),
     update(n, dt) { n.t += dt; n.face = Game.monk.x < n.x ? -1 : 1; } }, o || {});
 }
+
+// ---- Gates -----------------------------------------------------------------------------------
+// A gate across a passage that stands until its condition is met, then lifts.
+function Gate(x, y, h, cond, o) {
+  o = o || {};
+  return { x: x * T, y: y * T, w: (o.w || 1) * T, h: h * T, x0: x * T, y0: y * T, t: 0, dx: 0, dy: 0, solid: true, gate: true, lift: 0,
+    update(g, dt) { if (cond()) { if (!g.opened) { g.opened = true; Snd.sfx("door"); } g.lift += dt * 1.5; g.y = g.y0 - g.lift * g.h; if (g.lift >= 1) g.gone = true; } },
+    draw(c, g) {
+      const col = o.col || "#6a4a2a";
+      for (let i = 0; i < g.h; i += 12) px(c, g.x + 1, g.y + i + 2, g.w - 2, 3, shade(col, 0.2));
+      for (let i = 2; i < g.w; i += 6) px(c, g.x + i, g.y, 3, g.h, col);
+      if (o.lock && !g.opened) { px(c, g.x + g.w / 2 - 4, g.y + g.h / 2 - 4, 8, 8, "#c8962a"); px(c, g.x + g.w / 2 - 1, g.y + g.h / 2 - 1, 2, 3, "#3a2410"); }
+    } };
+}
+// ---- Roes and harts --------------------------------------------------------------------------
+function roe(c, x, y, t, o) {
+  o = o || {}; const face = o.face || 1, leap = o.leap || 0, col = o.col || "#b87a3a", s = o.s || 1;
+  c.save(); c.translate(Math.round(x), Math.round(y)); c.scale(face * s, s);
+  const legs = leap ? 1 : Math.floor(t * 8) % 2;
+  px(c, -8, -9, 16, 7, "#06040a"); px(c, -7, -8, 14, 5, col); px(c, -7, -8, 14, 1, shade(col, 0.25)); px(c, -7, -4, 14, 1, "#f0e0c8");
+  px(c, 5, -15, 4, 8, "#06040a"); px(c, 6, -14, 2, 7, col); px(c, 6, -17, 6, 4, "#06040a"); px(c, 7, -16, 4, 2, col); px(c, 10, -16, 1, 1, "#06040a");
+  if (o.hart) { px(c, 6, -22, 1, 6, "#5a3a1a"); px(c, 8, -23, 1, 7, "#5a3a1a"); px(c, 4, -21, 2, 1, "#5a3a1a"); px(c, 9, -21, 2, 1, "#5a3a1a"); }
+  px(c, -9, -9, 2, 2, "#f0e0c8");
+  if (leap) { px(c, -7, -3, 2, 4, col); px(c, -9, -2, 2, 2, col); px(c, 5, -3, 2, 4, col); px(c, 7, -6, 2, 3, col); }
+  else { px(c, -6 + legs, -3, 1, 4, shade(col, -0.3)); px(c, -3 - legs, -3, 1, 4, shade(col, -0.3)); px(c, 3 + legs, -3, 1, 4, shade(col, -0.3)); px(c, 6 - legs, -3, 1, 4, shade(col, -0.3)); }
+  c.restore();
+}
+function sheep(c, x, y, t, o) {
+  o = o || {}; const face = o.face || 1, fl = Math.floor(t * 6) % 2, wet = o.wet;
+  c.save(); c.translate(Math.round(x), Math.round(y)); c.scale(face, 1);
+  px(c, -9, -10, 18, 9, "#06040a"); px(c, -8, -9, 16, 7, wet ? "#e8f0ff" : "#f4f0e8"); for (let i = -7; i < 8; i += 3) px(c, i, -9, 2, 2, "#ffffff");
+  px(c, 7, -10, 5, 6, "#06040a"); px(c, 8, -9, 3, 4, "#3a3030"); px(c, 10, -8, 1, 1, "#ffffff");
+  px(c, -6, -2, 2, 3 - fl, "#3a3030"); px(c, -2, -2, 2, 2 + fl, "#3a3030"); px(c, 3, -2, 2, 3 - fl, "#3a3030"); px(c, 6, -2, 2, 2 + fl, "#3a3030");
+  c.restore();
+}

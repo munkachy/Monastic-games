@@ -38,7 +38,31 @@ const VERSE = {
     ctx.restore();
   },
 };
+// The points of a text: drawn once on a small canvas, read back, kept.
+const POINTS = new Map();
+function textPoints(tx, L, step) {
+  const key = tx.v + ":" + (tx.part || "") + ":" + L.size + ":" + (tx.w || 0) + ":" + tx.style;
+  if (POINTS.has(key)) return POINTS.get(key);
+  const k = 3, w = Math.ceil((tx.w || 300) * k), h = Math.ceil(L.lines.length * L.lh * k + L.size * k);
+  const cv = mk(w, h), c = cv.getContext("2d");
+  c.font = L.st.font(L.size * k); c.textBaseline = "top"; c.textAlign = "center"; c.fillStyle = "#fff";
+  L.lines.forEach((l, i) => c.fillText(l, w / 2, i * L.lh * k));
+  const d = c.getImageData(0, 0, w, h).data, pts = [], s = step * k;
+  for (let y = 0; y < h; y += s) for (let x = 0; x < w; x += s) if (d[(Math.floor(y) * w + Math.floor(x)) * 4 + 3] > 128) pts.push([x / k - (tx.w || 300) / 2, y / k, Math.random()]);
+  POINTS.set(key, pts); return pts;
+}
 const STYLE = {
+  // Spelled in stars on the night sky, each star twinkling in its turn.
+  stars: { size: 18, lh: 1.2, font: (s) => "700 " + s + "px " + FONT.carved,
+    draw(c, L, x, y, tx, t) {
+      for (const [px0, py0, r] of textPoints(tx, L, 1.6)) { const a = 0.45 + 0.55 * Math.abs(Math.sin(t * (1 + r) + r * 20)); c.fillStyle = "rgba(255,250,230," + a + ")"; c.fillRect(x + px0 - 0.5, y + py0 - 0.5, r > 0.92 ? 1.6 : 1, r > 0.92 ? 1.6 : 1); }
+    } },
+  // Set out in a flower-bed: each stroke of each letter a little bloom.
+  flowers: { size: 16, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
+    draw(c, L, x, y, tx, t) {
+      const cols = ["#ff7aa8", "#ffffff", "#ffe08a", "#c8a0ff", "#ff9a5a"];
+      for (const [px0, py0, r] of textPoints(tx, L, 2)) { const sway = Math.sin(t * 1.4 + px0 * 0.1) * 0.4; c.fillStyle = "#3a7a2e"; c.fillRect(x + px0 + sway, y + py0 + 0.8, 0.6, 1.4); c.fillStyle = cols[Math.floor(r * 5)]; c.fillRect(x + px0 - 0.9 + sway, y + py0 - 0.9, 1.8, 1.8); }
+    } },
   // Cut into stone: dark in the cut, light on its lower lip.
   carved: { size: 9, upper: true, lh: 1.45, font: (s) => "600 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx) { L.lines.forEach((l, i) => { const yy = y + i * L.lh; c.fillStyle = tx.light || "rgba(255,240,215,0.35)"; c.fillText(l, x, yy + 0.6); c.fillStyle = tx.color || "rgba(30,20,14,0.85)"; c.fillText(l, x, yy); }); } },
@@ -58,7 +82,7 @@ const STYLE = {
     draw(c, L, x, y, tx) { c.fillStyle = tx.color || "rgba(70,30,20,0.85)"; L.lines.forEach((l, i) => c.fillText(l, x, y + i * L.lh)); } },
   // Across the sky, large and pale, moving slower than the land.
   sky: { size: 20, lh: 1.15, font: (s) => "italic 500 " + s + "px " + FONT.sky,
-    draw(c, L, x, y, tx, t) { c.fillStyle = tx.color || "rgba(255,255,255,0.55)"; L.lines.forEach((l, i) => c.fillText(l, x + Math.sin(t * 0.3 + i) * 2, y + i * L.lh)); } },
+    draw(c, L, x, y, tx, t) { c.shadowColor = tx.shadow || "rgba(20,30,70,0.55)"; c.shadowBlur = 4; c.fillStyle = tx.color || "rgba(255,255,255,0.55)"; L.lines.forEach((l, i) => c.fillText(l, x + Math.sin(t * 0.3 + i) * 2, y + i * L.lh)); c.shadowBlur = 0; } },
   // Pressed into the sand: flattened, shadowed.
   sand: { size: 13, lh: 1.1, font: (s) => "italic 600 " + s + "px " + FONT.book,
     draw(c, L, x, y, tx) { c.translate(x, y); c.scale(1, 0.55); L.lines.forEach((l, i) => { c.fillStyle = "rgba(255,240,200,0.35)"; c.fillText(l, 0, i * L.lh + 1); c.fillStyle = tx.color || "rgba(110,70,30,0.65)"; c.fillText(l, 0, i * L.lh); }); } },
