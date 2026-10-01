@@ -173,7 +173,7 @@ Pharaoh's throne room and across a chasm on his chariots; the chains of gold,
 climbing a seated bride with little goldsmiths who climb beside you; the king
 at his repose and a bundle of myrrh as tall as a tower; the vineyards of
 Engaddi; the fair one whose eyes are doves; and the bed beneath the beams of
-cedar. Chapters II to VIII are being built.
+cedar. Chapter II, "The Lily among Thorns", has ten rooms: lilies among thorns, the apple tree to climb, the cellar of wine with its verse set out in flowers, roes and harts leaping across a field, the mountains where the sandals of the roe let you leap again in the air, the lattice over the garden wall, the winter passing into spring, the clefts of the rock full of doves, the little foxes to catch before the vineyard gate opens, and the break of day. Chapters III to VIII are being built.
 
 The engine is new (`engine.js`): rooms joined by doors, tile physics with
 stackable objects, lighting, and the verses lettered at full resolution

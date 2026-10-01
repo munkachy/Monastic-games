@@ -264,7 +264,9 @@ function hurtFoe(f, n, fromX) {
   } else Snd.sfx("block");
 }
 function hurtMonk(m, fromX) {
-  if (m.inv > 0 || Game.god) return;
+  if (m.inv > 0) return;
+  Game.hurtCount = (Game.hurtCount || 0) + 1;
+  if (Game.god) { m.inv = 1.1; return; }
   m.hearts--; m.inv = 1.1; Snd.sfx("hurt"); Game.shake = 0.25;
   m.vx = (m.x + m.w / 2 < fromX ? -1 : 1) * 150; m.vy = -200; m.lock = 0.2;
   if (m.carry) dropCarry(m, true);
@@ -358,7 +360,10 @@ function stepMonk(m, dt) {
   } else {
     const acc = m.ground ? P.accel : P.airAccel;
     const top = P.run * (m.carry ? 0.85 : 1) * (Game.slow || 1);
-    m.vx = approach(m.vx, dir * top, acc * dt);
+    // Wind: the north wind and the south, gusts on the heights.
+    let wind = 0;
+    for (const u of R.winds || []) if (overlap(m, { x: u.x * T, y: u.y * T, w: u.w * T, h: u.h * T })) wind += u.push * (u.gust ? 0.6 + 0.4 * Math.sin(World.t * u.gust) : 1);
+    m.vx = approach(m.vx, dir * top + wind, acc * dt);
     if (dir) m.face = dir;
     m.vy = Math.min(m.vy + P.grav * dt, P.fall);
     // Sliding down a wall, slowly, when leaning into it.
@@ -406,7 +411,7 @@ function wallLeap(m) {
   Snd.sfx("jump");
   for (let i = 0; i < 6; i++) World.parts.push({ x: m.wall > 0 ? m.x + m.w : m.x, y: m.y + 12 + Math.random() * 8, vx: -m.wall * Math.random() * 60, vy: -Math.random() * 40, g: 200, life: 0.3, c: "#d8d0c0", s: 1 });
 }
-function startDash(m, dir) { if (m.dashCd > 0 || m.carry) return; m.dash = 0.2; m.dashDir = dir; m.face = dir; m.dashCd = 0.6; Snd.sfx("float"); }
+function startDash(m, dir) { if (m.dashCd > 0 || m.carry) return; m.dash = 0.3; m.dashDir = dir; m.face = dir; m.dashCd = 0.6; Snd.sfx("float"); }
 function breakTile(tx, ty) {
   World.grid[ty * World.w + tx] = 0; Snd.sfx("rod");
   for (let i = 0; i < 12; i++) World.parts.push({ x: tx * T + 8, y: ty * T + 8, vx: (Math.random() - 0.5) * 140, vy: -Math.random() * 160, g: 600, life: 0.7, c: i % 2 ? "#8a7a68" : "#5a4c3e", s: 2 });
@@ -643,6 +648,7 @@ function stepPlay(dt) {
     else if (mv.path) { const p = mv.path, period = mv.period || 4, u = (Math.sin(mv.t * Math.PI * 2 / period - Math.PI / 2) + 1) / 2; mv.x = mv.x0 + (p[0] * T) * u; mv.y = mv.y0 + (p[1] * T) * u; }
     mv.dx = mv.x - ox; mv.dy = mv.y - oy;
   }
+  World.movers = World.movers.filter((mv) => !mv.gone);
   // Objects fall and settle, lowest first, so stacks rest on what is under them.
   World.bodies.sort((a, b) => b.y - a.y);
   for (const b of World.bodies) {
