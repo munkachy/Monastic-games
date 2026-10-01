@@ -10,7 +10,7 @@ const POWERS = {
   helmet:  { name: "The Helmet", text: "A thousand bucklers: one more heart, and you break cracked stone from below." },
   chariot: { name: "The Chariot of Aminadab", text: "Double-tap low on the screen to dash that way (C or Shift on keys)." },
   gloves:  { name: "The Climber's Gloves", text: "I will go up into the palm tree: in the air, hold toward a wall to climb it." },
-  seal:    { name: "The Seal upon Thy Heart", text: "Love is strong as death: your holy water burns as flame, through two at once." },
+  seal:    { name: "The Seal upon Thy Heart", text: "Love is strong as death: your holy water burns as flame, through two at once, and sets cedar barricades alight." },
 };
 Game.gainPower = function (key) {
   save.powers[key] = true; store();
@@ -206,7 +206,7 @@ function drawEnd(t) {
   const g = sx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#f7f0dc"); g.addColorStop(1, "#ead8b0"); sx.fillStyle = g; sx.fillRect(0, 0, W, H);
   const ch = Game.chapter, vs = CANTICLE[ch - 1];
   uiText("CANTICLE OF CANTICLES " + ROMAN[ch], W / 2, 8, { align: "center", size: 11, color: "#7a1f2b", edge: null, font: FONT.carved });
-  uiText(CHAPTER_TITLES[ch - 1], W / 2, 24, { align: "center", size: 8, color: "#8a6a4a", edge: null });
+  uiText(CHAPTER_TITLES[ch - 1] + (ch === 8 ? " · Here endeth the Canticle of Canticles" : ""), W / 2, 24, { align: "center", size: 8, color: "#8a6a4a", edge: null });
   sx.save(); sx.beginPath(); sx.rect(20, 38, W - 40, 148); sx.clip();
   sx.font = "10px " + FONT.book; sx.textBaseline = "top";
   let y = 40 - Game.scrollY;
