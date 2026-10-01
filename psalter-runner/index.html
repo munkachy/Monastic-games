@@ -16,8 +16,9 @@
 "use strict";
 // Psalter Runner: a 16-bit auto-runner through all 150 psalms.
 // One file, nothing to load. Left half of the screen: tap to jump, hold to
-// float. Right half: tap to attack. Keys: Space / Up / W to jump (hold to
-// float), X / J / Enter to attack, P or Esc to pause, M for sound.
+// float. Right half: tap to attack, hold to run faster (the longer the hold,
+// the faster). Keys: Space / Up / W to jump (hold to float), X / J / Enter to
+// attack, Right or D to run faster, P or Esc to pause, M for sound.
 
 // ---- The psalms ------------------------------------------------------------------
 // The text in the background, and under the run: the Douay-Rheims Bible
@@ -423,11 +424,14 @@ const Snd = (() => {
 })();
 
 // ---- Saved progress --------------------------------------------------------------
-let save = { best: [], open: 1, sung: [], saint: 0, sound: true };
+let save = { best: [], times: [], open: 1, sung: [], saint: 0, sound: true };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("psalter-runner") || "{}")); } catch (e) { }
 // Older saves kept only how far the player had come: every psalm before that was sung.
 if (!save.sung.length) for (let i = 0; i < save.open - 1; i++) save.sung[i] = true;
+if (!save.times) save.times = [];
 function store() { try { localStorage.setItem("psalter-runner", JSON.stringify(save)); } catch (e) { } }
+// A time in seconds as minutes, seconds and tenths: 1:23.4.
+const hms = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") + "." + Math.floor((t * 10) % 10);
 const sungCount = () => save.sung.filter(Boolean).length;
 // The five books of the Psalter. All are open from the start; finishing a
 // whole book brings a new saint, and finishing all five brings Our Lord.
@@ -555,8 +559,9 @@ function drawFigure(L, x, y, f, opt) {
 }
 
 // ---- Input ------------------------------------------------------------------------
-const input = { jumpHeld: false, jumpPressed: false, attackPressed: false, taps: [] };
-const jumpPointers = new Set();
+// The right side: a tap throws, and holding it runs faster (see update).
+const input = { jumpHeld: false, jumpPressed: false, attackPressed: false, rushHeld: false, taps: [] };
+const jumpPointers = new Set(), rushPointers = new Set();
 function toGame(ev) { return { x: (ev.clientX - offX) / scale, y: (ev.clientY - offY) / scale }; }
 // Touches anywhere on the screen count, not only on the picture: on a phone
 // held upright, the black space above and below is part of the controls.
@@ -567,10 +572,11 @@ addEventListener("pointerdown", (ev) => {
   if (state === "play") {
     if (p.x > W - 22 && p.x <= W && p.y >= 0 && p.y < 20) { pause(); return; }
     if (ev.clientX < innerWidth / 2) { jumpPointers.add(ev.pointerId); input.jumpHeld = true; input.jumpPressed = true; }
-    else input.attackPressed = true;
+    else { input.attackPressed = true; rushPointers.add(ev.pointerId); input.rushHeld = true; }
   } else input.taps.push(p);
 }, { passive: false });
-const release = (ev) => { jumpPointers.delete(ev.pointerId); input.jumpHeld = jumpPointers.size > 0; };
+const RUSH_KEYS = ["ArrowRight", "KeyD"];
+const release = (ev) => { jumpPointers.delete(ev.pointerId); rushPointers.delete(ev.pointerId); input.jumpHeld = jumpPointers.size > 0; input.rushHeld = rushPointers.size > 0 || RUSH_KEYS.some((k) => keys.has(k)); };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);
 addEventListener("contextmenu", (e) => e.preventDefault());
 const JUMP_KEYS = ["Space", "ArrowUp", "KeyW", "KeyZ"], ATTACK_KEYS = ["KeyX", "KeyJ", "Enter", "KeyK"];
@@ -582,11 +588,12 @@ addEventListener("keydown", (e) => {
   if (state === "play") {
     if (JUMP_KEYS.includes(e.code)) { input.jumpHeld = true; input.jumpPressed = true; e.preventDefault(); }
     if (ATTACK_KEYS.includes(e.code)) { input.attackPressed = true; e.preventDefault(); }
+    if (RUSH_KEYS.includes(e.code)) { input.rushHeld = true; e.preventDefault(); }
     if (e.code === "KeyP" || e.code === "Escape") pause();
   } else input.taps.push({ key: e.code });
   if (e.code === "KeyM") Snd.toggle();
 });
-addEventListener("keyup", (e) => { keys.delete(e.code); if (JUMP_KEYS.includes(e.code)) input.jumpHeld = jumpPointers.size > 0 || JUMP_KEYS.some((k) => keys.has(k)); });
+addEventListener("keyup", (e) => { keys.delete(e.code); if (JUMP_KEYS.includes(e.code)) input.jumpHeld = jumpPointers.size > 0 || JUMP_KEYS.some((k) => keys.has(k)); if (RUSH_KEYS.includes(e.code)) input.rushHeld = rushPointers.size > 0 || RUSH_KEYS.some((k) => keys.has(k)); });
 addEventListener("blur", () => { if (state === "play") pause(); });
 
 // ---- Things in the world -------------------------------------------------------------
@@ -1628,7 +1635,7 @@ function drawPlat(p, camX, camY) {
 
 // ---- The game ----------------------------------------------------------------------------
 let state = "title";
-const game = { mode: "book", psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0 };
+const game = { mode: "book", psalm: 0, phase: 0, score: 0, phaseScore: 0, saint: SAINTS[save.saint] || SAINTS[0], time: 0, run: 0, newBestTime: false };
 let world = null, player = null, shots = [], parts = [], trans = null, banner = 0, camX = 0, camY = 0;
 let selectIndex = save.saint || 0, psalmIndex = 0, bookIndex = 0;
 
@@ -1648,10 +1655,11 @@ function startPhase(pi, ph, keepHearts) {
   player.y = start.y - player.h;
   shots = []; parts = []; camX = -80; camY = 0; banner = 3.2;
   input.jumpPressed = false; input.attackPressed = false; input.jumpHeld = false; jumpPointers.clear();
+  input.rushHeld = false; rushPointers.clear();
   game.phaseScore = game.score;
   state = "play";
 }
-function startPsalm(pi) { game.score = 0; player = null; startPhase(pi, 0, false); }
+function startPsalm(pi) { game.score = 0; game.run = 0; game.newBestTime = false; player = null; startPhase(pi, 0, false); }
 
 // What a body standing at x stands on (the highest solid whose top is below y).
 function solidUnder(x, yTop) {
@@ -1826,11 +1834,17 @@ function update(dt) {
   if (window.__bot) window.__bot(dt);   // testing only
   world.t += dt; game.time += dt;
   const P = world.P, s = game.saint;
+  if (!s.auto) game.run += dt;          // the clock on this psalm (Our Lady's and Our Lord's runs are watched, not timed)
   if (banner > 0) banner -= dt;
   if (shake > 0) shake -= dt;
   // Running: always forward. In the desert the wind holds you back in the air.
   const wind = P.wind ? P.wind * (0.6 + 0.4 * Math.sin(world.t * 1.3)) : 0;
-  const vx = P.speed * (player.ground ? 1 : 1 - wind);
+  // Holding the right side of the screen runs faster: a moment's hold, then the
+  // longer it is held, the faster the saint goes, up to nearly twice the pace.
+  // Let go and the pace eases back.
+  if (input.rushHeld && !s.auto) { player.rushHold = (player.rushHold || 0) + dt; player.rush = Math.min(0.9, Math.max(player.rush || 0, (player.rushHold - 0.2) * 0.45)); }
+  else { player.rushHold = 0; player.rush = Math.max(0, (player.rush || 0) - dt * 1.2); }
+  const vx = P.speed * (1 + (player.rush || 0)) * (player.ground ? 1 : 1 - wind);
   const prevBottom = player.y + player.h;
   player.x += vx * dt;
   if (s.auto) autoMove(dt);
@@ -2003,6 +2017,8 @@ function finishPsalm() {
   joined = null; opened = null;
   if (game.saint.auto) return;            // Our Lady's run and Our Lord's are watched, not counted
   save.best[game.psalm] = Math.max(save.best[game.psalm] || 0, game.score);
+  game.newBestTime = !save.times[game.psalm] || game.run < save.times[game.psalm];
+  if (game.newBestTime) save.times[game.psalm] = Math.round(game.run * 10) / 10;
   const before = SAINTS.filter(unlocked), lord = jesusOpen(), k = bookOf(game.psalm), wasDone = bookDone(k);
   save.sung[game.psalm] = true;
   save.open = Math.max(save.open, Math.min(151, game.psalm + 2));
@@ -2143,6 +2159,8 @@ function drawEntity(e) {
 function drawPlayer() {
   if (player.inv > 0 && Math.floor(player.inv * 12) % 2) return;
   const x = player.x - camX, y = player.y - camY, s = game.saint;
+  // Streaks of light behind a saint who is rushing.
+  if (player.rush > 0.15) { ctx.globalAlpha = Math.min(0.7, player.rush); for (let k = 0; k < 4; k++) { const len = 6 + player.rush * 18 + ((world.t * 60 + k * 7) % 6); rect(x - 4 - len, y + 4 + k * 5, len, 1, k % 2 ? "#ffe8b0" : "#ffffff"); } ctx.globalAlpha = 1; }
   // Our Lady and Our Lord are borne up on light.
   if (s.auto && !player.ground) {
     const c = s.id === "jesus" ? "#fff4c8" : "#cfe0ff";
@@ -2194,6 +2212,9 @@ function drawHud() {
   if (player.shield > 0) text("SHIELD " + player.shield, 4, 13, { color: "#ffe08a", size: 8 });
   if (s.hold && !s.auto) { rect(4, player.shield ? 24 : 14, 30, 3, "#2a2a3a"); rect(4, player.shield ? 24 : 14, 30 * clamp(player.float / s.floatTime, 0, 1), 3, "#9fd0ff"); }
   text(String(game.score).padStart(5, "0"), W - 26, 4, { align: "right", color: "#ffe08a" });
+  if (!s.auto) text(hms(game.run), W - 26, 14, { align: "right", color: "#cfe0ff", size: 7 });
+  // The rush: a gauge that fills as the right side is held.
+  if (player.rush > 0.02) { rect(W - 56, 23, 30, 3, "#2a2a3a"); rect(W - 56, 23, 30 * player.rush / 0.9, 3, "#ffcf5a"); }
   // Pause.
   rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
   // How far through the psalm: one notch for each phase.
@@ -2340,7 +2361,7 @@ function drawPsalms(t) {
     if (hot) rect(x, y, 50, 2, "#ffe08a");
     text(String(i + 1), x + 25, y + 4, { align: "center", color: "#ffe08a", size: 14 });
     wrapText(PSALMS[i].title, 6.5, 46).slice(0, 2).forEach((l, n) => text(l, x + 25, y + 23 + n * 8, { align: "center", color: "#c8b8ff", size: 6.5, serif: true, edge: null }));
-    if (done) text("\u2713 " + (save.best[i] || 0), x + 25, y + 40, { align: "center", color: "#74c07a", size: 6.5, edge: null });
+    if (done) text("\u2713 " + (save.best[i] || 0) + (save.times[i] ? " \u00B7 " + hms(save.times[i]).replace(/\.\d$/, "") : ""), x + 25, y + 40, { align: "center", color: "#74c07a", size: 6.5, edge: null });
     boxes.push({ x, y, w: 50, h: 50, i });
   }
   const prev = psalmPage > 0 ? button("\u25C0", 2, 52, 16, 26, false) : null;
@@ -2374,11 +2395,11 @@ function drawPause() {
   rect(0, 0, W, H, "#000000aa");
   text("PAUSED", W / 2, 40, { align: "center", color: "#ffe08a", size: 16 });
   text("Left half: tap to jump, hold to float", W / 2, 66, { align: "center", size: 8 });
-  text("Right half: tap to attack", W / 2, 78, { align: "center", size: 8 });
+  text("Right half: tap to attack, hold to run faster", W / 2, 78, { align: "center", size: 8 });
   const go = button("RESUME", W / 2 - 40, 100, 80, 20, true);
   const quit = button("QUIT", W / 2 - 40, 128, 80, 20, false);
   for (const tp of input.taps) {
-    if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; jumpPointers.clear(); }
+    if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; jumpPointers.clear(); input.rushHeld = false; rushPointers.clear(); }
     else if (tp.key === "KeyQ" || (tp.x !== undefined && inBox(tp, quit))) { state = game.mode === "book" ? "psalms" : "title"; Snd.stop(); }
   }
   input.taps = [];
@@ -2403,7 +2424,9 @@ function drawDone(t) {
   drawFigure(game.saint.look, W / 2 - 6, 40, Math.floor(t * 4), { still: true });
   const last = PSALMS[game.psalm].verses[PSALMS[game.psalm].verses.length - 1];
   wrapText("“" + last + "”", 8, 270).slice(0, 3).forEach((l, i) => text(l, W / 2, 72 + i * 10, { align: "center", color: "#3a2a1a", edge: null, size: 8 }));
-  text(game.saint.auto ? "SCORE " + game.score : "SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, joined && opened ? 101 : 108, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
+  const sy = joined && opened ? 95 : 100;
+  text(game.saint.auto ? "SCORE " + game.score : "SCORE " + game.score + "   BEST " + (save.best[game.psalm] || 0), W / 2, sy, { align: "center", color: "#7a1f2b", edge: null, size: 9 });
+  if (!game.saint.auto) text("TIME " + hms(game.run) + (game.newBestTime ? "   NEW BEST TIME!" : "   BEST " + hms(save.times[game.psalm])), W / 2, sy + 10, { align: "center", color: game.newBestTime ? "#3a7a2e" : "#7a1f2b", edge: null, size: 8 });
   let ny = 122;
   if (joined) { const msg = joined === JESUS ? (alsoJoined ? alsoJoined.name + " joins you, and Our Lord has come!" : "Our Lord has come! Watch Him from the title page.") : joined.name + " has joined you!", mw = measure(msg, 10); ny = opened ? 117 : 122; text(msg, W / 2 + 8, ny, { align: "center", color: "#2f7a3a", edge: "#fff8e0", size: 10 }); drawFigure(joined.look, W / 2 + 8 - mw / 2 - 18, ny - 10, Math.floor(t * 8), {}); ny += 12; }
   if (opened) text("All of " + opened.name.replace("BOOK", "Book") + " sung!", W / 2, ny, { align: "center", color: "#3a4a9a", edge: "#fff8e0", size: 9 });
