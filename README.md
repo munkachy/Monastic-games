@@ -75,6 +75,14 @@ jars, and the divine flames. Psalm 3: the many who rise up, the Lord as shield,
 a dream of beds and mattresses ("I have slept and taken my rest"), and the
 broken teeth of the wicked.
 
+The music is made in the browser in the style of Catholic Truth Squad's:
+chip instruments played with Tim Follin's techniques (shimmering arpeggio
+chords, a swept pulse lead with trills and late vibrato, an echo, a resonant
+filter bass). Every stage has its own song on one of the Gregorian psalm
+tones, set to the scene: peaceful by the river, in heaven and in the dream;
+driving in the wind and on the mountain; dangerous over the fire and among
+the broken teeth.
+
 The psalm text that scrolls behind the run is The Grail Psalms (1963), as
 chanted in the Divine Office, taken from the Lumina project
 ([munkachy/lumina](https://github.com/munkachy/lumina), `data-grail.js`). The
