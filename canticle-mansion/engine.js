@@ -71,7 +71,8 @@ Snd.onToggle = (on) => { save.sound = on; store(); };
 // Touch: hold the lower left of the screen to walk left, the lower right to
 // walk right; tap the top of the screen to jump (hold it to jump higher).
 // Double-tap: pick a thing up or set it down, open a door, greet someone, or,
-// beside a wall, leap off it. Tap a creature to throw holy water at it.
+// beside a wall, leap off it. Tap a creature to throw holy water at it (or,
+// with the seal, a cedar barricade to set it alight).
 // Keys: arrows or WASD to walk, Up / W / Space to jump, Down / S / E to pick
 // up or set down, X or J to throw, C or Shift to dash, P or Esc to pause.
 const input = { left: false, right: false, up: false, jumpHeld: false, jumpPressed: false, double: null, throwAt: null, dash: 0, taps: [] };
@@ -97,7 +98,7 @@ addEventListener("pointerdown", (ev) => {
   if (dbl) input.double = { x: p.x + World.camX, y: p.y + World.camY, zone };
   // A creature under the finger: the holy water goes to it, and the finger does not walk.
   const wx = p.x + World.camX, wy = p.y + World.camY;
-  if (!dbl && World.foeNear(wx, wy, 26)) { input.throwAt = { x: wx, y: wy }; zone = "none"; }
+  if (!dbl && (World.foeNear(wx, wy, 26) || World.cedarAt(wx, wy))) { input.throwAt = { x: wx, y: wy }; zone = "none"; }
   touches.set(ev.pointerId, { zone });
   if (zone === "jump") input.jumpPressed = true;
   recompute();
@@ -136,6 +137,8 @@ const World = {
   at(tx, ty) { if (tx < 0 || tx >= this.w) return SOLID; if (ty < 0) return 0; if (ty >= this.h) return 0; return this.grid[ty * this.w + tx]; },
   // Solid for a body moving the given way: one-way ledges hold only from above.
   blocks(tx, ty, fromAbove) { const k = this.at(tx, ty); return k === SOLID || k === BREAK || k === BOUNCE || (fromAbove && k === ONEWAY); },
+  // A cedar barricade under the finger, and the seal to set it alight.
+  cedarAt(x, y) { return !!(this.def && this.def.cedar && save.powers.seal && this.at(Math.floor(x / T), Math.floor(y / T)) === BREAK); },
   foeNear(x, y, r) { return this.foes.some((f) => f.alive && Math.hypot(f.x + f.w / 2 - x, f.y + f.h / 2 - y) < r + Math.max(f.w, f.h) / 2); },
 };
 
@@ -171,6 +174,8 @@ function moveBody(b, dt, opts) {
     const hit = rectHitsTiles(b.x, b.y, b.w, b.h, false);
     if (hit) { if (dx > 0) b.x = hit.tx * T - b.w; else b.x = (hit.tx + 1) * T; b.hitWall = Math.sign(dx); b.vx = 0; }
     for (const o of others) if (overlap(b, o)) {
+      // A platform that rose under the feet as they left it is below, not beside: no shove sideways.
+      if (o.dx !== undefined && b.y + b.h - o.y <= 8) continue;
       // A push: a body walked into may give way if nothing holds it.
       if (opts.push && o.pushable && b.ground !== undefined && Math.abs(b.y + b.h - (o.y + o.h)) < 10) {
         const step = dx > 0 ? b.x + b.w - o.x : b.x - (o.x + o.w);
@@ -414,6 +419,13 @@ function wallLeap(m) {
   for (let i = 0; i < 6; i++) World.parts.push({ x: m.wall > 0 ? m.x + m.w : m.x, y: m.y + 12 + Math.random() * 8, vx: -m.wall * Math.random() * 60, vy: -Math.random() * 40, g: 200, life: 0.3, c: "#d8d0c0", s: 1 });
 }
 function startDash(m, dir) { if (m.dashCd > 0 || m.carry) return; m.dash = 0.3; m.dashDir = dir; m.face = dir; m.dashCd = 0.6; Snd.sfx("float"); }
+function burnTile(tx, ty) {
+  for (let i = 0; i < 16; i++) World.parts.push({ x: tx * T + 8, y: ty * T + 8, vx: (Math.random() - 0.5) * 80, vy: -40 - Math.random() * 120, g: -40, life: 0.6 + Math.random() * 0.4, c: i % 3 ? "#ffcf5a" : "#ff6a3a", s: 2 });
+  World.glows.push({ x: tx * T + 8, y: ty * T + 8, r: 40, c: "rgba(255,150,60,0.5)", life: 0.5, max: 0.5 });
+  breakTile(tx, ty);
+  // The fire runs along the cedar from board to board.
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (World.at(tx + dx, ty + dy) === BREAK && !World.burning.some((b) => b.tx === tx + dx && b.ty === ty + dy)) World.burning.push({ tx: tx + dx, ty: ty + dy, t: 0.08 + Math.random() * 0.1 });
+}
 function breakTile(tx, ty) {
   World.grid[ty * World.w + tx] = 0; Snd.sfx("rod");
   for (let i = 0; i < 12; i++) World.parts.push({ x: tx * T + 8, y: ty * T + 8, vx: (Math.random() - 0.5) * 140, vy: -Math.random() * 160, g: 600, life: 0.7, c: i % 2 ? "#8a7a68" : "#5a4c3e", s: 2 });
@@ -428,7 +440,7 @@ World.load = function (id, doorKey, how) {
   this.room = id; this.def = def; this.t = 0;
   const rows = def.map; this.h = rows.length; this.w = Math.max(...rows.map((r) => r.length));
   this.grid = new Uint8Array(this.w * this.h); this.hidden = new Uint8Array(this.w * this.h);
-  this.bodies = []; this.foes = []; this.shots = []; this.parts = []; this.npcs = []; this.movers = []; this.items = []; this.glows = []; this.doors = {};
+  this.bodies = []; this.foes = []; this.shots = []; this.parts = []; this.npcs = []; this.movers = []; this.burning = []; this.items = []; this.glows = []; this.doors = {};
   const marks = {};
   for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
     const ch = rows[y][x] || ".";
@@ -682,10 +694,14 @@ function stepPlay(dt) {
     const hitFoe = World.foes.find((f) => f.alive && overlap(s, f));
     if (hitFoe || rectHitsTiles(s.x, s.y, s.w, s.h, s.vy > 0, s.y + s.h - s.vy * dt) || s.life <= 0) {
       if (s.kind === "flame" && hitFoe && !s.through) { s.through = 1; hurtFoe(hitFoe, 2, s.x); continue; }
+      // Love is strong as death: the flame takes down what the hand cannot.
+      if (s.kind === "flame" && World.def.cedar) for (let ty = Math.floor((s.y - 4) / T); ty <= Math.floor((s.y + s.h + 4) / T); ty++) for (let tx = Math.floor((s.x - 4) / T); tx <= Math.floor((s.x + s.w + 4) / T); tx++) if (World.at(tx, ty) === BREAK) burnTile(tx, ty);
       splash(s.x + 3, s.y + 3, s.kind === "flame"); s.life = 0;
     }
   }
   World.shots = World.shots.filter((s) => s.life > 0);
+  for (const b of World.burning) { b.t -= dt; if (b.t <= 0 && World.at(b.tx, b.ty) === BREAK) burnTile(b.tx, b.ty); }
+  World.burning = World.burning.filter((b) => b.t > 0);
   // Gifts on the ground: lilies, hearts, the chapter's power.
   for (const it of World.items) {
     if (it.taken || !overlap(m, it)) continue;

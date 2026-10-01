@@ -117,6 +117,12 @@ function paintBreak(c, x, y, tx, ty) {
   px(c, x, y, T, T, "#7a6a58"); px(c, x + 1, y + 1, T - 2, T - 2, "#8a7a68");
   px(c, x + 3, y + 4, 6, 1, "#4a3e32"); px(c, x + 8, y + 4, 1, 6, "#4a3e32"); px(c, x + 5, y + 10, 7, 1, "#4a3e32"); px(c, x + 1, y + 1, T - 2, 1, "#b0a090");
 }
+// A barricade of cedar boards, lashed together: only flame will take it down.
+function paintCedar(c, x, y, tx, ty) {
+  px(c, x, y, T, T, "#3a2014");
+  for (let i = 0; i < 3; i++) { px(c, x + 1 + i * 5, y, 4, T, i % 2 ? "#8a4a2a" : "#9a5a32"); px(c, x + 2 + i * 5, y, 1, T, "#b8764a"); }
+  px(c, x, y + 5, T, 2, "#5a3a20"); px(c, x + 3, y + 5, 2, 2, "#c8a050"); px(c, x + 11, y + 5, 2, 2, "#c8a050");
+}
 function paintClimb(c, R, x, y, tx, ty) {
   const kind = (R.climb && R.climb.kind) || "rope";
   if (kind === "rope") { px(c, x + 7, y, 2, T, "#b8945a"); for (let i = 0; i < 4; i++) px(c, x + 6 + (i % 2) * 2, y + i * 4, 2, 2, "#8a6a3a"); }
@@ -136,7 +142,7 @@ ART.tiles = function (c, R, World) {
     if (k === SOLID) paintSolid(c, TILESET[tileStyleAt(R, tx, ty, 1)] || TILESET.stone, x, y, tx, ty, open);
     else if (k === ONEWAY) paintOneway(c, tileStyleAt(R, tx, ty, 2), x, y, tx, ty, { left: at(tx - 1, ty) !== ONEWAY, right: at(tx + 1, ty) !== ONEWAY });
     else if (k === THORN) paintThorn(c, x, y, R.thorn);
-    else if (k === BREAK) paintBreak(c, x, y, tx, ty);
+    else if (k === BREAK) (R.cedar ? paintCedar : paintBreak)(c, x, y, tx, ty);
     else if (k === CLIMB) paintClimb(c, R, x, y, tx, ty);
     else if (k === BOUNCE) { /* the bed is painted by its room */ }
     else if (k === WATER) { px(c, x, y + 2, T, T - 2, "rgba(60,120,200,0.55)"); px(c, x, y + 2, T, 1, "rgba(200,230,255,0.8)"); }

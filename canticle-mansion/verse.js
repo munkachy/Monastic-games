@@ -63,6 +63,16 @@ const STYLE = {
       const cols = ["#ff7aa8", "#ffffff", "#ffe08a", "#c8a0ff", "#ff9a5a"];
       for (const [px0, py0, r] of textPoints(tx, L, 2)) { const sway = Math.sin(t * 1.4 + px0 * 0.1) * 0.4; c.fillStyle = "#3a7a2e"; c.fillRect(x + px0 + sway, y + py0 + 0.8, 0.6, 1.4); c.fillStyle = cols[Math.floor(r * 5)]; c.fillRect(x + px0 - 0.9 + sway, y + py0 - 0.9, 1.8, 1.8); }
     } },
+  // Pieces of silver laid out in letters, each catching the light in its turn.
+  coins: { size: 16, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
+    draw(c, L, x, y, tx, t) {
+      for (const [px0, py0, r] of textPoints(tx, L, 1.5)) { const g = Math.max(0, Math.sin(t * 2 - px0 * 0.03 + r * 6)); c.fillStyle = "#4a4a54"; c.fillRect(x + px0 - 0.6, y + py0 - 0.3, 1.5, 1.5); c.fillStyle = g > 0.95 ? "#ffffff" : "#d8dce4"; c.fillRect(x + px0 - 0.7, y + py0 - 0.7, 1.3, 1.3); if (g > 0.98) { c.fillStyle = "rgba(255,255,255,0.8)"; c.fillRect(x + px0 - 2.5, y + py0, 5, 0.5); c.fillRect(x + px0, y + py0 - 2.5, 0.5, 5); } }
+    } },
+  // Letters of living fire: "the lamps thereof are fire and flames."
+  flame: { size: 18, lh: 1.2, font: (s) => "800 " + s + "px " + FONT.carved,
+    draw(c, L, x, y, tx, t) {
+      for (const [px0, py0, r] of textPoints(tx, L, 1.3)) { const f = Math.sin(t * 9 + r * 40) * 0.5 + 0.5, h = 0.8 + f * 1.2; c.fillStyle = r > 0.6 ? "#ffcf5a" : r > 0.25 ? "#ff8a3a" : "#e8402a"; c.fillRect(x + px0 - 0.6, y + py0 - h, 1.2, h + 0.5); if (r > 0.93) { c.fillStyle = "rgba(255,240,180," + f + ")"; c.fillRect(x + px0 - 0.4, y + py0 - h - 2 - f * 3, 0.8, 1.2); } }
+    } },
   // Cut into stone: dark in the cut, light on its lower lip.
   carved: { size: 9, upper: true, lh: 1.45, font: (s) => "600 " + s + "px " + FONT.carved,
     draw(c, L, x, y, tx) { L.lines.forEach((l, i) => { const yy = y + i * L.lh; c.fillStyle = tx.light || "rgba(255,240,215,0.35)"; c.fillText(l, x, yy + 0.6); c.fillStyle = tx.color || "rgba(30,20,14,0.85)"; c.fillText(l, x, yy); }); } },
