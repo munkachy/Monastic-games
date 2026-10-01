@@ -9,7 +9,7 @@ const POWERS = {
   angel:   { name: "The Guardian Angel", text: "Your angel goes before you, strikes what threatens, and turns blows aside." },
   helmet:  { name: "The Helmet", text: "A thousand bucklers: one more heart, and you break cracked stone from below." },
   chariot: { name: "The Chariot of Aminadab", text: "Double-tap low on the screen to dash that way (C or Shift on keys)." },
-  gloves:  { name: "The Climber's Gloves", text: "I will go up into the palm tree: hold jump against a wall to climb it." },
+  gloves:  { name: "The Climber's Gloves", text: "I will go up into the palm tree: in the air, hold toward a wall to climb it." },
   seal:    { name: "The Seal upon Thy Heart", text: "Love is strong as death: your holy water burns as flame, through two at once." },
 };
 Game.gainPower = function (key) {
