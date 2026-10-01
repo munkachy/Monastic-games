@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<title>Run the Way</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; }
+</style>
+</head>
+<body>
+<canvas id="screen" aria-label="Run the Way"></canvas>
+<script>
+"use strict";
+// Run the Way: the saints of Psalter Runner at full speed. Slopes speed them
+// up and slow them down, ramps throw them into the sky, springs bounce them
+// onto roads of cloud, and loops take them round and round, if they are fast
+// enough. Verses about running go by on a ticker at the foot of the screen.
+// One file, nothing to load. Left half of the screen: tap to jump, hold to
+// float. Right half: hold to run faster, the longer the faster. Keys: Space /
+// Up / W to jump, Right / D to run faster, P or Esc to pause, M for sound.
+//
+// The screen, the words, the music and the saints come from Psalter Runner
+// (psalter-runner/index.html); the run itself is new.
+const flat = (v) => v.replace(/\n/g, " ");
+// ---- The screen -----------------------------------------------------------------
+// A 320 x 180 picture, scaled up with hard edges, as a 16-bit console would.
+const W = 320, H = 180;
+// The picture is still laid out on a 320 x 180 grid, and the art keeps its
+// big square pixels; but the canvas itself is finer (R times), so words
+// come out smooth and easy to read.
+const cv = document.getElementById("screen");
+const ctx = cv.getContext("2d");
+let scale = 1, offX = 0, offY = 0, R = 3;
+function resize() {
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  R = clamp(Math.round(scale * (window.devicePixelRatio || 1)), 2, 4);
+  cv.width = W * R; cv.height = H * R;
+  ctx.imageSmoothingEnabled = false;
+  const w = Math.floor(W * scale), h = Math.floor(H * scale);
+  offX = Math.floor((innerWidth - w) / 2); offY = Math.floor((innerHeight - h) / 2);
+  cv.style.width = w + "px"; cv.style.height = h + "px";
+  cv.style.left = offX + "px"; cv.style.top = offY + "px";
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+addEventListener("resize", resize); resize();
+const lerp = (a, b, k) => a + (b - a) * k;
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+
+// ---- Words ---------------------------------------------------------------------
+// Clear type, drawn at the canvas's full resolution: a friendly sans-serif
+// for the game's own words, a book serif for the psalms.
+const SANS = "'Trebuchet MS', 'Segoe UI', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif";
+const SERIF = "Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, 'Times New Roman', serif";
+const fontOf = (size, serif) => (serif ? "italic 600 " : "700 ") + size + "px " + (serif ? SERIF : SANS);
+function measure(str, size, serif) { ctx.save(); ctx.font = fontOf(size, serif); const w = ctx.measureText(str).width; ctx.restore(); return w; }
+function text(str, x, y, o) {
+  o = o || {};
+  const size = o.size || 8, color = o.color || "#ffffff", edge = o.edge === undefined ? "#140c1c" : o.edge;
+  ctx.save();
+  ctx.font = fontOf(size, o.serif);
+  ctx.textAlign = o.align || "left"; ctx.textBaseline = "top";
+  if (edge) { ctx.lineJoin = "round"; ctx.lineWidth = Math.max(1.6, size / 4.5); ctx.strokeStyle = edge; ctx.strokeText(str, x, y); }
+  ctx.fillStyle = color; ctx.fillText(str, x, y);
+  const w = ctx.measureText(str).width;
+  ctx.restore();
+  return w;
+}
+function wrapText(str, size, width, serif) {
+  const words = flat(str).split(" "), lines = []; let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (measure(t, size, serif) > width && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// ---- Music and sound ----------------------------------------------------------------
+// The sound of the 16-bit consoles and the Commodore 64, made in the browser:
+// pulse waves whose width sweeps, a resonant filter on a sawtooth for the
+// bass, a stepped triangle, drums of noise. The techniques are Tim Follin's:
+// chords played as one voice switching notes fifty times a second, so the
+// ear hears the whole chord shimmer; trills, bends and late vibrato on the
+// lead; an echo that is the music repeating itself a little later; and a
+// lift into a new key. Every stage has its own song, built on one of the
+// Gregorian psalm tones and set to the scene: peaceful by the river, in
+// heaven and in the dream; driving in the wind and on the mountain;
+// dangerous over the fire and among the teeth.
+const Snd = (() => {
+  let ac = null, master, musicGain, sfxGain, reverbSend, echoIn, echoDelay, noise, metal;
+  const waves = {};
+  let on = true, song = null, pending = null, wanted = null;
+  let gridTime = 0, step = 0, SIX = 0.1, leadIndex = 0, lastLead = null;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function init() {
+    if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+    const A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+    ac = new A();
+    master = ac.createGain(); master.gain.value = on ? 0.8 : 0;
+    const limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -4; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
+    master.connect(limiter).connect(ac.destination);
+    const squeeze = ac.createDynamicsCompressor();
+    squeeze.threshold.value = -14; squeeze.knee.value = 10; squeeze.ratio.value = 3; squeeze.attack.value = 0.005; squeeze.release.value = 0.2;
+    squeeze.connect(master);
+    musicGain = ac.createGain(); musicGain.gain.value = 0.55; musicGain.connect(squeeze);
+    sfxGain = ac.createGain(); sfxGain.gain.value = 2.2; sfxGain.connect(master);
+    // A stone church: a long, soft reverb made from decaying noise.
+    const reverb = ac.createConvolver(), len = ac.sampleRate * 3, imp = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = imp.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5); }
+    reverb.buffer = imp; reverbSend = ac.createGain(); reverbSend.gain.value = 0.5; reverbSend.connect(reverb); reverb.connect(master);
+    const room = ac.createGain(); room.gain.value = 0.2; sfxGain.connect(room).connect(reverbSend);
+    // The echo: the music repeating itself a dotted eighth later, darker each time.
+    echoIn = ac.createGain(); echoDelay = ac.createDelay(2);
+    const fb = ac.createGain(); fb.gain.value = 0.38; const dark = ac.createBiquadFilter(); dark.type = "lowpass"; dark.frequency.value = 2600;
+    const wet = ac.createGain(); wet.gain.value = 0.45;
+    echoIn.connect(echoDelay); echoDelay.connect(dark).connect(fb).connect(echoDelay); echoDelay.connect(wet).connect(musicGain);
+    noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    // The consoles' short noise: a 93-step pattern from a shift register, for the hats.
+    metal = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    const md = metal.getChannelData(0); let reg = 1;
+    for (let i = 0; i < md.length; i++) { if (i % 3 === 0) { const bit = (reg ^ (reg >> 6)) & 1; reg = (reg >> 1) | (bit << 14); } md[i] = reg & 1 ? 0.8 : -0.8; }
+    if (wanted) { const w = wanted; wanted = null; play(w); }
+  }
+  function toggle() { on = !on; if (master) master.gain.setTargetAtTime(on ? 0.8 : 0, ac.currentTime, 0.05); save.sound = on; store(); }
+
+  // ---- The instruments ----
+  function pulseWave(duty) {
+    const k = "p" + duty; if (waves[k]) return waves[k];
+    const n = 48, re = new Float32Array(n + 1), im = new Float32Array(n + 1);
+    for (let h = 1; h <= n; h++) re[h] = (2 * Math.sin(Math.PI * h * duty)) / (Math.PI * h);
+    return (waves[k] = ac.createPeriodicWave(re, im));
+  }
+  function triWave() {
+    if (waves.tri) return waves.tri;
+    const N = 512, n = 32, re = new Float32Array(n + 1), im = new Float32Array(n + 1), w = [];
+    for (let i = 0; i < N; i++) { const x = i / N, tri = x < 0.5 ? 4 * x - 1 : 3 - 4 * x; w.push(Math.round(tri * 7.5 + 7.5) / 7.5 - 1); }
+    for (let h = 1; h <= n; h++) { let a = 0, b = 0; for (let i = 0; i < N; i++) { a += w[i] * Math.cos((2 * Math.PI * h * i) / N); b += w[i] * Math.sin((2 * Math.PI * h * i) / N); } re[h] = (2 * a) / N; im[h] = (2 * b) / N; }
+    return (waves.tri = ac.createPeriodicWave(re, im));
+  }
+  const env = (g, t, level, attack, hold, release) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(level, t + attack); g.gain.setValueAtTime(level, t + Math.max(attack, hold)); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(attack, hold) + release); };
+  // A swept pulse: a sawtooth minus itself a moment later, the moment moving slowly.
+  function sweptPulse(t, midi, rate, out) {
+    const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.setValueAtTime(mtof(midi), t);
+    const period = 1 / mtof(midi), d = ac.createDelay(0.05); d.delayTime.setValueAtTime(period * 0.5, t);
+    const lfo = ac.createOscillator(); lfo.frequency.value = rate; const depth = ac.createGain(); depth.gain.value = period * 0.3;
+    lfo.connect(depth).connect(d.delayTime);
+    const inv = ac.createGain(); inv.gain.value = -1;
+    o.connect(out); o.connect(d).connect(inv).connect(out); lfo.start(t);
+    return { o, lfo };
+  }
+  // Follin's chords: one voice switching notes `rate` times a second.
+  function arpChord(t, dur, notes, o) {
+    o = o || {};
+    const osc = ac.createOscillator();
+    if (o.tri) osc.setPeriodicWave(triWave()); else osc.setPeriodicWave(pulseWave(o.duty || 0.25));
+    const every = 1 / (o.rate || 50); let k = 0;
+    for (let at = t; at < t + dur; at += every, k++) osc.frequency.setValueAtTime(mtof(notes[k % notes.length]), at);
+    const g = ac.createGain(); env(g, t, o.vol || 0.06, o.attack || 0.004, dur - (o.release || 0.03), o.release || 0.03);
+    if (o.cutoff) { const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = o.cutoff; osc.connect(f).connect(g); } else osc.connect(g);
+    g.connect(musicGain);
+    if (o.echo) { const e = ac.createGain(); e.gain.value = o.echo; g.connect(e).connect(echoIn); }
+    if (o.verb) { const v = ac.createGain(); v.gain.value = o.verb; g.connect(v).connect(reverbSend); }
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+  // The filter bass: a sawtooth through a resonant filter that snaps shut.
+  function filterBass(midi, t, length, accent, bright) {
+    const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.setValueAtTime(mtof(midi), t);
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.Q.value = accent ? 9 : 6;
+    f.frequency.setValueAtTime((accent ? 1500 : 950) * (bright || 1), t); f.frequency.exponentialRampToValueAtTime(170, t + length);
+    const g = ac.createGain(); g.gain.setValueAtTime(accent ? 0.4 : 0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + length * 0.96);
+    o.connect(f).connect(g).connect(musicGain); o.start(t); o.stop(t + length + 0.02);
+  }
+  function triBass(midi, t, length, level) {
+    const o = ac.createOscillator(); o.setPeriodicWave(triWave()); o.frequency.setValueAtTime(mtof(midi), t);
+    const g = ac.createGain(); env(g, t, level || 0.28, 0.004, length * 0.8, length * 0.2 + 0.02);
+    o.connect(g).connect(musicGain); o.start(t); o.stop(t + length + 0.05);
+  }
+  // A lead note: bent in from below or trilled, with late vibrato, into the echo.
+  function lead(t, dur, midi, o) {
+    o = o || {};
+    const out = ac.createGain(), f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = o.cutoff || 5200;
+    const g = ac.createGain(); env(g, t, o.vol || 0.1, 0.008, dur * 0.85, dur * 0.15 + 0.06);
+    out.connect(f).connect(g).connect(musicGain);
+    const e = ac.createGain(); e.gain.value = o.echo === undefined ? 0.35 : o.echo; g.connect(e).connect(echoIn);
+    if (o.verb) { const v = ac.createGain(); v.gain.value = o.verb; g.connect(v).connect(reverbSend); }
+    const v = sweptPulse(t, midi, o.sweep || 3, out), osc = v.o;
+    if (o.glideFrom) { osc.frequency.setValueAtTime(mtof(o.glideFrom), t); osc.frequency.exponentialRampToValueAtTime(mtof(midi), t + 0.1); }
+    else if (o.trill) { for (let k = 0, at = t; at < t + Math.min(dur * 0.55, 0.3); at += 0.035, k++) osc.frequency.setValueAtTime(mtof(k % 2 ? o.trill : midi), at); osc.frequency.setValueAtTime(mtof(midi), t + Math.min(dur * 0.55, 0.3)); }
+    else if (o.bend) { osc.frequency.setValueAtTime(mtof(midi - o.bend), t); osc.frequency.exponentialRampToValueAtTime(mtof(midi), t + 0.05); }
+    if (dur > 0.25) { const vib = ac.createOscillator(); vib.frequency.value = o.vibRate || 5.5; const amt = ac.createGain(); amt.gain.setValueAtTime(0, t); amt.gain.setValueAtTime(0, t + Math.min(0.22, dur * 0.4)); amt.gain.linearRampToValueAtTime(o.vibDepth || 14, t + Math.min(0.5, dur * 0.8)); vib.connect(amt).connect(osc.detune); vib.start(t); vib.stop(t + dur + 0.3); }
+    osc.start(t); osc.stop(t + dur + 0.35); v.lfo.stop(t + dur + 0.35);
+  }
+  function kick(t, level) { const o = ac.createOscillator(); o.setPeriodicWave(triWave()); o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.07); const g = ac.createGain(); g.gain.setValueAtTime(level || 0.7, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2); o.connect(g).connect(musicGain); o.start(t); o.stop(t + 0.22); }
+  function noiseHit(t, type, freq, level, length, out, buf) { const s = ac.createBufferSource(); s.buffer = buf || noise; const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; const g = ac.createGain(); g.gain.setValueAtTime(level, t); g.gain.exponentialRampToValueAtTime(0.001, t + length); s.connect(f).connect(g).connect(out || musicGain); s.start(t, Math.random() * 0.5); s.stop(t + length + 0.02); }
+  function snare(t, level) { noiseHit(t, "bandpass", 1900, (level || 1) * 0.3, 0.17); const o = ac.createOscillator(); o.setPeriodicWave(triWave()); o.frequency.setValueAtTime(230, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.06); const g = ac.createGain(); g.gain.setValueAtTime((level || 1) * 0.28, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.08); o.connect(g).connect(musicGain); o.start(t); o.stop(t + 0.1); }
+  const hat = (t, open, level) => noiseHit(t, "highpass", 7000, level || (open ? 0.07 : 0.045), open ? 0.14 : 0.035, musicGain, metal);
+  const crash = (t) => { noiseHit(t, "highpass", 4000, 0.11, 0.9); noiseHit(t, "highpass", 4000, 0.05, 1.2, reverbSend); };
+  function tom(t, freq, level) { const o = ac.createOscillator(); o.setPeriodicWave(triWave()); o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 0.6, t + 0.12); const g = ac.createGain(); g.gain.setValueAtTime(level || 0.42, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); o.connect(g).connect(musicGain); o.start(t); o.stop(t + 0.18); }
+  function bell(t, base, level) { for (const [r, a, d] of [[0.5, 0.6, 3], [1, 1, 2.2], [1.2, 0.5, 1.6], [1.5, 0.4, 1.4], [2, 0.5, 1.2], [2.5, 0.25, 0.9], [3, 0.2, 0.7]]) { const o = ac.createOscillator(); o.frequency.value = base * r; const g = ac.createGain(); g.gain.setValueAtTime(level * a, t); g.gain.exponentialRampToValueAtTime(0.0005, t + d); o.connect(g); g.connect(musicGain); g.connect(reverbSend); o.start(t); o.stop(t + d + 0.05); } }
+
+  // ---- The modes and the psalm tones ----
+  // The eight church modes, as scales above their final.
+  const MODES = { 1: [0, 2, 3, 5, 7, 9, 10], 3: [0, 1, 3, 5, 7, 8, 10], 5: [0, 2, 4, 5, 7, 9, 11], 7: [0, 2, 4, 5, 7, 9, 10] };
+  // The psalm tones, each a short melody: intonation, reciting note, cadence.
+  const TONES = {
+    t1: [65, 67, 69, 69, 69, 71, 69, 67, 69, 69, 69, 67, 65, 64, 62],
+    t2: [60, 62, 65, 65, 65, 64, 65, 62, 65, 65, 65, 64, 62, 60, 62],
+    t3: [67, 69, 72, 72, 72, 74, 71, 72, 72, 72, 69, 72, 71, 69, 64],
+    t4: [69, 67, 69, 69, 69, 71, 69, 67, 69, 69, 69, 67, 69, 65, 64],
+    t5: [65, 69, 72, 72, 72, 74, 72, 72, 72, 72, 69, 72, 70, 72, 69],
+    t6: [65, 67, 69, 69, 69, 67, 69, 65, 67, 69, 69, 69, 67, 65, 65],
+    t7: [72, 71, 72, 74, 74, 74, 76, 74, 74, 74, 76, 74, 72, 71, 69],
+    t8: [67, 69, 72, 72, 72, 74, 72, 72, 72, 72, 71, 72, 69, 67, 67],
+    tp: [69, 71, 69, 69, 69, 67, 69, 69, 67, 67, 67, 65, 67, 64, 62],
+  };
+  // Every song: tempo; mode and final; four chord progressions (degrees of
+  // the mode, one chord a bar); and how each part plays.
+  //   drums: none, soft, half, drive, march, fire, tick
+  //   bass: tri, walk, filter, march;  chords: gate, pad, box;  lead: bright, deep
+  //   extra: wind, danger, bells, water, quake, brass
+  const SONGS = {
+    title:    { bpm: 96,  mode: 7, final: 67, tone: "t8", prog: [[0, 3, 4, 0], [0, 6, 3, 4]], drums: "none", bass: "tri", chords: "pad", lead: "deep", extra: ["bells"] },
+    alley:    { bpm: 92,  mode: 3, final: 64, tone: "t3", prog: [[0, 1, 0, 6], [0, 5, 1, 0]], drums: "half", bass: "walk", chords: "pad", lead: "deep", cutoff: 1400, extra: ["creep"] },
+    river:    { bpm: 104, mode: 5, final: 65, tone: "t6", prog: [[0, 3, 4, 0], [0, 5, 3, 4]], drums: "soft", bass: "tri", chords: "gate", gate: 1, lead: "bright", calm: true, extra: ["water"] },
+    desert:   { bpm: 138, mode: 1, final: 62, tone: "t1", prog: [[0, 6, 5, 6], [0, 3, 4, 0]], drums: "drive", bass: "filter", fig: 0, chords: "gate", gate: 0, lead: "bright", lift: 2, extra: ["wind"] },
+    abyss:    { bpm: 154, mode: 3, final: 64, tone: "t4", prog: [[0, 1, 0, 1], [0, 6, 1, 0]], drums: "fire", bass: "filter", fig: 2, chords: "gate", gate: 2, duty: 0.125, lead: "bright", trills: true, extra: ["danger"] },
+    kings:    { bpm: 116, mode: 1, final: 62, tone: "t2", prog: [[0, 5, 6, 4], [0, 3, 6, 0]], drums: "march", bass: "march", chords: "pad", lead: "deep", extra: ["brass"] },
+    heaven:   { bpm: 78,  mode: 5, final: 65, tone: "t5", prog: [[0, 3, 4, 0], [5, 3, 0, 4]], drums: "none", bass: "tri", chords: "pad", lead: "deep", bright: true, extra: ["bells", "water"] },
+    mountain: { bpm: 132, mode: 1, final: 62, tone: "t7", prog: [[0, 6, 3, 4], [0, 5, 6, 4]], drums: "drive", bass: "filter", fig: 1, chords: "gate", gate: 0, lead: "bright", lift: 2, extra: ["quake"] },
+    flames:   { bpm: 162, mode: 3, final: 64, tone: "t8", prog: [[0, 1, 6, 1], [0, 3, 1, 0]], drums: "fire", bass: "filter", fig: 2, chords: "gate", gate: 2, duty: 0.125, lead: "bright", trills: true, extra: ["danger"] },
+    foes:     { bpm: 144, mode: 1, final: 62, tone: "tp", prog: [[0, 6, 5, 6], [0, 5, 6, 4]], drums: "drive", heavy: true, bass: "filter", fig: 0, chords: "gate", gate: 0, lead: "bright", trills: true, extra: ["brass"] },
+    shield:   { bpm: 128, mode: 5, final: 65, tone: "t5", prog: [[0, 4, 5, 3], [0, 3, 4, 0]], drums: "drive", bass: "filter", fig: 1, chords: "gate", gate: 1, lead: "bright", lift: 2, extra: ["bells"] },
+    dream:    { bpm: 68,  mode: 5, final: 65, tone: "t6", prog: [[0, 5, 3, 4], [0, 3, 0, 4]], drums: "none", bass: "tri", chords: "box", lead: "deep", soft: true, extra: ["bells"] },
+    // The deep: a rolling bass, wind on the water, a swell of chords.
+    sea:      { bpm: 112, mode: 1, final: 62, tone: "t2", prog: [[0, 6, 3, 4], [0, 5, 6, 0]], drums: "half", bass: "walk", chords: "gate", gate: 1, calm: true, lead: "deep", extra: ["wind", "water"] },
+    // Lament: by the rivers of Babylon, in the pit. Slow, bare, no drums.
+    lament:   { bpm: 64,  mode: 3, final: 64, tone: "tp", prog: [[0, 6, 5, 0], [0, 1, 3, 0]], drums: "none", bass: "tri", chords: "pad", lead: "deep", cutoff: 1500, extra: ["bells"] },
+    // Praise him with trumpet and drum: bright, quick, every voice in.
+    festival: { bpm: 140, mode: 5, final: 65, tone: "t8", prog: [[0, 3, 4, 0], [0, 5, 3, 4]], drums: "drive", heavy: true, bass: "filter", fig: 1, chords: "gate", gate: 1, lead: "bright", lift: 2, extra: ["bells", "brass"] },
+    teeth:    { bpm: 126, mode: 3, final: 64, tone: "t3", prog: [[0, 1, 0, 6], [0, 1, 5, 1]], drums: "tick", bass: "walk", chords: "gate", gate: 2, duty: 0.125, lead: "deep", cutoff: 2400, extra: ["danger"] },
+  };
+  const scale = () => MODES[song.mode];
+  function degree(d) { const t = scale(), o = Math.floor(d / 7); return song.final + 12 * o + t[((d % 7) + 7) % 7]; }
+  function chord(root, lift) { const r = degree(root) + lift, th = degree(root + 2) + lift, fi = degree(root + 4) + lift; return fi - r === 7 ? [r, th, fi] : [r, th, r + 12]; }
+  // Four bars to a section (a stage is short), four sections a round: A the
+  // groove, B the psalm tone comes in as a lead, C a breakdown, D everything
+  // (lifted a tone in the brighter songs).
+  function place(n) {
+    const bar = Math.floor(n / 16), section = Math.floor(bar / 4) % 4;
+    const prog = song.prog[Math.floor(bar / 16) % song.prog.length];
+    const lift = section === 3 ? (song.lift || 0) : 0;
+    const root = prog[bar % 4];
+    return { bar, section, s: n % 16, lift, notes: chord(root, lift) };
+  }
+  const nextTone = () => { const tn = TONES[song.tone]; return tn[leadIndex++ % tn.length]; };
+  const FIGS = [
+    { 0: [0, 1], 2: [12, 1], 3: [0, 1], 6: [0, 1], 7: [12, 1], 10: [0, 2], 12: [7, 1], 14: [12, 1], 15: [10, 1] },
+    { 0: [0, 1], 2: [12, 1], 4: [0, 1], 6: [12, 1], 8: [0, 1], 10: [12, 1], 11: [0, 1], 12: [7, 1], 14: [12, 1] },
+    { 0: [0, 2], 3: [0, 1], 5: [12, 1], 6: [0, 2], 9: [7, 1], 10: [12, 2], 13: [0, 1], 14: [10, 2] },
+  ];
+  const GATES = [
+    [1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1],
+    [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1],
+  ];
+  const BRIGHT_LEAD = [[[0, 3], [3, 3], [6, 2], [8, 4], [12, 2], [14, 2], [16, 3], [19, 3], [22, 2], [24, 6], [30, 2]], [[0, 2], [2, 2], [4, 4], [8, 2], [10, 1], [11, 1], [12, 4], [16, 6], [22, 2], [24, 4], [28, 4]]];
+  const DEEP_LEAD = [[[0, 8], [8, 4], [12, 4], [16, 12], [28, 4]], [[0, 6], [6, 2], [8, 8], [16, 8], [24, 8]]];
+
+  function stepSong(t, n) {
+    const S = song, P = place(n), s = P.s, X = S.extra || [];
+    const bass = 36 + ((P.notes[0] - 36) % 12 + 12) % 12;
+    const up = P.notes.map((x) => x + 12);
+    const fillBar = P.bar % 4 === 3 && s >= 8, breakdown = P.section === 2;
+    // Drums.
+    switch (S.drums) {
+      case "soft": if (!breakdown) { if (s === 0 || s === 8) kick(t, 0.35); if (s % 4 === 2) hat(t, false, 0.03); if (s === 12) noiseHit(t, "bandpass", 3000, 0.06, 0.05); } break;
+      case "half": if (P.bar % 8 === 0 && s === 0) crash(t); if (s === 0 || s === 10) kick(t, 0.6); if (s === 8) { snare(t, 1); noiseHit(t, "bandpass", 1500, 0.07, 0.4, reverbSend); } if (s % 4 === 2) hat(t, false, 0.035); break;
+      case "drive": case "fire":
+        if (P.bar % 8 === 0 && s === 0) crash(t);
+        if (breakdown) { if (s === 0) kick(t, 0.6); if (s % 4 === 2) hat(t, false, 0.03); break; }
+        if (fillBar) { if (s % 2 === 0) tom(t, [220, 180, 150, 120][(s - 8) / 2]); if (s >= 12) snare(t, 0.6 + (s - 12) * 0.12); break; }
+        if (S.drums === "fire") { if (s % 4 === 0 || s === 3 || s === 11) kick(t, 0.75); if (s === 4 || s === 12) snare(t, 1.1); hat(t, false, s % 2 ? 0.03 : 0.06); if (s === 14 || s === 15) tom(t, s === 14 ? 160 : 130, 0.3); }
+        else { if (s === 0 || s === 6 || s === 10 || (S.heavy && s === 3)) kick(t); if (s === 4 || s === 12) snare(t); if (s === 14) hat(t, true); else if (s % 2 === 0 || S.heavy) hat(t, false, s % 4 === 2 ? 0.065 : 0.03); }
+        break;
+      case "march":
+        if (P.bar % 8 === 0 && s === 0) crash(t);
+        if (s === 0 || s === 8) kick(t, 0.65);
+        if (s % 2 === 0) snare(t, s === 4 || s === 12 ? 0.9 : 0.35);
+        if (P.bar % 4 === 3 && s >= 12) snare(t, 0.5 + (s - 12) * 0.15);
+        if (s === 0 && P.bar % 2 === 0) tom(t, 110, 0.5);
+        break;
+      case "tick":
+        hat(t, false, s % 4 === 0 ? 0.05 : 0.022);
+        if (s === 0 || s === 9) kick(t, 0.55);
+        if (s === 12) noiseHit(t, "bandpass", 2600, 0.12, 0.06);
+        break;
+    }
+    // Bass.
+    if (S.bass === "filter") {
+      const fig = FIGS[S.fig || 0];
+      if (breakdown) { if (s === 0) filterBass(bass, t, SIX * 14, false); }
+      else if (fig[s]) filterBass(bass + fig[s][0], t, SIX * fig[s][1] * 1.6, s === 0 || s === 10, S.drums === "fire" ? 1.4 : 1);
+    } else if (S.bass === "march") { if (s % 2 === 0) triBass(bass + (s % 8 === 6 ? 7 : 0), t, SIX * 1.6, 0.24); }
+    else if (S.bass === "walk") { if (s % 4 === 0) { const w = S.mode === 3 ? [0, 1, 3, 7] : [0, 3, 5, 7]; triBass(bass + w[(s / 4 + P.bar) % 4], t, SIX * 3, 0.24); } }
+    else { if (s === 0) triBass(bass, t, SIX * (S.bpm < 90 ? 15 : 7), 0.2); if (s === 8 && S.bpm >= 90) triBass(bass + 7, t, SIX * 7, 0.16); }
+    // Chords.
+    if (S.chords === "pad") {
+      if (s === 0) arpChord(t, SIX * 16, up, { rate: S.bpm < 90 ? 22 : 30, duty: 0.5, vol: S.bright ? 0.045 : 0.035, cutoff: S.cutoff || (S.bright ? 3600 : 1900), attack: 0.2, release: 0.5, echo: 0.3, verb: 0.35 });
+      if ((P.section === 1 || P.section === 3) && s % 2 === 0) { const run = [...up, up[0] + 12, up[1] + 12]; arpChord(t, SIX * 1.5, [run[(s / 2) % run.length] + 12], { duty: 0.125, vol: 0.026, echo: 0.45, cutoff: S.cutoff }); }
+    } else if (S.chords === "box") {
+      // A music box: a slow, high triangle arpeggio, rocking like a cradle.
+      if (s % 2 === 0) { const run = [up[0], up[1], up[2], up[1] + 12, up[2], up[1]]; arpChord(t, SIX * 2.2, [run[(s / 2) % run.length] + 12], { tri: true, vol: 0.07, echo: 0.4, verb: 0.4, release: 0.25 }); }
+      if (s === 0) arpChord(t, SIX * 16, up, { rate: 18, duty: 0.5, vol: 0.022, cutoff: 1500, attack: 0.4, release: 0.6, verb: 0.4 });
+    } else {
+      if (breakdown) { if (s === 0) arpChord(t, SIX * 16, up, { rate: 25, duty: 0.5, vol: 0.06, cutoff: 3000, echo: 0.3, attack: 0.1, release: 0.3 }); }
+      else if (GATES[S.gate || 0][s]) arpChord(t, SIX * (S.calm ? 1.6 : 0.9), [...up, up[0] + 12], { rate: S.calm ? 40 : 50, duty: S.duty || [0.125, 0.25, 0.5][s % 3], vol: S.calm ? 0.045 : 0.06, echo: 0.2, cutoff: S.calm ? 3200 : 0 });
+    }
+    // The lead: the psalm tone, as a riff (bright) or in long gliding notes (deep).
+    const inPhrase = n % 32;
+    if (S.lead === "bright" && (P.section === 1 || P.section === 3)) {
+      const shape = BRIGHT_LEAD[Math.floor(n / 32) % 2], hit = shape.find(([a]) => a === inPhrase);
+      if (hit) {
+        const p = nextTone() + 12 + P.lift, dur = hit[1] * SIX;
+        lead(t, dur, p, { vol: S.calm ? 0.085 : 0.11, trill: S.trills && hit[1] >= 4 ? p + 1 : 0, bend: hit[1] >= 4 ? 2 : 1, cutoff: S.calm ? 3600 : 5200 });
+        if (P.section === 3 && !S.calm) lead(t + SIX, dur, p + 12, { vol: 0.03, echo: 0.2, cutoff: 7000 });
+        lastLead = p;
+      }
+    } else if (S.lead === "deep" && P.section !== 0) {
+      const shape = DEEP_LEAD[Math.floor(n / 32) % 2], hit = shape.find(([a]) => a === inPhrase);
+      if (hit) { const p = nextTone() + (S.soft ? 12 : 0); lead(t, hit[1] * SIX, p, { vol: S.soft ? 0.06 : 0.08, glideFrom: lastLead, echo: 0.55, vibDepth: 22, vibRate: 4.6, sweep: 1.5, cutoff: S.cutoff || 3200, verb: 0.2 }); lastLead = p; }
+    }
+    // The colour of the place.
+    if (X.includes("bells") && s === 0 && P.bar % 2 === 0) bell(t, mtof(P.notes[0] + 12), 0.035);
+    if (X.includes("water") && s % 2 === 1 && P.section !== 2) arpChord(t, SIX * 0.8, [up[(s >> 1) % 3] + 24], { tri: true, vol: 0.03, echo: 0.5 });
+    if (X.includes("wind") && s === 0 && P.bar % 2 === 0) noiseHit(t, "bandpass", 600 + Math.random() * 900, 0.09, SIX * 28, musicGain);
+    if (X.includes("danger")) {
+      // Over the fire: a low rumble, and a clash of the tritone at each bar.
+      if (s === 0) { noiseHit(t, "lowpass", 160, 0.25, SIX * 15); arpChord(t, SIX * 2, [P.notes[0] + 6, P.notes[0] + 12], { rate: 60, duty: 0.25, vol: 0.05, echo: 0.3 }); }
+      if (s === 8 && P.bar % 2) arpChord(t, SIX * 1, [P.notes[0] + 25], { duty: 0.125, vol: 0.04, echo: 0.4 });
+    }
+    if (X.includes("quake") && s === 0 && P.bar % 2 === 1) { tom(t, 70, 0.6); noiseHit(t, "lowpass", 120, 0.3, 0.6); }
+    if (X.includes("brass") && (s === 0 || s === 3) && P.bar % 2 === 0 && !breakdown) arpChord(t, SIX * (s ? 1 : 2.5), up, { rate: 60, duty: 0.5, vol: 0.05, cutoff: 2200, echo: 0.2 });
+    if (X.includes("creep") && (s === 6 || s === 14)) arpChord(t, SIX * 0.6, [P.notes[1] + 24], { duty: 0.125, vol: 0.03, echo: 0.5 });
+  }
+
+  function update() {
+    if (!ac || !song || !on) return;
+    const horizon = ac.currentTime + 0.2;
+    if (gridTime < ac.currentTime) gridTime = ac.currentTime + 0.05;
+    while (gridTime < horizon) {
+      stepSong(gridTime, step);
+      gridTime += SIX; step++;
+      if (pending && step % 16 === 0) { start(pending); }
+    }
+  }
+  function start(key) {
+    song = SONGS[key]; song.key = key; pending = null; step = 0; leadIndex = 0; lastLead = null;
+    SIX = 60 / song.bpm / 4;
+    echoDelay.delayTime.setValueAtTime(60 / song.bpm * 0.75, ac.currentTime);
+  }
+  // Play a song: at once if none is playing, otherwise from the next bar.
+  function play(key) {
+    if (!SONGS[key]) return;
+    if (!ac) { wanted = key; return; }
+    if (!song) { start(key); gridTime = ac.currentTime + 0.08; }
+    else if (song.key !== key) pending = key;
+  }
+  function stop() { song = null; pending = null; }
+  // A note that belongs to the music: a tone of the chord now sounding,
+  // placed on the next sixteenth, for St. Cecilia's notes.
+  let noteTurn = 0;
+  function note() {
+    if (!ac || !on) return;
+    const t = song ? Math.max(ac.currentTime + 0.01, gridTime - SIX * Math.floor((gridTime - ac.currentTime) / SIX)) : ac.currentTime;
+    const ch = song ? place(step).notes : [72, 76, 79];
+    const p = ch[noteTurn++ % 3] + 24;
+    lead(t, 0.22, p, { vol: 0.09, echo: 0.5, bend: 0, cutoff: 6000 });
+  }
+
+  // Sound effects, on their own bus over the music.
+  function tone(f, len, type, vol, slide, at) {
+    if (!ac) return;
+    const t = at || ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    if (type === "square") o.setPeriodicWave(pulseWave(0.5)); else o.type = type || "triangle";
+    o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + len);
+    g.gain.setValueAtTime(vol || 0.12, t); g.gain.exponentialRampToValueAtTime(0.0008, t + len);
+    o.connect(g).connect(sfxGain); o.start(t); o.stop(t + len + 0.02);
+  }
+  function fxNoise(len, vol, freq) { if (ac) noiseHit(ac.currentTime, "bandpass", freq || 1200, vol || 0.2, len, sfxGain); }
+  function sfx(n) {
+    if (!ac || !on) return;
+    const now = ac.currentTime;
+    switch (n) {
+      case "jump": tone(330, 0.12, "square", 0.08, 660); break;
+      case "float": tone(880, 0.08, "triangle", 0.06, 990); break;
+      case "bounce": tone(220, 0.2, "square", 0.1, 880); break;
+      case "throw": tone(990, 0.06, "square", 0.06, 1500); break;
+      case "smite": fxNoise(0.15, 0.3, 900); tone(180, 0.15, "square", 0.09, 90); break;
+      case "neume": tone(1320, 0.08, "triangle", 0.12); tone(1980, 0.12, "triangle", 0.09, 0, now + 0.06); break;
+      case "hurt": tone(220, 0.3, "sawtooth", 0.12, 70); fxNoise(0.2, 0.18, 400); break;
+      case "shield": [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.3, "triangle", 0.09, 0, now + i * 0.07)); break;
+      case "block": tone(1500, 0.12, "triangle", 0.1, 700); break;
+      case "rod": fxNoise(0.5, 0.4, 300); tone(90, 0.5, "square", 0.12, 40); break;
+      case "rise": fxNoise(0.4, 0.18, 200); break;
+      case "win": [392, 494, 587, 784].forEach((f, i) => tone(f, 0.5, "triangle", 0.12, 0, now + i * 0.15)); break;
+      case "select": tone(660, 0.07, "square", 0.07); break;
+    }
+  }
+  return { init, toggle, sfx, play, stop, update, note, get on() { return on; }, set on(v) { on = v; }, SONGS };
+})();
+
+
+// ---- The saints ------------------------------------------------------------------
+// jump: take-off speed. hold: what holding the jump does in the air. attack:
+// what a tap on the right does, and how soon it can be done again (cd).
+const SAINTS = [
+  { id: "therese", name: "St. Therese", title: "The Little Flower", hearts: 3, jump: 330, hold: "float", floatCap: 36, floatTime: 1.8, attack: "rose", cd: 0.32,
+    about: "Hold to float down like a petal. Throws roses in a gentle arc.",
+    look: { robe: "#6b4226", shade: "#4a2c18", mantle: "#f2ead8", veil: "#1c1418", wimple: "#f7f3ea", skin: "#f2c8a6", hold: "rose" } },
+  { id: "cupertino", name: "St. Joseph", title: "of Cupertino, who flew", hearts: 3, jump: 320, hold: "levitate", floatTime: 1.1, attack: "ecstasy", cd: 0.8,
+    about: "Hold to rise into the air in ecstasy. His joy bursts out all around him.",
+    look: { robe: "#7a6a58", shade: "#5a4c3e", skin: "#efc2a0", hair: "#3a2a1e", tonsure: true, cord: "#efe6d0" } },
+  { id: "benedict", name: "St. Benedict", title: "Father of Monks", hearts: 3, jump: 330, hold: "float", floatCap: 80, floatTime: 0.9, attack: "medal", cd: 0.28,
+    about: "Throws the medal of St. Benedict, straight and fast, through two foes at once.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", skin: "#e8b896", hair: "#c8c2b8", beard: "#d8d4cc", hood: true, staff: true } },
+  // St. Maurus, St. Benedict's young disciple, who at his abbot's word ran
+  // out across the lake to pull St. Placidus from the water, and only on the
+  // shore found he had walked on it. Hold to surf: he skims across any gap
+  // at the height of the ground he left, rivers and fire and empty air alike.
+  { id: "maurus", name: "St. Maurus", title: "who walked on the water", hearts: 3, jump: 320, hold: "surf", floatCap: 30, floatTime: 1.7, attack: "wave", cd: 0.45,
+    about: "Hold to surf: he skims across rivers, fire and gaps on his board, as he walked on the water to save St. Placidus. Sends a rolling wave along the ground.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", skin: "#f0c8aa", hair: "#6a4a2e", board: true } },
+  { id: "scholastica", name: "St. Scholastica", title: "who prayed for rain", hearts: 3, jump: 320, hold: "float", floatCap: 70, floatTime: 0.8, double: true, attack: "rain", cd: 1.1,
+    about: "Jumps twice: the second is a prayer. Calls down a storm on the foes ahead.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", veil: "#141418", wimple: "#f7f3ea", skin: "#f0c8aa", dove: true } },
+  // Five more, one for each book of the Psalter finished.
+  { id: "hildegard", name: "St. Hildegard", title: "of Bingen, the green of God", hearts: 3, jump: 320, hold: "float", floatCap: 40, floatTime: 1.5, attack: "seed", cd: 0.55, book: 0,
+    about: "Viriditas: her seed takes root where it lands and springs up in a green vine that catches every foe who touches it.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", veil: "#141418", wimple: "#f7f3ea", skin: "#f0c8aa", sprig: true } },
+  { id: "cecilia", name: "St. Cecilia", title: "who sang in her heart to God", hearts: 3, jump: 330, hold: "float", floatCap: 55, floatTime: 1.3, attack: "note", cd: 0.3, book: 1,
+    about: "Her notes ripple through the air, through two foes at once, and every one she sings joins the music.",
+    look: { robe: "#a8324a", shade: "#7a1a2e", skin: "#f2cdb2", hair: "#6a3a22", gold: true, wreath: true } },
+  { id: "peter", name: "St. Peter", title: "the Rock", hearts: 4, jump: 310, hold: "surf", floatCap: 30, floatTime: 0.7, attack: "rock", cd: 0.5, book: 2,
+    about: "Throws rocks that bounce and roll: twice as heavy, and they smash hailstones and boulders. He can walk on the water, a little, before he sinks.",
+    look: { robe: "#3a5a8a", shade: "#2a4470", mantle: "#c89a4a", skin: "#e8b896", hair: "#c8c2b8", beard: "#d8d4cc", keys: true } },
+  { id: "augustine", name: "St. Augustine", title: "whose heart was restless", hearts: 3, jump: 320, hold: "float", floatCap: 80, floatTime: 0.6, double: true, attack: "heart", cd: 0.45, book: 3,
+    about: "Throws flaming hearts that seek out the nearest foe, as his own heart sought God. Jumps twice.",
+    look: { robe: "#1a1a22", shade: "#0e0e14", mantle: "#c8a040", skin: "#c8946a", hair: "#2a1e16", beard: "#2a1e16", mitre: true, heart: true } },
+  { id: "lucy", name: "St. Lucy", title: "light in the darkness", hearts: 3, jump: 330, hold: "float", floatCap: 45, floatTime: 1.2, attack: "eye", cd: 0.9, book: 4,
+    about: "Her eyes fly ahead and keep watch: each hangs in the air and strikes every foe that comes within its gaze.",
+    look: { robe: "#f4f0e8", shade: "#d8d0c4", sash: "#c8324a", skin: "#f4d4bc", hair: "#e0c070", candles: true } },
+];
+
+// A small figure in the style of the game, drawn from blocks: robe, head,
+// veil or hood, hands. (x, y) is the top-left of a 12 x 22 box; f is the
+// running frame; face is 1 (right) or -1 (left).
+function drawFigure(L, x, y, f, opt) {
+  opt = opt || {};
+  x = Math.round(x); y = Math.round(y);
+  const ink = "#140c1c";
+  const bob = opt.still ? 0 : (f % 2);
+  const fy = y + bob;
+  // A halo behind the head: a crown of stars for Our Lady, a cross for Our Lord.
+  if (L.halo) {
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = "#ffd84a"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x + 6, fy + 4, 7.5, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    if (L.halo === "cross") { rect(x + 5, fy - 5, 2, 3, "#d8324a"); rect(x - 3, fy + 3, 3, 2, "#d8324a"); rect(x + 12, fy + 3, 3, 2, "#d8324a"); }
+    else for (let k = 0; k < 7; k++) { const a = Math.PI + k * Math.PI / 6; rect(x + 6 + Math.cos(a) * 8 - 0.5, fy + 4 + Math.sin(a) * 8 - 0.5, 1.5, 1.5, "#fff4a0"); }
+  }
+  // Legs and feet, running.
+  if (!opt.seated) {
+    const a = opt.air ? 1 : f % 4 < 2 ? 0 : 1;
+    rect(x + 2 + (a ? 0 : 2), y + 19, 3, 3, ink); rect(x + 7 - (a ? 0 : 2), y + 19, 3, 3, ink);
+  }
+  // Robe.
+  rect(x + 1, fy + 8, 10, 12, ink);
+  rect(x + 2, fy + 9, 8, 10, L.robe);
+  rect(x + 2, fy + 15, 8, 4, L.shade);
+  if (L.mantle) { rect(x + 1, fy + 9, 2, 10, L.mantle); rect(x + 9, fy + 9, 2, 10, L.mantle); }
+  if (L.armor) { rect(x + 2, fy + 9, 8, 6, L.armor); rect(x + 3, fy + 10, 6, 1, "#ffffff"); }
+  if (L.cord) { rect(x + 2, fy + 13, 8, 1, L.cord); rect(x + 4, fy + 14, 1, 4, L.cord); }
+  // Arms.
+  rect(x + (opt.reach ? 10 : 9), fy + 10, 3, 3, L.skin);
+  // Head.
+  rect(x + 2, fy, 8, 9, ink);
+  rect(x + 3, fy + 1, 6, 7, L.skin);
+  rect(x + 7, fy + 3, 1, 1, ink);
+  if (L.veil) { rect(x + 2, fy, 3, 9, L.veil); rect(x + 2, fy, 8, 2, L.veil); rect(x + 4, fy + 1, 5, 1, L.wimple); rect(x + 3, fy + 7, 6, 2, L.wimple); }
+  if (L.hood) { rect(x + 2, fy, 2, 9, L.robe); rect(x + 2, fy, 8, 1, L.robe); }
+  if (L.long) rect(x + 2, fy + 1, 2, 9, L.hair);
+  if (L.hair && !L.hood) { rect(x + 3, fy + 1, 6, 1, L.hair); rect(x + 3, fy + 1, 1, 3, L.hair); }
+  if (L.tonsure) { rect(x + 3, fy + 1, 6, 2, L.hair); rect(x + 5, fy + 1, 2, 1, L.skin); }
+  if (L.beard) { rect(x + 4, fy + 5, 5, 3, L.beard); }
+  if (L.helm) { rect(x + 2, fy - 1, 8, 3, "#c8ccd4"); rect(x + 5, fy - 3, 2, 2, "#b8322a"); }
+  if (L.crown) { rect(x + 3, fy - 2, 6, 2, "#e8b94a"); rect(x + 3, fy - 4, 1, 2, "#e8b94a"); rect(x + 5, fy - 4, 2, 2, "#e8b94a"); rect(x + 8, fy - 4, 1, 2, "#e8b94a"); }
+  if (L.eyes) rect(x + 6, fy + 3, 2, 1, L.eyes);
+  // Things held.
+  if (L.hold === "rose") { rect(x + 11, fy + 8, 2, 2, "#d8324a"); rect(x + 11, fy + 10, 1, 3, "#2f7a3a"); }
+  if (L.staff) { rect(x + 12, fy + 2, 1, 18, "#8a5a2b"); rect(x + 11, fy + 2, 3, 1, "#8a5a2b"); }
+  if (L.board && !opt.air) { rect(x - 5, fy - 2, 4, 22, "#140c1c"); rect(x - 4, fy - 1, 2, 20, "#ffcf5a"); rect(x - 4, fy + 8, 2, 2, "#3a8ad0"); }
+  if (L.sprig) { rect(x + 11, fy + 6, 1, 6, "#2f7a3a"); rect(x + 10, fy + 5, 3, 2, "#5ac04a"); rect(x + 12, fy + 8, 2, 1, "#5ac04a"); }
+  if (L.gold) { rect(x + 2, fy + 13, 8, 1, "#e8b94a"); }
+  if (L.wreath) { rect(x + 3, fy - 1, 6, 1, "#f4f0e8"); rect(x + 3, fy - 1, 1, 1, "#ff7a9a"); rect(x + 6, fy - 1, 1, 1, "#ff7a9a"); }
+  if (L.keys) { rect(x + 11, fy + 9, 3, 1, "#e8b94a"); rect(x + 12, fy + 9, 1, 5, "#e8b94a"); rect(x + 11, fy + 12, 3, 1, "#cfd6dc"); }
+  if (L.mitre) { rect(x + 3, fy - 4, 6, 4, "#f4f0e8"); rect(x + 5, fy - 6, 2, 2, "#f4f0e8"); rect(x + 5, fy - 4, 2, 4, "#e8b94a"); }
+  if (L.heart) { rect(x + 11, fy + 8, 3, 3, "#d8324a"); rect(x + 12, fy + 6, 1, 2, "#ffb030"); }
+  if (L.sash) { for (let k = 0; k < 6; k++) rect(x + 3 + k, fy + 9 + k, 2, 1, L.sash); }
+  if (L.candles) { rect(x + 2, fy - 2, 8, 2, "#3a8a3a"); for (const k of [2, 5, 8]) { rect(x + k, fy - 5, 1, 3, "#f4f0e8"); rect(x + k, fy - 7, 1, 2, "#ffcf5a"); } }
+  if (L.dove) { rect(x + 1, fy - 5, 4, 2, "#ffffff"); rect(x - 1, fy - 6, 2, 1, "#ffffff"); }
+  if (L.weapon) { rect(x - 3, fy + 6, 1, 14, "#8a8a92"); rect(x - 4, fy + 4, 3, 3, "#c8ccd4"); }
+}
+
+// ---- Saved progress ----------------------------------------------------------------
+// Best times for each zone, how many zones are open, the saint last chosen.
+let save = { best: {}, neumes: {}, open: 1, saint: 2, sound: true };
+try { save = Object.assign(save, JSON.parse(localStorage.getItem("run-the-way") || "{}")); } catch (e) { }
+function store() { try { localStorage.setItem("run-the-way", JSON.stringify(save)); } catch (e) { } }
+const hms = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") + "." + Math.floor((t * 10) % 10);
+function bands(colors, y0, y1) { const n = colors.length, h = (y1 - y0) / n; colors.forEach((c, i) => rect(0, y0 + i * h, W, h + 1, c)); }
+
+// ---- The running verses ------------------------------------------------------------
+// They go by on a ticker at the foot of the screen, at a steady reading pace
+// however fast the saint is running. Douay-Rheims.
+const VERSES = [
+  ["I have run the way of thy commandments, when thou didst enlarge my heart.", "Psalm 118:32"],
+  ["He hath rejoiced as a giant to run the way.", "Psalm 18:6"],
+  ["They that hope in the Lord shall renew their strength, they shall take wings as eagles, they shall run and not be weary, they shall walk and not faint.", "Isaias 40:31"],
+  ["So run that you may obtain.", "1 Corinthians 9:24"],
+  ["Let us run by patience to the fight proposed to us: looking on Jesus, the author and finisher of faith.", "Hebrews 12:1–2"],
+  ["Who hath made my feet like the feet of harts: and who setteth me upon high places.", "Psalm 17:34"],
+  ["I press towards the mark, to the prize of the supernal vocation of God in Christ Jesus.", "Philippians 3:14"],
+  ["When thou runnest thou shalt not meet a stumblingblock.", "Proverbs 4:12"],
+  ["How beautiful upon the mountains are the feet of him that bringeth good tidings.", "Isaias 52:7"],
+  ["His word runneth swiftly.", "Psalm 147:4"],
+  ["Who will give me wings like a dove, and I will fly and be at rest?", "Psalm 54:7"],
+  ["Thy word is a lamp to my feet, and a light to my paths.", "Psalm 118:105"],
+  ["The path of the just, as a shining light, goeth forwards and increaseth even to perfect day.", "Proverbs 4:18"],
+  ["They shall go from virtue to virtue: the God of gods shall be seen in Sion.", "Psalm 83:8"],
+  ["Behold he cometh leaping upon the mountains, skipping over the hills.", "Canticle of Canticles 2:8"],
+  ["Write the vision, and make it plain upon tables: that he that readeth it may run over it.", "Habacuc 2:2"],
+  ["I have fought a good fight, I have finished my course, I have kept the faith.", "2 Timothy 4:7"],
+];
+
+// ---- The zones ---------------------------------------------------------------------
+// Each zone is a long run of country with its own sky and ground. `kit` is the
+// mix of pieces it is built from (see build), harder in the later zones.
+const ZONES = [
+  { id: "pastures", name: "Green Pastures", sub: "He hath set me in a place of pasture. Psalm 22:2", song: "river", len: 34000,
+    sky: ["#3a8ad8", "#5aa8ec", "#8ccaf6", "#c4e6fc"], far: "#7ab0d0", near: "#5aa046", dirt: ["#8a5a2e", "#6e4622"], grass: "#4fb83f", grass2: "#8ad85a",
+    kit: { hill: 3, valley: 3, ramp: 2, loop: 4, spring: 1, pit: 1, boost: 2, foes: 0.6 } },
+  { id: "heights", name: "The High Places", sub: "He setteth me upon high places. Psalm 17:34", song: "mountain", len: 38000,
+    sky: ["#4a6ab8", "#7a8ad0", "#b8a8d8", "#f0c8b8"], far: "#8a90b8", near: "#6a7a5a", dirt: ["#7a7280", "#5e5866"], grass: "#7ab06a", grass2: "#b8e08a", peaks: true,
+    kit: { hill: 3, valley: 2, ramp: 3, loop: 4, spring: 2, pit: 2, boost: 2, foes: 0.8 } },
+  { id: "waters", name: "Upon Many Waters", sub: "The Lord is upon many waters. Psalm 28:3", song: "sea", len: 40000,
+    sky: ["#2a6ab0", "#4a8ac8", "#7ab4e0", "#b8dcf0"], far: "#2a5a9a", near: "#3a7ab8", dirt: ["#d8b878", "#b8985a"], grass: "#e8d8a0", grass2: "#fff4c8", sea: true,
+    kit: { hill: 2, valley: 3, ramp: 4, loop: 4, spring: 2, pit: 3, boost: 3, foes: 0.9 } },
+  { id: "city", name: "The Holy City", sub: "Glorious things are said of thee, O city of God. Psalm 86:3", song: "kings", len: 42000,
+    sky: ["#3a2a6a", "#8a4a7a", "#e07a5a", "#f8c070"], far: "#5a3a5a", near: "#8a5a4a", dirt: ["#c89a6a", "#a8784a"], grass: "#e8c070", grass2: "#fff0b0", towers: true,
+    kit: { hill: 2, valley: 3, ramp: 3, loop: 5, spring: 2, pit: 3, boost: 3, foes: 1.1 } },
+  { id: "valley", name: "The Valley of the Shadow", sub: "I will fear no evils, for thou art with me. Psalm 22:4", song: "dream", len: 44000,
+    sky: ["#06081a", "#0e1430", "#1a2248", "#2a3058"], far: "#141a34", near: "#1e2a3a", dirt: ["#3a3448", "#2a2638"], grass: "#4a6a8a", grass2: "#8ab0d8", night: true,
+    kit: { hill: 2, valley: 3, ramp: 4, loop: 5, spring: 3, pit: 4, boost: 3, foes: 1.3 } },
+  { id: "courts", name: "The Courts of the Lord", sub: "My soul longeth and fainteth for the courts of the Lord. Psalm 83:3", song: "heaven", len: 46000,
+    sky: ["#f8e8b8", "#fff0c8", "#fff8e0", "#ffffff"], far: "#f0d898", near: "#e8c870", dirt: ["#f4ecd8", "#e0d4b8"], grass: "#e8b94a", grass2: "#fff4a0", gold: true,
+    kit: { hill: 2, valley: 3, ramp: 4, loop: 6, spring: 3, pit: 4, boost: 3, foes: 1.4 } },
+];
+
+// ---- Building a zone ------------------------------------------------------------------
+// The ground is a height for every 4 pixels of the way (NaN over a pit). On it
+// stand loops, springs, boost pads, neumes, foes, lamps and, at the end, the
+// church door. y grows downward; the start is at height 0.
+const STEP = 4;
+let level = null;
+function buildZone(zi) {
+  const Z = ZONES[zi], r = rng(1000 + zi * 77), K = Z.kit;
+  const hs = [], loops = [], springs = [], boosts = [], neumes = [], foes = [], lamps = [], plats = [];
+  let h = 0;
+  const at = () => hs.length * STEP;
+  // Add `len` pixels of ground, its height from fn(t) for t from 0 to 1, as an offset from where it starts.
+  const run = (len, fn) => { const h0 = h, n = Math.max(1, Math.round(len / STEP)); for (let i = 1; i <= n; i++) { hs.push(h0 + fn(i / n)); } h = hs[hs.length - 1]; };
+  const flat = (len) => run(len, () => 0);
+  const pit = (len) => { const n = Math.round(len / STEP); for (let i = 0; i < n; i++) hs.push(NaN); };
+  const arc = (x0, y0, n, gap, lift) => { for (let i = 0; i < n; i++) neumes.push({ x: x0 + i * gap, y: y0 - Math.sin((i / Math.max(1, n - 1)) * Math.PI) * (lift || 30) }); };
+  const row = (x0, y0, n, gap) => { for (let i = 0; i < n; i++) neumes.push({ x: x0 + i * gap, y: y0 }); };
+  const ease = (t) => (1 - Math.cos(t * Math.PI)) / 2;
+  flat(500); row(260, -16, 5, 24);
+  lamps.push({ x: 120, passed: true });
+  let nextLamp = 2600, lastKind = "";
+  while (at() < Z.len) {
+    const kinds = Object.entries(K).filter(([k]) => k !== "foes" && k !== lastKind);
+    let pick = r() * kinds.reduce((s, [, w]) => s + w, 0), kind = kinds[0][0];
+    for (const [k, w] of kinds) { if ((pick -= w) < 0) { kind = k; break; } }
+    lastKind = kind;
+    const x = at();
+    if (kind === "hill") {
+      const len = 500 + r() * 500, amp = 50 + r() * 70;
+      run(len, (t) => -Math.sin(t * Math.PI) * amp + (r() < 0 ? 0 : 0));
+      arc(x + len * 0.3, h - amp - 26, 5, len * 0.08, 10);
+    } else if (kind === "valley") {
+      // Down into a valley and up again: speed for nothing.
+      const len = 700 + r() * 500, depth = 90 + r() * 120;
+      run(len, (t) => Math.sin(t * Math.PI) * depth);
+      row(x + len * 0.4, h + depth - 16, 6, 18);
+    } else if (kind === "boost") {
+      // A long slope down with a boost pad at its foot.
+      const len = 600 + r() * 300, drop = 120 + r() * 120;
+      run(len, (t) => ease(t) * drop);
+      boosts.push({ x: at() + 40 });
+      flat(300);
+      row(at() - 260, h - 16, 8, 24);
+    } else if (kind === "ramp") {
+      // Down a slope, a boost pad, a ramp that throws you into the sky, a gap, and a landing.
+      const drop = 100 + r() * 100;
+      run(500, (t) => ease(t) * drop);
+      // This pad throws hard enough to clear the gap without any help.
+      boosts.push({ x: at() + 30, speed: 780 });
+      flat(200);
+      const rise = 70 + r() * 50, rl = 220;
+      run(rl, (t) => -Math.pow(t, 2.2) * rise);
+      const gap = 110 + r() * 110, x1 = at();
+      // Neumes along the flight, high in the sky.
+      arc(x1 + 30, h - 60, 9, (gap + 160) / 9, 110);
+      pit(gap);
+      h += 20 + r() * 40;
+      flat(400);
+    } else if (kind === "loop") {
+      // A level run-in, a boost pad, and a loop the loop. (No slope just before
+      // it: a fast saint would fly off its crest and over the loop.)
+      flat(300);
+      boosts.push({ x: at() - 120 });
+      flat(260);
+      const rad = 56 + Math.floor(r() * 3) * 6;
+      loops.push({ x: at() + 60, y: h, r: rad });
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; neumes.push({ x: at() + 60 + Math.sin(a) * (rad - 14), y: h - rad + Math.cos(a) * (rad - 14) }); }
+      flat(380);
+    } else if (kind === "spring") {
+      // A spring up to a road of clouds in the sky, and down again.
+      flat(160);
+      springs.push({ x: at() - 60, y: h });
+      const py = h - 230 - r() * 60, px = at() + 40, pl = 520 + r() * 300;
+      plats.push({ x0: px, x1: px + pl, y: py });
+      row(px + 30, py - 16, Math.floor(pl / 30), 30);
+      flat(pl + 160);
+    } else if (kind === "pit") {
+      // A plain gap to jump.
+      flat(140);
+      pit(64 + r() * 36);
+      flat(200);
+      arc(at() - 300, h - 30, 4, 22, 24);
+    }
+    // Foes on the flat stretches, more of them in the later zones.
+    if (r() < 0.35 * K.foes) foes.push({ kind: "sinner", x: at() - 120, y: h, home: at() - 120, alive: true });
+    if (r() < 0.2 * K.foes) foes.push({ kind: "crow", x: at() - 60, y: h - 70 - r() * 40, base: h - 80, alive: true, ph: r() * 6 });
+    if (at() > nextLamp) { flat(120); lamps.push({ x: at() - 60, passed: false }); nextLamp += 2600; }
+    flat(60 + r() * 100);
+  }
+  flat(260);
+  const goal = at() - 120;
+  flat(900);
+  // The lowest ground in the zone: falling well below it is falling out of the world.
+  let low = -1e9; for (const v of hs) if (!isNaN(v)) low = Math.max(low, v);
+  for (const f of foes) f.y = groundAt(hs, f.x) ?? f.y;
+  return { zi, Z, hs, loops, springs, boosts, neumes: neumes.map((n) => Object.assign(n, { got: false })), foes, lamps, plats, goal, low };
+}
+function groundAt(hs, x) {
+  const i = Math.floor(x / STEP), f = x / STEP - i;
+  if (i < 0) return hs[0];
+  const a = hs[i], b = hs[i + 1];
+  if (a === undefined || isNaN(a) || b === undefined || isNaN(b)) return null;
+  return a + (b - a) * f;
+}
+
+// ---- The run -------------------------------------------------------------------------------
+// Speeds are pixels a second. The saint always runs (at least at BASE); holding
+// the right side drives him faster with no limit but the one the world sets;
+// slopes speed him going down and slow him going up.
+const GRAV = 900, BASE = 150, DRIVE = 300, JUMP = 340, LOOP_G = 0.6, BLAST = 420;
+// The air pushes back harder the faster he goes: on the level, driving with
+// all his might, a saint tops out near ten times his easy pace. Downhill, and
+// off a boost pad, he goes faster still.
+const DRAG = 0.0006;
+const game = { saint: SAINTS[save.saint] || SAINTS[0], zone: 0, time: 0, neumes: 0, best: false, newBest: false };
+let state = "title", P = null, cam = { x: 0, y: 0, z: 1 }, parts = [], shake = 0, banner = 0, fade = 0;
+function startZone(zi) {
+  level = buildZone(zi); game.zone = zi; game.time = 0; game.neumes = 0;
+  P = { x: 40, y: 0, vx: 0, vy: 0, gsp: BASE, ground: true, ang: 0, mode: "ground", plat: null, inv: 0, jumps: 0, float: 0, flight: 0, loop: null, lastLoop: null, run: 0 };
+  P.y = groundAt(level.hs, P.x);
+  level.check = { x: 40, y: P.y };
+  cam = { x: P.x - 90, y: P.y - 110, z: 1 }; parts = []; banner = 3.5; fade = 0;
+  input.jumpPressed = false; input.jumpHeld = false; input.rushHeld = false; jumpPointers.clear(); rushPointers.clear();
+  Snd.play(level.Z.song);
+  state = "play";
+}
+const speedOf = () => (P.mode === "air" ? Math.hypot(P.vx, P.vy) : Math.abs(P.gsp));
+// The angle of the ground at x (looking back at the lip of a ramp, forward at the edge of a pit).
+const slopeAt = (x) => { const a = surface(x - 3), m = surface(x), b = surface(x + 3); if (m === null) return 0; if (b === null) return a === null ? 0 : Math.atan2(m - a, 3); if (a === null) return Math.atan2(b - m, 3); return Math.atan2(b - a, 6); };
+// The height of whatever the saint runs on at x: the cloud road he is on, or the ground.
+function surface(x) { if (P.plat) return x >= P.plat.x0 && x <= P.plat.x1 ? P.plat.y : null; return groundAt(level.hs, x); }
+
+function update(dt) {
+  const s = game.saint;
+  game.time += dt; P.inv = Math.max(0, P.inv - dt);
+  if (input.jumpPressed) {
+    if (P.mode === "ground") {
+      // Off the ground at right angles to it, keeping the run's speed.
+      // Up and away from the ground, keeping every bit of the run's forward
+      // speed: a jump at the lip of a ramp only adds to the flight.
+      const a = P.ang; P.vx = Math.max(P.gsp * Math.cos(a) + Math.max(0, JUMP * Math.sin(a)), 90); P.vy = P.gsp * Math.sin(a) - JUMP * Math.cos(a);
+      P.mode = "air"; P.plat = null; P.jumps = s.double ? 1 : 0; P.float = s.floatTime || 0; P.fromJump = true; Snd.sfx("jump");
+    } else if (P.mode === "air" && P.jumps > 0) { P.vy = -JUMP * 0.85; P.jumps--; P.fromJump = true; Snd.sfx("float"); burst(P.x, P.y, "#9fd0ff", 6); }
+  }
+  input.jumpPressed = false;
+  if (P.mode === "ground") runGround(dt);
+  else if (P.mode === "loop") runLoop(dt);
+  else runAir(dt, s);
+  // Springs, boost pads, neumes, foes, lamps, the door.
+  for (const sp of level.springs) if (Math.abs(P.x - sp.x) < 10 && P.y > sp.y - 14 && P.y < sp.y + 4 && P.mode !== "loop" && (P.mode === "ground" || P.vy >= 0)) {
+    const v = P.mode === "air" ? P.vx : P.gsp * Math.cos(P.ang);
+    P.mode = "air"; P.plat = null; P.vx = Math.max(v, 220); P.vy = -720; P.jumps = game.saint.double ? 1 : 0; P.float = game.saint.floatTime || 0; P.fromJump = false; sp.t = 0.3; Snd.sfx("bounce");
+  }
+  for (const b of level.boosts) if (P.mode === "ground" && Math.abs(P.x - b.x) < 10) { const v = b.speed || 560; if (P.gsp < v) { P.gsp = v; Snd.sfx("rise"); } b.t = 0.3; }
+  for (const n of level.neumes) if (!n.got && Math.abs(n.x - P.x) < 12 && Math.abs(n.y - (P.y - 11)) < 16) { n.got = true; game.neumes++; Snd.sfx("neume"); }
+  for (const n of parts) if (n.neume && !n.got && n.age > 0.4 && Math.abs(n.x - P.x) < 12 && Math.abs(n.y - (P.y - 11)) < 16) { n.got = true; n.life = 0; game.neumes++; Snd.sfx("neume"); }
+  for (const f of level.foes) {
+    if (!f.alive) continue;
+    if (f.kind === "sinner") { f.x = f.home + Math.sin(game.time * 0.8 + f.home) * 40; f.y = groundAt(level.hs, f.x) ?? f.y; }
+    else f.y = f.base + Math.sin(game.time * 2.2 + f.ph) * 14;
+    const fy = f.kind === "sinner" ? f.y - 11 : f.y;
+    if (Math.abs(f.x - P.x) < 12 && Math.abs(fy - (P.y - 11)) < 18) {
+      // Too fast to stop, or coming down on him from above: he is bowled over, harmlessly.
+      if (speedOf() >= BLAST || (P.mode === "air" && P.vy > 0 && P.y - 11 < fy)) {
+        f.alive = false; burst(f.x, fy, "#ffe08a", 12); Snd.sfx("smite");
+        if (P.mode === "air" && P.vy > 0) P.vy = -330;
+      } else if (P.inv <= 0) hurt();
+    }
+  }
+  for (const l of level.lamps) if (!l.passed && P.x > l.x) { l.passed = true; level.check = { x: l.x, y: groundAt(level.hs, l.x) }; Snd.sfx("shield"); burst(l.x, (level.check.y || 0) - 30, "#fff4a0", 10); }
+  // Fallen out of the world: back to the last lamp. The clock runs on.
+  if (P.y > level.low + 360) { Snd.sfx("hurt"); respawn(); }
+  if (P.x >= level.goal) finish();
+  // The camera: ahead of a fast saint, and further out the faster he goes.
+  const sp = speedOf(), z = clamp(1.1 - sp / 1800, 0.8, 1);
+  cam.z += (z - cam.z) * Math.min(1, dt * 1.5);
+  const vw = W / cam.z, vh = H / cam.z, lead = clamp((P.mode === "air" ? P.vx : P.gsp * Math.cos(P.ang)) * 0.22, -20, vw * 0.3);
+  cam.x += (P.x - vw * 0.3 + lead - cam.x) * Math.min(1, dt * 6);
+  cam.y += (P.y - vh * 0.6 - cam.y) * Math.min(1, dt * 5);
+  for (const p of parts) { p.age = (p.age || 0) + dt; p.life -= dt; p.vy += (p.g === undefined ? 400 : p.g) * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+  parts = parts.filter((p) => p.life > 0);
+  if (banner > 0) banner -= dt;
+}
+
+function runGround(dt) {
+  const a = P.ang;
+  // Slopes: down speeds him, up slows him.
+  P.gsp += GRAV * Math.sin(a) * dt;
+  if (input.rushHeld) { P.run += dt; P.gsp += DRIVE * (1 + Math.min(2, P.run * 0.4)) * dt; }
+  else { P.run = 0; if (P.gsp > BASE) P.gsp -= (60 + P.gsp * 0.08) * dt; }
+  P.gsp -= DRAG * P.gsp * P.gsp * dt;
+  if (P.gsp < BASE) P.gsp = Math.min(BASE, P.gsp + 260 * dt);
+  P.gsp = Math.max(P.gsp, 100);   // never slower than a steady walk, even up the steepest slope
+  const ox = P.x;
+  P.x += P.gsp * Math.cos(a) * dt;
+  // Into a loop, if he is fast enough to go round it.
+  for (const L of level.loops) if (!P.plat && ox < L.x && P.x >= L.x && L !== P.lastLoop && P.gsp >= 300) {
+    P.mode = "loop"; P.loop = L; P.phi = 0; P.x = L.x; P.y = L.y; P.lastLoop = L; Snd.sfx("rise"); return;
+  }
+  const g = surface(P.x);
+  if (g === null) { leave(a); return; }
+  const na = slopeAt(P.x);
+  // Over a crest faster than gravity can hold him: he flies.
+  const ds = Math.max(0.001, P.gsp * dt), bend = (na - a) / ds;
+  if (bend > 0 && P.gsp * P.gsp * bend > GRAV * Math.cos(a) * 1.05) { leave(a); return; }
+  P.y = g; P.ang = na;
+}
+function leave(a) {
+  P.mode = "air"; P.vx = P.gsp * Math.cos(a); P.vy = P.gsp * Math.sin(a); P.plat = null;
+  P.jumps = game.saint.double ? 1 : 0; P.float = game.saint.floatTime || 0; P.fromJump = false;
+}
+function runLoop(dt) {
+  const L = P.loop, r = L.r;
+  // Round the loop: gravity slows him going up and speeds him coming down.
+  P.gsp -= GRAV * LOOP_G * Math.sin(P.phi) * dt;
+  if (input.rushHeld) P.gsp += DRIVE * 0.5 * dt;
+  P.phi += (P.gsp / r) * dt;
+  const cx = L.x, cy = L.y - r;
+  P.x = cx + r * Math.sin(P.phi); P.y = cy + r * Math.cos(P.phi); P.ang = -P.phi;
+  // Too slow near the top: he falls away.
+  if (Math.cos(P.phi) < 0 && P.gsp * P.gsp / r < GRAV * LOOP_G * -Math.cos(P.phi)) {
+    P.mode = "air"; P.vx = P.gsp * Math.cos(P.phi); P.vy = -P.gsp * Math.sin(P.phi); P.float = 0; P.jumps = 0; P.fromJump = false; return;
+  }
+  if (P.phi >= Math.PI * 2) { P.mode = "ground"; P.x = L.x + 1; P.y = L.y; P.ang = 0; Snd.sfx("win"); }
+}
+function runAir(dt, s) {
+  P.vy += GRAV * dt;
+  // A short tap is a short jump: let go early and the rise is cut.
+  if (!input.jumpHeld && P.vy < -180 && P.fromJump) P.vy = -180;
+  // Holding the jump on the way down: float, rise, or skim the air, as the saint does.
+  if (input.jumpHeld && P.float > 0) {
+    if (s.hold === "levitate") { P.vy = Math.max(P.vy - 1600 * dt, -120); P.float -= dt; }
+    else if (s.hold === "surf") { if (P.vy > 0) { P.vy = 0; P.float -= dt; } }
+    else if (P.vy > (s.floatCap || 60)) { P.vy = s.floatCap || 60; P.float -= dt; }
+  }
+  if (input.rushHeld) P.vx += DRIVE * 0.35 * dt;
+  P.vx -= DRAG * 0.5 * P.vx * Math.abs(P.vx) * dt;
+  const py = P.y;
+  P.x += P.vx * dt; P.y += P.vy * dt;
+  P.ang *= Math.pow(0.02, dt);
+  // Landing on a road of clouds, from above.
+  if (P.vy > 0) for (const pl of level.plats) if (P.x >= pl.x0 && P.x <= pl.x1 && py <= pl.y && P.y >= pl.y) { P.plat = pl; land(0); P.y = pl.y; return; }
+  const g = groundAt(level.hs, P.x);
+  if (g !== null && P.y >= g && P.vy >= -40) { P.plat = null; land(slopeAt(P.x)); P.y = g; }
+}
+function land(a) {
+  P.mode = "ground"; P.ang = a;
+  P.gsp = Math.max(60, P.vx * Math.cos(a) + P.vy * Math.sin(a));
+  if (P.vy > 400) burst(P.x, P.y, "#ffffff", 5);
+}
+function hurt() {
+  if (window.__god) return;
+  Snd.sfx("hurt"); shake = 0.3;
+  if (game.neumes > 0) {
+    // The neumes fly out of his hands; some can be caught again.
+    const n = Math.min(game.neumes, 16);
+    for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i - n / 2) * 0.28; parts.push({ neume: true, x: P.x, y: P.y - 14, vx: Math.cos(a) * 160, vy: Math.sin(a) * 220 - 60, g: 500, life: 2.6 }); }
+    game.neumes = 0; P.inv = 1.6;
+    P.mode = "air"; P.plat = null; P.vx = -60; P.vy = -220; P.gsp = BASE;
+  } else respawn();
+}
+function respawn() {
+  const c = level.check;
+  P.x = c.x; P.y = c.y; P.mode = "ground"; P.plat = null; P.gsp = BASE; P.vx = 0; P.vy = 0; P.ang = 0; P.inv = 1.5; P.lastLoop = null;
+  cam.x = P.x - 90; cam.y = P.y - 110; fade = 0.6;
+}
+function finish() {
+  state = "done"; Snd.stop(); Snd.sfx("win");
+  const k = level.Z.id, t = Math.round(game.time * 10) / 10;
+  game.newBest = !save.best[k] || t < save.best[k];
+  if (game.newBest) save.best[k] = t;
+  save.neumes[k] = Math.max(save.neumes[k] || 0, game.neumes);
+  save.open = Math.max(save.open, Math.min(ZONES.length, game.zone + 2));
+  store();
+}
+function burst(x, y, c, n) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 220, vy: -Math.random() * 200, life: 0.5 + Math.random() * 0.3, c }); }
+// At speed, a frame is taken in small steps, so the saint never passes through anything.
+function tick(dt) {
+  const n = Math.max(1, Math.ceil(speedOf() * dt / 3));
+  for (let i = 0; i < n && state === "play"; i++) update(dt / n);
+}
+
+// ---- Drawing -----------------------------------------------------------------------------
+function drawSky(Z, t) {
+  bands(Z.sky, 0, H);
+  if (Z.night) for (let i = 0; i < 60; i++) rect((i * 97 - cam.x * 0.02) % W + (i * 97 - cam.x * 0.02 < 0 ? W : 0), (i * 41) % 110, 1, 1, i % 5 ? "#c8d0ff" : "#ffffff");
+  if (Z.night) { ctx.fillStyle = "#f4f0d8"; ctx.beginPath(); ctx.arc(250, 34, 12, 0, 7); ctx.fill(); ctx.fillStyle = Z.sky[1]; ctx.beginPath(); ctx.arc(256, 30, 11, 0, 7); ctx.fill(); }
+  else { ctx.fillStyle = Z.gold ? "#ffffff" : "#fff4c0"; ctx.beginPath(); ctx.arc(256, 36, 14, 0, 7); ctx.fill(); }
+  // Clouds, drifting slowly.
+  if (!Z.night) for (let i = 0; i < 6; i++) { const x = ((i * 83 - cam.x * 0.05 - t * 4) % (W + 80) + W + 80) % (W + 80) - 40, y = 18 + (i * 29) % 50; ctx.fillStyle = Z.gold ? "#fffaf0" : "#ffffff"; ctx.globalAlpha = 0.85; for (const [dx, dy, rr] of [[0, 0, 9], [10, -4, 11], [22, 0, 8]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, rr, 0, 7); ctx.fill(); } ctx.globalAlpha = 1; }
+  // Far country, then near hills, each moving more slowly than the ground.
+  const far = (x) => 110 + Math.sin(x * 0.006) * 14 + Math.sin(x * 0.017) * 6;
+  ctx.fillStyle = Z.far;
+  for (let x = 0; x < W; x += 2) { const wx = x + cam.x * 0.15; let y = far(wx); if (Z.peaks) y -= Math.max(0, 30 - Math.abs(((wx % 160) + 160) % 160 - 80) * 0.8); rect(x, y, 2, H - y, Z.far); }
+  if (Z.towers) for (let i = 0; i < 9; i++) { const x = ((i * 64 - cam.x * 0.2) % (W + 64) + W + 64) % (W + 64) - 32; const h = 30 + (i * 37) % 40; rect(x, 112 - h, 14, h, "#4a2a4a"); rect(x + 4, 112 - h - 8, 6, 8, "#4a2a4a"); rect(x + 6, 112 - h - 14, 2, 6, "#e8b94a"); rect(x + 5, 112 - h - 12, 4, 1, "#e8b94a"); }
+  if (Z.sea) { rect(0, 120, W, H - 120, "#2a6ab0"); for (let i = 0; i < 16; i++) rect(((i * 37 - cam.x * 0.3 - t * 10) % W + W) % W, 124 + (i * 13) % 30, 10, 1, "#9fd0f8"); }
+  else { ctx.fillStyle = Z.near; for (let x = 0; x < W; x += 2) { const wx = x + cam.x * 0.35, y = 132 + Math.sin(wx * 0.011) * 10 + Math.sin(wx * 0.031) * 4; rect(x, y, 2, H - y, Z.near); } }
+}
+let checker = null;
+function checkerFor(Z) {
+  const c = document.createElement("canvas"); c.width = 16; c.height = 16; const g = c.getContext("2d");
+  g.fillStyle = Z.dirt[0]; g.fillRect(0, 0, 16, 16); g.fillStyle = Z.dirt[1]; g.fillRect(0, 0, 8, 8); g.fillRect(8, 8, 8, 8);
+  return ctx.createPattern(c, "repeat");
+}
+function drawGround(Z) {
+  const x0 = Math.floor(cam.x / STEP) * STEP - STEP, x1 = cam.x + W / cam.z + STEP, hs = level.hs;
+  if (!checker || checker.zone !== Z) { checker = { zone: Z, pat: checkerFor(Z) }; }
+  // The earth, checkered, run by run (a pit breaks it).
+  let open = false;
+  ctx.fillStyle = checker.pat;
+  const bottom = cam.y + H / cam.z + 20;
+  for (let x = x0; x <= x1; x += STEP) {
+    const y = groundAt(hs, x);
+    if (y === null) { if (open) { ctx.lineTo(x - STEP, bottom); ctx.closePath(); ctx.fill(); open = false; } continue; }
+    if (!open) { ctx.beginPath(); ctx.moveTo(x, bottom); open = true; }
+    ctx.lineTo(x, y);
+  }
+  if (open) { ctx.lineTo(x1, bottom); ctx.closePath(); ctx.fill(); }
+  // The grass along the top.
+  ctx.lineWidth = 4; ctx.strokeStyle = Z.grass; ctx.lineJoin = "round"; ctx.beginPath(); let on = false;
+  for (let x = x0; x <= x1; x += STEP) { const y = groundAt(hs, x); if (y === null) { on = false; continue; } if (!on) { ctx.moveTo(x, y + 1); on = true; } else ctx.lineTo(x, y + 1); }
+  ctx.stroke();
+  ctx.lineWidth = 1; ctx.strokeStyle = Z.grass2; ctx.beginPath(); on = false;
+  for (let x = x0; x <= x1; x += STEP) { const y = groundAt(hs, x); if (y === null) { on = false; continue; } if (!on) { ctx.moveTo(x, y - 0.5); on = true; } else ctx.lineTo(x, y - 0.5); }
+  ctx.stroke();
+}
+function drawLoop(L, front) {
+  // A ring of earth and grass standing on the ground.
+  const cx = L.x, cy = L.y - L.r;
+  ctx.lineWidth = 12; ctx.strokeStyle = level.Z.dirt[1];
+  ctx.beginPath(); front ? ctx.arc(cx, cy, L.r + 6, Math.PI * 0.15, Math.PI * 0.85) : ctx.arc(cx, cy, L.r + 6, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = level.Z.grass;
+  ctx.beginPath(); front ? ctx.arc(cx, cy, L.r + 1, Math.PI * 0.15, Math.PI * 0.85) : ctx.arc(cx, cy, L.r + 1, 0, Math.PI * 2); ctx.stroke();
+}
+function drawThings(t) {
+  const L0 = cam.x - 40, L1 = cam.x + W / cam.z + 40;
+  for (const pl of level.plats) if (pl.x1 > L0 && pl.x0 < L1) {
+    // A road of clouds.
+    for (let x = pl.x0; x < pl.x1; x += 14) { ctx.fillStyle = level.Z.night ? "#8a96c8" : "#ffffff"; ctx.beginPath(); ctx.arc(x + 7, pl.y + 4, 8, 0, 7); ctx.fill(); }
+    rect(pl.x0, pl.y, pl.x1 - pl.x0, 4, level.Z.night ? "#b8c4f0" : "#f4f8ff");
+  }
+  for (const b of level.boosts) if (b.x > L0 && b.x < L1) {
+    const y = groundAt(level.hs, b.x) || 0; rect(b.x - 12, y - 3, 24, 3, "#2a2a3a");
+    for (let k = 0; k < 3; k++) { const on = Math.floor(t * 8 - k) % 3 === 0; rect(b.x - 9 + k * 7, y - 3, 4, 2, on ? "#ffe08a" : "#e8742a"); }
+  }
+  for (const sp of level.springs) if (sp.x > L0 && sp.x < L1) {
+    const up = sp.t > 0 ? (sp.t -= 1 / 60, 6) : 0;
+    rect(sp.x - 8, sp.y - 4, 16, 4, "#8a8a92"); for (let k = 0; k < 3; k++) rect(sp.x - 5, sp.y - 6 - k * 3 - up * k / 3, 10, 1, "#c8ccd4");
+    rect(sp.x - 9, sp.y - 13 - up, 18, 4, "#d8324a"); rect(sp.x - 9, sp.y - 13 - up, 18, 1, "#ff8a9a");
+  }
+  for (const l of level.lamps) if (l.x > L0 && l.x < L1) {
+    const y = groundAt(level.hs, l.x) || 0;
+    rect(l.x - 1, y - 30, 2, 30, "#5a4a3a"); rect(l.x - 4, y - 36, 8, 7, "#3a2a1a");
+    rect(l.x - 3, y - 35, 6, 5, l.passed ? "#ffcf5a" : "#4a3a2a");
+    if (l.passed) { ctx.globalAlpha = 0.25 + Math.sin(t * 6) * 0.08; ctx.fillStyle = "#ffe08a"; ctx.beginPath(); ctx.arc(l.x, y - 33, 9, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  // The door of the church, at the end of the way.
+  const gx = level.goal, gy = groundAt(level.hs, gx) || 0;
+  if (gx > L0 - 80 && gx < L1 + 80) {
+    rect(gx - 30, gy - 90, 76, 90, "#c8b898"); rect(gx - 30, gy - 92, 76, 4, "#a89878");
+    ctx.fillStyle = "#c8b898"; ctx.beginPath(); ctx.moveTo(gx - 34, gy - 90); ctx.lineTo(gx + 8, gy - 124); ctx.lineTo(gx + 50, gy - 90); ctx.fill();
+    rect(gx + 6, gy - 136, 4, 14, "#e8b94a"); rect(gx + 2, gy - 132, 12, 3, "#e8b94a");
+    rect(gx - 6, gy - 52, 28, 52, "#5a3a20"); ctx.fillStyle = "#5a3a20"; ctx.beginPath(); ctx.arc(gx + 8, gy - 52, 14, Math.PI, 0); ctx.fill();
+    rect(gx + 7, gy - 50, 2, 50, "#3a2414"); rect(gx - 20, gy - 70, 8, 12, "#8ac0f0"); rect(gx + 28, gy - 70, 8, 12, "#8ac0f0");
+  }
+  for (const n of level.neumes) if (!n.got && n.x > L0 && n.x < L1) drawNeume(n.x, n.y, t);
+  for (const p of parts) if (p.neume && !p.got) { ctx.globalAlpha = p.life < 0.8 ? (Math.floor(p.life * 12) % 2 ? 0.3 : 1) : 1; drawNeume(p.x, p.y, t); ctx.globalAlpha = 1; }
+  for (const f of level.foes) if (f.alive && f.x > L0 && f.x < L1) {
+    if (f.kind === "sinner") drawFigure({ robe: "#4a2a3a", shade: "#2a1a24", skin: "#c89a7a", hair: "#2a1a10", hood: true, eyes: "#d8324a" }, f.x - 6, f.y - 22, Math.floor(t * 6), {});
+    else { const fl = Math.floor(t * 10) % 2; rect(f.x - 6, f.y - 3, 12, 6, "#1a1420"); rect(f.x - 10, f.y - 3 - (fl ? 3 : -2), 6, 2, "#1a1420"); rect(f.x + 4, f.y - 3 - (fl ? 3 : -2), 6, 2, "#1a1420"); rect(f.x + 5, f.y - 2, 3, 2, "#e8b94a"); rect(f.x + 2, f.y - 2, 1, 1, "#ff4a3a"); }
+  }
+}
+function drawNeume(x, y, t) {
+  // A golden square note, turning.
+  const w = Math.max(1, Math.abs(Math.cos(t * 4 + x * 0.05)) * 7);
+  rect(x - w / 2, y - 3, w, 6, "#140c1c"); rect(x - w / 2 + 0.5, y - 2.5, Math.max(0.5, w - 1), 5, "#ffcf5a");
+  rect(x + w / 2 - 1, y - 9, 1, 6, "#140c1c");
+}
+// The saint: tilted with the ground, round the loop, and his feet a blur at speed.
+function drawSaint(t) {
+  if (P.inv > 0 && Math.floor(P.inv * 14) % 2 && state === "play") return;
+  const s = game.saint, sp = speedOf();
+  ctx.save();
+  ctx.translate(P.x, P.y); ctx.rotate(P.ang);
+  // Streaks of light behind him at speed.
+  if (sp > 380) { ctx.globalAlpha = clamp((sp - 380) / 500, 0, 0.6); for (let k = 0; k < 4; k++) { const len = 10 + Math.min(70, (sp - 380) * 0.08) + ((t * 60 + k * 7) % 6); rect(-8 - len, -20 + k * 5, len, 1, k % 2 ? "#ffe8b0" : "#ffffff"); } ctx.globalAlpha = 1; }
+  const blur = P.mode === "air" ? 0 : clamp((sp - 220) / 260, 0, 1);
+  const f = Math.floor(P.x / 10);
+  drawFigure(s.look, -6, -22, f, { air: P.mode === "air", seated: blur > 0 });
+  if (blur > 0) {
+    // The legs become a wheel, and at full pelt a figure of eight.
+    const spin = t * (20 + sp * 0.06);
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = "#140c1c"; ctx.lineWidth = 1.6;
+    if (blur < 1) { ctx.beginPath(); ctx.ellipse(0, -2, 5, 2.8, 0, 0, Math.PI * 2); ctx.stroke(); }
+    else { for (const dx of [-3.5, 3.5]) { ctx.beginPath(); ctx.ellipse(dx, -2.5, 3.6, 3.2, 0, 0, Math.PI * 2); ctx.stroke(); } }
+    ctx.strokeStyle = s.look.shade; ctx.lineWidth = 1;
+    for (let k = 0; k < 3; k++) { const a = spin + k * 2.1; ctx.beginPath(); ctx.arc(0, -2.5, 4.6, a, a + 0.9); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+function drawPlay(t) {
+  const Z = level.Z;
+  drawSky(Z, t);
+  ctx.save();
+  const sh = shake > 0 ? (shake -= 1 / 60, (Math.random() - 0.5) * 4) : 0;
+  ctx.scale(cam.z, cam.z); ctx.translate(-cam.x + sh, -cam.y);
+  for (const L of level.loops) if (L.x > cam.x - 100 && L.x < cam.x + W / cam.z + 100) drawLoop(L, false);
+  drawGround(Z);
+  drawThings(t);
+  drawSaint(t);
+  // The near rim of a loop goes in front of him.
+  if (P.mode === "loop") drawLoop(P.loop, true);
+  for (const p of parts) if (!p.neume) rect(p.x, p.y, 2, 2, p.c);
+  ctx.restore();
+  if (fade > 0) { ctx.globalAlpha = fade; rect(0, 0, W, H, "#000"); ctx.globalAlpha = 1; fade -= 1 / 60; }
+  drawHud(t);
+  drawTicker(t);
+}
+function drawHud(t) {
+  drawNeume(10, 11, t); text(String(game.neumes), 18, 4, { color: "#ffe08a", size: 9 });
+  text(hms(game.time), W / 2, 3, { align: "center", color: "#ffffff", size: 9 });
+  const sp = speedOf() / BASE;
+  if (sp > 1.15) text("×" + sp.toFixed(1), W - 26, 4, { align: "right", color: sp > 4 ? "#ff8a4a" : "#ffcf5a", size: 8 });
+  rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
+  if (banner > 0) {
+    ctx.globalAlpha = Math.min(1, banner);
+    text(level.Z.name.toUpperCase(), W / 2, 50, { align: "center", color: "#ffe08a", size: 16 });
+    text(level.Z.sub, W / 2, 72, { align: "center", color: "#ffffff", size: 8, serif: true });
+    ctx.globalAlpha = 1;
+  }
+}
+// The ticker: the running verses go by along the foot of the screen at a
+// steady reading pace, however fast the saint is going.
+const TICKER = VERSES.map(([v, ref]) => v + "  — " + ref).join("     ✠     ");
+let tickerX = 0, tickerW = 0;
+function drawTicker(t) {
+  rect(0, H - 13, W, 13, "#140c1cdd"); rect(0, H - 13, W, 1, "#e8b94a");
+  if (!tickerW) tickerW = measure(TICKER + "     ✠     ", 8, true);
+  tickerX = (tickerX + 26 / 60) % tickerW;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, H - 12, W, 12); ctx.clip();
+  for (let x = -tickerX; x < W; x += tickerW) text(TICKER + "     ✠     ", x, H - 11, { color: "#fff0c8", size: 8, serif: true, edge: null });
+  ctx.restore();
+}
+
+// ---- Menus --------------------------------------------------------------------------------
+function button(label, x, y, w, h, hot) {
+  rect(x - 1, y - 1, w + 2, h + 2, "#140c1c"); rect(x, y, w, h, hot ? "#e8b94a" : "#2a2240"); rect(x, y, w, 2, hot ? "#fff0a0" : "#3a3260");
+  text(label, x + w / 2, y + h / 2 - 5, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 9 });
+  return { x, y, w, h };
+}
+const inBox = (p, b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
+function menuSky(t) {
+  bands(["#2a6ab8", "#4a8ad0", "#7ab4e8", "#b8dcf4"], 0, H);
+  ctx.fillStyle = "#5aa046"; for (let x = 0; x < W; x += 2) { const y = 140 + Math.sin((x + t * 60) * 0.02) * 10; rect(x, y, 2, H - y, "#5aa046"); }
+}
+function drawTitle(t) {
+  menuSky(t);
+  text("RUN THE WAY", W / 2, 14, { align: "center", color: "#ffe08a", size: 26 });
+  text("“I have run the way of thy commandments, when thou didst enlarge my heart.”", W / 2, 48, { align: "center", color: "#ffffff", size: 8, serif: true });
+  text("Psalm 118:32", W / 2, 60, { align: "center", color: "#fff0c8", size: 7 });
+  // The saint, running in place with his feet a blur.
+  const s = game.saint;
+  ctx.save(); ctx.translate(W / 2, 112); ctx.scale(2, 2); ctx.translate(-W / 2, -112);
+  const keep = P; P = { x: W / 2, y: 112, gsp: 400 + Math.sin(t) * 300, mode: "ground", ang: 0, inv: 0 }; drawSaint(t); P = keep;
+  ctx.restore();
+  text(s.name, W / 2, 118, { align: "center", color: "#ffffff", size: 9 });
+  const go = button("RUN", W / 2 - 104, 140, 64, 20, true);
+  const who = button("SAINT", W / 2 - 32, 140, 64, 20, false);
+  const zones = button("ZONES", W / 2 + 40, 140, 64, 20, false);
+  text("Left: jump (hold to float)   Right: hold to run faster", W / 2, 166, { align: "center", color: "#ffffff", size: 7 });
+  for (const tp of input.taps) {
+    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); startZone(Math.min(save.open, ZONES.length) - 1); }
+    else if (tp.x !== undefined && inBox(tp, who)) { Snd.sfx("select"); state = "saints"; }
+    else if (tp.x !== undefined && inBox(tp, zones)) { Snd.sfx("select"); state = "zones"; }
+  }
+  input.taps = [];
+}
+function drawSaints(t) {
+  menuSky(t);
+  text("CHOOSE A SAINT", W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
+  const boxes = [];
+  SAINTS.forEach((s, i) => {
+    const x = 12 + (i % 5) * 60, y = 22 + Math.floor(i / 5) * 62, hot = s === game.saint;
+    rect(x - 1, y - 1, 56, 58, "#140c1c"); rect(x, y, 54, 56, hot ? "#e8b94a" : "#2a2240");
+    drawFigure(s.look, x + 21, y + 6, Math.floor(t * 6), {});
+    const n = s.name.replace("St. ", "");
+    text(n, x + 27, y + 32, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 7 });
+    text(s.double ? "double jump" : s.hold === "levitate" ? "rises" : s.hold === "surf" ? "skims gaps" : "floats", x + 27, y + 43, { align: "center", color: hot ? "#3a2a1a" : "#c8b8ff", edge: null, size: 6 });
+    boxes.push({ x, y, w: 54, h: 56, s, i });
+  });
+  const back = button("BACK", W / 2 - 40, 152, 80, 18, true);
+  for (const tp of input.taps) {
+    const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
+    if (b) { game.saint = b.s; save.saint = b.i; store(); Snd.sfx("select"); }
+    else if (tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, back))) state = "title";
+  }
+  input.taps = [];
+}
+function drawZones(t) {
+  menuSky(t);
+  text("THE WAY", W / 2, 4, { align: "center", color: "#ffe08a", size: 11 });
+  const boxes = [];
+  ZONES.forEach((Z, i) => {
+    const x = 10 + (i % 3) * 102, y = 22 + Math.floor(i / 3) * 62, open = i < save.open || window.__unlock;
+    rect(x - 1, y - 1, 96, 58, "#140c1c");
+    const sky = open ? Z.sky : ["#2a2240"];
+    sky.forEach((c, k) => rect(x, y + (k * 40) / sky.length, 94, 40 / sky.length + 1, c));
+    rect(x, y + 40, 94, 16, open ? Z.dirt[0] : "#1a1430"); rect(x, y + 40, 94, 2, open ? Z.grass : "#1a1430");
+    // The name, on two lines if it needs them.
+    const words = ((i + 1) + ". " + Z.name).split(" "), lines = [""];
+    for (const w of words) { const t = lines[lines.length - 1] ? lines[lines.length - 1] + " " + w : w; if (measure(t, 7) > 88 && lines[lines.length - 1]) lines.push(w); else lines[lines.length - 1] = t; }
+    lines.forEach((l, k) => text(l, x + 47, y + 4 + k * 9, { align: "center", color: "#ffffff", size: 7 }));
+    if (open) {
+      const b = save.best[Z.id];
+      text(b ? "BEST " + hms(b) : "not yet run", x + 47, y + 43, { align: "center", color: "#fff0c8", size: 7 });
+    } else text("finish the zone before", x + 47, y + 26, { align: "center", color: "#c8b8ff", size: 6, edge: null });
+    boxes.push({ x, y, w: 94, h: 56, i, open });
+  });
+  const back = button("BACK", W / 2 - 40, 152, 80, 18, false);
+  for (const tp of input.taps) {
+    const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
+    if (b && b.open) { Snd.sfx("select"); startZone(b.i); }
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = "title";
+  }
+  input.taps = [];
+}
+function drawDone(t) {
+  drawPlay(t);
+  rect(0, 0, W, H, "#000000aa");
+  text(level.Z.name.toUpperCase(), W / 2, 22, { align: "center", color: "#ffe08a", size: 14 });
+  text("“I have finished my course, I have kept the faith.”  2 Timothy 4:7", W / 2, 44, { align: "center", color: "#ffffff", size: 8, serif: true });
+  text("TIME " + hms(game.time), W / 2, 64, { align: "center", color: "#ffffff", size: 12 });
+  text(game.newBest ? "A NEW BEST TIME!" : "BEST " + hms(save.best[level.Z.id]), W / 2, 82, { align: "center", color: game.newBest ? "#8ae86a" : "#ffe08a", size: 9 });
+  text("NEUMES " + game.neumes, W / 2, 96, { align: "center", color: "#ffcf5a", size: 9 });
+  const last = game.zone >= ZONES.length - 1;
+  const again = button("AGAIN", W / 2 - 154, 130, 100, 20, false);
+  const next = last ? null : button("NEXT ZONE", W / 2 - 50, 130, 100, 20, true);
+  const menu = button("ZONES", W / 2 + 54, 130, 100, 20, last);
+  for (const tp of input.taps) {
+    if (tp.x !== undefined && inBox(tp, again)) startZone(game.zone);
+    else if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) startZone(game.zone + 1);
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, menu)) || (last && tp.key === "Enter")) state = "zones";
+  }
+  input.taps = [];
+}
+function drawPause(t) {
+  drawPlay(t);
+  rect(0, 0, W, H, "#000000aa");
+  text("PAUSED", W / 2, 34, { align: "center", color: "#ffe08a", size: 16 });
+  text("Left half: tap to jump, hold to float", W / 2, 60, { align: "center", size: 8 });
+  text("Right half: hold to run faster, the longer the faster", W / 2, 72, { align: "center", size: 8 });
+  const go = button("RESUME", W / 2 - 40, 96, 80, 20, true), quit = button("QUIT", W / 2 - 40, 124, 80, 20, false);
+  for (const tp of input.taps) {
+    if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; input.rushHeld = false; jumpPointers.clear(); rushPointers.clear(); }
+    else if (tp.x !== undefined && inBox(tp, quit)) { state = "zones"; Snd.stop(); }
+  }
+  input.taps = [];
+}
+
+// ---- Input -------------------------------------------------------------------------------
+const input = { jumpHeld: false, jumpPressed: false, rushHeld: false, taps: [] };
+const jumpPointers = new Set(), rushPointers = new Set();
+function toGame(ev) { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) / (r.width / W), y: (ev.clientY - r.top) / (r.height / H) }; }
+addEventListener("pointerdown", (ev) => {
+  if (ev.cancelable) ev.preventDefault();
+  Snd.init();
+  const p = toGame(ev);
+  if (state === "play") {
+    if (p.x > W - 24 && p.y < 20) { state = "pause"; input.taps = []; return; }
+    if (ev.clientX < innerWidth / 2) { jumpPointers.add(ev.pointerId); input.jumpHeld = true; input.jumpPressed = true; }
+    else { rushPointers.add(ev.pointerId); input.rushHeld = true; }
+  } else input.taps.push(p);
+}, { passive: false });
+const release = (ev) => { jumpPointers.delete(ev.pointerId); rushPointers.delete(ev.pointerId); input.jumpHeld = jumpPointers.size > 0 || JUMP_KEYS.some((k) => keys.has(k)); input.rushHeld = rushPointers.size > 0 || RUSH_KEYS.some((k) => keys.has(k)); };
+addEventListener("pointerup", release); addEventListener("pointercancel", release);
+addEventListener("contextmenu", (e) => e.preventDefault());
+const JUMP_KEYS = ["Space", "ArrowUp", "KeyW", "KeyZ"], RUSH_KEYS = ["ArrowRight", "KeyD", "KeyX"];
+const keys = new Set();
+addEventListener("keydown", (e) => {
+  Snd.init();
+  if (e.repeat) return;
+  keys.add(e.code);
+  if (state === "play") {
+    if (JUMP_KEYS.includes(e.code)) { input.jumpHeld = true; input.jumpPressed = true; e.preventDefault(); }
+    if (RUSH_KEYS.includes(e.code)) { input.rushHeld = true; e.preventDefault(); }
+    if (e.code === "KeyP" || e.code === "Escape") { state = "pause"; input.taps = []; }
+  } else input.taps.push({ key: e.code });
+  if (e.code === "KeyM") Snd.toggle();
+});
+addEventListener("keyup", (e) => { keys.delete(e.code); input.jumpHeld = jumpPointers.size > 0 || JUMP_KEYS.some((k) => keys.has(k)); input.rushHeld = rushPointers.size > 0 || RUSH_KEYS.some((k) => keys.has(k)); });
+addEventListener("blur", () => { if (state === "play") state = "pause"; });
+
+// ---- The loop ------------------------------------------------------------------------------
+let last = performance.now(), clock = 0;
+function frame(now) {
+  const dt = clamp((now - last) / 1000, 0, 0.05); last = now; clock += dt;
+  ctx.setTransform(R, 0, 0, R, 0, 0); ctx.imageSmoothingEnabled = false;
+  if (state === "title" || state === "saints" || state === "zones") Snd.play("title");
+  Snd.update();
+  if (state === "play") { tick(dt); if (state === "play") drawPlay(clock); }
+  if (state === "title") drawTitle(clock);
+  else if (state === "saints") drawSaints(clock);
+  else if (state === "zones") drawZones(clock);
+  else if (state === "done") drawDone(clock);
+  else if (state === "pause") drawPause(clock);
+  if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// For testing: ?zone=2 starts there; ?god keeps the saint safe; ?unlock opens every zone.
+const Q = new URLSearchParams(location.search);
+if (Q.has("god")) window.__god = true;
+if (Q.has("unlock")) window.__unlock = true;
+if (Q.has("saint")) game.saint = SAINTS[+Q.get("saint")] || game.saint;
+if (Q.has("zone")) startZone(+Q.get("zone") - 1);
+window.RW = { get P() { return P; }, get level() { return level; }, get state() { return state; }, get game() { return game; }, input, startZone, step(dt) { if (state === "play") tick(dt); }, ZONES, SAINTS, get save() { return save; } };
+
+Snd.on = save.sound !== false;
+</script>
+</body>
+</html>
