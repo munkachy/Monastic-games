@@ -38,8 +38,6 @@ const PRAYER_FROM_BUBBLE = 4;
 const SPELLS = {
   repel:    { icon: "aspergillum", cost: 4, name: "Holy water", key: "h" },
   zap:      { icon: "bolt",        cost: 3, name: "Zap",        key: "z" },
-  mortar:   { icon: "mortar",      cost: 3, name: "Mortar",     key: "c" },
-  scaffold: { icon: "scaffold",    cost: 5, name: "Scaffold",   key: "s" },
   gild:     { icon: "stone_gold",  cost: 2, name: "Gild",       key: "g" },
 };
 const BUBBLE_EVERY = [16, 28];     // seconds between bubbles (min, max)
@@ -48,15 +46,71 @@ const GOLD_BONUS = 10;             // coins for a gilded stone
 const SPELL_HELP = {
   repel: "drives off the demon",
   zap: "breaks the last stone",
-  mortar: "the stone sets solid",
-  scaffold: "a platform at the top",
   gild: "gold stone, +" + GOLD_BONUS + " coins",
 };
 
 const DEMON_FIRST_AT = 5;          // cubits of height before his first visit
 const DEMON_AWAY = [18, 32];       // seconds between visits (min, max)
+const DEMON_WAIT = 2;              // seconds he hovers, doing nothing, when he comes
 const DEMON_CURSES = 3;            // curses per visit
 const CURSE_CHANCE = 0.45;         // chance he curses each new stone while here
+
+// Fire. The demon drops it on the tower. Lay a stone on it at once and it is
+// smothered; leave it, and it spreads from stone to stone, in any direction,
+// and burns them away. Holy water douses one fire, for a little prayer.
+const FIRE_DROPS = [2, 3];         // fires he drops on each visit (first monasteries, later ones)
+const FIRE_EVERY = [3.5, 6];       // seconds between his fires (min, max)
+const FIRE_GRACE = 3;              // seconds a new fire smoulders before it spreads
+const FIRE_SPREAD = [1.1, 2.2];    // seconds between each fire's attempts to spread
+const FIRE_SPREAD_CHANCE = 0.65;   // chance each attempt finds fuel and catches
+const FIRE_BURN = 7;               // seconds until a burning stone is burned away
+const DOUSE_COST = 2;              // prayer to douse one fire with holy water
+
+// The seven deadly sins. The demon comes as one of them each time: each looks
+// different, and each does the same mischief.
+const SINS = [
+  { id: "pride", name: "Pride", colors: { m: "#2a0a3a", M: "#4a1a6a", o: "#1a0a20", r: "#a86ad8", R: "#6a2a9a", y: "#ffd83a" },
+    verse: ["Pride goeth before destruction: and the spirit is lifted up before a fall.", "Proverbs 16:18"] },
+  { id: "avarice", name: "Avarice", colors: { m: "#2a3a0a", M: "#4a5a1a", o: "#2a2008", r: "#c8b02a", R: "#6a7a1a", y: "#fff4a0" },
+    verse: ["For the desire of money is the root of all evils.", "1 Timothy 6:10"] },
+  { id: "lust", name: "Lust", colors: { m: "#3a0a2a", M: "#7a1a4a", o: "#2a0818", r: "#e85a9a", R: "#a82a6a", y: "#ffe0f0" },
+    verse: ["Walk in the spirit, and you shall not fulfill the lusts of the flesh.", "Galatians 5:16"] },
+  { id: "envy", name: "Envy", colors: { m: "#0a2a14", M: "#1a5a2a", o: "#082010", r: "#6ad06a", R: "#2a7a3a", y: "#c8ff3a" },
+    verse: ["Soundness of heart is the life of the flesh: but envy is the rottenness of the bones.", "Proverbs 14:30"] },
+  { id: "gluttony", name: "Gluttony", colors: { m: "#3a1a08", M: "#6a3a1a", o: "#2a1408", r: "#f09a4a", R: "#b8682a", y: "#ffe8a0" },
+    verse: ["Take heed to yourselves, lest perhaps your hearts be overcharged with surfeiting and drunkenness.", "Luke 21:34"] },
+  { id: "wrath", name: "Wrath", colors: { m: "#4a0404", M: "#8a0a0a", o: "#1a0404", r: "#ff5a2a", R: "#d01a1a", y: "#ffff6a" },
+    verse: ["For the anger of man worketh not the justice of God.", "James 1:20"] },
+  { id: "sloth", name: "Sloth", colors: { m: "#1a2030", M: "#3a4458", o: "#141820", r: "#9aa8c0", R: "#5a6a88", y: "#d8e0f0" },
+    verse: ["Go to the ant, O sluggard, and consider her ways, and learn wisdom.", "Proverbs 6:6"] },
+];
+
+// Scripture over the building site: spelled in stars at night, in clouds by
+// day, and in the light of the sun at its rising and setting. One for each Hour.
+const SKY_VERSES = [
+  ["The stone which the builders rejected; the same is become the head of the corner.", "Psalm 117:22"],
+  ["Know you not, that you are the temple of God, and that the Spirit of God dwelleth in you?", "1 Corinthians 3:16"],
+  ["Behold I will lay a stone in the foundations of Sion, a tried stone, a corner stone, a precious stone.", "Isaias 28:16"],
+  ["Your members are the temple of the Holy Ghost, who is in you.", "1 Corinthians 6:19"],
+  ["Be you also as living stones built up, a spiritual house.", "1 Peter 2:5"],
+  ["Jesus Christ himself being the chief corner stone.", "Ephesians 2:20"],
+  ["For other foundation no man can lay, but that which is laid; which is Christ Jesus.", "1 Corinthians 3:11"],
+  ["Upon this rock I will build my church, and the gates of hell shall not prevail against it.", "Matthew 16:18"],
+  ["The name of the Lord is a strong tower: the just runneth to it, and shall be exalted.", "Proverbs 18:10"],
+  ["A wise man that built his house upon a rock.", "Matthew 7:24"],
+  ["Wisdom hath built herself a house, she hath hewn her out seven pillars.", "Proverbs 9:1"],
+  ["You are the temple of the living God; as God saith: I will dwell in them, and walk among them.", "2 Corinthians 6:16"],
+];
+// Words set on a banner across the sky at the height of each new tier.
+const TIER_WORDS = [
+  ["Unless the Lord build the house, they labour in vain that build it.", "Psalm 126:1"],
+  ["The name of the Lord is a strong tower.", "Proverbs 18:10"],
+  ["Which of you having a mind to build a tower, doth not first sit down, and reckon the charges?", "Luke 14:28"],
+  ["The Lord is my firmament, my refuge, and my deliverer.", "Psalm 17:3"],
+];
+const VERSE_REPEL = ["Resist the devil, and he will fly from you.", "James 4:7"];
+const VERSE_SMOTHER = ["The shield of faith, wherewith you may be able to extinguish all the fiery darts of the most wicked one.", "Ephesians 6:16"];
+const VERSE_BURN = ["The fire shall try every man's work, of what sort it is.", "1 Corinthians 3:13"];
 const HASTE_FACTOR = 2.6;
 const HUGE_FACTOR = 1.5;
 
@@ -68,7 +122,6 @@ const HUGE_FACTOR = 1.5;
 // square stone rolling like a wheel. No bounce.
 const GRAVITY = 20;           // metres (stone squares) per second squared
 const STONE = { density: 1, friction: 0.95, restitution: 0, linearDamping: 0, angularDamping: 0.3 };
-const ICE = { density: 1, friction: 0.03, restitution: 0, linearDamping: 0, angularDamping: 0.3 };
 
 // The seven shapes, as square offsets, each with its own kind of stone.
 const SHAPES = [
@@ -88,9 +141,6 @@ const SHAPES = [
 
 const PRAYER_BY_LEVEL = [10, 13, 16, 20];
 const FOUNDATION_BY_LEVEL = [7, 9, 11];
-const MORTAR_COST_BY_LEVEL = [4, 3, 2];
-const MORTAR_PER_BUBBLE = 2;       // uses of Mortar in each mortar bubble
-const MORTAR_FROM_ROSARY = 1;      // uses at the start, with the olive-wood rosary
 
 const UPGRADES = [
   { id: "prayerLevel", name: "Deeper prayer", icon: "beads", now: (l) => "You hold " + PRAYER_BY_LEVEL[l] + " prayer.",
@@ -101,11 +151,6 @@ const UPGRADES = [
     ] },
   { id: "candle", name: "A fourth candle", icon: "candle_lit", now: (l) => "You have " + (3 + l) + " candles.",
     levels: [{ price: 500, text: "Drop four stones before the tower is finished, instead of three." }] },
-  { id: "trowel", name: "Mason's trowel", icon: "mortar", now: (l) => "Mortar costs " + MORTAR_COST_BY_LEVEL[l] + " prayer.",
-    levels: [
-      { price: 250, text: "Mortar costs 3 prayer." },
-      { price: 600, text: "Mortar costs 2 prayer." },
-    ] },
   { id: "foundation", name: "Wider foundation", icon: "stone_granite", now: (l) => "Your foundation is " + FOUNDATION_BY_LEVEL[l] + " stones wide.",
     levels: [
       { price: 300, text: "The cloister foundation, 9 stones wide." },
@@ -117,8 +162,8 @@ const UPGRADES = [
 
 const ROSARIES = [
   { id: "boxwood", name: "Boxwood rosary", price: 0, beads: "#d8b878", spell: null, text: "A plain rosary. Your towers start with no spell." },
-  { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: "mortar", text: "Every tower starts with one use of Mortar." },
-  { id: "silver", name: "Silver rosary", price: 450, beads: "#c8d0d8", spell: "scaffold", text: "Every tower starts with Scaffold." },
+  { id: "olive", name: "Olive-wood rosary", price: 200, beads: "#7a8a3a", spell: null, prayer: 3, text: "Every tower starts with 3 prayer already said." },
+  { id: "silver", name: "Silver rosary", price: 450, beads: "#c8d0d8", spell: null, slowFire: true, text: "The demon's fires smoulder twice as long before they spread." },
   { id: "gold", name: "Gold rosary", price: 700, beads: "#f0c030", spell: "gild", text: "Every tower starts with Gild." },
 ];
 
@@ -144,50 +189,50 @@ const WORLDS = [
     id: "stbernard", name: "St. Bernard Abbey", rank: "Postulant",
     about: "The abbey church at Cullman, Alabama: a great square block of sandstone quarried on the monks' own land.",
     base: [{ x: -4, w: 8 }],
-    spells: ["mortar"],
-    curses: ["ice"],
+    spells: [],
+    curses: [],
   },
   {
     id: "subiaco", name: "Subiaco", rank: "Novice",
     about: "The Sacro Speco, built into the cliff around the cave where St. Benedict lived as a hermit.",
     base: [{ x: -3.5, w: 7 }],
-    spells: ["mortar", "scaffold"],
-    curses: ["ice", "huge"],
+    spells: [],
+    curses: ["huge"],
   },
   {
     id: "montecassino", name: "Monte Cassino", rank: "Simple Vows",
     about: "St. Benedict's abbey on the mountain, where he wrote the Rule. Mind the cloister between the wings.",
     base: [{ x: -5.5, w: 4 }, { x: 1.5, w: 4 }],
-    spells: ["mortar", "scaffold"],
-    curses: ["ice", "huge"],
+    spells: ["gild"],
+    curses: ["huge"],
   },
   {
     id: "cluny", name: "Cluny", rank: "Solemn Profession",
     about: "The great abbey of Burgundy. Of its church, one octagonal bell tower still stands.",
     base: [{ x: -2.5, w: 5 }],
-    spells: ["mortar", "scaffold", "gild"],
-    curses: ["ice", "huge", "invisible"],
+    spells: ["gild"],
+    curses: ["huge", "haste"],
   },
   {
     id: "melk", name: "Melk", rank: "Cellarer",
     about: "The Baroque abbey on its rock above the Danube, with green domes on its towers.",
     base: [{ x: -4, w: 8 }],
-    spells: ["mortar", "scaffold", "gild"],
-    curses: ["ice", "huge", "invisible", "haste"],
+    spells: ["gild"],
+    curses: ["huge", "haste"],
   },
   {
     id: "montsaintmichel", name: "Mont-Saint-Michel", rank: "Prior",
     about: "The abbey on its rock in the bay of Normandy, under the spire of St. Michael.",
     base: [{ x: -2, w: 4 }],
-    spells: ["mortar", "scaffold", "gild"],
-    curses: ["ice", "huge", "invisible", "haste", "tumble"],
+    spells: ["gild"],
+    curses: ["huge", "haste", "tumble"],
   },
   {
     id: "montserrat", name: "Montserrat", rank: "Abbot",
     about: "The abbey among the saw-toothed peaks of Catalonia, home of the Black Madonna.",
     base: [{ x: -5, w: 3, drop: 1 }, { x: -2, w: 6 }],
-    spells: ["mortar", "scaffold", "gild"],
-    curses: ["ice", "huge", "invisible", "haste", "tumble"],
+    spells: ["gild"],
+    curses: ["huge", "haste", "tumble"],
   },
 ];
 
@@ -204,11 +249,13 @@ function makeMissions(world, level) {
     { key: "noloss", text: "Reach " + Math.round(H * 0.6) + " cubits without dropping a stone", check: (s) => s.heightNoLoss >= Math.round(H * 0.6) },
     { key: "coins", text: "Earn " + (60 + 40 * level) + " coins in one tower", check: (s) => s.earned >= 60 + 40 * level },
     { key: "bubbles", text: "Catch " + (1 + Math.floor(level / 2)) + " bubble" + (level >= 2 ? "s" : "") + " in one tower", check: (s) => s.bubbles >= 1 + Math.floor(level / 2) },
-    level === 0 ? { key: "mortar", text: "Use Mortar in a tower", check: (s) => s.mortars >= 1 }
-      : level <= 2 ? { key: "scaffold", text: "Use Scaffold twice in one tower", check: (s) => s.scaffolds >= 2 }
+    level === 0 ? { key: "mortar", text: "Smother a fire with a stone", check: (s) => s.smothered >= 1 }
+      : level <= 2 ? { key: "scaffold", text: "Smother " + (1 + level) + " fires in one tower", check: (s) => s.smothered >= 1 + level }
       : { key: "gold", text: "Build a tower with " + (level - 1) + " gold stones", check: (s) => s.golds >= level - 1 },
     { key: "noprayer", text: "Reach " + half + " cubits without using prayer", check: (s) => s.heightNoPrayer >= half },
-    { key: "cursed", text: "Lay " + (2 + level) + " cursed stones on one tower", check: (s) => s.cursedLanded >= 2 + level },
+    world.curses.length
+      ? { key: "cursed", text: "Lay " + (2 + level) + " cursed stones on one tower", check: (s) => s.cursedLanded >= 2 + level }
+      : { key: "cursed", text: "Douse a fire with holy water", check: (s) => s.doused >= 1 },
   ];
   // Shuffle with a fixed seed, so each monastery keeps the same order.
   let seed = 7 + level * 31;
@@ -292,14 +339,16 @@ let steering = false;     // true while the player controls the falling stone
 let activeSpeed = FALL_SPEED;
 let targetAngle = 0;
 let landed = [];          // stones that have been laid, oldest first
-let planks = [];          // scaffold platforms
+let fires = [];           // squares of stone that are burning
+let skyText = null;       // the verse in the sky now, as points to draw
+let verseCard = null;     // a verse shown for a moment under the banner
+let sinIndex = 0;         // which of the seven sins comes next
 let nextShape;
-let pending = null;       // "mortar" or "gild", waiting for the next stone
+let pending = null;       // "gild", waiting for the next stone
 let lost = 0;
 let prayer = 0;
 let prayerMax = 10;
 let known = new Set();    // spells learned this tower
-let mortarCharges = 0;    // Mortar is limited: each use needs one of these
 let tier = 0;
 let multiplier = 1;
 let earned = 0;           // coins earned on this tower
@@ -324,6 +373,10 @@ const demon = {
   curses: 0,
   x: VIEW_W / 2,
   y: 0,
+  wait: 0,                // seconds left of his pause on arriving
+  drops: 0,               // fires left to drop this visit
+  fireTimer: 0,
+  sin: SINS[0],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -336,7 +389,7 @@ function rand(min, max) {
 }
 
 function spellCost(name) {
-  return name === "mortar" ? MORTAR_COST_BY_LEVEL[save.trowel] : SPELLS[name].cost;
+  return SPELLS[name].cost;
 }
 
 // ---------------------------------------------------------------------------
@@ -385,17 +438,17 @@ function newTower() {
   active = null;
   steering = false;
   landed = [];
-  planks = [];
+  fires = [];
+  verseCard = null;
   pending = null;
   lost = 0;
   lives = 3 + save.candle;
-  prayer = 0;
   prayerMax = PRAYER_BY_LEVEL[save.prayerLevel];
   const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
+  prayer = Math.min(prayerMax, rosary.prayer || 0);
   known = new Set(rosary.spell ? [rosary.spell] : []);
-  mortarCharges = rosary.spell === "mortar" ? MORTAR_FROM_ROSARY : 0;
   stats = {
-    height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, mortars: 0, scaffolds: 0, golds: 0,
+    height: 0, laid: 0, repelled: 0, bubbles: 0, rotations: 0, golds: 0, smothered: 0, doused: 0, burned: 0,
     cursedLanded: 0, spellsUsed: 0, earned: 0, heightNoTurn: 0, heightNoLoss: 0, heightNoPrayer: 0,
   };
   finale = null;
@@ -421,6 +474,7 @@ function newTower() {
   demon.present = false;
   demon.fleeing = 0;
   demon.timer = 0;
+  setSkyVerse(0);
   nextShape = randomShape();
   mode = "play";
   hideScreens();
@@ -448,7 +502,7 @@ function spawn() {
 
   // The demon may curse this stone.
   let curse = null;
-  if (demon.present && !demon.fleeing && demon.curses > 0 && !pending && Math.random() < CURSE_CHANCE) {
+  if (demon.present && !demon.fleeing && demon.wait <= 0 && demon.curses > 0 && world.curses.length && !pending && Math.random() < CURSE_CHANCE) {
     curse = world.curses[Math.floor(Math.random() * world.curses.length)];
     demon.curses--;
   }
@@ -457,13 +511,13 @@ function spawn() {
   const x = VIEW_W / 2;
   // Start well above the tower, but not so far that the wait is tedious.
   const y = Math.max(camY + VIEW_H * 0.12, towerTop - 380);
-  const material = curse === "ice" ? ICE : STONE;
+  const material = STONE;
   const parts = shape.cells.map(([cx, cy]) =>
     Bodies.rectangle(x + cx * tile, y + cy * tile, tile, tile, material)
   );
   const body = Body.create({ parts, ...material });
   body.plugin.kind = "stone";
-  body.plugin.tex = curse === "ice" ? "stone_ice" : shape.tex;
+  body.plugin.tex = shape.tex;
   body.plugin.tile = tile;
   body.plugin.curse = curse;
   Composite.add(engine.world, body);
@@ -492,12 +546,9 @@ function spawn() {
   updateHud();
 }
 
-// Turn a stone into mortar (sets fast on touch) or gold (worth extra coins).
+// Turn a stone to gold (worth extra coins).
 function enchant(body, spell) {
-  if (spell === "mortar") {
-    body.plugin.mortar = true;
-    body.plugin.tex = "stone_mortar";
-  } else if (spell === "gild") {
+  if (spell === "gild") {
     body.plugin.gold = true;
     body.plugin.tex = "stone_gold";
   }
@@ -511,13 +562,8 @@ function land() {
   // Soak up most of the impact so stones settle instead of bouncing.
   Body.setVelocity(body, { x: body.velocity.x * LANDING_DAMPING, y: body.velocity.y * LANDING_DAMPING });
   Body.setAngularVelocity(body, body.angularVelocity * LANDING_DAMPING);
-  if (body.plugin.mortar) {
-    Body.setStatic(body, true);
-    effects.push({ kind: "flash", x: body.position.x, y: body.position.y, t: 0.6, color: "#ffffff" });
-    Sound.play("mortar");
-  } else {
-    Sound.play("land", (body.plugin.tile || TILE) / TILE);
-  }
+  body.plugin.laidAt = time;
+  Sound.play("land", (body.plugin.tile || TILE) / TILE);
   let coins = 1;
   if (body.plugin.gold) coins += GOLD_BONUS;
   earned += coins * multiplier;
@@ -579,7 +625,7 @@ function snapToSupport() {
   const maxX = active.bounds.max.x;
   let origin = null;
   let top = Infinity;
-  for (const b of landed.concat(planks)) {
+  for (const b of landed) {
     if (b.bounds.max.x <= minX || b.bounds.min.x >= maxX) continue;
     if (b.bounds.min.y < active.bounds.max.y - 2 || b.bounds.min.y >= top) continue;
     top = b.bounds.min.y;
@@ -638,7 +684,6 @@ function canCast(name) {
   if (mode !== "play" || prayer < spellCost(name)) return false;
   if (name === "repel") return demon.present && !demon.fleeing;
   if (name === "zap") return !!lastLaid();
-  if (name === "mortar") return mortarCharges > 0;
   return known.has(name);
 }
 
@@ -646,12 +691,9 @@ function cast(name) {
   if (!canCast(name)) return;
   prayer -= spellCost(name);
   stats.spellsUsed++;
-  if (name === "mortar") { stats.mortars++; mortarCharges--; }
-  if (name === "scaffold") stats.scaffolds++;
   if (name === "repel") repel();
   else if (name === "zap") zap();
-  else if (name === "scaffold") scaffold();
-  else if (active && steering && !active.plugin.mortar && !active.plugin.gold) enchant(active, name);
+  else if (active && steering && !active.plugin.gold) enchant(active, name);
   else pending = name;
   if (name === "gild") flashBanner("Gold stone: +" + GOLD_BONUS + " coins when it lands");
   drawNextPreview();
@@ -661,7 +703,7 @@ function cast(name) {
 // Holy water: the monk sprinkles the demon and he flees for a while.
 function repel() {
   demon.fleeing = 99; // he is hit when the spray arrives; see updateEffects
-  effects.push({ kind: "spray", from: monkHands(), t: 0, duration: 0.45 });
+  effects.push({ kind: "spray", from: monkHands(), to: demon, t: 0, duration: 0.45 });
   Sound.play("repel");
   blessAnim = 1;
 }
@@ -685,22 +727,146 @@ function zap() {
       t: rand(0.6, 1),
     });
   }
+  removeStone(body);
+}
+
+// Take a stone out of the tower (broken by Zap, or burned away).
+function removeStone(body) {
   Composite.remove(engine.world, body);
   landed = landed.filter((b) => b !== body);
+  fires = fires.filter((f) => f.body !== body);
   // Wake the stones around it so the tower settles again.
   for (const b of landed) if (!b.isStatic) Sleeping.set(b, false);
 }
 
-// Scaffold: a wooden platform level with the top of the tower, under the
-// falling stone, so you can build out to the side.
-function scaffold() {
-  const x = active ? active.position.x : VIEW_W / 2;
-  const y = towerTop - TILE / 4 - 2;
-  const plank = Bodies.rectangle(x, y, 4 * TILE, TILE / 2, { isStatic: true, friction: 1, frictionStatic: 1.5 });
-  plank.plugin.kind = "plank";
-  Composite.add(engine.world, plank);
-  planks.push(plank);
-  effects.push({ kind: "flash", x, y, t: 0.5, color: "#fff2a8" });
+// ---------------------------------------------------------------------------
+// Fire
+// ---------------------------------------------------------------------------
+
+function squaresOf(body) {
+  return body.parts.length > 1 ? body.parts.slice(1) : [body];
+}
+
+// The centre of a burning square, wherever its stone has rolled.
+function firePoint(f) {
+  const sq = squaresOf(f.body)[f.index];
+  return sq ? sq.position : f.body.position;
+}
+
+function burning(body, index) {
+  return fires.some((f) => f.body === body && f.index === index);
+}
+
+// The square of a laid stone at this point, if there is one (leaving out `except`).
+function squareAt(x, y, except) {
+  for (const b of landed) {
+    const squares = squaresOf(b);
+    for (let i = 0; i < squares.length; i++) {
+      if (except && b === except.body && i === except.index) continue;
+      const bb = squares[i].bounds;
+      if (x > bb.min.x + 2 && x < bb.max.x - 2 && y > bb.min.y + 2 && y < bb.max.y - 2) return { body: b, index: i };
+    }
+  }
+  return null;
+}
+
+function startFire(body, index) {
+  if (burning(body, index)) return;
+  const rosary = ROSARIES.find((r) => r.id === save.rosary) || ROSARIES[0];
+  fires.push({ body, index, age: 0, born: time, grace: FIRE_GRACE * (rosary.slowFire ? 2 : 1), spreadT: rand(FIRE_SPREAD[0], FIRE_SPREAD[1]) });
+}
+
+// The demon throws fire down onto a stone whose top lies open to the sky.
+function dropFire() {
+  const open = [];
+  for (const b of landed) {
+    if (!(b.isStatic || b.isSleeping || b.plugin.stillFor > 0.33)) continue;
+    const tile = b.plugin.tile || TILE;
+    squaresOf(b).forEach((sq, i) => {
+      const p = sq.position;
+      if (p.y < camY + 60 || burning(b, i)) return;
+      if (!squareAt(p.x, p.y - tile, { body: b, index: i })) open.push({ body: b, index: i });
+    });
+  }
+  if (!open.length) return false;
+  const target = open[Math.floor(Math.random() * open.length)];
+  effects.push({ kind: "fireball", from: { x: demon.x, y: demon.y + 16 }, target, t: 0, duration: 0.8 });
+  Sound.play("curse");
+  return true;
+}
+
+function updateFires(dt) {
+  for (const f of fires.slice()) {
+    if (!landed.includes(f.body)) { fires = fires.filter((g) => g !== f); continue; }
+    f.age += dt;
+    const p = firePoint(f);
+    const tile = f.body.plugin.tile || TILE;
+    // Smothered: a stone laid since the fire began now lies on top of it.
+    const over = squareAt(p.x, p.y - tile, f);
+    if (over && over.body !== f.body && over.body.plugin.laidAt > f.born) {
+      fires = fires.filter((g) => g !== f);
+      stats.smothered++;
+      steam(p.x, p.y - tile / 2);
+      Sound.play("hiss");
+      if (stats.smothered === 1) showVerse(VERSE_SMOTHER);
+      continue;
+    }
+    // Left alone, it spreads: now this way, now that, to any stone that touches it.
+    if (f.age > f.grace) {
+      f.spreadT -= dt;
+      if (f.spreadT <= 0) {
+        f.spreadT = rand(FIRE_SPREAD[0], FIRE_SPREAD[1]);
+        if (Math.random() < FIRE_SPREAD_CHANCE) {
+          const ways = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]].sort(() => Math.random() - 0.5);
+          for (const [dx, dy] of ways) {
+            const next = squareAt(p.x + dx * tile, p.y + dy * tile, f);
+            if (next && !burning(next.body, next.index)) { startFire(next.body, next.index); Sound.play("fire"); break; }
+          }
+        }
+      }
+    }
+    if (f.age > FIRE_BURN) burnAway(f.body);
+  }
+}
+
+// A stone that has burned long enough falls to ash.
+function burnAway(body) {
+  const x = body.position.x;
+  const y = body.position.y;
+  for (let i = 0; i < 18; i++) {
+    effects.push({ kind: "chip", tex: "stone_granite", x: x + rand(-TILE, TILE), y: y + rand(-TILE, TILE), vx: rand(-70, 70), vy: rand(-140, -20), t: rand(0.6, 1), ash: true });
+  }
+  effects.push({ kind: "flash", x, y, t: 0.5, color: "#ff8a3a" });
+  removeStone(body);
+  stats.burned++;
+  Sound.play("burn");
+  if (stats.burned === 1) showVerse(VERSE_BURN);
+}
+
+function nearestFire(x, y, r) {
+  let best = null;
+  let bd = r;
+  for (const f of fires) {
+    const p = firePoint(f);
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < bd) { bd = d; best = f; }
+  }
+  return best;
+}
+
+// Holy water on one fire.
+function douse(fire) {
+  prayer -= DOUSE_COST;
+  stats.spellsUsed++;
+  const p = firePoint(fire);
+  effects.push({ kind: "spray", from: monkHands(), to: { x: p.x, y: p.y }, fire, t: 0, duration: 0.45 });
+  Sound.play("repel");
+  blessAnim = 1;
+  updateHud();
+}
+
+function steam(x, y) {
+  for (let i = 0; i < 14; i++) effects.push({ kind: "puff", x: x + rand(-14, 14), y: y + rand(-6, 6), vx: rand(-20, 20), vy: rand(-90, -40), t: rand(0.6, 1.1) });
 }
 
 function lastLaid() {
@@ -727,6 +893,13 @@ function tapAt(clientX, clientY) {
   const x = (clientX - rect.left) / scale;
   const y = (clientY - rect.top) / scale + camY;
   if (bubble && Math.hypot(x - bubble.x, y - bubble.y) < 56) return catchBubble();
+  // A fire under the finger: holy water to douse it.
+  const fire = nearestFire(x, y, 44);
+  if (fire) {
+    if (prayer >= DOUSE_COST) douse(fire);
+    else flashBanner("Not enough prayer");
+    return;
+  }
   if (demon.present && !demon.fleeing && Math.hypot(x - demon.x, y - demon.y) < 56) {
     if (canCast("repel")) cast("repel");
     else flashBanner("Not enough prayer");
@@ -742,10 +915,6 @@ function catchBubble() {
   if (spell === "prayer") {
     prayer = Math.min(prayerMax, prayer + PRAYER_FROM_BUBBLE);
     flashBanner("+" + PRAYER_FROM_BUBBLE + " prayer");
-  } else if (spell === "mortar") {
-    known.add(spell);
-    mortarCharges += MORTAR_PER_BUBBLE;
-    flashBanner("Mortar +" + MORTAR_PER_BUBBLE);
   } else {
     known.add(spell);
     flashBanner(SPELLS[spell].name + ": " + SPELL_HELP[spell]);
@@ -800,6 +969,8 @@ function physicsStep() {
 function gameLogic(dt) {
   if (blessAnim > 0) blessAnim -= dt;
   if (banner && (banner.t -= dt) <= 0) banner = null;
+  if (verseCard && (verseCard.t -= dt) <= 0) verseCard = null;
+  if (skyText) skyText.t += dt;
   if (tierPopup && (tierPopup.t -= dt) <= 0) tierPopup = null;
 
   // Stones that fall off the tower are lost, and a candle goes out.
@@ -852,6 +1023,7 @@ function gameLogic(dt) {
   }
 
   updateDemon(dt);
+  updateFires(dt);
   updateBubble(dt);
 
   if (lost >= lives) {
@@ -883,6 +1055,7 @@ function startFinale() {
   Sound.play("end");
   demon.present = false;
   bubble = null;
+  fires = [];
   if (active && steering) {
     Composite.remove(engine.world, active);
     active = null;
@@ -926,15 +1099,29 @@ function updateDemon(dt) {
     demon.timer -= dt;
     if (demon.timer <= 0) {
       demon.present = true;
-      demon.curses = DEMON_CURSES;
+      demon.curses = world.curses.length ? DEMON_CURSES : 0;
+      demon.drops = WORLDS.indexOf(world) < 3 ? FIRE_DROPS[0] : FIRE_DROPS[1];
+      demon.wait = DEMON_WAIT;
+      demon.fireTimer = rand(0.4, 1.2);
       demon.timer = 30;
-      flashBanner("A demon comes!");
+      demon.sin = SINS[sinIndex++ % SINS.length];
+      flashBanner("The demon of " + demon.sin.name + "!", 2.2);
+      showVerse(demon.sin.verse);
       Sound.play("demon");
     }
+  } else if (demon.wait > 0) {
+    // He hovers a moment, looking the tower over, before he does anything.
+    demon.wait -= dt;
   } else {
     demon.timer -= dt;
-    // He leaves once his curses are spent, or when he grows bored.
-    if ((demon.curses === 0 && !active) || demon.timer <= 0) demon.fleeing = 1.2;
+    demon.fireTimer -= dt;
+    if (demon.drops > 0 && demon.fireTimer <= 0) {
+      demon.fireTimer = rand(FIRE_EVERY[0], FIRE_EVERY[1]);
+      if (dropFire()) demon.drops--;
+    }
+    // He leaves once his curses and fires are spent, or when he grows bored.
+    const falling = effects.some((e) => e.kind === "fireball" && !e.done);
+    if ((demon.curses === 0 && demon.drops === 0 && !active && !falling) || demon.timer <= 0) demon.fleeing = 1.2;
   }
   // Hover back and forth above the building site.
   demon.x = VIEW_W / 2 + Math.sin(time * 0.9) * (VIEW_W / 2 - 110);
@@ -954,8 +1141,7 @@ function updateBubble(dt) {
   // Mortar is the rarest bubble; others appear only until you know them.
   const choices = [["prayer", 3]];
   for (const s of world.spells) {
-    if (s === "mortar") choices.push(["mortar", 1]);
-    else if (!known.has(s)) choices.push([s, 3]);
+    if (!known.has(s)) choices.push([s, 3]);
   }
   let roll = Math.random() * choices.reduce((sum, [, w]) => sum + w, 0);
   let spell = choices[0][0];
@@ -976,13 +1162,38 @@ function updateEffects(dt) {
       e.t += dt;
       if (e.t >= e.duration && !e.done) {
         e.done = true;
-        demon.fleeing = 1.2;
-        stats.repelled++;
-        effects.push({ kind: "flash", x: demon.x, y: demon.y, t: 0.6, color: "#bfe8ff" });
-        flashBanner("Vade retro, Satana!");
+        if (e.fire) {
+          // Holy water on a fire: it hisses out.
+          if (fires.includes(e.fire)) {
+            const at = firePoint(e.fire);
+            fires = fires.filter((f) => f !== e.fire);
+            stats.doused++;
+            steam(at.x, at.y);
+          }
+        } else {
+          demon.fleeing = 1.2;
+          stats.repelled++;
+          effects.push({ kind: "flash", x: demon.x, y: demon.y, t: 0.6, color: "#bfe8ff" });
+          flashBanner("Vade retro, Satana!");
+          showVerse(VERSE_REPEL);
+        }
+      }
+    } else if (e.kind === "fireball") {
+      e.t += dt;
+      if (e.t >= e.duration && !e.done) {
+        e.done = true;
+        // It lands, if the stone is still there to land on.
+        if (landed.includes(e.target.body)) {
+          startFire(e.target.body, e.target.index);
+          Sound.play("fire");
+        }
       }
     } else {
       e.t -= dt;
+    }
+    if (e.kind === "puff") {
+      e.x += e.vx * dt;
+      e.y += e.vy * dt;
     }
     if (e.kind === "chip") {
       e.vy += 400 * dt;
@@ -990,7 +1201,7 @@ function updateEffects(dt) {
       e.y += e.vy * dt;
     }
   }
-  effects = effects.filter((e) => (e.kind === "spray" ? e.t < e.duration + 0.1 : e.t > 0));
+  effects = effects.filter((e) => (e.kind === "spray" || e.kind === "fireball" ? e.t < e.duration + 0.1 : e.t > 0));
 }
 
 // A jagged lightning bolt between two points.
@@ -1003,6 +1214,42 @@ function makeBolt(x1, y1, x2, y2, color, core) {
     points.push({ x: x1 + (x2 - x1) * f + jitter, y: y1 + (y2 - y1) * f });
   }
   return { kind: "bolt", points, color, core, t: 0.4 };
+}
+
+// A verse shown for a few seconds under the banner.
+function showVerse(v) {
+  verseCard = { text: v[0], ref: v[1], t: 6 };
+}
+
+// The verse in the sky for this Hour, turned into points to be spelled in
+// stars or clouds.
+let skyVerseIndex = 0;
+const SKY_FONT = 34;
+function setSkyVerse(index) {
+  skyVerseIndex = index;
+  const [text, ref] = SKY_VERSES[index % SKY_VERSES.length];
+  const width = 520;
+  const c = document.createElement("canvas").getContext("2d");
+  c.font = "bold " + SKY_FONT + "px Georgia, 'Times New Roman', serif";
+  const lines = [];
+  let line = "";
+  for (const w of text.split(" ")) {
+    const t = line ? line + " " + w : w;
+    if (c.measureText(t).width > width && line) { lines.push(line); line = w; } else line = t;
+  }
+  lines.push(line);
+  // A few points on the letters, for stars to twinkle on at night.
+  const lh = SKY_FONT * 1.15;
+  const can = document.createElement("canvas");
+  can.width = width + 40;
+  can.height = Math.ceil(lines.length * lh + 10);
+  const g = can.getContext("2d");
+  g.font = c.font; g.textAlign = "center"; g.textBaseline = "top"; g.fillStyle = "#fff";
+  lines.forEach((l, k) => g.fillText(l, can.width / 2, k * lh));
+  const data = g.getImageData(0, 0, can.width, can.height).data;
+  const points = [];
+  for (let y = 0; y < can.height; y += 4) for (let x = 0; x < can.width; x += 4) if (data[(y * can.width + x) * 4 + 3] > 160 && Math.random() < 0.12) points.push([x - can.width / 2, y, Math.random()]);
+  skyText = { ref, lines, lh, points, h: can.height, t: 0 };
 }
 
 function flashBanner(text, seconds) {
@@ -1218,6 +1465,7 @@ function updateHours(dt) {
       Sound.play("hour");
     }
     Sound.setChant(HOURS[index].chant);
+    setSkyVerse(skyVerseIndex + 1);
   }
 }
 
@@ -1312,9 +1560,72 @@ function drawScenery() {
   }
 }
 
+// Scripture across the sky: written in cloud by day, gilded by the sun at its
+// rising and setting, and in starlight by night. Whole letters, to be read.
+function drawSkyVerse() {
+  if (!skyText || mode === "title") return;
+  const sky = skyNow();
+  const fade = Math.min(1, skyText.t / 2.5);
+  const cx = VIEW_W / 2 + Math.sin(time * 0.15) * 4;
+  const y0 = Math.round(VIEW_H * 0.115);
+  const night = Math.max(0, Math.min(1, (sky.stars - 0.25) / 0.35));
+  ctx.save();
+  ctx.font = "bold " + SKY_FONT + "px Georgia, 'Times New Roman', serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.lineJoin = "round";
+  if (night < 1) {
+    // Cloud letters: a soft grey underside, a thick white billow, a bright face.
+    const warm = sky.dark > 0.05 ? 0.35 : 0;
+    ctx.globalAlpha = (1 - night) * fade;
+    skyText.lines.forEach((l, k) => {
+      const y = y0 + k * skyText.lh;
+      ctx.lineWidth = 4; ctx.strokeStyle = mixColor("#8a9cba", sky.top, warm); ctx.strokeText(l, cx + 1, y + 2);
+      ctx.lineWidth = 3; ctx.strokeStyle = mixColor("#e4ecf8", sky.bottom, warm); ctx.strokeText(l, cx, y);
+      ctx.fillStyle = "#ffffff"; ctx.fillText(l, cx, y);
+    });
+  }
+  if (night > 0) {
+    // Letters of starlight, with stars twinkling along them.
+    ctx.globalAlpha = night * fade;
+    ctx.shadowColor = "rgba(190,210,255,0.9)";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "rgba(250,248,232,0.9)";
+    skyText.lines.forEach((l, k) => ctx.fillText(l, cx, y0 + k * skyText.lh));
+    ctx.shadowBlur = 0;
+    for (const [x, y, r] of skyText.points) {
+      const a = Math.max(0, Math.sin(time * (1 + r * 3) + r * 40));
+      ctx.fillStyle = "rgba(255,255,255," + a.toFixed(2) + ")";
+      ctx.fillRect(Math.round(cx + x - 3), Math.round(y0 + y), 7, 1);
+      ctx.fillRect(Math.round(cx + x), Math.round(y0 + y - 3), 1, 7);
+    }
+  }
+  ctx.globalAlpha = fade;
+  ctx.font = "13px 'Press Start 2P', monospace";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = night > 0.5 ? "rgba(10,12,40,0.7)" : "rgba(40,70,120,0.55)";
+  ctx.strokeText(skyText.ref, VIEW_W / 2, y0 + skyText.lines.length * skyText.lh + 6);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(skyText.ref, VIEW_W / 2, y0 + skyText.lines.length * skyText.lh + 6);
+  ctx.restore();
+}
+
 function drawMarks() {
-  // The next tier is a row of diamonds across the sky.
+  // The next tier is a row of diamonds across the sky, under a banner of scripture.
   const y = Math.round(FOUND_Y - (tier + 1) * TIER_CUBITS * TILE);
+  const [words, ref] = TIER_WORDS[tier % TIER_WORDS.length];
+  ctx.font = "italic bold 17px Georgia, 'Times New Roman', serif";
+  ctx.textAlign = "center";
+  const ww = Math.min(VIEW_W - 40, ctx.measureText(words).width + 40);
+  ctx.fillStyle = "rgba(90,30,30,0.85)";
+  ctx.fillRect(VIEW_W / 2 - ww / 2 - 3, y - 63, ww + 6, 46);
+  ctx.fillStyle = "rgba(244,232,200,0.92)";
+  ctx.fillRect(VIEW_W / 2 - ww / 2, y - 60, ww, 40);
+  ctx.fillStyle = "#4a2a1a";
+  ctx.fillText(words, VIEW_W / 2, y - 42, VIEW_W - 60);
+  ctx.font = "9px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#8a3a2a";
+  ctx.fillText(ref, VIEW_W / 2, y - 26);
   ctx.fillStyle = "rgba(230,255,220,0.85)";
   for (let x = 120; x < VIEW_W - 120; x += 26) {
     ctx.beginPath();
@@ -1364,6 +1675,26 @@ function drawFoundation() {
   MonasteryArt[world.id](ctx);
   ctx.restore();
 
+  // The cornerstone, set in the ground before the monastery, with its psalm cut in it.
+  const cw = 206;
+  const ch = 150;
+  const cx = VIEW_W - cw - 8;
+  const cy = GROUND_Y - ch;
+  ctx.fillStyle = "#5a5048";
+  ctx.fillRect(cx - 3, cy - 3, cw + 6, ch + 3);
+  ctx.fillStyle = "#cfc3ae";
+  ctx.fillRect(cx, cy, cw, ch);
+  ctx.fillStyle = "#e6dcc8";
+  ctx.fillRect(cx, cy, cw, 4);
+  ctx.font = "10px 'Press Start 2P', monospace";
+  ctx.textAlign = "center";
+  ["THE STONE WHICH", "THE BUILDERS", "REJECTED; THE", "SAME IS BECOME", "THE HEAD OF", "THE CORNER.", "PS 117:22"].forEach((l, i) => {
+    ctx.fillStyle = "#f4ecdc";
+    ctx.fillText(l, cx + cw / 2, cy + 24 + i * 19);
+    ctx.fillStyle = i === 6 ? "#8a2a1a" : "#2e261e";
+    ctx.fillText(l, cx + cw / 2, cy + 23 + i * 19);
+  });
+
   // A wider foundation from the shop: wooden platforms out to each side.
   world.base.forEach((b, i) => {
     const r = foundRects[i];
@@ -1396,46 +1727,61 @@ function drawFoundation() {
 }
 
 function drawStone(body) {
-  const parts = body.parts.length > 1 ? body.parts.slice(1) : [body];
+  const parts = squaresOf(body);
   const tex = images[body.plugin.tex];
   const tile = body.plugin.tile || TILE;
-  const hidden = body === active && body.plugin.curse === "invisible";
-  if (hidden) ctx.globalAlpha = 0.07 + Math.max(0, Math.sin(time * 3)) * 0.05;
-  for (const part of parts) {
+  parts.forEach((part, i) => {
     ctx.save();
     ctx.translate(part.position.x, part.position.y);
     ctx.rotate(body.angle);
     ctx.drawImage(tex, -tile / 2, -tile / 2, tile, tile);
-    if (body.plugin.mortar) {
-      ctx.globalAlpha = body.isStatic ? 0.55 : 0.5 + Math.sin(time * 8) * 0.3;
-      ctx.drawImage(images.blessed, -tile / 2, -tile / 2, tile, tile);
-      ctx.globalAlpha = 1;
-    } else if (body.plugin.frozen) {
-      ctx.fillStyle = "rgba(40,30,60,0.18)";
+    // A burning square glows, then chars.
+    const f = fires.find((g) => g.body === body && g.index === i);
+    if (f) {
+      const k = Math.min(1, f.age / FIRE_BURN);
+      ctx.fillStyle = "rgba(" + Math.round(255 - k * 200) + "," + Math.round(110 - k * 90) + ",30," + (0.3 + k * 0.45 + Math.sin(time * 12 + i) * 0.06).toFixed(3) + ")";
       ctx.fillRect(-tile / 2, -tile / 2, tile, tile);
     }
     ctx.restore();
-  }
-  ctx.globalAlpha = 1;
+  });
   if (body === active && body.plugin.curse === "haste") {
     ctx.fillStyle = "rgba(220,40,40,0.6)";
     for (let i = -1; i <= 1; i++) ctx.fillRect(body.position.x + i * 16, body.bounds.min.y - 30, 3, 22);
   }
 }
 
-function drawPlank(plank) {
-  const w = plank.bounds.max.x - plank.bounds.min.x;
-  ctx.fillStyle = "#6a4424";
-  ctx.fillRect(plank.bounds.min.x + 6, plank.bounds.max.y, 4, 10);
-  ctx.fillRect(plank.bounds.max.x - 10, plank.bounds.max.y, 4, 10);
-  for (let x = 0; x < w; x += TILE) {
-    ctx.drawImage(images.stone_wood, plank.bounds.min.x + x, plank.bounds.min.y, TILE, TILE / 2);
+// Flames on every burning square: small at first, taller as it takes hold.
+function drawFires() {
+  for (const f of fires) {
+    const p = firePoint(f);
+    const tile = f.body.plugin.tile || TILE;
+    const grow = Math.min(1, 0.35 + f.age / 2);
+    const spreading = f.age > f.grace;
+    const base = p.y + tile / 2 - 2;
+    for (let k = 0; k < 6; k++) {
+      const x = p.x - tile / 2 + 2 + k * (tile - 4) / 5;
+      const h = (tile * 0.9 + Math.sin(time * 14 + k * 1.7 + f.born) * tile * 0.3) * grow * (spreading ? 1.35 : 1);
+      ctx.fillStyle = "#c8321a";
+      ctx.fillRect(Math.round(x - 3), Math.round(base - h), 6, Math.round(h));
+      ctx.fillStyle = "#ff8a2a";
+      ctx.fillRect(Math.round(x - 2), Math.round(base - h * 0.75), 4, Math.round(h * 0.75));
+      ctx.fillStyle = "#ffe25a";
+      ctx.fillRect(Math.round(x - 1), Math.round(base - h * 0.45), 2, Math.round(h * 0.45));
+    }
+    // Sparks rise from a fire that is spreading.
+    if (spreading) {
+      ctx.fillStyle = "#ffcf5a";
+      for (let k = 0; k < 3; k++) {
+        const u = (time * 0.8 + k / 3 + f.born) % 1;
+        ctx.fillRect(Math.round(p.x + Math.sin(u * 9 + k) * tile * 0.6), Math.round(base - tile - u * tile * 2), 3, 3);
+      }
+    }
   }
 }
 
 // A column of light, from the top of the screen down to where the stone will land.
 function drawDropGuide() {
-  if (!active || !steering || active.plugin.curse === "invisible") return;
+  if (!active || !steering) return;
   const minX = active.bounds.min.x;
   const maxX = active.bounds.max.x;
   const top = active.bounds.max.y;
@@ -1443,7 +1789,7 @@ function drawDropGuide() {
   for (const r of foundRects) {
     if (r.x + r.w > minX && r.x < maxX) surface = Math.min(surface, r.top);
   }
-  for (const b of landed.concat(planks)) {
+  for (const b of landed) {
     if (b.bounds.max.x > minX && b.bounds.min.x < maxX && b.bounds.min.y > top) {
       surface = Math.min(surface, b.bounds.min.y);
     }
@@ -1462,12 +1808,80 @@ function drawRoof() {
 
 function drawDemon() {
   if (!demon.present) return;
-  const frameName = Math.floor(time * 6) % 2 ? "demon_a" : "demon_b";
+  const sin = demon.sin;
+  const flap = sin.id === "sloth" ? 3 : 6;
+  const frameName = (Math.floor(time * flap) % 2 ? "demon_a_" : "demon_b_") + sin.id;
   const [w, h] = artSize(images[frameName], FIGURE_PX);
   const fading = demon.fleeing > 0 && demon.fleeing < 99;
   if (fading) ctx.globalAlpha = Math.max(0, demon.fleeing / 1.2);
-  drawSprite(frameName, Math.round(demon.x - w / 2), Math.round(demon.y - h / 2), FIGURE_PX);
+  const x = Math.round(demon.x - w / 2);
+  const y = Math.round(demon.y - h / 2);
+  drawSprite(frameName, x, y, FIGURE_PX);
+  drawSinMark(sin, x, y);
   ctx.globalAlpha = 1;
+}
+
+// What sets each sin apart, drawn over the demon in his own pixels.
+function drawSinMark(sin, x, y) {
+  const P = FIGURE_PX;
+  const dot = (col, row, color, wd, ht) => { ctx.fillStyle = color; ctx.fillRect(x + col * P, y + row * P, (wd || 1) * P, (ht || 1) * P); };
+  const c = sin.colors;
+  if (sin.id === "pride") {
+    // A crown of gold, set above his horns.
+    dot(7, -1, "#e8b030", 6, 1);
+    for (const col of [7, 9, 10, 12]) dot(col, -2, "#e8b030");
+    dot(9, -1, "#d02a3a");
+    dot(10, -1, "#3a6ad8");
+  } else if (sin.id === "avarice") {
+    // A bag of money clutched in his claw, a coin always slipping out.
+    dot(13, 8, "#6a4a1a", 3, 3);
+    dot(14, 7, "#4a3010");
+    dot(14, 9, "#f0c030");
+    const u = (time * 1.2) % 1;
+    dot(14, 11 + u * 6, "#f0c030");
+  } else if (sin.id === "lust") {
+    // A tail curling to a heart.
+    for (const [col, row] of [[11, 9], [12, 10], [13, 11], [14, 11], [15, 10]]) dot(col, row, c.r);
+    dot(15, 8, "#ff5a8a", 3, 1);
+    dot(16, 9, "#ff5a8a");
+    dot(15, 9, "#ff5a8a");
+  } else if (sin.id === "envy") {
+    // Great green eyes, always looking sideways at what others have.
+    const look = Math.sin(time * 1.5) > 0 ? 1 : 0;
+    dot(7, 3, "#c8ff3a", 2, 2);
+    dot(11, 3, "#c8ff3a", 2, 2);
+    dot(7 + look, 4, "#0a1a08");
+    dot(11 + look, 4, "#0a1a08");
+  } else if (sin.id === "gluttony") {
+    // A round belly, and a leg of mutton in his claw.
+    dot(6, 7, c.R, 8, 3);
+    dot(7, 10, c.R, 6, 1);
+    dot(8, 8, "#f8c88a", 4, 2);
+    dot(3, 8, "#a8481a", 2, 2);
+    dot(5, 9, "#f4ecd8");
+  } else if (sin.id === "wrath") {
+    // Fire about his horns, and a furious brow.
+    for (let k = 0; k < 6; k++) {
+      const hgt = 1 + Math.floor((Math.sin(time * 16 + k * 2) + 1) * 1.2);
+      dot(7 + k, 1 - hgt, k % 2 ? "#ffcf5a" : "#ff6a2a", 1, hgt);
+    }
+    dot(7, 3, c.o, 2, 1);
+    dot(11, 3, c.o, 2, 1);
+  } else if (sin.id === "sloth") {
+    // Heavy eyelids and a nightcap; he would rather be asleep.
+    dot(8, 4, c.R, 1, 0.6);
+    dot(11, 4, c.R, 1, 0.6);
+    dot(8, 0, "#3a5a9a", 4, 2);
+    dot(12, 0, "#3a5a9a", 2, 1);
+    dot(14, 1, "#3a5a9a");
+    dot(15, 2, "#ffffff");
+    ctx.font = "12px 'Press Start 2P', monospace";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#e8eef8";
+    const u = (time * 0.5) % 1;
+    ctx.globalAlpha *= 1 - u;
+    ctx.fillText("z", x + 17 * P + u * 20, y - u * 30);
+  }
 }
 
 function drawBubble() {
@@ -1508,18 +1922,35 @@ function drawEffects() {
         }
       }
     } else if (e.kind === "spray") {
-      // Drops of holy water arcing from the monk's hands to the demon.
+      // Drops of holy water arcing from the monk's hands to the demon, or to a fire.
       const p = Math.min(1, e.t / e.duration);
       ctx.fillStyle = "#9fe0ff";
       for (let i = 0; i < 12; i++) {
         const f = Math.max(0, p - i * 0.04);
-        const x = e.from.x + (demon.x - e.from.x) * f + Math.sin(i * 7) * 8;
-        const y = e.from.y + (demon.y - e.from.y) * f - Math.sin(f * Math.PI) * 120 + Math.cos(i * 5) * 8;
+        const x = e.from.x + (e.to.x - e.from.x) * f + Math.sin(i * 7) * 8;
+        const y = e.from.y + (e.to.y - e.from.y) * f - Math.sin(f * Math.PI) * 120 + Math.cos(i * 5) * 8;
         ctx.fillRect(Math.round(x), Math.round(y), 6, 6);
       }
     } else if (e.kind === "chip") {
       ctx.globalAlpha = Math.max(0, e.t);
-      ctx.drawImage(images[e.tex], 3, 3, 6, 6, e.x, e.y, 8, 8);
+      if (e.ash) { ctx.fillStyle = e.t > 0.8 ? "#ff8a2a" : "#3a3434"; ctx.fillRect(e.x, e.y, 7, 7); }
+      else ctx.drawImage(images[e.tex], 3, 3, 6, 6, e.x, e.y, 8, 8);
+    } else if (e.kind === "puff") {
+      ctx.globalAlpha = Math.max(0, e.t * 0.8);
+      ctx.fillStyle = "#e8eef4";
+      ctx.fillRect(Math.round(e.x), Math.round(e.y), 10, 10);
+    } else if (e.kind === "fireball" && !e.done) {
+      // Fire falling from the demon onto the tower.
+      const to = firePoint(e.target);
+      const tile = e.target.body.plugin.tile || TILE;
+      const f = Math.min(1, e.t / e.duration);
+      const x = e.from.x + (to.x - e.from.x) * f;
+      const y = e.from.y + (to.y - tile / 2 - e.from.y) * f * f;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = i ? "#ff8a2a" : "#ffe25a";
+        ctx.globalAlpha = 1 - i * 0.18;
+        ctx.fillRect(Math.round(x - 6 + i * (e.from.x - to.x) * 0.02), Math.round(y - 6 - i * 9), 12 - i, 12 - i);
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -1568,6 +1999,7 @@ function draw() {
   ctx.imageSmoothingEnabled = false;
 
   drawSky();
+  drawSkyVerse();
   ctx.save();
   if (mode === "finale") {
     ctx.translate(VIEW_W / 2, VIEW_H / 2);
@@ -1580,10 +2012,10 @@ function draw() {
   drawDropGuide();
   drawFoundation();
   drawMarks();
-  for (const plank of planks) drawPlank(plank);
   for (const body of Composite.allBodies(engine.world)) {
     if (body.plugin.kind === "stone") drawStone(body);
   }
+  drawFires();
   drawDemon();
   drawBubble();
   drawEffects();
@@ -1592,6 +2024,35 @@ function draw() {
   ctx.restore();
   drawNightTint();
   drawBanner();
+  drawVerseCard();
+}
+
+// A verse on a scroll under the banner, for a few seconds.
+function drawVerseCard() {
+  if (!verseCard) return;
+  ctx.globalAlpha = Math.min(1, verseCard.t * 1.5, (6 - verseCard.t) * 3);
+  ctx.font = "italic 19px Georgia, 'Times New Roman', serif";
+  ctx.textAlign = "center";
+  const words = verseCard.text.split(" ");
+  const lines = [];
+  let line = "";
+  for (const w of words) {
+    const t = line ? line + " " + w : w;
+    if (ctx.measureText(t).width > 520 && line) { lines.push(line); line = w; } else line = t;
+  }
+  lines.push(line);
+  const y = VIEW_H * 0.24 + 34;
+  const h = lines.length * 24 + 34;
+  ctx.fillStyle = "#6a3a1a";
+  ctx.fillRect(VIEW_W / 2 - 283, y - 3, 566, h + 6);
+  ctx.fillStyle = "#f4e8c8";
+  ctx.fillRect(VIEW_W / 2 - 280, y, 560, h);
+  ctx.fillStyle = "#3a2414";
+  lines.forEach((l, i) => ctx.fillText(l, VIEW_W / 2, y + 26 + i * 24));
+  ctx.font = "10px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#8a2a1a";
+  ctx.fillText(verseCard.ref, VIEW_W / 2, y + h - 10);
+  ctx.globalAlpha = 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -1616,7 +2077,6 @@ function updateHud() {
     el.classList.toggle("armed", pending === name);
     el.querySelector(".cost").textContent = spellCost(name);
   }
-  $("mortar-charges").textContent = "×" + mortarCharges;
 }
 
 function paintIcon(el, name) {
@@ -1651,7 +2111,7 @@ function drawNextPreview() {
   c.imageSmoothingEnabled = false;
   c.clearRect(0, 0, 60, 60);
   if (!nextShape) return;
-  const tex = pending === "mortar" ? "stone_mortar" : pending === "gild" ? "stone_gold" : nextShape.tex;
+  const tex = pending === "gild" ? "stone_gold" : nextShape.tex;
   for (const [cx, cy] of nextShape.cells) {
     c.drawImage(images[tex], 30 + cx * size - size / 2, 30 + cy * size - size / 2, size, size);
   }
@@ -1967,6 +2427,10 @@ loadArt((loaded) => {
   }
   for (const h of HABITS) {
     images["habit_" + h.id] = renderSprite({ grid: ART.monk_idle.grid, colors: { ...ART.monk_idle.colors, ...h.colors } });
+  }
+  // The demon in the colours of each of the seven sins.
+  for (const sin of SINS) {
+    for (const f of ["demon_a", "demon_b"]) images[f + "_" + sin.id] = renderSprite({ grid: ART[f].grid, colors: { ...ART[f].colors, ...sin.colors } });
   }
   for (const el of document.querySelectorAll("[data-sprite]")) paintIcon(el, el.dataset.sprite);
   resize();
