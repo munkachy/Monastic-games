@@ -81,10 +81,13 @@ browser (`audio.js`).
 One file, `psalter-runner/index.html`, with no libraries, fonts or images to
 load. On a phone, tap the left half of the screen to jump and hold to float;
 tap the right half to attack, and hold it to run faster: the longer you hold,
-the faster the saint goes, up to nearly twice the pace. On a keyboard: Space,
+the faster the saint goes, with no limit at all (the camera looks further
+ahead as the pace rises). On a keyboard: Space,
 Up or W to jump (hold to float), X, J or Enter to attack, Right or D to run
 faster, P to pause, M for sound. Each psalm is timed; the end screen shows your
-time and your best, and the psalm list shows each psalm's best score and time.
+time and your best, and the psalm list shows each psalm's best score and time. Every
+stretch of every psalm is half again as long as it was first built: the
+stretch itself, then a fresh half-stretch of the same place joined on after it.
 
 The title page shows the five books of the Psalter (Psalms 1–41, 42–72,
 73–89, 90–106 and 107–150), all open from the start; within a book any psalm
