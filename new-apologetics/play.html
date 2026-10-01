@@ -99,6 +99,8 @@
   .chapter { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 10px; }
   .chapter.locked { opacity: 0.5; }
   .chapter h3 { font: 400 32px/1.1 var(--clear); }
+  .chapter .setup { font: 400 20px/1.3 var(--clear); color: var(--muted); margin: 0; }
+  .chapter .setup:empty { display: none; }
   #s-map .chapter > .label { font: 400 19px/1.2 var(--clear); letter-spacing: 0.02em; text-transform: none; }
   #s-map .chapter button { font: 400 22px/1.1 var(--clear); }
   .chapter .missions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
@@ -764,9 +766,10 @@
       const open = chapterOpen(ci);
       const el = document.createElement("article");
       el.className = "chapter" + (open ? "" : " locked");
-      el.innerHTML = `<span class="label"></span><h3></h3><div class="missions"></div><div class="joins-slot"></div><div class="row extra"></div>`;
+      el.innerHTML = `<span class="label"></span><h3></h3><p class="setup"></p><div class="missions"></div><div class="joins-slot"></div><div class="row extra"></div>`;
       el.querySelector(".label").textContent = (ci === 0 ? "Prologue" : ch.id === "epilogue" ? "Epilogue" : ch.final ? "Final chapter" : "Chapter " + ci) + " · " + ch.group + (chapterDone(ci) ? " · complete" : "");
       el.querySelector("h3").textContent = ch.title;
+      el.querySelector(".setup").textContent = ch.setup || "";
       const list = el.querySelector(".missions");
       ch.missions.forEach((m, mi) => {
         const b = document.createElement("button");

@@ -463,6 +463,25 @@ const GameData = (() => {
     { id: "epilogue", title: "One Fold", group: "Epilogue", missions: [], scenes: { before: 0 }, unlocks: [] },
   ];
 
+  // What each chapter is about, shown on its card on the map: the problem the
+  // team faces, never the answer. The player finds that by playing.
+  const SETUP = {
+    prologue: "A viral clip, three hundred angry comments, and the top one says Catholics can't answer a single one of them. Trent Horn and Jimmy Akin decide to try.",
+    atheists: "Alex O'Connor finds one argument stronger than all the rest: a fawn burns to death in a forest fire, alone, and no one ever knows. Why would a good God allow suffering that seems to serve no purpose at all?",
+    evangelicals: "Ryan stops strangers on the street with two questions: “Are you a good person?” and “If you died tonight, would you go to heaven?” How should a Catholic answer?",
+    lds: "Two missionaries at the door say the Church fell away soon after the apostles died, and was restored only in 1830. If that is true, when did it happen, and why did no one notice?",
+    islam: "At Speakers' Corner the crowd says the Bible was corrupted, and asks, cameras rolling, where Jesus ever said “I am God.” The team has to answer in front of everyone.",
+    newage: "A WitchTok influencer tells her followers that Apollo loves them and Hecate protects them. It sounds kind. But is that what the old gods were ever like?",
+    body: "“My body, my choice,” say the activists; “my body, my brand,” say the content creators. Whose body is the child's, and what happens to a person who becomes a product?",
+    identity: "A kind pastor and a campus full of allies say the Church's teaching on sexuality is hateful. Is it? And who gets to say who you really are?",
+    scholars: "Bart Ehrman says the manuscripts disagree in hundreds of thousands of places, and that the Gospels were written anonymously, long after the events. Then how can anyone trust what they say about Jesus?",
+    reformed: "James White holds that Scripture alone is the Church's only infallible rule of faith, and he has heard every Catholic reply a thousand times. The team needs an argument he hasn't.",
+    nones: "Nearly three in ten Americans now say they have no religion in particular. They aren't against God, just not interested. How do you reach someone who won't look up from the phone?",
+    finale: "Every opponent from the year comes back to the table on a single night, and last of all the Master of None. What do you say when you can't win them all?",
+    epilogue: "Every debate is won, and the world still doesn't seem to be listening. Why keep going?",
+  };
+  for (const ch of CAMPAIGN) ch.setup = SETUP[ch.id] || "";
+
   // The rules, shown on the design page and behind the Rules button in the game.
   // Each is [name, explanation]; the explanation may use <b>.
   const RULES_INTRO = "Teams of four take turns, fastest first: a strip of faces over the stage shows who goes next. Every evangelist has a basic move that can be used every turn, two skills that need three turns to recharge, and one great move that needs four and starts partly charged. A great move lands half again as hard as the rest, so reaching it is a real upgrade. Every debater has just two things to lose: Composure and Zeal. Moves either hit Composure, knock Zeal down, or do something else: stun, mute, call out, shield.";
