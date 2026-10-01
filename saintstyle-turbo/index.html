@@ -724,6 +724,30 @@ const Snd = (() => {
       case "gift": [659, 880, 1319].forEach((f, i) => tone(f, 0.2, "triangle", 0.08, 0, now + i * 0.05)); break;
     }
   }
+  // A little voice: the words sung syllable by syllable, each vowel shaped by
+  // the two formants of the mouth, a breath of noise for each consonant. Not
+  // speech, but near enough to hear "Glo-ri-a!" in it. pitch is the voice's
+  // note in Hz; a demon's is low and rough.
+  const VOWELS = { a: [800, 1200], e: [500, 1900], i: [320, 2300], o: [520, 880], u: [340, 760], y: [320, 2200] };
+  let talkingUntil = 0;
+  function say(words, pitch, rough) {
+    if (!ac || !on || ac.currentTime < talkingUntil) return;
+    const syl = (words.toLowerCase().replace(/[^a-z ]/g, "").match(/[^aeiouy ]*[aeiouy]+(?:[^aeiouy ]+(?= |$))?/g) || []).slice(0, 9);
+    let t = ac.currentTime + 0.02;
+    syl.forEach((sy, i) => {
+      const last = i === syl.length - 1, len = last ? 0.3 : 0.12, v = VOWELS[sy.match(/[aeiouy]/)[0]];
+      // A chant-like line: up a little, then down to rest on the last syllable.
+      const f0 = pitch * Math.pow(2, (last ? -2 : [0, 2, 4, 2, 0, 2][i % 6]) / 12);
+      if (/^[^aeiouy]/.test(sy)) noiseHit(t, "bandpass", /^[sz]/.test(sy) ? 5000 : 2600, 0.06, 0.035, sfxGain, 2);
+      const o = osc(rough ? "sawtooth" : "p0.3", f0, t + 0.02), g = ac.createGain(), end = adsr(g, t + 0.02, rough ? 0.5 : 0.7, 0.015, 0.04, 0.8, len, 0.05);
+      if (last) { o.frequency.setValueAtTime(f0, t + 0.12); o.frequency.exponentialRampToValueAtTime(f0 * 0.9, t + len); }
+      for (const [f, q, amp] of [[v[0], 6, 1], [v[1], 9, 0.6]]) { const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = q; const fg = ac.createGain(); fg.gain.value = amp; o.connect(bp).connect(fg).connect(g); }
+      if (rough) { const lfo = osc("sine", 30, t), d = ac.createGain(); d.gain.value = 40; lfo.connect(d).connect(o.frequency); lfo.start(t); lfo.stop(end + 0.02); }
+      g.connect(sfxGain); o.start(t + 0.02); o.stop(end + 0.02);
+      t += len + 0.025;
+    });
+    talkingUntil = t;
+  }
   // For testing: render some seconds of a song (or one part of it) offline,
   // scheduling the notes just ahead of the music as the live player does, and measure it.
   async function test(key, secs, part, fromBar, lvl) {
@@ -742,7 +766,7 @@ const Snd = (() => {
     for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; sum += d[i] * d[i]; }
     return { peak: +peak.toFixed(3), rmsDb: +(10 * Math.log10(sum / d.length + 1e-12)).toFixed(1), ms: Math.round(ms) };
   }
-  return { init, toggle, sfx, play, stop, update, setAir, setLayer, landed, sting, test, get on() { return on; }, set on(v) { on = v; }, SONGS };
+  return { init, toggle, sfx, play, stop, update, setAir, setLayer, landed, sting, say, test, get on() { return on; }, set on(v) { on = v; }, SONGS };
 })();
 
 // ---- The saints ------------------------------------------------------------------
@@ -752,7 +776,7 @@ const SAINTS = [
   { id: "therese", name: "St. Therese", title: "The Little Flower", hearts: 3, jump: 330, hold: "float", floatCap: 36, floatTime: 1.8, attack: "rose", cd: 0.32,
     about: "Hold to float down like a petal. Throws roses in a gentle arc.",
     look: { robe: "#6b4226", shade: "#4a2c18", mantle: "#f2ead8", veil: "#1c1418", wimple: "#f7f3ea", skin: "#f2c8a6", hold: "rose" } },
-  { id: "cupertino", name: "St. Joseph", title: "of Cupertino, who flew", hearts: 3, jump: 320, hold: "levitate", floatTime: 1.1, attack: "ecstasy", cd: 0.8,
+  { id: "cupertino", name: "St. Joseph of Cupertino", short: "J. of Cupertino", title: "who flew", hearts: 3, jump: 320, hold: "levitate", floatTime: 1.1, attack: "ecstasy", cd: 0.8,
     about: "Hold to rise into the air in ecstasy. His joy bursts out all around him.",
     look: { robe: "#7a6a58", shade: "#5a4c3e", skin: "#efc2a0", hair: "#3a2a1e", tonsure: true, cord: "#efe6d0" } },
   { id: "benedict", name: "St. Benedict", title: "Father of Monks", hearts: 3, jump: 330, hold: "float", floatCap: 80, floatTime: 0.9, attack: "medal", cd: 0.28,
@@ -848,7 +872,7 @@ function drawFigure(L, x, y, f, opt) {
 // For each mansion: best time, best style, most neumes, and whether its demon
 // has been beaten. `open` is how many mansions may be entered. `tutorial`:
 // the Novitiate is done. `done`: the tricks landed at least once.
-let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 2, sound: true, landed: 0, tutorial: false, done: {}, coached: {} };
+let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {} };
 try {
   const old = JSON.parse(localStorage.getItem("run-the-way") || "{}");
   // The first Run the Way had six zones of the Psalms; keep only the saint and the sound.
@@ -945,33 +969,45 @@ const ZONES = [
   { id: "m1", num: "First Mansions", name: "The Gate of Prayer", sin: "pride", dsp: 520, song: "gate", len: 24000,
     sub: "The door into the castle is prayer, and the first room is knowing yourself.",
     sky: ["#9aaa98", "#b0bea8", "#c8d2b8", "#e0e4cc"], sun: "#f4f0d8", far: "#7a8676", near: "#5e6a58", dirt: ["#6e7268", "#5e625a"], grass: "#6a9a4a", grass2: "#a8d070", cloud: "#f0f2e8", rail: "#c8ccc0", bg: "castle",
-    air: { kicker: 5, mega: 1, updraft: 1, spring: 2 }, ground: { hill: 2, valley: 2, rail: 2, loop: 2, pit: 1, ramp: 1 }, foes: 0.5 },
+    air: { kicker: 3, mega: 1, updraft: 1, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 2, loop: 2, pit: 1, ramp: 1 }, foes: 0.5 },
   { id: "m2", num: "Second Mansions", name: "The Torchlit Stair", sin: "sloth", dsp: 540, song: "stair", len: 24000,
     sub: "The King keeps calling, through good words and good friends. Keep going.",
     sky: ["#0a0a24", "#141638", "#1e2050", "#2a2a62"], sun: "#f4f0d8", far: "#1a1a3a", near: "#24244a", dirt: ["#2e2e4c", "#26263e"], grass: "#e07a2a", grass2: "#ffc070", cloud: "#6a6aa8", rail: "#ffb060", bg: "torches", night: true,
-    air: { kicker: 5, mega: 2, updraft: 1, spring: 2 }, ground: { hill: 2, valley: 2, rail: 3, loop: 2, pit: 2, ramp: 1 }, foes: 0.7 },
+    air: { kicker: 3, mega: 2, updraft: 1, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 2, pit: 2, ramp: 1 }, foes: 0.7 },
   { id: "m3", num: "Third Mansions", name: "The Ordered Garden", sin: "avarice", dsp: 560, song: "garden", len: 24000,
     sub: "A good and well-ordered life. Now hold nothing back from God.",
     sky: ["#1a8ae8", "#4aa8f4", "#8acaf8", "#d0ecfc"], sun: "#ffffff", far: "#3a8a3a", near: "#2a6a2a", dirt: ["#c8683a", "#b05a30"], grass: "#4ab83a", grass2: "#a8f07a", cloud: "#ffffff", rail: "#f4f0e8", bg: "garden",
-    air: { kicker: 4, mega: 2, updraft: 2, spring: 2 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 2, ramp: 1 }, foes: 0.8 },
+    air: { kicker: 3, mega: 2, updraft: 1, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 2, ramp: 1 }, foes: 0.8 },
   { id: "m4", num: "Fourth Mansions", name: "The Two Fountains", sin: "envy", dsp: 580, song: "fountains", len: 24000,
     sub: "One basin is filled by pipes and labour; the other from the spring itself.",
     sky: ["#0a5a6a", "#1a7a88", "#3aa0a8", "#7ad0cc"], sun: "#e8fff8", far: "#cfe6e8", near: "#a8d0d4", dirt: ["#e8f4f4", "#cfe2e6"], grass: "#1ab0a8", grass2: "#8af0e8", cloud: "#e8fffc", rail: "#2a8a90", bg: "fountains",
-    air: { kicker: 4, mega: 3, updraft: 2, spring: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 3, ramp: 1 }, foes: 0.9 },
+    air: { kicker: 3, mega: 2, updraft: 1, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 3, ramp: 1 }, foes: 0.9 },
   { id: "m5", num: "Fifth Mansions", name: "The Silkworm's Wings", sin: "gluttony", dsp: 600, song: "silk", len: 24000,
     sub: "The silkworm spins its house and dies in it; out comes a white butterfly.",
     sky: ["#3a1a5a", "#6a2a7a", "#a84a8a", "#e88ab0"], sun: "#ffe0f0", far: "#4a1a4a", near: "#6a2a5a", dirt: ["#6a2a5a", "#5a2050"], grass: "#f0a0d0", grass2: "#fff0fa", cloud: "#ffe8f4", rail: "#ffd0ec", bg: "silk",
-    air: { kicker: 3, mega: 3, updraft: 3, spring: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 3, ramp: 1 }, foes: 1.0 },
+    air: { kicker: 2, mega: 2, updraft: 2, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 3, loop: 3, pit: 3, ramp: 1 }, foes: 1.0 },
   { id: "m6", num: "Sixth Mansions", name: "The Fire of Longing", sin: "wrath", dsp: 620, song: "fire", len: 24000,
     sub: "Wounded by love, the soul can hardly bear to wait for the King.",
     sky: ["#100404", "#3a0808", "#8a1a08", "#e0500a"], sun: "#ffd04a", far: "#1a0606", near: "#2a0a08", dirt: ["#2a1a1a", "#1e1212"], grass: "#ff6a1a", grass2: "#ffd04a", cloud: "#c89a90", rail: "#ffcf5a", bg: "fire",
-    air: { kicker: 3, mega: 3, updraft: 3, spring: 1 }, ground: { hill: 2, valley: 2, rail: 4, loop: 3, pit: 4, ramp: 1 }, foes: 1.2 },
+    air: { kicker: 2, mega: 2, updraft: 2, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 4, loop: 3, pit: 4, ramp: 1 }, foes: 1.2 },
   { id: "m7", num: "Seventh Mansions", name: "The King's Chamber", sin: "lust", dsp: 640, song: "king", len: 24000,
     sub: "At the centre of the soul, in the brightest room of all, the King himself.",
     sky: ["#fffaf0", "#fff4dc", "#fcecc4", "#f4dca0"], sun: "#ffffff", far: "#e8eefc", near: "#f4e4b8", dirt: ["#f8f8ff", "#e4e8f8"], grass: "#e8b94a", grass2: "#fff4a0", cloud: "#ffffff", rail: "#e8b94a", bg: "crystal",
-    air: { kicker: 2, mega: 4, updraft: 3, spring: 1 }, ground: { hill: 2, valley: 2, rail: 4, loop: 4, pit: 4, ramp: 1 }, foes: 1.3 },
+    air: { kicker: 1, mega: 3, updraft: 2, heaven: 1 }, ground: { hill: 2, valley: 2, rail: 4, loop: 4, pit: 4, ramp: 1 }, foes: 1.3 },
 ];
 for (const Z of ZONES) Z.demon = SINS[Z.sin];
+// The saints: two to begin with, one more for each demon beaten, and when
+// every one of them has been won, St. Benedict, the father of them all.
+const START_SAINTS = ["therese", "maurus"];
+const SAINT_PRIZE = { m1: "scholastica", m2: "cupertino", m3: "peter", m4: "cecilia", m5: "lucy", m6: "hildegard", m7: "augustine" };
+function saintOpen(s) {
+  if (window.__unlock || START_SAINTS.includes(s.id)) return true;
+  if (s.id === "benedict") return ZONES.every((Z) => save.wins[Z.id]);
+  const z = Object.keys(SAINT_PRIZE).find((k) => SAINT_PRIZE[k] === s.id);
+  return !!(z && save.wins[z]);
+}
+// What must be done to win a saint not yet won.
+const saintHow = (s) => { if (s.id === "benedict") return "beat all seven"; const z = Object.keys(SAINT_PRIZE).find((k) => SAINT_PRIZE[k] === s.id); return z ? "beat " + SINS[ZONES.find((Z) => Z.id === z).sin].name : ""; };
 // The Novitiate, where the saint is taught: a cloister, and no demon.
 const NOVITIATE = { id: "novitiate", num: "The Novitiate", name: "Ausculta", song: "novice", tutorial: true,
   sub: "Listen, O my son, to the precepts of thy master, and incline the ear of thy heart.",
@@ -1020,7 +1056,7 @@ const SIGS = {
 };
 const sigOf = (s) => SIGS[s.id] || SIGS.benedict;
 // Each saint's flourish: no flip, only a moment, for when there is little air.
-const FLOURISHES = { therese: "Rose Toss", cupertino: "Little Lift", benedict: "Staff Raised", maurus: "Board Grab", scholastica: "Dove Release",
+const FLOURISHES = { therese: "Rose Toss", cupertino: "Little Lift", benedict: "Medal Raised", maurus: "Board Grab", scholastica: "Dove Release",
   hildegard: "Sprig Wave", cecilia: "High Note", peter: "Keys Up", augustine: "Heart Aflame", lucy: "Candle Glow" };
 const trickName = (k) => nameOf(k, P);
 // How many demons have been beaten: that many sets of tricks have been learned.
@@ -1041,7 +1077,7 @@ const LOOP_SIZES = [40, 48, 60, 76, 96, 120];
 const GRAV = 900;
 let level = null;
 function builder(seed) {
-  const r = rng(seed), L = { hs: [], loops: [], springs: [], boosts: [], neumes: [], foes: [], lamps: [], plats: [], rails: [], gifts: [], launches: [], drafts: [] };
+  const r = rng(seed), L = { hs: [], loops: [], springs: [], boosts: [], neumes: [], foes: [], lamps: [], plats: [], rails: [], gifts: [], launches: [], drafts: [], storms: [] };
   let h = 0;
   const at = () => L.hs.length * STEP;
   // Add `len` pixels of ground, its height from fn(t) for t from 0 to 1, as an offset from where it starts.
@@ -1120,6 +1156,69 @@ function builder(seed) {
       L.plats.push({ x0: px, x1: px + pl, y: py });
       row(px + 30, py - 16, Math.floor(pl / 30), 30); flat(pl + 160);
     },
+    // The Ladder's big brother, for the open sky: a throw so high the ground is a memory.
+    cannon() {
+      flat(320); L.boosts.push({ x: at() - 120, speed: 900 });
+      const rise = 170 + r() * 40; run(380, (t) => -Math.pow(t, 2.8) * rise);
+      const lip = { x: at() - 6, y: h, vx: 600, vy: -(1000 + r() * 160), kind: "mega" }, drop = 360 + r() * 80;
+      L.launches.push(lip); pit(760);
+      h = lip.y + 60; run(2600, (t) => ease(t) * drop); flat(700);
+      flight(lip, 16, 0.16);
+    },
+    // The heavens: a spring up to a road of clouds, and over it more roads,
+    // higher and higher, joined by ramps of cloud. The higher, the more neumes
+    // and the longer the fall at the end (and the more tricks in it). But the
+    // roads have gaps, and storm clouds sit on them and hang over them, and a
+    // bolt from one throws a runner back down to the earth. Under it all, easy ground.
+    heaven(tiers) {
+      tiers = tiers || 2 + Math.floor(r() * 2);
+      flat(200); L.springs.push({ x: at() - 60, y: h });
+      const base = h, x0 = at() + 40, tierY = (k) => base - 250 - k * 230;
+      // Each tier a run of roads with gaps between, starting further on than the one below.
+      let start = x0, end = x0;
+      for (let k = 0; k < tiers; k++) {
+        const top = k === tiers - 1, y = tierY(k), len = 2200 + r() * 900 - k * 300;
+        let x = start, first = true;
+        const stop = start + len;
+        while (x < stop) {
+          const pl = { x0: x, x1: x + (first ? 1000 + r() * 300 : 600 + r() * 600), y, tier: k + 1 };
+          L.plats.push(pl);
+          row(pl.x0 + 30, y - 16 - k * 4, Math.floor((pl.x1 - pl.x0 - 40) / (34 - k * 6)), 34 - k * 6);
+          // Storms: one sitting on the road (jump it), or hanging low over it (do not jump).
+          const room = pl.x1 - pl.x0;
+          if (!first || k > 0) for (let sx = pl.x0 + 200 + r() * 100; sx < pl.x1 - 560; sx += 240 + r() * 220 - k * 30) {
+            // (Room after each to come down on the road again, past a jump over it.)
+            if (r() < 0.45 + k * 0.15) L.storms.push(r() < 0.6 ? { x: sx, y: y - 12, r: 15, sit: true } : { x: sx, y: y - 66, r: 17, sit: false, bob: r() * 6 });
+          }
+          first = false;
+          x = pl.x1 + 140 + r() * 120 + k * 20;
+          // Partway, a ramp of cloud up to the next tier.
+          if (!top && x > start + len * 0.45 && !pl.kick) break;
+        }
+        const last = L.plats[L.plats.length - 1];
+        if (!top) {
+          last.kick = { len: 130, rise: 34 };
+          L.launches.push({ x: last.x1 - 6, y: y - 34, vx: 470, vy: -700, kind: "cloud", plat: last });
+          // The road below goes on past the ramp, for whoever misses the one above.
+          const below = { x0: last.x1 + 360, x1: last.x1 + 1100 + r() * 300, y, tier: k + 1 };
+          L.plats.push(below); row(below.x0 + 30, y - 16, Math.floor((below.x1 - below.x0 - 40) / 34), 34);
+          L.storms.push({ x: below.x0 + 240 + r() * 200, y: y - 12, r: 15, sit: true });
+          end = Math.max(end, below.x1);
+          start = last.x1 + 220;
+        } else {
+          // At the very top, the gate of heaven: a great ramp of cloud, and a long, long fall.
+          last.kick = { len: 160, rise: 50 };
+          L.launches.push({ x: last.x1 - 6, y: y - 50, vx: 540, vy: -820, kind: "heaven", plat: last });
+          L.gifts.push({ x: last.x0 + 120, y: y - 22, kind: r() < 0.5 ? "fire" : "wind", got: false });
+          end = Math.max(end, last.x1 + 600);
+        }
+      }
+      // The easy ground underneath, and a long slope down to come home on.
+      const gentle = { hill: () => { const len = 400 + r() * 300, amp = 25 + r() * 25; run(len, (t) => -Math.sin(t * Math.PI) * amp); }, valley: () => P.valley(), rail: () => P.rail(false), flat: () => flat(300 + r() * 200) };
+      const ks = Object.keys(gentle);
+      while (at() < end + 400) { gentle[ks[Math.floor(r() * ks.length)]](); flat(60); }
+      const fall = 220 + r() * 60; run(2400, (t) => ease(t) * fall); flat(500);
+    },
     // A plain gap to jump.
     pit() { flat(140); pit(64 + r() * 36); flat(200); arc(at() - 300, h - 30, 4, 22, 24); },
   };
@@ -1164,7 +1263,56 @@ function buildZone(zi) {
     if (B.at() > nextLamp) { B.flat(120); L.lamps.push({ x: B.at() - 60, passed: false }); nextLamp += 2600; }
     B.flat(60 + r() * 100);
   }
+  // One relic in each mansion, hard to find: on the highest road of clouds, just out of reach without a jump.
+  const top = L.plats.filter((pl) => pl.tier).sort((a, b) => b.tier - a.tier || (b.x1 - b.x0) - (a.x1 - a.x0))[0];
+  if (top) {
+    const x = top.x0 + (top.x1 - top.x0) * (0.4 + r() * 0.3);
+    L.storms = L.storms.filter((st) => Math.abs(st.x - x) > 140 || st.y < top.y - 120 || st.y > top.y + 10);
+    L.gifts.push({ x, y: top.y - 40, kind: "relic", got: false });
+  }
   return finishLevel(B, { zi, Z });
+}
+// Freestyle: no demon and no door, only the way, built a little further ahead
+// as the saint runs on, for as long as he likes: big ramps, the greatest
+// throws of all, and the heavens, again and again. Every so often the sky
+// changes to the colours of another mansion, and its song.
+const FREE_AIR = { cannon: 3, mega: 3, kicker: 2, heaven: 3, updraft: 2, spring: 1 }, FREE_GROUND = { hill: 2, valley: 2, rail: 3, loop: 3, ramp: 2 };
+const STAGE = 16000;
+function freeZone(i) {
+  const Z = ZONES[((i % ZONES.length) + ZONES.length) % ZONES.length];
+  return Object.assign({}, Z, { num: "Freestyle", name: "The Open Sky", sub: "No demon and no door: only the way, on and on. Fly as high as you dare.", demon: null, free: true });
+}
+function buildFree(seed) {
+  const B = builder(seed), r = B.r, L = B.L;
+  B.flat(500); B.row(260, -16, 5, 24);
+  L.lamps.push({ x: 120, passed: true });
+  const first = Math.floor(r() * ZONES.length);
+  Object.assign(L, { zi: -2, Z: freeZone(first), free: true, B, goal: Infinity, low: 0, stage: 0, firstZone: first, nextLamp: 2600, nextGift: 2400, deck: {}, started: false });
+  growFree(L, 0);
+  return L;
+}
+// Build on ahead of the saint, and clear away what is far behind him.
+function growFree(L, px) {
+  const B = L.B, r = B.r;
+  const deal = (kind, counts) => {
+    const d = L.deck[kind] || (L.deck[kind] = []);
+    if (!d.length) { for (const [k, n] of Object.entries(counts)) for (let i = 0; i < n; i++) d.push(k); for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; } }
+    return d.pop();
+  };
+  const until = B.at() + 9000;
+  while (B.at() < until) {
+    const g = deal("ground", FREE_GROUND);
+    if (g === "rail") B.P.rail(r() < 0.4); else B.P[g]();
+    B.flat(80 + r() * 80);
+    B.P[L.started ? deal("air", FREE_AIR) : "kicker"](); L.started = true;
+    if (B.at() > L.nextGift) { B.flat(160); L.gifts.push({ x: B.at() - 80, y: B.h - 20, kind: r() < 0.5 ? "fire" : "wind", got: false }); L.nextGift += 3000 + r() * 2000; }
+    if (B.at() > L.nextLamp) { B.flat(120); L.lamps.push({ x: B.at() - 60, passed: false }); L.nextLamp += 2600; }
+    B.flat(60 + r() * 100);
+  }
+  for (const v of L.hs) if (!isNaN(v) && v > L.low) L.low = v;
+  const far = px - 4000, keep = (o) => (o.x1 !== undefined ? o.x1 : o.x) > far;
+  for (const k of ["loops", "springs", "boosts", "neumes", "foes", "plats", "rails", "gifts", "launches", "drafts", "storms"]) L[k] = L[k].filter(keep);
+  L.lamps = L.lamps.filter((l) => l.x > far || l === L.lamps[L.lamps.length - 1]);
 }
 // The Novitiate: one lesson after another, each on its own stretch of the way.
 // A lesson: what the Novice Master says, the swipes to show (if any), and
@@ -1205,6 +1353,11 @@ function buildNovitiate() {
   for (const l of lessons) l.y = groundAt(lv.hs, l.x + 4) ?? l.y;
   return lv;
 }
+// The top of a road of clouds at x: level, but curling up at the end of one with a ramp.
+function platY(pl, x) {
+  if (!pl.kick || x < pl.x1 - pl.kick.len) return pl.y;
+  return pl.y - pl.kick.rise * Math.pow(clamp((x - (pl.x1 - pl.kick.len)) / pl.kick.len, 0, 1), 2.4);
+}
 function groundAt(hs, x) {
   const i = Math.floor(x / STEP), f = x / STEP - i;
   if (i < 0) return hs[0];
@@ -1226,15 +1379,24 @@ const draftAt = (x) => { for (const d of level.drafts) if (x >= d.x0 && x <= d.x
 // throw him on; but all of that soon eases back to a run. Only a trick,
 // landed, makes him surge past it: the saint's feet become a wheel, and then,
 // little by little, he is running again.
-const BASE = 160, RUN_TOP = 440, ACCEL = 420, JUMP = 340, LOOP_G = 0.6, BLAST = 380;
+const BASE = 160, RUN_TOP = 440, ACCEL = 420, LOOP_G = 0.6, BLAST = 380;
+// How hard each saint jumps: St. Joseph of Cupertino, who flew, highest of all;
+// St. Peter, the Rock, lowest. The demon beats his wings.
+const LEAP = { cupertino: 520, therese: 470, cecilia: 470, lucy: 470, hildegard: 460, benedict: 450, maurus: 450, scholastica: 440, augustine: 440, peter: 420 };
+const jumpOf = (A) => (A.player ? LEAP[game.saint.id] || 450 : 450);
+// The voices: each saint's pitch, high or low, and what each cries out at his own trick.
+const VOICE = { therese: 300, scholastica: 290, hildegard: 280, cecilia: 320, lucy: 310, cupertino: 210, benedict: 170, maurus: 200, peter: 160, augustine: 180 };
+const CRY = { benedict: "Vade retro!", therese: "Shower of roses!", cupertino: "Alleluia!", maurus: "Deo gratias!", scholastica: "Fiat!",
+  hildegard: "Viriditas!", cecilia: "Cantate!", peter: "Tu es Petrus!", augustine: "Tolle, lege!", lucy: "Lux!" };
+const voice = (words) => Snd.say(words, VOICE[game.saint.id] || 200);
 const EASE = 1.6;          // how quickly extra speed eases back to a run (a share of it a second)
 const AIR_DRAG = 0.0003;
 const DRAFT_VX = 330;      // the most a runner moves forward inside a column of wind
 const WIND_TIME = 8, FIRE_TIME = 8;
 const COUNT = 3;           // the count before the race
 const REPEAT = 12;         // a trick done again within this many seconds is worth half as much, and half again
-const game = { saint: SAINTS[save.saint] || SAINTS[0], zone: 0, tutorial: false, time: 0, neumes: 0, style: 0, bestChain: 0, newBest: false, newStyle: false, count: 0, demonTime: 0, won: false, learnedBefore: 0, newTricks: [], lastChain: [], stolen: 0 };
-let state = "title", P = null, D = null, tutor = null, cam = { x: 0, y: 0, z: 1 }, parts = [], pops = [], rings = [], shake = 0, banner = 0, fade = 0, slow = 1;
+const game = { saint: SAINTS[save.saint] && saintOpen(SAINTS[save.saint]) ? SAINTS[save.saint] : SAINTS.find(saintOpen), shots: 0, newSaints: [], zone: 0, tutorial: false, time: 0, neumes: 0, style: 0, bestChain: 0, newBest: false, newStyle: false, count: 0, demonTime: 0, won: false, learnedBefore: 0, newTricks: [], lastChain: [], stolen: 0 };
+let shots = [], state = "title", P = null, D = null, tutor = null, cam = { x: 0, y: 0, z: 1 }, parts = [], pops = [], rings = [], shake = 0, banner = 0, fade = 0, slow = 1;
 const mus = { layer: 0, down: 0 };
 // The demon has wings: he can always beat them once more in the air, but cannot float.
 const WINGS = { double: true, floatTime: 0 };
@@ -1247,15 +1409,17 @@ function newRunner(x, player) {
 }
 function startZone(zi) { begin(buildZone(zi), zi); }
 function startTutorial() { begin(buildNovitiate(), -1); }
+function startFree() { begin(buildFree(Math.floor(Math.random() * 1e6)), -2); }
 function begin(lv, zi) {
-  level = lv; game.zone = zi; game.tutorial = zi < 0;
-  Object.assign(game, { time: 0, neumes: 0, style: 0, bestChain: 0, count: game.tutorial ? 0 : COUNT, demonTime: 0, won: false, learnedBefore: learned(), newTricks: [], lastChain: [], stolen: 0 });
+  level = lv; game.zone = zi; game.tutorial = zi === -1; game.free = zi === -2;
+  Object.assign(game, { time: 0, neumes: 0, style: 0, bestChain: 0, count: game.tutorial || game.free ? 0 : COUNT, dist: 0, demonTime: 0, won: false, learnedBefore: learned(), newTricks: [], newSaints: [], lastChain: [], stolen: 0 });
   P = newRunner(40, true);
   level.check = { x: 40, y: P.y };
   // The demon starts beside him.
-  if (game.tutorial) D = null;
+  if (game.tutorial || game.free) D = null;
   else { D = newRunner(40, false); D.sin = level.Z.demon; D.ai = Object.assign({ planned: false }, DEMON_AI[D.sin.id]); D.check = { x: 40 }; D.done = false; D.say = null; D.sayT = 0; D.quiet = 0; D.label = null; D.nap = 0; }
   tutor = game.tutorial ? { i: -1, done: false, t: 0, msg: null, msgT: 0, launched: false } : null;
+  game.shots = D ? 1 : 0; shots = [];
   cam = { x: P.x - 90, y: P.y - 110, z: 1 }; parts = []; pops = []; rings = []; banner = game.tutorial ? 0 : COUNT + 0.8; fade = 0; slow = 1;
   input.jumpPressed = false; input.jumpHeld = false; input.rushHeld = false; pointers.clear();
   mus.layer = 0; mus.down = 0; Snd.setLayer(0); Snd.setAir(0);
@@ -1267,7 +1431,7 @@ const onFeet = (A) => A.mode === "ground" || A.mode === "grind";
 // The angle of the ground at x (looking back at the lip of a ramp, forward at the edge of a pit).
 const slopeAt = (A, x) => { const a = surface(A, x - 3), m = surface(A, x), b = surface(A, x + 3); if (m === null) return 0; if (b === null) return a === null ? 0 : Math.atan2(m - a, 3); if (a === null) return Math.atan2(b - m, 3); return Math.atan2(b - a, 6); };
 // The height of whatever a runner runs on at x: the cloud road he is on, or the ground.
-function surface(A, x) { if (A.plat) return x >= A.plat.x0 && x <= A.plat.x1 ? A.plat.y : null; return groundAt(level.hs, x); }
+function surface(A, x) { if (A.plat) return x >= A.plat.x0 && x <= A.plat.x1 ? platY(A.plat, x) : null; return groundAt(level.hs, x); }
 // Words that float up over the play: points, the race.
 function pop(str, color, size, sub) { pops.push({ str, color: color || "#ffe08a", size: size || 10, sub, t: 0 }); if (pops.length > 3) pops.shift(); }
 function addStyle(n) { game.style += n; }
@@ -1277,6 +1441,8 @@ function label(A, str, color) { if (!A.player) A.label = { str, color: color || 
 function say(key, chance) {
   if (!D || (chance !== undefined && Math.random() > chance) || (D.quiet > 0 && key !== "lose" && key !== "win")) return;
   D.say = D.sin.say[key]; D.sayT = 2.6; D.quiet = 3.5; Snd.sfx("taunt");
+  // In a low, rough voice, the first few words of it.
+  if (D.say) Snd.say(D.say.split(/[.!?]/)[0].split(" ").slice(0, 4).join(" "), 105, true);
 }
 
 function update(dt) {
@@ -1300,8 +1466,10 @@ function update(dt) {
   game.time += dt;
   stepRunner(P, dt);
   if (D) runDemon(dt);
+  if (shots.length) runShots(dt);
   if (tutor) runTutor(dt);
   if (P.x >= level.goal && state === "play") finish();
+  if (level.free) runFree();
   follow(dt);
   for (const p of parts) { p.age = (p.age || 0) + dt; p.life -= dt; p.vy += (p.g === undefined ? 400 : p.g) * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
   parts = parts.filter((p) => p.life > 0);
@@ -1319,11 +1487,11 @@ function stepRunner(A, dt) {
     if (onFeet(A)) {
       // Up and away from the ground, keeping every bit of the run's forward
       // speed: a jump at the lip of a ramp only adds to the flight.
-      const a = A.ang; A.vx = Math.max(A.gsp * Math.cos(a) + Math.max(0, JUMP * Math.sin(a)), 90); A.vy = A.gsp * Math.sin(a) - JUMP * Math.cos(a);
+      const a = A.ang; A.vx = Math.max(A.gsp * Math.cos(a) + Math.max(0, jumpOf(A) * Math.sin(a)), 90); A.vy = A.gsp * Math.sin(a) - jumpOf(A) * Math.cos(a);
       if (A.mode === "grind") endGrind(A);
       takeOff(A, true);
       if (A.player) { Snd.sfx("jump"); lessonEvent("jump"); }
-    } else if (A.mode === "air" && A.jumps > 0 && !A.inDraft) { A.vy = -JUMP * 0.85; A.jumps--; A.fromJump = true; if (A.player) { Snd.sfx("float"); burst(A.x, A.y, "#9fd0ff", 6); } }
+    } else if (A.mode === "air" && A.jumps > 0 && !A.inDraft) { A.vy = -jumpOf(A) * 0.85; A.jumps--; A.fromJump = true; if (A.player) { Snd.sfx("float"); burst(A.x, A.y, "#9fd0ff", 6); } }
   }
   c.jumpPressed = false;
   if (A.mode === "ground") runGround(A, dt);
@@ -1333,14 +1501,19 @@ function stepRunner(A, dt) {
   // Springs and boost pads, for both runners.
   for (const sp of level.springs) if (Math.abs(A.x - sp.x) < 10 && A.y > sp.y - 14 && A.y < sp.y + 4 && (A.mode === "ground" || (A.mode === "air" && A.vy >= 0))) {
     const v = A.mode === "air" ? A.vx : A.gsp * Math.cos(A.ang);
-    takeOff(A, false); A.vx = Math.max(v, 220); A.vy = -720; A.crash = 0; sp.t = 0.3;
+    takeOff(A, false); A.vx = clamp(v, 220, 560); A.vy = -720; A.crash = 0; sp.t = 0.3;
     if (A.player) { Snd.sfx("bounce"); lessonEvent("spring"); }
+  }
+  for (const st of level.storms) if (Math.abs(A.x - st.x) < st.r + 4 && A.inv <= 0 && !A.struck) {
+    const sy = st.sit ? st.y : st.y + Math.sin(game.time * 2 + st.bob) * 8;
+    if (Math.abs(A.y - 11 - sy) < st.r + 8) { strike(A, st, sy); break; }
   }
   for (const b of level.boosts) if (A.mode === "ground" && Math.abs(A.x - b.x) < 10) { const v = b.speed || 560; if (A.gsp < v) { A.gsp = v; if (A.player) Snd.sfx("rise"); } A.pad = 0.9; b.t = 0.3; }
   if (A.player) {
     for (const g of level.gifts) if (!g.got && Math.abs(g.x - A.x) < 14 && Math.abs(g.y - (A.y - 11)) < 20) {
       g.got = true; Snd.sfx("gift"); burst(g.x, g.y, g.kind === "fire" ? "#ffcf5a" : "#ffffff", 14);
-      if (g.kind === "fire") { A.fire = FIRE_TIME; pop("TONGUES OF FIRE", "#ffb030", 11, "Acts 2:3. Tricks count double."); }
+      if (g.kind === "relic") { game.shots = 1; pop("A RELIC!", "#fff4a0", 13, WEAPON[game.saint.id] + " is ready again"); voice("Deo gratias"); }
+      else if (g.kind === "fire") { A.fire = FIRE_TIME; pop("TONGUES OF FIRE", "#ffb030", 11, "Acts 2:3. Tricks count double."); }
       else { A.wind = WIND_TIME; pop("A MIGHTY WIND", "#e8f8ff", 11, "Acts 2:2. Lighter in the air."); }
     }
     for (const n of level.neumes) if (!n.got && Math.abs(n.x - A.x) < 12 && Math.abs(n.y - (A.y - 11)) < 16) { n.got = true; game.neumes++; Snd.sfx("neume"); }
@@ -1381,6 +1554,10 @@ function follow(dt) {
   }
   if (below === null || below < P.y) below = P.y;
   P.alt = below - P.y;
+  // How far above the earth itself (not the clouds): the country behind sinks away.
+  let earth = groundAt(level.hs, P.x); for (let k = 1; earth === null && k <= 20; k++) earth = groundAt(level.hs, P.x + k * 40);
+  const sinkTo = earth === null ? cam.sink || 0 : clamp((earth - P.y - 140) * 0.3, 0, 150);
+  cam.sink = (cam.sink || 0) + (sinkTo - (cam.sink || 0)) * Math.min(1, dt * 3);
   // On the ground, the lie of the land just ahead too.
   let low = below, high = P.y - 30;
   if (P.mode === "ground" && !P.plat) for (let k = 1; k <= 6; k++) {
@@ -1419,6 +1596,8 @@ function launch(A, Lp) {
   if (!A.player) return;
   Snd.sfx("launch"); shake = 0.15; burst(A.x, A.y, "#ffffff", 10);
   if (Lp.kind === "mega" && !level.seenLadder) { level.seenLadder = true; pop("JACOB'S LADDER", "#fff4a0", 11, "Genesis 28:12"); }
+  if (Lp.kind === "heaven") { addStyle(500); pop("THE GATE OF HEAVEN +500", "#fff4a0", 10, "Genesis 28:17"); }
+  else if (Lp.kind === "cloud") { addStyle(150); pop("HIGHER! +150", "#e8f8ff", 8); }
   lessonEvent("ramp");
   A.landIn = predictLand(A); coach();
 }
@@ -1436,11 +1615,12 @@ function runGround(A, dt) {
   } else {
     // Running toward the speed he wants: a jog, a run, or a surge.
     const run = A.player ? RUN_TOP * (A.wind > 0 ? 1.15 : 1) : RUN_TOP * A.ai.run * (A.nap > 0 ? 0.3 : 1);
-    const top = A.surge > 0 ? A.surgeV : c.rushHeld ? run : BASE;
+    // On the clouds nobody runs faster than a run: they are soft underfoot.
+    const top = A.plat ? (c.rushHeld || A.surge > 0 ? run : BASE) : A.surge > 0 ? A.surgeV : c.rushHeld ? run : BASE;
     if (c.rushHeld || A.surge > 0) A.run += dt; else A.run = 0;
     if (A.gsp < top) A.gsp = Math.min(top, A.gsp + ACCEL * (1 + Math.min(1.5, A.run * 0.8)) * dt);
     // Faster than that (downhill, off a pad, a surge wearing off): it eases away. A pad's throw is kept a moment.
-    else if (!A.pad) A.gsp -= (A.gsp - top) * EASE * dt;
+    else if (!A.pad) A.gsp -= (A.gsp - top) * (A.plat ? 6 : EASE) * dt;
   }
   if (A.surge > 0 && Math.random() < 0.7) parts.push({ x: A.x - 6, y: A.y - 3 - Math.random() * 12, vx: -90, vy: -40, g: -40, life: 0.3, c: A.player ? (Math.random() < 0.5 ? "#ffcf5a" : "#ff8a2a") : Math.random() < 0.5 ? A.sin.colors.r : A.sin.colors.y });
   A.gsp = Math.max(A.gsp, A.crash ? 40 : 90);   // never slower than a walk, even up the steepest slope
@@ -1453,7 +1633,7 @@ function runGround(A, dt) {
   // Onto a rail where it leaves the ground.
   for (const R of level.rails) if (!A.plat && ox < R.x0 + 2 && A.x >= R.x0 + 2 && !A.crash) { startGrind(A, R); return; }
   // Off the lip of a big ramp.
-  for (const Lp of level.launches) if (!A.plat && ox < Lp.x && A.x >= Lp.x) { launch(A, Lp); return; }
+  for (const Lp of level.launches) if ((Lp.plat || null) === A.plat && ox < Lp.x && A.x >= Lp.x) { launch(A, Lp); return; }
   // Into a column of wind: up he goes.
   const Dr = !A.plat && draftAt(A.x);
   if (Dr) { const v = A.gsp; takeOff(A, false); A.vx = Math.max(v, 200); A.vy = -220; enterDraft(A, Dr); return; }
@@ -1569,7 +1749,7 @@ function runAir(A, dt, sk) {
   }
   if (A.vy > 0) {
     // Landing on a road of clouds, from above.
-    for (const pl of level.plats) if (A.x >= pl.x0 && A.x <= pl.x1 && py <= pl.y && A.y >= pl.y) {
+    if (!A.struck) for (const pl of level.plats) if (A.x >= pl.x0 && A.x <= pl.x1 && py <= pl.y && A.y >= pl.y) {
       if (midTrick(A)) { cloudBounce(A, pl); return; }
       A.plat = pl; A.y = pl.y; land(A, 0); if (A.player) lessonEvent("cloud"); return;
     }
@@ -1583,7 +1763,7 @@ function runAir(A, dt, sk) {
   if (g !== null && A.y >= g && A.vy >= -40) { A.plat = null; A.y = g; land(A, slopeAt(A, A.x)); }
 }
 function land(A, a) {
-  A.mode = "ground"; A.ang = a; A.inDraft = null;
+  A.mode = "ground"; A.ang = a; A.inDraft = null; if (!A.plat) A.struck = false;
   A.gsp = Math.max(60, A.vx * Math.cos(a) + A.vy * Math.sin(a));
   if (midTrick(A)) { crash(A); return; }
   if (A.player) {
@@ -1607,7 +1787,7 @@ function predictLand(A) {
     vx -= AIR_DRAG * vx * Math.abs(vx) * dt;
     const py = y; x += vx * dt; y += vy * dt; t += dt;
     if (vy > 0) {
-      for (const pl of level.plats) if (x >= pl.x0 && x <= pl.x1 && py <= pl.y && y >= pl.y) return done();
+      if (!A.struck) for (const pl of level.plats) if (x >= pl.x0 && x <= pl.x1 && py <= pl.y && y >= pl.y) return done();
       for (const R of level.rails) if (x >= R.x0 + 8 && x <= R.x1 - 4) { const ry = railY(R, x); if (py <= ry + 1 && y >= ry) return done(); }
       const g = groundAt(level.hs, x); if (g !== null && y >= g) { y = g; return done(); }
     }
@@ -1700,7 +1880,7 @@ function landTricks(A) {
   const pts = Math.round((sum * n * (perfect ? 1.5 : 1) * (fire ? 2 : 1)) / 10) * 10;
   // The surge: faster and longer for more tricks, harder ones, a perfect landing, the fire.
   const b = A.chain.reduce((a, e) => a + e.boost, 0) * (perfect ? 1.25 : 1) * (fire ? 1.5 : 1);
-  const v = RUN_TOP * (A.player ? 1 : A.ai.run) * Math.min(2.7, 1.35 + b), secs = Math.min(7, 2.5 + 1.5 * b + (perfect ? 1 : 0));
+  const v = RUN_TOP * (A.player ? 1 : A.ai.run) * Math.min(3, 1.3 + 1.2 * b), secs = Math.min(9, 2.2 + 2.2 * b + (perfect ? 1 : 0));
   A.surgeV = A.surge > 0 ? Math.max(A.surgeV, v) : v;
   A.surge = Math.max(A.surge + 0.5, secs); A.surgeMax = A.surge;
   A.gsp = Math.max(A.gsp, A.surgeV);
@@ -1716,6 +1896,9 @@ function landTricks(A) {
   comboShow(A, "landed"); A.combo.total = pts; A.combo.perfect = perfect;
   pop(word, perfect ? "#fff4a0" : n > 1 ? "#ffcf5a" : "#8ae86a", n > 2 || pts >= 3500 ? 16 : 13, perfect ? "PERFECT LANDING" : null);
   Snd.sfx("land"); Snd.sfx("surge"); Snd.landed(n); if (perfect) Snd.sfx("perfect");
+  // A big one: the saint cries out for joy.
+  if (pts >= 1500) setTimeout(() => voice(word.replace("!", "")), 120);
+  else if (perfect && n >= 2) setTimeout(() => voice("Deo gratias"), 120);
   burst(A.x, A.y - 4, "#fff4a0", 8 + n * 4); rings.push({ x: A.x, y: A.y - 6, t: 0, dur: 0.5, c: perfect ? "#fff4a0" : "#ffffff" });
   save.landed = (save.landed || 0) + n; for (const id of ids) if (id !== "grind") save.done[id] = true;
   game.lastChain = ids.filter((id) => id !== "grind");
@@ -1745,6 +1928,58 @@ function crash(A) {
   say("crash", 0.6);
   lessonEvent("crash");
 }
+// A storm cloud: a bolt from it, and the runner is thrown down out of the heavens to the earth.
+function strike(A, st, sy) {
+  if (A.player) comboShow(A, A.chain.length || A.trick ? "bailed" : undefined);
+  A.trick = null; A.queue = []; A.buf = ""; A.chain = []; A.coach = null;
+  if (A.mode === "grind") endGrind(A);
+  takeOff(A, false); A.struck = true; A.jumps = 0; A.float = 0;
+  A.vx = Math.min(Math.max(A.vx, A.gsp), 280); A.vy = 260; A.surge = 0; A.inv = 0.6;
+  rings.push({ bolt: true, x: st.x, y: A.y + 20, t: 0, dur: 0.3, c: "#fff4a0" });
+  if (!A.player) { label(A, "STRUCK!", "#fff4a0"); return; }
+  shake = 0.3; Snd.sfx("crash"); burst(A.x, A.y - 10, "#fff4a0", 12);
+  pop("STRUCK DOWN!", "#fff4a0", 13, "Back to the earth with you");
+  say("crash", 0.5);
+}
+// Each saint's one shot at the demon, from what he carries: once in each
+// mansion it flies after the demon wherever he is, and when it finds him he
+// tumbles and is a long while getting up. A relic, hidden high in the heavens, gives it back.
+const WEAPON = { therese: "A rose from heaven", cupertino: "A star of joy", benedict: "The medal", maurus: "A wave from the lake", scholastica: "Her dove",
+  hildegard: "A seed of viriditas", cecilia: "A note of praise", peter: "The keys of the kingdom", augustine: "A burning heart", lucy: "Her lamp" };
+const canFire = () => state === "play" && D && !D.done && game.shots > 0 && game.count <= 0 && !P.crash;
+function fire() {
+  if (!canFire()) return;
+  game.shots--;
+  const sp = speedOf(P);
+  shots.push({ x: P.x, y: P.y - 16, vx: P.x < D.x ? Math.max(300, sp) : -300, vy: -260, t: 0, id: game.saint.id, c: sigOf(game.saint).c });
+  Snd.sfx("perfect"); burst(P.x, P.y - 16, "#fff4a0", 10);
+  pop(WEAPON[game.saint.id].toUpperCase() + "!", "#fff4a0", 10, "after the demon of " + D.sin.name);
+}
+function runShots(dt) {
+  for (const m of shots) {
+    m.t += dt;
+    if (!D || D.done || m.t > 9) { m.gone = true; continue; }
+    const dx = D.x - m.x, dy = D.y - 9 - m.y, d = Math.hypot(dx, dy) || 1;
+    // Always faster than he is, and turning harder the longer it flies.
+    const sp = Math.min(2600, 500 + m.t * 900) + speedOf(D), k = Math.min(1, dt * (2.5 + m.t * 5));
+    m.vx += ((dx / d) * sp - m.vx) * k; m.vy += ((dy / d) * sp - m.vy) * k;
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (Math.random() < 0.8) parts.push({ x: m.x, y: m.y, vx: -m.vx * 0.05 + (Math.random() - 0.5) * 40, vy: -m.vy * 0.05 + (Math.random() - 0.5) * 40, g: 0, life: 0.4, c: m.c[Math.floor(Math.random() * m.c.length)] });
+    if (d < 18) { m.gone = true; smite(D); }
+  }
+  shots = shots.filter((m) => !m.gone);
+}
+// The demon, hit: down he goes, his tricks and his surge lost, and slow to get up.
+function smite(A) {
+  if (A.mode === "grind") endGrind(A);
+  A.trick = null; A.queue = []; A.chain = []; A.surge = 0; A.trail = [];
+  if (A.mode === "ground" && !A.plat) crash(A);
+  else { if (A.mode !== "air") takeOff(A, false); A.vx = Math.min(A.vx, 160); A.vy = Math.max(A.vy, -60); A.crash = 1.4; A.struck = true; }
+  A.stun = 2.5; label(A, "SMITTEN!", "#ffffff");
+  burst(A.x, A.y - 9, "#fff4a0", 18); burst(A.x, A.y - 9, A.sin.colors.r, 10); rings.push({ x: A.x, y: A.y - 9, t: 0, dur: 0.6, c: "#fff4a0" });
+  Snd.sfx("smite"); Snd.sfx("crash"); Snd.say("Aaargh", 100, true); shake = 0.2;
+  pop("THE DEMON IS SMITTEN!", "#fff4a0", 12, A.sin.name + " tumbles");
+}
 // The clouds are kind: come down on them mid-trick and they throw him up for another try.
 function cloudBounce(A, pl) {
   A.trick = null; A.queue = []; A.buf = "";
@@ -1757,7 +1992,7 @@ function cloudBounce(A, pl) {
 // A saint's own trick: what it looks like as it begins.
 function startSignature(A) {
   const G = sigOf(game.saint);
-  Snd.sfx("perfect"); rings.push({ x: A.x, y: A.y - 11, t: 0, dur: 0.7, c: G.c[0], follow: A });
+  Snd.sfx("perfect"); voice(CRY[game.saint.id] || "Alleluia!"); rings.push({ x: A.x, y: A.y - 11, t: 0, dur: 0.7, c: G.c[0], follow: A });
   if (G.fx === "rise") A.vy = Math.min(A.vy, -260);
   if (G.fx === "storm") rings.push({ bolt: true, x: A.x + 30, y: A.y, t: 0, dur: 0.35, c: "#ffffff" });
 }
@@ -1859,7 +2094,10 @@ function demonThink(A, dt) {
     const ahead = A.x + 24 + A.gsp * 0.12;
     // A gap ahead (but not the lip of a ramp, which throws him, nor the wind, which lifts him): jump.
     const lip = level.launches.some((l) => l.x >= A.x && l.x <= ahead + 12) || level.drafts.some((d) => d.x0 >= A.x && d.x0 <= ahead + 12);
-    if (!lip && groundAt(level.hs, ahead) === null && !A.plat) { c.jumpPressed = true; c.jumpHeld = true; }
+    const gap = A.plat ? surface(A, ahead) === null && A.x < A.plat.x1 - 4 : groundAt(level.hs, ahead) === null;
+    const sits = level.storms.some((st) => st.sit && st.x > A.x + 10 && st.x - A.x < 50 + A.gsp * 0.12 && Math.abs(st.y - (A.y - 12)) < 30);
+    const hangs = level.storms.some((st) => !st.sit && st.x > A.x && st.x - A.x < 260 && Math.abs(st.y - (A.y - 66)) < 30);
+    if (!lip && (gap || sits) && !hangs) { c.jumpPressed = true; c.jumpHeld = true; }
     else c.jumpHeld = false;
   }
   if (A.mode === "air" && !ai.planned && A.airT >= ai.react) { ai.planned = true; if (!A.crash) planTricks(A); }
@@ -1974,12 +2212,33 @@ function respawn() {
   P = newRunner(c.x, true); P.inv = 1.5; P.wind = keep.wind; P.fire = keep.fire; P.lead = keep.lead;
   cam.x = P.x - 90; cam.y = P.y - 110; fade = 0.6;
 }
+// Freestyle: build on ahead, and now and then a new sky and a new song.
+function runFree() {
+  if (P.x > level.B.at() - 6000) growFree(level, P.x);
+  const st = Math.floor(P.x / STAGE);
+  if (st > level.stage) {
+    level.stage = st; level.Z = freeZone(level.firstZone + st);
+    Snd.play(level.Z.song); Snd.setLayer(mus.layer);
+    pop("THE SKY OF " + level.Z.name.toUpperCase(), "#ffe08a", 9, level.Z.num);
+  }
+  game.dist = Math.max(game.dist || 0, Math.round(P.x / 40));
+}
+// The end of a freestyle run (from the pause menu): what was done, and the best ever.
+function endFree() {
+  state = "done"; Snd.stop();
+  if (P.mode === "grind") endGrind(P);
+  const b = save.free || (save.free = { style: 0, dist: 0, combo: 0 });
+  game.newStyle = game.style > b.style; game.newBest = (game.dist || 0) > b.dist;
+  b.style = Math.max(b.style, game.style); b.dist = Math.max(b.dist, game.dist || 0); b.combo = Math.max(b.combo, game.bestChain);
+  store(); Snd.sting("win");
+}
 function finish() {
   state = "done"; Snd.stop();
   if (P.mode === "grind") endGrind(P);
   if (game.tutorial) { save.tutorial = true; store(); Snd.sting("win"); return; }
   const k = level.Z.id, t = Math.round(game.time * 10) / 10;
   game.won = !game.demonTime;
+  const had = SAINTS.filter(saintOpen);
   game.newBest = !save.best[k] || t < save.best[k];
   if (game.newBest) save.best[k] = t;
   game.newStyle = game.style > (save.style[k] || 0);
@@ -1989,6 +2248,7 @@ function finish() {
   if (game.won) { save.wins[k] = true; save.open = Math.max(save.open, Math.min(ZONES.length, game.zone + 2)); }
   store();
   game.newTricks = TRICKS.filter((tr) => tr.learn > game.learnedBefore && tr.learn <= learned());
+  game.newSaints = SAINTS.filter((s) => saintOpen(s) && !had.includes(s));
   if (game.won) { Snd.sting("win"); say("lose"); if (game.newTricks.length) setTimeout(() => Snd.sting("learn"), 1500); }
   else Snd.sting("lose");
 }
@@ -2040,6 +2300,10 @@ function drawSky(Z, t) {
     ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(W / 2, 40, 16, 0, 7); ctx.fill();
   } else { ctx.fillStyle = Z.sun; ctx.beginPath(); ctx.arc(256, 34, 13, 0, 7); ctx.fill(); }
   if (!Z.night && bg !== "fire") for (let i = 0; i < 5; i++) { ctx.globalAlpha = 0.8; puffs(wrap(i * 83 - cam.x * 0.05 - t * 4, W + 80) - 40, 16 + (i * 29) % 46, Z.cloud); ctx.globalAlpha = 1; }
+  // High in the heavens the country sinks away below, and more clouds go by.
+  const sink = cam.sink || 0;
+  if (sink > 1 && !Z.night) for (let i = 0; i < 6; i++) { ctx.globalAlpha = Math.min(0.8, sink / 80); puffs(wrap(i * 71 - cam.x * 0.09, W + 80) - 40, 70 + (i * 37) % 90 + sink * 0.3, Z.cloud); ctx.globalAlpha = 1; }
+  ctx.save(); ctx.translate(0, sink);
   if (bg === "castle") {
     // The outer walls: grey towers on green-grey hills.
     country(Z.far, 116, 8, 0.006, 0.12);
@@ -2119,7 +2383,7 @@ function drawSky(Z, t) {
     rect(0, 130, W, H - 130, Z.near);
     ctx.strokeStyle = "#e8b94a"; ctx.lineWidth = 2;
     for (let i = 0; i < 7; i++) { const x = wrap(i * 60 - cam.x * 0.35, W + 60) - 30; ctx.beginPath(); ctx.arc(x, 130, 28, Math.PI, 0); ctx.stroke(); }
-  }
+  }  ctx.restore();
 }
 let checker = null;
 function checkerFor(Z) {
@@ -2169,8 +2433,13 @@ function drawRail(R) {
 }
 function drawGift(g, t) {
   const y = g.y + Math.sin(t * 3 + g.x) * 3;
-  ctx.globalAlpha = 0.3; ctx.fillStyle = g.kind === "fire" ? "#ffb030" : "#e8f8ff"; ctx.beginPath(); ctx.arc(g.x, y, 10, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
-  if (g.kind === "fire") {
+  ctx.globalAlpha = 0.3; ctx.fillStyle = g.kind === "fire" ? "#ffb030" : g.kind === "relic" ? "#fff4a0" : "#e8f8ff"; ctx.beginPath(); ctx.arc(g.x, y, g.kind === "relic" ? 13 + Math.sin(t * 5) * 2 : 10, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+  if (g.kind === "relic") {
+    // A reliquary: a little golden house with a cross on its roof, and a window of light.
+    rect(g.x - 6, y - 3, 12, 9, "#140c1c"); rect(g.x - 5, y - 2, 10, 7, "#e8b94a");
+    ctx.fillStyle = "#e8b94a"; ctx.beginPath(); ctx.moveTo(g.x - 7, y - 2); ctx.lineTo(g.x, y - 8); ctx.lineTo(g.x + 7, y - 2); ctx.fill();
+    rect(g.x - 0.5, y - 13, 1, 5, "#ffcf5a"); rect(g.x - 2, y - 11.5, 4, 1, "#ffcf5a"); rect(g.x - 2, y, 4, 3, Math.floor(t * 6) % 2 ? "#ffffff" : "#fff4a0");
+  } else if (g.kind === "fire") {
     // A tongue of fire.
     const f = Math.sin(t * 16 + g.x) * 1.5;
     ctx.fillStyle = "#ff6a1a"; ctx.beginPath(); ctx.arc(g.x, y + 2, 5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(g.x - 5, y + 1); ctx.lineTo(g.x + f, y - 10); ctx.lineTo(g.x + 5, y + 1); ctx.fill();
@@ -2185,10 +2454,20 @@ function drawGift(g, t) {
 function drawThings(t) {
   const L0 = cam.x - 40, L1 = cam.x + W / cam.z + 40, Z = level.Z;
   for (const pl of level.plats) if (pl.x1 > L0 && pl.x0 < L1) {
-    // A road of clouds.
+    // A road of clouds (the higher, the brighter), curling up at the end where there is a ramp.
     ctx.fillStyle = Z.cloud;
-    for (let x = pl.x0; x < pl.x1; x += 14) { ctx.beginPath(); ctx.arc(x + 7, pl.y + 4, 8, 0, 7); ctx.fill(); }
+    for (let x = pl.x0; x < pl.x1; x += 14) { const y = platY(pl, x + 7); ctx.beginPath(); ctx.arc(x + 7, y + 4, 8, 0, 7); ctx.fill(); if (y < pl.y - 2) rect(x, y + 4, 14, pl.y - y, Z.cloud); }
     rect(pl.x0, pl.y, pl.x1 - pl.x0, 4, Z.cloud);
+    if (pl.tier > 1) { ctx.globalAlpha = 0.25 * (pl.tier - 1); rect(pl.x0, pl.y - 1, pl.x1 - pl.x0, 2, "#fff4a0"); ctx.globalAlpha = 1; }
+  }
+  // Storm clouds: dark, rumbling, a bolt now and then.
+  for (const st of level.storms) if (st.x > L0 - 30 && st.x < L1 + 30) {
+    const y = st.sit ? st.y : st.y + Math.sin(game.time * 2 + st.bob) * 8, fl = Math.sin(t * 7 + st.x) > 0.93;
+    ctx.fillStyle = fl ? "#8a8aa8" : "#3a3a50";
+    for (const [dx, dy, rr] of [[-9, 2, 9], [0, -3, 11], [9, 1, 9], [3, 5, 8], [-4, 6, 7]]) { ctx.beginPath(); ctx.arc(st.x + dx, y + dy, rr * st.r / 15, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#24243a"; ctx.beginPath(); ctx.arc(st.x - 2, y + 6, 7, 0, 7); ctx.fill();
+    rect(st.x - 5, y - 2, 2, 2, "#fff4a0"); rect(st.x + 3, y - 2, 2, 2, "#fff4a0");
+    if (fl || Math.floor(t * 5 + st.x) % 7 === 0) { ctx.strokeStyle = "#fff4a0"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(st.x, y + 10); ctx.lineTo(st.x - 4, y + 17); ctx.lineTo(st.x + 2, y + 18); ctx.lineTo(st.x - 3, y + 27); ctx.stroke(); }
   }
   for (const R of level.rails) if (R.x1 > L0 && R.x0 < L1) drawRail(R);
   for (const b of level.boosts) if (b.x > L0 && b.x < L1) {
@@ -2294,52 +2573,163 @@ function drawSaint(A, t) {
   // Streaks of light behind him at speed, and fire in a surge, and the wind.
   if (sp > 380) { ctx.globalAlpha = clamp((sp - 380) / 500, 0, 0.6); for (let k = 0; k < 4; k++) { const len = 10 + Math.min(70, (sp - 380) * 0.08) + ((t * 60 + k * 7) % 6); rect(-8 - len, -20 + k * 5, len, 1, A.surge > 0 ? (k % 2 ? "#ffcf5a" : "#ff6a1a") : k % 2 ? "#ffe8b0" : "#ffffff"); } ctx.globalAlpha = 1; }
   if (A.wind > 0) { ctx.globalAlpha = 0.5; ctx.strokeStyle = "#e8f8ff"; ctx.lineWidth = 1; for (let k = 0; k < 2; k++) { const a = t * 9 + k * 3; ctx.beginPath(); ctx.arc(0, -11, 13 + k * 3, a, a + 2); ctx.stroke(); } ctx.globalAlpha = 1; }
-  // A trick turns him about his middle (the thurible swings from above his head).
-  const T = A.trick; let rot = 0, sx = 1, sy = 1, pivot = -11;
+  // A trick turns him about his middle.
+  const T = A.trick && !A.crash ? A.trick : null; let rot = 0, sx = 1, sy = 1;
   if (T) {
     const u = clamp(T.t / T.k.dur, 0, 1), e = 1 - (1 - u) * (1 - u);
     if (T.k.rot) rot = T.k.rot * e;
     if (T.k.roll) sx = Math.cos(u * Math.PI * 2);
     if (T.k.pose === "prostrate") rot = Math.sin(u * Math.PI) * Math.PI / 2;
-    if (T.k.pose === "thurible") { pivot = -40; rot = Math.sin(u * Math.PI * 4) * 0.9 * Math.sin(u * Math.PI); }
-    if (T.k.pose === "tedeum" || T.k.sig) { const g = 1 + Math.sin(u * Math.PI) * 0.4; sx *= g; sy *= g; }
-    if (T.k.quick) sy = 1 + Math.sin(u * Math.PI) * 0.12;
+    if (T.k.pose === "tedeum" || T.k.sig) { const g = 1 + Math.sin(u * Math.PI) * 0.25; sx *= g; sy *= g; }
   }
   if (A.crash > 0) rot = -Math.PI / 2 + Math.sin(A.crash * 20) * 0.2;
-  if (T && T.k.pose === "thurible") { ctx.strokeStyle = "#c8b070"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, pivot - 14); ctx.lineTo(Math.sin(rot) * -26, pivot - Math.cos(rot) * -26 - 26 + 26); ctx.stroke(); }
-  ctx.translate(0, pivot); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(0, -pivot);
-  const ground = A.mode === "ground" && !A.crash, wheel = ground && A.surge > 0;
-  // Running: the faster, the quicker the steps, up to a point.
-  const rate = ground ? Math.min(16, 6 + sp / 40) : 0;
-  drawFigure(s.look, -6, -22, Math.floor(t * rate), { air: !ground, seated: wheel });
-  if (wheel) {
-    const spin = t * 30;
-    ctx.globalAlpha = 0.9; ctx.strokeStyle = "#140c1c"; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.ellipse(0, -2.5, 5, 3, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = s.look.shade; ctx.lineWidth = 1;
-    for (let k = 0; k < 3; k++) { const a = spin + k * 2.1; ctx.beginPath(); ctx.arc(0, -2.5, 4.4, a, a + 0.9); ctx.stroke(); }
-    ctx.globalAlpha = 1;
+  ctx.translate(0, -11); ctx.rotate(rot); ctx.scale(sx, sy); ctx.translate(0, 11);
+  if (T) drawRig(s, poseOf(T, s), T, t);
+  else {
+    const ground = A.mode === "ground" && !A.crash, wheel = ground && A.surge > 0;
+    // Running: the faster, the quicker the steps, up to a point.
+    const rate = ground ? Math.min(16, 6 + sp / 40) : 0;
+    drawFigure(s.look, -6, -22, Math.floor(t * rate), { air: !ground, seated: wheel });
+    if (wheel) {
+      const spin = t * 30;
+      ctx.globalAlpha = 0.9; ctx.strokeStyle = "#140c1c"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(0, -2.5, 5, 3, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = s.look.shade; ctx.lineWidth = 1;
+      for (let k = 0; k < 3; k++) { const a = spin + k * 2.1; ctx.beginPath(); ctx.arc(0, -2.5, 4.4, a, a + 0.9); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
   }
-  if (T && T.k.quick) drawFlourish(s, clamp(T.t / T.k.dur, 0, 1));
-  if (T && T.k.pose === "cross") { rect(-11, -14, 22, 2, s.look.robe); rect(-11, -14, 2, 2, s.look.skin); rect(9, -14, 2, 2, s.look.skin); }
-  if (T && T.k.sig && sigOf(s).fx === "keys") { rect(-6, -40, 12, 2, "#e8b94a"); rect(-1, -44, 2, 10, "#cfd6dc"); rect(-3, -46, 6, 3, "#e8b94a"); }
-  if (T && T.k.sig && sigOf(s).fx === "heart") { ctx.fillStyle = "#d8324a"; ctx.beginPath(); ctx.arc(-2, -34, 3, 0, 7); ctx.arc(2, -34, 3, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(-5, -33); ctx.lineTo(0, -27); ctx.lineTo(5, -33); ctx.fill(); }
   ctx.restore();
 }
-// Each saint's flourish: the thing he carries, held up high (u from 0 to 1).
-function drawFlourish(s, u) {
-  const lift = Math.sin(u * Math.PI), L = s.look, arm = () => rect(3, -20 - lift * 3, 2, 7, L.skin);
-  const glint = (x, y) => { ctx.globalAlpha = lift; rect(x - 3, y, 7, 1, "#ffffff"); rect(x, y - 3, 1, 7, "#ffffff"); ctx.globalAlpha = 1; };
-  switch (s.id) {
-    case "benedict": arm(); rect(5, -40 - lift * 4, 1, 22, "#8a5a2b"); rect(3, -41 - lift * 4, 4, 1, "#8a5a2b"); rect(3, -41 - lift * 4, 1, 3, "#8a5a2b"); glint(5, -44 - lift * 4); break;
-    case "peter": arm(); rect(3, -30 - lift * 4, 5, 1, "#e8b94a"); rect(5, -32 - lift * 4, 1, 6, "#e8b94a"); rect(3, -27 - lift * 4, 5, 1, "#cfd6dc"); glint(5, -34 - lift * 4); break;
-    case "augustine": { arm(); const y = -30 - lift * 4; ctx.fillStyle = "#d8324a"; ctx.beginPath(); ctx.arc(3, y, 2.5, 0, 7); ctx.arc(7, y, 2.5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(0.5, y + 1); ctx.lineTo(5, y + 6); ctx.lineTo(9.5, y + 1); ctx.fill(); rect(4, y - 6, 2, 3, "#ffb030"); break; }
-    case "hildegard": arm(); rect(5, -34 - lift * 4, 1, 10, "#2f7a3a"); rect(3, -35 - lift * 4, 5, 2, "#5ac04a"); rect(6, -31 - lift * 4, 3, 1, "#5ac04a"); glint(5, -37 - lift * 4); break;
-    case "lucy": ctx.globalAlpha = 0.5 + lift * 0.5; for (const k of [-4, -1, 2]) rect(k, -31 - lift * 4, 1, 3 + lift * 4, "#ffcf5a"); ctx.fillStyle = "#fff4a0"; ctx.globalAlpha = lift * 0.35; ctx.beginPath(); ctx.arc(0, -30, 8 + lift * 4, 0, 7); ctx.fill(); ctx.globalAlpha = 1; break;
-    case "maurus": rect(-10, 1, 20, 2, "#140c1c"); rect(-9, 0, 18, 2, "#ffcf5a"); rect(-1, 0, 2, 2, "#3a8ad0"); rect(4, -6, 2, 6, L.skin); break;
-    case "cupertino": rect(-5, -21 - lift * 3, 2, 7, L.skin); rect(3, -21 - lift * 3, 2, 7, L.skin); break;
-    default: arm(); break;
+// ---- The saint in a trick: a figure of jointed parts ----
+// In the air the saint is drawn from parts that move: a torso that leans,
+// arms and legs that swing about the shoulder and the hip, and stretch when
+// the move looks better for it. Each trick is a few poses in time, after the
+// moves of the skate ramps: a tuck, a layout, a Superman, a Christ Air, a
+// split kick, a Rocket Air. Angles: 0 hangs straight down from the joint,
+// a quarter turn points forward, a half turn straight up; arm and leg are
+// how far the limbs are stretched.
+const PI = Math.PI;
+const NEUTRAL = { t: 0, aL: -0.35, aR: 0.35, lL: 0.15, lR: -0.1, arm: 1, leg: 1 };
+const TUCK = { t: 0.5, aL: 1.3, aR: 1.5, lL: 2.3, lR: 2.5, leg: 0.6 };
+const pose = (o) => Object.assign({}, NEUTRAL, o);
+const hold = (a, b, p) => [[0, {}], [a, p], [b, p], [1, {}]];
+const POSES = {
+  // The flourish: the thing he carries, held up high, legs kicked apart.
+  flourish: hold(0.25, 0.8, { aR: PI - 0.1, aL: PI + 0.5, arm: 1.4, lL: 0.6, lR: -0.5, leg: 1.2 }),
+  // Front flip: a tight tuck, knees to the chest.
+  front: hold(0.18, 0.8, TUCK),
+  // Back flip: laid out straight, arms flung back, legs long.
+  back: hold(0.2, 0.85, { t: -0.25, aL: -1.8, aR: -1.4, arm: 1.4, lL: -0.1, lR: -0.15, leg: 1.35 }),
+  // Barrel roll: spread like an X.
+  barrel: hold(0.15, 0.85, { aL: -2.3, aR: 2.3, lL: 0.8, lR: -0.8, arm: 1.4, leg: 1.4 }),
+  // Prostration: the plank, the Superman: flat out, arms reaching far ahead, legs far behind.
+  prostrate: hold(0.2, 0.8, { aL: PI, aR: PI - 0.08, arm: 1.7, lL: 0.04, lR: -0.04, leg: 1.6 }),
+  // Double flip: tucked, and at the end both legs kick out.
+  double: [[0, {}], [0.12, TUCK], [0.68, TUCK], [0.84, { lL: 1.8, lR: -0.8, leg: 1.8, aL: -2, aR: 2.1, arm: 1.4 }], [1, {}]],
+  // Double back flip: the split kick, legs far apart, arms up.
+  dback: hold(0.2, 0.82, { lL: 1.65, lR: -1.65, leg: 1.85, aL: PI - 0.5, aR: PI + 0.4, arm: 1.35 }),
+  // The Sign of the Cross: the Christ Air, arms straight out, legs together and long.
+  cross: hold(0.15, 0.85, { aL: -PI / 2, aR: PI / 2, arm: 1.7, lL: 0, lR: 0, leg: 1.5 }),
+  // Each saint's own trick: the Rocket Air, his treasure held up, legs straight down.
+  sig: hold(0.15, 0.85, { aL: PI + 0.25, aR: PI - 0.1, arm: 1.6, lL: 0.04, lR: -0.04, leg: 1.9 }),
+  // Te Deum: arms up in a V, legs split, everything stretched.
+  tedeum: hold(0.15, 0.85, { aL: PI - 0.6, aR: PI + 0.6, arm: 1.7, lL: 1.3, lR: -1.3, leg: 1.8 }),
+};
+// The moves that never hold still.
+const MOVING = {
+  // The Thurible: the censer swung round and round at full stretch, legs scissoring.
+  thurible: (u) => { const k = Math.sin(u * PI); return pose({ aR: u * PI * 6, arm: 1 + 0.8 * k, aL: -0.8, lL: Math.sin(u * 16) * 0.9 * k, lR: -Math.sin(u * 16) * 0.9 * k, leg: 1 + 0.4 * k }); },
+  // Triple flip: tucked tight, arms windmilling.
+  triple: (u) => { const k = Math.min(1, Math.min(u, 1 - u) * 8); return pose({ t: 0.5 * k, lL: 2.3 * k + 0.15, lR: 2.5 * k - 0.1, leg: 1 - 0.4 * k, aL: u * 14, aR: u * 14 + PI, arm: 1 + 0.3 * k }); },
+};
+// St. Maurus grabs his board instead: crouched, one hand down to it.
+const BOARD_GRAB = hold(0.2, 0.8, { t: 0.3, aR: 0.25, arm: 1.6, aL: -1.2, lL: 0.9, lR: 0.7, leg: 0.75 });
+function poseOf(T, s) {
+  const u = clamp(T.t / T.k.dur, 0, 1), id = T.k.quick ? "flourish" : T.k.id;
+  if (MOVING[id]) return MOVING[id](u);
+  const keys = T.k.quick && s.id === "maurus" ? BOARD_GRAB : POSES[id];
+  if (!keys) return pose({});
+  let i = 0; while (i < keys.length - 2 && u > keys[i + 1][0]) i++;
+  const [u0, a] = keys[i], [u1, b] = keys[i + 1], k = clamp((u - u0) / Math.max(0.001, u1 - u0), 0, 1), e = k * k * (3 - 2 * k);
+  const pa = pose(a), pb = pose(b), o = {};
+  for (const key in pa) o[key] = pa[key] + (pb[key] - pa[key]) * e;
+  return o;
+}
+// One limb from (x, y): a sleeve or a leg, and a hand or a shoe at its end. Returns the end.
+function limb(x, y, a, len, w, color, end, endW, endH) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-a);
+  rect(-w / 2 - 0.6, -0.6, w + 1.2, len + 1.2, "#140c1c"); rect(-w / 2, 0, w, len, color);
+  rect(-endW / 2, len - 1, endW, endH, end);
+  ctx.restore();
+  return [x + Math.sin(a) * len, y + Math.cos(a) * len];
+}
+// The jointed saint, his feet at (0, 0). The far arm and leg first, then the body, then the near ones.
+function drawRig(s, p, T, t) {
+  const L = s.look, hip = [0, -9], ink = "#140c1c";
+  const up = [Math.sin(p.t), -Math.cos(p.t)], sh = [hip[0] + up[0] * 8, hip[1] + up[1] * 8];
+  const legC = L.shade, armLen = 7 * p.arm, legLen = 8 * p.leg;
+  limb(hip[0], hip[1], p.lL, legLen, 3, legC, ink, 4, 2.5);
+  limb(sh[0], sh[1], p.aL, armLen, 2.6, L.shade, L.skin, 3, 3);
+  // The body: the habit from hip to shoulder, and its skirt.
+  ctx.save(); ctx.translate(hip[0], hip[1]); ctx.rotate(p.t);
+  rect(-5, -9, 10, 13, ink); rect(-4, -8, 8, 11, L.robe); rect(-4, -1, 8, 4, L.shade);
+  if (L.mantle) { rect(-4, -8, 2, 11, L.mantle); rect(2, -8, 2, 11, L.mantle); }
+  if (L.cord) rect(-4, -2, 8, 1, L.cord);
+  if (L.sash) for (let k = 0; k < 6; k++) rect(-3 + k, -8 + k, 2, 1, L.sash);
+  if (L.gold) rect(-4, -2, 8, 1, "#e8b94a");
+  // The head, on the shoulders.
+  ctx.translate(0, -13);
+  rect(-4, -4.5, 8, 9, ink); rect(-3, -3.5, 6, 7, L.skin); rect(1, -1.5, 1, 1, ink);
+  if (L.veil) { rect(-4, -4.5, 3, 9, L.veil); rect(-4, -4.5, 8, 2, L.veil); rect(-2, -3.5, 5, 1, L.wimple); rect(-3, 2.5, 6, 2, L.wimple); }
+  if (L.hood) { rect(-4, -4.5, 2, 9, L.robe); rect(-4, -4.5, 8, 1, L.robe); }
+  if (L.hair && !L.hood) { rect(-3, -3.5, 6, 1, L.hair); rect(-3, -3.5, 1, 3, L.hair); }
+  if (L.tonsure) { rect(-3, -3.5, 6, 2, L.hair); rect(-1, -3.5, 2, 1, L.skin); }
+  if (L.beard) rect(-2, 0.5, 5, 3, L.beard);
+  if (L.mitre) { rect(-3, -8.5, 6, 4, "#f4f0e8"); rect(-1, -10.5, 2, 2, "#f4f0e8"); rect(-1, -8.5, 2, 4, "#e8b94a"); }
+  if (L.wreath) { rect(-3, -5.5, 6, 1, "#f4f0e8"); rect(-3, -5.5, 1, 1, "#ff7a9a"); rect(0, -5.5, 1, 1, "#ff7a9a"); }
+  if (L.candles) { rect(-4, -6.5, 8, 2, "#3a8a3a"); for (const k of [-4, -1, 2]) { rect(k, -9.5, 1, 3, "#f4f0e8"); rect(k, -11.5, 1, 2, "#ffcf5a"); } }
+  ctx.restore();
+  limb(hip[0], hip[1], p.lR, legLen, 3, legC, ink, 4, 2.5);
+  const hand = limb(sh[0], sh[1], p.aR, armLen, 2.6, L.robe, L.skin, 3, 3);
+  // In the near hand, what the trick wants held up.
+  const k = T.k, u = clamp(T.t / k.dur, 0, 1), lift = Math.sin(u * PI);
+  if (k.quick || k.sig) drawProp(s.id, hand[0], hand[1], p.aR, k.sig ? 1.3 : 1.15, lift, t);
+  if (k.pose === "thurible") drawProp("thurible", hand[0], hand[1], p.aR, 1.2, 1, t);
+  if (k.quick && s.id === "maurus") { rect(-11, 1, 22, 2, ink); rect(-10, 0, 20, 2, "#ffcf5a"); rect(-1, 0, 2, 2, "#3a8ad0"); }
+}
+// The treasure each saint holds up: drawn outward from the hand along the arm, size k, glowing as it is lifted.
+function drawProp(id, x, y, a, k, glow, t) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-a); ctx.translate(0, 2); ctx.scale(k, k);
+  if (glow > 0.3 && id !== "thurible") { ctx.globalAlpha = 0.35 * glow; ctx.fillStyle = "#fff4a0"; ctx.beginPath(); ctx.arc(0, 4, 7, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+  const disc = (cy, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0, cy, r, 0, 7); ctx.fill(); };
+  switch (id) {
+    case "benedict":   // The medal of St. Benedict: gold, the cross on its face.
+      disc(4, 3.6, "#140c1c"); disc(4, 3, "#ffcf5a"); rect(-0.5, 1.6, 1, 4.8, "#7a4a10"); rect(-2, 3.5, 4, 1, "#7a4a10"); rect(-0.5, -0.5, 1, 1.5, "#e8b94a"); break;
+    case "therese":    // Roses.
+      rect(-0.5, 0, 1, 5, "#2f7a3a"); disc(5.5, 2.2, "#d8324a"); disc(4.5, 1.4, "#ff7a9a"); rect(1, 2, 2, 1, "#5ac04a"); break;
+    case "cupertino":  // Nothing but joy: a star.
+      rect(-0.5, 2, 1, 6, "#fff4a0"); rect(-3, 4.5, 6, 1, "#fff4a0"); rect(-1, 3.5, 2, 3, "#ffffff"); break;
+    case "maurus": break;
+    case "scholastica": // Her dove.
+      rect(-2, 2, 5, 3, "#ffffff"); rect(2, 1, 2, 2, "#ffffff"); rect(4, 1.5, 1, 1, "#e8b94a"); rect(-2, Math.sin(t * 30) > 0 ? -1 : 4, 4, 2, "#f0f0f0"); break;
+    case "hildegard":  // A sprig of green.
+      rect(-0.5, 0, 1, 8, "#2f7a3a"); rect(-2, 6, 4, 2, "#5ac04a"); rect(0, 3, 3, 1, "#5ac04a"); rect(-3, 4, 3, 1, "#5ac04a"); break;
+    case "cecilia":    // A little harp.
+      rect(-2, 0, 1, 8, "#e8b94a"); rect(-2, 7, 5, 1, "#e8b94a"); rect(2, 2, 1, 6, "#e8b94a"); for (let q = 0; q < 3; q++) rect(-1 + q, 1 + q, 1, 7 - q, "#fff4c0"); break;
+    case "peter":      // The keys of the kingdom, gold and silver, crossed.
+      ctx.save(); ctx.translate(0, 4); ctx.rotate(0.6); rect(-0.5, -4, 1, 8, "#e8b94a"); rect(-1.5, -5, 3, 2, "#e8b94a"); ctx.rotate(-1.2); rect(-0.5, -4, 1, 8, "#cfd6dc"); rect(-1.5, -5, 3, 2, "#cfd6dc"); ctx.restore(); break;
+    case "augustine":  // The heart, aflame.
+      disc(3, 2, "#d8324a"); ctx.save(); ctx.translate(2.2, 0); disc(3, 2, "#d8324a"); ctx.restore(); ctx.fillStyle = "#d8324a"; ctx.beginPath(); ctx.moveTo(-2, 3.5); ctx.lineTo(1, 7.5); ctx.lineTo(4.2, 3.5); ctx.fill();
+      rect(0.5, -1 - Math.abs(Math.sin(t * 20)), 1.5, 3, "#ffb030"); break;
+    case "lucy":       // A lamp, burning.
+      rect(-3, 2, 6, 2, "#c89a4a"); rect(-1, 4, 2, 1, "#c89a4a"); rect(-0.5, -1 - Math.abs(Math.sin(t * 18)), 1.5, 3, "#ffcf5a"); disc(0, 1.2, "#fff4a0"); break;
+    case "thurible": { // The censer on its chains, and its smoke.
+      ctx.strokeStyle = "#c8b070"; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-2, 7); ctx.moveTo(1, 0); ctx.lineTo(2, 7); ctx.stroke();
+      disc(9, 3, "#140c1c"); disc(9, 2.4, "#d8b050"); rect(-2.5, 8.5, 5, 1, "#a07a20"); rect(-0.5, 5.5, 1, 1.5, "#d8b050"); break;
+    }
   }
+  ctx.restore();
 }
 // The demon racing: tilted with the way, turning in his tricks, tumbling when he crashes.
 function drawDemonRunner(A, t) {
@@ -2375,6 +2765,12 @@ function drawPlay(t) {
   }
   if (D) drawDemonRunner(D, t);
   drawSaint(P, t);
+  // The saint's shot, flying after the demon.
+  for (const m of shots) {
+    ctx.globalAlpha = 0.35 + Math.sin(t * 20) * 0.1; ctx.fillStyle = m.c[0]; ctx.beginPath(); ctx.arc(m.x, m.y, 11, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    if (m.id === "maurus") { ctx.fillStyle = "#3a8ad0"; ctx.beginPath(); ctx.arc(m.x, m.y, 6, Math.PI, 0); ctx.fill(); rect(m.x - 6, m.y, 12, 2, "#8ad0ff"); rect(m.x - 2, m.y - 6, 4, 2, "#ffffff"); }
+    else drawProp(m.id, m.x, m.y + 6, Math.PI, 1.7, 1, t);
+  }
   // The near rim of a loop goes in front of whoever is in it.
   if (P.mode === "loop") drawLoop(P.loop, true);
   if (D && D.mode === "loop" && D.loop !== P.loop) drawLoop(D.loop, true);
@@ -2427,7 +2823,10 @@ function drawHud(t) {
   const Z = level.Z;
   drawNeume(10, 11, t); text(String(game.neumes), 18, 4, { color: "#ffe08a", size: 9 });
   text("STYLE " + commas(game.style), 5, 16, { color: "#c8f0ff", size: 7 });
-  if (!game.tutorial) text(hms(game.time), W / 2, 2, { align: "center", color: "#ffffff", size: 9 });
+  if (game.free) {
+    text(commas(game.dist || 0) + " PACES", W / 2, 2, { align: "center", color: "#ffffff", size: 9 });
+    if (save.free) text("BEST STYLE " + commas(save.free.style), W / 2, 13, { align: "center", color: "#c8f0ff", size: 6 });
+  } else if (!game.tutorial) text(hms(game.time), W / 2, 2, { align: "center", color: "#ffffff", size: 9 });
   if (D) {
     // The race: the way from start to door, the saint and the demon on it.
     const sin = D.sin, bx = W / 2 - 54, bw = 108, by = 15;
@@ -2447,6 +2846,15 @@ function drawHud(t) {
   if (sp > 1.15) text("×" + sp.toFixed(1), game.tutorial ? W - 64 : W - 26, 4, { align: "right", color: P.surge > 0 ? "#ff8a4a" : "#ffcf5a", size: 8 });
   rect(W - 20, 1, 13, 13, "#140c1c66"); rect(W - 18, 3, 3, 9, "#ffffff"); rect(W - 12, 3, 3, 9, "#ffffff");
   if (game.tutorial) button("SKIP", W - 60, 2, 34, 11, false, 6);
+  if (D && !D.done && game.count <= 0 && game.shots > 0) {
+    // The one shot at the demon: tap here (or F).
+    const on = canFire(), pulse = 0.6 + Math.sin(t * 6) * 0.3;
+    rect(4, 25, 26, 24, "#140c1c"); rect(5, 26, 24, 22, on ? "#5a3a20" : "#3a3048");
+    ctx.globalAlpha = pulse; rect(5, 26, 24, 1, "#fff4a0"); ctx.globalAlpha = 1;
+    if (game.saint.id === "maurus") { ctx.fillStyle = "#3a8ad0"; ctx.beginPath(); ctx.arc(17, 38, 6, Math.PI, 0); ctx.fill(); rect(11, 38, 12, 2, "#8ad0ff"); }
+    else drawProp(game.saint.id, 17, 32, Math.PI, 1.1, 0.8, t);
+    text("F", 27, 41, { align: "right", size: 5, color: "#ffe08a" });
+  }
   // The surge, and the gifts, and how long they last.
   let gy = 16;
   if (P.surge > 0) { text("SURGE", W - 42, gy, { color: "#ffb030", size: 6 }); rect(W - 22, gy + 2, 18 * Math.min(1, P.surge / P.surgeMax), 3, Math.floor(t * 12) % 2 ? "#ffcf5a" : "#ff6a1a"); gy += 9; }
@@ -2488,6 +2896,8 @@ function drawHud(t) {
     text(Z.num.toUpperCase(), W / 2, 36, { align: "center", color: "#ffffff", size: 8 });
     text(Z.name.toUpperCase(), W / 2, 46, { align: "center", color: "#ffe08a", size: 15 });
     wrapText(Z.sub, 8, 280, true).forEach((l, i) => text(l, W / 2, 66 + i * 10, { align: "center", color: "#ffffff", size: 8, serif: true }));
+    if (game.free) text("Pause and END RUN when you are done", W / 2, 90, { align: "center", color: "#ffe08a", size: 7 });
+    if (D) text("Once in the race, tap the button at the top left (or F) to send " + WEAPON[game.saint.id].toLowerCase() + " after him", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
     if (D) text("Race the demon of " + D.sin.name + " to the door", W / 2, 90, { align: "center", color: D.sin.colors.y, size: 7 });
     ctx.globalAlpha = 1;
   }
@@ -2624,13 +3034,14 @@ function drawTitle(t) {
   // The saint doing his tricks, the demon at his shoulder doing his.
   const s = game.saint, show = TRICKS.filter((k) => knows(k) && !k.pose), k = show[Math.floor(t / 1.6) % show.length];
   drawDemon(SINS.pride, W / 2 + 46, 82 + Math.sin(t * 5) * 2, t, 1.4, Math.floor(t / 2.3) % 3 === 1 ? ((t % 2.3) / 2.3) * Math.PI * 2 : 0);
-  ctx.save(); ctx.translate(W / 2, 104); ctx.scale(2, 2); ctx.translate(-W / 2, -104);
-  drawSaint(demoRunner(W / 2, 104, (t % 3.2) < 1.6 ? null : k, t), t);
+  ctx.save(); ctx.translate(W / 2, 106); ctx.scale(1.7, 1.7); ctx.translate(-W / 2, -106);
+  drawSaint(demoRunner(W / 2, 106, (t % 3.2) < 1.6 ? null : k, t), t);
   ctx.restore();
   text(s.name, W / 2, 108, { align: "center", color: "#ffffff", size: 9 });
   const go = button(save.tutorial ? "RUN" : "BEGIN", W / 2 - 50, 120, 100, 18, true, 10);
-  const who = button("SAINT", 14, 143, 66, 16, false, 8), zones = button("CASTLE", 88, 143, 66, 16, false, 8);
-  const book = button("TRICKS", 162, 143, 66, 16, false, 8), nov = button("NOVITIATE", 236, 143, 70, 16, false, 8);
+  const who = button("SAINT", 6, 143, 58, 16, false, 7), zones = button("CASTLE", 68, 143, 58, 16, false, 7);
+  const free = button("FREESTYLE", 130, 143, 60, 16, false, 7);
+  const book = button("TRICKS", 194, 143, 58, 16, false, 7), nov = button("NOVITIATE", 256, 143, 58, 16, false, 7);
   text("Left: jump   Right: hold to run   In the air: tap or swipe for tricks", W / 2, 164, { align: "center", color: "#ffffff", size: 7 });
   for (const tp of input.taps) {
     if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); if (!save.tutorial) startTutorial(); else startZone(Math.min(save.open, ZONES.length) - 1); }
@@ -2638,6 +3049,7 @@ function drawTitle(t) {
     else if (tp.x !== undefined && inBox(tp, zones)) { Snd.sfx("select"); state = "zones"; }
     else if (tp.x !== undefined && inBox(tp, book)) { Snd.sfx("select"); bookBack = "title"; state = "book"; }
     else if (tp.x !== undefined && inBox(tp, nov)) { Snd.sfx("select"); startTutorial(); }
+    else if (tp.x !== undefined && inBox(tp, free)) { Snd.sfx("select"); startFree(); }
   }
   input.taps = [];
 }
@@ -2646,21 +3058,34 @@ function drawSaints(t) {
   text("CHOOSE A SAINT", W / 2, 3, { align: "center", color: "#ffe08a", size: 11 });
   const boxes = [];
   SAINTS.forEach((s, i) => {
-    const x = 7 + (i % 5) * 62, y = 18 + Math.floor(i / 5) * 66, hot = s === game.saint;
+    const x = 7 + (i % 5) * 62, y = 18 + Math.floor(i / 5) * 66, hot = s === game.saint, open = saintOpen(s);
+    if (!open) {
+      // Not yet won: a shadow, and what it takes.
+      rect(x - 1, y - 1, 60, 64, "#140c1c"); rect(x, y, 58, 62, "#1a1430");
+      ctx.globalAlpha = 0.5; drawFigure({ robe: "#0a0810", shade: "#0a0810", skin: "#0a0810", hood: true }, x + 23, y + 4, 0, { still: true }); ctx.globalAlpha = 1;
+      text(s.short || s.name.replace("St. ", ""), x + 29, y + 28, { align: "center", color: "#8a7aaa", size: 7 });
+      text("?", x + 29, y + 10, { align: "center", color: "#c8b8ff", size: 10 });
+      text(saintHow(s), x + 29, y + 41, { align: "center", color: "#ffcf5a", edge: null, size: 6 });
+      return;
+    }
     rect(x - 1, y - 1, 60, 64, "#140c1c"); rect(x, y, 58, 62, hot ? "#e8b94a" : "#2a2240");
     drawFigure(s.look, x + 23, y + 4, Math.floor(t * 6), {});
-    const n = s.name.replace("St. ", "");
+    // How high he jumps: a bar of gold.
+    const lh = Math.round((LEAP[s.id] - 380) / 7);
+    rect(x + 4, y + 25 - lh, 4, lh, hot ? "#7a4a10" : "#ffcf5a"); text("↑", x + 6, y + 25 - lh - 8, { align: "center", size: 6, color: hot ? "#7a4a10" : "#ffcf5a", edge: null });
+    const n = s.short || s.name.replace("St. ", "");
     text(n, x + 29, y + 28, { align: "center", color: hot ? "#140c1c" : "#ffe8b0", edge: hot ? null : "#140c1c", size: 7 });
     text(s.double ? "double jump" : s.hold === "levitate" ? "rises" : s.hold === "surf" ? "skims gaps" : "floats", x + 29, y + 37, { align: "center", color: hot ? "#3a2a1a" : "#c8b8ff", edge: null, size: 6 });
     text("tap: " + FLOURISHES[s.id], x + 29, y + 45, { align: "center", color: hot ? "#3a2a1a" : "#ffffff", edge: null, size: 6 });
     text(sigOf(s).name, x + 29, y + 53, { align: "center", color: hot ? "#7a1a2e" : "#ffcf5a", edge: null, size: 6 });
     boxes.push({ x, y, w: 58, h: 62, s, i });
   });
-  text("Each saint's own trick, learned at the fifth mansion: swipe ↓ ↓ ↑ ↑ ←", W / 2, 150, { align: "center", color: "#ffffff", size: 7 });
+  text("Beat a demon to win a saint.   Gold bar: how high each jumps.", W / 2, 150, { align: "center", color: "#ffffff", size: 7 });
   const back = button("BACK", W / 2 - 40, 160, 80, 16, true, 8);
   for (const tp of input.taps) {
     const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
-    if (b) { game.saint = b.s; save.saint = b.i; store(); Snd.sfx("select"); }
+    if (b && saintOpen(b.s)) { game.saint = b.s; save.saint = b.i; store(); Snd.sfx("select"); }
+    else if (b) Snd.sfx("hurt");
     else if (tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, back))) state = "title";
   }
   input.taps = [];
@@ -2749,6 +3174,21 @@ function drawDone(t) {
     input.taps = [];
     return;
   }
+  if (game.free) {
+    const b = save.free;
+    text("FREESTYLE", W / 2, 8, { align: "center", color: "#ffe08a", size: 14 });
+    text("STYLE " + commas(game.style) + (game.newStyle ? "  NEW BEST!" : "  best " + commas(b.style)), W / 2, 34, { align: "center", color: game.newStyle ? "#8ae86a" : "#c8f0ff", size: 9 });
+    text(commas(game.dist || 0) + " PACES" + (game.newBest ? "  NEW BEST!" : "  best " + commas(b.dist)) + "   ·   " + hms(game.time), W / 2, 48, { align: "center", color: game.newBest ? "#8ae86a" : "#ffffff", size: 8 });
+    text("BEST COMBO " + commas(game.bestChain) + "   ·   NEUMES " + game.neumes, W / 2, 60, { align: "center", color: "#ffcf5a", size: 8 });
+    raceVerse(true, 84);
+    const again = button("AGAIN", W / 2 - 104, 128, 100, 20, true), menu = button("TITLE", W / 2 + 4, 128, 100, 20, false);
+    for (const tp of input.taps) {
+      if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, again))) startFree();
+      else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, menu))) state = "title";
+    }
+    input.taps = [];
+    return;
+  }
   const Z = level.Z, sin = Z.demon, k = Z.id;
   text(Z.num.toUpperCase(), W / 2, 4, { align: "center", color: "#ffffff", size: 7 });
   text(Z.name.toUpperCase(), W / 2, 12, { align: "center", color: "#ffe08a", size: 12 });
@@ -2770,7 +3210,11 @@ function drawDone(t) {
     text("NEW TRICK" + (game.newTricks.length > 1 ? "S" : "") + ": " + game.newTricks.map((q) => nameOf(q, P).toUpperCase()).join(", "), W / 2 - 64, 89, { size: 7, color: "#ffe08a" });
     game.newTricks.forEach((q, i) => text(arrows(q.keys) + "   " + q.pts + " pts, " + q.dur.toFixed(2) + "s of air", W / 2 - 64, 99 + i * 9, { size: 7, color: "#ffffff" }));
   } else if (game.zone >= ZONES.length - 1 && game.won) text("God alone suffices.   St. Teresa of Ávila", W / 2, 100, { align: "center", color: "#fff4c0", size: 9, serif: true });
-  else text("“So run that you may obtain.”  1 Corinthians 9:24", W / 2, 100, { align: "center", color: "#fff0c8", size: 8, serif: true });
+  else raceVerse(game.won, 94);
+  if (game.newSaints.length) {
+    const ns = game.newSaints.map((s) => s.name).join(" and ");
+    text("NEW SAINT: " + ns.toUpperCase() + (game.newSaints.some((s) => s.id === "benedict") ? "  (every saint won!)" : ""), W / 2, 123, { align: "center", color: "#8ae86a", size: 7 });
+  }
   if (D && D.sayT > 0) bubble(D.say, W - 70, 150, "center");
   const last = game.zone >= ZONES.length - 1, nextOpen = !last && game.zone + 1 < save.open;
   const again = button("AGAIN", W / 2 - 154, 132, 100, 20, !nextOpen);
@@ -2783,20 +3227,52 @@ function drawDone(t) {
   }
   input.taps = [];
 }
+// At the end of a race, a word of Scripture about running and striving: one
+// for a win, another for a loss, a different one each time. Douay-Rheims.
+const WON_VERSES = [
+  ["I have fought a good fight, I have finished my course, I have kept the faith.", "2 Timothy 4:7"],
+  ["I therefore so run, not as at an uncertainty: I so fight, not as one beating the air.", "1 Corinthians 9:26"],
+  ["They indeed that they may receive a corruptible crown; but we an incorruptible one.", "1 Corinthians 9:25"],
+  ["He hath rejoiced as a giant to run the way.", "Psalm 18:6"],
+  ["Be thou faithful until death: and I will give thee the crown of life.", "Apocalypse 2:10"],
+  ["Thanks be to God, who hath given us the victory through our Lord Jesus Christ.", "1 Corinthians 15:57"],
+  ["They shall run and not be weary, they shall walk and not faint.", "Isaias 40:31"],
+  ["In all these things we overcome, because of him that hath loved us.", "Romans 8:37"],
+];
+const LOST_VERSES = [
+  ["The race is not to the swift, nor the battle to the strong.", "Ecclesiastes 9:11"],
+  ["You did run well, what hath hindered you, that you should not obey the truth?", "Galatians 5:7"],
+  ["A just man shall fall seven times, and shall rise again.", "Proverbs 24:16"],
+  ["He that striveth for the mastery is not crowned, except he strive lawfully.", "2 Timothy 2:5"],
+  ["Let us run by patience to the fight proposed to us.", "Hebrews 12:1"],
+  ["Forgetting the things that are behind, I press towards the mark.", "Philippians 3:13–14"],
+  ["Lift up the hands which hang down, and the feeble knees, and make straight steps with your feet.", "Hebrews 12:12–13"],
+  ["Know you not that they that run in the race, all run indeed, but one receiveth the prize?", "1 Corinthians 9:24"],
+];
+let verseAt = -1, verseFor = null;
+function raceVerse(won, y) {
+  const list = won ? WON_VERSES : LOST_VERSES;
+  // A new verse for each race, kept while the screen is up.
+  if (verseFor !== game.time) { verseFor = game.time; verseAt = Math.floor(Math.random() * list.length); }
+  const [v, ref] = list[verseAt % list.length], lines = wrapText("“" + v + "”", 8, 290, true);
+  lines.forEach((l, i) => text(l, W / 2, y + i * 10, { align: "center", color: "#fff0c8", size: 8, serif: true }));
+  text(ref, W / 2, y + lines.length * 10 + 1, { align: "center", color: "#e8b94a", size: 7, serif: true });
+}
 function drawPause(t) {
   drawPlay(t);
   rect(0, 0, W, H, "#000000c0");
   text("PAUSED", W / 2, 8, { align: "center", color: "#ffe08a", size: 14 });
   text("Left half: tap to jump, hold to float.   Right half: hold to run.", W / 2, 30, { align: "center", size: 7 });
   text("In the air: tap the right side for a quick trick, or swipe for the others.", W / 2, 41, { align: "center", size: 7, color: "#c8f0ff" });
-  text("Finish every trick before you land, or you crash (clouds bounce you).", W / 2, 52, { align: "center", size: 7 });
+  text("Finish every trick before you land, or you crash (clouds bounce you; storms throw you down).", W / 2, 52, { align: "center", size: 7 });
   text("Land a combo for points × tricks, and a surge: the only way past a run.", W / 2, 63, { align: "center", size: 7 });
-  const go = button("RESUME", W / 2 - 130, 84, 80, 20, true), book = button("TRICKS", W / 2 - 40, 84, 80, 20, false), quit = button("QUIT", W / 2 + 50, 84, 80, 20, false);
+  text("Once a race: the button at the top left (or F) sends your saint's gift after the demon.", W / 2, 72, { align: "center", size: 6, color: "#fff4a0" });
+  const go = button("RESUME", W / 2 - 130, 84, 80, 20, true), book = button("TRICKS", W / 2 - 40, 84, 80, 20, false), quit = button(game.free ? "END RUN" : "QUIT", W / 2 + 50, 84, 80, 20, false);
   const skip = game.tutorial ? button("SKIP THE LESSONS", W / 2 - 60, 116, 120, 18, false, 8) : null;
   for (const tp of input.taps) {
     if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; input.rushHeld = false; pointers.clear(); }
     else if (tp.x !== undefined && inBox(tp, book)) { bookBack = "pause"; state = "book"; }
-    else if (tp.x !== undefined && inBox(tp, quit)) { state = game.tutorial ? "title" : "zones"; Snd.stop(); }
+    else if (tp.x !== undefined && inBox(tp, quit)) { if (game.free) endFree(); else { state = game.tutorial ? "title" : "zones"; Snd.stop(); } }
     else if (skip && tp.x !== undefined && inBox(tp, skip)) skipTutorial();
   }
   input.taps = [];
@@ -2827,6 +3303,7 @@ addEventListener("pointerdown", (ev) => {
   if (state === "play") {
     if (p.x > W - 24 && p.y < 16) { state = "pause"; input.taps = []; return; }
     if (game.tutorial && p.x > W - 62 && p.x < W - 24 && p.y < 16) { skipTutorial(); return; }
+    if (canFire() && p.x < 32 && p.y > 22 && p.y < 52) { fire(); return; }
     const left = ev.clientX < innerWidth / 2;
     const q = { left, ax: p.x, ay: p.y, swiped: false, t0: performance.now(), air: airborne() };
     pointers.set(ev.pointerId, q);
@@ -2867,6 +3344,7 @@ addEventListener("keydown", (e) => {
     if (RUSH_KEYS.includes(e.code)) { input.rushHeld = true; e.preventDefault(); }
     if (e.code === "ArrowDown") e.preventDefault();
     if (e.code === "KeyP" || e.code === "Escape") { state = "pause"; input.taps = []; }
+    if (e.code === "KeyF" || e.code === "ShiftLeft" || e.code === "ShiftRight") fire();
   } else input.taps.push({ key: e.code });
   if (e.code === "KeyM") Snd.toggle();
 });
@@ -2887,10 +3365,22 @@ function frame(now) {
   else if (state === "book") drawBook(clock);
   else if (state === "done") drawDone(clock);
   else if (state === "pause") drawPause(clock);
+  else if (state === "poses") drawPoses();
   if (innerHeight > innerWidth * 1.1 && state !== "play") { rect(0, 0, W, 12, "#000"); text("Turn your phone sideways for a bigger view", W / 2, 2, { align: "center", color: "#c8b8ff", size: 8 }); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+// For testing: every trick at once, frozen at one moment of it (u from 0 to 1).
+let poseU = 0.5;
+function drawPoses() {
+  rect(0, 0, W, H, "#2a2240");
+  TRICKS.forEach((k, i) => {
+    const x = 26 + (i % 6) * 53, y = 70 + Math.floor(i / 6) * 86, R = demoRunner(x, y, null, 0);
+    R.mode = "air"; R.trick = { k, t: k.dur * poseU };
+    ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 1.6); ctx.translate(-x, -y); drawSaint(R, 1); ctx.restore();
+    text(nameOf(k, P).slice(0, 13), x, y + 8, { align: "center", size: 6 });
+  });
+}
 
 // For testing: ?zone=2 starts there; ?god keeps the saint safe; ?unlock opens every mansion and trick; ?novice starts the Novitiate.
 const Q = new URLSearchParams(location.search);
@@ -2900,7 +3390,7 @@ if (Q.has("saint")) game.saint = SAINTS[+Q.get("saint")] || game.saint;
 if (Q.has("zone")) startZone(+Q.get("zone") - 1);
 if (Q.has("novice")) startTutorial();
 window.RW = { get cam() { return cam; }, get P() { return P; }, get D() { return D; }, get level() { return level; }, get state() { return state; }, set state(v) { state = v; }, get game() { return game; }, get tutor() { return tutor; }, get slow() { return slow; },
-  input, startZone, startTutorial, swipe, predictLand, step(dt) { if (state === "play") tick(dt); }, ZONES, SAINTS, TRICKS, get save() { return save; }, learned };
+  set poseU(v) { poseU = v; }, input, startZone, startTutorial, startFree, endFree, swipe, predictLand, step(dt) { if (state === "play") tick(dt); }, ZONES, SAINTS, TRICKS, get save() { return save; }, learned };
 
 Snd.on = save.sound !== false;
 </script>

@@ -187,6 +187,28 @@ groove, and its own demon, drawn as in Benedictine Bricks: Pride, Sloth,
 Avarice, Envy, Gluttony, Wrath and Lust. Beat the demon to the door and the
 next mansion opens.
 
+**The saints.** A new player has two, St. Therese and St. Maurus. Each demon
+beaten wins one more: St. Scholastica, St. Joseph of Cupertino, St. Peter,
+St. Cecilia, St. Lucy, St. Hildegard and St. Augustine. When every one of
+them has been won, St. Benedict, the father of them all, comes too. Each
+jumps to his own height (St. Joseph of Cupertino, who flew, highest; St.
+Peter, the Rock, lowest), shown as a gold bar on the saints screen.
+
+**The one shot.** Once in each race, the button at the top left (or F)
+sends the saint's own gift after the demon: St. Therese's rose, St.
+Benedict's medal, St. Scholastica's dove, St. Peter's keys, St. Augustine's
+burning heart, and so on. It follows him wherever he is, always faster than
+he is, and when it finds him he tumbles, loses his tricks and his surge, and
+is a long while getting up. One relic is hidden in each mansion, on the
+highest road of clouds and just out of reach without a jump; it gives the
+shot back.
+
+**Freestyle** (from the title): no demon and no door, only the way, built
+on ahead for as long as the saint runs. It is mostly the biggest throws,
+the heavens and loops. Every 16,000 paces the sky changes to another
+mansion's colours and song. The pause screen ends the run and shows the
+style, the distance and the best of each.
+
 **Running and surging.** Hold the right half of the screen to run; tap the
 left half to jump (hold it to float, rise, skim or jump again, as each saint
 does). Running only gets a saint so far. Every trick landed on his feet sets
@@ -195,16 +217,34 @@ harder tricks and for a perfect landing, and then, little by little, he is
 running again. The surge is the only way to go faster than a run.
 
 **The way.** Great ramps throw the saint high, and the greatest, Jacob's
-Ladder (Genesis 28:12), stands with angels going up and down it. Columns of
+Ladder (Genesis 28:12), stands with angels going up and down it. The ground
+has few obstacles. The heavens are harder: a spring throws the saint up
+onto a road of clouds, and ramps of cloud throw him up to a second road and
+a third, each higher, brighter and richer in neumes. At the very top, the
+Gate of Heaven (Genesis 28:17) throws him higher than anything on earth,
+with the longest fall of all to fill with tricks. But the roads have gaps,
+and storm clouds sit on them (jump those) or hang low over them (do not
+jump under those). A bolt from one throws him straight back down to the
+earth, through every cloud. Nobody runs faster than a run on the clouds. As
+he climbs, the country behind sinks away below. Columns of
 wind, the breath of the Spirit (John 3:8), lift him and hold him up. There
 are loops small and large, rails to grind, springs up to roads of cloud, and
 two gifts: a mighty wind (Acts 2:2), lighter in the air, and tongues of fire
 (Acts 2:3), tricks counting double. The camera pulls back in big air so the
 ground stays in sight, and a ring marks where he will come down.
 
-**Tricks.** In the air, tap the right side for each saint's quick flourish
-(St. Benedict raises his staff, St. Scholastica lets her dove fly, St.
-Maurus grabs his board), or swipe anywhere, up, down, left and right, for
+**Tricks.** Every trick has its own movement. The saint is drawn from
+jointed parts whose arms and legs swing and stretch, longer than life when
+the move looks better for it. The front flip is a tight tuck; the back flip
+is laid out with arms flung back; the barrel roll is spread like an X;
+prostration is a plank, the Superman; the double flip ends with a kick;
+the double back flip is a split kick; the Sign of the Cross is a Christ Air;
+the Thurible swings the censer round at full stretch while the legs
+scissor; each saint's own trick is a Rocket Air with the saint's treasure
+held high; and the Te Deum is everything at once. In the air, tap the right
+side for each saint's quick flourish, holding up what that saint carries
+(St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
+St. Lucy her lamp; St. Maurus grabs his board), or swipe anywhere, up, down, left and right, for
 the others: ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
 ↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
 light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
@@ -219,7 +259,10 @@ paid times the number of tricks when he lands, the same trick done again too
 soon is worth less, and landing before a trick is finished is a crash that
 loses the combo and the surge, except on clouds, which bounce him up for
 another try. Big chains are hailed in Latin: Bene, Optime, Gloria,
-Alleluia, Hosanna.
+Alleluia, Hosanna, and the saint sings out the word in a little voice of
+his own, high or low. Each saint cries out at his own trick ("Vade retro!",
+"Tolle, lege!", "Tu es Petrus!", "Viriditas!", "Lux!"). The demon growls
+his taunts. Harder tricks make a faster and a longer surge.
 
 **The demon.** He runs the same way by the same rules: round the loops,
 along the rails, off the ramps and up on the wind, doing tricks in the air
@@ -234,8 +277,15 @@ all. He has plenty to say for himself. A bar at the top shows where both
 are and who leads by how many paces; when he is off the screen his face
 waits at its edge, smaller the further away he is. In testing, a saint who
 only runs loses every race; one who does the basic tricks well beats the
-first two demons; one who uses each new trick wins them all, the last by a
-little.
+first two demons; one who uses each new trick wins them all, some by only
+a few paces.
+
+At the end of each race comes a verse about running and striving, a
+different one each time: a verse of victory for a win ("I have fought a
+good fight", 2 Timothy 4:7; "I so run, not as at an uncertainty", 1
+Corinthians 9:26), and a verse of encouragement for a loss ("The race is
+not to the swift", Ecclesiastes 9:11; "A just man shall fall seven times,
+and shall rise again", Proverbs 24:16).
 
 **The music** is funk, made in the browser: a sampled drum kit with ghost
 notes and swing, slap and synth bass, clavinet, chicken-scratch and wah
