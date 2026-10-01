@@ -66,7 +66,8 @@ jars, and the divine flames. Psalm 3: the many who rise up, the Lord as shield,
 a dream of beds and mattresses ("I have slept and taken my rest"), and the
 broken teeth of the wicked.
 
-The psalm text that scrolls behind the run is the Douay-Rheims, which is in the
-public domain. The Grail Psalter is still under copyright; to use it, or any
-other translation you have the right to use, replace the verses in `PSALMS` at
-the top of the file.
+The psalm text that scrolls behind the run is The Grail Psalms (1963), as
+chanted in the Divine Office, taken from the Lumina project
+([munkachy/lumina](https://github.com/munkachy/lumina), `data-grail.js`). The
+verses sit in `PSALMS` at the top of the file; each stage names the verses it
+shows.
