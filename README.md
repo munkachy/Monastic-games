@@ -184,8 +184,8 @@ Runner race the seven deadly sins through the seven mansions of St. Teresa
 of Ávila's *Interior Castle*, from the gate of prayer to the King's own room
 at the centre. Each mansion has its own colours and country, its own funk
 groove, and its own demon, drawn as in Benedictine Bricks: Pride, Sloth,
-Avarice, Envy, Gluttony, Wrath and Lust. Beat the demon to the door and the
-next mansion opens.
+Avarice, Envy, Gluttony, Wrath and Lust. Every mansion is open from the
+start; beating a demon teaches new tricks and wins a new saint.
 
 **The saints.** A new player has two, St. Therese and St. Maurus. Each demon
 beaten wins one more: St. Scholastica, St. Joseph of Cupertino, St. Peter,
@@ -196,8 +196,8 @@ is experience, up to level 10, shown on the saints screen as a level, a
 progress bar and a gold bar for the jump. RESET PROGRESS on the castle
 screen (tap it twice) starts everything again from nothing.
 
-**The one shot.** Once in each race, the button at the top left (or F)
-sends the saint's own gift after the demon: St. Therese's rose, St.
+**The one shot.** Once in each race, the quick trick (→ in the air, or F)
+throws the saint's own gift after the demon, whether he is ahead or behind: St. Therese's rose, St.
 Benedict's medal, St. Scholastica's dove, St. Peter's keys, St. Augustine's
 burning heart, and so on. It follows him wherever he is, always faster than
 he is, and when it finds him he tumbles, loses his tricks and his surge, and
