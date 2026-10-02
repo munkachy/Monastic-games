@@ -221,6 +221,22 @@ the heavens and loops. Every 16,000 paces the sky changes to another
 mansion's colours and song. The pause screen ends the run and shows the
 style, the distance and the best of each.
 
+**Race your Guardian Angel** (from the title): any mansion, against your
+guardian angel instead of its demon. He runs by the same rules, but paces
+himself to your own best time there: the game keeps where you were every
+quarter second of your best run, and he follows it. Beat your best and he
+gets faster too. Afterwards he says what he saw. After a loss he gives hints
+from the run ("You crashed 4 times. Pay attention to the bar over your
+head..."). After a win he praises the best of it: your biggest combo, perfect
+landings, no crashes. Either way he suggests two combos you have not landed
+yet. You may throw your gift at him. He notices, he says so, and he brings
+it up again afterwards.
+
+**Speed** (from the title): SLOW MO, MEDIUM or TURBO. Turbo is the game as
+it was made. The slower speeds slow the whole world, so there is more time in
+the air to put combos together. The race clock runs with the world, so a
+time is a time at any speed.
+
 **Running and surging.** The saint runs alone, always. Tap anywhere to jump
 (keep your finger down to float, rise, skim or jump again, as each saint
 does). In the air, a pad of four arrows comes up at the bottom right: tap

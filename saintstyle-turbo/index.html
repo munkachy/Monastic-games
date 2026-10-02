@@ -878,7 +878,9 @@ function drawFigure(L, x, y, f, opt) {
 // For each mansion: best time, best style, most neumes, and whether its demon
 // has been beaten. `open` is how many mansions may be entered. `tutorial`:
 // the Novitiate is done. `done`: the tricks landed at least once.
-let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {} };
+// `speed`: 0 slow motion, 1 medium, 2 turbo. `trace`: for each mansion, where the saint was every
+// quarter second of his best run (his guardian angel runs to it). `angel`: races run and won against him.
+let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed: 2, trace: {}, angel: {} };
 try {
   const old = JSON.parse(localStorage.getItem("run-the-way") || "{}");
   // The first Run the Way had six zones of the Psalms; keep only the saint and the sound.
@@ -887,10 +889,15 @@ try {
 } catch (e) { }
 // Start again from nothing: every mansion, saint, trick, combo and record forgotten (the sound setting kept).
 function resetProgress() {
-  const sound = save.sound;
-  save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {} };
+  const sound = save.sound, speed = save.speed;
+  save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed, trace: {}, angel: {} };
   store();
 }
+save.trace = save.trace || {}; save.angel = save.angel || {}; if (save.speed === undefined) save.speed = 2;
+// How fast the whole world runs: turbo is the game as it was made; slower gives more time in the air for combos.
+// (The clock runs with the world, so a time is a time at any speed.)
+const SPEEDS = [{ name: "SLOW MO", k: 0.55 }, { name: "MEDIUM", k: 0.75 }, { name: "TURBO", k: 1 }];
+const speedK = () => (SPEEDS[save.speed] || SPEEDS[2]).k;
 function store() { try { localStorage.setItem("run-the-way", JSON.stringify(save)); } catch (e) { } }
 const hms = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStart(2, "0") + "." + Math.floor((t * 10) % 10);
 const commas = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -1413,13 +1420,14 @@ function startZone(zi) { begin(buildZone(zi), zi); }
 function startTutorial() { begin(buildNovitiate(), -1); }
 function startFree() { begin(buildFree(Math.floor(Math.random() * 1e6)), -2); }
 function begin(lv, zi) {
-  level = lv; game.zone = zi; game.tutorial = zi === -1; game.free = zi === -2;
+  level = lv; game.zone = zi; game.tutorial = zi === -1; game.free = zi === -2; game.angel = !!game.angelMenu && zi >= 0;
+  game.st = newStats(); game.trace = []; game.prevBest = zi >= 0 ? save.best[lv.Z.id] : 0;
   Object.assign(game, { time: 0, neumes: 0, style: 0, bestChain: 0, count: game.tutorial || game.free ? 0 : COUNT, dist: 0, demonTime: 0, won: false, learnedBefore: learned(), newTricks: [], newSaints: [], newCombos: [], lastChain: [], stolen: 0 });
   P = newRunner(40, true);
   level.check = { x: 40, y: P.y };
   // The demon starts beside him.
   if (game.tutorial || game.free) D = null;
-  else { D = newRunner(40, false); D.sin = level.Z.demon; D.ai = Object.assign({ planned: false }, DEMON_AI[D.sin.id]); D.check = { x: 40 }; D.done = false; D.say = null; D.sayT = 0; D.quiet = 0; D.label = null; D.nap = 0; }
+  else { D = newRunner(40, false); D.sin = game.angel ? ANGEL : level.Z.demon; D.ai = Object.assign({ planned: false }, game.angel ? ANGEL_AI : DEMON_AI[D.sin.id]); D.check = { x: 40 }; D.done = false; D.say = null; D.sayT = 0; D.quiet = 0; D.label = null; D.nap = 0; }
   tutor = game.tutorial ? { i: -1, done: false, t: 0, msg: null, msgT: 0, launched: false } : null;
   game.shots = D ? 1 : 0; shots = [];
   cam = { x: P.x - 90, y: P.y - 110, z: 1 }; parts = []; pops = []; rings = []; banner = game.tutorial ? 0 : COUNT + 0.8; fade = 0; slow = 1;
@@ -1442,9 +1450,11 @@ function label(A, str, color) { if (!A.player) A.label = { str, color: color || 
 // The demon speaks his mind (not too often).
 function say(key, chance) {
   if (!D || (chance !== undefined && Math.random() > chance) || (D.quiet > 0 && key !== "lose" && key !== "win")) return;
-  D.say = D.sin.say[key]; D.sayT = 2.6; D.quiet = 3.5; Snd.sfx("taunt");
-  // In a low, rough voice, the first few words of it.
-  if (D.say) Snd.say(D.say.split(/[.!?]/)[0].split(" ").slice(0, 4).join(" "), 105, true);
+  const l = D.sin.say[key];
+  D.say = Array.isArray(l) ? l[Math.floor(Math.random() * l.length)] : l; D.sayT = 2.6; D.quiet = 3.5;
+  if (!isAngel(D)) Snd.sfx("taunt");
+  // In a low, rough voice, the first few words of it (the angel's is high and clear).
+  if (D.say) Snd.say(D.say.split(/[.!?]/)[0].split(" ").slice(0, 4).join(" "), isAngel(D) ? 250 : 105, !isAngel(D));
 }
 
 function update(dt) {
@@ -1465,6 +1475,8 @@ function update(dt) {
     return;
   }
   game.time += dt;
+  // Where he is, every quarter second, for his angel to follow if this is his best.
+  if (game.zone >= 0 && game.time >= game.trace.length * 0.25) game.trace.push(Math.round(P.x));
   // The saint runs by himself, always.
   input.rushHeld = true;
   stepRunner(P, dt);
@@ -1541,7 +1553,7 @@ function stepRunner(A, dt) {
   // Fallen out of the world: back to the last lamp (or the start of the lesson). The clock runs on.
   if (A.y > level.low + 360) {
     if (!A.player) { const k = A; D = Object.assign(newRunner(A.check.x, false), { sin: k.sin, ai: k.ai, check: k.check, done: false, say: k.say, sayT: k.sayT, quiet: k.quiet, label: null, nap: 0 }); return; }
-    Snd.sfx("hurt"); if (tutor) lessonEvent("fall"); else respawn();
+    Snd.sfx("hurt"); if (tutor) lessonEvent("fall"); else { if (game.st) game.st.fall++; respawn(); }
   }
   // Afterimages of a surging runner.
   if (A.surge > 0 && (A.trailT -= dt) <= 0) { A.trailT = 0.035; A.trail.unshift({ x: A.x, y: A.y, ang: A.ang }); if (A.trail.length > 6) A.trail.pop(); }
@@ -1957,6 +1969,8 @@ function landTricks(A) {
     return;
   }
   addStyle(pts); game.bestChain = Math.max(game.bestChain, pts);
+  { const S = game.st; S.landed += n; if (n >= 2) S.combos++; if (perfect) S.perfect++; S.longest = Math.max(S.longest, n); S.maxStack = Math.max(S.maxStack, A.stack || 0);
+    if (A.chain.some((e) => e.sig)) S.sig++; if (pts > S.bestPts) { S.bestPts = pts; S.bestNames = A.chain.map((e) => e.name); } }
   let word = PRAISE[0][1]; for (const [at, w] of PRAISE) if (pts >= at) word = w;
   comboShow(A, "landed"); A.combo.total = pts; A.combo.perfect = perfect;
   pop(word, perfect ? "#fff4a0" : n > 1 ? "#ffcf5a" : "#8ae86a", n > 2 || pts >= 3500 ? 16 : 13, perfect ? "PERFECT LANDING" : stacking && gain ? "+" + gain + (gain > 1 ? " FLAMES" : " FLAME") + "  ×" + A.stack : null);
@@ -1967,7 +1981,8 @@ function landTricks(A) {
   burst(A.x, A.y - 4, "#fff4a0", 8 + n * 4); rings.push({ x: A.x, y: A.y - 6, t: 0, dur: 0.5, c: perfect ? "#fff4a0" : "#ffffff" });
   save.landed = (save.landed || 0) + n; for (const id of ids) if (id !== "grind") save.done[id] = true;
   game.lastChain = ids.filter((id) => id !== "grind");
-  if (A.chain.some((e) => e.sig) && D && !D.done && D.x > A.x - 600) {
+  if (A.chain.some((e) => e.sig) && isAngel(D)) say("combo");
+  else if (A.chain.some((e) => e.sig) && D && !D.done && D.x > A.x - 600) {
     // A saint's own trick, landed: the demon reels back.
     D.gsp = Math.min(D.gsp, 120); D.surge = 0; D.stun = 1; label(D, "VADE RETRO!", "#ffffff"); pop("THE DEMON REELS BACK", "#ff9ab0", 8);
   }
@@ -2000,6 +2015,7 @@ function crash(A) {
   if (A.player) comboShow(A, "bailed");
   A.trick = null; A.queue = []; A.buf = ""; A.coach = null;
   A.chain = [];
+  if (A.player && game.st) { game.st.crash++; if (had) game.st.bail++; }
   if (A.player && window.__god) { A.mode = "ground"; return; }
   A.mode = "ground"; A.crash = 0.9; A.gsp = Math.min(A.gsp, 260); A.surge = 0; A.stack = 0;
   if (!A.player) {
@@ -2021,6 +2037,7 @@ function strike(A, st, sy) {
   A.vx = Math.min(Math.max(A.vx, A.gsp), 280); A.vy = 260; A.surge = 0; A.stack = 0; A.inv = 0.6;
   rings.push({ bolt: true, x: st.x, y: A.y + 20, t: 0, dur: 0.3, c: "#fff4a0" });
   if (!A.player) { label(A, "STRUCK!", "#fff4a0"); return; }
+  if (game.st) game.st.struck++;
   shake = 0.3; Snd.sfx("crash"); burst(A.x, A.y - 10, "#fff4a0", 12);
   pop("STRUCK DOWN!", "#fff4a0", 13, "Back to the earth with you");
   say("crash", 0.5);
@@ -2039,7 +2056,8 @@ function fire() {
   const sp = speedOf(P);
   shots.push({ x: P.x + 10, y: P.y - 22, vx: P.x < D.x ? Math.max(300, sp) + 200 : -300, vy: -200, t: 0, id: game.saint.id, c: sigOf(game.saint).c });
   Snd.sfx("perfect"); burst(P.x, P.y - 16, "#fff4a0", 10);
-  pop(WEAPON[game.saint.id].toUpperCase() + "!", "#fff4a0", 10, "after the demon of " + D.sin.name);
+  game.st.threw++;
+  pop(WEAPON[game.saint.id].toUpperCase() + "!", "#fff4a0", 10, isAngel(D) ? "after your guardian angel?!" : "after the demon of " + D.sin.name);
 }
 function runShots(dt) {
   for (const m of shots) {
@@ -2061,7 +2079,19 @@ function smite(A) {
   A.trick = null; A.queue = []; A.chain = []; A.surge = 0; A.stack = 0; A.trail = [];
   if (A.mode === "ground" && !A.plat) crash(A);
   else { if (A.mode !== "air") takeOff(A, false); A.vx = Math.min(A.vx, 160); A.vy = Math.max(A.vy, -60); A.crash = 1.4; A.struck = true; }
-  A.stun = 2.5; label(A, "SMITTEN!", "#ffffff");
+  A.stun = 2.5;
+  if (isAngel(A)) {
+    // The angel, hit by the saint he guards: down he goes, and he has something to say about it.
+    const S = game.st; S.hitAngel++;
+    burst(A.x, A.y - 9, "#fff4a0", 18); burst(A.x, A.y - 9, "#ffffff", 14); rings.push({ x: A.x, y: A.y - 9, t: 0, dur: 0.6, c: "#ffffff" });
+    for (let i = 0; i < 6; i++) parts.push({ x: A.x, y: A.y - 12, vx: (Math.random() - 0.5) * 90, vy: -60 - Math.random() * 60, g: 40, life: 1.6, c: "#ffffff" });
+    Snd.sfx("smite"); Snd.say("Ow", 260); shake = 0.15; label(A, "OW!", "#ffffff");
+    pop("YOU HIT YOUR GUARDIAN ANGEL?!", "#fff4a0", 11, "He felt that. In his feathers.");
+    A.say = ANGEL_HIT[(S.hitAngel - 1) % ANGEL_HIT.length]; A.sayT = 3.6; A.quiet = 5;
+    setTimeout(() => Snd.say(A.say.split(/[.!?]/)[0].split(" ").slice(0, 4).join(" "), 250), 500);
+    return;
+  }
+  label(A, "SMITTEN!", "#ffffff");
   burst(A.x, A.y - 9, "#fff4a0", 18); burst(A.x, A.y - 9, A.sin.colors.r, 10); rings.push({ x: A.x, y: A.y - 9, t: 0, dur: 0.6, c: "#fff4a0" });
   Snd.sfx("smite"); Snd.sfx("crash"); Snd.say("Aaargh", 100, true); shake = 0.2;
   pop("THE DEMON IS SMITTEN!", "#fff4a0", 12, A.sin.name + " tumbles");
@@ -2161,6 +2191,135 @@ const DEMON_AI = {
   wrath: { run: 1.13, use: 1, err: 0.15, react: 0.12, tricks: ["front", "back", "double", "dback", "triple"], way: "biggest" },
   lust: { run: 1.08, use: 1, err: 0.08, react: 0.2, tricks: ["quick", "front", "back", "barrel", "double", "dback", "triple"], way: "most" },
 };
+// ---- The guardian angel ---------------------------------------------------------------------
+// In the angel's races he runs every mansion beside the saint, by the same
+// rules as a demon; but he paces himself to the saint's own best time there,
+// following where the saint was, second by second, on his best run. Get faster
+// and so does he. Afterwards he says what he saw: what to work on after a
+// loss, what was good after a win, and new combos to try. The saint may throw
+// his gift at him. He notices.
+const ANGEL = { id: "angel", name: "Your Angel", flourish: "Wing Flutter",
+  colors: { m: "#ffffff", M: "#c8dcf8", o: "#140c1c", r: "#9fc4ec", R: "#f4f8ff", y: "#ffd84a", s: "#f2c8a6", w: "#ffffff" },
+  say: {
+    start: ["Ready? I'll be right beside you. As always.", "I only run as fast as your best. So beat it!", "Same road, same rules. Go on!"],
+    pass: ["There you go! Don't look back!", "Yes! Faster than your best!", "Look at you go!"],
+    lead: ["Catch me! I'm only as fast as you were.", "Keep up! This is your own best pace.", "This way! Follow me!"],
+    crash: ["Up you get. I've seen you do worse.", "Ouch. Shake it off!", "I caught you. Mostly."],
+    combo: ["Beautiful! Do that again!", "Now THAT is style!", "The choirs are clapping!"],
+    lose: ["You beat me! I'm so proud I could sing.", "Faster than your best! Gloria!"],
+    win: ["Through the door! Come on, you're nearly here!", "I'm at the door. Bring it home!"],
+  } };
+// Two frames, wings up and wings down, in the demons' little grid.
+const ANGEL_GRIDS = [[
+  "........yyyy........",
+  "mm.....y....y.....mm",
+  "mMm.....ssss.....mMm",
+  ".mMMm...soso...mMMm.",
+  "..mMMm..ssss..mMMm..",
+  "...mMMmrrrrrrmMMm...",
+  "....mmrRRRRRRrmm....",
+  "......rRRyyRRr......",
+  "......rRRRRRRr......",
+  ".....rRRRRRRRRr.....",
+  ".....rrrrrrrrrr.....",
+  "......oo....oo......",
+], [
+  "........yyyy........",
+  ".......y....y.......",
+  "........ssss........",
+  "........soso........",
+  "........ssss........",
+  "..mmmmmrrrrrrmmmmm..",
+  ".mMMMMrRRRRRRrMMMMm.",
+  "mMMMm.rRRyyRRr.mMMMm",
+  "mMm...rRRRRRRr...mMm",
+  "mm...rRRRRRRRRr...mm",
+  ".....rrrrrrrrrr.....",
+  "......oo....oo......",
+]];
+ANGEL.grids = ANGEL_GRIDS;
+const isAngel = (A) => !!(A && A.sin && A.sin.id === "angel");
+// How he races: every trick, chosen for the most points in the air he has, rarely too many.
+const ANGEL_AI = { run: 1, use: 0.9, err: 0.04, react: 0.16, tricks: ["quick", "front", "back", "barrel", "double", "dback", "triple"], way: "most" };
+// Where the saint was at time t on his best run here (a little past the door after it).
+function angelTarget(t) {
+  const k = level.Z.id, tr = save.trace[k], best = save.best[k], start = 40;
+  if (tr && tr.length > 1) {
+    const i = t / 0.25, a = Math.floor(i);
+    if (a >= tr.length - 1) return level.goal + (t - (tr.length - 1) * 0.25) * RUN_TOP;
+    return lerp(tr[a], tr[a + 1], i - a);
+  }
+  // A best time but no record of the run (from before the angel came): the same time, at an even pace.
+  // No best time at all: an easy pace, for a first meeting.
+  const T = best || level.goal / (RUN_TOP * 0.7);
+  return start + (level.goal - start) * (t / T);
+}
+// What he says when the saint's gift hits him.
+const ANGEL_HIT = [
+  "Ow! I've guarded you since the day you were born!",
+  "Was that aimed at me? I'm telling St. Michael.",
+  "Friendly fire! FRIENDLY. FIRE.",
+  "I forgive you. I have to. It's in the job description.",
+  "You know I'm the one who catches you when you fall?",
+];
+// The things he notices on a run.
+const newStats = () => ({ crash: 0, bail: 0, struck: 0, fall: 0, hurt: 0, landed: 0, combos: 0, perfect: 0, longest: 0, maxStack: 0, sig: 0, bestPts: 0, bestNames: [], threw: 0, hitAngel: 0 });
+const plural = (n, one, many) => n + " " + (n === 1 ? one : many || one + "s");
+// Combos he suggests: two or three tricks the saint knows, short enough to fit in one good jump,
+// that do not run together into a longer trick, and that he has not landed yet.
+function combosToTry(n) {
+  const kit = known().filter((k) => !k.quick && !k.sig), out = [];
+  const apart = (ks) => { for (let i = 1; i < ks.length; i++) for (let j = 0; j < i; j++) { const st = ks.slice(j, i).map((k) => k.keys).join("") + ks[i].keys[0]; if (known().some((k) => k.keys.startsWith(st))) return false; } return true; };
+  for (const a of kit) for (const b of kit) {
+    if (a === b) continue;
+    const pair = [a, b];
+    if (pair.reduce((x, k) => x + k.dur, 0) <= 1.5 && apart(pair)) out.push(pair);
+    for (const c of kit) { const tri = [a, b, c]; if (c !== b && c !== a && tri.reduce((x, k) => x + k.dur, 0) <= 1.5 && apart(tri)) out.push(tri); }
+  }
+  const fresh = out.filter((ks) => !save.combos[ks.map((k) => k.id).join(">")]);
+  const pool = (fresh.length ? fresh : out).map((ks) => ({ ks, score: (ks.reduce((x, k) => x + k.pts, 0) * ks.length) / ks.reduce((x, k) => x + k.dur, 0) * (0.6 + Math.random() * 0.8) }));
+  pool.sort((a, b) => b.score - a.score);
+  return pool.slice(0, n).map((q) => q.ks);
+}
+const comboWords = (ks) => ks.map((k) => k.name).join(" + ");
+const comboKeys = (ks) => ks.map((k) => arrows(k.keys)).join("  ·  ");
+// After the race: what he has to say, by what he saw.
+function angelTalk(won, margin) {
+  const S = game.st, w = WEAPON[game.saint.id].replace(/^(A|The|Her) /, (m) => m.toLowerCase()), lines = [];
+  if (!won) {
+    lines.push(margin < 3 ? "I was only " + margin.toFixed(1) + " seconds ahead. So close!" : "I was " + margin.toFixed(1) + " seconds ahead. You've been faster than this before!");
+    const tips = [];
+    if (S.crash >= 2) tips.push([S.crash * 3, "You crashed " + S.crash + " times. Pay attention to the bar over your head: finish the trick before it runs out."]);
+    if (S.struck >= 2) tips.push([S.struck * 3, "The storm clouds struck you down " + S.struck + " times. Go under them, not through them."]);
+    if (S.fall >= 1) tips.push([S.fall * 4, "You fell " + plural(S.fall, "time") + ". When the ground runs out, jump early."]);
+    if (S.hurt >= 2) tips.push([S.hurt * 2, "You ran into " + S.hurt + " sinners. Run hard, or come down on them from above, and they bowl over."]);
+    if (S.landed < game.time / 7) tips.push([6, "Only " + plural(S.landed, "trick") + " landed. Every trick you land is a surge: try one on every jump."]);
+    if (!S.combos && S.landed > 1) tips.push([5, "No combos this time. Two tricks in one jump surge much harder than one."]);
+    if (S.maxStack < 2 && S.landed > 2) tips.push([4, "Land again while you're still surging, and the flames stack. That's where the real speed is."]);
+    if (!S.perfect && S.landed > 3) tips.push([3, "Touch down just as a trick ends for a PERFECT landing: a longer surge."]);
+    if (!S.threw && game.shots > 0) tips.push([2, "You never threw " + w + ". You may throw it at me, you know. I'd forgive you. Eventually."]);
+    if (save.speed === 2 && S.crash + S.struck >= 3) tips.push([5, "Try SLOW MO on the title screen. Same race, more time in the air."]);
+    if (S.hitAngel) tips.push([10, "You hit me with " + w + " and STILL lost? We need to talk."]);
+    tips.sort((a, b) => b[0] - a[0]);
+    for (const [, t] of tips.slice(0, 3)) lines.push(t);
+    if (lines.length < 3) lines.push("You know this road. Run it like you did on your best day.");
+  } else {
+    lines.push(game.newBest && game.prevBest ? "You beat your best by " + (game.prevBest - Math.round(game.time * 10) / 10).toFixed(1) + " seconds! So now I'm faster too." : "You beat me! Now I'll run at this pace.");
+    const praise = [];
+    if (S.bestNames.length >= 2) praise.push([S.bestPts / 400, "That " + S.bestNames.join(" + ") + " for " + commas(S.bestPts) + "! I've never seen the like, and I've seen a lot."]);
+    if (S.longest >= 3) praise.push([S.longest * 2, plural(S.longest, "trick") + " in one jump! The choirs lost count."]);
+    if (S.perfect >= 2) praise.push([S.perfect * 1.5, plural(S.perfect, "perfect landing") + ". Heaven noticed."]);
+    if (!S.crash && !S.struck && !S.fall) praise.push([7, "Not a single crash. Steady as a monk at Matins."]);
+    if (S.maxStack >= 4) praise.push([S.maxStack, "You stacked " + S.maxStack + " flames. Tongues of fire!"]);
+    if (S.sig) praise.push([5, "And your own " + sigOf(game.saint).name + "! Glorious."]);
+    if (S.combos >= 3) praise.push([S.combos, plural(S.combos, "combo") + " landed. That's how you surge."]);
+    if (S.hitAngel) praise.push([20, "You won... by hitting me with " + w + ". I'm putting that in my report."]);
+    praise.sort((a, b) => b[0] - a[0]);
+    for (const [, t] of praise.slice(0, 2)) lines.push(t);
+    if (lines.length < 2) lines.push("Clean and quick. Now let's see some bigger tricks.");
+  }
+  return lines;
+}
 for (const [id, s] of Object.entries(SINS)) s.flourish = { pride: "The Strut", sloth: "Big Yawn", avarice: "Coin Flip", envy: "Side-Eye", gluttony: "Belly Roll", wrath: "Fist Shake", lust: "Look At Me" }[id];
 const trickById = (id) => (id === "quick" ? TRICKS.find((k) => k.quick) : TRICKS.find((k) => k.id === id));
 function runDemon(dt) {
@@ -2169,6 +2328,8 @@ function runDemon(dt) {
   if (A.label && (A.label.t -= dt) <= 0) A.label = null;
   if (A.done) { A.y += ((groundAt(level.hs, A.x) ?? A.y) - 30 - A.y) * Math.min(1, dt * 3); return; }
   if (A.stun > 0) { A.stun -= dt; A.gsp = Math.min(A.gsp, 160); }
+  // The angel keeps to the saint's best pace: a little quicker when behind it, a little slower when ahead.
+  if (isAngel(A)) A.ai.run = clamp(1 + (angelTarget(game.time) - A.x) / 450, 0.5, 1.7);
   demonThink(A, dt);
   stepRunner(A, dt);
   if (D !== A) return;   // fell, and was put back at his lamp
@@ -2176,9 +2337,9 @@ function runDemon(dt) {
   if (A.ai.grabs) for (const n of level.neumes) if (!n.got && n.x > P.x - 40 && Math.abs(n.x - A.x) < 14 && Math.abs(n.y - (A.y - 11)) < 18) { n.got = true; game.stolen++; parts.push({ x: n.x, y: n.y, vx: 0, vy: -60, g: 0, life: 0.4, c: "#ffcf5a" }); }
   // Passing, and being passed.
   const lead = P.x - A.x;
-  if (lead > 60 && P.lead <= 0) { P.lead = 1; if (game.time > 1.5) { pop("YOU PASS THE DEMON", "#8ae86a", 9); say("pass", 0.7); } }
-  else if (lead < -60 && P.lead >= 0) { P.lead = -1; if (game.time > 1.5) { pop("THE DEMON PASSES YOU", "#ff8a7a", 9); say("lead", 0.7); } }
-  if (A.x >= level.goal) { A.done = true; A.x = level.goal; game.demonTime = game.time; Snd.sfx("hurt"); pop("THE DEMON IS AT THE DOOR", "#ff8a7a", 9); say("win"); }
+  if (lead > 60 && P.lead <= 0) { P.lead = 1; if (game.time > 1.5) { pop(isAngel(A) ? "YOU PASS YOUR ANGEL" : "YOU PASS THE DEMON", "#8ae86a", 9); say("pass", 0.7); } }
+  else if (lead < -60 && P.lead >= 0) { P.lead = -1; if (game.time > 1.5) { pop(isAngel(A) ? "YOUR ANGEL PASSES YOU" : "THE DEMON PASSES YOU", "#ff8a7a", 9); say("lead", 0.7); } }
+  if (A.x >= level.goal) { A.done = true; A.x = level.goal; game.demonTime = game.time; Snd.sfx(isAngel(A) ? "gift" : "hurt"); pop(isAngel(A) ? "YOUR ANGEL IS AT THE DOOR" : "THE DEMON IS AT THE DOOR", "#ff8a7a", 9); say("win"); }
 }
 // The demon's mind: run, jump the gaps, and in the air, pick his tricks.
 function demonThink(A, dt) {
@@ -2293,6 +2454,7 @@ function lessonRetry(msg) {
 
 function hurt() {
   if (window.__god) return;
+  if (game.st) game.st.hurt++;
   Snd.sfx("hurt"); shake = 0.3;
   if (P.mode === "grind") endGrind(P);
   P.trick = null; P.queue = []; P.buf = ""; P.chain = []; P.combo = null;
@@ -2338,10 +2500,23 @@ function finish() {
   game.won = !game.demonTime;
   const had = SAINTS.filter(saintOpen);
   game.newBest = !save.best[k] || t < save.best[k];
-  if (game.newBest) save.best[k] = t;
+  if (game.newBest) { save.best[k] = t; game.trace.push(Math.round(level.goal)); save.trace[k] = game.trace; }
   game.newStyle = game.style > (save.style[k] || 0);
   if (game.newStyle) save.style[k] = game.style;
   save.neumes[k] = Math.max(save.neumes[k] || 0, game.neumes);
+  if (game.angel) {
+    // A race with the angel opens nothing and teaches nothing: it only makes the saint faster.
+    const a = save.angel[k] || (save.angel[k] = { races: 0, wins: 0 });
+    a.races++; if (game.won) a.wins++;
+    gainXp(game.won ? 200 : 100); store();
+    game.newTricks = []; game.newSaints = [];
+    game.talk = angelTalk(game.won, game.time - game.demonTime);
+    game.tryCombos = combosToTry(2);
+    Snd.sting(game.won ? "win" : "lose");
+    if (game.won) say("lose");
+    startScene(game.won);
+    return;
+  }
   // Beat the demon, and the way into the next mansion is open, and a new trick is learned.
   gainXp(game.won ? 300 : 100);
   if (game.won) { save.wins[k] = true; save.open = Math.max(save.open, Math.min(ZONES.length, game.zone + 2)); }
@@ -2370,10 +2545,11 @@ function music(dt) {
 function tick(dt) {
   slow += (slowWanted() - slow) * Math.min(1, dt * 8);
   if (P.coach) P.coach.t += dt;
-  dt *= slow;
+  const sk = speedK();
+  dt *= slow * sk;
   const n = Math.max(1, Math.ceil(Math.max(speedOf(P), D && !D.done ? speedOf(D) : 0) * dt / 3));
   for (let i = 0; i < n && state === "play"; i++) update(dt / n);
-  if (state === "play") { P.landIn = P.mode === "air" ? predictLand(P) : 0; music(dt / slow); }
+  if (state === "play") { P.landIn = P.mode === "air" ? predictLand(P) : 0; music(dt / slow / sk); }
 }
 // ---- Drawing -----------------------------------------------------------------------------
 const wrap = (x, span) => ((x % span) + span) % span;
@@ -2613,7 +2789,7 @@ const toScreen = (x, y) => [(x - cam.x) * cam.z, (y - cam.y) * cam.z];
 // The demon, drawn from his grid, with the mark of his sin: (x, y) his middle,
 // k his size, turned by rot and squashed by sx, sy.
 function drawDemon(sin, x, y, t, k, rot, sx, sy) {
-  const c = sin.colors, g = DEMON_GRIDS[Math.floor(t * (sin.id === "sloth" ? 3 : 7)) % 2];
+  const c = sin.colors, g = (sin.grids || DEMON_GRIDS)[Math.floor(t * (sin.id === "sloth" ? 3 : sin.id === "angel" ? 4 : 7)) % 2];
   ctx.save(); ctx.translate(Math.round(x), Math.round(y)); if (rot) ctx.rotate(rot); ctx.scale(k * (sx || 1), k * (sy || 1)); ctx.translate(-10, -6);
   for (let r = 0; r < g.length; r++) for (let q = 0; q < 20; q++) { const ch = g[r][q]; if (ch !== ".") rect(q, r, 1, 1, c[ch]); }
   const dot = (q, r, col, w, h) => rect(q, r, w || 1, h || 1, col);
@@ -3028,8 +3204,12 @@ function drawHud(t) {
     text(Z.name.toUpperCase(), W / 2, 46, { align: "center", color: "#ffe08a", size: 15 });
     wrapText(Z.sub, 8, 280, true).forEach((l, i) => text(l, W / 2, 66 + i * 10, { align: "center", color: "#ffffff", size: 8, serif: true }));
     if (game.free) text("Pause and END RUN when you are done", W / 2, 90, { align: "center", color: "#ffe08a", size: 7 });
-    if (D) text("Once in the race, your quick trick (→ in the air) sends " + WEAPON[game.saint.id].toLowerCase() + " after him", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
-    if (D) text("Race the demon of " + D.sin.name + " to the door", W / 2, 90, { align: "center", color: D.sin.colors.y, size: 7 });
+    if (D && !isAngel(D)) text("Once in the race, your quick trick (→ in the air) sends " + WEAPON[game.saint.id].toLowerCase() + " after him", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
+    if (D && !isAngel(D)) text("Race the demon of " + D.sin.name + " to the door", W / 2, 90, { align: "center", color: D.sin.colors.y, size: 7 });
+    if (isAngel(D)) {
+      text(save.best[Z.id] ? "Your guardian angel runs at your best time: " + hms(save.best[Z.id]) : "Your guardian angel, at an easy pace: set a time for him to chase", W / 2, 90, { align: "center", color: "#fff4a0", size: 7 });
+      text("Your quick trick (→ in the air) can hit him too. He will notice.", W / 2, 99, { align: "center", color: "#ffffff", size: 6 });
+    }
     ctx.globalAlpha = 1;
   }
   if (game.count > 0) text(String(Math.ceil(game.count)), W / 2, 104, { align: "center", color: "#ffffff", size: 26 });
@@ -3181,14 +3361,20 @@ function drawTitle(t) {
   ctx.restore();
   text(s.name, W / 2, 108, { align: "center", color: "#ffffff", size: 9 });
   const go = button(save.tutorial ? "RUN" : "BEGIN", W / 2 - 50, 120, 100, 18, true, 10);
+  // How fast the world runs, and the races with the guardian angel.
+  const spd = button("SPEED: " + SPEEDS[save.speed].name, 8, 121, 92, 16, false, 7);
+  const ang = button("RACE YOUR ANGEL", W - 100, 121, 92, 16, false, 7);
+  drawDemon(ANGEL, W - 54, 112 + Math.sin(t * 3) * 1.5, t, 0.6, 0);
   const who = button("SAINT", 6, 143, 58, 16, false, 7), zones = button("CASTLE", 68, 143, 58, 16, false, 7);
   const free = button("FREESTYLE", 130, 143, 60, 16, false, 7);
   const book = button("TRICKS", 194, 143, 58, 16, false, 7), nov = button("NOVITIATE", 256, 143, 58, 16, false, 7);
   text("Tap anywhere to jump (hold to float).   In the air: tap the arrows for tricks", W / 2, 164, { align: "center", color: "#ffffff", size: 7 });
   for (const tp of input.taps) {
-    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); if (!save.tutorial) startTutorial(); else startZone(Math.max(0, ZONES.findIndex((Z) => !save.wins[Z.id]))); }
+    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { Snd.sfx("select"); game.angelMenu = false; if (!save.tutorial) startTutorial(); else startZone(Math.max(0, ZONES.findIndex((Z) => !save.wins[Z.id]))); }
+    else if (tp.key === "KeyS" || (tp.x !== undefined && inBox(tp, spd))) { save.speed = (save.speed + 2) % 3; store(); Snd.sfx("select"); }
+    else if (tp.key === "KeyA" || (tp.x !== undefined && inBox(tp, ang))) { Snd.sfx("select"); game.angelMenu = true; state = "zones"; }
     else if (tp.x !== undefined && inBox(tp, who)) { Snd.sfx("select"); state = "saints"; }
-    else if (tp.x !== undefined && inBox(tp, zones)) { Snd.sfx("select"); state = "zones"; }
+    else if (tp.x !== undefined && inBox(tp, zones)) { Snd.sfx("select"); game.angelMenu = false; state = "zones"; }
     else if (tp.x !== undefined && inBox(tp, book)) { Snd.sfx("select"); bookBack = "title"; state = "book"; }
     else if (tp.x !== undefined && inBox(tp, nov)) { Snd.sfx("select"); startTutorial(); }
     else if (tp.x !== undefined && inBox(tp, free)) { Snd.sfx("select"); startFree(); }
@@ -3238,7 +3424,9 @@ let resetAsk = 0, resetDone = 0;
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 function drawZones(t) {
   menuSky(t);
-  text("THE INTERIOR CASTLE", W / 2, 3, { align: "center", color: "#ffe08a", size: 11 });
+  const AM = !!game.angelMenu;
+  text(AM ? "RACE YOUR GUARDIAN ANGEL" : "THE INTERIOR CASTLE", W / 2, 3, { align: "center", color: AM ? "#fff4a0" : "#ffe08a", size: 11 });
+  if (AM) text("He runs each mansion at your best time there. Speed: " + SPEEDS[save.speed].name, W / 2, 143, { align: "center", color: "#ffffff", size: 7 });
   const boxes = [];
   ZONES.forEach((Z, i) => {
     const row = i < 4 ? 0 : 1, x = row ? 46 + (i - 4) * 78 : 7 + i * 78, y = 19 + row * 64, open = true;
@@ -3247,9 +3435,13 @@ function drawZones(t) {
     sky.forEach((c, k) => rect(x, y + (k * 42) / sky.length, 72, 42 / sky.length + 1, c));
     rect(x, y + 42, 72, 18, open ? Z.dirt[0] : "#1a1430"); rect(x, y + 42, 72, 2, open ? Z.grass : "#1a1430");
     text(ROMAN[i], x + 4, y + 2, { color: "#ffe08a", size: 9 });
-    if (open) drawDemon(Z.demon, x + 62, y + 9, t, 0.7, 0);
+    if (open) drawDemon(AM ? ANGEL : Z.demon, x + 62, y + 9, t, 0.7, 0);
     wrapText(Z.name, 7, 66).forEach((l, k) => text(l, x + 36, y + 14 + k * 9, { align: "center", color: "#ffffff", size: 7 }));
-    if (open) {
+    if (open && AM) {
+      const b = save.best[Z.id], a = save.angel[Z.id];
+      text(b ? "HE RUNS " + hms(b) : "AN EASY PACE", x + 36, y + 44, { align: "center", color: "#fff4a0", size: 6 });
+      text(a ? "BEATEN " + a.wins + " / " + a.races : "not yet raced", x + 36, y + 52, { align: "center", color: "#c8f0ff", size: 6 });
+    } else if (open) {
       const b = save.best[Z.id];
       text(save.wins[Z.id] ? "WON " + (b ? hms(b) : "") : b ? "LOST TO " + Z.demon.name.toUpperCase() : "vs " + Z.demon.name, x + 36, y + 44, { align: "center", color: save.wins[Z.id] ? "#fff4a0" : "#fff0c8", size: 6 });
       if (save.style[Z.id]) text("STYLE " + commas(save.style[Z.id]), x + 36, y + 52, { align: "center", color: "#c8f0ff", size: 6 });
@@ -3257,7 +3449,7 @@ function drawZones(t) {
     boxes.push({ x, y, w: 72, h: 60, i, open });
   });
   const back = button("BACK", W / 2 - 40, 152, 80, 18, false);
-  const sure = resetAsk > clock, reset = button(sure ? "TAP AGAIN TO ERASE ALL" : "RESET PROGRESS", sure ? 4 : 6, 154, sure ? 112 : 78, 14, false, 6);
+  const sure = resetAsk > clock, reset = AM ? { x: -99, y: -99, w: 0, h: 0 } : button(sure ? "TAP AGAIN TO ERASE ALL" : "RESET PROGRESS", sure ? 4 : 6, 154, sure ? 112 : 78, 14, false, 6);
   if (resetDone > clock) text("Progress erased. Start again from the Novitiate.", W / 2, 143, { align: "center", color: "#ff8a7a", size: 7 });
   for (const tp of input.taps) if (tp.x !== undefined && inBox(tp, reset)) {
     if (sure) { resetProgress(); game.saint = SAINTS.find(saintOpen); resetAsk = 0; Snd.sfx("hurt"); resetDone = clock + 2.5; }
@@ -3268,7 +3460,7 @@ function drawZones(t) {
   for (const tp of input.taps) {
     const b = tp.x !== undefined && boxes.find((q) => inBox(tp, q));
     if (b && b.open) { Snd.sfx("select"); startZone(b.i); }
-    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) state = "title";
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, back))) { state = "title"; game.angelMenu = false; }
   }
   input.taps = [];
 }
@@ -3372,9 +3564,11 @@ const QUIPS = {
 let scene = null;
 function startScene(won) {
   const q = QUIPS[game.saint.id] || QUIPS.benedict, list = won ? q.win : q.lose;
-  scene = { won, line: list[Math.floor(Math.random() * list.length)], t0: clock, sin: D ? D.sin : null };
+  // Against the angel, it is the angel who speaks: his first word on the race.
+  const angel = game.angel && !game.free;
+  scene = { won, angel, line: angel ? game.talk[0] : list[Math.floor(Math.random() * list.length)], t0: clock, sin: D ? D.sin : null };
   state = "scene"; input.taps = [];
-  setTimeout(() => { if (state === "scene") Snd.say(scene.line.split(/[.!?,:]/)[0].split(" ").slice(0, 5).join(" "), VOICE[game.saint.id] || 200); }, 900);
+  setTimeout(() => { if (state === "scene") Snd.say(scene.line.split(/[.!?,:]/)[0].split(" ").slice(0, 5).join(" "), angel ? 250 : VOICE[game.saint.id] || 200); }, 900);
 }
 function drawScene(t) {
   const u = t - scene.t0, k = Math.min(1, u / 0.5), e = 1 - Math.pow(1 - k, 3), s = game.saint, won = scene.won, G = sigOf(s);
@@ -3391,7 +3585,12 @@ function drawScene(t) {
     ctx.globalAlpha = 0.4; for (let i = 0; i < 40; i++) { const x = (i * 29 + t * 30) % W, y = (i * 47 + t * 260) % H; rect(x, y, 1, 6, "#8a9ac8"); } ctx.globalAlpha = 1;
   }
   // The demon, across the way: tumbling away dizzy, or crowing over his win.
-  if (scene.sin) {
+  if (scene.angel) {
+    // The angel, across the way: clapping for joy at a win, or calling back from the door, hand on hip.
+    const bob = Math.sin(t * (won ? 9 : 3)) * (won ? 4 : 2);
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = "#fff4c0"; ctx.beginPath(); ctx.arc(W - 62, 88 + bob, 34, 0, 7); ctx.fill(); ctx.restore();
+    drawDemon(ANGEL, W - 62, 88 + bob, t, 2.8, won ? Math.sin(t * 6) * 0.08 : 0);
+  } else if (scene.sin) {
     if (won) { drawDemon(scene.sin, W - 46 + Math.sin(u * 3) * 6, 132, t, 1.3, u * 5); text("@#!", W - 46, 108, { align: "center", size: 7, color: scene.sin.colors.r }); }
     else drawDemon(scene.sin, W - 62, 88 + Math.sin(t * 4) * 4, t, 2.8, Math.sin(t * 3) * 0.15);
   }
@@ -3402,13 +3601,16 @@ function drawScene(t) {
   ctx.save(); ctx.translate(-30 + e * 116, 160 + (won ? Math.sin(t * 5) * 2 : 0)); ctx.scale(1 + e * 2.5, 1 + e * 2.5); if (!won) ctx.rotate(0.12); drawSaint(R, t); ctx.restore();
   // Bars across the top and the foot, as in a film.
   rect(0, 0, W, 16, "#000000"); rect(0, H - 16, W, 16, "#000000");
-  text(game.free ? "WHAT A RUN!" : won ? "VICTORY!" : "THE DEMON WINS THIS ONE", W / 2, 3, { align: "center", size: 9, color: won ? "#ffe08a" : "#ff8a7a" });
+  text(game.free ? "WHAT A RUN!" : scene.angel ? (won ? "YOU BEAT YOUR ANGEL!" : "YOUR ANGEL WINS THIS ONE") : won ? "VICTORY!" : "THE DEMON WINS THIS ONE", W / 2, 3, { align: "center", size: 9, color: won ? "#ffe08a" : "#ff8a7a" });
   // What the saint says, a letter at a time.
   if (u > 0.45) {
-    const shown = scene.line.slice(0, Math.floor((u - 0.45) * 45)), lines = wrapText(scene.line, 8, 138, true), bx = 158, by = 34, bh = 18 + lines.length * 11;
+    const shown = scene.line.slice(0, Math.floor((u - 0.45) * 45)), lines = wrapText(scene.line, 8, 138, true), bx = scene.angel ? 104 : 158, by = scene.angel ? 22 : 34, bh = 18 + lines.length * 11;
     rect(bx - 1, by - 1, 152, bh + 2, "#140c1c"); rect(bx, by, 150, bh, "#fff8ec");
-    ctx.fillStyle = "#fff8ec"; ctx.beginPath(); ctx.moveTo(bx, by + bh - 12); ctx.lineTo(bx - 12, by + bh + 2); ctx.lineTo(bx + 6, by + bh - 2); ctx.fill();
-    text(s.name.toUpperCase(), bx + 5, by + 3, { size: 7, color: "#7a1a2e", edge: null });
+    ctx.fillStyle = "#fff8ec"; ctx.beginPath();
+    if (scene.angel) { ctx.moveTo(bx + 150, by + bh - 12); ctx.lineTo(bx + 166, by + bh + 8); ctx.lineTo(bx + 140, by + bh - 1); }
+    else { ctx.moveTo(bx, by + bh - 12); ctx.lineTo(bx - 12, by + bh + 2); ctx.lineTo(bx + 6, by + bh - 2); }
+    ctx.fill();
+    text(scene.angel ? "YOUR GUARDIAN ANGEL" : s.name.toUpperCase(), bx + 5, by + 3, { size: 7, color: "#7a1a2e", edge: null });
     let left = shown.length;
     lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, left)); left -= l.length + 1; text(part, bx + 5, by + 14 + i * 11, { size: 8, color: "#2a1a1a", edge: null, serif: true }); });
   }
@@ -3448,6 +3650,7 @@ function drawDone(t) {
     input.taps = [];
     return;
   }
+  if (game.angel) { drawAngelDone(t); return; }
   const Z = level.Z, sin = Z.demon, k = Z.id;
   text(Z.num.toUpperCase(), W / 2, 4, { align: "center", color: "#ffffff", size: 7 });
   text(Z.name.toUpperCase(), W / 2, 12, { align: "center", color: "#ffe08a", size: 12 });
@@ -3481,6 +3684,36 @@ function drawDone(t) {
   for (const tp of input.taps) {
     if ((tp.x !== undefined && inBox(tp, again)) || (!next && tp.key === "Enter")) startZone(game.zone);
     else if (next && (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, next)))) startZone(game.zone + 1);
+    else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, menu))) state = "zones";
+  }
+  input.taps = [];
+}
+// After a race with the angel: the times, what he saw, what he says, and combos to try.
+function drawAngelDone(t) {
+  const Z = level.Z, k = Z.id, S = game.st, a = save.angel[k] || { races: 0, wins: 0 };
+  text(Z.num.toUpperCase() + " · " + Z.name.toUpperCase(), W / 2, 3, { align: "center", color: "#ffe08a", size: 8 });
+  if (game.won) text("YOU BEAT YOUR GUARDIAN ANGEL", W / 2, 14, { align: "center", color: "#8ae86a", size: 10 });
+  else text("YOUR GUARDIAN ANGEL WAS FIRST, BY " + (game.time - game.demonTime).toFixed(1) + "s", W / 2, 14, { align: "center", color: "#ffcf9a", size: 10 });
+  text("TIME " + hms(game.time) + (game.newBest ? "  NEW BEST!" : "  best " + hms(save.best[k])) + "   ·   beaten him " + a.wins + " of " + a.races + "   ·   " + SPEEDS[save.speed].name, W / 2, 27, { align: "center", color: game.newBest ? "#8ae86a" : "#ffffff", size: 7 });
+  text("CRASHES " + (S.crash + S.struck + S.fall) + "   TRICKS " + S.landed + "   COMBOS " + S.combos + "   PERFECT " + S.perfect + "   BEST STACK ×" + S.maxStack + "   STYLE " + commas(game.style), W / 2, 37, { align: "center", color: "#c8f0ff", size: 6 });
+  // What he says.
+  rect(10, 47, W - 20, 78, "#fff8ec"); rect(10, 47, W - 20, 1, "#e8b94a");
+  drawDemon(ANGEL, 26, 62 + Math.sin(t * 3) * 1.5, t, 1.2, 0);
+  text("YOUR ANGEL SAYS", 42, 50, { size: 6, color: "#7a1a2e", edge: null });
+  let y = 59;
+  for (const line of game.talk.slice(1)) for (const l of wrapText(line, 7, W - 66, true)) { if (y < 96) text(l, 42, y, { size: 7, color: "#2a1a1a", edge: null, serif: true }); y += 8.5; }
+  y = Math.max(y + 2, 98);
+  if (game.tryCombos.length) {
+    text("TRY THESE:", 42, y, { size: 6, color: "#7a1a2e", edge: null });
+    game.tryCombos.forEach((ks, i) => { text(comboWords(ks), 86, y + i * 12, { size: 6, color: "#2a1a1a", edge: null }); text(comboKeys(ks), 86, y + i * 12 + 6, { size: 5, color: "#7a5a2a", edge: null }); });
+  }
+  const again = button("AGAIN", W / 2 - 154, 134, 100, 18, true);
+  const next = game.zone < ZONES.length - 1 ? button("NEXT MANSION", W / 2 - 50, 134, 100, 18, false) : null;
+  const menu = button("MANSIONS", W / 2 + 54, 134, 100, 18, false);
+  text("He runs at your best time: beat it, and he gets faster too.", W / 2, 160, { align: "center", color: "#fff0c8", size: 7, serif: true });
+  for (const tp of input.taps) {
+    if (tp.key === "Enter" || (tp.x !== undefined && inBox(tp, again))) startZone(game.zone);
+    else if (next && tp.x !== undefined && inBox(tp, next)) startZone(game.zone + 1);
     else if (tp.key === "Escape" || (tp.x !== undefined && inBox(tp, menu))) state = "zones";
   }
   input.taps = [];
