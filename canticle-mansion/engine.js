@@ -68,17 +68,20 @@ Snd.on = save.sound !== false;
 Snd.onToggle = (on) => { save.sound = on; store(); };
 
 // ---- Input --------------------------------------------------------------------------
-// Touch: hold the lower left of the screen to walk left, the lower right to
-// walk right; tap the top of the screen to jump (hold it to jump higher).
-// Double-tap: pick a thing up or set it down, open a door, greet someone, or,
-// beside a wall, leap off it. Tap a creature to throw holy water at it (or,
-// with the seal, a cedar barricade to set it alight).
+// Touch, made for two thumbs: on the left half of the screen, hold the outer
+// part to walk left and the inner part to walk right; tap anywhere on the
+// right half to jump (hold it to jump higher, or to climb). The round button
+// at the lower right does whatever there is to do, and says what: lift or set
+// down, open, speak, leap off a wall, dash. Tap a creature to throw holy
+// water at it (or, with the seal, a cedar barricade to set it alight).
 // Keys: arrows or WASD to walk, Up / W / Space to jump, Down / S / E to pick
 // up or set down, X or J to throw, C or Shift to dash, P or Esc to pause.
 const input = { left: false, right: false, up: false, jumpHeld: false, jumpPressed: false, double: null, throwAt: null, dash: 0, taps: [] };
 const touches = new Map();
-let lastTap = { t: -9, x: 0, y: 0 };
-const JUMP_BAND = 0.4;
+// The action button, and where the left thumb's walking divides.
+const ACT = { x: W - 34, y: H - 34, r: 21 };
+const WALK_SPLIT = W * 0.25;
+const onAct = (p) => Math.hypot(p.x - ACT.x, p.y - ACT.y) < ACT.r + 9;
 function toGame(ev) { return { x: (ev.clientX - offX) / scale, y: (ev.clientY - offY) / scale }; }
 function recompute() {
   input.left = input.right = input.jumpHeld = false;
@@ -89,27 +92,30 @@ function recompute() {
 addEventListener("pointerdown", (ev) => {
   if (ev.cancelable) ev.preventDefault();
   Snd.init();
-  const p = toGame(ev), now = performance.now() / 1000;
+  const p = toGame(ev);
   if (Game.state !== "play") { input.taps.push(p); return; }
   if (p.x > W - 24 && p.y < 22) { Game.pause(); return; }
-  const dbl = now - lastTap.t < 0.32 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 46;
-  lastTap = { t: dbl ? -9 : now, x: p.x, y: p.y };
-  let zone = p.y < H * JUMP_BAND ? "jump" : ev.clientX < innerWidth / 2 ? "left" : "right";
-  if (dbl) input.double = { x: p.x + World.camX, y: p.y + World.camY, zone };
-  // A creature under the finger: the holy water goes to it, and the finger does not walk.
+  if (onAct(p)) { input.double = { act: true }; touches.set(ev.pointerId, { zone: "act" }); Game.actPress = 0.15; return; }
+  let zone = p.x >= W / 2 ? "jump" : p.x < WALK_SPLIT ? "left" : "right";
+  // A creature under the finger: the holy water goes to it, and the finger does nothing else.
   const wx = p.x + World.camX, wy = p.y + World.camY;
-  if (!dbl && (World.foeNear(wx, wy, 26) || World.cedarAt(wx, wy))) { input.throwAt = { x: wx, y: wy }; zone = "none"; }
+  if (World.foeNear(wx, wy, 26) || World.cedarAt(wx, wy)) { input.throwAt = { x: wx, y: wy }; zone = "none"; }
   touches.set(ev.pointerId, { zone });
   if (zone === "jump") input.jumpPressed = true;
   recompute();
 }, { passive: false });
+addEventListener("pointermove", (ev) => {
+  const t = touches.get(ev.pointerId); if (!t || (t.zone !== "left" && t.zone !== "right")) return;
+  const p = toGame(ev), z = p.x < WALK_SPLIT ? "left" : p.x < W / 2 + 20 ? "right" : t.zone;
+  if (z !== t.zone) { t.zone = z; recompute(); }
+});
 const release = (ev) => { touches.delete(ev.pointerId); recompute(); };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);
 addEventListener("contextmenu", (e) => e.preventDefault());
 const keys = new Set();
 addEventListener("keydown", (e) => {
   Snd.init();
-  if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+  if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   keys.add(e.code);
   if (Game.state !== "play") { input.taps.push({ key: e.code }); recompute(); return; }
@@ -262,7 +268,9 @@ function splash(x, y, big) {
 }
 function hurtFoe(f, n, fromX) {
   if (f.inv > 0) return;
-  f.hp -= n; f.inv = 0.25; f.vx = (f.x + f.w / 2 < fromX ? -1 : 1) * 60;
+  // A moment's stillness as the blow lands: it feels like it struck home.
+  Game.hitStop = Math.max(Game.hitStop || 0, f.hp - n <= 0 ? 0.07 : 0.045);
+  f.hp -= n; f.inv = 0.25; f.flash = 0.12; f.vx = (f.x + f.w / 2 < fromX ? -1 : 1) * 60;
   if (f.hp <= 0) {
     f.alive = false; Snd.sfx("smite");
     for (let i = 0; i < 14; i++) World.parts.push({ x: f.x + f.w / 2, y: f.y + f.h / 2, vx: (Math.random() - 0.5) * 90, vy: -30 - Math.random() * 80, g: -40, life: 0.8, c: i % 2 ? "#fff4c8" : "#ffe08a", s: 1 });
@@ -272,9 +280,12 @@ function hurtMonk(m, fromX) {
   if (m.inv > 0) return;
   Game.hurtCount = (Game.hurtCount || 0) + 1;
   if (Game.god) { m.inv = 1.1; return; }
-  m.hearts--; m.inv = 1.1; Snd.sfx("hurt"); Game.shake = 0.25;
+  // The gentle way (in the book's help page): a blow still pushes, but costs nothing.
+  if (save.assist && save.assist.gentle) { m.inv = 1.1; Snd.sfx("hurt"); Game.shake = 0.12; m.vx = (m.x + m.w / 2 < fromX ? -1 : 1) * 150; m.vy = -200; m.lock = 0.2; return; }
+  m.hearts--; m.inv = 1.1; Snd.sfx("hurt"); Game.shake = 0.25; Game.hitStop = 0.09;
   m.vx = (m.x + m.w / 2 < fromX ? -1 : 1) * 150; m.vy = -200; m.lock = 0.2;
   if (m.carry) dropCarry(m, true);
+  Grace.loseLily();
   if (m.hearts <= 0) Game.fallen();
 }
 
@@ -324,6 +335,7 @@ function stepMonk(m, dt) {
   let dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   if (Game.cutscene) dir = 0;
   if (m.lock > 0) dir = 0;
+  if (Game.powerT > 0) { Game.powerT -= dt; dir = 0; input.jumpPressed = false; }
   // Climbing: hanging rugs, the bundle of myrrh, the golden chain.
   // On a rope or rug if any part of the body is against it.
   let ropeX = -1;
@@ -332,18 +344,18 @@ function stepMonk(m, dt) {
   m.climbCd = Math.max(0, (m.climbCd || 0) - dt);
   if (onClimb && input.up && !m.carry && m.climbCd <= 0) m.climbing = true;
   if (!onClimb) m.climbing = false;
-  // Leaping off a wall: a double tap, or a jump, while beside one in the air (or a double tap on the ground).
+  // Leaping off a wall: the action button, or a jump, while beside one in the air (or the button on the ground).
   const wallL = rectHitsTiles(m.x - 2, m.y + 4, 2, m.h - 8, false) || solidsFor(m).some((o) => overlap({ x: m.x - 2, y: m.y + 4, w: 2, h: m.h - 8 }, o));
   const wallR = rectHitsTiles(m.x + m.w, m.y + 4, 2, m.h - 8, false) || solidsFor(m).some((o) => overlap({ x: m.x + m.w, y: m.y + 4, w: 2, h: m.h - 8 }, o));
   m.wall = wallL ? -1 : wallR ? 1 : 0;
   const wantJump = input.jumpPressed || m.buffer > 0;
   m.buffer = input.jumpPressed ? 0.12 : Math.max(0, m.buffer - dt);
-  // Double tap: lift, set down, open, greet, or leap off the wall.
+  // The action: lift, set down, open, greet, or leap off the wall, or (with the chariot) dash.
   const dbl = input.double; input.double = null;
   if (dbl && !Game.cutscene) {
     const used = Game.interact(m, dbl);
     if (!used && m.wall && !m.carry) { wallLeap(m); }
-    else if (!used && save.powers.chariot && dbl.zone && dbl.zone !== "jump" && !m.dash) startDash(m, dbl.zone === "left" ? -1 : 1);
+    else if (!used && save.powers.chariot && !m.dash) startDash(m, m.face);
   }
   if (input.dash && save.powers.chariot && !m.dash) startDash(m, m.face);
   input.dash = 0;
@@ -379,13 +391,19 @@ function stepMonk(m, dt) {
     if (wantJump) {
       if (m.ground || m.coyote > 0) { m.vy = -P.jump() * (m.carry ? 0.9 : 1); m.ground = false; m.coyote = 0; m.buffer = 0; m.cut = false; m.jumps = 1; Snd.sfx("jump"); m.riding = null; }
       else if (m.wall && !m.carry) { wallLeap(m); m.buffer = 0; }
-      else if (save.powers.sandals && m.jumps < 2 && !m.carry) { m.vy = -P.jump() * 0.88; m.jumps = 2; m.buffer = 0; m.cut = false; Snd.sfx("float"); for (let i = 0; i < 8; i++) World.parts.push({ x: m.x + m.w / 2, y: m.y + m.h, vx: (Math.random() - 0.5) * 80, vy: 30, g: 0, life: 0.3, c: "#ffe9a8", s: 2 }); }
+      else if (((save.powers.sandals && m.jumps < 2) || (save.assist && save.assist.wings)) && !m.carry) { m.vy = -P.jump() * 0.88; m.jumps = 2; m.buffer = 0; m.cut = false; Snd.sfx("float"); for (let i = 0; i < 8; i++) World.parts.push({ x: m.x + m.w / 2, y: m.y + m.h, vx: (Math.random() - 0.5) * 80, vy: 30, g: 0, life: 0.3, c: "#ffe9a8", s: 2 }); }
     }
     // Let go early, land early.
     if (!input.jumpHeld && m.vy < -80 && !m.cut && !m.bounced) { m.vy *= 0.5; m.cut = true; }
   }
   input.jumpPressed = false;
+  // Stretched as he springs up; squashed as he lands, the harder the more; easing back to himself.
+  if (m.vy < -200 && (m.prevVy === undefined || m.prevVy > -150)) m.sq = 0.22;
+  const fallV = m.vy;
   const was = moveBody(m, dt, { push: true });
+  m.prevVy = m.vy;
+  if (!was && m.ground && fallV > 120) m.sq = -Math.min(0.3, fallV / 1500);
+  m.sq = (m.sq || 0) * Math.pow(0.0008, dt);
   if (m.ground) { m.coyote = 0.08; m.jumps = 0; m.bouncedUp = false; }
   else m.coyote = Math.max(0, m.coyote - dt);
   if (m.bounced) { m.vy = -P.bounce * (input.jumpHeld ? 1.18 : 1); m.ground = false; m.cut = true; Snd.sfx("bounce"); m.bounced = false; }
@@ -445,6 +463,8 @@ World.load = function (id, doorKey, how) {
   for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) {
     const ch = rows[y][x] || ".";
     const k = (def.legend && def.legend[ch] !== undefined) ? def.legend[ch] : TILE_OF[ch];
+    // The stair that cannot be seen is not there to stand on until the lantern shows it.
+    if (ch === "¤" && !save.powers.lantern) continue;
     if (typeof k === "number") { this.grid[y * this.w + x] = k; if (def.hide && def.hide.includes(ch)) this.hidden[y * this.w + x] = 1; }
     else if (/[0-9]/.test(ch)) (this.doors[ch] = this.doors[ch] || []).push({ x, y });
     else if (ch !== ".") (marks[ch] = marks[ch] || []).push({ x, y });
@@ -484,6 +504,7 @@ World.load = function (id, doorKey, how) {
   this.snapCamera();
   if (def.song) Snd.play(def.song);
   Game.roomName = def.name; Game.nameTime = 3;
+  Grace.onLoadAll();
   if (def.music === false) Snd.stop();
 };
 World.redrawTiles = function () {
@@ -522,6 +543,7 @@ function spawnAt(ch, x, y, def) {
     case "e": World.foes.push(Foe("bee", x, y)); break;
     case "l": if (!(save.lilies[def.chapter] || {})[def.id + x + "," + y]) World.items.push({ kind: "lily", x: x + 3, y: y + 2, w: 10, h: 12, key: def.id + x + "," + y }); break;
     case "h": World.items.push({ kind: "heart", x: x + 3, y: y + 3, w: 10, h: 10 }); break;
+    case "§": { const key = def.id + ":pome"; if (!(save.pomes || {})[key]) World.items.push({ kind: "pome", key, x: x + 2, y: y + 2, w: 12, h: 12 }); break; }
     case "P": if (def.power && !save.powers[def.power]) World.items.push({ kind: "power", power: def.power, x: x, y: y - 4, w: 16, h: 20 }); break;
   }
 }
@@ -538,7 +560,7 @@ function Foe(kind, x, y) {
   return base;
 }
 function stepFoe(f, dt) {
-  f.t += dt; f.inv = Math.max(0, f.inv - dt);
+  f.t += dt; f.inv = Math.max(0, f.inv - dt); f.flash = Math.max(0, (f.flash || 0) - dt);
   const m = Game.monk, dx = m.x + m.w / 2 - (f.x + f.w / 2), dy = m.y + m.h / 2 - (f.y + f.h / 2), dist = Math.hypot(dx, dy);
   const ground = (sp) => { f.vy = Math.min(f.vy + P.grav * dt, P.fall); f.vx = f.face * sp; moveBody(f, dt, { noBodies: true, bouncy: false });
     // Turn at walls and at edges.
@@ -588,12 +610,13 @@ function stepAngel(a, dt) {
 
 // ---- The game --------------------------------------------------------------------------------
 const Game = {
+  flyers: [], hitStop: 0, powerT: 0,
   state: "title", monk: Monk.make(0, 0), chapter: 1, shake: 0, cutscene: null, roomName: "", nameTime: 0, god: false, slow: 1,
   fade: 0, fadeTo: null, banner: null, toast: null, angel: null, clock: 0, readNow: null,
   start(ch, roomId, door) {
     this.chapter = ch; this.state = "play";
     const C = CHAPTERS[ch - 1];
-    this.monk = Monk.make(0, 0); this.monk.max = this.monk.hearts = save.powers.helmet ? 6 : 5;
+    this.monk = Monk.make(0, 0); this.monk.max = this.monk.hearts = Grace.maxHearts();
     this.angel = save.powers.angel ? { x: 0, y: 0, t: 0 } : null;
     this.flags = {}; this.flock = []; this.speech = null; this.banner = null;
     if (ch === 1 && !Object.keys(save.read).length) this.hint = 8;
@@ -603,6 +626,7 @@ const Game = {
   go(id, door) {
     // A short fade, then the next room.
     if (this.fadeTo) return;
+    Grace.leaving(id, door);
     if (id === "END") { this.finishChapter(); return; }
     this.fadeTo = { id, door }; this.fade = 0;
     Snd.sfx("door");
@@ -621,7 +645,19 @@ const Game = {
     if (this.state !== "play") return;
     m.x = m.safe.x; m.y = m.safe.y - 2; m.vx = 0; m.vy = 0; m.inv = 1.2;
   },
-  // A double tap: what is there to do?
+  // What the action button would do just now, for its label.
+  actionHint(m) {
+    if (m.carry) return "SET DOWN";
+    const near = (o, r) => Math.hypot(o.x + (o.w || 0) / 2 - (m.x + m.w / 2), o.y + (o.h || 0) / 2 - (m.y + m.h / 2)) < r;
+    for (const n of World.npcs) if (n.talk && near(n, 40)) return n.verb || "SPEAK";
+    for (const k in World.doors) { const d = World.doors[k]; if (d.edge === "inside" && d.to && overlap({ x: m.x - 4, y: m.y, w: m.w + 8, h: m.h }, d)) return "OPEN"; }
+    if (World.def.actionHint) { const h = World.def.actionHint(m); if (h) return h; }
+    if (nearestLift(m, null)) return "LIFT";
+    if (m.wall && !m.ground) return "LEAP";
+    if (save.powers.chariot) return "DASH";
+    return null;
+  },
+  // The action button (or Down on the keys): what is there to do?
   interact(m, at) {
     if (m.carry) { dropCarry(m); return true; }
     const near = (o, r) => Math.hypot(o.x + (o.w || 0) / 2 - (m.x + m.w / 2), o.y + (o.h || 0) / 2 - (m.y + m.h / 2)) < r;
@@ -706,7 +742,8 @@ function stepPlay(dt) {
   for (const it of World.items) {
     if (it.taken || !overlap(m, it)) continue;
     it.taken = true;
-    if (it.kind === "lily") { const c = save.lilies[R.chapter] = save.lilies[R.chapter] || {}; c[it.key] = 1; store(); Snd.sfx("neume"); Game.toast = { text: "A lily of the valleys", t: 0 }; }
+    if (it.kind === "lily") Grace.pickLily(it);
+    if (it.kind === "pome") Grace.takePome(it);
     if (it.kind === "heart") { m.hearts = Math.min(m.max, m.hearts + 2); Snd.sfx("neume"); }
     if (it.kind === "power") Game.gainPower(it.power);
   }
@@ -731,11 +768,17 @@ function stepPlay(dt) {
     const d = Math.hypot(m.x + m.w / 2 - cx, m.y + m.h / 2 - cy);
     if (d < (tx.reach || Math.max(90, (tx.w || 0) / 2 + 40))) {
       const key = R.chapter + ":" + tx.v;
-      if (!save.read[key]) { save.read[key] = 1; store(); Snd.sfx("verse"); Game.toast = { text: "Canticle " + R.chapter + ":" + tx.v, t: 0, verse: true }; }
+      if (!save.read[key]) {
+        save.read[key] = 1; store(); Snd.sfx("verse"); Game.toast = { text: "Canticle " + R.chapter + ":" + tx.v, t: 0, verse: true };
+        // Its first letters lift off the wall and fly into the book at the corner.
+        const words = (CANTICLE[R.chapter - 1][tx.v - 1] || "").replace(/[^A-Za-z]/g, "").slice(0, 10);
+        for (let i = 0; i < words.length; i++) Game.flyers.push({ ch: words[i], t: -i * 0.05, sx: clamp(cx + (i - words.length / 2) * 7 - World.camX, 10, W - 10), sy: clamp(cy - World.camY, 10, H - 10) });
+      }
       Game.readNow = tx;
     }
   }
   if (R.update) R.update(World, dt);
+  Grace.step(dt);
   World.follow(Math.min(1, dt * 7));
 }
 
@@ -755,9 +798,10 @@ function drawWorld() {
   fx.drawImage(World.tileCanvas, 0, 0);
   for (const mv of World.movers) ART.mover(fx, mv, t);
   for (const it of World.items) ART.item(fx, it, t);
+  Grace.drawWorld(fx, t);
   for (const b of World.bodies) if (!b.carried) ART.body(fx, b, t);
   for (const n of World.npcs) ART.npc(fx, n, t);
-  for (const f of World.foes) ART.foe(fx, f, t);
+  for (const f of World.foes) { ART.foe(fx, f, t); if (f.flash > 0) { fx.save(); fx.globalAlpha = 0.7; fx.fillStyle = "#ffffff"; fx.fillRect(Math.round(f.x), Math.round(f.y), f.w, f.h); fx.restore(); } }
   if (Game.angel) ART.angel(fx, Game.angel, t);
   ART.monk(fx, Game.monk, t);
   if (Game.monk.carry) ART.body(fx, Game.monk.carry, t);
@@ -789,6 +833,15 @@ function drawWorld() {
   for (const it of World.items) if (it.kind === "power") glow(it.x + 8, it.y + 10, 40, "rgba(255,230,150,0.6)", 0.7 + Math.sin(t * 4) * 0.2);
   if (save.powers.lantern) glow(Game.monk.x + 5 + Game.monk.face * 6, Game.monk.y + 16, 40, "rgba(255,200,120,0.25)", 1);
   if (Game.angel) glow(Game.angel.x + 6, Game.angel.y + 8, 30, "rgba(220,235,255,0.5)", 0.8);
+  Grace.glowBeloved(glow, t);
+  // A new gift held high: rays of light turning about the monk.
+  if (Game.powerT > 0) {
+    const m = Game.monk, mx = m.x + m.w / 2, my = m.y - 4, k = Math.min(1, Game.powerT / 0.4);
+    glow(mx, my, 90, "rgba(255,240,180,0.9)", k);
+    sx.globalAlpha = 0.13 * k; sx.fillStyle = "#fff4c8";
+    for (let i = 0; i < 12; i++) { const a = t * 0.8 + (i / 12) * Math.PI * 2; sx.beginPath(); sx.moveTo(mx, my); sx.lineTo(mx + Math.cos(a) * 220, my + Math.sin(a) * 220); sx.lineTo(mx + Math.cos(a + 0.12) * 220, my + Math.sin(a + 0.12) * 220); sx.fill(); }
+    sx.globalAlpha = 1;
+  }
   if (R.glow) R.glow(sx, World, t, glow);
   sx.restore();
 }
@@ -806,7 +859,9 @@ function drawLight(cx, cy, t) {
   hole(m.x + m.w / 2, m.y + m.h / 2, save.powers.lantern ? 130 : 72, save.powers.lantern ? 1 : 0.85);
   for (const s of World.shots) hole(s.x, s.y, s.kind === "flame" ? 40 : 18, 0.8);
   for (const g of World.glows) hole(g.x, g.y, g.r, Math.max(0, g.life / g.max));
-  for (const it of World.items) if (it.kind === "power" || it.kind === "lily") hole(it.x + 6, it.y + 8, 36, 0.8);
+  for (const it of World.items) if (it.kind === "power" || it.kind === "lily" || it.kind === "pome") hole(it.x + 6, it.y + 8, 36, 0.8);
+  if (Game.lily) hole(Game.lily.x + 5, Game.lily.y + 6, 34, 0.8);
+  if (World.vase && World.vase.x !== undefined) hole(World.vase.x + 7, World.vase.y + 4, 30, 0.6);
   if (Game.angel) hole(Game.angel.x + 6, Game.angel.y + 8, 50, 0.8);
   if (R.lightHoles) R.lightHoles(hole, World, t);
   // Every verse carries a little light of its own, so the dark never swallows the words.

@@ -271,6 +271,9 @@ ART.monk = function (c, m, t) {
   const C = ART.monkColors(m), f = m.face;
   const ox = Math.round(m.x + m.w / 2), oy = Math.round(m.y + m.h); // feet, centre
   c.save(); c.translate(ox, oy); if (f < 0) c.scale(-1, 1);
+  if (m.sq) c.scale(1 - m.sq * 0.6, 1 + m.sq);
+  // Lifting a new gift high: both hands up.
+  const raising = Game.powerT > 0;
   const shapes = [];
   const S = (x, y, w, h, col) => shapes.push([x, y, w, h, col]);
   const a = m.anim, step = m.step || 0;
@@ -294,7 +297,8 @@ ART.monk = function (c, m, t) {
   S(-5, y0 + 14, 10, 1, C.cord); S(-1, y0 + 15, 1, 4, C.cord);
   // Arms: by the side, swinging, raised to carry or to throw, against the wall.
   const arm = (x, y, w, h) => { S(x, y, w, h, C.habit); S(x, y + h - 1, w, 1, C.lo); };
-  if (m.carry) { arm(-5, y0 + 2, 3, 8); arm(3, y0 + 2, 3, 8); S(-5, y0 + 1, 3, 2, C.skin); S(3, y0 + 1, 3, 2, C.skin); }
+  if (raising) { arm(-6, y0 - 6, 3, 12); arm(4, y0 - 6, 3, 12); S(-6, y0 - 8, 3, 2, C.skin); S(4, y0 - 8, 3, 2, C.skin); }
+  else if (m.carry) { arm(-5, y0 + 2, 3, 8); arm(3, y0 + 2, 3, 8); S(-5, y0 + 1, 3, 2, C.skin); S(3, y0 + 1, 3, 2, C.skin); }
   else if (a === "throw") { arm(3, y0 + 9, 6, 3); S(9, y0 + 9, 2, 3, C.skin); }
   else if (a === "climb") { const k = Math.floor(t * 8) % 2; arm(2, y0 + (k ? 3 : 6), 3, 7); S(3, y0 + (k ? 2 : 5), 3, 2, C.skin); arm(-3, y0 + (k ? 6 : 3), 3, 7); }
   else if (a === "slide") { arm(3, y0 + 4, 3, 7); S(5, y0 + 3, 2, 3, C.skin); }
@@ -345,6 +349,13 @@ ART.body = function (c, b, t) {
 ART.item = function (c, it, t) {
   const x = Math.round(it.x), y = Math.round(it.y + Math.sin(t * 3 + it.x) * 1.5);
   if (it.kind === "lily") { px(c, x + 4, y + 6, 2, 6, "#3a8a2e"); px(c, x + 1, y + 8, 3, 2, "#5aa040"); px(c, x + 2, y, 6, 6, "#ffffff"); px(c, x, y + 2, 10, 3, "#ffffff"); px(c, x + 4, y + 2, 2, 2, "#ffe08a"); px(c, x + 2, y + 5, 6, 1, "#d8d8e8"); }
+  if (it.kind === "pome") {
+    // A pomegranate: round and red, its little crown on top, a glint.
+    c.fillStyle = "#06040a"; c.beginPath(); c.arc(x + 6, y + 7, 6.5, 0, 7); c.fill();
+    c.fillStyle = "#b8242e"; c.beginPath(); c.arc(x + 6, y + 7, 5.5, 0, 7); c.fill();
+    px(c, x + 3, y + 4, 2, 2, "#ff8a8a"); px(c, x + 4, y - 1, 5, 3, "#06040a"); px(c, x + 5, y - 1, 1, 2, "#e8b94a"); px(c, x + 7, y - 1, 1, 2, "#e8b94a");
+    if (Math.sin(t * 3 + x) > 0.8) px(c, x + 8, y + 3, 1, 1, "#ffffff");
+  }
   if (it.kind === "heart") { const col = "#e8324a"; px(c, x, y + 2, 4, 4, col); px(c, x + 5, y + 2, 4, 4, col); px(c, x + 1, y + 1, 2, 1, col); px(c, x + 6, y + 1, 2, 1, col); px(c, x + 1, y + 6, 7, 1, col); px(c, x + 2, y + 7, 5, 1, col); px(c, x + 3, y + 8, 3, 1, col); px(c, x + 1, y + 2, 1, 1, "#ffb0b8"); }
   if (it.kind === "power") POWER_ICON[it.power] && POWER_ICON[it.power](c, x, y, t);
 };
