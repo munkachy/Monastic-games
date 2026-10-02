@@ -156,7 +156,7 @@ const room6 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 6 }, def);
       { v: 12, style: "sky", x: 640, y: 16, w: 440, size: 16, color: "rgba(255,240,230,0.9)" },
       { v: 12, part: [0, 2], style: "sky", x: 1000, y: 96, w: 100, size: 12, color: "rgba(255,240,230,0.45)", reach: 300 },
     ],
-    update() { hintOnce("dash", "Double-tap low on the screen to dash that way. Jump, then dash, to cross the chasms.", save.powers.chariot); },
+    update() { hintOnce("dash", "The round button dashes the way you face. Jump, then dash, to cross the chasms.", save.powers.chariot); },
     back(c, Wd, t) {
       // Chariots racing along the far ridge.
       for (let i = 0; i < 3; i++) { const x = ((t * 140 + i * 420) % 1500) - 150, y = 120 + i * 6; px(c, x, y, 26, 6, "#c8962a"); c.fillStyle = "#3a2410"; c.beginPath(); c.arc(x + 13, y + 8, 5, 0, 7); c.fill(); px(c, x + 28, y - 6, 14, 7, "#7a4a2a"); px(c, x + 38, y - 12, 4, 7, "#7a4a2a"); }

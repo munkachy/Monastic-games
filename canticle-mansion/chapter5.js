@@ -53,10 +53,10 @@ const room5 = (id, def) => { ROOMS[id] = Object.assign({ id, chapter: 5 }, def);
     ],
     init(Wd) {
       if (!Game.flags.bolt) Wd.movers.push(Gate(44, 9, 3, () => Game.flags.bolt, { lock: true, col: "#5a3a20" }));
-      Wd.npcs.push({ kind: "bolt", x: 42 * T, y: 9 * T, w: 16, h: 48, talk() { if (Game.flags.bolt) return; Game.flags.bolt = 1; Snd.sfx("door"); Game.say("", CANTICLE[4][5].split(" ").slice(0, 18).join(" "), 5); }, draw() { } });
+      Wd.npcs.push({ kind: "bolt", x: 42 * T, y: 9 * T, w: 16, h: 48, verb: "OPEN", talk() { if (Game.flags.bolt) return; Game.flags.bolt = 1; Snd.sfx("door"); Game.say("", CANTICLE[4][5].split(" ").slice(0, 18).join(" "), 5); }, draw() { } });
     },
     update(Wd) {
-      hintOnce("bolt", "Someone knocks. Double-tap the door to open the bolt.", Game.monk.x > 36 * T && !Game.flags.bolt);
+      hintOnce("bolt", "Someone knocks. Stand by the door and press the round button to draw the bolt.", Game.monk.x > 36 * T && !Game.flags.bolt);
       if (Math.random() < 0.2) Wd.parts.push({ x: (45 + Math.random() * 4) * T, y: 16, vx: 0, vy: 30, g: 300, life: 0.8, c: "#a8d4ff", s: 1 });
     },
     paint(c) {

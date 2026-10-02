@@ -38,7 +38,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
       const blocker = Wd.movers.find((q) => q.lips);
       if (this.open > 0.55 && blocker) Wd.movers.splice(Wd.movers.indexOf(blocker), 1);
       if (this.open < 0.3 && !blocker && dist > 60) Wd.movers.push({ x: 32 * T, y: 9 * T, w: 6 * T, h: 48, dx: 0, dy: 0, t: 0, solid: true, lips: true, draw() { } });
-      hintOnce("crate", "Double-tap the crate to lift it, and again to set it down.", near(26 * T, 11 * T, 60));
+      hintOnce("crate", "Stand by the crate and press the round button to lift it; press it again to set it down.", near(26 * T, 11 * T, 60));
     },
     paint(c) {
       // The marble face: a serene countenance, eyes closed, lips at the floor.
@@ -105,7 +105,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     update(Wd, dt) {
       const m = Game.monk;
       hintOnce("water", "Tap a bat to throw holy water at it.", Wd.foes.some((f) => f.alive && f.awake));
-      hintOnce("shaft", "Ride the perfume up the shaft, or double-tap beside a wall to leap from it.", near(28.5 * T, 9 * T, 70));
+      hintOnce("shaft", "Ride the perfume up the shaft, or leap from wall to wall: jump beside a wall, then jump again.", near(28.5 * T, 9 * T, 70));
       // Perfume rising in the shaft.
       if (Math.random() < 0.5) Wd.parts.push({ x: 28 * T + Math.random() * 32, y: 11.5 * T, vx: (Math.random() - 0.5) * 10, vy: -60 - Math.random() * 60, g: 0, life: 2.4, c: Math.random() < 0.5 ? "#ffb0e0" : "#ffe0f4", s: 1 });
       // The oil, poured out.
@@ -178,7 +178,7 @@ const near = (x, y, r) => { const m = Game.monk; return Math.hypot(m.x + m.w / 2
     map: g.rows(), doors: { 1: { to: "c1_store", door: "2" }, 2: { to: "c1_desert", door: "1" } },
     lights: [{ x: 624, y: 84, r: 150, c: "rgba(255,230,170,0.5)" }, { x: 300, y: 150, r: 40, c: "rgba(120,160,255,0.2)" }],
     update(Wd) {
-      hintOnce("leap", "Leap from wall to wall up the shaft: double-tap beside a wall.", near(35 * T, 9 * T, 60));
+      hintOnce("leap", "Leap from wall to wall up the shaft: jump beside a wall, then jump again.", near(35 * T, 9 * T, 60));
       if (Math.random() < 0.04) Wd.parts.push({ x: (2 + Math.random() * 30) * T, y: 6 * T, vx: 0, vy: 20, g: 600, life: 0.6, c: "#8ab0d0", s: 1 });
     },
   });

@@ -346,12 +346,40 @@ pressed into sand, stitched into a curtain, lettered on a label, kindled in
 light as he comes near, strung bead by bead on a chain of gold. Pause to read
 the chapter as far as you have found it; finish a chapter to read it whole.
 
-On a phone: hold the lower left of the screen to walk left, the lower right
-to walk right, and tap the top to jump (hold for higher). Double-tap a thing
-to lift it or set it down, to open a door or greet someone; double-tap beside
-a wall to leap off it. Tap a creature to throw holy water at it. On a
-keyboard: arrows or WASD to walk, Up, W or Space to jump, Down, S or E to lift
-and set down, X or J to throw, P to pause, M for sound.
+On a phone: hold the left quarter of the screen to walk back, the next
+quarter to walk on, and tap anywhere on the right half to jump (hold for
+higher). The round button at the lower right lifts and sets down, opens,
+speaks, leaps off a wall, and dashes; its label says what it will do. Tap a
+creature to throw holy water at it. On a keyboard: arrows or WASD to walk, Up,
+W or Space to jump, Down, S or E for the button, X or J to throw, C or Shift
+to dash, P to pause, M for sound.
+
+The lilies are not kept by touching them: a lily follows at the monk's
+shoulder until he brings it to the vase by the way onward. A blow sends it
+home to where it grew. Keep every lily of a chapter and a page of the Fathers
+on that chapter opens in the book: St. Bernard's Sermons on the Song of Songs
+for the first three chapters (tr. S. J. Eales, 1895), St. John of the Cross's
+A Spiritual Canticle for the rest (tr. D. Lewis, 1909 edition).
+
+In about half the rooms, and always in the last of each chapter, a dark
+figure stands in the shadows with the light along one edge of him. Come near
+and he is gone, leaving a line of the Canticle behind; at the end of a
+chapter he stays a breath longer.
+
+In two rooms of most chapters something is set out of reach of the powers
+found so far: a ledge too high (the sandals), a box of cracked stone in the
+air (the helmet), a stair that cannot be seen (the lantern shows it), a tall
+hanging pillar (the gloves), a little cedar hut (the seal's flame). In each
+is a pomegranate ("thy plants are a paradise of pomegranates", 4:13); every
+four found give one more heart.
+
+The pause book has four pages: the verses found, the rooms of the chapter
+(with what each still keeps), the Fathers, and help, where three easier ways
+can be turned on at any time: no harm from blows, a slower game, and endless
+leaps. Some chapters end with a moment of their own: the keepers of the city
+come after the monk at the end of V, petals fall on the day of the king's
+espousals at the end of III, and the young hart leads the way up the
+mountains of spices at the very end.
 
 Chapter I, "The Kiss of His Mouth", runs through fifteen rooms: in through a
 great mouth of marble whose lips part as you come; the wine and the perfume,
@@ -364,7 +392,7 @@ Pharaoh's throne room and across a chasm on his chariots; the chains of gold,
 climbing a seated bride with little goldsmiths who climb beside you; the king
 at his repose and a bundle of myrrh as tall as a tower; the vineyards of
 Engaddi; the fair one whose eyes are doves; and the bed beneath the beams of
-cedar. Chapter II, "The Lily among Thorns", has ten rooms: lilies among thorns, the apple tree to climb, the cellar of wine with its verse set out in flowers, roes and harts leaping across a field, the mountains where the sandals of the roe let you leap again in the air, the lattice over the garden wall, the winter passing into spring, the clefts of the rock full of doves, the little foxes to catch before the vineyard gate opens, and the break of day. Chapter III, "By Night I Sought Him", has nine rooms: the dark bedchamber where the lantern waits on a high shelf, the streets and the broad ways with the watchmen walking them, the city gate they keep, my mother's house, the sleeping roes with the verse spelled in stars, a pillar of smoke of spices to ride up, the threescore valiant ones about the bed of Solomon, the litter of Solomon (pillars of silver, the seat of gold, the going-up of purple), and the king crowned on the day of his espousals. Chapter IV, "A Garden Enclosed", has eight rooms: Mount Galaad and its flocks, the river crossed on the backs of sheep come up from the washing, the scarlet lace to climb, the tower of David hung with a thousand bucklers, the mountain of myrrh and the hill of frankincense, the dens of the lions and the mountains of the leopards, the dropping honeycomb, and the garden enclosed, where the guardian angel waits beside a sealed fountain; once found, the angel follows you and turns blows aside, the fountain is unsealed and lifts you, and the north wind and the south wind blow. Chapter V, "My Heart Watcheth", has seven rooms: the feast in the garden, the night door with its keyhole and its bolt to open, the empty streets with their verse in the stars, the keepers of the walls (the helmet waits in their guardroom: one more heart, and cracked stone breaks when you jump into it), the daughters of Jerusalem, a colossal image of the beloved to climb from its bases of gold to its head of finest gold with each verse beside the part it tells of, and the crossroads where the daughters ask whither he is gone. Chapter VI, "Terrible as an Army", has seven rooms: the bed of spices with its verse in flowers, the army in its ranks and banners, the flock from the washing, the threescore queens on their balconies with the one dove flying ahead to show the way, the climb through the clouds as the sky passes from dawn to moon to sun, the garden of nuts with walnuts dropping from the boughs, and the chariots of Aminadab, whose power is a dash (double-tap low on the screen) to carry you over chasms no jump can cross. Chapter VII, "The Palm Tree", has eight rooms: the companies of camps with the skilful workman's jewels, the heap of wheat set about with lilies and two young roes, the tower of ivory to climb above the fishpools of Hesebon, Carmel and the channels of the king's purple, the palm tree itself, whose gloves at its foot let you climb any wall you hold toward in the air, the best wine in the cellar, the field and the villages, and the gates where all fruits, new and old, are kept. Chapter VIII, "Love Is Strong as Death", has eight rooms: my mother's house with the cup of spiced wine, the desert by night with the charge to the daughters spelled in stars and the apple tree at its end, the seal upon the heart (with the seal, holy water burns as flame, and a cedar barricade it touches burns from board to board), the many waters that cannot quench charity, crossed on the floating goods of a house, the little sister and the wall like a tower, the vineyard of the peaceable with its verses laid out in pieces of silver, the gardens where the friends turn to hearken, and the flight of the roe and the young hart over the mountains of spices, where the Canticle ends.
+cedar. Chapter II, "The Lily among Thorns", has ten rooms: lilies among thorns, the apple tree to climb, the cellar of wine with its verse set out in flowers, roes and harts leaping across a field, the mountains where the sandals of the roe let you leap again in the air, the lattice over the garden wall, the winter passing into spring, the clefts of the rock full of doves, the little foxes to catch before the vineyard gate opens, and the break of day. Chapter III, "By Night I Sought Him", has nine rooms: the dark bedchamber where the lantern waits on a high shelf, the streets and the broad ways with the watchmen walking them, the city gate they keep, my mother's house, the sleeping roes with the verse spelled in stars, a pillar of smoke of spices to ride up, the threescore valiant ones about the bed of Solomon, the litter of Solomon (pillars of silver, the seat of gold, the going-up of purple), and the king crowned on the day of his espousals. Chapter IV, "A Garden Enclosed", has eight rooms: Mount Galaad and its flocks, the river crossed on the backs of sheep come up from the washing, the scarlet lace to climb, the tower of David hung with a thousand bucklers, the mountain of myrrh and the hill of frankincense, the dens of the lions and the mountains of the leopards, the dropping honeycomb, and the garden enclosed, where the guardian angel waits beside a sealed fountain; once found, the angel follows you and turns blows aside, the fountain is unsealed and lifts you, and the north wind and the south wind blow. Chapter V, "My Heart Watcheth", has seven rooms: the feast in the garden, the night door with its keyhole and its bolt to open, the empty streets with their verse in the stars, the keepers of the walls (the helmet waits in their guardroom: one more heart, and cracked stone breaks when you jump into it), the daughters of Jerusalem, a colossal image of the beloved to climb from its bases of gold to its head of finest gold with each verse beside the part it tells of, and the crossroads where the daughters ask whither he is gone. Chapter VI, "Terrible as an Army", has seven rooms: the bed of spices with its verse in flowers, the army in its ranks and banners, the flock from the washing, the threescore queens on their balconies with the one dove flying ahead to show the way, the climb through the clouds as the sky passes from dawn to moon to sun, the garden of nuts with walnuts dropping from the boughs, and the chariots of Aminadab, whose power is a dash (the round button) to carry you over chasms no jump can cross. Chapter VII, "The Palm Tree", has eight rooms: the companies of camps with the skilful workman's jewels, the heap of wheat set about with lilies and two young roes, the tower of ivory to climb above the fishpools of Hesebon, Carmel and the channels of the king's purple, the palm tree itself, whose gloves at its foot let you climb any wall you hold toward in the air, the best wine in the cellar, the field and the villages, and the gates where all fruits, new and old, are kept. Chapter VIII, "Love Is Strong as Death", has eight rooms: my mother's house with the cup of spiced wine, the desert by night with the charge to the daughters spelled in stars and the apple tree at its end, the seal upon the heart (with the seal, holy water burns as flame, and a cedar barricade it touches burns from board to board), the many waters that cannot quench charity, crossed on the floating goods of a house, the little sister and the wall like a tower, the vineyard of the peaceable with its verses laid out in pieces of silver, the gardens where the friends turn to hearken, and the flight of the roe and the young hart over the mountains of spices, where the Canticle ends.
 
 The engine is new (`engine.js`): rooms joined by doors, tile physics with
 stackable objects, lighting, and the verses lettered at full resolution
