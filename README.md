@@ -260,7 +260,7 @@ the Thurible swings the censer round at full stretch while the legs
 scissor; each saint's own trick is a Rocket Air with the saint's treasure
 held high; and the Te Deum is everything at once. In the air, tap the right
 side for each saint's quick flourish, holding up what that saint carries
-(St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
+(St. Benedict raises his medal, St. Therese throws a handful of rose petals out ahead of her, St. Peter the keys,
 St. Lucy her lamp; St. Maurus grabs his board), or tap the arrows for
 the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
 genuflection in the air, a single ← a heel click, all quick, for short jumps (keep the arrow held down
