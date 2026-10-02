@@ -282,7 +282,11 @@ another try. Big chains are hailed in Latin: Bene, Optime, Gloria,
 Alleluia, Hosanna, and the saint sings out the word in a little voice of
 his own, high or low. Each saint cries out at his own trick ("Vade retro!",
 "Tolle, lege!", "Tu es Petrus!", "Viriditas!", "Lux!"). The demon growls
-his taunts. Harder tricks make a faster and a longer surge.
+his taunts. Harder tricks make a faster and a longer surge. Moves flow into one another: an
+arrow that, added to the moves just done, makes the start of a longer
+trick turns them into that trick, carrying on from where they were (↑, a
+breath, ↑ is a front flip; one more ↑ makes it a double, one more a
+triple), so long tricks need not be tapped all at once.
 
 **The book of combos.** Every chain of two or more tricks landed is written
 down in order, with how many times it has been landed and its best score.
