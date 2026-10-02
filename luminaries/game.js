@@ -47,9 +47,15 @@ function wrapFit(str, width, size, maxLines, weight, font) {
 }
 
 // ---- Saved --------------------------------------------------------------------------------------
-let save = { best: 0, reached: 0, muted: false, stageBest: {}, learned: false, master: false, masterBest: 0 };
+let save = { best: 0, reached: 0, muted: false, stageBest: {}, learned: false, master: false, masterBest: 0, pilgrim: false };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("luminaries") || "{}")); } catch (e) { }
 const store = () => { try { localStorage.setItem("luminaries", JSON.stringify(save)); } catch (e) { } };
+// Master is earned: it opens once the whole Pilgrimage has been finished.
+const masterOpen = () => !!(save.pilgrim || save.master);
+let resetArm = -99;
+function resetProgress() { save = { best: 0, reached: 0, muted: save.muted, stageBest: {}, learned: false, master: false, masterBest: 0, pilgrim: false }; store(); }
+// How fast a gift's message rises (pixels a second) until it leaves the screen.
+const GIFT_DRIFT = 6.5;
 Sound.muted = !!save.muted;
 
 // ---- The game -----------------------------------------------------------------------------------
@@ -76,6 +82,7 @@ const MASTER = [
 ];
 const masterStage = (z) => STAGE_BY_ID[MASTER[z].id] ?? STAGE_BY_ID.therese;
 function start(mode, si) {
+  if (mode === "master" && !masterOpen()) { state = "master"; return; }
   Sound.init();
   if (mode === "master") si = masterStage(0);
   if (mode === "tutorial") si = STAGE_BY_ID.francis ?? STAGE_BY_ID.teresa;
@@ -280,6 +287,7 @@ function finish(won) {
   if (G.score > save.best) { save.best = G.score; G.newBest = true; }
   if (G.mode === "single") { const k = G.stage.id; if (G.score > (save.stageBest[k] || 0)) save.stageBest[k] = G.score; }
   if (G.mode === "master") save.masterBest = Math.max(save.masterBest || 0, G.score);
+  if (G.mode === "pilgrimage" && won) save.pilgrim = true;
   store();
   state = "over"; overT = 0;
   if (won) { Sound.muffle(false); Sfx.bonus(2); }
@@ -290,7 +298,8 @@ function useGift() {
   G.gift = 0;
   tutEvent("gift");
   const g = G.stage.gift;
-  pop(g.name.toUpperCase(), "#ffffff", 20, g.about);
+  // The gift's name and what it does rise slowly up and away; nothing else pushes them off.
+  G.giftMsg = { str: g.name.toUpperCase(), sub: g.about, t: 0 };
   Sfx.gift();
   if (g.kind === "mono") G.queue = G.queue.map(() => newPiece({ mono: true }));
   else if (g.kind === "lumen" || g.kind === "lumen2") for (const q of G.queue.slice(0, g.kind === "lumen2" ? 2 : 1)) { q.gems = [false, false, false, false]; q.gems[Math.floor(Math.random() * 4)] = true; }
@@ -400,6 +409,7 @@ function fallSpeed() {
 function stepPlay(dt) {
   G.time += dt; G.stageTime += dt;
   for (const q of G.pops) q.t += dt; G.pops = G.pops.filter((q) => q.t < 1.8);
+  if (G.giftMsg) { G.giftMsg.t += dt; if (FY + 70 - G.giftMsg.t * GIFT_DRIFT < -50) G.giftMsg = null; }
   for (const p of G.parts) { p.life -= dt; p.vy += (p.petal ? 30 : 220) * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.rot !== undefined) p.rot += dt * 4; }
   G.parts = G.parts.filter((p) => p.life > 0);
   if (G.rings) { for (const r of G.rings) r.t += dt; G.rings = G.rings.filter((r) => r.t < 0.5); }
@@ -599,6 +609,11 @@ function drawPlay(quiet) {
     text(q.str, W / 2, y, { align: "center", size: q.size, weight: 800, color: q.color, alpha: a, glow: "rgba(0,0,0,0.8)", blur: 8, spacing: 1.5 });
     if (q.sub) { const ls = wrap(q.sub, 280, "500 9px " + FONT.ui); ls.slice(0, 2).forEach((l, k) => text(l, W / 2, y + 13 + k * 11, { align: "center", size: 9, weight: 500, color: "#ffffff", alpha: a * 0.9, glow: "rgba(0,0,0,0.9)", blur: 6 })); }
   });
+  if (G.giftMsg && !quiet) {
+    const q = G.giftMsg, a = Math.min(1, q.t / 0.25), y = FY + 70 - q.t * GIFT_DRIFT;
+    text(q.str, W / 2, y, { align: "center", size: 20, weight: 800, color: "#ffffff", alpha: a, glow: "rgba(0,0,0,0.8)", blur: 8, spacing: 1.5, max: 560 });
+    wrap(q.sub, 300, "500 10px " + FONT.ui).slice(0, 3).forEach((l, k) => text(l, W / 2, y + 15 + k * 12, { align: "center", size: 10, weight: 500, color: "#ffffff", alpha: a * 0.95, glow: "rgba(0,0,0,0.9)", blur: 6 }));
+  }
   if (G.banner.t < 4.2 && !quiet) drawBanner(st, G.banner.t);
   if (G.over) { ctx.fillStyle = `rgba(0,0,0,${Math.min(0.6, G.overT * 0.4)})`; ctx.fillRect(0, 0, W, H); }
 }
@@ -673,7 +688,7 @@ function button(label, x, y, w, h, o) {
   ctx.fillStyle = hot ? "rgba(255,255,255,0.95)" : "rgba(10,8,20,0.55)"; roundRect(x, y, w, h, h / 2); ctx.fill();
   ctx.strokeStyle = o.color || "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.2; roundRect(x, y, w, h, h / 2); ctx.stroke();
   ctx.restore();
-  text(label, x + w / 2, y + h / 2 + (o.size || 11) * 0.36, { align: "center", size: o.size || 11, weight: 700, color: hot ? "#140c20" : "#ffffff", spacing: 2 });
+  text(label, x + w / 2, y + h / 2 + (o.size || 11) * 0.36, { align: "center", size: o.size || 11, weight: 700, color: hot ? "#140c20" : "#ffffff", spacing: 2, max: w - 18 });
   const b = { x, y, w, h, act: o.act }; buttons.push(b); return b;
 }
 function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
@@ -695,9 +710,12 @@ function drawTitle(dt) {
   } else button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
   button("LEARN TO PLAY", W / 2 - 186, 210, 180, 22, { hot: !save.learned, act: () => start("tutorial", 0) });
   button("SINGLE STAGE", W / 2 + 6, 210, 180, 22, { act: () => { state = "stages"; } });
-  button(save.master ? "MASTER  ✦" : "MASTER", W / 2 - 186, 240, 180, 22, { act: () => { state = "master"; } });
+  button(save.master ? "MASTER  ✦" : masterOpen() ? "MASTER" : "MASTER  · LOCKED", W / 2 - 186, 240, 180, 22, { size: masterOpen() ? 11 : 9, act: () => { state = "master"; } });
   button("HOW TO PLAY", W / 2 + 6, 240, 180, 22, { act: () => { helpFrom = "title"; state = "help"; } });
-  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 50, 272, 100, 18, { size: 9, act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
+  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 186, 272, 180, 18, { size: 9, act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
+  // Reset progress: a second tap within four seconds confirms.
+  const armed = menuT - resetArm < 4;
+  button(armed ? "TAP AGAIN TO ERASE ALL" : "RESET PROGRESS", W / 2 + 6, 272, 180, 18, { size: 9, color: armed ? "#ff7a8a" : undefined, act: () => { if (menuT - resetArm < 4) { resetProgress(); resetArm = -99; } else resetArm = menuT; } });
   if (save.master) text("DOCTOR OPTIME", W / 2, 304, { align: "center", size: 11, weight: 700, font: FONT.title, color: "#ffe8a0", glow: "rgba(255,220,140,0.8)", blur: 10, spacing: 3 });
   text("The Pilgrimage: all " + STAGES.length + " Doctors of the Church, in the order of their lives" + (save.best ? "   ·   best " + save.best.toLocaleString() : ""), W / 2, 330, { align: "center", size: 9, weight: 600, color: "rgba(255,255,255,0.7)", max: 600 });
   if (!Sound.ctx()) text("Tap anywhere to begin with sound", W / 2, 346, { align: "center", size: 9, weight: 600, color: "#ffe8c0", alpha: 0.6 + Math.sin(menuT * 4) * 0.4 });
@@ -746,6 +764,11 @@ function drawMaster(dt) {
     text(s2.name, 200, y + 16, { size: 11, weight: 700, font: FONT.title, color: "#ffffff", max: 190 });
     text(Z.quota + " squares in " + Z.secs + "s", 506, y + 16, { align: "right", size: 9, weight: 600, color: "#e8e0ff" });
   });
+  if (!masterOpen()) {
+    text("Master opens once you have finished the Pilgrimage.", W / 2, 286, { align: "center", size: 11, weight: "italic 500", font: FONT.quote, color: "#ffe8c0", max: 560 });
+    button("BACK", W / 2 - 70, 300, 140, 26, { hot: true, act: () => { state = "title"; } });
+    return;
+  }
   if (save.masterBest) text("best " + save.masterBest.toLocaleString() + (save.master ? "   ·   DOCTOR OPTIME" : ""), W / 2, 284, { align: "center", size: 9, weight: 600, color: "#ffe8c0" });
   button("BEGIN", W / 2 - 150, 300, 140, 26, { hot: true, act: () => start("master", 0) });
   button("BACK", W / 2 + 10, 300, 140, 26, { act: () => { state = "title"; } });
