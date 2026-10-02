@@ -3383,7 +3383,7 @@ function drawScene(t) {
   text(game.free ? "WHAT A RUN!" : won ? "VICTORY!" : "THE DEMON WINS THIS ONE", W / 2, 3, { align: "center", size: 9, color: won ? "#ffe08a" : "#ff8a7a" });
   // What the saint says, a letter at a time.
   if (u > 0.45) {
-    const shown = scene.line.slice(0, Math.floor((u - 0.45) * 45)), lines = wrapText(scene.line, 8, 140), bx = 158, by = 34, bh = 18 + lines.length * 11;
+    const shown = scene.line.slice(0, Math.floor((u - 0.45) * 45)), lines = wrapText(scene.line, 8, 138, true), bx = 158, by = 34, bh = 18 + lines.length * 11;
     rect(bx - 1, by - 1, 152, bh + 2, "#140c1c"); rect(bx, by, 150, bh, "#fff8ec");
     ctx.fillStyle = "#fff8ec"; ctx.beginPath(); ctx.moveTo(bx, by + bh - 12); ctx.lineTo(bx - 12, by + bh + 2); ctx.lineTo(bx + 6, by + bh - 2); ctx.fill();
     text(s.name.toUpperCase(), bx + 5, by + 3, { size: 7, color: "#7a1a2e", edge: null });
@@ -3396,7 +3396,7 @@ function drawScene(t) {
 }
 function drawDone(t) {
   drawPlay(t);
-  rect(0, 0, W, H, "#000000b8");
+  rect(0, 0, W, H, "#0e0a18f0");
   if (game.tutorial) {
     text("THE NOVITIATE IS DONE", W / 2, 14, { align: "center", color: "#ffe08a", size: 14 });
     text("“Listen, O my son, to the precepts of thy master.”  Rule of St. Benedict", W / 2, 36, { align: "center", color: "#fff0c8", size: 7, serif: true });
@@ -3443,7 +3443,7 @@ function drawDone(t) {
     // A new trick learned: shown, with how to do it.
     const nk = game.newTricks[0];
     rect(W / 2 - 110, 86, 220, 36, "#2a2240"); rect(W / 2 - 110, 86, 220, 1, "#e8b94a");
-    ctx.save(); ctx.beginPath(); ctx.rect(W / 2 - 110, 86, 40, 36); ctx.clip(); drawSaint(demoRunner(W / 2 - 90, 116, nk, t), t); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(W / 2 - 110, 86, 40, 36); ctx.clip(); ctx.translate(W / 2 - 90, 112); ctx.scale(0.72, 0.72); ctx.translate(-(W / 2 - 90), -112); drawSaint(demoRunner(W / 2 - 90, 112, nk, t), t); ctx.restore();
     text("NEW TRICK" + (game.newTricks.length > 1 ? "S" : "") + ": " + game.newTricks.map((q) => nameOf(q, P).toUpperCase()).join(", "), W / 2 - 64, 89, { size: 7, color: "#ffe08a" });
     game.newTricks.forEach((q, i) => text(arrows(q.keys) + "   " + q.pts + " pts, " + q.dur.toFixed(2) + "s of air", W / 2 - 64, 99 + i * 9, { size: 7, color: "#ffffff" }));
   } else if (game.zone >= ZONES.length - 1 && game.won) text("God alone suffices.   St. Teresa of Ávila", W / 2, 100, { align: "center", color: "#fff4c0", size: 9, serif: true });
@@ -3452,7 +3452,6 @@ function drawDone(t) {
     const ns = game.newSaints.map((s) => s.name).join(" and ");
     text("NEW SAINT: " + ns.toUpperCase() + (game.newSaints.some((s) => s.id === "benedict") ? "  (every saint won!)" : ""), W / 2, 123, { align: "center", color: "#8ae86a", size: 7 });
   }
-  if (D && D.sayT > 0) bubble(D.say, W - 70, 150, "center");
   const last = game.zone >= ZONES.length - 1, nextOpen = !last;
   const again = button("AGAIN", W / 2 - 154, 132, 100, 20, !nextOpen);
   const next = nextOpen ? button("NEXT MANSION", W / 2 - 50, 132, 100, 20, true) : null;
@@ -3497,15 +3496,19 @@ function raceVerse(won, y) {
 }
 function drawPause(t) {
   drawPlay(t);
-  rect(0, 0, W, H, "#000000c0");
+  rect(0, 0, W, H, "#0e0a18e8");
   text("PAUSED", W / 2, 8, { align: "center", color: "#ffe08a", size: 14 });
-  text("Your saint runs alone. Tap anywhere to jump; keep your finger down to float.", W / 2, 30, { align: "center", size: 7 });
-  text("In the air, arrows come up at the bottom right: tap them for tricks (→ alone: the quick one).", W / 2, 41, { align: "center", size: 7, color: "#c8f0ff" });
-  text("Finish every trick before you land, or you crash (clouds bounce you, and keep your surge).", W / 2, 52, { align: "center", size: 7 });
-  text("Land a combo for points × tricks, and a surge; land again while surging and it stacks.", W / 2, 63, { align: "center", size: 7 });
-  text("Once a race, your → quick trick throws your saint's gift after the demon, ahead or behind.", W / 2, 72, { align: "center", size: 6, color: "#fff4a0" });
-  const go = button("RESUME", W / 2 - 130, 84, 80, 20, true), book = button("TRICKS", W / 2 - 40, 84, 80, 20, false), quit = button(game.free ? "END RUN" : "QUIT", W / 2 + 50, 84, 80, 20, false);
-  const skip = game.tutorial ? button("SKIP THE LESSONS", W / 2 - 60, 116, 120, 18, false, 8) : null;
+  // The help, each line wrapped to fit the screen.
+  let hy = 28;
+  for (const [str, c] of [["Tap anywhere to jump; keep your finger down to float.", "#ffffff"],
+    ["In the air, tap the arrows at the bottom right for tricks; → alone is the quick one.", "#c8f0ff"],
+    ["Finish each trick before you land, or crash. Clouds bounce you and keep your surge.", "#ffffff"],
+    ["A combo pays points × tricks; land again while surging and the surge stacks.", "#c8f0ff"],
+    ["Once a race, the → quick trick throws your gift at the demon, ahead or behind.", "#fff4a0"]])
+    for (const l of wrapText(str, 6, W - 24)) { text(l, W / 2, hy, { align: "center", size: 6, color: c }); hy += 8; }
+  const by = Math.max(84, hy + 6);
+  const go = button("RESUME", W / 2 - 130, by, 80, 20, true), book = button("TRICKS", W / 2 - 40, by, 80, 20, false), quit = button(game.free ? "END RUN" : "QUIT", W / 2 + 50, by, 80, 20, false);
+  const skip = game.tutorial ? button("SKIP THE LESSONS", W / 2 - 60, by + 28, 120, 18, false, 8) : null;
   for (const tp of input.taps) {
     if (tp.key === "KeyP" || tp.key === "Escape" || tp.key === "Enter" || (tp.x !== undefined && inBox(tp, go))) { state = "play"; input.jumpHeld = false; input.rushHeld = false; pointers.clear(); }
     else if (tp.x !== undefined && inBox(tp, book)) { bookBack = "pause"; state = "book"; }
