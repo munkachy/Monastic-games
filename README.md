@@ -230,9 +230,11 @@ only gets a saint so far. Every trick landed on his feet sets
 off a surge: his feet become a wheel and he flies along, faster for more and
 harder tricks and for a perfect landing, and then, little by little, he is
 running again. The surge is the only way to go faster than a run. Land
-again while still surging and the surges stack: up to six deep, each a
-little faster, their time added together, shown as six flames at the top
-right. A crash, or being hit by the saint's shot, loses the whole stack. The same rule holds for the demons.
+again while still surging and the surges stack, shown as six flames at
+the top right: a one-arrow move lights none, a flip one, and a great trick
+(the Sign of the Cross, the Thurible, the triple flip, the saint's own
+trick, the Te Deum) two, at most three in one landing. Each flame past the
+first adds speed, and the surges' time adds up. A crash, or being hit by the saint's shot, loses the whole stack. The same rule holds for the demons.
 
 **The way.** Great ramps throw the saint high, and the greatest, Jacob's
 Ladder (Genesis 28:12), stands with angels going up and down it. The ground
