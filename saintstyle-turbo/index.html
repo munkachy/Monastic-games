@@ -896,32 +896,6 @@ const hms = (t) => Math.floor(t / 60) + ":" + String(Math.floor(t % 60)).padStar
 const commas = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 function bands(colors, y0, y1) { const n = colors.length, h = (y1 - y0) / n; colors.forEach((c, i) => rect(0, y0 + i * h, W, h + 1, c)); }
 
-// ---- The running verses ------------------------------------------------------------
-// They go by on a ticker at the foot of the screen, at a steady reading pace
-// however fast the saint is running. Douay-Rheims.
-const VERSES = [
-  ["I have run the way of thy commandments, when thou didst enlarge my heart.", "Psalm 118:32"],
-  ["He hath rejoiced as a giant to run the way.", "Psalm 18:6"],
-  ["They that hope in the Lord shall renew their strength, they shall take wings as eagles, they shall run and not be weary, they shall walk and not faint.", "Isaias 40:31"],
-  ["So run that you may obtain.", "1 Corinthians 9:24"],
-  ["Let us run by patience to the fight proposed to us: looking on Jesus, the author and finisher of faith.", "Hebrews 12:1–2"],
-  ["Who hath made my feet like the feet of harts: and who setteth me upon high places.", "Psalm 17:34"],
-  ["I press towards the mark, to the prize of the supernal vocation of God in Christ Jesus.", "Philippians 3:14"],
-  ["When thou runnest thou shalt not meet a stumblingblock.", "Proverbs 4:12"],
-  ["How beautiful upon the mountains are the feet of him that bringeth good tidings.", "Isaias 52:7"],
-  ["His word runneth swiftly.", "Psalm 147:4"],
-  ["Who will give me wings like a dove, and I will fly and be at rest?", "Psalm 54:7"],
-  ["Thy word is a lamp to my feet, and a light to my paths.", "Psalm 118:105"],
-  ["The path of the just, as a shining light, goeth forwards and increaseth even to perfect day.", "Proverbs 4:18"],
-  ["They shall go from virtue to virtue: the God of gods shall be seen in Sion.", "Psalm 83:8"],
-  ["Behold he cometh leaping upon the mountains, skipping over the hills.", "Canticle of Canticles 2:8"],
-  ["Write the vision, and make it plain upon tables: that he that readeth it may run over it.", "Habacuc 2:2"],
-  ["I have fought a good fight, I have finished my course, I have kept the faith.", "2 Timothy 4:7"],
-  ["David danced with all his might before the Lord.", "2 Kings 6:14"],
-  ["A time to mourn, and a time to dance.", "Ecclesiastes 3:4"],
-  ["God is ascended with jubilee, and the Lord with the sound of trumpet.", "Psalm 46:6"],
-];
-
 // ---- The seven deadly sins ----------------------------------------------------------
 // A demon races the saint through each mansion, a different sin each time.
 // The colours and the little marks of each are those of Benedictine Bricks.
@@ -2890,7 +2864,6 @@ function drawPlay(t) {
   if (fade > 0) { ctx.globalAlpha = fade; rect(0, 0, W, H, "#000"); ctx.globalAlpha = 1; fade -= 1 / 60; }
   drawHud(t);
   drawCombo(t);
-  drawTicker(t);
   if (!tutor && !(P.coach && P.coach.t < 3 && P.mode === "air")) padHint = null;
   if (tutor) drawTutor(t);
   else if (P.coach && P.coach.t < 3 && P.mode === "air") drawCoach(t);
@@ -3022,7 +2995,7 @@ function drawCombo(t) {
   const fadeOut = C.state === "live" ? 1 : clamp((1.6 - C.t) / 0.5, 0, 1);
   if (fadeOut <= 0) return;
   ctx.globalAlpha = fadeOut;
-  const y = H - 37, names = C.names.map((n) => n.toUpperCase());
+  const y = H - 27, names = C.names.map((n) => n.toUpperCase());
   let shown = names.slice(), line = "";
   const live = C.live && C.state === "live" ? C.live.name.toUpperCase() : null;
   const make = () => (shown.length ? (shown.length < names.length ? "... + " : "") + shown.join(" + ") : "") + (live ? (shown.length ? " + " : "") + live : "");
@@ -3051,7 +3024,7 @@ function drawGesture(keys, done, x, y, t, big) {
   padHint = keys[Math.min(done, keys.length - 1)];
 }
 // ---- The arrows: a pad at the bottom right, there whenever the saint is in the air ----
-const PAD = { x: W - 44, y: H - 50, r: 24, s: 22 };
+const PAD = { x: W - 42, y: H - 40, r: 24, s: 22 };
 const PAD_AT = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
 let padHint = null, padShow = 0;
 // Which arrow a point on the screen is on, if any (generously: anywhere within reach of the pad).
@@ -3099,18 +3072,6 @@ function drawCoach(t) {
   text("NEW TRICK: " + nameOf(k, P).toUpperCase(), W / 2, 32, { align: "center", size: 8, color: "#ffe08a" });
   text("You have air enough. Tap " + arrows(k.keys), W / 2, 42, { align: "center", size: 7, color: "#ffffff" });
   if (P.swipes < k.keys.length) drawGesture(k.keys, Math.min(P.swipes, k.keys.length - 1), W / 2, 104, t, true);
-}
-// The ticker: the running verses go by along the foot of the screen at a
-// steady reading pace, however fast the saint is going.
-const TICKER = VERSES.map(([v, ref]) => v + "  — " + ref).join("     ✠     ");
-let tickerX = 0, tickerW = 0;
-function drawTicker(t) {
-  rect(0, H - 13, W, 13, "#140c1cdd"); rect(0, H - 13, W, 1, "#e8b94a");
-  if (!tickerW) tickerW = measure(TICKER + "     ✠     ", 8, true);
-  tickerX = (tickerX + 26 / 60) % tickerW;
-  ctx.save(); ctx.beginPath(); ctx.rect(0, H - 12, W, 12); ctx.clip();
-  for (let x = -tickerX; x < W; x += tickerW) text(TICKER + "     ✠     ", x, H - 11, { color: "#fff0c8", size: 8, serif: true, edge: null });
-  ctx.restore();
 }
 
 // ---- Menus --------------------------------------------------------------------------------

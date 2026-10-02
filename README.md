@@ -331,11 +331,6 @@ slowing time and showing the arrows to tap when a trick is wanted, and putting t
 saint back to try again when it goes wrong. The book of tricks (from the
 title or the pause screen) shows every trick done, which arrows make it, what it
 is worth and when it is learned.
-
-Along the foot of the screen a ticker carries the Douay verses about running
-(Psalm 118:32, "I have run the way of thy commandments"; Isaias 40:31;
-Hebrews 12:1–2; 1 Corinthians 9:24 and more) at a steady reading pace.
-
 ## Canticle Mansion
 
 A Benedictine monk explores a great house, and the lands about it, made of
