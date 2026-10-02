@@ -236,7 +236,7 @@ right. A crash, or being hit by the saint's shot, loses the whole stack. The sam
 
 **The way.** Great ramps throw the saint high, and the greatest, Jacob's
 Ladder (Genesis 28:12), stands with angels going up and down it. The ground
-has few obstacles. Every loop throws the saint out faster than he went in
+has few obstacles and no gaps to fall into anywhere. Every loop throws the saint out faster than he went in
 (a quarter again, and a push), and runs on into a ramp that throws him up
 to the clouds. The clouds are all good: long roads with nothing on them but
 neumes, where a surge and its stack never run down and a trick landed too
