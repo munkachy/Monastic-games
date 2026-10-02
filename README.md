@@ -21,7 +21,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
 | [SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/) | `saintstyle-turbo/` | A trick racer with the saints of Psalter Runner: the seven deadly sins race them through St. Teresa's seven mansions, by the same rules; ramps, loops, rails, tricks on an arrow pad, combos, stacking surges, surges, a tutorial, and adaptive funk music; a single HTML file with nothing to load |
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
-| [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | `luminaries/` | A falling-block music puzzle in the spirit of Lumines through the Doctors of the Church: a stage, a world and a song for each Doctor, synthesised live in the browser, with their words on a ticker beneath the field |
+| [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | `luminaries/` | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church: a stage, a world, a song and a gift for each Doctor, a tutorial, and Master mode, synthesised live in the browser, with their words on a ticker beneath the field |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
 ## Playing locally
@@ -357,54 +357,64 @@ title or the pause screen) shows every trick done, which arrows make it, what it
 is worth and when it is learned.
 ## Luminaries
 
-A falling-block music puzzle in the spirit of Lumines, through the Doctors of
-the Church. Blocks of four fall in, in two colours; turn them and move them so
-that four of one colour meet in a square. A line of light sweeps the field in
-time with the music and takes away every square it passes. Clear four or more
-in one sweep for a streak.
+A falling-block music puzzle in the spirit of Lumines, through all
+thirty-eight Doctors of the Church. Blocks of four fall in, in two colours;
+turn them and move them so that four of one colour meet in a square. A line
+of light sweeps the field in time with the music and takes away every square
+it passes. Clear four or more in one sweep for a streak.
 
-**The Pilgrimage** goes through the Doctors in the order of their deaths. Each
-is a stage with its own colours, its own world behind the field, and its own
-song. The stage changes in the middle of play, as in Lumines, with the next
-song starting on the downbeat. The first six are built:
+**Learn to Play** is a tutorial in eight short lessons (moving, turning,
+dropping, making a square, the line of light, streaks, the light block, and
+the Doctor's gift), played by the Lake of Annecy with St. Francis de Sales.
 
-- St. Augustine (*Restless (Until It Rests)*): neo-soul funk that will not come
-  home until a big clear lands it on D minor, with the Te Deum over it.
-- St. Hildegard (*Viriditas*): melodic house in E Phrygian, with her own *O
-  virtus Sapientiae* sung high and a sub bass falling to the bottom.
-- St. Thomas Aquinas (*Summa Funkologica*): progressive funk shaped like an
-  article of the Summa: objections in 7/8, *sed contra* in 5/4, *respondeo*
-  in 4/4 with his own *Pange lingua*, replies in 7/8.
-- St. Teresa of Ávila (*Seven Mansions*): bright nu-disco with palmas and a
-  crystal castle of seven mansions.
-- St. John of the Cross (*Noche Oscura*): almost nothing: kick, sub bass,
-  silence, and one far light.
-- St. Thérèse (*Shower of Roses*): bright, girly, euphoric techno, with roses
-  and falling petals.
+**The Pilgrimage** goes through the Doctors in the order of their deaths, from
+St. Irenaeus (c. 202) to St. Thérèse (1897). Each Doctor is a stage with its
+own colours, its own world behind the field, its own song and its own gift.
+The stage changes in the middle of play, as in Lumines, with the next song
+starting on the downbeat. Continue picks up at the furthest Doctor reached.
 
 **Single Stage** plays one Doctor for as long as you last.
 
-**The Doctor's gift.** Clearing squares fills a gift (✦), different for each
-Doctor:
-- *Tolle, lege*: the next three blocks in one colour.
-- *Viriditas*: every lonely block turns to the other colour.
-- *Summa*: the next block carries a light that sweeps away its whole colour.
-- *Let nothing disturb thee*: the blocks hang still for twenty seconds.
-- *Dark Night*: the line waits eight beats while you build.
-- *Shower of Roses*: the top blocks of the tallest columns are taken up.
+**Master** is five zones, fast from the first block and with no gifts: clear
+each zone's squares before its time runs out, and finish all five to be named
+*Doctor Optime*. It opens once the Pilgrimage has been finished.
 
-**The ticker.** The Doctors' words pass under the field at a reading pace.
-Every quotation is copied from a public-domain translation and cited:
-- Pusey's *Confessions*.
-- The English Dominicans' *Summa*.
-- Longfellow's version of St. Teresa's bookmark, the Stanbrook *Interior
-  Castle*, and Lewis's *Life*.
-- David Lewis's St. John of the Cross.
-- Taylor's *Story of a Soul*.
+**Reset Progress** on the title screen erases saved progress (tap it twice).
 
-St. Hildegard's songs and St. Thomas's hymns are newly translated from the
-Latin. The chant melodies come from the public-domain chant books, as
-transcribed at GregoBase.
+**The Doctor's gift.** Clearing squares fills a gift (✦). Each Doctor gives
+one of these, named for that Doctor (*Tolle, lege*; *Viriditas*; *Summa*;
+*Contra Mundum*; *The Cell*; *Kindly Light*; and so on):
+- the next blocks come in one colour;
+- every lonely block turns to the other colour;
+- the next block (or two) carries a light that takes its whole colour;
+- the blocks fall at half speed for thirty seconds;
+- the blocks hang still for twenty seconds;
+- the line of light waits eight beats while you build;
+- the lowest row, or the top two blocks of every column, are struck away;
+- every square on the field is taken at once;
+- roses take up the top blocks of the tallest columns.
+The gift's name and what it does rise slowly up the screen and away.
+
+**The songs.** Every Doctor has a song in a modern style chosen for that
+Doctor: soul-funk for St. Irenaeus, swing jazz-funk for St. Hilary, a key that
+climbs at each of St. Athanasius's five exiles, dub for St. Cyril of
+Jerusalem's mysteries, big-band gospel for St. John Chrysostom, the Doctors'
+hymn *Iste Confessor* over a groove for St. Gregory the Great, chiptune for
+St. Isidore, the eight tones in turn for St. John Damascene, a duduk for St.
+Gregory of Narek, a scale that rises for ever for St. Anselm, a slow jam for
+St. Bernard, *Summa Funkologica* for St. Thomas, a heartbeat for St.
+Catherine, flamenco for St. John of Ávila, mandolins for St. Alphonsus, an
+organ in the fog for St. John Henry Newman, and many more.
+
+**The ticker.** The Doctors' words pass under the field at a reading pace:
+376 quotations in all. Each one is copied from a public-domain translation
+and cited (the Ante-Nicene and Nicene and Post-Nicene Fathers, Pusey,
+Eales, Thorold, Deane, Allies, Sellar, the Stanbrook Benedictines, Grimm,
+Lewis, Taylor and others), or newly translated from the Latin and marked
+"tr. for Luminaries" (among them St. Peter Chrysologus, St. Isidore, St. Peter
+Damian, St. Anthony, St. Bonaventure, St. Albert, St. Peter Canisius and St.
+Lawrence of Brindisi). The chant melodies come from the public-domain chant
+books, as transcribed at GregoBase.
 
 **Controls.** On a phone, played sideways:
 - Drag sideways to move.
