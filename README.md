@@ -10,6 +10,7 @@ serve the whole repo as-is.
 - **[Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/)**: run all 150 psalms with the saints (made for phones)
 - **[SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/)**: the saints race the seven deadly sins through St. Teresa's Interior Castle: big air, tricks, combos and funk (made for phones)
 - **[Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/)**: explore a mansion made of the Canticle of Canticles (made for phones)
+- **[Luminaries](https://munkachy.github.io/Monastic-games/luminaries/)**: a Lumines-style music puzzle through the Doctors of the Church (made for phones)
 - **[Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html)**: assemble a squad, level up, light up the world ([about the game](https://munkachy.github.io/Monastic-games/new-apologetics/))
 
 All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/Monastic-games/)**
@@ -20,6 +21,7 @@ All the games: **[munkachy.github.io/Monastic-games](https://munkachy.github.io/
 | [Psalter Runner](https://munkachy.github.io/Monastic-games/psalter-runner/) | `psalter-runner/` | A 16-bit auto-runner for phones through all 150 psalms, with ten saints to play; a single HTML file with nothing to load |
 | [SaintStyle Turbo](https://munkachy.github.io/Monastic-games/saintstyle-turbo/) | `saintstyle-turbo/` | A trick racer with the saints of Psalter Runner: the seven deadly sins race them through St. Teresa's seven mansions, by the same rules; ramps, loops, rails, tricks on an arrow pad, combos, stacking surges, surges, a tutorial, and adaptive funk music; a single HTML file with nothing to load |
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | `canticle-mansion/` | An exploring, climbing and building game through the Canticle of Canticles: a Benedictine monk in a mansion whose rooms are made of the verses |
+| [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | `luminaries/` | A falling-block music puzzle in the spirit of Lumines through the Doctors of the Church: a stage, a world and a song for each Doctor, synthesised live in the browser, with their words on a ticker beneath the field |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | `new-apologetics/` | Assemble a squad. Level up. Light up the world. A team battler starring today's Catholic apologists (still under review) |
 
 ## Playing locally
@@ -353,6 +355,75 @@ slowing time and showing the arrows to tap when a trick is wanted, and putting t
 saint back to try again when it goes wrong. The book of tricks (from the
 title or the pause screen) shows every trick done, which arrows make it, what it
 is worth and when it is learned.
+## Luminaries
+
+A falling-block music puzzle in the spirit of Lumines, through the Doctors of
+the Church. Blocks of four fall in, in two colours; turn them and move them so
+that four of one colour meet in a square. A line of light sweeps the field in
+time with the music and takes away every square it passes. Clear four or more
+in one sweep for a streak.
+
+**The Pilgrimage** goes through the Doctors in the order of their deaths. Each
+is a stage with its own colours, its own world behind the field, and its own
+song. The stage changes in the middle of play, as in Lumines, with the next
+song starting on the downbeat. The first six are built:
+
+- St. Augustine (*Restless (Until It Rests)*): neo-soul funk that will not come
+  home until a big clear lands it on D minor, with the Te Deum over it.
+- St. Hildegard (*Viriditas*): melodic house in E Phrygian, with her own *O
+  virtus Sapientiae* sung high and a sub bass falling to the bottom.
+- St. Thomas Aquinas (*Summa Funkologica*): progressive funk shaped like an
+  article of the Summa: objections in 7/8, *sed contra* in 5/4, *respondeo*
+  in 4/4 with his own *Pange lingua*, replies in 7/8.
+- St. Teresa of Ávila (*Seven Mansions*): bright nu-disco with palmas and a
+  crystal castle of seven mansions.
+- St. John of the Cross (*Noche Oscura*): almost nothing: kick, sub bass,
+  silence, and one far light.
+- St. Thérèse (*Shower of Roses*): bright, girly, euphoric techno, with roses
+  and falling petals.
+
+**Single Stage** plays one Doctor for as long as you last.
+
+**The Doctor's gift.** Clearing squares fills a gift (✦), different for each
+Doctor:
+- *Tolle, lege*: the next three blocks in one colour.
+- *Viriditas*: every lonely block turns to the other colour.
+- *Summa*: the next block carries a light that sweeps away its whole colour.
+- *Let nothing disturb thee*: the blocks hang still for twenty seconds.
+- *Dark Night*: the line waits eight beats while you build.
+- *Shower of Roses*: the top blocks of the tallest columns are taken up.
+
+**The ticker.** The Doctors' words pass under the field at a reading pace.
+Every quotation is copied from a public-domain translation and cited:
+- Pusey's *Confessions*.
+- The English Dominicans' *Summa*.
+- Longfellow's version of St. Teresa's bookmark, the Stanbrook *Interior
+  Castle*, and Lewis's *Life*.
+- David Lewis's St. John of the Cross.
+- Taylor's *Story of a Soul*.
+
+St. Hildegard's songs and St. Thomas's hymns are newly translated from the
+Latin. The chant melodies come from the public-domain chant books, as
+transcribed at GregoBase.
+
+**Controls.** On a phone, played sideways:
+- Drag sideways to move.
+- Tap to turn: the left half turns one way, the right half the other.
+- Drag down to drop faster; flick down to drop at once.
+- Tap ✦ for the gift.
+
+On a keyboard:
+- ← → move.
+- ↑ or X turns; Z turns back.
+- ↓ drops faster; Space drops at once.
+- G or Shift uses the gift.
+- P pauses; M switches the sound.
+
+The music is synthesised live in the browser (`audio.js`). The band has drums,
+FM keys, supersaw pads, plucks, a formant choir, and a mixing desk: reverb,
+ping-pong delay, sidechain pumping from the kick, and a compressor and
+limiter. Sounds from the game land on the song's grid.
+
 ## Canticle Mansion
 
 A Benedictine monk explores a great house, and the lands about it, made of
