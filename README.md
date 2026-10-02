@@ -266,7 +266,7 @@ the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
 genuflection in the air, a single ← a heel click, all quick, for short jumps (keep the arrow held down
 and the move is held, worth more the longer it lasts;
 let go before landing, or it is a crash); ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, →→ prostration,
-↑↑↑ double flip, ↓↓↓ double back flip, ↑↓→→ the Sign of the Cross (drawn in
+↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
 light on the sky), ↓↑↓↑ the Thurible (swung like the censer at Vespers, with
 incense), ↓↓↑↑← each saint's own trick (which drives the demon back), ↑↑↑↑
 triple flip, and ↑↑↓↓→→ the Te Deum. The flourish and the two flips are known
