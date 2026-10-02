@@ -231,19 +231,18 @@ off a surge: his feet become a wheel and he flies along, faster for more and
 harder tricks and for a perfect landing, and then, little by little, he is
 running again. The surge is the only way to go faster than a run. Land
 again while still surging and the surges stack: up to six deep, each a
-little faster, their time added together. A crash, a storm or the demon's
-own fall loses the whole stack. The same rule holds for the demons.
+little faster, their time added together, shown as six flames at the top
+right. A crash, or being hit by the saint's shot, loses the whole stack. The same rule holds for the demons.
 
 **The way.** Great ramps throw the saint high, and the greatest, Jacob's
 Ladder (Genesis 28:12), stands with angels going up and down it. The ground
-has few obstacles. The heavens are harder: a spring throws the saint up
-onto a road of clouds, and ramps of cloud throw him up to a second road and
-a third, each higher, brighter and richer in neumes. At the very top, the
-Gate of Heaven (Genesis 28:17) throws him higher than anything on earth,
-with the longest fall of all to fill with tricks. But the roads have gaps,
-and storm clouds sit on them (jump those) or hang low over them (do not
-jump under those). A bolt from one throws him straight back down to the
-earth, through every cloud. Nobody runs faster than a run on the clouds. As
+has few obstacles. Every loop throws the saint out faster than he went in
+(a quarter again, and a push), and runs on into a ramp that throws him up
+to the clouds. The clouds are all good: long roads with nothing on them but
+neumes, where a surge and its stack never run down and a trick landed too
+soon only bounces. Ramps of cloud throw him up to a second road and
+sometimes a third, and at the very top the Gate of Heaven (Genesis 28:17)
+gives the longest air in the game, for the biggest combos. As
 he climbs, the country behind sinks away below. Columns of
 wind, the breath of the Spirit (John 3:8), lift him and hold him up. There
 are loops small and large, rails to grind, springs up to roads of cloud, and
@@ -264,7 +263,7 @@ side for each saint's quick flourish, holding up what that saint carries
 (St. Benedict raises his medal, St. Therese her roses, St. Peter the keys,
 St. Lucy her lamp; St. Maurus grabs his board), or tap the arrows for
 the others: a single ↑ is the Leap of Joy (a star jump), a single ↓ a
-genuflection in the air, a single ← a heel click (keep the arrow held down
+genuflection in the air, a single ← a heel click, all quick, for short jumps (keep the arrow held down
 and the move is held, worth more the longer it lasts;
 let go before landing, or it is a crash); ↑↑ front flip, ↓↓ back flip, ↓↑ barrel roll, ←→ prostration,
 ↑↑↑ double flip, ↓↓↓ double back flip, ↑↓←→ the Sign of the Cross (drawn in
