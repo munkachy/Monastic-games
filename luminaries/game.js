@@ -23,7 +23,11 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const FONT = { title: "Cinzel, 'Trajan Pro', Georgia, serif", quote: "'Cormorant Garamond', Georgia, serif", ui: "Montserrat, 'Segoe UI', system-ui, sans-serif" };
 function text(str, x, y, o) {
   o = o || {};
-  ctx.font = (o.weight || 600) + " " + (o.size || 10) + "px " + (o.font || FONT.ui);
+  let size = o.size || 10;
+  ctx.font = (o.weight || 600) + " " + size + "px " + (o.font || FONT.ui);
+  if (o.spacing && ctx.letterSpacing !== undefined) ctx.letterSpacing = o.spacing + "px";
+  // Too wide for its box: smaller, until it fits.
+  if (o.max) { const w = ctx.measureText(str).width; if (w > o.max) { size = Math.max(5.5, size * o.max / w); ctx.font = (o.weight || 600) + " " + size + "px " + (o.font || FONT.ui); } }
   ctx.textAlign = o.align || "left"; ctx.textBaseline = o.base || "alphabetic";
   if (o.spacing && ctx.letterSpacing !== undefined) ctx.letterSpacing = o.spacing + "px";
   if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 10; }
@@ -37,13 +41,20 @@ function wrap(str, width, font) {
   if (line) out.push(line); return out;
 }
 
+function wrapFit(str, width, size, maxLines, weight, font) {
+  for (let sz = size; sz >= 6; sz -= 0.5) { const ls = wrap(str, width, weight + " " + sz + "px " + font); if (ls.length <= maxLines) return { lines: ls, size: sz }; }
+  return { lines: wrap(str, width, weight + " 6px " + font).slice(0, maxLines), size: 6 };
+}
+
 // ---- Saved --------------------------------------------------------------------------------------
-let save = { best: 0, reached: 0, muted: false, stageBest: {} };
+let save = { best: 0, reached: 0, muted: false, stageBest: {}, learned: false, master: false, masterBest: 0 };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("luminaries") || "{}")); } catch (e) { }
 const store = () => { try { localStorage.setItem("luminaries", JSON.stringify(save)); } catch (e) { } };
 Sound.muted = !!save.muted;
 
 // ---- The game -----------------------------------------------------------------------------------
+STAGES.sort((a, b) => a.n - b.n);
+const STAGE_BY_ID = Object.fromEntries(STAGES.map((s, i) => [s.id, i]));
 const TARGET = 50;            // squares to clear in a stage of the Pilgrimage
 const GIFT_FILL = 18;         // squares to fill the gift
 let state = "title", G = null;
@@ -55,17 +66,30 @@ function newPiece(o) {
   if (o.gem || (!mono && G && G.pieces > 8 && Math.random() < 1 / 22)) gems[Math.floor(Math.random() * 4)] = true;
   return { cells, gems, x: 7, row: -2, off: 0 };
 }
+// Master mode: five zones, fast from the start, no gifts. Clear the quota of each before its time runs out.
+const MASTER = [
+  { id: "athanasius", quota: 18, secs: 100, speed: 2.0 },
+  { id: "thomas", quota: 22, secs: 100, speed: 2.4 },
+  { id: "catherine", quota: 26, secs: 100, speed: 2.8 },
+  { id: "chrysostom", quota: 30, secs: 100, speed: 3.2 },
+  { id: "therese", quota: 34, secs: 100, speed: 3.6 },
+];
+const masterStage = (z) => STAGE_BY_ID[MASTER[z].id] ?? STAGE_BY_ID.therese;
 function start(mode, si) {
   Sound.init();
+  if (mode === "master") si = masterStage(0);
+  if (mode === "tutorial") si = STAGE_BY_ID.francis ?? STAGE_BY_ID.teresa;
   G = {
     mode, si, stage: STAGES[si], prev: null, fadeT: 0,
     grid: Array.from({ length: COLS }, () => Array(ROWS).fill(null)),
     falling: [], piece: null, queue: [], spawnT: 0.6, pieces: 0,
     tl: 0, holdT: 0, passSq: 0, combo: 0, score: 0, squares: 0, stageSq: 0, time: 0, stageTime: 0,
-    gift: 0, hangT: 0, over: false, overT: 0, done: false,
+    gift: 0, hangT: 0, calmT: 0, over: false, overT: 0, done: false, zone: 0, zoneSq: 0, zoneT: 0,
     energy: 0, parts: [], pops: [], banner: { t: 0 }, anchors: [], level: 0, danger: 0,
   };
   for (let i = 0; i < 3; i++) G.queue.push(newPiece());
+  G.startSi = si;
+  if (mode === "tutorial") { G.tut = { i: -1, ok: 0, T: {} }; nextLesson(); }
   Sound.muffle(false);
   Sound.play(SONGS[G.stage.song]);
   Ticker.set(G.stage);
@@ -83,19 +107,21 @@ function spawn() {
 }
 function move(dx) {
   const p = G.piece; if (!p) return;
-  if (canAt(p.x + dx, p.row) && (p.off === 0 || canAt(p.x + dx, p.row + 1))) { p.x += dx; Sfx.move(); }
+  if (canAt(p.x + dx, p.row) && (p.off === 0 || canAt(p.x + dx, p.row + 1))) { p.x += dx; Sfx.move(); tutEvent("move"); }
 }
 function rotate(dir) {
   const p = G.piece; if (!p) return;
   const [a, b, c, d] = p.cells, [ga, gb, gc, gd] = p.gems;   // tl tr bl br
   if (dir > 0) { p.cells = [c, a, d, b]; p.gems = [gc, ga, gd, gb]; } else { p.cells = [b, d, a, c]; p.gems = [gb, gd, ga, gc]; }
   Sfx.rotate(dir);
+  tutEvent("turn");
 }
 function hardDrop() {
   const p = G.piece; if (!p) return;
   let n = 0; while (canAt(p.x, p.row + 1)) { p.row++; n++; }
   p.off = 0;
   for (let i = 0; i < 6; i++) G.parts.push({ x: FX + (p.x + Math.random() * 2) * CS, y: FY + (p.row + 2) * CS, vx: (Math.random() - 0.5) * 60, vy: -Math.random() * 40, life: 0.4, c: G.stage.colors.line, s: 2 });
+  tutEvent("drop");
   land(n > 0);
 }
 function land(hard) {
@@ -108,6 +134,7 @@ function land(hard) {
   }
   settle();
   Sfx.land(hard);
+  tutEvent("land");
 }
 // Blocks with nothing under them fall (a block landing half over a gap splits in two).
 function settle() {
@@ -140,11 +167,11 @@ function markSquares() {
   }
   for (const [x, y] of anchors) for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
     const c = G.grid[x + dx][y + dy];
-    if (c.gem) { c.gem = false; chainFrom(x + dx, y + dy); Sfx.lumen(); }
+    if (c.gem) { c.gem = false; chainFrom(x + dx, y + dy); Sfx.lumen(); tutEvent("lumen"); }
   }
   const before = G.anchors.length;
   G.anchors = anchors;
-  if (anchors.length > before) Sfx.square(anchors.length - before);
+  if (anchors.length > before) { Sfx.square(anchors.length - before); tutEvent("square"); }
 }
 function chainFrom(x0, y0) {
   const col = G.grid[x0][y0].c, seen = new Set(), st = [[x0, y0]];
@@ -197,7 +224,8 @@ function commit() {
     G.grid[x][y] = null;
   }
   G.rings = G.rings || []; G.rings.push({ x: FX + G.tl * CS, t: 0 });
-  G.passSq += n; G.squares += n; G.stageSq += n;
+  G.passSq += n; G.squares += n; G.stageSq += n; G.zoneSq += n;
+  tutEvent("clear", n);
   G.gift = Math.min(1, G.gift + n / GIFT_FILL);
   G.energy = Math.min(1, G.energy + 0.15 + n * 0.05);
   Sfx.clear(n, kill.size);
@@ -218,16 +246,22 @@ function endPass() {
     pop(n + (n === 1 ? " SQUARE" : " SQUARES") + (m > 1 ? "  ×" + m : ""), m > 1 ? G.stage.colors.accent : "#ffffff", m > 1 ? 18 : 14, "+" + pts.toLocaleString());
     if (n >= 4) { Sound.fill("home"); Sfx.big(m); }
   } else G.combo = 0;
+  tutEvent("pass", n);
+  // Master: the quota made, on to the next zone (or the title, after the fifth).
+  if (G.mode === "master" && G.zoneSq >= MASTER[G.zone].quota) {
+    if (G.zone < MASTER.length - 1) { G.zone++; G.zoneSq = 0; G.zoneT = 0; setStage(masterStage(G.zone)); pop("ZONE " + (G.zone + 1), "#ffffff", 22, MASTER[G.zone].quota + " squares in " + MASTER[G.zone].secs + " seconds"); }
+    else if (!G.done) { G.done = true; save.master = true; finish(true); }
+  }
   // On through the Pilgrimage.
   if (G.mode === "pilgrimage" && G.stageSq >= TARGET) {
-    if (G.si < STAGES.length - 1) nextStage();
+    if (G.si < STAGES.length - 1) setStage(G.si + 1);
     else if (!G.done) { G.done = true; finish(true); }
   }
 }
-function nextStage() {
+function setStage(si) {
   G.prev = G.stage; G.fadeT = 1.6;
-  G.si++; G.stage = STAGES[G.si]; G.stageSq = 0; G.stageTime = 0;
-  save.reached = Math.max(save.reached, G.si); store();
+  G.si = si; G.stage = STAGES[G.si]; G.stageSq = 0; G.stageTime = 0;
+  if (G.mode === "pilgrimage") { save.reached = Math.max(save.reached, G.si); store(); }
   Sound.queue(SONGS[G.stage.song]);
   Sfx.stage();
   G.banner = { t: 0 };
@@ -236,6 +270,8 @@ function nextStage() {
 function pop(str, color, size, sub) { G.pops.push({ str, color, size, sub, t: 0 }); if (G.pops.length > 3) G.pops.shift(); }
 function gameOver() {
   if (G.over) return;
+  // In the lessons nobody loses: the field is simply cleared.
+  if (G.mode === "tutorial") { clearField(); G.piece = null; G.spawnT = 0.4; return; }
   G.over = true; G.overT = 0; G.piece = null;
   Sfx.over(); Sound.muffle(true, 0.4);
 }
@@ -243,19 +279,39 @@ function finish(won) {
   G.won = won;
   if (G.score > save.best) { save.best = G.score; G.newBest = true; }
   if (G.mode === "single") { const k = G.stage.id; if (G.score > (save.stageBest[k] || 0)) save.stageBest[k] = G.score; }
+  if (G.mode === "master") save.masterBest = Math.max(save.masterBest || 0, G.score);
   store();
   state = "over"; overT = 0;
   if (won) { Sound.muffle(false); Sfx.bonus(2); }
 }
 // The Doctor's gift.
 function useGift() {
-  if (!G || G.gift < 1 || G.over || state !== "play") return;
+  if (!G || G.gift < 1 || G.over || state !== "play" || G.mode === "master") return;
   G.gift = 0;
+  tutEvent("gift");
   const g = G.stage.gift;
   pop(g.name.toUpperCase(), "#ffffff", 20, g.about);
   Sfx.gift();
   if (g.kind === "mono") G.queue = G.queue.map(() => newPiece({ mono: true }));
-  else if (g.kind === "lumen") { G.queue[0].gems = [false, false, false, false]; G.queue[0].gems[Math.floor(Math.random() * 4)] = true; }
+  else if (g.kind === "lumen" || g.kind === "lumen2") for (const q of G.queue.slice(0, g.kind === "lumen2" ? 2 : 1)) { q.gems = [false, false, false, false]; q.gems[Math.floor(Math.random() * 4)] = true; }
+  else if (g.kind === "calm") G.calmT = 30;
+  else if (g.kind === "sweep") {
+    // Every square on the field taken at once, as though the line had passed over it all.
+    for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c && (c.mark || c.chain)) c.lit = true; }
+    commit();
+    G.rings = G.rings || []; for (let x = 0; x <= COLS; x += 2) G.rings.push({ x: FX + x * CS, t: 0 });
+  } else if (g.kind === "bottom" || g.kind === "top2") {
+    // The lowest row lifted away (everything above settles), or the top two blocks of every column.
+    const gone = [];
+    if (g.kind === "bottom") for (let x = 0; x < COLS; x++) { if (G.grid[x][ROWS - 1]) gone.push([x, ROWS - 1]); }
+    else for (let x = 0; x < COLS; x++) { let y = 0; while (y < ROWS && !G.grid[x][y]) y++; for (let k = 0; k < 2 && y + k < ROWS; k++) gone.push([x, y + k]); }
+    for (const [x, y] of gone) {
+      const c = G.grid[x][y], col = (c.c ? G.stage.colors.b : G.stage.colors.a)[1];
+      G.grid[x][y] = null;
+      for (let i = 0; i < 4; i++) G.parts.push({ x: FX + x * CS + 10, y: FY + y * CS + 10, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 140, life: 0.8, c: col, s: 2.5, add: true });
+    }
+    settle();
+  }
   else if (g.kind === "hang") G.hangT = 20;
   else if (g.kind === "hold") G.holdT = (8 * 60) / Sound.bpm();
   else if (g.kind === "green") {
@@ -276,15 +332,70 @@ function useGift() {
     }
   }
 }
+// ---- Learning to play: eight short lessons, on a gentle stage ---------------------------------------
+function clearField() { for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) G.grid[x][y] = null; G.falling = []; G.anchors = []; }
+const put = (x, y, c, gem) => { G.grid[x][y] = { c, gem: !!gem, lit: false, flash: 0.3 }; };
+const fixed = (cells, gem) => ({ cells, gems: cells.map((_, i) => gem === i), x: 7, row: -2, off: 0 });
+const LESSONS = [
+  { title: "Moving", text: "A block of four falls from the top. Drag left or right to move it (or press ← →). Move it, then let it land.",
+    setup() { clearField(); }, done(ev, T) { if (ev === "move") T.moved = 1; return ev === "land" && T.moved; } },
+  { title: "Turning", text: "Tap the screen to turn the block (or press ↑). Turn it twice, then let it land.",
+    setup() { clearField(); }, done(ev, T) { if (ev === "turn") T.n = (T.n || 0) + 1; return ev === "land" && T.n >= 2; } },
+  { title: "Dropping", text: "Flick your finger down to drop a block at once (or press Space).",
+    setup() { clearField(); }, done: (ev) => ev === "drop" },
+  { title: "Making a square", text: "Four of one colour in a square light up. Drop this block on the glowing place to make one.",
+    setup() { clearField(); put(6, 9, 0); put(7, 9, 0); G.piece = null; G.queue[0] = fixed([1, 1, 0, 0]); G.target = [6, 8]; }, done: (ev) => ev === "square" },
+  { title: "The line of light", text: "Watch the line of light sweep across in time with the music. It takes away every square it passes.",
+    setup() { if (!G.anchors.length) { put(2, 8, 1); put(3, 8, 1); put(2, 9, 1); put(3, 9, 1); } }, done: (ev, T, n) => ev === "clear" && n > 0 },
+  { title: "Streaks", text: "Clear four squares or more in one sweep for a streak: twice the points, and more if you keep it up. Watch these go.",
+    setup() { clearField(); [0, 1, 0, 1].forEach((c, k) => { for (const dx of [0, 1]) for (const y of [8, 9]) put(4 + k * 2 + dx, y, c); }); }, done: (ev, T, n) => ev === "pass" && n >= 4 },
+  { title: "The light block", text: "A block with a light in it (✦) takes away all its colour joined to it. Drop it on the matching row.",
+    setup() { clearField(); for (let x = 0; x < COLS; x++) put(x, 9, 0); G.piece = null; G.queue[0] = fixed([0, 0, 0, 0], 2); G.target = null; }, done: (ev) => ev === "lumen" },
+  { title: "The Doctor's gift", text: "Clearing squares fills the gift (✦ at the left). It is full now: tap it (or press G). Each Doctor gives a different one.",
+    setup() { G.gift = 1; }, done: (ev) => ev === "gift" },
+];
+function nextLesson() {
+  const T = G.tut; T.i++; T.T = {}; T.ok = 0; G.target = null;
+  if (T.i >= LESSONS.length) { T.end = true; save.learned = true; store(); Sfx.bonus(2); return; }
+  LESSONS[T.i].setup();
+}
+function tutEvent(ev, n) {
+  if (!G || G.mode !== "tutorial" || G.tut.end || G.tut.ok > 0 || G.tut.i < 0) return;
+  if (LESSONS[G.tut.i].done(ev, G.tut.T, n)) { G.tut.ok = 1.8; G.target = null; Sfx.square(1); }
+}
+function stepTutorial(dt) {
+  const T = G.tut;
+  if (T.ok > 0) { T.ok -= dt; if (T.ok <= 0) nextLesson(); }
+}
+function drawLesson() {
+  const T = G.tut, col = G.stage.colors;
+  ctx.fillStyle = "rgba(8,6,20,0.82)"; roundRect(130, 4, 380, 54, 10); ctx.fill();
+  ctx.strokeStyle = col.accent; ctx.lineWidth = 1.2; roundRect(130, 4, 380, 54, 10); ctx.stroke();
+  if (T.end) {
+    text("YOU ARE READY", W / 2, 24, { align: "center", size: 14, weight: 800, color: "#ffffff", spacing: 2 });
+    text("Stack, make squares, and let the light sweep. Each Doctor has a world, a song and a gift.", W / 2, 42, { align: "center", size: 10, weight: 500, color: col.ink, max: 360 });
+    return;
+  }
+  const L = LESSONS[T.i];
+  text("LESSON " + (T.i + 1) + " OF " + LESSONS.length + "  ·  " + L.title.toUpperCase(), W / 2, 19, { align: "center", size: 9, weight: 800, color: col.accent, spacing: 1.5, max: 360 });
+  if (T.ok > 0) { text("✓  WELL DONE", W / 2, 42, { align: "center", size: 15, weight: 800, color: "#ffffff" }); return; }
+  const f = wrapFit(L.text, 360, 11, 2, "500", FONT.ui);
+  f.lines.forEach((l, i) => text(l, W / 2, 34 + i * (f.size + 3), { align: "center", size: f.size, weight: 500, color: "#ffffff" }));
+}
+
 // The level of the music, from how far into the stage the player has come.
 function levelOf() {
   if (G.mode === "pilgrimage") { const u = G.stageSq / TARGET; return u < 0.15 ? 0 : u < 0.45 ? 1 : u < 0.8 ? 2 : 3; }
+  if (G.mode === "master") return G.zoneSq / MASTER[G.zone].quota < 0.3 ? 2 : 3;
+  if (G.mode === "tutorial") return Math.min(2, Math.floor(G.tut.i / 3));
   const u = (G.squares % 60) / 60; return G.squares < 12 ? (G.squares < 4 ? 0 : 1) : u < 0.2 ? 1 : u < 0.6 ? 2 : 3;
 }
 function fallSpeed() {
   if (G.hangT > 0) return 0.05;
-  const base = G.mode === "pilgrimage" ? 0.85 + G.si * 0.16 + (G.stageSq / TARGET) * 0.4 : 0.9 + Math.floor(G.squares / 40) * 0.18;
-  return Math.min(4, base);
+  if (G.mode === "tutorial") return 0.6;
+  if (G.mode === "master") return MASTER[G.zone].speed;
+  const base = G.mode === "pilgrimage" ? 0.85 + G.si * 0.065 + (G.stageSq / TARGET) * 0.35 : 0.9 + Math.floor(G.squares / 40) * 0.18;
+  return Math.min(4, base) * (G.calmT > 0 ? 0.5 : 1);
 }
 function stepPlay(dt) {
   G.time += dt; G.stageTime += dt;
@@ -295,6 +406,9 @@ function stepPlay(dt) {
   G.energy = Math.max(0, G.energy - dt * 0.35);
   G.banner.t += dt; if (G.fadeT > 0) G.fadeT -= dt;
   if (G.hangT > 0) G.hangT -= dt;
+  if (G.calmT > 0) G.calmT -= dt;
+  if (G.mode === "master" && !G.over && !G.done) { G.zoneT += dt; if (G.zoneT >= MASTER[G.zone].secs) gameOver(); }
+  if (G.mode === "tutorial") stepTutorial(dt);
   for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c && c.flash > 0) c.flash -= dt; }
   if (G.over) { G.overT += dt; if (G.overT > 1.8) finish(false); return; }
   // The piece.
@@ -443,6 +557,8 @@ function drawPlay(quiet) {
   ctx.strokeStyle = col.line; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
   for (const [x, y] of G.anchors) ctx.strokeRect(FX + x * CS + 1, FY + y * CS + 1, CS * 2 - 2, CS * 2 - 2);
   ctx.globalAlpha = 1;
+  // In the lessons: where to put the block, glowing.
+  if (G.target) { const [tx, ty] = G.target, a = 0.35 + 0.3 * Math.sin(t * 6); ctx.strokeStyle = hexA(col.line, a + 0.3); ctx.lineWidth = 2.5; ctx.strokeRect(FX + tx * CS + 1, FY + ty * CS + 1, CS * 2 - 2, CS * 2 - 2); ctx.fillStyle = hexA(col.line, a * 0.4); ctx.fillRect(FX + tx * CS + 1, FY + ty * CS + 1, CS * 2 - 2, CS * 2 - 2); }
   // The falling piece, and where it will land.
   const p = G.piece;
   if (p) {
@@ -470,6 +586,13 @@ function drawPlay(quiet) {
   ctx.restore();
   drawHud();
   Ticker.draw(FY + ROWS * CS + 12, 26, col);
+  if (G.mode === "tutorial") {
+    drawLesson();
+    if (G.tut.end && !quiet) {
+      button("BEGIN THE PILGRIMAGE", W / 2 - 150, FY + 80, 300, 30, { hot: true, act: () => start("pilgrimage", 0) });
+      button("BACK TO THE TITLE", W / 2 - 100, FY + 120, 200, 24, { act: finishToTitle });
+    }
+  }
   // Words over the field.
   if (!quiet) G.pops.forEach((q, i) => {
     const a = q.t < 0.15 ? q.t / 0.15 : q.t > 1.3 ? Math.max(0, (1.8 - q.t) / 0.5) : 1, y = FY + 70 + i * 34 - q.t * 8;
@@ -484,17 +607,19 @@ const ROMAN = (n) => { const r = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1,
 function drawBanner(st, bt) {
   const a = bt < 0.4 ? bt / 0.4 : bt > 3.4 ? Math.max(0, (4.2 - bt) / 0.8) : 1, col = st.colors, y = FY + 50;
   ctx.globalAlpha = a * 0.75; ctx.fillStyle = "#000"; ctx.fillRect(0, y - 34, W, 92); ctx.globalAlpha = 1;
-  text(ROMAN(st.n) + "  ·  " + st.life + "  ·  " + st.place.toUpperCase(), W / 2, y - 16, { align: "center", size: 9, weight: 600, color: col.accent, alpha: a, spacing: 2 });
-  text(st.name.toUpperCase(), W / 2, y + 10, { align: "center", size: 26, weight: 700, font: FONT.title, color: "#ffffff", alpha: a, glow: col.accent, blur: 14, spacing: 1 });
-  text(st.title, W / 2, y + 28, { align: "center", size: 15, weight: "italic 500", font: FONT.quote, color: col.ink, alpha: a });
-  text("♪  " + SONGS[st.song].title + "      ✦  Gift: " + st.gift.name, W / 2, y + 47, { align: "center", size: 9, weight: 600, color: col.accent, alpha: a });
+  text(ROMAN(st.n) + "  ·  " + st.life + "  ·  " + st.place.toUpperCase(), W / 2, y - 16, { align: "center", size: 9, weight: 600, color: col.accent, alpha: a, spacing: 2, max: 560 });
+  text(st.name.toUpperCase(), W / 2, y + 10, { align: "center", size: 26, weight: 700, font: FONT.title, color: "#ffffff", alpha: a, glow: col.accent, blur: 14, spacing: 1, max: 580 });
+  text(st.title, W / 2, y + 28, { align: "center", size: 15, weight: "italic 500", font: FONT.quote, color: col.ink, alpha: a, max: 560 });
+  text("♪  " + SONGS[st.song].title + "      ✦  Gift: " + st.gift.name, W / 2, y + 47, { align: "center", size: 9, weight: 600, color: col.accent, alpha: a, max: 580 });
 }
 function drawHud() {
   const st = G.stage, col = st.colors;
   ctx.fillStyle = col.panel; roundRect(18, FY - 46, 104, 250, 12); ctx.fill(); roundRect(518, FY - 46, 104, 250, 12); ctx.fill();
-  // Top: who, and the song.
-  text(ROMAN(st.n) + " · " + st.name.toUpperCase(), W / 2, 22, { align: "center", size: 13, weight: 700, font: FONT.title, color: "#ffffff", glow: "rgba(0,0,0,0.7)", blur: 6, spacing: 1 });
-  text(st.title + "   ♪ " + SONGS[st.song].title, W / 2, 38, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: col.ink, glow: "rgba(0,0,0,0.8)", blur: 6 });
+  // Top: who, and the song (the lesson, in the tutorial).
+  if (G.mode !== "tutorial") {
+    text(ROMAN(st.n) + " · " + st.name.toUpperCase(), W / 2, 22, { align: "center", size: 13, weight: 700, font: FONT.title, color: "#ffffff", glow: "rgba(0,0,0,0.7)", blur: 6, spacing: 1, max: 370 });
+    text(st.title + "   ♪ " + SONGS[st.song].title, W / 2, 38, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: col.ink, glow: "rgba(0,0,0,0.8)", blur: 6, max: 370 });
+  }
   // Left: what comes next.
   text("NEXT", 70, FY - 30, { align: "center", size: 8, weight: 700, color: col.accent, spacing: 2 });
   G.queue.forEach((q, i) => {
@@ -503,28 +628,38 @@ function drawHud() {
     [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([dx, dy], k) => drawCell(st, dx * CS, dy * CS, { c: q.cells[k], gem: q.gems[k] }));
     ctx.restore();
   });
-  // The gift.
-  const gx = 70, gy = 252, r = 24, full = G.gift >= 1, tt = performance.now() / 1000;
+  // The gift (none in Master mode).
+  const gx = 70, gy = 244, r = 23, full = G.gift >= 1, tt = performance.now() / 1000;
+  if (G.mode !== "master") {
   ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.stroke();
   ctx.strokeStyle = full ? col.line : col.accent; ctx.beginPath(); ctx.arc(gx, gy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * G.gift); ctx.stroke();
   if (full) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = hexA(col.line, 0.25 + 0.2 * Math.sin(tt * 6)); ctx.beginPath(); ctx.arc(gx, gy, r - 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
   text("✦", gx, gy + 5, { align: "center", size: 16, weight: 700, color: full ? "#ffffff" : "rgba(255,255,255,0.4)" });
   text(full ? "GIFT READY" : "GIFT", gx, gy + r + 13, { align: "center", size: 8, weight: 700, color: full ? col.line : col.accent, spacing: 1.5 });
-  const gl = wrap(st.gift.name, 120, "italic 500 11px " + FONT.quote);
-  gl.forEach((l, i) => text(l, gx, gy + r + 26 + i * 11, { align: "center", size: 11, weight: "italic 500", font: FONT.quote, color: col.ink }));
-  if (G.hangT > 0) text("STILL " + Math.ceil(G.hangT) + "s", gx, gy - r - 8, { align: "center", size: 8, weight: 700, color: col.line });
-  if (G.holdT > 0) text("THE LINE WAITS", gx, gy - r - 8, { align: "center", size: 8, weight: 700, color: col.line });
+  const gf = wrapFit(st.gift.name, 94, 11, 2, "italic 500", FONT.quote);
+  gf.lines.forEach((l, i) => text(l, gx, gy + r + 25 + i * (gf.size + 1), { align: "center", size: gf.size, weight: "italic 500", font: FONT.quote, color: col.ink, max: 96 }));
+  if (G.hangT > 0) text("STILL " + Math.ceil(G.hangT) + "s", gx, gy - r - 8, { align: "center", size: 8, weight: 700, color: col.line, max: 96 });
+  if (G.holdT > 0) text("THE LINE WAITS", gx, gy - r - 8, { align: "center", size: 8, weight: 700, color: col.line, max: 96 });
+  if (G.calmT > 0) text("CALM " + Math.ceil(G.calmT) + "s", gx, gy - r - 8, { align: "center", size: 8, weight: 700, color: col.line, max: 96 });
+  } else text("NO GIFTS IN MASTER", gx, gy, { align: "center", size: 8, weight: 700, color: col.accent, max: 96 });
   // Right: the score and the way.
   const rx = 570;
-  const row = (label, val, y, big) => { text(label, rx, y, { align: "center", size: 8, weight: 700, color: col.accent, spacing: 2 }); text(val, rx, y + (big ? 20 : 16), { align: "center", size: big ? 19 : 14, weight: 700, color: "#ffffff", glow: "rgba(0,0,0,0.6)", blur: 4 }); };
+  const row = (label, val, y, big) => { text(label, rx, y, { align: "center", size: 8, weight: 700, color: col.accent, spacing: 2, max: 96 }); text(val, rx, y + (big ? 20 : 16), { align: "center", size: big ? 19 : 14, weight: 700, color: "#ffffff", glow: "rgba(0,0,0,0.6)", blur: 4, max: 96 }); };
   row("SCORE", G.score.toLocaleString(), FY - 22, true);
   row("SQUARES", String(G.squares), FY + 26);
   if (G.mode === "pilgrimage") {
     row("STAGE " + (G.si + 1) + " OF " + STAGES.length, G.stageSq + " / " + TARGET, FY + 70);
     ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(rx - 40, FY + 92, 80, 3); ctx.fillStyle = col.line; ctx.fillRect(rx - 40, FY + 92, 80 * Math.min(1, G.stageSq / TARGET), 3);
-  } else row("SINGLE STAGE", "level " + (1 + Math.floor(G.squares / 40)), FY + 70);
+  } else if (G.mode === "master") {
+    const Z = MASTER[G.zone];
+    row("ZONE " + (G.zone + 1) + " OF " + MASTER.length, G.zoneSq + " / " + Z.quota, FY + 70);
+    ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(rx - 40, FY + 92, 80, 3); ctx.fillStyle = col.line; ctx.fillRect(rx - 40, FY + 92, 80 * Math.min(1, G.zoneSq / Z.quota), 3);
+  } else if (G.mode === "tutorial") row("LESSON", (G.tut.i + 1) + " / " + LESSONS.length, FY + 70);
+  else row("SINGLE STAGE", "level " + (1 + Math.floor(G.squares / 40)), FY + 70);
   if (G.combo > 0) row("STREAK", "×" + Math.min(5, 1 + G.combo), FY + 114);
-  const tm = Math.floor(G.time); row("TIME", Math.floor(tm / 60) + ":" + String(tm % 60).padStart(2, "0"), FY + 158);
+  const tm = G.mode === "master" ? Math.max(0, Math.ceil(MASTER[G.zone].secs - G.zoneT)) : Math.floor(G.time);
+  row(G.mode === "master" ? "TIME LEFT" : "TIME", Math.floor(tm / 60) + ":" + String(tm % 60).padStart(2, "0"), FY + 158);
+  if (G.mode === "master" && tm <= 10 && Math.floor(performance.now() / 250) % 2) { ctx.strokeStyle = "#ff5a6a"; ctx.lineWidth = 2; roundRect(526, FY + 146, 88, 28, 6); ctx.stroke(); }
   // Pause.
   ctx.fillStyle = "rgba(255,255,255,0.75)"; ctx.fillRect(W - 24, 10, 4, 14); ctx.fillRect(W - 16, 10, 4, 14);
 }
@@ -553,33 +688,67 @@ function drawTitle(dt) {
   text("LUMINARIES", W / 2, 112, { align: "center", size: 52, weight: 700, font: FONT.title, color: "#fff8e8", glow: `rgba(255,220,140,${0.6 + pulse * 0.4})`, blur: 22 + pulse * 10, spacing: 6 });
   text("O Doctor optime, Ecclesiae sanctae lumen", W / 2, 140, { align: "center", size: 16, weight: "italic 500", font: FONT.quote, color: "#ffe8c0" });
   text("O best of teachers, light of holy Church  ·  the antiphon for the Doctors", W / 2, 158, { align: "center", size: 8.5, weight: 600, color: "rgba(255,240,220,0.7)", spacing: 1 });
-  button("PILGRIMAGE", W / 2 - 90, 186, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
-  button("SINGLE STAGE", W / 2 - 90, 220, 180, 22, { act: () => { state = "stages"; } });
-  button("HOW TO PLAY", W / 2 - 90, 250, 180, 22, { act: () => { helpFrom = "title"; state = "help"; } });
-  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 50, 280, 100, 18, { size: 9, act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
-  text("The Pilgrimage: " + STAGES.length + " of the 38 Doctors so far, in the order of their lives" + (save.best ? "   ·   best " + save.best.toLocaleString() : ""), W / 2, 330, { align: "center", size: 9, weight: 600, color: "rgba(255,255,255,0.7)" });
+  const cont = save.reached > 0 && save.reached < STAGES.length;
+  if (cont) {
+    button("PILGRIMAGE", W / 2 - 186, 176, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
+    button("CONTINUE: " + STAGES[save.reached].short.toUpperCase(), W / 2 + 6, 176, 180, 26, { size: 9, act: () => start("pilgrimage", save.reached) });
+  } else button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
+  button("LEARN TO PLAY", W / 2 - 186, 210, 180, 22, { hot: !save.learned, act: () => start("tutorial", 0) });
+  button("SINGLE STAGE", W / 2 + 6, 210, 180, 22, { act: () => { state = "stages"; } });
+  button(save.master ? "MASTER  ✦" : "MASTER", W / 2 - 186, 240, 180, 22, { act: () => { state = "master"; } });
+  button("HOW TO PLAY", W / 2 + 6, 240, 180, 22, { act: () => { helpFrom = "title"; state = "help"; } });
+  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 50, 272, 100, 18, { size: 9, act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
+  if (save.master) text("DOCTOR OPTIME", W / 2, 304, { align: "center", size: 11, weight: 700, font: FONT.title, color: "#ffe8a0", glow: "rgba(255,220,140,0.8)", blur: 10, spacing: 3 });
+  text("The Pilgrimage: all " + STAGES.length + " Doctors of the Church, in the order of their lives" + (save.best ? "   ·   best " + save.best.toLocaleString() : ""), W / 2, 330, { align: "center", size: 9, weight: 600, color: "rgba(255,255,255,0.7)", max: 600 });
   if (!Sound.ctx()) text("Tap anywhere to begin with sound", W / 2, 346, { align: "center", size: 9, weight: 600, color: "#ffe8c0", alpha: 0.6 + Math.sin(menuT * 4) * 0.4 });
 }
+let stagePage = 0;
 function drawStages(dt) {
   menuT += dt;
   ctx.fillStyle = grad(ctx, 0, 0, W, H, [[0, "#0a0618"], [1, "#1a1030"]]); ctx.fillRect(0, 0, W, H);
-  text("SINGLE STAGE", W / 2, 34, { align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 3 });
-  text("Play one Doctor's stage for as long as you last", W / 2, 52, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: "#e8dcff" });
-  STAGES.forEach((st, i) => {
-    const cw = 190, chh = 104, x = 20 + (i % 3) * (cw + 10), y = 70 + Math.floor(i / 3) * (chh + 10);
-    ctx.save(); ctx.beginPath(); roundRect(x, y, cw, chh, 10); ctx.clip();
-    ctx.translate(x, y); ctx.scale(cw / W, chh / H * 1.0); st.bg(ctx, { t: menuT, pulse: 0, L: 1, energy: 0 }); ctx.restore();
-    ctx.fillStyle = "rgba(0,0,0,0.45)"; roundRect(x, y, cw, chh, 10); ctx.fill();
-    ctx.strokeStyle = st.colors.accent; ctx.lineWidth = 1.2; roundRect(x, y, cw, chh, 10); ctx.stroke();
-    for (const [k, dx] of [["a", 0], ["b", 1], ["a", 2], ["b", 3]]) ctx.drawImage(sprite(st, k, false), x + 12 + dx * 14, y + 12, 12, 12);
-    text(ROMAN(st.n) + " · " + st.life, x + cw - 10, y + 22, { align: "right", size: 8, weight: 600, color: st.colors.accent, spacing: 1 });
-    text(st.name, x + 12, y + 50, { size: 14, weight: 700, font: FONT.title, color: "#ffffff" });
-    text(st.title, x + 12, y + 66, { size: 12, weight: "italic 500", font: FONT.quote, color: st.colors.ink });
-    text("♪ " + SONGS[st.song].title, x + 12, y + 86, { size: 9, weight: 600, color: st.colors.accent });
-    if (save.stageBest[st.id]) text("best " + save.stageBest[st.id].toLocaleString(), x + cw - 10, y + 86, { align: "right", size: 8, weight: 600, color: "#ffffff" });
+  text("SINGLE STAGE", W / 2, 30, { align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 3 });
+  text("Play one Doctor's stage for as long as you last", W / 2, 47, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: "#e8dcff" });
+  const per = 12, pages = Math.ceil(STAGES.length / per); stagePage = clamp(stagePage, 0, pages - 1);
+  STAGES.slice(stagePage * per, stagePage * per + per).forEach((st, k) => {
+    const i = stagePage * per + k, cw = 146, chh = 76, x = 20 + (k % 4) * (cw + 4), y = 58 + Math.floor(k / 4) * (chh + 6);
+    ctx.save(); roundRect(x, y, cw, chh, 9); ctx.clip();
+    ctx.translate(x, y); ctx.scale(cw / W, chh / H); st.bg(ctx, { t: menuT, pulse: 0, L: 1, energy: 0 }); ctx.restore();
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; roundRect(x, y, cw, chh, 9); ctx.fill();
+    ctx.strokeStyle = st.colors.accent; ctx.lineWidth = 1.2; roundRect(x, y, cw, chh, 9); ctx.stroke();
+    for (const [kk, dx] of [["a", 0], ["b", 1]]) ctx.drawImage(sprite(st, kk, false), x + 8 + dx * 12, y + 8, 10, 10);
+    text(ROMAN(st.n) + " · " + st.life, x + cw - 8, y + 16, { align: "right", size: 7.5, weight: 600, color: st.colors.accent, max: cw - 40 });
+    text(st.name, x + 8, y + 36, { size: 12, weight: 700, font: FONT.title, color: "#ffffff", max: cw - 16 });
+    text(st.title, x + 8, y + 50, { size: 11, weight: "italic 500", font: FONT.quote, color: st.colors.ink, max: cw - 16 });
+    text("♪ " + SONGS[st.song].title, x + 8, y + 67, { size: 8, weight: 600, color: st.colors.accent, max: save.stageBest[st.id] ? cw - 60 : cw - 16 });
+    if (save.stageBest[st.id]) text(save.stageBest[st.id].toLocaleString(), x + cw - 8, y + 67, { align: "right", size: 7.5, weight: 600, color: "#ffffff", max: 44 });
     buttons.push({ x, y, w: cw, h: chh, act: () => start("single", i) });
   });
-  button("BACK", W / 2 - 50, 310, 100, 22, { act: () => { state = "title"; } });
+  if (pages > 1) {
+    button("◀", 20, 318, 44, 22, { act: () => { stagePage = (stagePage + pages - 1) % pages; } });
+    button("▶", W - 64, 318, 44, 22, { act: () => { stagePage = (stagePage + 1) % pages; } });
+    text("page " + (stagePage + 1) + " of " + pages, W / 2 + 120, 333, { align: "center", size: 9, weight: 600, color: "#c8b8ff" });
+  }
+  button("BACK", W / 2 - 50, 318, 100, 22, { act: () => { state = "title"; } });
+}
+// Master mode, before it begins: what it asks.
+function drawMaster(dt) {
+  menuT += dt;
+  const st = STAGES[masterStage(0)];
+  st.bg(ctx, { t: menuT, pulse: beatInfo().pulse, L: 3, energy: 0 });
+  ctx.fillStyle = "rgba(4,2,12,0.72)"; ctx.fillRect(0, 0, W, H);
+  text("MASTER", W / 2, 50, { align: "center", size: 30, weight: 700, font: FONT.title, color: "#ffffff", spacing: 6, glow: "rgba(255,220,140,0.7)", blur: 16 });
+  text("Five zones, fast from the first block, and no gifts.", W / 2, 76, { align: "center", size: 14, weight: "italic 500", font: FONT.quote, color: "#ffe8c0" });
+  text("Clear each zone's squares before its time runs out. Finish all five to be named Doctor Optime.", W / 2, 94, { align: "center", size: 10, weight: 500, color: "#ffffff", max: 560 });
+  MASTER.forEach((Z, i) => {
+    const s2 = STAGES[masterStage(i)], y = 116 + i * 30;
+    ctx.fillStyle = "rgba(255,255,255,0.06)"; roundRect(120, y, 400, 24, 8); ctx.fill();
+    text("ZONE " + (i + 1), 134, y + 16, { size: 9, weight: 800, color: s2.colors.accent, spacing: 1.5 });
+    text(s2.name, 200, y + 16, { size: 11, weight: 700, font: FONT.title, color: "#ffffff", max: 190 });
+    text(Z.quota + " squares in " + Z.secs + "s", 506, y + 16, { align: "right", size: 9, weight: 600, color: "#e8e0ff" });
+  });
+  if (save.masterBest) text("best " + save.masterBest.toLocaleString() + (save.master ? "   ·   DOCTOR OPTIME" : ""), W / 2, 284, { align: "center", size: 9, weight: 600, color: "#ffe8c0" });
+  button("BEGIN", W / 2 - 150, 300, 140, 26, { hot: true, act: () => start("master", 0) });
+  button("BACK", W / 2 + 10, 300, 140, 26, { act: () => { state = "title"; } });
 }
 function drawHelp(dt) {
   menuT += dt;
@@ -618,16 +787,17 @@ function drawOver(dt) {
   drawPlay(true);
   ctx.fillStyle = "rgba(4,2,12,0.78)"; ctx.fillRect(0, 0, W, H);
   const st = G.stage, won = G.won;
-  text(won ? "THE PILGRIMAGE IS COMPLETE" : G.mode === "pilgrimage" ? "THE PILGRIMAGE PAUSES HERE" : "THE STAGE IS ENDED", W / 2, 70, { align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 2, glow: st.colors.accent, blur: 12 });
+  const head = G.mode === "master" ? (won ? "DOCTOR OPTIME" : G.zoneT >= MASTER[G.zone].secs ? "TIME RAN OUT IN ZONE " + (G.zone + 1) : "MASTER ENDS IN ZONE " + (G.zone + 1)) : won ? "THE PILGRIMAGE IS COMPLETE" : G.mode === "pilgrimage" ? "THE PILGRIMAGE PAUSES HERE" : "THE STAGE IS ENDED";
+  text(head, W / 2, 70, { max: 600, align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 2, glow: st.colors.accent, blur: 12 });
   text(G.score.toLocaleString() + (G.newBest ? "   NEW BEST" : ""), W / 2, 108, { align: "center", size: 30, weight: 800, color: G.newBest ? st.colors.line : "#ffffff" });
-  text(G.squares + " squares   ·   reached " + st.name + "   ·   " + Math.floor(G.time / 60) + ":" + String(Math.floor(G.time % 60)).padStart(2, "0"), W / 2, 130, { align: "center", size: 10, weight: 600, color: st.colors.accent });
-  if (won) text("Thirty-two more Doctors are on the way.", W / 2, 150, { align: "center", size: 13, weight: "italic 500", font: FONT.quote, color: "#ffffff" });
+  text(G.squares + " squares   ·   reached " + st.name + "   ·   " + Math.floor(G.time / 60) + ":" + String(Math.floor(G.time % 60)).padStart(2, "0"), W / 2, 130, { align: "center", size: 10, weight: 600, color: st.colors.accent, max: 600 });
+  if (won) text(G.mode === "master" ? "All five zones cleared: you are named Doctor Optime." : "All thirty-eight Doctors of the Church, from Irenaeus to Thérèse.", W / 2, 150, { align: "center", size: 13, weight: "italic 500", font: FONT.quote, color: "#ffffff", max: 560 });
   if (!G.overQuote) { const qs = QUOTES[st.id]; G.overQuote = qs[Math.floor(Math.random() * qs.length)]; }
   const q = G.overQuote, ls = wrap("“" + q.t + "”", 440, "italic 500 15px " + FONT.quote);
   ls.forEach((l, i) => text(l, W / 2, 182 + i * 18, { align: "center", size: 15, weight: "italic 500", font: FONT.quote, color: st.colors.ink }));
   text(("— " + st.name + ", " + q.s).toUpperCase(), W / 2, 188 + ls.length * 18, { align: "center", size: 8, weight: 600, color: st.colors.accent, spacing: 0.8 });
   if (overT > 0.8) {
-    button("AGAIN", W / 2 - 150, 292, 140, 26, { hot: true, act: () => start(G.mode, G.mode === "single" ? G.si : 0) });
+    button("AGAIN", W / 2 - 150, 292, 140, 26, { hot: true, act: () => start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0) });
     button("TITLE", W / 2 + 10, 292, 140, 26, { act: finishToTitle });
   }
 }
@@ -643,8 +813,9 @@ addEventListener("pointerdown", (ev) => {
   if (first && state === "title") { Sound.play(SONGS.title); }
   const p = toGame(ev);
   if (state === "play") {
+    if (hitButton(p)) return;
     if (p.x > W - 34 && p.y < 34) { pause(); return; }
-    if (Math.hypot(p.x - 70, p.y - 252) < 34) { useGift(); return; }
+    if (Math.hypot(p.x - 70, p.y - 244) < 34) { useGift(); return; }
     Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: performance.now(), col0: G.piece ? G.piece.x : 7, moved: false, down: false, lastY: p.y };
     return;
   }
@@ -687,10 +858,12 @@ addEventListener("keydown", (e) => {
     else if (e.code === "Space") hardDrop();
     else if (e.code === "KeyG" || e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "Enter") useGift();
     else if (e.code === "KeyP" || e.code === "Escape") pause();
+    if (G && G.mode === "tutorial" && G.tut.end && e.code === "Enter") start("pilgrimage", 0);
   } else if (state === "pause") { if (e.code === "KeyP" || e.code === "Escape" || e.code === "Enter") resume(); }
   else if (state === "title") { if (e.code === "Enter" || e.code === "Space") start("pilgrimage", 0); }
   else if (state === "over" && overT > 0.8) { if (e.code === "Enter" || e.code === "Space") start(G.mode, G.mode === "single" ? G.si : 0); else if (e.code === "Escape") finishToTitle(); }
-  else if ((state === "help" || state === "stages") && e.code === "Escape") state = state === "help" ? helpFrom : "title";
+  else if ((state === "help" || state === "stages" || state === "master") && e.code === "Escape") state = state === "help" ? helpFrom : "title";
+  else if (state === "stages" && (e.code === "ArrowRight" || e.code === "ArrowLeft")) stagePage += e.code === "ArrowRight" ? 1 : -1;
 });
 addEventListener("keyup", (e) => {
   Input.keys.delete(e.code);
@@ -714,6 +887,7 @@ function frame(now) {
   else if (state === "pause") drawPause(dt);
   else if (state === "over") drawOver(dt);
   else if (state === "stages") drawStages(dt);
+  else if (state === "master") drawMaster(dt);
   else if (state === "help") drawHelp(dt);
   else drawTitle(dt);
   if (innerHeight > innerWidth * 1.1) { ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, 0, W, 26); text("Turn your phone sideways to play", W / 2, 17, { align: "center", size: 11, weight: 700, color: "#ffe8c0" }); }
