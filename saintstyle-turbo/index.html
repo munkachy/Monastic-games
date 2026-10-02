@@ -1815,8 +1815,34 @@ function nameOf(k, A) {
   return k.sig ? sigOf(game.saint).name : k.name;
 }
 // A swipe, a tap, or an arrow key, while the saint is in the air.
+// Moves flow into one another: an arrow that, added to the move just done (or
+// still being done, or waiting its turn), makes the start of a longer move
+// turns that move into the longer one, carrying on from where it was.
+const FLOW = 0.6;   // how soon after a move ends it can still grow into a longer one
+function flowInto(d) {
+  if (P.buf) return false;
+  // The moves of this flight that can still grow: those done just now, the one under way, those waiting.
+  const tail = [];
+  for (let i = P.chain.length - 1; i >= 0; i--) { const e = P.chain[i]; if (!e.keys || game.time - e.at > FLOW * (P.chain.length - i)) break; tail.unshift({ keys: e.keys, t: e.dur, from: "done" }); }
+  if (P.trick) tail.push({ keys: P.trick.k.keys, t: P.trick.t, from: "live" });
+  for (const k of P.queue) tail.push({ keys: k.keys, t: 0, from: "queue" });
+  // The longest run of them, ending with the newest, that this arrow makes into the start of a longer move.
+  for (let j = 0; j < tail.length; j++) {
+    const run = tail.slice(j), keys = run.map((q) => q.keys).join("") + d;
+    if (!known().some((k) => k.keys.startsWith(keys))) continue;
+    for (const q of run) {
+      if (q.from === "done") { P.chain.pop(); P.recent.pop(); }
+      else if (q.from === "live") P.trick = null;
+    }
+    P.queue = [];
+    P.buf = keys.slice(0, -1); P.carry = run.reduce((a, q) => a + q.t, 0);
+    return true;
+  }
+  return false;
+}
 function swipe(d) {
   if (!P || P.mode !== "air" || state !== "play" || P.crash > 0) return;
+  flowInto(d);
   P.buf += d; P.bufT = COMBO_WAIT; P.swipes++;
   Snd.sfx("swipe", d);
   // No longer trick that he knows begins this way: do it now, without waiting. But if the
@@ -1849,7 +1875,8 @@ function runTricks(A, dt) {
   if (A.buf && (A.bufT -= dt) <= 0) resolveCombo(A);
   if (!A.trick && A.queue.length) {
     const k = A.queue.shift();
-    A.trick = { k, t: 0 };
+    // (Grown out of a move already under way: it carries on from there, but always has time to show itself.)
+    A.trick = { k, t: Math.min(A.carry || 0, k.dur * 0.5) }; A.carry = 0;
     if (A.player) { if (k.sig) startSignature(A); else Snd.sfx("trick"); comboShow(A); }
     else label(A, nameOf(k, A).toUpperCase() + "!");
     if (k.pose === "cross") rings.push({ cross: true, who: A, t: 0, dur: k.dur + 0.5 });
@@ -1877,7 +1904,7 @@ function finishTrick(A) {
   A.trick = null;
   if (T.t < T.k.dur * 0.88) return;
   const w = worth(A, T.k), bonus = heldPts(T);
-  A.chain.push({ id: T.k.id, name: nameOf(T.k, A), pts: Math.round(((T.k.pts + bonus) * w) / 10) * 10, boost: (T.k.boost + bonus / 1000) * w, sig: T.k.sig });
+  A.chain.push({ id: T.k.id, name: nameOf(T.k, A), pts: Math.round(((T.k.pts + bonus) * w) / 10) * 10, boost: (T.k.boost + bonus / 1000) * w, sig: T.k.sig, keys: T.k.keys, dur: T.k.dur, at: game.time });
   A.lastDone = game.time;
   if (A.player) comboShow(A);
 }
@@ -1896,7 +1923,7 @@ function comboShow(A, st) {
 // The combo is paid when he lands on his feet: points times the number of
 // tricks in it, and a surge. A landing just as the last trick finishes is perfect.
 function landTricks(A) {
-  A.buf = ""; A.queue = []; A.coach = null;
+  A.buf = ""; A.queue = []; A.carry = 0; A.coach = null;
   finishTrick(A);
   const n = A.chain.length;
   if (!n) { if (A.player) { A.combo = null; lessonEvent("land", { n: 0, ids: [] }); } return; }
