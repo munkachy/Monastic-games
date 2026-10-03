@@ -5,7 +5,7 @@
 // when play starts.
 
 const Game = {
-  part: 0, music: false,
+  part: 0, music: false, practising: false,
   soundWoke() {
     if (Game.music || !Sound.ctx()) return;
     Game.music = true;
@@ -14,16 +14,23 @@ const Game = {
   startPart(i) {
     goSideways();
     Game.music = true;
-    Game.part = i;
+    Game.part = i; Game.practising = false;
     const done = () => Game.partDone(i);
     switch (PARTS[i].id) {
       case "cold": Scene.start(SCENES.cold(), done); break;
       case "desert": Scene.start(SCENES.desert(), done); break;
       case "flight": Flight.start(done); break;
-      case "fight": Scene.start(SCENES.street(), () => Fight.start(() => Scene.start(SCENES.guardian(), done))); break;
+      // The first time, the angel shows him every move before the street (the practice).
+      case "fight": Scene.start(SCENES.street(), () => Fight.start(() => Scene.start(SCENES.guardian(), done), { kata: !save.practised })); break;
       case "choice": Scene.start(SCENES.choice(), done); break;
       case "bell": Scene.start(SCENES.bell(), done); break;
     }
+  },
+  // The practice on its own, from the parts screen or the pause screen.
+  practice() {
+    goSideways();
+    Game.music = true; Game.part = PARTS.findIndex((P) => P.id === "fight"); Game.practising = true;
+    Fight.start(() => { Game.practising = false; Game.toTitle(); }, { kata: true, only: true });
   },
   partDone(i) {
     if (i >= PARTS.length - 1) { save.done = true; save.part = PARTS.length - 1; store(); Game.toTitle(true); return; }
@@ -86,7 +93,8 @@ const Parts = {
       text(open ? P.name : "Not yet", x + 12, y + 46, { size: 12, weight: 700, color: open ? "#f1ede4" : "#55524c", max: bw - 20 });
       if (open) text(P.about, x + 12, y + 63, { size: 8.5, weight: 500, color: "#a9a49a", max: bw - 20 });
     });
-    button("BACK", W / 2 - 60, H - 52, 120, 32, () => { mode = Title; }, {});
+    button("BACK", W / 2 - 130, H - 52, 120, 32, () => { mode = Title; }, {});
+    button("PRACTICE", W / 2 + 10, H - 52, 120, 32, () => Game.practice(), { hot: true });
   },
   key(code, down) { if (down && code === "Escape") mode = Title; },
 };
@@ -99,14 +107,29 @@ const Pause = {
     Pause.under.draw();
     buttons.length = 0;
     rect(0, 0, W, H, "rgba(4,3,8,0.78)");
-    text("PAUSED", W / 2, 70, { align: "center", font: FONT.title, size: 26, weight: 700, spacing: 6, color: "#ffffff", glow: "rgba(232,196,106,0.5)", blur: 14 });
-    text(PARTS[Game.part].name, W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 16, color: C.holy });
-    const bx = W / 2 - 110, bw = 220;
-    button("RESUME", bx, 116, bw, 36, () => Game.resume(), { hot: true });
-    button("BEGIN THIS PART AGAIN", bx, 160, bw, 30, () => { Sound.muffle(false); Game.startPart(Game.part); }, {});
-    button("SKIP TO THE NEXT PART", bx, 196, bw, 30, () => { Sound.muffle(false); Game.partDone(Game.part); }, {});
-    button(Sound.muted ? "SOUND: OFF" : "SOUND: ON", bx, 232, bw, 30, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
-    button("BACK TO THE TITLE", bx, 268, bw, 30, () => Game.toTitle(), {});
+    // In the fight, the moves are listed beside the buttons.
+    const fight = Pause.under === Fight, cx = fight ? Math.max(130, W * 0.24) : W / 2;
+    text("PAUSED", cx, 58, { align: "center", font: FONT.title, size: 26, weight: 700, spacing: 6, color: "#ffffff", glow: "rgba(232,196,106,0.5)", blur: 14 });
+    text(Game.practising ? "The practice" : PARTS[Game.part].name, cx, 82, { align: "center", font: FONT.line, italic: true, size: 16, color: C.holy });
+    const bw = 200, bx = cx - bw / 2;
+    let y = 98;
+    const b = (label, act, o, h) => { button(label, bx, y, bw, h || 28, act, o || {}); y += (h || 28) + 7; };
+    b("RESUME", () => Game.resume(), { hot: true }, 34);
+    if (Game.practising) b("BEGIN THE PRACTICE AGAIN", () => { Sound.muffle(false); Game.practice(); });
+    else b("BEGIN THIS PART AGAIN", () => { Sound.muffle(false); Game.startPart(Game.part); });
+    if (!Game.practising) b("SKIP TO THE NEXT PART", () => { Sound.muffle(false); Game.partDone(Game.part); });
+    if (fight && !Game.practising) b("PRACTICE THE MOVES", () => { Sound.muffle(false); Game.practice(); });
+    b(Sound.muted ? "SOUND: OFF" : "SOUND: ON", () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); });
+    b("BACK TO THE TITLE", () => Game.toTitle());
+    if (fight) {
+      const mx = Math.max(cx + bw / 2 + 28, W * 0.46), mv = Fight.moves(), rh = Math.min(19, (H - 70) / mv.length);
+      text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.holy });
+      mv.forEach(([k, what], i) => {
+        const yy = 60 + i * rh;
+        text(k, mx, yy, { size: 9, weight: 800, spacing: 1, color: "#f1ede4", max: 120 });
+        text(what, mx + 124, yy, { size: 9, weight: 500, color: "#b9b3a6", max: W - mx - 136 });
+      });
+    }
   },
   key(code, down) { if (down && (code === "Escape" || code === "KeyP" || code === "Enter")) Game.resume(); },
 };
