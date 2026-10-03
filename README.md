@@ -440,7 +440,7 @@ books, as transcribed at GregoBase.
 **Controls.** On a phone, played sideways:
 - Drag sideways to move.
 - Tap to turn: the left half turns one way, the right half the other.
-- Drag down to drop faster; flick down to drop at once.
+- Drag down to bring the block down faster.
 
 There is no separate rules page: Learn to Play teaches everything.
 - Tap ✦ for the gift.
