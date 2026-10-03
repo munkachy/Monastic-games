@@ -375,7 +375,7 @@ const LESSONS = [
     setup() { clearField(); }, done(ev, T) { if (ev === "move") T.moved = 1; return ev === "land" && T.moved; } },
   { title: "Turning", text: "Tap the screen to turn the block (or press ↑). Turn it twice, then let it land.",
     setup() { clearField(); }, done(ev, T) { if (ev === "turn") T.n = (T.n || 0) + 1; return ev === "land" && T.n >= 2; } },
-  { title: "Dropping", text: "Flick your finger down to drop a block at once (or drag it down, or press Space).",
+  { title: "Dropping", text: "Drag your finger down to bring a block down faster (or press ↓; Space drops it at once).",
     setup() { clearField(); }, done: (ev) => ev === "drop" },
   { title: "Making a square", text: "Four of one colour in a square light up. Drop this block on the glowing place to make one.",
     setup() { clearField(); put(6, 9, 0); put(7, 9, 0); G.piece = null; G.queue[0] = fixed([1, 1, 0, 0]); G.target = [6, 8]; }, done: (ev) => ev === "square" },
@@ -912,7 +912,7 @@ addEventListener("pointerdown", (ev) => {
     if (p.x > W - 34 && p.y < 34) { pause(); return; }
     if (G.mode !== "master" && Math.hypot(p.x - INFO.x, p.y - INFO.y) < INFO.r + 6) { giftInfo(); return; }
     if (Math.hypot(p.x - 70, p.y - 244) < 34) { useGift(); return; }
-    Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: ev.timeStamp, col0: G.piece ? G.piece.x : 7, moved: false, down: false, lastY: p.y };
+    Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: ev.timeStamp, col0: G.piece ? G.piece.x : 7, moved: false, down: false };
     return;
   }
   if (hitButton(p)) { if (Sound.ctx()) Sound.I.bell(Sound.now() + 0.01, 88, 0.5, 0.3, { ratio: 3, index: 1, sfx: true }); return; }
@@ -927,13 +927,7 @@ addEventListener("pointermove", (ev) => {
     while (G.piece && G.piece.x < want) { const x = G.piece.x; move(1); if (G.piece.x === x) break; }
     while (G.piece && G.piece.x > want) { const x = G.piece.x; move(-1); if (G.piece.x === x) break; }
   }
-  if (T.flicked) return;
-  // Timed by when each touch happened, not when the game got to it, so a busy phone still reads a flick.
-  const now = ev.timeStamp;
-  // A flick: a short, fast, straight stroke down, right from the start of the touch.
-  if (!T.down && dy > 22 && dy > Math.abs(dx) * 1.5 && now - T.t0 < 220 && dy / Math.max(1, now - T.t0) > 0.32) { T.flicked = true; Input.soft = false; hardDrop(); return; }
   if (dy > 30 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; Input.softTouch = dy - 30; }
-  T.lastY = p.y; T.lastT = now;
 }, { passive: false });
 const release = (ev) => {
   const T = Input.touch; if (!T || T.id !== ev.pointerId) return;
@@ -941,7 +935,6 @@ const release = (ev) => {
   if (state !== "play" || !G) return;
   const p = toGame(ev), dt = ev.timeStamp - T.t0, dy = p.y - T.y0, dx = p.x - T.x0;
   if (!T.moved && dt < 350) rotate(p.x < W / 2 ? -1 : 1);
-  else if (!T.flicked && !T.down && dy > 40 && dt < 300 && dy > Math.abs(dx) * 1.5) hardDrop();
 };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);
 addEventListener("contextmenu", (e) => e.preventDefault());
