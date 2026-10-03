@@ -56,8 +56,9 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 - **Easy, Normal and Hard.** Normal and Hard open once you finish the Pilgrimage. At the end of each, the Doctors speak to you from heaven.
 - **Single Stage** plays any Doctor you have reached. **Master** is five fast zones with no gifts.
 - **Learn to Play** teaches everything in eight short lessons with St. Francis de Sales.
-- On a phone: drag sideways to move, tap to turn, drag down to drop gently, flick down to drop at once.
-- The Doctors' words pass under the field: 376 quotations, each from a cited public-domain translation or newly translated from the Latin.
+- On a phone, held sideways: drag sideways to move, tap to turn, drag down to drop gently, flick down to drop at once.
+- **You play along.** Every song lends you its own instruments: moving plays the column's note (low at the left, high at the right), drawing a block down plays a run down the scale, and a flick strikes a chord, all in the song's key and on its beat.
+- The Doctors' words pass under the field: 376 quotations, each from a public-domain translation (cited in the source files) or newly translated from the Latin. Tap the words for the next one.
 
 ## Fear Not
 
@@ -72,7 +73,7 @@ The first build: one night, in six parts, played with the phone sideways (it loc
 
 ## Recent highlights
 
-- **Luminaries:** all 38 Doctors; three difficulties with one smooth speed curve; closing scenes with the Doctors; an info button for each gift; gentler touch controls with a true flick; a Reset Progress button.
+- **Luminaries:** all 38 Doctors; three difficulties with one smooth speed curve; closing scenes with the Doctors; your own instruments in every song; St. Teresa's new gift, the Interior Castle; the title music from the first tap; a "turn sideways" screen.
 - **SaintStyle Turbo:** renamed from Run the Way (the old address still works); slow motion is now the default speed.
 - **Fear Not:** the first build is playable, the whole first night from the cold open to the bell for Vigils. The fight now plays like Arkham Asylum (counters that pin, takedowns, vaults, gadgets, slow motion) with a practice that teaches it, and the flight now looks like the first Grand Theft Auto, down to street level among the traffic.
 
