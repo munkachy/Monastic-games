@@ -15,9 +15,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | A Benedictine monk explores, climbs and builds through a mansion made of the Canticle of Canticles, finding every verse |
 | [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church, each with a world, a song, a gift and their own words |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
-
-**In planning:** [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/design.html), an
-angel action game in a film-noir city. The link goes to the design page; nothing is built yet.
+| [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
 
 ## Benedictine Bricks
 
@@ -62,11 +60,22 @@ angel action game in a film-noir city. The link goes to the design page; nothing
 - **You play along.** Every song lends you its own instruments: moving plays the column's note (low at the left, high at the right), drawing a block down plays a run down the scale, and a flick strikes a chord, all in the song's key and on its beat.
 - The Doctors' words pass under the field: 376 quotations, each from a public-domain translation (cited in the source files) or newly translated from the Latin. Tap the words for the next one.
 
+## Fear Not
+
+The first build: one night, in six parts, played with the phone sideways (it locks to sideways where the phone allows, and asks to be turned where it does not).
+
+- **Bring Daddy Home.** 2 AM. A radio in the dark, a girl at her window, her father in his car across from a corner store with a gun in his lap, and the whispers.
+- **Someone Asked.** The desert monastery. His angel wakes Fr. Lawrence; he protests that he is not Padre Pio, and is answered. His body stays kneeling in the chapel.
+- **The Flight.** The city from straight above, as in the first Grand Theft Auto: tall buildings lean away as you pass, the camera draws back as the angel gathers speed and comes in close when it slows, and there is traffic in the streets and people under umbrellas. Dive down between the buildings to street level (mind the walls), and beat the wings to climb back over the roofs. On a phone: drag on the left to steer, tap on the right to beat the wings (on the beat is strongest), hold to dive. On a keyboard: arrows steer, Space flaps, hold Shift to dive. Fill up at the church, then follow the girl's prayer to the car while the dark closes in.
+- **The Street.** The fight, side on, as in Batman: Arkham Asylum. First, the first time, the angel shows him every move against shades (the practice; play it again any time from the parts screen or the pause screen, which also lists every move). On a phone: tap a demon to strike and keep tapping to flow; tap open street to zip there; tap a gold sign to counter (he catches the wrist or ankle, throws the demon down and pins it); swipe away from a red sign to dodge, or toward a demon close by to vault over it; hold to block; tap twice for a heavy blow that breaks a guard; swipe up to launch, down to slam; flick from Fr. Lawrence to throw holy water; drag a far demon to pull it in with the stole, or a near one to throw it into the others. On a keyboard: arrows move, Space strikes toward the arrow held, X counters, Z dodges (or vaults), Q blocks, C is the heavy blow, E launches, V slams, F holy water, R the stole, T throws, B blesses. Demons knocked down lie on the street a moment: reach one before it rises and finish it (a takedown); it pays to keep moving. Time slows with each blow of a combo and all but stops when a sign shows, so there is time to counter and flow on. His angel waits above, out of sight, and swoops down every fifth blow of a combo. At eight in a row, a launch carries the whole fight up to the Heights, where the angels are stronger, and everyone falls when it comes down; a grab that catches him drags the whole fight down to the Depths, until ten in a row bring him up. Break the chains of shadow on the father's guardian angel.
+- **The Choice** and **Vigils.** What the father does; and back to the chapel before the bell.
+- Everything is drawn in code (`fear-not/art.js`, `fear-not/scenes.js`); the music runs on the synth engine from Luminaries, with a noir jazz band for the city and kung fu film music for the fights (`fear-not/audio.js`, `fear-not/music.js`). Progress is saved after each part. `?part=2` in the address starts at a given part.
+
 ## Recent highlights
 
 - **Luminaries:** all 38 Doctors; three difficulties with one smooth speed curve; closing scenes with the Doctors; your own instruments in every song; St. Teresa's new gift, the Interior Castle; the title music from the first tap; a "turn sideways" screen.
 - **SaintStyle Turbo:** renamed from Run the Way (the old address still works); slow motion is now the default speed.
-- **Fear Not:** design page published.
+- **Fear Not:** the first build is playable, the whole first night from the cold open to the bell for Vigils. The fight now plays like Arkham Asylum (counters that pin, takedowns, vaults, gadgets, slow motion) with a practice that teaches it, and the flight now looks like the first Grand Theft Auto, down to street level among the traffic.
 
 ## Playing locally
 
