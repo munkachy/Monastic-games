@@ -371,9 +371,30 @@ the Doctor's gift), played by the Lake of Annecy with St. Francis de Sales.
 St. Irenaeus (c. 202) to St. Thérèse (1897). Each Doctor is a stage with its
 own colours, its own world behind the field, its own song and its own gift.
 The stage changes in the middle of play, as in Lumines, with the next song
-starting on the downbeat. Continue picks up at the furthest Doctor reached.
+starting on the downbeat.
 
-**Single Stage** plays one Doctor for as long as you last.
+It comes in three difficulties. In each, the blocks speed up along one smooth
+curve from the first Doctor to the last, so Continue picks up at the same pace
+where you left off:
+- **Easy**: 0.7 rows a second at the start, 1.6 at the end (a moderate pace).
+- **Normal**: 0.9 to 2.6, which asks real skill by St. Thérèse.
+- **Hard**: 1.2 to 3.8, fast at the end but still playable.
+
+Normal and Hard open once the Pilgrimage has been finished at any difficulty.
+Each difficulty keeps its own Continue.
+
+**When you finish**, the Doctors speak to you from heaven, in comic panels
+drawn like icons: each Doctor with a gold halo and a red name-plate, in an
+arched frame, over the world of their own stage. After Easy, Thérèse,
+Augustine, Francis de Sales, Jerome and Teresa urge you on to Normal. After
+Normal, Thomas, Catherine, Hildegard, John of the Cross and Athanasius send you
+on to Hard. After Hard, Gregory the Great, Bede, Anselm, Bernard and Newman
+send you home. Their words are written for the game, in their spirit, and are
+not quotations. The scene can be watched again from the Pilgrimage page.
+
+**Single Stage** plays one Doctor for as long as you last, at the pace of that
+point in the Pilgrimage, at any difficulty you have opened. Each Doctor's
+stage opens here once you have passed it in the Pilgrimage.
 
 **Master** is five zones, fast from the first block and with no gifts: clear
 each zone's squares before its time runs out, and finish all five to be named
@@ -381,7 +402,8 @@ each zone's squares before its time runs out, and finish all five to be named
 
 **Reset Progress** on the title screen erases saved progress (tap it twice).
 
-**The Doctor's gift.** Clearing squares fills a gift (✦). Each Doctor gives
+**The Doctor's gift.** Clearing squares fills a gift (✦). The small (i) beside
+it pauses the game and explains what this Doctor's gift does. Each Doctor gives
 one of these, named for that Doctor (*Tolle, lege*; *Viriditas*; *Summa*;
 *Contra Mundum*; *The Cell*; *Kindly Light*; and so on):
 - the next blocks come in one colour;
@@ -393,7 +415,6 @@ one of these, named for that Doctor (*Tolle, lege*; *Viriditas*; *Summa*;
 - the lowest row, or the top two blocks of every column, are struck away;
 - every square on the field is taken at once;
 - roses take up the top blocks of the tallest columns.
-The gift's name and what it does rise slowly up the screen and away.
 
 **The songs.** Every Doctor has a song in a modern style chosen for that
 Doctor: soul-funk for St. Irenaeus, swing jazz-funk for St. Hilary, a key that
