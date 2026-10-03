@@ -375,7 +375,7 @@ const LESSONS = [
     setup() { clearField(); }, done(ev, T) { if (ev === "move") T.moved = 1; return ev === "land" && T.moved; } },
   { title: "Turning", text: "Tap the screen to turn the block (or press ↑). Turn it twice, then let it land.",
     setup() { clearField(); }, done(ev, T) { if (ev === "turn") T.n = (T.n || 0) + 1; return ev === "land" && T.n >= 2; } },
-  { title: "Dropping", text: "Drag your finger down to bring a block down faster (or press ↓; Space drops it at once).",
+  { title: "Dropping", text: "Flick your finger down to drop a block at once, or drag it down to bring it down slowly (or press Space).",
     setup() { clearField(); }, done: (ev) => ev === "drop" },
   { title: "Making a square", text: "Four of one colour in a square light up. Drop this block on the glowing place to make one.",
     setup() { clearField(); put(6, 9, 0); put(7, 9, 0); G.piece = null; G.queue[0] = fixed([1, 1, 0, 0]); G.target = [6, 8]; }, done: (ev) => ev === "square" },
@@ -849,9 +849,7 @@ function drawPause(dt) {
   drawPlay(true);
   ctx.fillStyle = "rgba(4,2,12,0.75)"; ctx.fillRect(0, 0, W, H);
   text("PAUSED", W / 2, 90, { align: "center", size: 28, weight: 700, font: FONT.title, color: "#ffffff", spacing: 4 });
-  const g = G.stage.gift;
-  text("Gift of " + G.stage.name + ": " + g.name, W / 2, 120, { align: "center", size: 14, weight: "italic 500", font: FONT.quote, color: G.stage.colors.ink });
-  wrap(g.about, 380, "500 10px " + FONT.ui).forEach((l, i) => text(l, W / 2, 138 + i * 13, { align: "center", size: 10, weight: 500, color: "#ffffff" }));
+  text(G.stage.name + "  ·  " + DIFF[G.diff].name, W / 2, 120, { align: "center", size: 14, weight: "italic 500", font: FONT.quote, color: G.stage.colors.ink, max: 420 });
   button("RESUME", W / 2 - 90, 180, 180, 26, { hot: true, act: resume });
   button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 90, 214, 180, 22, { act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
   button("END AND RETURN", W / 2 - 90, 242, 180, 22, { act: () => { Sound.muffle(false); finishToTitle(); } });
@@ -908,8 +906,11 @@ addEventListener("pointerdown", (ev) => {
   if (first && state === "title") { Sound.play(SONGS.title); }
   const p = toGame(ev);
   if (state === "play") {
-    if (hitButton(p)) return;
-    if (p.x > W - 34 && p.y < 34) { pause(); return; }
+    // Taps outside the game's own picture (the black bands when the phone is upright) work the
+    // field, never the buttons.
+    const inside = p.x >= 0 && p.x <= W && p.y >= 0 && p.y <= H;
+    if (inside && hitButton(p)) return;
+    if (inside && p.x > W - 34 && p.y < 34) { pause(); return; }
     if (G.mode !== "master" && Math.hypot(p.x - INFO.x, p.y - INFO.y) < INFO.r + 6) { giftInfo(); return; }
     if (Math.hypot(p.x - 70, p.y - 244) < 34) { useGift(); return; }
     Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: ev.timeStamp, col0: G.piece ? G.piece.x : 7, moved: false, down: false };
@@ -927,6 +928,11 @@ addEventListener("pointermove", (ev) => {
     while (G.piece && G.piece.x < want) { const x = G.piece.x; move(1); if (G.piece.x === x) break; }
     while (G.piece && G.piece.x > want) { const x = G.piece.x; move(-1); if (G.piece.x === x) break; }
   }
+  if (T.flicked) return;
+  // A flick: a short, fast, straight stroke down, right from the start of the touch, timed by each
+  // touch's own timestamp so a busy phone still reads it. Anything slower is a gentle drag.
+  const now = ev.timeStamp;
+  if (!T.down && dy > 22 && dy > Math.abs(dx) * 1.5 && now - T.t0 < 220 && dy / Math.max(1, now - T.t0) > 0.32) { T.flicked = true; Input.soft = false; hardDrop(); return; }
   if (dy > 30 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; Input.softTouch = dy - 30; }
 }, { passive: false });
 const release = (ev) => {
