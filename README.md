@@ -15,9 +15,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Canticle Mansion](https://munkachy.github.io/Monastic-games/canticle-mansion/) | A Benedictine monk explores, climbs and builds through a mansion made of the Canticle of Canticles, finding every verse |
 | [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church, each with a world, a song, a gift and their own words |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
-
-**In planning:** [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/design.html), an
-angel action game in a film-noir city. The link goes to the design page; nothing is built yet.
+| [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
 
 ## Benedictine Bricks
 
@@ -61,11 +59,22 @@ angel action game in a film-noir city. The link goes to the design page; nothing
 - On a phone: drag sideways to move, tap to turn, drag down to drop gently, flick down to drop at once.
 - The Doctors' words pass under the field: 376 quotations, each from a cited public-domain translation or newly translated from the Latin.
 
+## Fear Not
+
+The first build: one night, in six parts, played with the phone sideways (it locks to sideways where the phone allows, and asks to be turned where it does not).
+
+- **Bring Daddy Home.** 2 AM. A radio in the dark, a girl at her window, her father in his car across from a corner store with a gun in his lap, and the whispers.
+- **Someone Asked.** The desert monastery. His angel wakes Fr. Lawrence; he protests that he is not Padre Pio, and is answered. His body stays kneeling in the chapel.
+- **The Flight.** The city from above, riding the angel's back: drag on the left to steer, tap on the right to beat the wings (on the beat is strongest), hold to dive. Climb above the fog, touch a light to swing round it on a thread, fill up at the church, follow the girl's prayer to the car while the dark closes in.
+- **The Street.** The fight, side on, by touch alone: tap a demon to strike and keep tapping to chain; tap a gold sign to counter; swipe away from a red sign to dodge; tap twice for the angel's wing bash; swipe up to launch; hold on the ground for a wing shield; fill the Spirit to bless them all. Break the chains of shadow on the father's guardian angel.
+- **The Choice** and **Vigils.** What the father does; and back to the chapel before the bell.
+- Everything is drawn in code (`fear-not/art.js`, `fear-not/scenes.js`); the music runs on the synth engine from Luminaries, with a noir jazz band for the city and kung fu film music for the fights (`fear-not/audio.js`, `fear-not/music.js`). Progress is saved after each part. `?part=2` in the address starts at a given part.
+
 ## Recent highlights
 
 - **Luminaries:** all 38 Doctors; three difficulties with one smooth speed curve; closing scenes with the Doctors; an info button for each gift; gentler touch controls with a true flick; a Reset Progress button.
 - **SaintStyle Turbo:** renamed from Run the Way (the old address still works); slow motion is now the default speed.
-- **Fear Not:** design page published.
+- **Fear Not:** the first build is playable: the whole first night, from the cold open to the bell for Vigils.
 
 ## Playing locally
 
