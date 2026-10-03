@@ -161,7 +161,7 @@ STAGES.push(
     id: "albert", n: 27, name: "St. Albert the Great", short: "Albert", title: "the Universal Doctor", life: "c. 1200–1280", place: "Cologne",
     song: "albert", scale: [55, 57, 58, 60, 62, 63, 65, 67, 69],
     colors: { a: ["#c8703a", "#ffb888", "#6a3010"], b: ["#2aa89a", "#8af0e0", "#0a4e46"], line: "#f4fff8", panel: "rgba(8,16,14,0.6)", ink: "#f0fff8", accent: "#f0a070" },
-    gift: { name: "Doctor Universalis", about: "He knew every branch of learning: every square on the field is taken at once.", kind: "sweep" },
+    gift: { name: "Doctor Universalis", about: "He knew every branch of learning: every square on the field is taken at once, with every block of its colour joined to it.", kind: "sweep" },
     motif: (c, k, s) => { c.strokeStyle = k === "a" ? "rgba(255,220,190,0.4)" : "rgba(220,255,250,0.4)"; c.lineWidth = 1; c.beginPath(); for (let i = 0; i <= 6; i++) { const a = i / 6 * TAU + Math.PI / 6; c[i ? "lineTo" : "moveTo"](s / 2 + Math.cos(a) * s * 0.22, s / 2 + Math.sin(a) * s * 0.22); } c.stroke(); },
     bg(c, I) {
       const { t, pulse, L, energy } = I;

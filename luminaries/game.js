@@ -200,7 +200,7 @@ function markSquares() {
   G.anchors = anchors;
   if (anchors.length > before) { Sfx.square(anchors.length - before); tutEvent("square"); }
 }
-function chainFrom(x0, y0) {
+function chainFrom(x0, y0, quiet) {
   const col = G.grid[x0][y0].c, seen = new Set(), st = [[x0, y0]];
   while (st.length) {
     const [x, y] = st.pop(), k = x * 16 + y; if (seen.has(k)) continue; seen.add(k);
@@ -208,7 +208,7 @@ function chainFrom(x0, y0) {
     c.chain = true;
     st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
   }
-  pop("LUMEN", G.stage.colors.line, 18);
+  if (!quiet) pop("LUMEN", G.stage.colors.line, 18);
 }
 // The line of light.
 function stepLine(dt) {
@@ -317,6 +317,9 @@ function finish(won) {
 // The Doctor's gift.
 function useGift() {
   if (!G || G.gift < 1 || G.over || state !== "play" || G.mode === "master") return;
+  const g0 = G.stage.gift;
+  // A gift that gathers up squares waits, unspent, until there is a square to gather.
+  if (g0.kind === "sweep" && !G.grid.some((col) => col.some((c) => c && c.mark))) { pop("MAKE A SQUARE FIRST", "#ffffff", 12, "then " + g0.name + " gathers it up"); return; }
   G.gift = 0;
   tutEvent("gift");
   const g = G.stage.gift;
@@ -326,7 +329,8 @@ function useGift() {
   else if (g.kind === "lumen" || g.kind === "lumen2") for (const q of G.queue.slice(0, g.kind === "lumen2" ? 2 : 1)) { q.gems = [false, false, false, false]; q.gems[Math.floor(Math.random() * 4)] = true; }
   else if (g.kind === "calm") G.calmT = 30;
   else if (g.kind === "sweep") {
-    // Every square on the field taken at once, as though the line had passed over it all.
+    // Every square on the field taken at once, and with each square every block of its colour joined to it.
+    for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c && c.mark && !c.chain) chainFrom(x, y, true); }
     for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c && (c.mark || c.chain)) c.lit = true; }
     commit();
     G.rings = G.rings || []; for (let x = 0; x <= COLS; x += 2) G.rings.push({ x: FX + x * CS, t: 0 });

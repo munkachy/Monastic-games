@@ -27,7 +27,7 @@ STAGES.push(
     id: "irenaeus", n: 1, name: "St. Irenaeus of Lyon", short: "Irenaeus", title: "Doctor of Unity", life: "c. 130–c. 202", place: "Lyon",
     song: "irenaeus", scale: [58, 62, 65, 67, 70, 72, 74, 77],
     colors: { a: ["#f0be3a", "#fff0a0", "#9a6a10"], b: ["#1e8a6a", "#7ae0b8", "#0a4a36"], line: "#fff0b0", panel: "rgba(4,20,14,0.55)", ink: "#f4ffe8", accent: "#f8d060" },
-    gift: { name: "Recapitulation", about: "All things gathered up in Christ: every square on the field is taken at once.", kind: "sweep" },
+    gift: { name: "Recapitulation", about: "All things gathered up in Christ: every square on the field is taken at once, with every block of its colour joined to it.", kind: "sweep" },
     motif: (c, k, s) => { c.strokeStyle = k === "a" ? "rgba(120,70,0,0.45)" : "rgba(200,255,230,0.45)"; c.lineWidth = 1; c.beginPath(); if (k === "a") c.arc(s / 2, s / 2, s * 0.2, 0, TAU); else { c.ellipse(s / 2, s / 2, s * 0.26, s * 0.12, -0.7, 0, TAU); } c.stroke(); },
     bg(c, I) {
       const { t, pulse, L, energy } = I;
