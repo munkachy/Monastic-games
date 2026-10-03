@@ -47,15 +47,34 @@ function wrapFit(str, width, size, maxLines, weight, font) {
 }
 
 // ---- Saved --------------------------------------------------------------------------------------
-let save = { best: 0, reached: 0, muted: false, stageBest: {}, learned: false, master: false, masterBest: 0, pilgrim: false };
+// Three ways through the Pilgrimage. The blocks speed up along one smooth curve from the first
+// Doctor to the last: v0 rows a second at St. Irenaeus, v1 at the end of St. Therese. (Measured
+// against the field, ten rows plus two above it: Easy ends near seven seconds for a block to cross
+// the field, a moderate pace; Normal near four and a half; Hard near three, which is fast but
+// still playable, short of the frantic speeds of the late levels of falling-block games.)
+const DIFFS = [
+  { id: "easy", name: "EASY", v0: 0.7, v1: 1.6, about: "Gentle all the way: the blocks rise only to a moderate pace by the last Doctor." },
+  { id: "normal", name: "NORMAL", v0: 0.9, v1: 2.6, about: "A steady climb, until by St. Thérèse it asks real skill." },
+  { id: "hard", name: "HARD", v0: 1.2, v1: 3.8, about: "Brisk from the start, and fast by the end: hard, but never impossible." },
+];
+const DIFF = Object.fromEntries(DIFFS.map((d) => [d.id, d]));
+const freshDiff = () => ({ easy: { reached: 0, done: false }, normal: { reached: 0, done: false }, hard: { reached: 0, done: false } });
+let save = { best: 0, muted: false, stageBest: {}, learned: false, master: false, masterBest: 0, diff: freshDiff(), diffSel: "easy" };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("luminaries") || "{}")); } catch (e) { }
+// Older saves kept one Pilgrimage: it becomes the Easy one.
+for (const d of DIFFS) save.diff[d.id] = Object.assign({ reached: 0, done: false }, save.diff[d.id]);
+if (save.reached) { save.diff.easy.reached = Math.max(save.diff.easy.reached, save.reached); delete save.reached; }
+if (save.pilgrim) { save.diff.easy.done = true; delete save.pilgrim; }
+if (!DIFF[save.diffSel]) save.diffSel = "easy";
 const store = () => { try { localStorage.setItem("luminaries", JSON.stringify(save)); } catch (e) { } };
-// Master is earned: it opens once the whole Pilgrimage has been finished.
-const masterOpen = () => !!(save.pilgrim || save.master);
+// Finished the Pilgrimage at least once, at any difficulty: Normal, Hard and Master open.
+const pilgrimDone = () => DIFFS.some((d) => save.diff[d.id].done);
+const diffOpen = (id) => id === "easy" || pilgrimDone();
+const masterOpen = () => pilgrimDone() || !!save.master;
+// A Doctor's stage opens in Single Stage once it has been passed in the Pilgrimage.
+const stageOpen = (i) => DIFFS.some((d) => save.diff[d.id].done || save.diff[d.id].reached > i);
 let resetArm = -99;
-function resetProgress() { save = { best: 0, reached: 0, muted: save.muted, stageBest: {}, learned: false, master: false, masterBest: 0, pilgrim: false }; store(); }
-// How fast a gift's message rises (pixels a second) until it leaves the screen.
-const GIFT_DRIFT = 6.5;
+function resetProgress() { save = { best: 0, muted: save.muted, stageBest: {}, learned: false, master: false, masterBest: 0, diff: freshDiff(), diffSel: "easy" }; store(); }
 Sound.muted = !!save.muted;
 
 // ---- The game -----------------------------------------------------------------------------------
@@ -81,13 +100,14 @@ const MASTER = [
   { id: "therese", quota: 34, secs: 100, speed: 3.6 },
 ];
 const masterStage = (z) => STAGE_BY_ID[MASTER[z].id] ?? STAGE_BY_ID.therese;
-function start(mode, si) {
+function start(mode, si, diff) {
   if (mode === "master" && !masterOpen()) { state = "master"; return; }
+  diff = DIFF[diff] && diffOpen(diff) ? diff : DIFF[save.diffSel] && diffOpen(save.diffSel) ? save.diffSel : "easy";
   Sound.init();
   if (mode === "master") si = masterStage(0);
   if (mode === "tutorial") si = STAGE_BY_ID.francis ?? STAGE_BY_ID.teresa;
   G = {
-    mode, si, stage: STAGES[si], prev: null, fadeT: 0,
+    mode, si, diff, stage: STAGES[si], prev: null, fadeT: 0,
     grid: Array.from({ length: COLS }, () => Array(ROWS).fill(null)),
     falling: [], piece: null, queue: [], spawnT: 0.6, pieces: 0,
     tl: 0, holdT: 0, passSq: 0, combo: 0, score: 0, squares: 0, stageSq: 0, time: 0, stageTime: 0,
@@ -268,7 +288,7 @@ function endPass() {
 function setStage(si) {
   G.prev = G.stage; G.fadeT = 1.6;
   G.si = si; G.stage = STAGES[G.si]; G.stageSq = 0; G.stageTime = 0;
-  if (G.mode === "pilgrimage") { save.reached = Math.max(save.reached, G.si); store(); }
+  if (G.mode === "pilgrimage") { const D = save.diff[G.diff]; D.reached = Math.max(D.reached, G.si); store(); }
   Sound.queue(SONGS[G.stage.song]);
   Sfx.stage();
   G.banner = { t: 0 };
@@ -287,10 +307,12 @@ function finish(won) {
   if (G.score > save.best) { save.best = G.score; G.newBest = true; }
   if (G.mode === "single") { const k = G.stage.id; if (G.score > (save.stageBest[k] || 0)) save.stageBest[k] = G.score; }
   if (G.mode === "master") save.masterBest = Math.max(save.masterBest || 0, G.score);
-  if (G.mode === "pilgrimage" && won) save.pilgrim = true;
+  if (G.mode === "pilgrimage" && won) save.diff[G.diff].done = true;
   store();
   state = "over"; overT = 0;
   if (won) { Sound.muffle(false); Sfx.bonus(2); }
+  // The whole Pilgrimage finished: the Doctors have something to say first.
+  if (won && G.mode === "pilgrimage" && typeof startScene === "function") startScene(G.diff, () => { state = "over"; overT = 0; Sound.play(SONGS[G.stage.song]); });
 }
 // The Doctor's gift.
 function useGift() {
@@ -298,8 +320,7 @@ function useGift() {
   G.gift = 0;
   tutEvent("gift");
   const g = G.stage.gift;
-  // The gift's name and what it does rise slowly up and away; nothing else pushes them off.
-  G.giftMsg = { str: g.name.toUpperCase(), sub: g.about, t: 0 };
+  G.giftGlow = 1.6;
   Sfx.gift();
   if (g.kind === "mono") G.queue = G.queue.map(() => newPiece({ mono: true }));
   else if (g.kind === "lumen" || g.kind === "lumen2") for (const q of G.queue.slice(0, g.kind === "lumen2" ? 2 : 1)) { q.gems = [false, false, false, false]; q.gems[Math.floor(Math.random() * 4)] = true; }
@@ -403,13 +424,19 @@ function fallSpeed() {
   if (G.hangT > 0) return 0.05;
   if (G.mode === "tutorial") return 0.6;
   if (G.mode === "master") return MASTER[G.zone].speed;
-  const base = G.mode === "pilgrimage" ? 0.85 + G.si * 0.065 + (G.stageSq / TARGET) * 0.35 : 0.9 + Math.floor(G.squares / 40) * 0.18;
-  return Math.min(4, base) * (G.calmT > 0 ? 0.5 : 1);
+  // How far along the whole Pilgrimage, from 0 at the first block to 1 at the end of the last Doctor.
+  // In Single Stage it starts where that Doctor stands, and creeps up the longer you last.
+  const N = STAGES.length, p = G.mode === "pilgrimage" ? (G.si + Math.min(1, G.stageSq / TARGET)) / N : G.si / (N - 1) + G.squares / 400;
+  return curveSpeed(G.diff, p) * (G.calmT > 0 ? 0.5 : 1);
+}
+function curveSpeed(diff, p) {
+  const D = DIFF[diff] || DIFF.easy;
+  return D.v0 + (D.v1 - D.v0) * Math.pow(clamp(p, 0, 1), 1.15);
 }
 function stepPlay(dt) {
   G.time += dt; G.stageTime += dt;
   for (const q of G.pops) q.t += dt; G.pops = G.pops.filter((q) => q.t < 1.8);
-  if (G.giftMsg) { G.giftMsg.t += dt; if (FY + 70 - G.giftMsg.t * GIFT_DRIFT < -50) G.giftMsg = null; }
+  if (G.giftGlow > 0) G.giftGlow -= dt;
   for (const p of G.parts) { p.life -= dt; p.vy += (p.petal ? 30 : 220) * dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.rot !== undefined) p.rot += dt * 4; }
   G.parts = G.parts.filter((p) => p.life > 0);
   if (G.rings) { for (const r of G.rings) r.t += dt; G.rings = G.rings.filter((r) => r.t < 0.5); }
@@ -599,7 +626,7 @@ function drawPlay(quiet) {
   if (G.mode === "tutorial") {
     drawLesson();
     if (G.tut.end && !quiet) {
-      button("BEGIN THE PILGRIMAGE", W / 2 - 150, FY + 80, 300, 30, { hot: true, act: () => start("pilgrimage", 0) });
+      button("BEGIN THE PILGRIMAGE", W / 2 - 150, FY + 80, 300, 30, { hot: true, act: () => start("pilgrimage", 0, "easy") });
       button("BACK TO THE TITLE", W / 2 - 100, FY + 120, 200, 24, { act: finishToTitle });
     }
   }
@@ -609,11 +636,6 @@ function drawPlay(quiet) {
     text(q.str, W / 2, y, { align: "center", size: q.size, weight: 800, color: q.color, alpha: a, glow: "rgba(0,0,0,0.8)", blur: 8, spacing: 1.5 });
     if (q.sub) { const ls = wrap(q.sub, 280, "500 9px " + FONT.ui); ls.slice(0, 2).forEach((l, k) => text(l, W / 2, y + 13 + k * 11, { align: "center", size: 9, weight: 500, color: "#ffffff", alpha: a * 0.9, glow: "rgba(0,0,0,0.9)", blur: 6 })); }
   });
-  if (G.giftMsg && !quiet) {
-    const q = G.giftMsg, a = Math.min(1, q.t / 0.25), y = FY + 70 - q.t * GIFT_DRIFT;
-    text(q.str, W / 2, y, { align: "center", size: 20, weight: 800, color: "#ffffff", alpha: a, glow: "rgba(0,0,0,0.8)", blur: 8, spacing: 1.5, max: 560 });
-    wrap(q.sub, 300, "500 10px " + FONT.ui).slice(0, 3).forEach((l, k) => text(l, W / 2, y + 15 + k * 12, { align: "center", size: 10, weight: 500, color: "#ffffff", alpha: a * 0.95, glow: "rgba(0,0,0,0.9)", blur: 6 }));
-  }
   if (G.banner.t < 4.2 && !quiet) drawBanner(st, G.banner.t);
   if (G.over) { ctx.fillStyle = `rgba(0,0,0,${Math.min(0.6, G.overT * 0.4)})`; ctx.fillRect(0, 0, W, H); }
 }
@@ -649,6 +671,11 @@ function drawHud() {
   ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.stroke();
   ctx.strokeStyle = full ? col.line : col.accent; ctx.beginPath(); ctx.arc(gx, gy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * G.gift); ctx.stroke();
   if (full) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = hexA(col.line, 0.25 + 0.2 * Math.sin(tt * 6)); ctx.beginPath(); ctx.arc(gx, gy, r - 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  if (G.giftGlow > 0) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = hexA(col.line, G.giftGlow / 1.6); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gx, gy, r + 6 + (1.6 - G.giftGlow) * 14, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+  // (i): what this gift does, with the game paused.
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.arc(INFO.x, INFO.y, INFO.r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = col.accent; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(INFO.x, INFO.y, INFO.r, 0, Math.PI * 2); ctx.stroke();
+  text("i", INFO.x, INFO.y + 4, { align: "center", size: 11, weight: 700, font: FONT.quote, color: "#ffffff" });
   text("✦", gx, gy + 5, { align: "center", size: 16, weight: 700, color: full ? "#ffffff" : "rgba(255,255,255,0.4)" });
   text(full ? "GIFT READY" : "GIFT", gx, gy + r + 13, { align: "center", size: 8, weight: 700, color: full ? col.line : col.accent, spacing: 1.5 });
   const gf = wrapFit(st.gift.name, 94, 11, 2, "italic 500", FONT.quote);
@@ -663,14 +690,14 @@ function drawHud() {
   row("SCORE", G.score.toLocaleString(), FY - 22, true);
   row("SQUARES", String(G.squares), FY + 26);
   if (G.mode === "pilgrimage") {
-    row("STAGE " + (G.si + 1) + " OF " + STAGES.length, G.stageSq + " / " + TARGET, FY + 70);
+    row(DIFF[G.diff].name + " · " + (G.si + 1) + " OF " + STAGES.length, G.stageSq + " / " + TARGET, FY + 70);
     ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(rx - 40, FY + 92, 80, 3); ctx.fillStyle = col.line; ctx.fillRect(rx - 40, FY + 92, 80 * Math.min(1, G.stageSq / TARGET), 3);
   } else if (G.mode === "master") {
     const Z = MASTER[G.zone];
     row("ZONE " + (G.zone + 1) + " OF " + MASTER.length, G.zoneSq + " / " + Z.quota, FY + 70);
     ctx.fillStyle = "rgba(255,255,255,0.15)"; ctx.fillRect(rx - 40, FY + 92, 80, 3); ctx.fillStyle = col.line; ctx.fillRect(rx - 40, FY + 92, 80 * Math.min(1, G.zoneSq / Z.quota), 3);
   } else if (G.mode === "tutorial") row("LESSON", (G.tut.i + 1) + " / " + LESSONS.length, FY + 70);
-  else row("SINGLE STAGE", "level " + (1 + Math.floor(G.squares / 40)), FY + 70);
+  else row("SINGLE · " + DIFF[G.diff].name, "level " + (1 + Math.floor(G.squares / 40)), FY + 70);
   if (G.combo > 0) row("STREAK", "×" + Math.min(5, 1 + G.combo), FY + 114);
   const tm = G.mode === "master" ? Math.max(0, Math.ceil(MASTER[G.zone].secs - G.zoneT)) : Math.floor(G.time);
   row(G.mode === "master" ? "TIME LEFT" : "TIME", Math.floor(tm / 60) + ":" + String(tm % 60).padStart(2, "0"), FY + 158);
@@ -703,11 +730,7 @@ function drawTitle(dt) {
   text("LUMINARIES", W / 2, 112, { align: "center", size: 52, weight: 700, font: FONT.title, color: "#fff8e8", glow: `rgba(255,220,140,${0.6 + pulse * 0.4})`, blur: 22 + pulse * 10, spacing: 6 });
   text("O Doctor optime, Ecclesiae sanctae lumen", W / 2, 140, { align: "center", size: 16, weight: "italic 500", font: FONT.quote, color: "#ffe8c0" });
   text("O best of teachers, light of holy Church  ·  the antiphon for the Doctors", W / 2, 158, { align: "center", size: 8.5, weight: 600, color: "rgba(255,240,220,0.7)", spacing: 1 });
-  const cont = save.reached > 0 && save.reached < STAGES.length;
-  if (cont) {
-    button("PILGRIMAGE", W / 2 - 186, 176, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
-    button("CONTINUE: " + STAGES[save.reached].short.toUpperCase(), W / 2 + 6, 176, 180, 26, { size: 9, act: () => start("pilgrimage", save.reached) });
-  } else button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => start("pilgrimage", 0) });
+  button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => { state = "pilgrim"; } });
   button("LEARN TO PLAY", W / 2 - 186, 210, 180, 22, { hot: !save.learned, act: () => start("tutorial", 0) });
   button("SINGLE STAGE", W / 2 + 6, 210, 180, 22, { act: () => { state = "stages"; } });
   button(save.master ? "MASTER  ✦" : masterOpen() ? "MASTER" : "MASTER  · LOCKED", W / 2 - 186, 240, 180, 22, { size: masterOpen() ? 11 : 9, act: () => { state = "master"; } });
@@ -725,28 +748,73 @@ function drawStages(dt) {
   menuT += dt;
   ctx.fillStyle = grad(ctx, 0, 0, W, H, [[0, "#0a0618"], [1, "#1a1030"]]); ctx.fillRect(0, 0, W, H);
   text("SINGLE STAGE", W / 2, 30, { align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 3 });
-  text("Play one Doctor's stage for as long as you last", W / 2, 47, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: "#e8dcff" });
+  text("Play one Doctor's stage for as long as you last, at the pace of that point in the Pilgrimage", W / 2, 47, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: "#e8dcff", max: 600 });
   const per = 12, pages = Math.ceil(STAGES.length / per); stagePage = clamp(stagePage, 0, pages - 1);
   STAGES.slice(stagePage * per, stagePage * per + per).forEach((st, k) => {
     const i = stagePage * per + k, cw = 146, chh = 76, x = 20 + (k % 4) * (cw + 4), y = 58 + Math.floor(k / 4) * (chh + 6);
     ctx.save(); roundRect(x, y, cw, chh, 9); ctx.clip();
     ctx.translate(x, y); ctx.scale(cw / W, chh / H); st.bg(ctx, { t: menuT, pulse: 0, L: 1, energy: 0 }); ctx.restore();
-    ctx.fillStyle = "rgba(0,0,0,0.5)"; roundRect(x, y, cw, chh, 9); ctx.fill();
+    const open = stageOpen(i);
+    ctx.fillStyle = open ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.8)"; roundRect(x, y, cw, chh, 9); ctx.fill();
     ctx.strokeStyle = st.colors.accent; ctx.lineWidth = 1.2; roundRect(x, y, cw, chh, 9); ctx.stroke();
+    if (!open) {
+      // Not yet passed: the numeral, a padlock, the name, and how to open it.
+      text(ROMAN(st.n) + " · " + st.life, x + cw - 8, y + 16, { align: "right", size: 7.5, weight: 600, color: "rgba(255,255,255,0.45)", max: cw - 40 });
+      const lx = x + 18, ly = y + 16; ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(lx, ly - 3, 4, Math.PI, 0); ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.fillRect(lx - 5.5, ly - 3, 11, 8);
+      text(st.name, x + 8, y + 42, { size: 12, weight: 700, font: FONT.title, color: "rgba(255,255,255,0.55)", max: cw - 16 });
+      text("Pass this Doctor in the Pilgrimage", x + 8, y + 62, { size: 8, weight: 600, color: "rgba(255,255,255,0.6)", max: cw - 16 });
+      return;
+    }
     for (const [kk, dx] of [["a", 0], ["b", 1]]) ctx.drawImage(sprite(st, kk, false), x + 8 + dx * 12, y + 8, 10, 10);
     text(ROMAN(st.n) + " · " + st.life, x + cw - 8, y + 16, { align: "right", size: 7.5, weight: 600, color: st.colors.accent, max: cw - 40 });
     text(st.name, x + 8, y + 36, { size: 12, weight: 700, font: FONT.title, color: "#ffffff", max: cw - 16 });
     text(st.title, x + 8, y + 50, { size: 11, weight: "italic 500", font: FONT.quote, color: st.colors.ink, max: cw - 16 });
     text("♪ " + SONGS[st.song].title, x + 8, y + 67, { size: 8, weight: 600, color: st.colors.accent, max: save.stageBest[st.id] ? cw - 60 : cw - 16 });
     if (save.stageBest[st.id]) text(save.stageBest[st.id].toLocaleString(), x + cw - 8, y + 67, { align: "right", size: 7.5, weight: 600, color: "#ffffff", max: 44 });
-    buttons.push({ x, y, w: cw, h: chh, act: () => start("single", i) });
+    buttons.push({ x, y, w: cw, h: chh, act: () => start("single", i, save.diffSel) });
   });
+  // Which difficulty Single Stage plays at.
+  DIFFS.forEach((dd, k) => { const open = diffOpen(dd.id), on = save.diffSel === dd.id && open; button(dd.name, 70 + k * 64, 318, 60, 22, { size: 8, hot: on, color: open ? undefined : "rgba(255,255,255,0.2)", act: () => { if (open) { save.diffSel = dd.id; store(); } } }); });
   if (pages > 1) {
     button("◀", 20, 318, 44, 22, { act: () => { stagePage = (stagePage + pages - 1) % pages; } });
     button("▶", W - 64, 318, 44, 22, { act: () => { stagePage = (stagePage + 1) % pages; } });
-    text("page " + (stagePage + 1) + " of " + pages, W / 2 + 120, 333, { align: "center", size: 9, weight: 600, color: "#c8b8ff" });
+    text("page " + (stagePage + 1) + " of " + pages, W / 2 + 160, 333, { align: "center", size: 9, weight: 600, color: "#c8b8ff" });
   }
-  button("BACK", W / 2 - 50, 318, 100, 22, { act: () => { state = "title"; } });
+  button("BACK", W / 2 + 10, 318, 100, 22, { act: () => { state = "title"; } });
+}
+// The Pilgrimage, before it begins: Easy, Normal or Hard, and where each one has reached.
+function drawPilgrim(dt) {
+  menuT += dt;
+  ctx.fillStyle = grad(ctx, 0, 0, W, H, [[0, "#0a0618"], [1, "#1a1030"]]); ctx.fillRect(0, 0, W, H);
+  text("THE PILGRIMAGE", W / 2, 32, { align: "center", size: 22, weight: 700, font: FONT.title, color: "#ffffff", spacing: 3 });
+  text("All thirty-eight Doctors, in the order of their lives, a little faster with each one", W / 2, 50, { align: "center", size: 12, weight: "italic 500", font: FONT.quote, color: "#e8dcff", max: 600 });
+  const N = STAGES.length;
+  DIFFS.forEach((d, k) => {
+    const x = 20 + k * 205, y = 62, w = 190, h = 168, open = diffOpen(d.id), D = save.diff[d.id], sel = save.diffSel === d.id;
+    const st = STAGES[Math.min(N - 1, D.done ? N - 1 : D.reached)];
+    ctx.save(); roundRect(x, y, w, h, 12); ctx.clip(); ctx.translate(x, y); ctx.scale(w / W, h / H);
+    st.bg(ctx, { t: menuT, pulse: 0, L: 1 + k, energy: 0 }); ctx.restore();
+    ctx.fillStyle = open ? (sel ? "rgba(0,0,0,0.42)" : "rgba(0,0,0,0.62)") : "rgba(0,0,0,0.8)"; roundRect(x, y, w, h, 12); ctx.fill();
+    ctx.strokeStyle = sel && open ? "#ffffff" : "rgba(255,255,255,0.35)"; ctx.lineWidth = sel && open ? 2.5 : 1; roundRect(x, y, w, h, 12); ctx.stroke();
+    text(d.name, x + w / 2, y + 30, { align: "center", size: 20, weight: 700, font: FONT.title, color: open ? "#ffffff" : "rgba(255,255,255,0.45)", spacing: 3 });
+    // The pace, drawn: a line climbing from the first Doctor to the last.
+    ctx.strokeStyle = open ? st.colors.accent : "rgba(255,255,255,0.25)"; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i <= 20; i++) { const u = i / 20, v = curveSpeed(d.id, u); ctx[i ? "lineTo" : "moveTo"](x + 20 + u * (w - 40), y + 72 - (v - 0.5) * 9); }
+    ctx.stroke();
+    const ab = wrapFit(d.about, w - 24, 10, 3, "500", FONT.ui);
+    ab.lines.forEach((l, i) => text(l, x + w / 2, y + 96 + i * (ab.size + 3), { align: "center", size: ab.size, weight: 500, color: open ? "#ffffff" : "rgba(255,255,255,0.45)" }));
+    const status = !open ? "Opens once you have finished the Pilgrimage" : D.done ? "✦ COMPLETE ✦" : D.reached > 0 ? "Reached " + STAGES[D.reached].name : "Not yet begun";
+    text(status, x + w / 2, y + h - 14, { align: "center", size: 9, weight: 700, color: open ? (D.done ? "#ffe8a0" : st.colors.accent) : "rgba(255,255,255,0.5)", max: w - 20 });
+    if (open) buttons.push({ x, y, w, h, act: () => { save.diffSel = d.id; store(); } });
+  });
+  const d = DIFF[diffOpen(save.diffSel) ? save.diffSel : "easy"], D = save.diff[d.id];
+  const canCont = D.reached > 0 && !(D.done && D.reached >= N - 1);
+  if (canCont) {
+    button("BEGIN: " + d.name, W / 2 - 186, 244, 180, 28, { hot: !canCont, act: () => start("pilgrimage", 0, d.id) });
+    button("CONTINUE: " + STAGES[D.reached].short.toUpperCase(), W / 2 + 6, 244, 180, 28, { hot: true, size: 9, act: () => start("pilgrimage", D.reached, d.id) });
+  } else button("BEGIN: " + d.name, W / 2 - 90, 244, 180, 28, { hot: true, act: () => start("pilgrimage", 0, d.id) });
+  if (D.done && typeof startScene === "function") button("SEE THE DOCTORS' WORD", W / 2 - 186, 282, 180, 22, { size: 9, act: () => startScene(d.id, () => { state = "pilgrim"; Sound.play(SONGS.title); }) });
+  button("BACK", D.done ? W / 2 + 6 : W / 2 - 60, 282, D.done ? 180 : 120, 22, { act: () => { state = "title"; } });
 }
 // Master mode, before it begins: what it asks.
 function drawMaster(dt) {
@@ -803,6 +871,23 @@ function drawPause(dt) {
   void dt;
 }
 function pause() { if (state === "play" && G && !G.over) { state = "pause"; Sound.muffle(true); } }
+// The gift's (i) button, beside the dial: the game waits while you read.
+const INFO = { x: 108, y: 214, r: 9 };
+function giftInfo() { if (state === "play" && G && !G.over && G.mode !== "master") { state = "giftinfo"; Sound.muffle(true); Input.soft = false; } }
+function drawGiftInfo(dt) {
+  drawPlay(true);
+  const st = G.stage, col = st.colors, g = st.gift;
+  ctx.fillStyle = "rgba(4,2,12,0.72)"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(10,8,22,0.9)"; roundRect(130, 70, 380, 200, 16); ctx.fill();
+  ctx.strokeStyle = col.accent; ctx.lineWidth = 1.5; roundRect(130, 70, 380, 200, 16); ctx.stroke();
+  text("THE GIFT OF " + st.name.toUpperCase(), W / 2, 98, { align: "center", size: 9, weight: 700, color: col.accent, spacing: 2, max: 340 });
+  text("✦  " + g.name + "  ✦", W / 2, 126, { align: "center", size: 22, weight: "italic 600", font: FONT.quote, color: "#ffffff", max: 350 });
+  const ls = wrapFit(g.about, 330, 13, 4, "500", FONT.ui);
+  ls.lines.forEach((l, i) => text(l, W / 2, 152 + i * (ls.size + 5), { align: "center", size: ls.size, weight: 500, color: "#ffffff" }));
+  text(G.gift >= 1 ? "Your gift is ready: tap ✦ (or press G) to use it." : "Clear squares to fill the ring around ✦; when it is full, tap it.", W / 2, 222, { align: "center", size: 9, weight: 600, color: col.ink, max: 340 });
+  button("BACK TO PLAY", W / 2 - 80, 234, 160, 24, { hot: true, act: resume });
+  void dt;
+}
 function resume() { state = "play"; Sound.muffle(false); Input.soft = false; }
 function finishToTitle() { if (G && G.score > save.best) { save.best = G.score; store(); } G = null; state = "title"; Sound.play(SONGS.title); }
 function drawOver(dt) {
@@ -810,7 +895,7 @@ function drawOver(dt) {
   drawPlay(true);
   ctx.fillStyle = "rgba(4,2,12,0.78)"; ctx.fillRect(0, 0, W, H);
   const st = G.stage, won = G.won;
-  const head = G.mode === "master" ? (won ? "DOCTOR OPTIME" : G.zoneT >= MASTER[G.zone].secs ? "TIME RAN OUT IN ZONE " + (G.zone + 1) : "MASTER ENDS IN ZONE " + (G.zone + 1)) : won ? "THE PILGRIMAGE IS COMPLETE" : G.mode === "pilgrimage" ? "THE PILGRIMAGE PAUSES HERE" : "THE STAGE IS ENDED";
+  const head = G.mode === "master" ? (won ? "DOCTOR OPTIME" : G.zoneT >= MASTER[G.zone].secs ? "TIME RAN OUT IN ZONE " + (G.zone + 1) : "MASTER ENDS IN ZONE " + (G.zone + 1)) : won ? "THE PILGRIMAGE IS COMPLETE · " + DIFF[G.diff].name : G.mode === "pilgrimage" ? "THE PILGRIMAGE PAUSES HERE · " + DIFF[G.diff].name : "THE STAGE IS ENDED";
   text(head, W / 2, 70, { max: 600, align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 2, glow: st.colors.accent, blur: 12 });
   text(G.score.toLocaleString() + (G.newBest ? "   NEW BEST" : ""), W / 2, 108, { align: "center", size: 30, weight: 800, color: G.newBest ? st.colors.line : "#ffffff" });
   text(G.squares + " squares   ·   reached " + st.name + "   ·   " + Math.floor(G.time / 60) + ":" + String(Math.floor(G.time % 60)).padStart(2, "0"), W / 2, 130, { align: "center", size: 10, weight: 600, color: st.colors.accent, max: 600 });
@@ -820,7 +905,7 @@ function drawOver(dt) {
   ls.forEach((l, i) => text(l, W / 2, 182 + i * 18, { align: "center", size: 15, weight: "italic 500", font: FONT.quote, color: st.colors.ink }));
   text(("— " + st.name + ", " + q.s).toUpperCase(), W / 2, 188 + ls.length * 18, { align: "center", size: 8, weight: 600, color: st.colors.accent, spacing: 0.8 });
   if (overT > 0.8) {
-    button("AGAIN", W / 2 - 150, 292, 140, 26, { hot: true, act: () => start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0) });
+    button("AGAIN", W / 2 - 150, 292, 140, 26, { hot: true, act: () => start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0, G.diff) });
     button("TITLE", W / 2 + 10, 292, 140, 26, { act: finishToTitle });
   }
 }
@@ -838,11 +923,13 @@ addEventListener("pointerdown", (ev) => {
   if (state === "play") {
     if (hitButton(p)) return;
     if (p.x > W - 34 && p.y < 34) { pause(); return; }
+    if (G.mode !== "master" && Math.hypot(p.x - INFO.x, p.y - INFO.y) < INFO.r + 6) { giftInfo(); return; }
     if (Math.hypot(p.x - 70, p.y - 244) < 34) { useGift(); return; }
     Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: performance.now(), col0: G.piece ? G.piece.x : 7, moved: false, down: false, lastY: p.y };
     return;
   }
-  if (hitButton(p)) { if (Sound.ctx()) Sound.I.bell(Sound.now() + 0.01, 88, 0.5, 0.3, { ratio: 3, index: 1, sfx: true }); }
+  if (hitButton(p)) { if (Sound.ctx()) Sound.I.bell(Sound.now() + 0.01, 88, 0.5, 0.3, { ratio: 3, index: 1, sfx: true }); return; }
+  if (state === "scene") sceneTap();
 }, { passive: false });
 addEventListener("pointermove", (ev) => {
   const T = Input.touch; if (!T || T.id !== ev.pointerId || state !== "play" || !G || !G.piece) return;
@@ -881,11 +968,14 @@ addEventListener("keydown", (e) => {
     else if (e.code === "Space") hardDrop();
     else if (e.code === "KeyG" || e.code === "ShiftLeft" || e.code === "ShiftRight" || e.code === "Enter") useGift();
     else if (e.code === "KeyP" || e.code === "Escape") pause();
-    if (G && G.mode === "tutorial" && G.tut.end && e.code === "Enter") start("pilgrimage", 0);
+    else if (e.code === "KeyI") giftInfo();
+    if (G && G.mode === "tutorial" && G.tut.end && e.code === "Enter") start("pilgrimage", 0, "easy");
   } else if (state === "pause") { if (e.code === "KeyP" || e.code === "Escape" || e.code === "Enter") resume(); }
-  else if (state === "title") { if (e.code === "Enter" || e.code === "Space") start("pilgrimage", 0); }
-  else if (state === "over" && overT > 0.8) { if (e.code === "Enter" || e.code === "Space") start(G.mode, G.mode === "single" ? G.si : 0); else if (e.code === "Escape") finishToTitle(); }
-  else if ((state === "help" || state === "stages" || state === "master") && e.code === "Escape") state = state === "help" ? helpFrom : "title";
+  else if (state === "giftinfo") { if (["KeyI", "Escape", "Enter", "Space", "KeyP"].includes(e.code)) resume(); }
+  else if (state === "scene") { if (e.code === "Escape") sceneSkip(); else if (e.code === "Enter" || e.code === "Space" || e.code === "ArrowRight") sceneTap(); }
+  else if (state === "title") { if (e.code === "Enter" || e.code === "Space") state = "pilgrim"; }
+  else if (state === "over" && overT > 0.8) { if (e.code === "Enter" || e.code === "Space") start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0, G.diff); else if (e.code === "Escape") finishToTitle(); }
+  else if ((state === "help" || state === "stages" || state === "master" || state === "pilgrim") && e.code === "Escape") state = state === "help" ? helpFrom : "title";
   else if (state === "stages" && (e.code === "ArrowRight" || e.code === "ArrowLeft")) stagePage += e.code === "ArrowRight" ? 1 : -1;
 });
 addEventListener("keyup", (e) => {
@@ -908,6 +998,9 @@ function frame(now) {
   buttons.length = 0;
   if (state === "play") { stepKeys(dt); stepPlay(dt); Ticker.step(dt); drawPlay(); }
   else if (state === "pause") drawPause(dt);
+  else if (state === "giftinfo") drawGiftInfo(dt);
+  else if (state === "pilgrim") drawPilgrim(dt);
+  else if (state === "scene") drawScene(dt);
   else if (state === "over") drawOver(dt);
   else if (state === "stages") drawStages(dt);
   else if (state === "master") drawMaster(dt);
@@ -919,4 +1012,4 @@ function frame(now) {
 resize();
 requestAnimationFrame(frame);
 // For tests: drive the game by hand.
-window.LUM = { get G() { return G; }, get state() { return state; }, set state(v) { state = v; }, start, step: (dt) => { stepPlay(dt || 1 / 60); Ticker.step(dt || 1 / 60); }, move, rotate, hardDrop, useGift, STAGES, SONGS, Sound, save: () => save, draw: () => drawPlay() };
+window.LUM = { get G() { return G; }, get state() { return state; }, set state(v) { state = v; }, start, step: (dt) => { stepPlay(dt || 1 / 60); Ticker.step(dt || 1 / 60); }, move, rotate, hardDrop, useGift, speed: () => fallSpeed(), STAGES, SONGS, Sound, save: () => save, draw: () => drawPlay() };
