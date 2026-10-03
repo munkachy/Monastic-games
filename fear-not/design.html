@@ -99,18 +99,18 @@
 <p><b>An open world from above, in 2D.</b> The city is seen from straight above, with Fr. Lawrence riding his angel over it. It looks 3D through three cheap tricks:</p>
 <ul>
   <li><b>Leaning buildings.</b> Each building is drawn as its roof plus its walls, and the taller it is, the further its roof leans away from the centre of the screen. As you fly past, the towers seem to swing, and you see the neon signs on their walls. This is how the first top-down Grand Theft Auto games made a flat city feel deep.</li>
-  <li><b>Height is zoom.</b> Climb and the camera pulls back, so the city shrinks below you; dive and it rushes up, the rooftops growing larger. Clouds and rain drift between you and the ground at their own speed.</li>
+  <li><b>Speed is zoom.</b> As in the first Grand Theft Auto, the camera draws back as the angel gathers speed and comes in close when it slows, and it always stays well above the tallest roof in view, so the towers loom up toward you. Clouds and rain drift between you and the ground at their own speed.</li>
   <li><b>A shadow on the roofs.</b> The angel's shadow falls on the rooftops below, small and far away when you are high, close beneath you when you dive. That shows your height at a glance.</li>
 </ul>
 <p>The joins come naturally: dive to the street and the view cuts, often through a close-up, to the side-on fight; win, and the angel lifts off and the camera rises back to the view from above. The skyline lives in the cut scenes and the side-on fights.</p>
 <ul>
-  <li><b>Above the fog.</b> Low down, the fog and the dark drain you and hide the way. Climb high enough and you break out above the fog into clear night air, with the neon glowing up through it.</li>
+  <li><b>Down into the streets.</b> (Changed after the first playtests.) The angel can dive right down to street level and fly between the buildings, over the traffic and the people under their umbrellas, scraping the walls if you steer badly; beat the wings to climb back over the roofs. The street lamps and the neon fill your light down there; the dark round the temptation drains it.</li>
   <li><b>Churches recharge you.</b> Fly near a church and its light fills you again; a lit church is a place to rest and recover.</li>
 </ul>
 <p>Light is your anchor; shadow is the demons' ground. This is what web-slinging is to Spider-Man.</p>
 <table>
   <tr><th>Move</th><th>What it does</th></tr>
-  <tr><td>Light-tether</td><td>Reach for a nearby light and swing round it on a thread of brightness, then let go to slingshot onward. Streetlamps give small swings; a cathedral window gives a huge one.</td></tr>
+  <tr><td><s>Light-tether</s></td><td>Dropped after the first playtests: swinging round lights did not feel good. The dive and the flap up carry the flight.</td></tr>
   <tr><td>Dive and pull up</td><td>Fold your wings to dive through the rain and gain speed; pull up and the speed becomes height. A good flight is a wave of dives and climbs.</td></tr>
   <tr><td>Flap on the beat</td><td>Flaps cost breath; a flap timed to the music gives a strong surge.</td></tr>
   <tr><td>Updrafts</td><td>Churches, adoration chapels and people praying send up columns of light that lift you high.</td></tr>
@@ -133,6 +133,8 @@
   <tr><td>Hold on empty ground</td><td>Wing shield (block)</td></tr>
   <tr><td>Tap a demon showing the <span class="gold">gold sign</span></td><td>Counter</td></tr>
   <tr><td>Swipe away from a <span class="red">red sign</span></td><td>Dodge: grabs and rage attacks cannot be countered</td></tr>
+  <tr><td>Swipe toward a demon close by</td><td>Vault over it, as Batman does</td></tr>
+  <tr><td>Tap a demon lying on the ground</td><td>Takedown: finish it before it rises</td></tr>
   <tr><td>Circle a group</td><td>Halo spin (a special, unlocked at a high combo)</td></tr>
 </table>
 <ul>
@@ -173,7 +175,7 @@
   <li><b>The opening</b> is the tutorial: the night the angel wakes him, his protest, the first flight and the first fight. See "The first build" below.</li>
   <li><b>Not princes.</b> His angel is a guardian, from the lowest choir. As in Daniel 10, the way into some parts of the city is held against them, and they must fight to get through.</li>
   <li><b>The princes.</b> The darkness over each part of the city is ruled by a fallen prince. Breaking a prince's hold is what brings an archangel to fight beside them: Michael first, as he came to help in Daniel 10:13.</li>
-  <li><b>He rides on the angel's back.</b> A priest cannot fly. He hangs on to his angel's back, cassock flapping, holding his hat on; the light-tether is the angel's reach.</li>
+  <li><b>He rides on the angel's back.</b> A priest cannot fly. He hangs on to his angel's back, cassock flapping, holding his hat on.</li>
   <li><b>The holy souls.</b> Some places are dark because a soul in purgatory is bound up with them and asks for help. The angel cannot set that soul free alone. What he can do is move a living person to pray for it, or to have a Mass offered. When that prayer is made, that part of the city opens. St. Gregory the Great tells stories of this kind in Book IV of his <i>Dialogues</i>, the same work whose second book is the life of St. Benedict.</li>
 </ul>
 
@@ -213,7 +215,7 @@
   <li><b>Uptown:</b> looks calm, is among the hardest: respectable-looking demons of pride, greed and quiet despair.</li>
   <li>Every district starts in shadow and lightens as you win it back.</li>
   <li><b>How it is built.</b> The districts are placed by hand: where each church, landmark and boss is. The buildings in between are generated from a fixed seed, so the same city comes back every time and only a little has to be saved (which districts are lit). They are simple tall shapes.</li>
-  <li><b>A floor in the air.</b> In flight you cannot drop below the rooftops; the streets are lost in fog. You only go down to the street for a fight, which keeps the city cheap to draw on a phone.</li>
+  <li><b>The streets are alive.</b> In flight you can go all the way down. Cars keep to their lanes and turn at the crossroads; people walk round their blocks. Only what is on the screen is drawn, which keeps it cheap on a phone. You still go down to the side-on street for a fight.</li>
 </ul>
 
 <h2>Losing, and difficulty</h2>
@@ -249,8 +251,8 @@
 <ol>
   <li><b>Cold open: "Bring Daddy Home".</b> 2 AM. A radio in the dark: for a week the lights have been going out across the city, block by block. In a small apartment a girl of about seven kneels at her window in her pyjamas: "Please bring Daddy home." Out in the rain her father sits in his car across from a corner store, deep in debt to the wrong people, a gun in his lap. Shapes in the dark lean close and whisper: <i>Just this once. Nobody gets hurt. You have no choice.</i></li>
   <li><b>The desert.</b> Hard cut to silence and stars. Fr. Lawrence asleep in his cell. A light. "Get up. Someone asked." The one who asked is a child. His protest ("I'm not Padre Pio"), and the angel's answer.</li>
-  <li><b>The flight.</b> Riding the angel's back over the district from above: learning to steer, climb above the fog, tether to lights, and recharge near a church, while the darkness closes round the car.</li>
-  <li><b>The fight.</b> Down to the wet street around the car, side-on, against the demons crowding it: the first combos, counters and dodges, with the angel blocking and striking beside him. The father, who never sees them, sits frozen. His guardian angel is pinned against the car in chains of shadow. Freed, he tells them the first clue to the larger mystery: the man the father owes, and where the lights first went out.</li>
+  <li><b>The flight.</b> Riding the angel's back over the district from above: learning to steer, to dive down into the streets and to climb back over the roofs, and to recharge near a church, while the darkness closes round the car.</li>
+  <li><b>The fight.</b> First, in his mind, the angel shows him every move against shades (the practice). Then down to the wet street around the car, side-on, against the demons crowding it, played as close to Batman: Arkham Asylum as we can: free-flowing strikes; counters that catch the wrist or ankle, throw the demon down and pin it; vaults over attackers; demons knocked flat who can be finished before they rise; gadgets in the flow (holy water, the stole, throws); time slowing with each blow and all but stopping at the warning sign. His angel waits above and swoops down at five in a row. The father, who never sees them, sits frozen. His guardian angel is pinned against the car in chains of shadow. Freed, he tells them the first clue to the larger mystery: the man the father owes, and where the lights first went out.</li>
   <li><b>The choice.</b> He makes his own choice: he drops the gun into a storm drain and drives home. The street's lights come back on. In the last close-up the apartment door opens, and we see her face.</li>
   <li><b>The bell.</b> Back to the chapel as the bell rings for Vigils. The brothers file in. Fr. Lawrence's knees ache.</li>
 </ol>
@@ -266,7 +268,7 @@
   <li><b>Combat arena:</b> the priest and his angel; three demons (one to counter, one to dodge, one with a shield); all the gestures; dizzy and rage; the combo meter; a first Heights/Depths shift.</li>
   <li><b>Michael and tag-ins.</b></li>
   <li><b>One full encounter:</b> a person, a temptation, the fight, their choice.</li>
-  <li><b>Flight prototype:</b> one district in shadow; light-tether, dive and pull-up, updrafts, shadow drain.</li>
+  <li><b>Flight prototype:</b> one district in shadow; dive and pull-up, flying the streets, updrafts, shadow drain.</li>
   <li><b>The city:</b> districts, reclaiming the light, the virtues, the story.</li>
 </ol>
 
