@@ -457,7 +457,8 @@ function stepPlay(dt) {
   if (!p) { G.spawnT -= dt; if (G.spawnT <= 0 && !G.falling.length) spawn(); }
   else {
     let v = fallSpeed();
-    if (Input.soft) v = Math.max(v, 18);
+    // Holding ↓ on a keyboard drops fast; dragging a finger down is gentler, and quicker the further it drags.
+    if (Input.soft) v = Math.max(v, Input.softTouch ? 3 + Math.min(3, Input.softTouch / 25) : 18);
     p.off += v * dt;
     while (p.off >= 1) { if (canAt(p.x, p.row + 1)) { p.row++; p.off -= 1; } else { p.off = 0; land(false); break; } }
     if (G.piece && !canAt(p.x, p.row + 1) && p.off > 0.05) { p.off = 0; land(false); }
@@ -911,7 +912,7 @@ addEventListener("pointerdown", (ev) => {
     if (p.x > W - 34 && p.y < 34) { pause(); return; }
     if (G.mode !== "master" && Math.hypot(p.x - INFO.x, p.y - INFO.y) < INFO.r + 6) { giftInfo(); return; }
     if (Math.hypot(p.x - 70, p.y - 244) < 34) { useGift(); return; }
-    Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: performance.now(), col0: G.piece ? G.piece.x : 7, moved: false, down: false, lastY: p.y };
+    Input.touch = { id: ev.pointerId, x0: p.x, y0: p.y, t0: ev.timeStamp, col0: G.piece ? G.piece.x : 7, moved: false, down: false, lastY: p.y };
     return;
   }
   if (hitButton(p)) { if (Sound.ctx()) Sound.I.bell(Sound.now() + 0.01, 88, 0.5, 0.3, { ratio: 3, index: 1, sfx: true }); return; }
@@ -927,17 +928,18 @@ addEventListener("pointermove", (ev) => {
     while (G.piece && G.piece.x > want) { const x = G.piece.x; move(-1); if (G.piece.x === x) break; }
   }
   if (T.flicked) return;
-  const now = performance.now(), vy = (p.y - T.lastY) / Math.max(1, now - (T.lastT || T.t0));
-  // A flick: quick and straight down (a fast stroke, or 30 points down within a quarter-second).
-  if (dy > 18 && dy > Math.abs(dx) * 1.3 && (vy > 0.45 || (dy > 30 && now - T.t0 < 250))) { T.flicked = true; Input.soft = false; hardDrop(); return; }
-  if (dy > 26 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; }
+  // Timed by when each touch happened, not when the game got to it, so a busy phone still reads a flick.
+  const now = ev.timeStamp;
+  // A flick: a short, fast, straight stroke down, right from the start of the touch.
+  if (!T.down && dy > 22 && dy > Math.abs(dx) * 1.5 && now - T.t0 < 220 && dy / Math.max(1, now - T.t0) > 0.32) { T.flicked = true; Input.soft = false; hardDrop(); return; }
+  if (dy > 30 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; Input.softTouch = dy - 30; }
   T.lastY = p.y; T.lastT = now;
 }, { passive: false });
 const release = (ev) => {
   const T = Input.touch; if (!T || T.id !== ev.pointerId) return;
-  Input.touch = null; Input.soft = false;
+  Input.touch = null; Input.soft = false; Input.softTouch = 0;
   if (state !== "play" || !G) return;
-  const p = toGame(ev), dt = performance.now() - T.t0, dy = p.y - T.y0, dx = p.x - T.x0;
+  const p = toGame(ev), dt = ev.timeStamp - T.t0, dy = p.y - T.y0, dx = p.x - T.x0;
   if (!T.moved && dt < 350) rotate(p.x < W / 2 ? -1 : 1);
   else if (!T.flicked && !T.down && dy > 40 && dt < 300 && dy > Math.abs(dx) * 1.5) hardDrop();
 };
