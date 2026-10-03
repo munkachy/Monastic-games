@@ -31,10 +31,14 @@ const Sound = (() => {
     return b;
   }
   A.init = function () {
-    if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+    // On iPhones, play as media, so the side switch that silences the ringer does not silence the music.
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { }
+    // Safari can leave the sound "suspended" or "interrupted" (a call, a notification, another app): wake it.
+    if (ac) { if (ac.state !== "running" && ac.state !== "closed") ac.resume(); return; }
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
     build(new C({ latencyHint: "interactive" }));
     setInterval(tick, 25);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running" && ac.state !== "closed") ac.resume(); });
   };
   function build(context) {
     ac = context;
