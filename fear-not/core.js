@@ -165,7 +165,7 @@ function pauseButton() {
 const PARTS = [
   { id: "cold", name: "Bring Daddy Home", about: "2 AM, in the city" },
   { id: "desert", name: "Someone Asked", about: "The monastery in the desert" },
-  { id: "flight", name: "The Flight", about: "Over the city and down its streets" },
+  { id: "flight", name: "The Flight", about: "Rooftop to rooftop, on the angel's back" },
   { id: "fight", name: "The Street", about: "The demons round the car" },
   { id: "choice", name: "The Choice", about: "What he does now" },
   { id: "bell", name: "Vigils", about: "Back before the bell" },
