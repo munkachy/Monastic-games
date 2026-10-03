@@ -20,6 +20,7 @@ function resize() {
 }
 addEventListener("resize", resize);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let UI_A = 1;   // the whole menu's opacity, as it fades in
 const FONT = { title: "Cinzel, 'Trajan Pro', Georgia, serif", quote: "'Cormorant Garamond', Georgia, serif", ui: "Montserrat, 'Segoe UI', system-ui, sans-serif" };
 function text(str, x, y, o) {
   o = o || {};
@@ -31,7 +32,7 @@ function text(str, x, y, o) {
   ctx.textAlign = o.align || "left"; ctx.textBaseline = o.base || "alphabetic";
   if (o.spacing && ctx.letterSpacing !== undefined) ctx.letterSpacing = o.spacing + "px";
   if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 10; }
-  if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
+  ctx.globalAlpha = (o.alpha === undefined ? 1 : o.alpha) * UI_A;
   ctx.fillStyle = o.color || "#ffffff"; ctx.fillText(str, x, y);
   ctx.shadowBlur = 0; ctx.globalAlpha = 1; if (ctx.letterSpacing !== undefined) ctx.letterSpacing = "0px";
 }
@@ -112,7 +113,7 @@ function start(mode, si, diff) {
     falling: [], piece: null, queue: [], spawnT: 0.6, pieces: 0,
     tl: 0, holdT: 0, passSq: 0, combo: 0, score: 0, squares: 0, stageSq: 0, time: 0, stageTime: 0,
     gift: 0, hangT: 0, calmT: 0, over: false, overT: 0, done: false, zone: 0, zoneSq: 0, zoneT: 0,
-    energy: 0, parts: [], pops: [], banner: { t: 0 }, anchors: [], level: 0, danger: 0,
+    energy: 0, parts: [], pops: [], banner: { t: 0 }, anchors: [], level: 0, danger: 0, shift: null, slide: null,
   };
   for (let i = 0; i < 3; i++) G.queue.push(newPiece());
   G.startSi = si;
@@ -160,7 +161,7 @@ function land(hard) {
     G.grid[x][y] = { c: p.cells[i], gem: p.gems[i], lit: false, flash: 0 };
   }
   settle();
-  Sfx.land(hard);
+  Sfx.land(hard, p.x);
   tutEvent("land"); if (Input.soft) tutEvent("drop");
 }
 // Blocks with nothing under them fall (a block landing half over a gap splits in two).
@@ -346,6 +347,12 @@ function useGift() {
     }
     settle();
   }
+  else if (g.kind === "shift") {
+    // Through the seven mansions: the field moves seven places toward its fuller side.
+    let left = 0, right = 0;
+    for (let x = 0; x < 7; x++) for (let y = 0; y < ROWS; y++) { if (G.grid[x][y]) left++; if (G.grid[COLS - 1 - x][y]) right++; }
+    G.shift = { dir: right >= left ? 1 : -1, n: 0, t: 0.05, gone: 0 };
+  }
   else if (g.kind === "hang") G.hangT = 20;
   else if (g.kind === "hold") G.holdT = (8 * 60) / Sound.bpm();
   else if (g.kind === "green") {
@@ -364,6 +371,32 @@ function useGift() {
       G.grid[x][y] = null;
       for (let i = 0; i < 6; i++) G.parts.push({ x: FX + x * CS + 10, y: FY + y * CS + 10, vx: (Math.random() - 0.5) * 80, vy: -Math.random() * 60, life: 1, c: i % 2 ? "#ff7ab0" : "#ffffff", s: 3, petal: true, rot: Math.random() * 6 });
     }
+  }
+}
+const SHIFT_PTS = 30;   // for each block carried out of the field by the Interior Castle
+function stepShift(dt) {
+  const S = G.shift;
+  S.t -= dt; if (S.t > 0) return;
+  S.t += 30 / Sound.bpm();
+  const d = S.dir, edge = d > 0 ? COLS - 1 : 0, cols = G.stage.colors;
+  for (let y = 0; y < ROWS; y++) {
+    const c = G.grid[edge][y]; if (!c) continue;
+    S.gone++;
+    const col = (c.c ? cols.b : cols.a)[1];
+    for (let i = 0; i < 4; i++) G.parts.push({ x: FX + (edge + 0.5 + d * 0.5) * CS, y: FY + y * CS + CS / 2, vx: d * (90 + Math.random() * 160), vy: (Math.random() - 0.6) * 90, life: 0.7 + Math.random() * 0.3, c: col, s: 3, add: true });
+  }
+  if (d > 0) { G.grid.pop(); G.grid.unshift(Array(ROWS).fill(null)); } else { G.grid.shift(); G.grid.push(Array(ROWS).fill(null)); }
+  for (const f of G.falling) { f.x += d; if (f.x < 0 || f.x >= COLS) { f.done = true; S.gone++; } }
+  G.falling = G.falling.filter((f) => !f.done);
+  // The block in the air is lifted clear if a column now stands where it is.
+  const p = G.piece; if (p) { while (!canAt(p.x, p.row) && p.row > -2) p.row--; if (!canAt(p.x, p.row + 1)) p.off = 0; }
+  G.slide = { d, a: 1 };
+  S.n++;
+  Sfx.mansion(S.n);
+  if (S.n >= 7) {
+    const pts = S.gone * SHIFT_PTS; G.score += pts; G.shift = null;
+    G.energy = Math.min(1, G.energy + 0.4);
+    pop("THE SEVENTH MANSION", G.stage.colors.accent, 18, S.gone ? "+" + pts.toLocaleString() + ": " + S.gone + (S.gone === 1 ? " block" : " blocks") + " passed through" : "the field moves over");
   }
 }
 // ---- Learning to play: eight short lessons, on a gentle stage ---------------------------------------
@@ -452,15 +485,19 @@ function stepPlay(dt) {
   if (G.mode === "tutorial") stepTutorial(dt);
   for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c && c.flash > 0) c.flash -= dt; }
   if (G.over) { G.overT += dt; if (G.overT > 1.8) finish(false); return; }
+  // The Interior Castle moving the field; the block in the air waits for it.
+  if (G.shift) stepShift(dt);
+  if (G.slide) { G.slide.a -= dt * 9; if (G.slide.a <= 0) G.slide = null; }
   // The piece.
   const p = G.piece;
-  if (!p) { G.spawnT -= dt; if (G.spawnT <= 0 && !G.falling.length) spawn(); }
+  if (G.shift) { /* waiting */ }
+  else if (!p) { G.spawnT -= dt; if (G.spawnT <= 0 && !G.falling.length) spawn(); }
   else {
     let v = fallSpeed();
     // Holding ↓ on a keyboard drops fast; dragging a finger down is gentler, and quicker the further it drags.
     if (Input.soft) v = Math.max(v, Input.softTouch ? 3 + Math.min(3, Input.softTouch / 25) : 18);
     p.off += v * dt;
-    while (p.off >= 1) { if (canAt(p.x, p.row + 1)) { p.row++; p.off -= 1; } else { p.off = 0; land(false); break; } }
+    while (p.off >= 1) { if (canAt(p.x, p.row + 1)) { p.row++; p.off -= 1; if (Input.soft) Sfx.soft(p.x, p.row); } else { p.off = 0; land(false); break; } }
     if (G.piece && !canAt(p.x, p.row + 1) && p.off > 0.05) { p.off = 0; land(false); }
   }
   stepFalling(dt);
@@ -476,9 +513,11 @@ const Sfx = (() => {
   const S = {}, I = Sound.I;
   const sc = () => G.stage.scale;
   let rot = 0;
-  S.move = () => { if (!Sound.ctx()) return; const t = Sound.grid(1); I.perc(t, sc()[0] - 12, 0.25, { decay: 0.05, pan: (G.piece.x - 7) / 9 }); };
+  // Moving, drawing down and flicking play the song's own voices for the player (kit.js).
+  S.move = () => Kit.move(G.stage, G.stage.song, G.piece.x);
+  S.soft = (x, row) => Kit.soft(G.stage, G.stage.song, x, row);
   S.rotate = (d) => { if (!Sound.ctx()) return; rot = (rot + (d > 0 ? 1 : sc().length - 1)) % sc().length; I.pluck(Sound.grid(1), sc()[rot], 0.12, 0.35, { wave: "triangle", cut: 4200, dly: 0.1, rev: 0.1, decay: 0.15 }); };
-  S.land = (hard) => { if (!Sound.ctx()) return; const t = Sound.grid(1); I.perc(t, sc()[0] - 24, hard ? 0.6 : 0.35, { decay: 0.1 }); if (hard) I.hat(t, 0.4, { f: 5000, decay: 0.06 }); };
+  S.land = (hard, x) => Kit.drop(G.stage, G.stage.song, x, hard);
   S.square = (n) => { if (!Sound.ctx()) return; const t = Sound.grid(1); I.bell(t, sc()[(G.anchors.length * 2) % sc().length] + 12, 0.5, 0.3, { ratio: 3, index: 1.5, dly: 0.2 }); void n; };
   S.lumen = () => { if (!Sound.ctx()) return; const t = Sound.grid(2); I.swell(t, 0.3, 0.8); I.bell(t + 0.3, sc()[4] + 12, 1.2, 0.5); };
   S.clear = (n, cells) => {
@@ -489,6 +528,7 @@ const Sfx = (() => {
   };
   S.big = (m) => { if (!Sound.ctx()) return; const t = Sound.grid(4), s = sc(); I.stab(t, [s[0], s[2], s[4], s[0] + 12], 0.8, { cut: 6000, dly: 0.2 }); if (m >= 3) I.impact(t, 0.6); };
   S.bonus = (k) => { if (!Sound.ctx()) return; const t = Sound.grid(4), s = sc(); I.impact(t, 0.9); I.choir(t, [s[0], s[2], s[4]], 2.2, 0.8, { vowel: "a", att: 0.05 }); if (k > 1) I.bell(t, s[0] + 24, 2, 0.6); };
+  S.mansion = (n) => { if (!Sound.ctx()) return; const t = Sound.grid(1), s = sc(); I.bell(t, s[(n - 1) % s.length] + 12 * (1 + Math.floor((n - 1) / s.length)), n === 7 ? 1.6 : 0.5, n === 7 ? 0.6 : 0.4, { ratio: 3, index: 1.4, dly: 0.2 }); I.fall(t, 0.18, 0.35); if (n === 7) { I.impact(t, 0.6); I.choir(t, [s[0], s[2], s[4]], 1.6, 0.6, { vowel: "a", att: 0.04 }); } };
   S.gift = () => { if (!Sound.ctx()) return; const t = Sound.grid(2), s = sc(); I.swell(t, 0.5, 0.8); I.choir(t + 0.4, [s[0], s[2], s[4], s[0] + 12], 2.5, 0.7, { vowel: "o", att: 0.1 }); I.bell(t + 0.4, s[4] + 12, 2, 0.5); };
   S.stage = () => { if (!Sound.ctx()) return; const mt = Sound.musicTime(); const bar = mt ? (60 / Sound.bpm()) * 4 : 2; const t = Sound.now() + 0.05; I.riser(t, bar * 0.9, 0.9); I.impact(t + bar, 1, {}); };
   S.over = () => { if (!Sound.ctx()) return; const t = Sound.now() + 0.02; I.fall(t, 1.8, 1); I.impact(t, 0.7); };
@@ -497,23 +537,29 @@ const Sfx = (() => {
 })();
 
 // ---- The ticker: the Doctors' words, under the field, at a reading pace -------------------------------
+// Only the words themselves (where each comes from is kept in the quotes files). Tap the words for the next.
+const TICK = { y: FY + ROWS * CS + 12, h: 26 };
 const Ticker = (() => {
-  const T = { cur: null, x: 0, list: [], i: 0, stage: null, next: null, speed: 30 };
+  const T = { cur: null, x: 0, list: [], i: 0, stage: null, next: null, speed: 30, fade: 1 };
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   T.set = (st) => { T.stage = st; T.list = shuffle(QUOTES[st.id] || []); T.i = 0; T.cur = null; T.next = null; };
   T.queueStage = (st) => { T.next = st; };
+  function take(x) {
+    if (T.next) { T.set(T.next); }
+    const q = T.list[T.i++ % Math.max(1, T.list.length)]; if (!q) return;
+    ctx.font = "italic 500 14px " + FONT.quote; const w = ctx.measureText("“" + q.t + "”").width;
+    T.cur = { q, w, stage: T.stage }; T.x = x;
+  }
   T.step = (dt) => {
     if (!T.stage) return;
-    if (!T.cur) {
-      if (T.next) { T.set(T.next); }
-      const q = T.list[T.i++ % Math.max(1, T.list.length)]; if (!q) return;
-      ctx.font = "italic 500 14px " + FONT.quote; const w1 = ctx.measureText("“" + q.t + "”").width;
-      ctx.font = "600 9px " + FONT.ui; const w2 = ctx.measureText(("— " + T.stage.name + ", " + q.s).toUpperCase()).width;
-      T.cur = { q, w1, w2, w: w1 + 18 + w2, stage: T.stage }; T.x = W + 10;
-    }
-    T.x -= T.speed * dt;
+    if (!T.cur) { take(W + 10); T.fade = 1; if (!T.cur) return; }
+    T.x -= T.speed * dt; T.fade = Math.min(1, T.fade + dt * 4);
     if (T.x + T.cur.w < -40) T.cur = null;
   };
+  // The next quotation at once, from the left, so it can be read straight away.
+  T.skip = () => { if (!T.stage) return; take(24); T.fade = 0; };
+  // Whether a point is on the words now passing.
+  T.hit = (p) => !!T.cur && p.y >= TICK.y - 4 && p.y <= TICK.y + TICK.h + 6 && p.x >= T.x - 12 && p.x <= T.x + T.cur.w + 12;
   T.draw = (y, h, colors) => {
     const c = ctx;
     c.save();
@@ -522,11 +568,7 @@ const Ticker = (() => {
     c.fillStyle = grad(c, 0, 0, W, 0, [[0, "rgba(255,255,255,0)"], [0.5, colors.accent], [1, "rgba(255,255,255,0)"]]);
     c.globalAlpha = 0.5; c.fillRect(0, y, W, 0.6); c.fillRect(0, y + h - 0.6, W, 0.6); c.globalAlpha = 1;
     c.beginPath(); c.rect(0, y, W, h); c.clip();
-    if (T.cur) {
-      const q = T.cur.q;
-      text("“" + q.t + "”", T.x, y + h / 2 + 5, { font: FONT.quote, size: 14, weight: "italic 500", color: colors.ink });
-      text(("— " + T.cur.stage.name + ", " + q.s).toUpperCase(), T.x + T.cur.w1 + 18, y + h / 2 + 3.5, { size: 9, weight: 600, color: colors.accent, spacing: 0.6 });
-    }
+    if (T.cur) text("“" + T.cur.q.t + "”", T.x, y + h / 2 + 5, { font: FONT.quote, size: 14, weight: "italic 500", color: colors.ink, alpha: T.fade });
     // The edges fade into the dark.
     c.restore();
   };
@@ -593,12 +635,16 @@ function drawPlay(quiet) {
   for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(FX, FY + y * CS + 0.5); ctx.lineTo(FX + COLS * CS, FY + y * CS + 0.5); ctx.stroke(); }
   ctx.strokeStyle = col.accent; ctx.globalAlpha = 0.5; ctx.strokeRect(FX - 4.5, FY - 0.5, COLS * CS + 9, ROWS * CS + 4); ctx.globalAlpha = 1;
   if (G.danger > 0.02) { ctx.fillStyle = `rgba(255,40,60,${0.12 * G.danger * (0.6 + 0.4 * Math.sin(t * 6))})`; ctx.fillRect(FX, FY, COLS * CS, 3 * CS); }
-  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c) drawCell(st, FX + x * CS, FY + y * CS, c); }
-  for (const f of G.falling) drawCell(st, FX + f.x * CS, FY + f.y * CS, { c: f.c, gem: f.gem });
+  const sx = G.slide ? -G.slide.d * CS * G.slide.a * G.slide.a : 0;
+  if (sx) { ctx.save(); ctx.beginPath(); ctx.rect(FX, FY - 2 * CS, COLS * CS, (ROWS + 2) * CS); ctx.clip(); }
+  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) { const c = G.grid[x][y]; if (c) drawCell(st, FX + x * CS + sx, FY + y * CS, c); }
+  for (const f of G.falling) drawCell(st, FX + f.x * CS + sx, FY + f.y * CS, { c: f.c, gem: f.gem });
   // The outline of every square, bright.
   ctx.strokeStyle = col.line; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
-  for (const [x, y] of G.anchors) ctx.strokeRect(FX + x * CS + 1, FY + y * CS + 1, CS * 2 - 2, CS * 2 - 2);
+  for (const [x, y] of G.anchors) ctx.strokeRect(FX + x * CS + 1 + sx, FY + y * CS + 1, CS * 2 - 2, CS * 2 - 2);
   ctx.globalAlpha = 1;
+  if (sx) ctx.restore();
+  if (G.shift && G.shift.n > 0) text(ROMAN(G.shift.n), FX + COLS * CS / 2, FY + ROWS * CS / 2 + 22, { align: "center", size: 64, weight: 700, font: FONT.title, color: "#ffffff", alpha: 0.28, glow: col.line, blur: 20 });
   // In the lessons: where to put the block, glowing.
   if (G.target) { const [tx, ty] = G.target, a = 0.35 + 0.3 * Math.sin(t * 6); ctx.strokeStyle = hexA(col.line, a + 0.3); ctx.lineWidth = 2.5; ctx.strokeRect(FX + tx * CS + 1, FY + ty * CS + 1, CS * 2 - 2, CS * 2 - 2); ctx.fillStyle = hexA(col.line, a * 0.4); ctx.fillRect(FX + tx * CS + 1, FY + ty * CS + 1, CS * 2 - 2, CS * 2 - 2); }
   // The falling piece, and where it will land.
@@ -627,7 +673,7 @@ function drawPlay(quiet) {
   }
   ctx.restore();
   drawHud();
-  Ticker.draw(FY + ROWS * CS + 12, 26, col);
+  Ticker.draw(TICK.y, TICK.h, col);
   if (G.mode === "tutorial") {
     drawLesson();
     if (G.tut.end && !quiet) {
@@ -716,7 +762,7 @@ let menuT = 0, overT = 0;
 const buttons = [];
 function button(label, x, y, w, h, o) {
   o = o || {}; const hot = o.hot;
-  ctx.save();
+  ctx.save(); ctx.globalAlpha = UI_A;
   ctx.fillStyle = hot ? "rgba(255,255,255,0.95)" : "rgba(10,8,20,0.55)"; roundRect(x, y, w, h, h / 2); ctx.fill();
   ctx.strokeStyle = o.color || "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.2; roundRect(x, y, w, h, h / 2); ctx.stroke();
   ctx.restore();
@@ -735,6 +781,11 @@ function drawTitle(dt) {
   text("LUMINARIES", W / 2, 112, { align: "center", size: 52, weight: 700, font: FONT.title, color: "#fff8e8", glow: `rgba(255,220,140,${0.6 + pulse * 0.4})`, blur: 22 + pulse * 10, spacing: 6 });
   text("O Doctor optime, Ecclesiae sanctae lumen", W / 2, 140, { align: "center", size: 16, weight: "italic 500", font: FONT.quote, color: "#ffe8c0" });
   text("O best of teachers, light of holy Church  ·  the antiphon for the Doctors", W / 2, 158, { align: "center", size: 8.5, weight: 600, color: "rgba(255,240,220,0.7)", spacing: 1 });
+  if (!awake) {
+    text("TAP TO BEGIN", W / 2, 236, { align: "center", size: 13, weight: 700, color: "#ffe8c0", spacing: 5, alpha: 0.55 + Math.sin(menuT * 3) * 0.35, glow: "rgba(255,220,140,0.6)", blur: 10 });
+    return;
+  }
+  awakeT += dt; UI_A = Math.min(1, awakeT / 0.6);
   button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => { state = "pilgrim"; } });
   button("LEARN TO PLAY", W / 2 - 186, 210, 180, 22, { hot: !save.learned, act: () => start("tutorial", 0) });
   button("SINGLE STAGE", W / 2 + 6, 210, 180, 22, { act: () => { state = "stages"; } });
@@ -745,7 +796,7 @@ function drawTitle(dt) {
   button(armed ? "TAP AGAIN TO ERASE ALL" : "RESET PROGRESS", W / 2 + 6, 272, 180, 18, { size: 9, color: armed ? "#ff7a8a" : undefined, act: () => { if (menuT - resetArm < 4) { resetProgress(); resetArm = -99; } else resetArm = menuT; } });
   if (save.master) text("DOCTOR OPTIME", W / 2, 304, { align: "center", size: 11, weight: 700, font: FONT.title, color: "#ffe8a0", glow: "rgba(255,220,140,0.8)", blur: 10, spacing: 3 });
   text("The Pilgrimage: all " + STAGES.length + " Doctors of the Church, in the order of their lives" + (save.best ? "   ·   best " + save.best.toLocaleString() : ""), W / 2, 330, { align: "center", size: 9, weight: 600, color: "rgba(255,255,255,0.7)", max: 600 });
-  if (!Sound.ctx()) text("Tap anywhere to begin with sound", W / 2, 346, { align: "center", size: 9, weight: 600, color: "#ffe8c0", alpha: 0.6 + Math.sin(menuT * 4) * 0.4 });
+  UI_A = 1;
 }
 let stagePage = 0;
 function drawStages(dt) {
@@ -888,7 +939,6 @@ function drawOver(dt) {
   if (!G.overQuote) { const qs = QUOTES[st.id]; G.overQuote = qs[Math.floor(Math.random() * qs.length)]; }
   const q = G.overQuote, ls = wrap("“" + q.t + "”", 440, "italic 500 15px " + FONT.quote);
   ls.forEach((l, i) => text(l, W / 2, 182 + i * 18, { align: "center", size: 15, weight: "italic 500", font: FONT.quote, color: st.colors.ink }));
-  text(("— " + st.name + ", " + q.s).toUpperCase(), W / 2, 188 + ls.length * 18, { align: "center", size: 8, weight: 600, color: st.colors.accent, spacing: 0.8 });
   if (overT > 0.8) {
     button("AGAIN", W / 2 - 150, 292, 140, 26, { hot: true, act: () => start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0, G.diff) });
     button("TITLE", W / 2 + 10, 292, 140, 26, { act: finishToTitle });
@@ -897,13 +947,27 @@ function drawOver(dt) {
 
 // ---- Input ------------------------------------------------------------------------------------
 const Input = { soft: false, keys: new Set(), das: { dir: 0, t: 0 }, touch: null };
+// Upright on a phone: the game waits behind the "turn sideways" card in index.html.
+const uprightMQ = matchMedia("(orientation: portrait) and (hover: none) and (pointer: coarse)");
+const upright = () => uprightMQ.matches;
+// Browsers let sound begin only at a touch or a key. Until then the title waits with "tap to begin",
+// so that the first touch starts the music rather than a game. Phones count the lifting of the
+// finger (not its landing) as the touch that may start sound, so the sound is woken there too.
+let awake = false, awakeT = 0;
+function wake() {
+  Sound.init();
+  if (awake) return;
+  awake = true; awakeT = 0;
+  if (state === "title") Sound.play(SONGS.title);
+}
+// Where a browser allows sound before any touch (some do, for sites already visited), it begins at once.
+try { Sound.init(); if (Sound.ctx() && Sound.ctx().state === "running") wake(); } catch (e) { }
 function toGame(ev) { const r = cv.getBoundingClientRect(); return { x: ((ev.clientX - r.left) / r.width) * W, y: ((ev.clientY - r.top) / r.height) * H }; }
 function hitButton(p) { for (let i = buttons.length - 1; i >= 0; i--) { const b = buttons[i]; if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) { b.act && b.act(); return true; } } return false; }
 addEventListener("pointerdown", (ev) => {
   if (ev.cancelable) ev.preventDefault();
-  const first = !Sound.ctx();
   Sound.init();
-  if (first && state === "title") { Sound.play(SONGS.title); }
+  if (upright() || !awake) return;
   const p = toGame(ev);
   if (state === "play") {
     // Taps outside the game's own picture (the black bands when the phone is upright) work the
@@ -936,17 +1000,20 @@ addEventListener("pointermove", (ev) => {
   if (dy > 30 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; Input.softTouch = dy - 30; }
 }, { passive: false });
 const release = (ev) => {
+  if (ev.type === "pointerup") wake();
   const T = Input.touch; if (!T || T.id !== ev.pointerId) return;
   Input.touch = null; Input.soft = false; Input.softTouch = 0;
   if (state !== "play" || !G) return;
   const p = toGame(ev), dt = ev.timeStamp - T.t0, dy = p.y - T.y0, dx = p.x - T.x0;
-  if (!T.moved && dt < 350) rotate(p.x < W / 2 ? -1 : 1);
+  if (!T.moved && dt < 350) { if (Ticker.hit(p)) Ticker.skip(); else rotate(p.x < W / 2 ? -1 : 1); }
 };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);
+addEventListener("touchend", wake, { passive: true }); addEventListener("click", wake);
 addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
-  const first = !Sound.ctx(); Sound.init(); if (first && state === "title") Sound.play(SONGS.title);
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(e.code)) e.preventDefault();
+  if (!awake) { wake(); return; }
+  Sound.init();
   if (e.repeat) return;
   Input.keys.add(e.code);
   if (e.code === "KeyM") { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); return; }
@@ -996,10 +1063,10 @@ function frame(now) {
   else if (state === "stages") drawStages(dt);
   else if (state === "master") drawMaster(dt);
   else drawTitle(dt);
-  if (innerHeight > innerWidth * 1.1) { ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, 0, W, 26); text("Turn your phone sideways to play", W / 2, 17, { align: "center", size: 11, weight: 700, color: "#ffe8c0" }); }
+  if (upright()) { if (state === "play") pause(); if (state === "giftinfo") state = "pause"; Input.touch = null; Input.soft = false; }
   requestAnimationFrame(frame);
 }
 resize();
 requestAnimationFrame(frame);
 // For tests: drive the game by hand.
-window.LUM = { get G() { return G; }, get state() { return state; }, set state(v) { state = v; }, start, step: (dt) => { stepPlay(dt || 1 / 60); Ticker.step(dt || 1 / 60); }, move, rotate, hardDrop, useGift, speed: () => fallSpeed(), STAGES, SONGS, Sound, save: () => save, draw: () => drawPlay() };
+window.LUM = { get G() { return G; }, get state() { return state; }, set state(v) { state = v; }, get awake() { return awake; }, Ticker, TICK, start, step: (dt) => { stepPlay(dt || 1 / 60); Ticker.step(dt || 1 / 60); }, move, rotate, hardDrop, useGift, speed: () => fallSpeed(), STAGES, SONGS, Sound, save: () => save, draw: () => drawPlay() };
