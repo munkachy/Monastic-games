@@ -1,17 +1,17 @@
 "use strict";
 // Fear Not: the flight. The city seen from straight above, as in the first Grand Theft Auto:
 // tall buildings leaning away from the middle of the screen, their walls and windows and neon
-// showing as you pass, and the camera drawing back as the angel gathers speed and coming in close
-// when it slows. Fr. Lawrence rides his angel over the roofs, or down into the streets between the
-// buildings, over the traffic and the people under their umbrellas. Dive to drop and gain speed;
-// beat the wings (strongest on the beat) to climb. Mind the walls down there.
+// showing as you pass, and the camera drawing back while the angel is in the air and coming in
+// close when it lands. Fr. Lawrence rides his angel from rooftop to rooftop: tap a roof near you
+// and the angel leaps to it, gliding down to a lower one, beating its wings hard to climb to a
+// higher one. Only so far at a leap: across the city it goes building by building. Below, the
+// traffic and the people under their umbrellas.
 
 const Flight = (() => {
   const BLOCK = 200, STREET = 56, NX = 20, NY = 14, LANE = 12, WALK = 5;
-  const FOCAL = 430, LOW = 14, CEIL = 600;
+  const FOCAL = 430, REACH = 300;
   const START = { x: 320, y: 300 }, CHURCH = { x: 9.5 * BLOCK, y: 5.5 * BLOCK }, HOME = { x: 3.5 * BLOCK, y: 11.5 * BLOCK };
   const CARLINE = 10, CAR = { x: 16.5 * BLOCK, y: CARLINE * BLOCK + LANE + 6 };
-  const BOUND = { x0: 100, y0: 100, x1: NX * BLOCK - 100, y1: NY * BLOCK - 100 };
   const SIGNS = [C.pink, C.cyan, C.red, C.teal, C.pink, C.cyan, C.lav];
   const CARCOL = ["#1c2236", "#2a1a22", "#14262a", "#262630", "#301c14", "#1a1a1e", "#3a3a44", "#22304a"];
   const ROOFS = ["#161d33", "#1b2238", "#1a1c2c", "#20283e", "#262234", "#151a28", "#1d2630", "#22243a"];
@@ -58,9 +58,9 @@ const Flight = (() => {
         else { const mx = (x0 + x1) / 2, my = (y0 + y1) / 2; lots.push([x0, y0, mx - 4, my - 4], [mx + 4, y0, x1, my - 4], [x0, my + 4, mx - 4, y1], [mx + 4, my + 4, x1, y1]); }
         for (const [a, b, c, d] of lots) {
           const ins = 8 + r() * 5;
-          let h = 40 + Math.pow(r(), 1.3) * (90 + 260 * up);
-          if (r() < 0.14 && up > 0.3) h += 100 + r() * 120;
-          h = clamp(h * (1 - 0.55 * old), 28, 440);
+          let h = 40 + Math.pow(r(), 1.3) * (100 + 300 * up);
+          if (r() < 0.16 && up > 0.25) h += 200 + r() * 360;          // the towers: twice the height of the rest
+          h = clamp(h * (1 - 0.55 * old), 28, 920);
           if (isHome) h = 84;
           const bd = { x0: a + ins, y0: b + ins, x1: c - ins, y1: d - ins, h, tone: r(), win: Math.floor(r() * 1e6), tank: r() < 0.3, ac: r() < 0.55, pad: h > 300 && r() < 0.5, sign: null };
           if (r() < 0.38) { const side = Math.floor(r() * 4); bd.sign = { side, c: SIGNS[Math.floor(r() * SIGNS.length)], z: clamp(h * (0.25 + r() * 0.5), 18, h - 10) }; }
@@ -84,12 +84,6 @@ const Flight = (() => {
     return { blocks, lights };
   }
   const blockAt = (x, y) => { const i = Math.floor(x / BLOCK), j = Math.floor(y / BLOCK); return i < 0 || j < 0 || i >= NX || j >= NY ? null : built.blocks[j * NX + i]; };
-  // A building the angel would fly into at (x, y) and height z.
-  function solidAt(x, y, z) {
-    const B = blockAt(x, y); if (!B) return null;
-    for (const b of B.b) if (x > b.x0 - 5 && x < b.x1 + 5 && y > b.y0 - 5 && y < b.y1 + 5 && z < b.h + 6) return b;
-    return null;
-  }
   // The roof under (x, y), or the street.
   function groundAt(x, y) {
     const B = blockAt(x, y); let h = 0;
@@ -152,60 +146,103 @@ const Flight = (() => {
   }
 
   // ---- Starting --------------------------------------------------------------------------------
+  // Every roof the angel can stand on: the buildings, the church's roofs, and none of the parks.
+  function roofs() { const out = []; for (const B of built.blocks) for (const b of B.b) out.push(b); return out; }
+  const roofCentre = (b) => ({ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 });
+  // How far from where he stands to the nearest edge of a roof.
+  const edgeD = (b, x, y) => Math.hypot(Math.max(b.x0 - x, 0, x - b.x1), Math.max(b.y0 - y, 0, y - b.y1));
+  const reachable = (b) => b !== P.on && edgeD(b, P.x, P.y) <= REACH;
   function start(done) {
     if (!built) { built = build(); makeLife(); }
     for (const L of built.lights) { L.lit = L.base; L.show = L.lit; L.dying = 0; }
-    P = { x: START.x, y: START.y, alt: 430, vz: 0, speed: 150, head: 0.55, breath: 5, light: 100, wing: 0, flap: 0, diving: false, diveT: 0, turned: 0, bump: 0, lowT: 0 };
-    F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, msg: null, msgs: [], stick: null, wingTouch: null, keys: {}, arrive: 0, rescue: 0, fade: 1, dark: 300, onBeatT: -9, rain: [], warned: false, flaps: 0, bumps: 0 };
+    const first = roofs().sort((a, b) => dist(START.x, START.y, roofCentre(a).x, roofCentre(a).y) - dist(START.x, START.y, roofCentre(b).x, roofCentre(b).y))[0], c = roofCentre(first);
+    P = { x: c.x, y: c.y, alt: first.h, on: first, jump: null, speed: 0, head: 0.55, wing: 0, mode: "stand", flapT: 0 };
+    F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, msg: null, msgs: [], keys: {}, arrive: 0, fade: 1, dark: 300, rain: [], leaps: 0, ups: 0, downs: 0, far: null, hits: [], toldFar: false };
     cam = { x: P.x, y: P.y, z: P.alt + 300, lx: 0, ly: 0 };
     for (let i = 0; i < 120; i++) F.rain.push(rainDrop(true));
-    say(tip("Hold on to me, Father. Drag on the left side to steer.", "Hold on to me, Father. Steer with the arrow keys."));
-    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0.35, windF: 500, rain: 0 });
+    say(tip("Hold on to me, Father. Tap a rooftop near us, and I will leap to it.", "Hold on to me, Father. Press an arrow, and I will leap to the nearest roof that way; or click a roof near us."));
+    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0.2, windF: 420, rain: 0 });
     mode = Flight;
   }
   function say(t, who) { F.msg = { text: t, t: 0, who: who || "angel" }; if ((who || "angel") === "angel") Sound.fx.chord(F.msgs.length); F.msgs.push(t); }
 
-  // ---- The rules of flight -------------------------------------------------------------------------
-  function onBeat() {
-    const b = Sound.beat();
-    if (b) return b.phase < 0.17 || b.phase > 0.86;
-    const ph = (performance.now() / 625) % 1; return ph < 0.17 || ph > 0.86;
-  }
-  function flap() {
-    if (F.arrive) return;
-    if (P.breath < 1) { F.noBreath = 0.6; return; }
-    const beat = onBeat();
-    P.breath -= beat ? 0.5 : 1;
-    P.vz += beat ? 170 : 110; P.speed += beat ? 60 : 16; P.flap = 1; F.flaps++;
-    if (beat) { F.onBeatT = F.t; Sound.fx.whoosh(0.35, 0.6, true); }
-    Sound.fx.flap(beat ? 1.2 : 0.8);
-  }
-  function startDive() { P.diving = true; P.diveT = 0; }
-  function endDive() {
-    if (!P.diving) return;
-    P.diving = false;
-    // Coming out of a dive, the speed turns into lift.
-    if (P.diveT > 0.25) { P.vz += Math.max(0, P.speed - 150) * 0.8; P.speed = lerp(P.speed, 190, 0.3); Sound.fx.whoosh(0.4, 0.5, true); }
-  }
-  function rescue() { F.rescue = 0.001; P.diving = false; }
-  // A wall met down among the buildings: a scrape of feathers, a jolt, some light lost.
-  function bump(hard) {
-    if (P.bump > 0) return false;
-    P.bump = 0.35; F.bumps++;
-    P.speed *= hard ? 0.55 : 0.85; P.light = Math.max(0, P.light - (hard ? 4 : 1.5));
-    Sound.fx.hit(hard ? 0.7 : 0.35); if (hard) Sound.fx.gasp();
-    F.feathers = F.feathers || [];
-    for (let i = 0; i < (hard ? 6 : 2); i++) F.feathers.push({ x: P.x, y: P.y, z: P.alt, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, t: 0, r: Math.random() * TAU });
-    if (hard && !F.toldWalls && F.step >= 2) { F.toldWalls = true; say("Gently, Father! Steer along the streets."); }
+  // ---- The leaps ---------------------------------------------------------------------------------
+  // To a roof near him: up over anything taller on the way, beating hard if the roof is higher,
+  // gliding if it is lower. `street` for the last one, down to his car.
+  function leap(b, street) {
+    if (P.jump || F.arrive) return false;
+    let tx, ty, h1;
+    if (street) { tx = CAR.x - 34; ty = CAR.y - 18; h1 = 0; }
+    else { const c = roofCentre(b), nx = clamp(P.x, b.x0, b.x1), ny = clamp(P.y, b.y0, b.y1); tx = clamp(lerp(c.x, nx, 0.4), b.x0 + 8, b.x1 - 8); ty = clamp(lerp(c.y, ny, 0.4), b.y0 + 8, b.y1 - 8); h1 = b.h; }
+    const d = dist(P.x, P.y, tx, ty), h0 = P.alt;
+    let top = Math.max(h0, h1);
+    for (let i = 1; i < 10; i++) top = Math.max(top, groundAt(lerp(P.x, tx, i / 10), lerp(P.y, ty, i / 10)));
+    const apex = top + 30 + d * 0.08, c = 2 * apex - (h0 + h1) / 2;
+    const dur = 0.6 + d / 480 + Math.max(0, h1 - h0) / 700 + (street ? 0.4 : 0);
+    P.jump = { x0: P.x, y0: P.y, h0, x1: tx, y1: ty, h1, c, dur, t: 0, b, street, d };
+    P.head = Math.atan2(ty - P.y, tx - P.x); P.on = null;
+    F.leaps++; if (h1 > h0 + 40) F.ups++; else if (h1 < h0 - 40) F.downs++;
+    Sound.fx.whoosh(0.4, 0.7, true); Sound.fx.flap(1.1);
     return true;
   }
+  function stepLeap(dt) {
+    const J = P.jump; J.t += dt;
+    const u = clamp(J.t / J.dur, 0, 1), e = smooth(u);
+    P.x = lerp(J.x0, J.x1, e); P.y = lerp(J.y0, J.y1, e);
+    const alt = (1 - u) * (1 - u) * J.h0 + 2 * u * (1 - u) * J.c + u * u * J.h1, rising = 2 * (1 - u) * (J.c - J.h0) + 2 * u * (J.h1 - J.c);
+    P.alt = alt;
+    P.speed = J.d / J.dur * 1.6 + Math.abs(rising) / J.dur * 0.3;
+    // Climbing, the wings beat fast; coming down, they spread and glide.
+    P.mode = rising > 20 ? "flap" : "glide";
+    if (P.mode === "flap") { P.flapT -= dt; if (P.flapT <= 0) { P.flapT = 0.16; Sound.fx.flap(0.7); } }
+    if (u >= 1) {
+      P.jump = null; P.speed = 0; P.alt = J.h1; P.mode = "stand";
+      Sound.fx.step(1.6); F.landT = 0.4;
+      if (J.street) { F.arrive = 0.001; Sound.fx.whoosh(1.2, 1, false); Sound.fx.heart(1); }
+      else P.on = J.b;
+    }
+  }
+  // The roof under a point on the screen: the one drawn on top there, its roof first, then its walls.
+  function roofAt(p) {
+    let best = null;
+    for (let i = F.hits.length - 1; i >= 0; i--) {
+      const h = F.hits[i];
+      if (p.x >= h.rx0 - 6 && p.x <= h.rx1 + 6 && p.y >= h.ry0 - 6 && p.y <= h.ry1 + 6) return h.b;
+      if (!best && p.x >= h.bx0 && p.x <= h.bx1 && p.y >= h.by0 && p.y <= h.by1) best = h.b;
+    }
+    return best;
+  }
+  function tryLeap(b) {
+    if (!b || P.jump || F.arrive || b === P.on) return;
+    if (!reachable(b)) {
+      F.far = { b, t: F.t }; Sound.fx.tick(600, 0.8);
+      if (!F.toldFar) { F.toldFar = true; say("Too far for one leap, Father. Building by building."); }
+      return;
+    }
+    leap(b);
+  }
+  // The best roof within reach the way he points (or, with no way, toward where they are going).
+  function roofToward(dx, dy) {
+    let best = null, bs = -1e9;
+    const T = target();
+    for (const b of roofs()) {
+      if (!reachable(b)) continue;
+      const c = roofCentre(b), vx = c.x - P.x, vy = c.y - P.y, d = Math.hypot(vx, vy) || 1;
+      let sc;
+      if (dx || dy) { const m = Math.hypot(dx, dy), dot = (vx * dx + vy * dy) / (d * m); if (dot < 0.55) continue; sc = dot * 220 - d * 0.5; }
+      else { const gain = dist(P.x, P.y, T.x, T.y) - dist(c.x, c.y, T.x, T.y); if (gain <= 0) continue; sc = gain; }
+      if (sc > bs) { bs = sc; best = b; }
+    }
+    return best;
+  }
+  const nearCar = () => dist(P.x, P.y, CAR.x, CAR.y) < REACH + 140;
+
   function step(dt) { stepFlight(dt); moveCam(dt); }
   function stepFlight(dt) {
     F.t += dt; if (F.msg) F.msg.t += dt;
-    if (F.noBreath) F.noBreath = Math.max(0, F.noBreath - dt);
     F.fade = Math.max(0, F.fade - dt * 1.2);
+    if (F.landT) F.landT = Math.max(0, F.landT - dt);
     stepCars(dt); stepPeople(dt);
-    if (F.feathers) { for (const f of F.feathers) { f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.z -= 30 * dt; f.r += dt * 3; } F.feathers = F.feathers.filter((f) => f.t < 1.6); }
     // The darkness closes round the car, and the lights in it go out one by one.
     F.dark = Math.min(1150, 300 + F.t * 4.2);
     for (const L of built.lights) {
@@ -214,87 +251,32 @@ const Flight = (() => {
       if (L.dying) { L.dying += dt; L.show = Math.sin(L.dying * 40) > 0 ? 0.3 : 1; if (L.dying > 0.9) { L.lit = 0; L.show = 0; } }
       else L.show = L.lit;
     }
-    if (F.rescue) {
-      F.rescue += dt;
-      if (F.rescue > 1.0 && F.rescue < 1.2) { P.x = CHURCH.x - 140; P.y = CHURCH.y - 120; P.alt = 330; P.vz = 0; P.speed = 140; P.light = 100; P.breath = 5; P.head = 0; say("I have you. Rest a moment in the church's light, then on."); F.rescue = 1.2; }
-      if (F.rescue > 2.2) F.rescue = 0;
-      return;
-    }
     if (F.arrive) {
-      F.arrive += dt; P.alt = lerp(P.alt, LOW, dt * 2.2); P.x = lerp(P.x, CAR.x - 30, dt * 2); P.y = lerp(P.y, CAR.y - 20, dt * 2); P.speed = lerp(P.speed, 40, dt * 2);
-      Sound.ambience({ wind: 0.9, windF: 1400 });
+      F.arrive += dt;
       if (F.arrive > 1.6 && !F.left) { F.left = true; Sound.ambience({ wind: 0 }); F.done(); }
       return;
     }
-    // Steering: tighter when slow, as among the buildings.
-    const rate = 3.0 - P.speed / 330;
-    const S = F.stick;
-    if (S && S.mag > 0.15) { const d = angDiff(P.head, Math.atan2(S.dy, S.dx)), turn = rate * Math.min(1, S.mag) * dt, tt = clamp(d, -turn, turn); P.head += tt; P.turned += Math.abs(tt); }
-    const k = F.keys;
-    const kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0), ky = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
-    if (kx || ky) { const d = angDiff(P.head, Math.atan2(ky, kx)), turn = rate * dt, tt = clamp(d, -turn, turn); P.head += tt; P.turned += Math.abs(tt); }
-    // Out of bounds: the angel turns back of its own accord.
-    if (P.x < BOUND.x0 || P.x > BOUND.x1 || P.y < BOUND.y0 || P.y > BOUND.y1) {
-      const want = Math.atan2((BOUND.y0 + BOUND.y1) / 2 - P.y, (BOUND.x0 + BOUND.x1) / 2 - P.x);
-      P.head += clamp(angDiff(P.head, want), -1.8 * dt, 1.8 * dt);
-      if (!F.warned) { F.warned = true; say("Not that way. Her prayer is behind us."); }
-    }
-    // Wings. Near the street the angel glides slower, as if walking the city.
-    if (F.wingTouch && !F.wingTouch.dove && F.t - F.wingTouch.t0 > 0.2) { F.wingTouch.dove = true; startDive(); }
-    const cruise = lerp(100, 160, clamp(P.alt / 380, 0, 1));
-    if (P.diving) { P.diveT += dt; P.vz = lerp(P.vz, -260, dt * 3); P.speed = Math.min(480, P.speed + 120 * dt); }
-    else { P.vz -= 26 * dt; P.vz *= 1 - 1.15 * dt; P.speed += (cruise - P.speed) * 0.55 * dt; }
-    P.breath = Math.min(5, P.breath + 0.9 * dt);
-    P.flap = Math.max(0, P.flap - dt * 2.2); P.wing += dt * (P.diving ? 2 : 3 + P.flap * 14);
-    P.bump = Math.max(0, P.bump - dt);
-    // Moving, and the walls: slide along one met side on; stop and lose speed against one met head on.
-    const vx = Math.cos(P.head) * P.speed * dt, vy = Math.sin(P.head) * P.speed * dt;
-    if (!solidAt(P.x + vx, P.y + vy, P.alt)) { P.x += vx; P.y += vy; }
-    else if (!solidAt(P.x + vx, P.y, P.alt) && Math.abs(vx) > Math.abs(vy) * 0.3) { P.x += vx; P.head += clamp(angDiff(P.head, vx > 0 ? 0 : PI), -4 * dt, 4 * dt); bump(false); }
-    else if (!solidAt(P.x, P.y + vy, P.alt) && Math.abs(vy) > Math.abs(vx) * 0.3) { P.y += vy; P.head += clamp(angDiff(P.head, vy > 0 ? PI / 2 : -PI / 2), -4 * dt, 4 * dt); bump(false); }
-    else if (bump(true)) {
-      // Head on: bounce off the wall.
-      let cx = Math.cos(P.head), cy = Math.sin(P.head);
-      if (solidAt(P.x + vx, P.y, P.alt)) cx = -cx;
-      if (solidAt(P.x, P.y + vy, P.alt)) cy = -cy;
-      P.head = Math.atan2(cy, cx);
-    }
-    // The church lifts you on its column of light, and fills you again.
-    const dc = dist(P.x, P.y, CHURCH.x, CHURCH.y);
-    if (dc < 190 && P.alt > 60) { P.vz += 260 * dt * (1 - dc / 190); P.light = Math.min(100, P.light + 45 * dt); }
-    P.alt += P.vz * dt;
-    const floor = Math.max(LOW, groundAt(P.x, P.y) + 10);
-    if (P.alt < floor) { P.alt = floor; P.vz = Math.max(0, P.vz); }
-    if (P.alt > CEIL) { P.alt = CEIL; P.vz = Math.min(0, P.vz); }
-    if (P.alt < 70) P.lowT += dt;
-    // The light: the dark round the car drains it; the lights in the streets and the church fill it.
-    const inDark = dist(P.x, P.y, CAR.x, CAR.y) < F.dark;
-    P.light += (inDark ? -(6 + (P.alt < 90 ? 5 : 0)) : 1) * dt;
-    for (const L of built.lights) if (L.show > 0.5 && Math.abs(L.x - P.x) < 150 && Math.abs(L.y - P.y) < 150 && Math.hypot(L.x - P.x, L.y - P.y, (L.z - P.alt) * 0.5) < 150) { P.light += 10 * dt; break; }
-    P.light = clamp(P.light, 0, 100);
-    if (P.light <= 0) rescue();
-    // Down low, the wind of the wings stirs the umbrellas.
+    if (P.jump) stepLeap(dt);
+    P.wing += dt * (P.mode === "flap" ? 26 : P.mode === "glide" ? 0.6 : 2);
+    // Low over the street, the wind of the wings stirs the umbrellas.
     if (P.alt < 50) for (const p of people) { if (p.gust > 0) continue; const [x, y] = personXY(p); if (Math.abs(x - P.x) < 34 && Math.abs(y - P.y) < 34) p.gust = 1; }
-    // The music and the wind follow the flight.
-    Sound.setLevel(P.diving || P.speed > 260 ? 2 : F.step >= 1 ? 1 : 0);
-    Sound.ambience({ wind: 0.25 + clamp((P.speed - 140) / 300, 0, 0.7), windF: 380 + P.speed * 2.2 });
+    Sound.setLevel(P.jump ? 2 : F.step >= 1 ? 1 : 0);
+    Sound.ambience({ wind: P.jump ? 0.55 : 0.2, windF: P.jump ? 900 : 420 });
     lessons();
   }
   // ---- The lessons of the first flight, one after another ------------------------------------------
   function lessons() {
-    const s = F.step, since = F.t - F.stepT;
-    if (s === 0 && P.turned > 1.5) { F.step = 1; say(tip("Now fold my wings: hold on the right side to dive. Down into the streets.", "Now fold my wings: hold Shift to dive. Down into the streets.")); }
-    else if (s === 1 && P.alt < 70) { F.step = 2; say(tip("Down here we are among them. Mind the walls. Tap on the right to beat my wings and climb; on the beat is strongest.", "Down here we are among them. Mind the walls. Press Space to beat my wings and climb; on the beat is strongest.")); }
-    else if (s === 2 && ((P.alt > 280 && F.flaps >= 2) || since > 30)) { F.step = 3; say("There: the church. Fly over it, and its light will fill us again."); }
-    else if (s === 3 && dist(P.x, P.y, CHURCH.x, CHURCH.y) < 200) { F.step = 4; say("Now the gold thread, to the south. That is her prayer, rising. Follow it."); Sound.fx.glory(); }
-    else if (s === 4 && dist(P.x, P.y, HOME.x, HOME.y) < 190) { F.step = 5; say("Her window. She has prayed all night. Now the smoke, to the east: her father. Hurry. The dark is closing round him."); }
-    else if (s === 5 && dist(P.x, P.y, CAR.x, CAR.y) < 520) { F.step = 6; say(tip("Down! Hold on the right, and dive to the street, to his car.", "Down! Hold Shift, and dive to the street, to his car.")); }
-    if (F.step >= 5 && dist(P.x, P.y, CAR.x, CAR.y) < 170 && P.alt < 80) { F.arrive = 0.001; Sound.fx.whoosh(1.2, 1, false); Sound.fx.heart(1); }
+    const s = F.step, on = P.on;
+    if (s === 0 && F.leaps >= 1 && !P.jump) { F.step = 1; say("Higher, and I beat my wings; lower, and I glide. But only so far at a leap: across the city we go building by building."); }
+    else if (s === 1 && F.leaps >= 3 && !P.jump) { F.step = 2; say("There: the church. Its light will fill us."); }
+    else if (s === 2 && on && on.church) { F.step = 3; say("Now the gold thread, to the south. That is her prayer, rising. Follow it."); Sound.fx.glory(); }
+    else if (s === 3 && on && dist(P.x, P.y, HOME.x, HOME.y) < 200) { F.step = 4; say("Her window. She has prayed all night. Now the smoke, to the east: her father. Hurry. The dark is closing round him."); }
+    else if (s === 4 && nearCar() && !P.jump) { F.step = 5; say(tip("There, his car. Tap it, and we dive down to the street.", "There, his car. Press Space, or click it, and we dive down to the street.")); }
     if (F.step !== F.lastStep) { F.lastStep = F.step; F.stepT = F.t; }
   }
   function target() {
-    if (F.step <= 3) return { x: CHURCH.x, y: CHURCH.y, c: C.holy, z: 66 };
-    if (F.step === 4) return { x: HOME.x, y: HOME.y, c: C.holy, z: 84 };
+    if (F.step <= 2) return { x: CHURCH.x, y: CHURCH.y, c: C.holy, z: 66 };
+    if (F.step === 3) return { x: HOME.x, y: HOME.y, c: C.holy, z: 84 };
     return { x: CAR.x, y: CAR.y, c: C.ember, z: 0 };
   }
 
@@ -306,14 +288,17 @@ const Flight = (() => {
   const sx = (x, z) => W / 2 + (x - cam.x) * K(z);
   const sy = (y, z) => H / 2 + (y - cam.y) * K(z);
   function moveCam(dt) {
-    const sp = clamp((P.speed - 90) / 380, 0, 1), back = lerp(210, 620, sp);
+    // Drawn back while the angel is in the air, close in when it stands on a roof.
+    const sp = clamp(P.speed / 600, 0, 1), back = lerp(250, 620, sp);
     let tall = 0;
-    const i0 = Math.floor((P.x - 650) / BLOCK), i1 = Math.floor((P.x + 650) / BLOCK), j0 = Math.floor((P.y - 450) / BLOCK), j1 = Math.floor((P.y + 450) / BLOCK);
-    for (let j = Math.max(0, j0); j <= Math.min(NY - 1, j1); j++) for (let i = Math.max(0, i0); i <= Math.min(NX - 1, i1); i++) for (const b of built.blocks[j * NX + i].b) tall = Math.max(tall, b.h);
-    const want = Math.max(P.alt + back, tall + 140);
-    cam.z += (want - cam.z) * Math.min(1, dt * (want > cam.z ? 3 : 1.6));
-    // A little way ahead of the angel, the way it is going.
-    const lead = 20 + P.speed * 0.14;
+    // It must stay above the towers right round him; taller ones further off are drawn reaching
+    // up past it, as the tallest did in the first Grand Theft Auto.
+    const i0 = Math.floor((P.x - 280) / BLOCK), i1 = Math.floor((P.x + 280) / BLOCK), j0 = Math.floor((P.y - 280) / BLOCK), j1 = Math.floor((P.y + 280) / BLOCK);
+    for (let j = Math.max(0, j0); j <= Math.min(NY - 1, j1); j++) for (let i = Math.max(0, i0); i <= Math.min(NX - 1, i1); i++) for (const b of built.blocks[j * NX + i].b) if (edgeD(b, P.x, P.y) < 240) tall = Math.max(tall, b.h);
+    const want = Math.max(P.alt + back, tall + 150);
+    cam.z += (want - cam.z) * Math.min(1, dt * (want > cam.z ? 2.6 : 1.4));
+    // A little way ahead of the angel while it leaps; over it when it stands.
+    const lead = P.jump ? 30 + P.speed * 0.1 : 0;
     cam.lx += (Math.cos(P.head) * lead - cam.lx) * Math.min(1, dt * 2); cam.ly += (Math.sin(P.head) * lead - cam.ly) * Math.min(1, dt * 2);
     cam.x = P.x + cam.lx; cam.y = P.y + cam.ly;
   }
@@ -321,6 +306,7 @@ const Flight = (() => {
   // ---- Drawing -------------------------------------------------------------------------------------
   function rainDrop(any) { const a = Math.random() * TAU, r = any ? Math.random() * W * 0.7 : W * (0.45 + Math.random() * 0.35); return { x: Math.cos(a) * r, y: Math.sin(a) * r * 0.75, k: 0.6 + Math.random() * 0.8 }; }
   function draw() {
+    F.hits.length = 0;
     const k0 = K(0), hw = W / 2 / k0 + 30, hh = H / 2 / k0 + 30;
     const vx0 = cam.x - hw, vx1 = cam.x + hw, vy0 = cam.y - hh, vy1 = cam.y + hh;
     const inView = (x, y, m) => x > vx0 - m && x < vx1 + m && y > vy0 - m && y < vy1 + m;
@@ -365,7 +351,6 @@ const Flight = (() => {
     const inDark = (b) => dist((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, CAR.x, CAR.y) < F.dark;
     for (const b of vis) { if (b.h > P.alt && b.d < pd) { over.push(b); continue; } b.church ? drawChurch() : drawBuilding(b, inDark(b)); }
     drawShadow();
-    drawFeathers();
     drawAngel();
     for (const b of over) b.church ? drawChurch() : drawBuilding(b, inDark(b));
     // The lights themselves: neon and lamps.
@@ -383,10 +368,8 @@ const Flight = (() => {
     // Mist in the air, thicker the higher you are; clouds passing under you up top.
     const haze = clamp((cam.z - 500) / 900, 0, 0.35);
     if (haze > 0) { ctx.fillStyle = "rgba(18,24,44," + haze + ")"; ctx.fillRect(0, 0, W, H); }
-    drawClouds();
     drawRain();
     drawHUD();
-    if (F.rescue) rect(0, 0, W, H, "rgba(0,0,0," + clamp(F.rescue < 1.2 ? F.rescue : 2.2 - F.rescue, 0, 1) + ")");
     if (F.arrive) rect(0, 0, W, H, "rgba(0,0,0," + clamp((F.arrive - 0.6) / 1.0, 0, 1) + ")");
     if (F.fade > 0) rect(0, 0, W, H, "rgba(0,0,0," + F.fade + ")");
   }
@@ -462,9 +445,9 @@ const Flight = (() => {
     }
   }
   function drawBuilding(b, dark) {
-    const kr = K(b.h);
+    const top = Math.min(b.h, cam.z - 90), kr = K(top);
     const gx0 = sx(b.x0, 0), gx1 = sx(b.x1, 0), gy0 = sy(b.y0, 0), gy1 = sy(b.y1, 0);
-    const rx0 = sx(b.x0, b.h), rx1 = sx(b.x1, b.h), ry0 = sy(b.y0, b.h), ry1 = sy(b.y1, b.h);
+    const rx0 = sx(b.x0, top), rx1 = sx(b.x1, top), ry0 = sy(b.y0, top), ry1 = sy(b.y1, top);
     const t = b.tone, wall = dark ? "#06080f" : t < 0.33 ? "#121a32" : t < 0.66 ? "#161c3a" : "#14162a", wall2 = dark ? "#040509" : t < 0.33 ? "#0c1224" : t < 0.66 ? "#0e132a" : "#0d0f1e";
     const walls = [];
     if (cam.y > b.y1) walls.push([2, [gx0, gy1, gx1, gy1, rx1, ry1, rx0, ry1], wall]);
@@ -475,8 +458,8 @@ const Flight = (() => {
       poly(q, c);
       const span = Math.hypot(q[4] - q[2], q[5] - q[3]);
       // Windows in rows up the wall, a few of them lit.
-      if (!dark && span > 6 && span / Math.max(1, Math.floor(b.h / 14)) > 1.5) {
-        const floors = Math.max(1, Math.floor(b.h / 14)), len = side % 2 ? b.y1 - b.y0 : b.x1 - b.x0, cols = Math.max(3, Math.min(9, Math.floor(len / 14))), sz = clamp(span / floors * 0.45, 1, 3.2);
+      if (!dark && span > 6 && span / Math.max(1, Math.floor(top / 14)) > 1.5) {
+        const floors = Math.max(1, Math.floor(top / 14)), len = side % 2 ? b.y1 - b.y0 : b.x1 - b.x0, cols = Math.max(3, Math.min(9, Math.floor(len / 14))), sz = clamp(span / floors * 0.45, 1, 3.2);
         for (let f = 0; f < floors; f++) for (let cI = 0; cI < cols; cI++) {
           if (hash2(b.win + side * 97, f, cI) > 0.3) continue;
           const u = (cI + 0.5) / cols, v = (f + 0.6) / (floors + 0.4);
@@ -489,7 +472,7 @@ const Flight = (() => {
       ctx.globalAlpha = 0.55; poly([q[0], q[1], q[2], q[3], lerp(q[2], q[4], 0.25), lerp(q[3], q[5], 0.25), lerp(q[0], q[6], 0.25), lerp(q[1], q[7], 0.25)], "#03040a"); ctx.globalAlpha = 1;
       // A neon sign on this wall.
       if (b.sign && b.sign.side === side) {
-        const v = b.sign.z / b.h, u0 = 0.25, u1 = 0.75, dv = Math.min(0.1, 12 / b.h);
+        const v = Math.min(0.95, b.sign.z / top), u0 = 0.25, u1 = 0.75, dv = Math.min(0.1, 12 / top);
         const p = (u, vv) => [lerp(lerp(q[0], q[2], u), lerp(q[6], q[4], u), vv), lerp(lerp(q[1], q[3], u), lerp(q[7], q[5], u), vv)];
         const a = p(u0, v - dv), bb = p(u1, v - dv), c2 = p(u1, v + dv), d = p(u0, v + dv);
         const L = b.light || (b.light = built.lights.find((l) => l.b === b));
@@ -498,6 +481,7 @@ const Flight = (() => {
       }
     }
     winFlush(0.6);
+    F.hits.push({ b, rx0, ry0, rx1, ry1, bx0: Math.min(gx0, rx0), by0: Math.min(gy0, ry0), bx1: Math.max(gx1, rx1), by1: Math.max(gy1, ry1) });
     // The roof: its parapet, the plant on it, a water tank, a helipad on the tallest.
     const rw = rx1 - rx0, rh = ry1 - ry0, roofC = ROOFS[Math.floor(t * ROOFS.length)];
     rect(rx0, ry0, rw, rh, dark ? "#080a12" : roofC);
@@ -510,6 +494,13 @@ const Flight = (() => {
     if (b.tank) { circle(lerp(rx0, rx1, 0.28), lerp(ry0, ry1, 0.68), Math.min(rw, rh) * 0.11, dark ? "#0a0c14" : "#2c2638"); circle(lerp(rx0, rx1, 0.28), lerp(ry0, ry1, 0.68), Math.min(rw, rh) * 0.06, dark ? "#06080e" : "#1a1624"); }
     if (b.pad && !dark) { const cx = lerp(rx0, rx1, 0.5), cy = lerp(ry0, ry1, 0.5), r = Math.min(rw, rh) * 0.3; ctx.strokeStyle = "rgba(242,212,122,0.4)"; ctx.lineWidth = Math.max(1, kr); ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke(); rect(cx - r * 0.4, cy - r * 0.5, r * 0.15, r, "rgba(242,212,122,0.45)"); rect(cx + r * 0.25, cy - r * 0.5, r * 0.15, r, "rgba(242,212,122,0.45)"); rect(cx - r * 0.3, cy - r * 0.07, r * 0.6, r * 0.14, "rgba(242,212,122,0.45)"); if (Math.sin(F.t * 3 + b.win) > 0.6) glow(rx0 + 3, ry0 + 3, 8, "#ff3040", 0.8); }
     if (b === homeB()) glow(lerp(rx0, rx1, 0.5), ry1, 34 * kr, "#ffd9a0", 0.6);    // her building: one warm window
+    roofMarks(b, rx0, ry0, rx1, ry1);
+  }
+  // The roofs within a leap, outlined faintly in gold; one tapped that is too far, in red.
+  function roofMarks(b, rx0, ry0, rx1, ry1) {
+    if (F.far && F.far.b === b && F.t - F.far.t < 0.7) { ctx.strokeStyle = hexA("#ff5a3a", 1 - (F.t - F.far.t) / 0.7); ctx.lineWidth = 2.5; ctx.strokeRect(rx0, ry0, rx1 - rx0, ry1 - ry0); }
+    if (P.jump || F.arrive || !reachable(b)) return;
+    ctx.strokeStyle = hexA(C.holy, 0.45 + 0.18 * Math.sin(F.t * 3 + b.x0 * 0.01)); ctx.lineWidth = 2; ctx.strokeRect(rx0 + 2, ry0 + 2, rx1 - rx0 - 4, ry1 - ry0 - 4);
   }
   let homeCache;
   function homeB() { if (homeCache === undefined) { const B = built.blocks.find((x) => x.kind === "home"); homeCache = B ? B.home : null; } return homeCache; }
@@ -529,6 +520,8 @@ const Flight = (() => {
         for (let i = 1; i < 6; i++) { const u = i / 6, ax = lerp(w[0], w[2], u), ay = lerp(w[1], w[3], u), bx = lerp(w[6], w[4], u), by = lerp(w[7], w[5], u); line(lerp(ax, bx, 0.25), lerp(ay, by, 0.25), lerp(ax, bx, 0.75), lerp(ay, by, 0.75), "#ffd27a", Math.max(1.5, 2.2 * k)); }
       }
       rect(rx0, ry0, rx1 - rx0, ry1 - ry0, "#3a2c20"); ctx.strokeStyle = "#7a5a30"; ctx.lineWidth = 1; ctx.strokeRect(rx0, ry0, rx1 - rx0, ry1 - ry0);
+      F.hits.push({ b: bb, rx0, ry0, rx1, ry1, bx0: Math.min(gx0, rx0), by0: Math.min(gy0, ry0), bx1: Math.max(gx1, rx1), by1: Math.max(gy1, ry1) });
+      roofMarks(bb, rx0, ry0, rx1, ry1);
     }
     // The cross on the roof, and the light.
     const kk = K(h + 8), cx2 = sx(CHURCH.x + 22, h + 8), cy2 = sy(CHURCH.y, h + 8);
@@ -582,25 +575,22 @@ const Flight = (() => {
   function drawShadow() {
     // The shadow falls a little to the south-east, on the roof or the street below the angel.
     const hz = groundAt(P.x + (P.alt) * 0.12, P.y + (P.alt) * 0.16), gx = P.x + (P.alt - hz) * 0.12, gy = P.y + (P.alt - hz) * 0.16;
-    const k = K(hz), x = sx(gx, hz), y = sy(gy, hz), op = P.diving ? 0.35 : 1;
+    const k = K(hz), x = sx(gx, hz), y = sy(gy, hz), op = P.mode === "stand" ? 0.7 : 1;
     ctx.save(); ctx.translate(x, y); ctx.rotate(P.head); ctx.globalAlpha = 0.42;
     ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(0, 0, 15 * k * 0.5, 5 * k * 0.5, 0, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.ellipse(-2 * k * 0.5, 0, 7 * k * 0.5, 30 * k * op * 0.5, 0, 0, TAU); ctx.fill();
     ctx.restore();
   }
-  function drawFeathers() {
-    if (!F.feathers) return;
-    for (const f of F.feathers) { const k = K(f.z); ctx.save(); ctx.translate(sx(f.x, f.z), sy(f.y, f.z)); ctx.rotate(f.r); ctx.globalAlpha = Math.max(0, 1 - f.t / 1.6); ctx.fillStyle = "#f6f0e0"; ctx.beginPath(); ctx.ellipse(0, 0, 4 * k, 1.4 * k, 0, 0, TAU); ctx.fill(); ctx.restore(); }
-    ctx.globalAlpha = 1;
-  }
   // The angel from above, wings out, and Fr. Lawrence on its back holding his hat on.
   function drawAngel() {
     // Scaled with height, but not so far that it is lost among the towers.
-    const k = clamp(0.3 + K(P.alt) * 0.34, 0.45, 1.05), x = sx(P.x, P.alt), y = sy(P.y, P.alt);
+    const k = clamp(0.42 + K(P.alt) * 0.34, 0.6, 1.1), x = sx(P.x, P.alt), y = sy(P.y, P.alt);
     glow(x, y, 70 * k, C.holy, 0.3);
     ctx.save(); ctx.translate(x, y); ctx.rotate(P.head); ctx.scale(k, k);
-    if (P.bump > 0) ctx.rotate(Math.sin(P.bump * 40) * 0.15);
-    const beat = Math.sin(P.wing * 2.4), span = P.diving ? 0.38 : 0.84 + 0.16 * beat, sweep = P.diving ? -16 : -3 * beat;
+    // Standing, the wings folded; climbing, beating fast; coming down, spread wide in a glide.
+    const beat = P.mode === "flap" ? Math.sin(P.wing) : P.mode === "stand" ? 0.2 * Math.sin(P.wing) : 0;
+    const span = P.mode === "stand" ? 0.46 + 0.04 * beat : P.mode === "glide" ? 1.04 : 0.78 + 0.26 * beat, sweep = P.mode === "glide" ? 3 : P.mode === "stand" ? -12 : -5 * beat;
+    if (F.landT) ctx.scale(1 + F.landT * 0.2, 1 + F.landT * 0.2);
     for (const d of [-1, 1]) {
       // A wing: the leading edge out from the shoulder, and a scalloped trailing edge of
       // long feathers, swept back when diving.
@@ -631,16 +621,6 @@ const Flight = (() => {
     rect(6, -0.9, 2, 1.8, "#f6f8ff");
     ctx.restore();
   }
-  function drawClouds() {
-    const r = seeded(66);
-    for (let i = 0; i < 18; i++) {
-      const wx = (r() * 4600 + F.t * 9) % 4600 - 300, wy = r() * 3400 - 300, z = 470 + r() * 90;
-      if (z >= cam.z - 40) continue;
-      const kz = K(z), x = sx(wx, z), y = sy(wy, z);
-      if (x < -500 || x > W + 500 || y < -500 || y > H + 500) continue;
-      ctx.globalAlpha = 0.18; ctx.fillStyle = "#56607e"; ctx.beginPath(); ctx.ellipse(x, y, 160 * kz, 70 * kz, 0.2, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
-    }
-  }
   // Rain, falling away from you: streaks that run in toward the middle of the screen.
   function drawRain() {
     ctx.strokeStyle = "rgba(196,240,255,0.28)"; ctx.lineWidth = 1; ctx.beginPath();
@@ -653,33 +633,14 @@ const Flight = (() => {
     ctx.stroke();
   }
   function drawHUD() {
-    // The light.
-    const lx = 16, ly = 16, lw = 130, low = P.light < 25;
-    rect(lx, ly, lw, 6, "rgba(255,255,255,0.08)");
-    rect(lx, ly, lw * P.light / 100, 6, low && Math.sin(F.t * 10) > 0 ? "#ff6a50" : C.holy);
-    glow(lx + lw * P.light / 100, ly + 3, 14, C.holy, 0.4);
-    text("LIGHT", lx, ly + 18, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
-    // Breath: five feathers, and the beat pulsing behind them.
-    const b = Sound.beat(), ph = b ? b.phase : (performance.now() / 625) % 1, pul = Math.max(0, 1 - ph * 4);
-    for (let i = 0; i < 5; i++) {
-      const fx = lx + 46 + i * 15, fy = ly + 15, full = clamp(P.breath - i, 0, 1);
-      ctx.globalAlpha = 0.25 + 0.75 * full; ctx.save(); ctx.translate(fx, fy); ctx.rotate(-0.5); ctx.beginPath(); ctx.ellipse(0, 0, 6, 2.2, 0, 0, TAU); ctx.fillStyle = full >= 1 ? "#efeadb" : "#7a7668"; ctx.fill(); ctx.restore(); ctx.globalAlpha = 1;
-    }
-    glow(lx + 76, ly + 15, 26 + pul * 8, C.holy, 0.12 + pul * 0.25);
-    if (F.noBreath) text("out of breath", lx + 46, ly + 32, { size: 8, italic: true, font: FONT.line, color: "#ffb0a0", alpha: F.noBreath });
-    if (F.t - F.onBeatT < 0.8) text("ON THE BEAT", W / 2, H - 70, { align: "center", size: 10, weight: 800, spacing: 3, color: C.holy, glow: C.holy, blur: 12, alpha: 1 - (F.t - F.onBeatT) / 0.8 });
-    // The altimeter: the street at the foot, the roofs round you, and where you are.
-    const ax = W - 18, ay0 = 60, ay1 = H - 60, ya = (z) => lerp(ay1, ay0, clamp(z / CEIL, 0, 1));
-    rect(ax, ay0, 2, ay1 - ay0, "rgba(255,255,255,0.12)");
-    text("STREET", ax - 6, ay1 + 3, { align: "right", size: 7, weight: 700, color: "rgba(160,180,220,0.7)" });
-    const roof = groundAt(P.x, P.y); if (roof > 0) rect(ax - 6, ya(roof), 14, 1, "rgba(160,180,220,0.6)");
-    circle(ax + 1, ya(P.alt), 4, C.holy); glow(ax + 1, ya(P.alt), 10, C.holy, 0.4);
     // Where to go.
     const T = target(), tx = sx(T.x, T.z), ty = sy(T.y, T.z);
     if (tx < 20 || tx > W - 20 || ty < 20 || ty > H - 20) {
       const a = Math.atan2(ty - H / 2, tx - W / 2), ex = clamp(W / 2 + Math.cos(a) * W, 26, W - 40), ey = clamp(H / 2 + Math.sin(a) * W, 40, H - 26);
       ctx.save(); ctx.translate(ex, ey); ctx.rotate(a); poly([10, 0, -6, -7, -3, 0, -6, 7], T.c); ctx.restore(); glow(ex, ey, 16, T.c, 0.4);
     } else { ctx.strokeStyle = hexA(T.c, 0.5 + 0.3 * Math.sin(F.t * 4)); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(tx, ty, 18 + 4 * Math.sin(F.t * 4), 0, TAU); ctx.stroke(); }
+    // His car, when they are near enough to dive to it.
+    if (F.step >= 5 && !P.jump && !F.arrive) { const cx = sx(CAR.x, 0), cy = sy(CAR.y, 0), pul = Math.sin(F.t * 6); ctx.strokeStyle = hexA(C.holy, 0.6 + 0.3 * pul); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 26 + 4 * pul, 0, TAU); ctx.stroke(); text(tip("TAP HIS CAR", "SPACE: DIVE"), cx, cy - 34, { align: "center", size: 9, weight: 800, spacing: 2, color: C.holy }); }
     // The angel's words.
     if (F.msg && F.msg.t < 9) {
       const a = clamp(F.msg.t / 0.4, 0, 1) * clamp((9 - F.msg.t) / 0.8, 0, 1);
@@ -687,38 +648,32 @@ const Flight = (() => {
       ctx.globalAlpha = 0.55 * a; rect(W / 2 - Math.min(W - 140, 540) / 2, 8, Math.min(W - 140, 540), 14 + ls.length * 20, "#050407"); ctx.globalAlpha = 1;
       ls.forEach((l, i) => text(l, W / 2, 26 + i * 20, { align: "center", size: 17, weight: 500, italic: true, font: FONT.line, color: "#f6eccb", alpha: a }));
     }
-    // The controls, while they are being learned.
-    if (F.step < 4) {
-      const a = 0.45;
-      text(tip("DRAG: STEER", "ARROWS: STEER"), 18, H - 16, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
-      text(tip("TAP: FLAP UP  ·  HOLD: DIVE", "SPACE: FLAP UP  ·  HOLD SHIFT: DIVE"), W - 18, H - 16, { align: "right", size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
-    }
-    if (F.stick) { ctx.strokeStyle = "rgba(233,230,223,0.3)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(F.stick.x0, F.stick.y0, 44, 0, TAU); ctx.stroke(); circle(F.stick.x0 + F.stick.dx * 44, F.stick.y0 + F.stick.dy * 44, 12, "rgba(233,230,223,0.35)"); }
+    // How to play, while it is being learned.
+    if (F.step < 3) text(tip("TAP A GOLD ROOF NEAR YOU: THE ANGEL LEAPS TO IT", "ARROWS: LEAP THAT WAY  ·  SPACE: LEAP TOWARD WHERE WE ARE GOING  ·  OR CLICK A GOLD ROOF"), W / 2, H - 16, { align: "center", size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)", max: W - 60 });
     pauseButton();
   }
 
-  // ---- Touch: the left side steers, the right side flaps (tap) and dives (hold) ----------------------
-  function down(p, ev) {
-    if (F.arrive || F.rescue) return;
-    if (p.x < W * 0.42 && !F.stick) { F.stick = { id: ev.pointerId, x0: p.x, y0: p.y, dx: 0, dy: 0, mag: 0 }; return; }
-    if (!F.wingTouch) F.wingTouch = { id: ev.pointerId, t0: F.t, dove: false };
-  }
-  function move(p, ev) {
-    const S = F.stick;
-    if (S && S.id === ev.pointerId) { let dx = (p.x - S.x0) / 44, dy = (p.y - S.y0) / 44; const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; } S.dx = dx; S.dy = dy; S.mag = Math.min(1, m); }
-  }
+  // ---- Touch and keys: tap a roof near you, and the angel leaps to it --------------------------------
+  function down(p, ev) { F.touch = { id: ev.pointerId, x: p.x, y: p.y, moved: false }; }
+  function move(p, ev) { const T = F.touch; if (T && T.id === ev.pointerId && dist(p.x, p.y, T.x, T.y) > 14) T.moved = true; }
   function up(p, ev) {
-    if (F.stick && F.stick.id === ev.pointerId) { F.stick = null; return; }
-    const T = F.wingTouch;
-    if (T && T.id === ev.pointerId) { F.wingTouch = null; if (T.dove) endDive(); else flap(); }
+    const T = F.touch; F.touch = null;
+    if (!T || T.id !== ev.pointerId || T.moved || P.jump || F.arrive) return;
+    // His car, at the end: down to the street.
+    if (F.step >= 5 && nearCar() && dist(p.x, p.y, sx(CAR.x, 0), sy(CAR.y, 0)) < 60) { leap(null, true); return; }
+    tryLeap(roofAt(p));
   }
   function key(code, isDown, e) {
     F.keys[code] = isDown;
-    if (e && e.repeat) return;
-    if (code === "Escape" && isDown) { Game.pause(); return; }
-    if (F.arrive || F.rescue) return;
-    if (code === "Space" && isDown) flap();
-    if (code === "ShiftLeft" || code === "ShiftRight" || code === "KeyZ") { if (isDown) startDive(); else endDive(); }
+    if (!isDown || (e && e.repeat)) return;
+    if (code === "Escape") { Game.pause(); return; }
+    if (P.jump || F.arrive) return;
+    const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], KeyA: [-1, 0], KeyD: [1, 0], KeyW: [0, -1], KeyS: [0, 1] };
+    if (dirs[code]) { const [dx, dy] = dirs[code], k = F.keys; const ddx = dx || ((k.ArrowLeft || k.KeyA) ? -1 : (k.ArrowRight || k.KeyD) ? 1 : 0), ddy = dy || ((k.ArrowUp || k.KeyW) ? -1 : (k.ArrowDown || k.KeyS) ? 1 : 0); const b = roofToward(ddx, ddy); if (b) leap(b); else { Sound.fx.tick(600, 0.8); } return; }
+    if (code === "Space" || code === "Enter") {
+      if (F.step >= 5 && nearCar()) { leap(null, true); return; }
+      const b = roofToward(0, 0); if (b) leap(b); else Sound.fx.tick(600, 0.8);
+    }
   }
   return { start, step, draw, down, move, up, key, get F() { return F; }, get P() { return P; }, get cam() { return cam; }, CHURCH, HOME, CAR };
 })();

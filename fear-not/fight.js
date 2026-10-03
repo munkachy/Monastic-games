@@ -1583,7 +1583,7 @@ const Fight = (() => {
       const bx = W - 52, by = H - 52, pul = 1 + 0.1 * Math.sin(G.t * 8);
       glow(bx, by, 60 * pul, C.holy, 0.7); circle(bx, by, 28 * pul, "rgba(255,240,200,0.9)"); ctx.strokeStyle = "#8a6020"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 28 * pul, 0, TAU); ctx.stroke();
       poly([bx, by + 14, bx - 11, by - 4, bx - 4, by - 4, bx - 4, by - 14, bx + 4, by - 14, bx + 4, by - 4, bx + 11, by - 4], "#8a6020");
-      text(tip("FROM ON HIGH", "B · FROM ON HIGH"), bx, by + 42, { align: "center", size: 8, weight: 800, spacing: 2, color: "#5a4020" });
+      text(tip("FROM ON HIGH", "B · FROM ON HIGH"), W - 12, by + 42, { align: "right", size: 8, weight: 800, spacing: 1.5, color: "#5a4020", max: 110 });
       buttons.push({ x: bx - 36, y: by - 36, w: 72, h: 72, act: () => finisher() });
     } else if (H0.spirit >= SPIRIT) {
       const bx = W - 52, by = H - 52, pul = 1 + 0.08 * Math.sin(G.t * 6);
