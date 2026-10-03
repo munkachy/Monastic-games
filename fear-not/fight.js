@@ -23,7 +23,13 @@ const Fight = (() => {
   const Y0 = 250, Y1 = 338, SPIRIT = 10, SKY = 430;
   const depth = (y) => 0.82 + 0.24 * (y - Y0) / (Y1 - Y0);
   let G = null, bg = null, bgKey = "";
-  const carX = () => W * 0.5, CARY = 238;
+  // The street is three screens wide, the car in the middle of it. The camera stays on Fr. Lawrence,
+  // and he is kept half a screen from either end, so it never has to stop following him.
+  const carX = () => (G ? G.ww / 2 : W * 0.5), CARY = 238;
+  const HX0 = () => W / 2, HX1 = () => G.ww - W / 2;          // where he can go
+  const FX0 = 24, FX1 = () => G.ww - 24;                        // where they can go
+  const keepX = (x) => clamp(x, HX0(), HX1());
+  const pan = (x) => clamp((x - G.view.cx) / W, -0.8, 0.8);
   // Fr. Lawrence in the fight: a steel-blue coat, a gold band on his hat, the light of his angel
   // round his edges and a ring of it at his feet, so he can never be mistaken for the demons,
   // who are black and edged in red.
@@ -151,14 +157,16 @@ const Fight = (() => {
 
   function start(done, opts) {
     opts = opts || {};
+    const ww = Math.round(W * 3), hx0 = ww / 2 - W * 0.22;
+    bg = null;
     G = {
-      done, opts, t: 0, ts: 1, slowT: 0, slowTs: 1, zoom: { k: 1, x: W / 2, y: H / 2 }, cam: { k: 1, x: W / 2, y: H / 2 }, view: { k: 1, cx: W / 2, cy: H / 2 }, freeze: 0, muffled: false,
+      done, opts, t: 0, ts: 1, slowT: 0, slowTs: 1, zoom: { k: 1, x: hx0, y: H / 2 }, cam: { k: 1, x: hx0, y: H / 2 }, view: { k: 1, cx: hx0, cy: H / 2 }, freeze: 0, muffled: false, ww,
       warnT: 0, warnF: null, pulseT: 0, pulseTs: 1, slowVis: 0, takedowns: 0, chainTD: 0,
       base: opts.kata ? "kata" : "street", world: opts.kata ? "kata" : "street", worldT: 0, shift: null, banner: null, whispers: [], whisperT: 2,
       wave: -1, waveT: 0, foes: [], parts: [], pops: [], spawnQ: [], nextAtk: 2, touch: null, lastTap: null, msg: null, flash: 0, flashC: "#fff", shake: 0,
-      hero: { x: W * 0.3, y: 300, z: 0, dir: 1, act: { kind: "idle", t: 0 }, resolve: 100, spirit: 0, inv: 0, combo: 0, comboT: 0, best: 0, queue: null, hits: 0, last: null },
-      angel: { x: W * 0.3, y: 300, z: SKY, dir: 1, act: { kind: "above", t: 0 }, t: 0, lightX: W * 0.3, catchT: 0 },
-      guard: { chains: 6, freed: false, t: 0, fight: 0, nextHit: 0, x: carX() - 40 },
+      hero: { x: hx0, y: 300, z: 0, dir: 1, act: { kind: "idle", t: 0 }, resolve: 100, spirit: 0, inv: 0, combo: 0, comboT: 0, best: 0, queue: null, hits: 0, last: null },
+      angel: { x: hx0, y: 300, z: SKY, dir: 1, act: { kind: "above", t: 0 }, t: 0, lightX: hx0, catchT: 0 },
+      guard: { chains: 6, freed: false, t: 0, fight: 0, nextHit: 0, x: ww / 2 - 40 },
       taught: {}, over: 0, down: 0, keys: {}, launched: false, practised: false, kata: null,
     };
     if (opts.kata) { G.kata = { i: -1, t: 0, setT: 0, again: 0 }; kataNext(); Sound.play(SONGS.fight); Sound.setLevel(0); }
@@ -176,14 +184,24 @@ const Fight = (() => {
     G.nextAtk = 2.2;
   }
   let foeId = 0;
+  // They come up out of the street near him, through a hole that burns open and closes after them.
   function spawn(kind, at, hp) {
-    const left = (foeId % 2 === 0) !== (G.hero.x > W / 2);
-    const shade = G.world === "kata" || kind === "shade";
-    const f = { id: ++foeId, kind: kind === "shade" ? "whisper" : kind, x: at ? at.x : left ? -40 : W + 40, y: at ? at.y : lerp(Y0 + 10, Y1 - 6, Math.random()), z: 0, vz: 0, vx: 0, dir: left ? 1 : -1,
-      hp: hp || (kind === "grab" ? 12 : kind === "shield" ? 10 : 9), act: { kind: at ? "idle" : "enter", t: 0 }, sign: null, stun: 0, dizzy: 0, shield: kind === "shield", hat: true, hatKind: foeId % 3 === 0 ? 1 : 0,
-      slot: Math.random() * TAU, ph: Math.random() * 10, seed: Math.random() * 10, rim: shade ? "#a8acc8" : DEMON_RIMS[foeId % 3], shade };
+    const H0 = G.hero, shade = G.world === "kata" || kind === "shade";
+    let x = at ? at.x : 0, y = at ? at.y : lerp(Y0 + 10, Y1 - 6, Math.random());
+    if (!at) {
+      // A place on the screen to one side of him, not on top of another of them.
+      for (let k = 0; k < 8; k++) {
+        const side = (foeId + k) % 2 ? 1 : -1;
+        x = clamp(H0.x + side * (W * 0.2 + Math.random() * W * 0.2), 60, G.ww - 60);
+        if (!G.foes.some((o) => !o.gone && Math.abs(o.x - x) < 56 && Math.abs(o.y - y) < 30)) break;
+      }
+    }
+    const f = { id: ++foeId, kind: kind === "shade" ? "whisper" : kind, x, y, z: 0, vz: 0, vx: 0, dir: H0.x >= x ? 1 : -1,
+      hp: hp || (kind === "grab" ? 12 : kind === "shield" ? 10 : 9), act: { kind: "emerge", t: 0, dur: 0.95 }, sign: null, stun: 0, dizzy: 0, shield: kind === "shield", hat: true, hatKind: foeId % 3 === 0 ? 1 : 0,
+      slot: Math.random() * TAU, ph: Math.random() * 10, seed: Math.random() * 10, rim: shade ? "#a8acc8" : DEMON_RIMS[foeId % 3], shade, holeT: 0 };
     f.max = f.hp; G.foes.push(f);
-    puff(f.x + (at ? 0 : left ? 30 : -30), f.y - 50, "#000000", 10, true);
+    puff(f.x, f.y - 4, "#000000", 8, true);
+    Sound.fx.growl(0.6); Sound.fx.hit(0.35, pan(f.x));
     return f;
   }
   const alive = () => G.foes.filter((f) => !f.gone);
@@ -197,8 +215,8 @@ const Fight = (() => {
     G.hero.combo = 0; G.hero.comboT = 0;
     for (const f of G.foes) if (!f.gone) { f.sign = null; if (f.act.kind === "wind" || f.act.kind === "lunge") f.act = { kind: "idle", t: 0 }; }
     // A shade of the right kind, if the lesson needs one.
-    if (L.kind && !alive().some((f) => f.kind === L.kind)) spawn(L.kind, { x: clamp(G.hero.x + 170, 80, W - 80), y: G.hero.y }, L.hp);
-    if (L.far) for (const f of alive()) if (Math.abs(f.x - G.hero.x) < 200) { f.x = G.hero.x < W / 2 ? W - 70 : 70; }
+    if (L.kind && !alive().some((f) => f.kind === L.kind)) spawn(L.kind, { x: clamp(G.hero.x + 170, 80, G.ww - 80), y: G.hero.y }, L.hp);
+    if (L.far) for (const f of alive()) if (Math.abs(f.x - G.hero.x) < 200) { f.x = clamp(G.hero.x + (f.x >= G.hero.x ? 1 : -1) * W * 0.4, 60, G.ww - 60); }
   }
   // Something the player did, for the lesson in hand.
   function ev(name) {
@@ -222,7 +240,7 @@ const Fight = (() => {
     const n = alive().filter((f) => !f.shield || L.kind === "shield").length;
     if (L.need && n < L.need && !G.shift && G.world === "kata") {
       K.spawnT = (K.spawnT || 0) - dt;
-      if (K.spawnT <= 0) { K.spawnT = 0.5; const x = L.far ? (H0.x < W / 2 ? W - 80 : 80) : clamp(H0.x + (Math.random() < 0.5 ? -1 : 1) * (110 + Math.random() * 120), 70, W - 70); spawn("shade", { x, y: lerp(Y0 + 10, Y1 - 10, Math.random()) }, L.hp); }
+      if (K.spawnT <= 0) { K.spawnT = 0.5; const x = clamp(H0.x + (Math.random() < 0.5 ? -1 : 1) * (L.far ? W * 0.4 : 110 + Math.random() * 120), 70, G.ww - 70); spawn("shade", { x, y: lerp(Y0 + 10, Y1 - 10, Math.random()) }, L.hp); }
     }
     // The set pieces: a gold sign to counter, a red one to dodge, a blow to block.
     const s = alive().filter((f) => f.act.kind === "idle" && f.z === 0 && !f.shield);
@@ -430,7 +448,7 @@ const Fight = (() => {
     hitStop(0.12); G.shake = 10; G.flash = 0.4; G.flashC = C.holy;
     G.parts.push({ kind: "beam", x: f.x, t: 0.3 }); G.parts.push({ kind: "ring", x: f.x, y: f.y, r: 8, t: 0.2 });
     sparks(f.x, f.y - 14, "#ffffff", 12); dustAt(f.x, f.y);
-    Sound.fx.hit(2.2, clamp((f.x - W / 2) / W, -0.8, 0.8)); Sound.fx.hah(1.3, H0.dir * 0.3); Sound.fx.clang();
+    Sound.fx.hit(2.2, pan(f.x)); Sound.fx.hah(1.3, H0.dir * 0.3); Sound.fx.clang();
     f.takenDown = true; f.hp = 0;
     castOut(f);
     pop(f.x, f.y - 92, G.chainTD > 1 ? "TAKEDOWN ×" + G.chainTD : "TAKEDOWN", "#ffffff", true);
@@ -443,7 +461,7 @@ const Fight = (() => {
     if (f ? !fresh("water", f) : (moved("water"), false)) return;
     if (busy() && H0.act.kind !== "hurt") { if (f) H0.queue = { f, move: "water" }; return; }
     if (f) H0.dir = f.x >= H0.x ? 1 : -1; else if (dx) H0.dir = dx > 0 ? 1 : -1;
-    const tx = f ? f.x : clamp(H0.x + (dx || H0.dir) * 260, 30, W - 30), ty = f ? f.y : clamp(H0.y + (dy || 0) * 140, Y0, Y1);
+    const tx = f ? f.x : clamp(H0.x + (dx || H0.dir) * 260, FX0, FX1()), ty = f ? f.y : clamp(H0.y + (dy || 0) * 140, Y0, Y1);
     act("toss", { f, which: TOSS, dur: 0.3 * R().strike, tx, ty, fired: false });
     Sound.fx.whoosh(0.2, 0.5, true);
   }
@@ -508,7 +526,7 @@ const Fight = (() => {
     }
     hitStop(k > 1.5 ? 0.09 : 0.045);
     G.shake = Math.max(G.shake, 2 + k * 2);
-    Sound.fx.hit(k, clamp((f.x - W / 2) / W, -0.8, 0.8));
+    Sound.fx.hit(k, pan(f.x));
     sparks(f.x - Math.sign(f.x - H0.x || 1) * 10, f.y - 70 * depth(f.y) - f.z, k > 1.3 ? "#ffffff" : f.rim, 6 + k * 3);
     if (f.hp <= 0) castOut(f);
     return true;
@@ -539,7 +557,7 @@ const Fight = (() => {
     const others = alive().filter((o) => o !== f && o.sign === "gold" && o.act.kind === "wind" && Math.abs(o.x - H0.x) < 240 && Math.abs(o.y - H0.y) < 70);
     moved("counter");
     f.sign = null; H0.dir = f.x >= H0.x ? 1 : -1; H0.y = f.y + 1; H0.z = 0;
-    H0.x = clamp(f.x - H0.dir * 48 * depth(f.y), 20, W - 20);
+    H0.x = keepX(f.x - H0.dir * 48 * depth(f.y));
     H0.queue = null;
     act("counter", { f, dur: 0.72 * R().strike, leg: f.atk === "kick", others, slam: false, kicked: false, x0: H0.x });
     f.act = { kind: "countered", t: 0, u: 0 }; f.z = 0; f.vz = 0; f.vx = 0; f.dir = -H0.dir; f.dizzy = 0;
@@ -548,7 +566,7 @@ const Fight = (() => {
     slowmo(0.2, 0.32, (f.x + H0.x) / 2, f.y - 60, 1.26); G.warnT = 0;
     if (G.kata) G.kata.countered = true;
     G.flash = 0.3; G.flashC = C.holy;
-    Sound.fx.clang(clamp((f.x - W / 2) / W, -0.8, 0.8));
+    Sound.fx.clang(pan(f.x));
     pop(f.x, f.y - 130 * depth(f.y), others.length === 2 ? "TRIPLE COUNTER" : others.length === 1 ? "DOUBLE COUNTER" : "COUNTER", C.holy, others.length > 0);
     if (G.slowFor === f || others.includes(G.slowFor)) G.slowFor = null;
     ev("counter");
@@ -561,11 +579,11 @@ const Fight = (() => {
     // Toward a demon close by: he vaults clean over its head, as Batman does, and lands behind it.
     const over = Math.abs(ux) > 0.6 ? alive().filter((f) => !lying(f) && f.z === 0 && Math.sign(f.x - H0.x) === Math.sign(ux) && Math.abs(f.x - H0.x) < 130 && Math.abs(f.y - H0.y) < 42).sort((a, b) => Math.abs(a.x - H0.x) - Math.abs(b.x - H0.x))[0] : null;
     if (over) {
-      act("dodge", { dur: 0.44, vault: true, from: [H0.x, H0.y], to: [clamp(over.x + Math.sign(ux) * 72, 30, W - 30), clamp(over.y + 2, Y0, Y1)] });
+      act("dodge", { dur: 0.44, vault: true, from: [H0.x, H0.y], to: [keepX(over.x + Math.sign(ux) * 72), clamp(over.y + 2, Y0, Y1)] });
       H0.inv = 0.55; Sound.fx.whoosh(0.4, 0.7, true); H0.dir = ux > 0 ? 1 : -1;
       if (over.act.kind === "wind" || over.act.kind === "lunge") pop(over.x, over.y - 140 * depth(over.y), "VAULT", "#9fe4ff");
     } else {
-      act("dodge", { dur: 0.36, from: [H0.x, H0.y], to: [clamp(H0.x + ux * 125, 30, W - 30), clamp(H0.y + uy * 60, Y0, Y1)] });
+      act("dodge", { dur: 0.36, from: [H0.x, H0.y], to: [keepX(H0.x + ux * 125), clamp(H0.y + uy * 60, Y0, Y1)] });
       H0.inv = 0.45; Sound.fx.whoosh(0.3, 0.6);
     }
     ev("dodge");
@@ -620,7 +638,7 @@ const Fight = (() => {
   function tapGround(p) {
     const H0 = G.hero;
     if (["grabbed", "down", "bless", "grab"].includes(H0.act.kind) || G.over || G.shift) return;
-    const ty = clamp(p.y, Y0, Y1), tx = clamp(p.x, 24, W - 24), d = dist(H0.x, H0.y, tx, ty);
+    const ty = clamp(p.y, Y0, Y1), tx = keepX(p.x), d = dist(H0.x, H0.y, tx, ty);
     if (d < 12) return;
     H0.dir = tx >= H0.x ? 1 : -1; H0.queue = null; moved("dash");
     act("dash", { from: [H0.x, H0.y], to: [tx, ty], dur: clamp(d / 700, 0.16, 0.42), style: d > 160 ? "flip" : "roll" });
@@ -689,7 +707,7 @@ const Fight = (() => {
     const A = G.angel; if (A.act.kind !== "above") return false;
     if (kind !== "carry" && (!f || f.gone)) return false;
     const T = kind === "carry" ? G.hero : f;
-    A.dir = T.x >= W / 2 ? -1 : 1; if (Math.abs(T.x - G.hero.x) > 5 && kind !== "carry") A.dir = T.x >= G.hero.x ? 1 : -1;
+    A.dir = T.x >= G.view.cx ? -1 : 1; if (Math.abs(T.x - G.hero.x) > 5 && kind !== "carry") A.dir = T.x >= G.hero.x ? 1 : -1;
     A.x = T.x - A.dir * 150; A.y = T.y - 2; A.z = SKY;
     A.act = { kind, phase: "dive", t: 0, f };
     Sound.fx.whoosh(0.45, 1, false);
@@ -762,13 +780,15 @@ const Fight = (() => {
     // The camera: pushed in on the great moments, on him and the one drawing back during the
     // warning, and drawn in a little on him as a combo builds.
     const wf = G.warnF, mid = (f) => ({ x: (f.x + HR.x) / 2, y: (f.y + HR.y) / 2 - 60 });
-    let Z = { k: 1, x: W / 2, y: H / 2 };
+    let Z = { k: 1, x: HR.x, y: H / 2 };
     if (G.slowT > 0) Z = G.zoom;
     else if (G.slowFor) Z = Object.assign({ k: 1.12 }, mid(G.slowFor));
     else if (wf && (G.warnT > 0 || engaged())) Z = Object.assign({ k: G.warnT > 0 ? 1.17 : 1.1 }, mid(wf));
     else if (HR.combo >= 4 && !G.over && !G.shift) Z = { k: 1 + Math.min(0.14, (HR.combo - 3) * 0.014), x: HR.x, y: HR.y - 70 };
     const ck = Math.min(1, dtRaw * (Z.k > 1.09 ? 7 : 3));
-    G.cam.k += (Z.k - G.cam.k) * ck; G.cam.x += (Z.x - G.cam.x) * ck; G.cam.y += (Z.y - G.cam.y) * ck;
+    G.cam.k += (Z.k - G.cam.k) * ck; G.cam.y += (Z.y - G.cam.y) * ck;
+    // Across, it is always on Fr. Lawrence, close behind him even when he zips.
+    G.cam.x += (HR.x - G.cam.x) * Math.min(1, dtRaw * 14);
     // The music is muffled while time is slow, and in the Depths.
     const muff = G.world === "depths" || (G.muffled ? G.slowVis > 0.35 : G.slowVis > 0.55);
     if (muff !== G.muffled) { G.muffled = muff; Sound.muffle(muff, muff ? 0.05 : 0.2); }
@@ -820,7 +840,7 @@ const Fight = (() => {
   function recover() {
     // His angel has carried him to the church to recover. No death: the wave begins again.
     G.down = 0;
-    const H0 = G.hero; H0.resolve = 100; H0.combo = 0; H0.spirit = Math.max(H0.spirit, 2); act("idle"); H0.x = W * 0.3; H0.y = 300; H0.z = 0; H0.inv = 1.5;
+    const H0 = G.hero; H0.resolve = 100; H0.combo = 0; H0.spirit = Math.max(H0.spirit, 2); act("idle"); H0.x = G.ww / 2 - W * 0.22; H0.y = 300; H0.z = 0; H0.inv = 1.5;
     G.angel.act = { kind: "above", t: 0 }; G.world = G.base; G.whispers = [];
     for (const f of G.foes) f.gone = true;
     G.foes = []; G.spawnQ = []; G.slowFor = null;
@@ -961,7 +981,7 @@ const Fight = (() => {
       if (!A0.hit && u >= 0.5) { A0.hit = true; if (f) takedown(f); }
       if (u >= 1) after();
     }
-    else if (A0.kind === "hurt") { H0.x = clamp(H0.x - H0.dir * 60 * dt * (1 - u), 20, W - 20); if (u >= 1) after(); }
+    else if (A0.kind === "hurt") { H0.x = keepX(H0.x - H0.dir * 60 * dt * (1 - u)); if (u >= 1) after(); }
     else if (A0.kind === "finisher") {
       // Up into the light; the world changes under him; down on them.
       if (u < 0.4) H0.z = 160 * ease(u / 0.4);
@@ -969,7 +989,7 @@ const Fight = (() => {
       if (u > 0.82) H0.z = 160 * (1 - smooth((u - 0.82) / 0.18));
       if (!A0.landed && u >= 1) { A0.landed = true; H0.z = 0; finisherLands(); act("land", { dur: 0.3, z0: 0 }); }
     }
-    else if (A0.kind === "trip") { if (u < 0.25) H0.x = clamp(A0.x0 + H0.dir * 46 * ease(u / 0.25), 20, W - 20); if (u >= 1) act("idle"); }
+    else if (A0.kind === "trip") { if (u < 0.25) H0.x = keepX(A0.x0 + H0.dir * 46 * ease(u / 0.25)); if (u >= 1) act("idle"); }
     else if (A0.kind === "grabbed") {
       if (A0.t > (A0.tick || 0)) { A0.tick = A0.t + 0.4; hurtHero(5, true); }
       // In the Heights his angel tears the demon off him; in the Depths he must break free himself.
@@ -991,7 +1011,7 @@ const Fight = (() => {
       }
       if (u >= 1) act("idle");
     } else if (A0.kind === "block") { if (!(G.touch && G.touch.block) && !G.keys.KeyQ) act("idle"); }
-    H0.x = clamp(H0.x, 20, W - 20); H0.y = clamp(H0.y, Y0, Y1);
+    H0.x = keepX(H0.x); H0.y = clamp(H0.y, Y0, Y1);
   }
   function hurtHero(dmg, grab) {
     const H0 = G.hero;
@@ -1064,7 +1084,7 @@ const Fight = (() => {
       for (const o of G.foes) if (o !== f && !o.gone && !a.hits.includes(o) && Math.abs(o.x - f.x) < 44 && Math.abs(o.y - f.y) < 36) {
         a.hits.push(o); landHit(o, 2, 1.7, { front: false, breaks: true, fromX: f.x }); if (!o.gone && !lying(o)) o.dizzy = Math.max(o.dizzy, 1.6); ev("throwhit"); pop(o.x, o.y - 120, "BOWLED OVER", C.holy);
       }
-      if (f.x < 24 || f.x > W - 24 || a.t > 0.6) { f.x = clamp(f.x, 24, W - 24); f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.z = 0; f.vz = 0; landHit(f, 2, 1.4, { angel: true, front: false, kx: 0.2, noFloor: true }); if (!f.gone) floor(f); G.shake = 6; }
+      if (f.x < FX0 || f.x > FX1() || a.t > 0.6) { f.x = clamp(f.x, FX0, FX1()); f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.z = 0; f.vz = 0; landHit(f, 2, 1.4, { angel: true, front: false, kx: 0.2, noFloor: true }); if (!f.gone) floor(f); G.shake = 6; }
       return;
     }
     if (a.kind === "pulled") { const u = clamp(a.t / 0.28, 0, 1), e = u * u; f.x = lerp(a.x0, a.x1, e); f.y = lerp(a.y0, a.y1, e); f.z = Math.sin(u * PI) * 20; if (u >= 1 && !(by.kind === "haul" && by.f === f)) { f.z = 0; f.act = { kind: "hurt", t: 0, dur: 0.4 }; } return; }
@@ -1078,13 +1098,10 @@ const Fight = (() => {
       }
     }
     f.x += f.vx * dt; f.vx *= 1 - 6 * dt;
+    if (f.holeT > 0) f.holeT -= dt;
     if (a.kind === "castout") return;
-    if (a.kind !== "enter") { if (f.x < 24) { f.x = 24; f.vx = Math.abs(f.vx) * 0.3; } if (f.x > W - 24) { f.x = W - 24; f.vx = -Math.abs(f.vx) * 0.3; } }
-    if (a.kind === "enter") {
-      const tx = clamp(f.x + f.dir * 160, 60, W - 60);
-      f.x += f.dir * 80 * dt; if ((f.dir > 0 && f.x >= tx - 100) || (f.dir < 0 && f.x <= tx + 100) || a.t > 2.5) f.act = { kind: "idle", t: 0 };
-      return;
-    }
+    if (f.x < FX0) { f.x = FX0; f.vx = Math.abs(f.vx) * 0.3; } if (f.x > FX1()) { f.x = FX1(); f.vx = -Math.abs(f.vx) * 0.3; }
+    if (a.kind === "emerge") { f.dir = H0.x >= f.x ? 1 : -1; if (a.t > a.dur) { f.act = { kind: "idle", t: 0 }; f.holeT = 0.5; } return; }
     if (a.kind === "hurt") { if (a.t > a.dur) f.act = { kind: "idle", t: 0 }; return; }
     if (a.kind === "face") { if (a.t > 1.4) f.act = { kind: "idle", t: 0 }; return; }
     // Down on the street, and up again.
@@ -1118,12 +1135,12 @@ const Fight = (() => {
     // Their places stay on the screen: one that would stand past the edge goes round to his other side.
     const ring = 92 + (f.kind === "grab" ? 20 : 0);
     let side = f.x >= H0.x ? 1 : -1;
-    if (H0.x + side * (ring + 30) < 40 || H0.x + side * (ring + 30) > W - 40) side = -side;
-    let tx = clamp(H0.x + side * ring + Math.sin(f.slot + G.t * 0.3) * 30, 40, W - 40), ty = clamp(H0.y + Math.sin(f.slot * 2.1 + G.t * 0.25) * 34, Y0, Y1);
+    if (H0.x + side * (ring + 30) < 40 || H0.x + side * (ring + 30) > G.ww - 40) side = -side;
+    let tx = clamp(H0.x + side * ring + Math.sin(f.slot + G.t * 0.3) * 30, 40, G.ww - 40), ty = clamp(H0.y + Math.sin(f.slot * 2.1 + G.t * 0.25) * 34, Y0, Y1);
     for (const o of others) { const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy); if (d < 60 && d > 0.1) { tx += dx / d * 50; ty += dy / d * 20; } }
     const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
     if (d > 6) { const sp = f.kind === "grab" ? 55 : 72; f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
-    f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, 24, W - 24);
+    f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0, FX1());
   }
   function resolveAttack(f) {
     const H0 = G.hero, grab = f.sign === "red", close = Math.abs(f.x - H0.x) < 90 && Math.abs(f.y - H0.y) < 40;
@@ -1150,7 +1167,7 @@ const Fight = (() => {
   }
   function castOut(f) {
     f.gone = true; f.sign = null; f.act = { kind: "castout", t: 0 }; f.vx = Math.sign(f.x - G.hero.x || 1) * 260; f.vz = 260; f.z = Math.max(f.z, 1);
-    Sound.fx.yelp(clamp((f.x - W / 2) / W, -0.8, 0.8));
+    Sound.fx.yelp(pan(f.x));
     setTimeout(() => { Sound.fx.puff(); }, 380);
     pop(f.x, f.y - 140 * depth(f.y), f.shade ? "GONE" : "CAST OUT", "#ffffff");
     if (G.slowFor === f) G.slowFor = null;
@@ -1206,7 +1223,7 @@ const Fight = (() => {
   function sparks(x, y, c, n) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 120 + Math.random() * 240; G.parts.push({ kind: "spark", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c, t: 0 }); } }
   function shards(x, y) { for (let i = 0; i < 10; i++) G.parts.push({ kind: "shard", x, y, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, r: Math.random() * TAU, t: 0 }); }
   function puff(x, y, c, n, dark) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 30 + Math.random() * 60; G.parts.push({ kind: dark ? "smoke" : "puff", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, t: 0, c }); } }
-  function pop(x, y, text, c, big) { G.pops.push({ x: clamp(x, 60, W - 60), y: Math.max(70, y), text, c, t: 0, big }); }
+  function pop(x, y, text, c, big) { const cx = G.view.cx; G.pops.push({ x: clamp(x, cx - W / 2 + 60, cx + W / 2 - 60), y: Math.max(70, y), text, c, t: 0, big }); }
   const LIFE = { hat: 2.5, ring: 0.8, smoke: 0.9, puff: 0.9, flask: 0.5, link: 1.4, streak: 0.3, mark: 0.4, throwflask: 0.3, beam: 1.2, warn: 0.5 };
   function stepParts(dt) {
     for (const p of G.parts) {
@@ -1235,69 +1252,98 @@ const Fight = (() => {
   }
 
   // ---- Drawing: the four worlds -----------------------------------------------------------------------
+  // The sky and the far city: one long picture, wider than the screen, that slides past at half
+  // the speed of the street, so the city seems far off behind it.
+  const BGW = () => Math.round(W + (G.ww - W) * 0.5 + 40);
   function background() {
-    const key = W + ":" + DPR + ":" + scale;
+    const bw = BGW(), key = W + ":" + bw + ":" + DPR + ":" + scale;
     if (bg && bgKey === key) return bg;
-    bgKey = key; bg = document.createElement("canvas"); bg.width = Math.round(W * scale * DPR); bg.height = Math.round(H * scale * DPR);
+    bgKey = key; bg = document.createElement("canvas"); bg.width = Math.round(bw * scale * DPR); bg.height = Math.round(H * scale * DPR);
     const c2 = bg.getContext("2d"); c2.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0);
     // Draw with the shared helpers, pointed at the off-screen canvas for a moment.
     const back = useCtx(c2);
-    const g = ctx.createLinearGradient(0, 0, 0, Y0); g.addColorStop(0, "#03040a"); g.addColorStop(1, "#101a34"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, Y0);
-    skyline(101, -10, W + 10, Y0 - 50, 60, 200, "#0a1124", { t: 0, winA: 0.35, lit: 0.35 });
-    skyline(102, -10, W + 10, Y0 - 10, 30, 110, "#070b18", { t: 0, winA: 0.45, lit: 0.4, signs: false });
-    rect(0, Y0 - 14, W, 14, "#10131e"); rect(0, Y0 - 14, W, 2, "#1c2134");     // the far kerb
+    const g = ctx.createLinearGradient(0, 0, 0, Y0); g.addColorStop(0, "#03040a"); g.addColorStop(1, "#101a34"); ctx.fillStyle = g; ctx.fillRect(0, 0, bw, Y0);
+    skyline(101, -10, bw + 10, Y0 - 50, 60, 200, "#0a1124", { t: 0, winA: 0.35, lit: 0.35 });
+    skyline(102, -10, bw + 10, Y0 - 10, 30, 110, "#070b18", { t: 0, winA: 0.45, lit: 0.4, signs: false });
     useCtx(back);
     return bg;
   }
+  // The part of the street on the screen, in the street's own measure (with a margin).
+  function viewSpan() { const v = G.view; return [v.cx - W / (2 * v.k) - 60, v.cx + W / (2 * v.k) + 60]; }
+  const drawFar = () => ctx.drawImage(background(), (G.view.cx - W / 2) * 0.5 - 20, 0, BGW(), H);
+  // Each stretch of a wide world drawn from its own seed, so it is the same each time it comes round.
+  function tiles(tw, x0, x1, fn) { for (let k = Math.floor(x0 / tw); k <= Math.floor(x1 / tw); k++) fn(k * tw, seeded(1000 + k * 7919)); }
+  // Shop fronts along the street, either side of the corner store: dark doors, a lit window or two,
+  // a fire escape.
+  function shopfronts(x0, x1, t) {
+    const sxL = carX() + W * 0.22 - 30, sxR = carX() + W * 0.22 + Math.min(200, W * 0.27) + 30;
+    tiles(170, x0, x1, (x, r) => {
+      if (x + 170 > sxL && x < sxR) return;
+      const w = 120 + r() * 40, h = 70 + r() * 60, y = Y0 - 12 - h, c = r() < 0.5 ? "#0b0f1e" : "#0e1222";
+      rect(x + 8, y, w, h, c); rect(x + 8, y, w, 2, "#1c2236");
+      const door = x + 8 + w * (0.15 + r() * 0.5);
+      rect(door, Y0 - 12 - 34, 16, 34, "#04050a");
+      for (let i = 0; i < 3; i++) if (r() < 0.55) { const wx = x + 14 + i * (w / 3), lit = r() < 0.5; rect(wx, y + 12, w / 3 - 14, 16, lit ? "rgba(255,217,160,0.32)" : "#070912"); }
+      if (r() < 0.35) { ctx.strokeStyle = "#151a2c"; ctx.lineWidth = 1.2; for (let k = 0; k < 3; k++) { const fy = y + 20 + k * 22; ctx.strokeRect(x + 20, fy, 44, 2); } }
+    });
+    rect(x0, Y0 - 14, x1 - x0, 14, "#10131e"); rect(x0, Y0 - 14, x1 - x0, 2, "#1c2134");     // the far kerb
+  }
+  // The lamps along the street; the one by the car flickers until the guardian is free.
+  function lampsAt() { const base = carX() - W * 0.38, out = []; for (let k = -3; k <= 3; k++) { const x = base + k * 480; if (x > 60 && x < G.ww - 60 && Math.abs(x - (carX() + W * 0.22 + 80)) > 150) out.push(x); } return out; }
   function drawWorld(world, t) {
+    const [vx0, vx1] = viewSpan();
     if (world === "street") {
-      ctx.drawImage(background(), 0, 0, W, H);
-      const sx = W * 0.72;
-      cornerStore(sx, Y0 - 12, Math.min(200, W * 0.27), 118, t);
-      lamp(W * 0.12, Y0 - 12, 128, C.ice, Math.sin(t * 7) > 0.8 && !G.guard.freed ? 0.4 : 1, 1);
-      wetStreet(Y0 - 2, H, [[sx + Math.min(200, W * 0.27) * 0.36, C.red, 1, 44], [sx + Math.min(200, W * 0.27) * 0.79, C.cyan, 1, 14], [W * 0.12 + 11, C.ice, 1, 12], [carX(), C.cyan, 0.4, 30]], t);
+      drawFar();
+      shopfronts(vx0, vx1, t);
+      const sx = carX() + W * 0.22, sw = Math.min(200, W * 0.27), base = carX() - W * 0.38, refl = [];
+      cornerStore(sx, Y0 - 12, sw, 118, t);
+      for (const x of lampsAt()) { if (x < vx0 - 40 || x > vx1 + 40) continue; lamp(x, Y0 - 12, 128, C.ice, x === base && Math.sin(t * 7) > 0.8 && !G.guard.freed ? 0.4 : 1, 1); refl.push([x + 11, C.ice, 1, 12]); }
+      refl.push([sx + sw * 0.36, C.red, 1, 44], [sx + sw * 0.79, C.cyan, 1, 14], [carX(), C.cyan, 0.4, 30]);
+      wetStreet(Y0 - 2, H, refl, t, vx0, vx1);
       // The car, and the father frozen in it; his guardian in chains against it.
       car(carX(), CARY, 1.6, { t, dash: 1, bow: 2, rim: C.cyan });
       drawGuardian(t);
     } else if (world === "kata") {
       // A rooftop above the city, as he sees it in his mind: the angel's gold in the air.
-      ctx.drawImage(background(), 0, 0, W, H);
-      ctx.fillStyle = "rgba(242,212,122,0.07)"; ctx.fillRect(0, 0, W, Y0);
-      const g = ctx.createLinearGradient(0, Y0 - 16, 0, H); g.addColorStop(0, "#1a1d2c"); g.addColorStop(1, "#0b0c14"); ctx.fillStyle = g; ctx.fillRect(0, Y0 - 16, W, H);
-      rect(0, Y0 - 18, W, 4, "#2a2e44");
-      for (let x = 30; x < W; x += 90) rect(x, Y0 + 30, 1, H, "rgba(255,255,255,0.03)");
-      const tx = W * 0.86;
-      rect(tx - 2, Y0 - 90, 4, 74, "#05060c"); rect(tx + 34, Y0 - 90, 4, 74, "#05060c"); ctx.fillStyle = "#07080f"; ctx.beginPath(); ctx.ellipse(tx + 18, Y0 - 112, 30, 26, 0, 0, TAU); ctx.fill(); poly([tx - 14, Y0 - 128, tx + 18, Y0 - 150, tx + 50, Y0 - 128], "#07080f");
-      glowOval(W / 2, Y0 + 40, W * 0.45, 40, C.holy, 0.08);
+      drawFar();
+      ctx.fillStyle = "rgba(242,212,122,0.07)"; ctx.fillRect(vx0, 0, vx1 - vx0, Y0);
+      const g = ctx.createLinearGradient(0, Y0 - 16, 0, H); g.addColorStop(0, "#1a1d2c"); g.addColorStop(1, "#0b0c14"); ctx.fillStyle = g; ctx.fillRect(vx0, Y0 - 16, vx1 - vx0, H);
+      rect(vx0, Y0 - 18, vx1 - vx0, 4, "#2a2e44");
+      for (let x = Math.floor(vx0 / 90) * 90 + 30; x < vx1; x += 90) rect(x, Y0 + 30, 1, H, "rgba(255,255,255,0.03)");
+      tiles(700, vx0, vx1, (x0, r) => {
+        if (r() < 0.6) { const tx = x0 + 100 + r() * 400; rect(tx - 2, Y0 - 90, 4, 74, "#05060c"); rect(tx + 34, Y0 - 90, 4, 74, "#05060c"); ctx.fillStyle = "#07080f"; ctx.beginPath(); ctx.ellipse(tx + 18, Y0 - 112, 30, 26, 0, 0, TAU); ctx.fill(); poly([tx - 14, Y0 - 128, tx + 18, Y0 - 150, tx + 50, Y0 - 128], "#07080f"); }
+        else { const tx = x0 + 150 + r() * 300; rect(tx, Y0 - 44, 60, 30, "#080a12"); rect(tx + 22, Y0 - 38, 14, 24, "#04050a"); }
+      });
+      glowOval(G.view.cx, Y0 + 40, W * 0.45, 40, C.holy, 0.08);
     } else if (world === "heights") {
       // The Heights: above the clouds, gold light, the city far below.
       const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1c1f4a"); g.addColorStop(0.45, "#6a5a8a"); g.addColorStop(0.75, "#e8b878"); g.addColorStop(1, "#fff0c8");
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = g; ctx.fillRect(vx0, 0, vx1 - vx0, H);
       ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.12;
-      for (let i = 0; i < 5; i++) { const x = W * (0.1 + i * 0.22) + Math.sin(t * 0.3 + i) * 20; poly([x - 20, 0, x + 20, 0, x + 120, H, x - 60, H], "#fff3cf"); }
+      for (let x0 = Math.floor(vx0 / 170) * 170 - 170; x0 < vx1 + 170; x0 += 170) { const x = x0 + Math.sin(t * 0.3 + x0) * 20; poly([x - 20, 0, x + 20, 0, x + 120, H, x - 60, H], "#fff3cf"); }
       ctx.restore();
-      const r = seeded(15);
-      for (let i = 0; i < 14; i++) { const x = ((r() * W * 1.4 + t * (6 + r() * 10)) % (W * 1.4)) - W * 0.2, y = Y0 - 40 + r() * 60, rx = 80 + r() * 140; ctx.globalAlpha = 0.5; ctx.fillStyle = "#fff6e4"; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.28, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
-      const fg = ctx.createLinearGradient(0, Y0 - 10, 0, H); fg.addColorStop(0, "rgba(255,246,228,0.85)"); fg.addColorStop(1, "rgba(255,236,200,1)"); ctx.fillStyle = fg; ctx.fillRect(0, Y0 - 6, W, H);
-      for (let i = 0; i < 9; i++) { const x = ((i * 137 + t * 12) % (W + 200)) - 100; ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.ellipse(x, Y0 + 4 + (i % 3) * 30, 90, 16, 0, 0, TAU); ctx.fill(); }
-      for (let i = 0; i < 24; i++) { const x = (r() * W + t * 20) % W, y = (r() * Y0 - t * 30 + Y0 * 4) % Y0; glow(x, y, 3 + r() * 3, "#ffffff", 0.5); }
+      tiles(600, vx0 - 300, vx1 + 300, (x0, r) => { for (let i = 0; i < 6; i++) { const x = x0 + ((r() * 600 + t * (6 + r() * 10)) % 600), y = Y0 - 40 + r() * 60, rx = 80 + r() * 140; ctx.globalAlpha = 0.5; ctx.fillStyle = "#fff6e4"; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.28, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; } });
+      const fg = ctx.createLinearGradient(0, Y0 - 10, 0, H); fg.addColorStop(0, "rgba(255,246,228,0.85)"); fg.addColorStop(1, "rgba(255,236,200,1)"); ctx.fillStyle = fg; ctx.fillRect(vx0, Y0 - 6, vx1 - vx0, H);
+      tiles(500, vx0 - 200, vx1 + 200, (x0, r) => { for (let i = 0; i < 4; i++) { const x = x0 + ((r() * 500 + t * 12) % 500); ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.ellipse(x, Y0 + 4 + (i % 3) * 30, 90, 16, 0, 0, TAU); ctx.fill(); } });
+      tiles(400, vx0, vx1, (x0, r) => { for (let i = 0; i < 8; i++) { const x = x0 + ((r() * 400 + t * 20) % 400), y = (r() * Y0 - t * 30 + Y0 * 4) % Y0; glow(x, y, 3 + r() * 3, "#ffffff", 0.5); } });
     } else if (world === "depths") {
       // The Depths: a red dark under everything, cracks of ember, chains hanging out of the black.
-      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#020103"); g.addColorStop(0.6, "#14040a"); g.addColorStop(1, "#2a0608"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      const r = seeded(27);
-      for (let i = 0; i < 9; i++) { const x = r() * W, len = 60 + r() * 140, sw = Math.sin(t * 0.8 + i) * 6; for (let k = 0; k < len; k += 9) { ctx.strokeStyle = "#1e080a"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(x + sw * k / len, k, 4, 2.2, k % 18 ? 0 : PI / 2, 0, TAU); ctx.stroke(); } }
-      for (let i = 0; i < 12; i++) { const x = r() * W, y = 40 + r() * (Y0 - 80), fl = 0.5 + 0.5 * Math.sin(t * (1 + r()) + i * 3); glow(x, y, 5, C.ember, 0.35 * fl); glow(x + 7, y, 5, C.ember, 0.35 * fl); }
-      rect(0, Y0 - 8, W, H, "#0c0306");
+      const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#020103"); g.addColorStop(0.6, "#14040a"); g.addColorStop(1, "#2a0608"); ctx.fillStyle = g; ctx.fillRect(vx0, 0, vx1 - vx0, H);
+      tiles(400, vx0, vx1, (x0, r) => {
+        for (let i = 0; i < 3; i++) { const x = x0 + r() * 400, len = 60 + r() * 140, sw = Math.sin(t * 0.8 + i + x0) * 6; for (let k = 0; k < len; k += 9) { ctx.strokeStyle = "#1e080a"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(x + sw * k / len, k, 4, 2.2, k % 18 ? 0 : PI / 2, 0, TAU); ctx.stroke(); } }
+        for (let i = 0; i < 4; i++) { const x = x0 + r() * 400, y = 40 + r() * (Y0 - 80), fl = 0.5 + 0.5 * Math.sin(t * (1 + r()) + i * 3 + x0); glow(x, y, 5, C.ember, 0.35 * fl); glow(x + 7, y, 5, C.ember, 0.35 * fl); }
+      });
+      rect(vx0, Y0 - 8, vx1 - vx0, H, "#0c0306");
       ctx.strokeStyle = hexA(C.ember, 0.5); ctx.lineWidth = 1.4;
-      for (let i = 0; i < 10; i++) { let x = r() * W, y = Y0 + r() * (H - Y0); ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (r() - 0.5) * 60; y += (r() - 0.3) * 14; ctx.lineTo(x, y); } ctx.stroke(); }
-      glowOval(W / 2, H, W * 0.6, 60, "#ff2a1a", 0.18 + 0.05 * Math.sin(t * 2));
+      tiles(400, vx0, vx1, (x0, r) => { for (let i = 0; i < 4; i++) { let x = x0 + r() * 400, y = Y0 + r() * (H - Y0); ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (r() - 0.5) * 60; y += (r() - 0.3) * 14; ctx.lineTo(x, y); } ctx.stroke(); } });
+      glowOval(G.view.cx, H, W * 0.6, 60, "#ff2a1a", 0.18 + 0.05 * Math.sin(t * 2));
     }
   }
   // From the screen to the street, through the camera's push-in.
   function toWorld(p) { const v = G.view; return { x: v.cx + (p.x - W / 2) / v.k, y: v.cy + (p.y - H / 2) / v.k }; }
   function draw() {
     const t = G.t, H0 = G.hero, k = G.cam.k;
-    const cx = clamp(G.cam.x, W / (2 * k), W - W / (2 * k)), cy = clamp(G.cam.y, H / (2 * k), H - H / (2 * k));
+    const cx = clamp(G.cam.x, W / (2 * k), G.ww - W / (2 * k)), cy = clamp(G.cam.y, H / (2 * k), H - H / (2 * k));
     G.view = { k, cx, cy };
     ctx.save();
     ctx.translate(W / 2, H / 2); ctx.scale(k, k); ctx.translate(-cx, -cy);
@@ -1323,8 +1369,8 @@ const Fight = (() => {
     drawParts();
     drawCharge();
     ctx.restore();
-    if ((G.world === "street" && !G.shift) || (G.shift && (G.shift.from === "street" || G.shift.to === "street"))) rain(t, 130, 0, 0, W, H, { seed: 41 });
     ctx.restore();
+    if ((G.world === "street" && !G.shift) || (G.shift && (G.shift.from === "street" || G.shift.to === "street"))) rain(t, 130, 0, 0, W, H, { seed: 41 });
     drawAbove();
     if (G.world === "depths" && !G.shift) {
       const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.9); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(20,0,4,0.75)"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
@@ -1424,6 +1470,7 @@ const Fight = (() => {
     const a = f.act, t = G.t + f.seed, grab = f.kind === "grab";
     if (a.kind === "floored" || (a.kind === "castout" && f.takenDown)) return a.face ? demonFace() : demonFloored(t, grab);
     if (a.kind === "rise") return demonRise(t, grab, a.t / 0.4, a.face);
+    if (a.kind === "emerge") return pose({ lean: 0.15, head: -0.35 + 0.1 * Math.sin(t * 9), sF: 2.9 + 0.2 * Math.sin(t * 7), eF: 0.3, sB: 2.6 + 0.2 * Math.cos(t * 7), eB: 0.4, hF: 0.1, kF: 0.25, hB: -0.1, kB: 0.2 });
     if (a.kind === "countered") {
       // Caught by the wrist or the ankle, then thrown down on its back.
       const caught = demonLunge(f.atk === "kick" ? "kick" : false), k = clamp((a.u - 0.2) / 0.3, 0, 1);
@@ -1438,12 +1485,31 @@ const Fight = (() => {
     if (f.dizzy > 0) return demonDizzy(t);
     if (a.kind === "wind") return blendPose(demonIdle(t, f.seed), demonWind(grab ? true : f.atk === "kick" ? "kick" : false), smooth(a.t / 0.3));
     if (a.kind === "lunge" || a.kind === "grabbing") return demonLunge(grab ? true : f.atk === "kick" ? "kick" : false);
-    if (a.kind === "enter" || f.walk) return demonWalk(f.ph * 7);
+    if (f.walk) return demonWalk(f.ph * 7);
     return demonIdle(t, f.seed);
   }
   function drawFoe(f, fl) {
     const s = depth(f.y) * (f.kind === "grab" ? 1.08 : 1), p = foePose(f), o = { t: G.t + f.seed, hat: f.hat, hatKind: f.hatKind, body: f.kind === "grab" ? "big" : undefined, shield: f.shield, dizzy: f.dizzy > 0, ink: f.shade ? "#2a2c3c" : undefined };
-    if (fl) { if (f.act.kind !== "castout") drawFigure("demon", f.x, f.y + 2, s, f.dir, p, Object.assign({ flipY: true, alpha: 0.2 }, o)); return; }
+    if (fl) { if (f.act.kind !== "castout" && f.act.kind !== "emerge") drawFigure("demon", f.x, f.y + 2, s, f.dir, p, Object.assign({ flipY: true, alpha: 0.2 }, o)); return; }
+    // The hole it climbs out of: burning open, and closing again after it.
+    const em = f.act.kind === "emerge";
+    if (em || f.holeT > 0) {
+      const open = em ? smooth(f.act.t / 0.3) : clamp(f.holeT / 0.5, 0, 1), rx = 32 * s * open, ry = 8 * s * open;
+      if (rx > 0.5) {
+        glowOval(f.x, f.y, rx * 1.6, ry * 2.2, "#ff3a1a", 0.5 * open);
+        ctx.fillStyle = "#010002"; ctx.beginPath(); ctx.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = hexA(C.ember, 0.85 * open); ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(f.x, f.y, rx, ry, 0, 0, TAU); ctx.stroke();
+      }
+    }
+    if (em) {
+      // Up out of it: drawn only above the street, so the rest is still down in the hole.
+      const up = smooth((f.act.t - 0.22) / 0.62), sink = (1 - up) * 140 * s;
+      if (up <= 0) return;
+      ctx.save(); ctx.beginPath(); ctx.rect(f.x - 90, f.y - 400, 180, 401); ctx.clip();
+      drawFigure("demon", f.x, f.y + sink, s, f.dir, p, Object.assign({ rim: f.rim, rimX: f.x < G.hero.x ? -2 : 2, alpha: f.shade ? 0.85 : 1 }, o));
+      ctx.restore();
+      return;
+    }
     if (f.act.kind === "castout") {
       const k = f.act.t;
       if (k > 0.42) { if (!f.puffed) { f.puffed = true; puff(f.x, f.y - 60 * s - f.z, C.holy, 16, false); G.parts.push({ kind: "ring", x: f.x, y: f.y - 60 * s - f.z, r: 4, t: 0.4 }); } return; }
@@ -1592,6 +1658,14 @@ const Fight = (() => {
       text(tip("BLESS", "B · BLESS"), bx, by + 40, { align: "center", size: 8, weight: 800, spacing: 2, color: C.holy });
       buttons.push({ x: bx - 34, y: by - 34, w: 68, h: 68, act: () => bless() });
     }
+    // Any of them off the screen: a red mark at the edge, the way to them. The chains, in gold.
+    const v = G.view, edge = (wx, wy, col, label) => {
+      const x = (wx - v.cx) * v.k + W / 2; if (x > 6 && x < W - 6) return;
+      const right = x >= W, ex = right ? W - 12 : 12, ey = clamp((wy - 70 - v.cy) * v.k + H / 2, 70, H - 40);
+      poly(right ? [ex + 6, ey, ex - 4, ey - 8, ex - 4, ey + 8] : [ex - 6, ey, ex + 4, ey - 8, ex + 4, ey + 8], col); glow(ex, ey, 12, col, 0.4);
+      if (label) text(label, right ? ex - 10 : ex + 10, ey + 3, { align: right ? "right" : "left", size: 7, weight: 800, spacing: 1.5, color: col });
+    };
+    if (!G.shift) { for (const f of alive()) edge(f.x, f.y, f.sign === "red" ? "#ff3040" : f.sign === "gold" ? C.holy : "#ff6a5a"); if (chainsOpen()) edge(G.guard.x, Y0, C.holy, "CHAINS"); }
     // The angel's words. In the practice they stay until the next lesson.
     const until = G.kata ? 60 : 7;
     if (G.msg && G.msg.t < until) {
