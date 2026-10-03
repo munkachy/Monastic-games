@@ -441,6 +441,8 @@ books, as transcribed at GregoBase.
 - Drag sideways to move.
 - Tap to turn: the left half turns one way, the right half the other.
 - Drag down to drop faster; flick down to drop at once.
+
+There is no separate rules page: Learn to Play teaches everything.
 - Tap ✦ for the gift.
 
 On a keyboard:
