@@ -296,6 +296,59 @@ const Sound = (() => {
     o = o || {};
     I.choir(t, [midi], dur, (v === undefined ? 1 : v) * 0.8, { vowel: o.vowel || "a", att: 0.006, rel: 0.06, vib: 3, rev: o.rev === undefined ? 0.25 : o.rev, dly: o.dly === undefined ? 0.3 : o.dly, formant: o.formant || 1.15, glide: o.glide });
   };
+  // A mallet on wood or metal: the note, and a high partial for the knock that dies at once
+  // (marimba with the fourth partial; kalimba, celesta and the like with others).
+  I.mallet = function (t, midi, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const f = mtof(midi), dec = o.decay || 0.45, sum = ac.createGain();
+    const a = osc("sine", f, t), g = gainAt(t); env(g, t, 0.002, 0.42 * v, 0.004, dec);
+    const b = osc("sine", f * (o.partial || 3.93), t), gb = gainAt(t); env(gb, t, 0.001, (o.knock === undefined ? 0.2 : o.knock) * v, 0.002, dec * (o.ring || 0.16));
+    a.connect(g); b.connect(gb); g.connect(sum); gb.connect(sum);
+    route(sum, t, { pan: o.pan, rev: o.rev === undefined ? 0.18 : o.rev, dly: o.dly });
+    for (const x of [a, b]) { x.start(t); x.stop(t + dec + 0.1); }
+  };
+  // An organ: drawbars of pure tones on every note, the click of a key, and the slow wobble of a
+  // turning speaker. `bars` are [harmonic, level] (a reed organ, an accordion, are other settings).
+  I.organ = function (t, notes, dur, v, o) {
+    o = o || {}; v = (v === undefined ? 1 : v) / Math.sqrt(notes.length);
+    const bars = o.bars || [[1, 1], [2, 0.7], [3, 0.45], [4, 0.35], [6, 0.18], [8, 0.12]];
+    const g = gainAt(t), att = o.att || 0.008, rel = o.rel || 0.08;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.2 * v, t + att);
+    g.gain.setValueAtTime(0.2 * v, t + Math.max(att, dur)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+    const lfo = osc("sine", o.leslie || 6.2, t), lg = gainAt(t, o.wobble === undefined ? 6 : o.wobble); lfo.connect(lg);
+    for (const m of notes) for (const [h, k] of bars) {
+      const a = osc(o.wave || "sine", mtof(m) * h, t), ga = gainAt(t, (k / bars.length) * 2.2);
+      lg.connect(a.detune); a.connect(ga); ga.connect(g); a.start(t); a.stop(t + dur + rel + 0.1);
+    }
+    lfo.start(t); lfo.stop(t + dur + rel + 0.1);
+    if (o.click !== false) { const n = noise(t, 0.012), hp = filt("highpass", 3000, 0.7, t), gn = gainAt(t); env(gn, t, 0.001, 0.08 * v, 0.001, 0.008); n.connect(hp); hp.connect(gn); route(gn, t, { pan: o.pan }); }
+    route(g, t, { pan: o.pan, rev: o.rev === undefined ? 0.22 : o.rev, dly: o.dly });
+  };
+  // A flute or a whistle: a pure tone with its octave, a breath of noise, a vibrato coming in late.
+  I.flute = function (t, midi, dur, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const f = mtof(midi), g = gainAt(t), att = o.att || 0.025, rel = o.rel || 0.1;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.26 * v, t + att);
+    g.gain.setValueAtTime(0.26 * v, t + Math.max(att, dur)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+    const a = osc(o.wave || "sine", f, t), h = osc("sine", f * 2, t), hg = gainAt(t, o.bright || 0.12);
+    const lfo = osc("sine", 5.4, t), lg = gainAt(t, 0); lg.gain.linearRampToValueAtTime(o.vib === undefined ? 14 : o.vib, t + Math.min(0.3, dur + 0.05));
+    lfo.connect(lg); lg.connect(a.detune); lg.connect(h.detune);
+    if (o.glide) for (const [x, k] of [[a, 1], [h, 2]]) { x.frequency.setValueAtTime(mtof(o.glide) * k, t); x.frequency.exponentialRampToValueAtTime(f * k, t + 0.06); }
+    a.connect(g); h.connect(hg); hg.connect(g);
+    const n = noise(t, dur + 0.1), bp = filt("bandpass", f * 2, 2, t), ng = gainAt(t); env(ng, t, 0.01, (o.breath || 0.1) * v, Math.max(0.01, dur * 0.5), 0.08);
+    n.connect(bp); bp.connect(ng);
+    route(g, t, { pan: o.pan, rev: o.rev === undefined ? 0.3 : o.rev, dly: o.dly === undefined ? 0.15 : o.dly }); route(ng, t, { pan: o.pan, rev: 0.2 });
+    for (const x of [a, h, lfo]) { x.start(t); x.stop(t + dur + rel + 0.1); }
+  };
+  // A drop of water, a bubble: a pure tone that leaps up as it ends.
+  I.bloop = function (t, midi, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const f = mtof(midi), d = o.dur || 0.09, a = osc("sine", f * (o.from || 0.7), t), g = gainAt(t);
+    a.frequency.exponentialRampToValueAtTime(f * (o.to || 1.6), t + d);
+    env(g, t, 0.003, 0.42 * v, 0.01, d);
+    a.connect(g); route(g, t, { pan: o.pan, rev: o.rev === undefined ? 0.25 : o.rev, dly: o.dly === undefined ? 0.3 : o.dly });
+    a.start(t); a.stop(t + d + 0.1);
+  };
   // Transitions: a riser into a change, an impact on its downbeat, a swell, a falling sweep.
   I.riser = function (t, dur, v) {
     v = v === undefined ? 1 : v;
