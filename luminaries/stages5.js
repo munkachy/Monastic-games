@@ -7,7 +7,7 @@ STAGES.push(
     id: "avila", n: 29, name: "St. John of Ávila", short: "John of Ávila", title: "Apostle of Andalusia", life: "1499–1569", place: "Montilla",
     song: "avila", scale: [64, 65, 68, 69, 71, 72, 74, 76],
     colors: { a: ["#1e5ac8", "#8ab4ff", "#0a2460"], b: ["#f08a24", "#ffd090", "#8a4204"], line: "#ffffff", panel: "rgba(6,14,36,0.55)", ink: "#f4f8ff", accent: "#ffb050" },
-    gift: { name: "Audi, Filia", about: "Listen, daughter, to his little book: every square on the field is taken at once.", kind: "sweep" },
+    gift: { name: "Audi, Filia", about: "Listen, daughter, to his little book: every square on the field is taken at once, with every block of its colour joined to it.", kind: "sweep" },
     motif: (c, k, s) => { c.strokeStyle = k === "a" ? "rgba(255,255,255,0.45)" : "rgba(120,50,0,0.45)"; c.lineWidth = 1; c.beginPath(); c.moveTo(s / 2, s * 0.25); c.lineTo(s * 0.75, s / 2); c.lineTo(s / 2, s * 0.75); c.lineTo(s * 0.25, s / 2); c.closePath(); c.moveTo(s / 2, s * 0.38); c.lineTo(s / 2, s * 0.62); c.moveTo(s * 0.38, s / 2); c.lineTo(s * 0.62, s / 2); c.stroke(); },
     bg(c, I) {
       const { t, pulse, L, energy } = I;

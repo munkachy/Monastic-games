@@ -7,7 +7,7 @@ STAGES.push(
     id: "chrysostom", n: 9, name: "St. John Chrysostom", short: "Chrysostom", title: "the Golden-Mouthed", life: "c. 347–407", place: "Constantinople",
     song: "chrysostom", scale: [63, 65, 67, 70, 72, 75, 77, 79],
     colors: { a: ["#f4c430", "#fff2a0", "#9a7008"], b: ["#b0182a", "#ff7080", "#58040e"], line: "#fff6c0", panel: "rgba(30,4,8,0.55)", ink: "#fff4e4", accent: "#f8d050" },
-    gift: { name: "Golden Mouth", about: "One sermon takes the whole city: every square on the field is taken at once.", kind: "sweep" },
+    gift: { name: "Golden Mouth", about: "One sermon moves the whole city: every square on the field is taken at once, with every block of its colour joined to it.", kind: "sweep" },
     motif: (c, k, s) => { c.strokeStyle = k === "a" ? "rgba(120,80,0,0.5)" : "rgba(255,190,200,0.45)"; c.lineWidth = 1; c.beginPath(); c.arc(s / 2, s * 0.62, s * 0.24, Math.PI, 0); c.stroke(); },
     bg(c, I) {
       const { t, pulse, L, energy } = I;
