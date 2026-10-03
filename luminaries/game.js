@@ -161,7 +161,7 @@ function land(hard) {
   }
   settle();
   Sfx.land(hard);
-  tutEvent("land");
+  tutEvent("land"); if (Input.soft) tutEvent("drop");
 }
 // Blocks with nothing under them fall (a block landing half over a gap splits in two).
 function settle() {
@@ -371,7 +371,7 @@ const LESSONS = [
     setup() { clearField(); }, done(ev, T) { if (ev === "move") T.moved = 1; return ev === "land" && T.moved; } },
   { title: "Turning", text: "Tap the screen to turn the block (or press ↑). Turn it twice, then let it land.",
     setup() { clearField(); }, done(ev, T) { if (ev === "turn") T.n = (T.n || 0) + 1; return ev === "land" && T.n >= 2; } },
-  { title: "Dropping", text: "Flick your finger down to drop a block at once (or press Space).",
+  { title: "Dropping", text: "Flick your finger down to drop a block at once (or drag it down, or press Space).",
     setup() { clearField(); }, done: (ev) => ev === "drop" },
   { title: "Making a square", text: "Four of one colour in a square light up. Drop this block on the glowing place to make one.",
     setup() { clearField(); put(6, 9, 0); put(7, 9, 0); G.piece = null; G.queue[0] = fixed([1, 1, 0, 0]); G.target = [6, 8]; }, done: (ev) => ev === "square" },
@@ -707,7 +707,7 @@ function drawHud() {
 }
 
 // ---- Menus --------------------------------------------------------------------------------------
-let menuT = 0, overT = 0, helpFrom = "title";
+let menuT = 0, overT = 0;
 const buttons = [];
 function button(label, x, y, w, h, o) {
   o = o || {}; const hot = o.hot;
@@ -733,8 +733,7 @@ function drawTitle(dt) {
   button("PILGRIMAGE", W / 2 - 90, 176, 180, 26, { hot: true, act: () => { state = "pilgrim"; } });
   button("LEARN TO PLAY", W / 2 - 186, 210, 180, 22, { hot: !save.learned, act: () => start("tutorial", 0) });
   button("SINGLE STAGE", W / 2 + 6, 210, 180, 22, { act: () => { state = "stages"; } });
-  button(save.master ? "MASTER  ✦" : masterOpen() ? "MASTER" : "MASTER  · LOCKED", W / 2 - 186, 240, 180, 22, { size: masterOpen() ? 11 : 9, act: () => { state = "master"; } });
-  button("HOW TO PLAY", W / 2 + 6, 240, 180, 22, { act: () => { helpFrom = "title"; state = "help"; } });
+  button(save.master ? "MASTER  ✦" : masterOpen() ? "MASTER" : "MASTER  · LOCKED", W / 2 - 90, 240, 180, 22, { size: masterOpen() ? 11 : 9, act: () => { state = "master"; } });
   button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 186, 272, 180, 18, { size: 9, act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
   // Reset progress: a second tap within four seconds confirms.
   const armed = menuT - resetArm < 4;
@@ -841,22 +840,6 @@ function drawMaster(dt) {
   button("BEGIN", W / 2 - 150, 300, 140, 26, { hot: true, act: () => start("master", 0) });
   button("BACK", W / 2 + 10, 300, 140, 26, { act: () => { state = "title"; } });
 }
-function drawHelp(dt) {
-  menuT += dt;
-  ctx.fillStyle = grad(ctx, 0, 0, W, H, [[0, "#0a0618"], [1, "#1a1030"]]); ctx.fillRect(0, 0, W, H);
-  text("HOW TO PLAY", W / 2, 34, { align: "center", size: 20, weight: 700, font: FONT.title, color: "#ffffff", spacing: 3 });
-  const lines = [
-    ["Blocks of four fall in, in two colours.", "Turn them and move them so that four of one colour meet in a square."],
-    ["A line of light sweeps across in time with the music.", "Every square it passes is taken away. Clear 4 or more in one sweep for a streak."],
-    ["A block with a light in it (✦), once it makes a square,", "takes with it every block of its colour joined to it."],
-    ["Clearing squares fills the Doctor's gift (✦, at the left).", "Each Doctor gives a different one. Use it when it is full."],
-    ["Phone: drag sideways to move, tap to turn (left half one way, right half the other),", "drag down to drop faster, flick down to drop at once, tap ✦ for the gift."],
-    ["Keys: ← → move, ↑ or X turn, Z turn back, ↓ faster, Space drop,", "G or Shift for the gift, P to pause, M for sound."],
-  ];
-  let y = 66;
-  for (const [a, b] of lines) { text(a, W / 2, y, { align: "center", size: 11, weight: 600, color: "#ffffff" }); text(b, W / 2, y + 14, { align: "center", size: 11, weight: 500, color: "#d8ccff" }); y += 38; }
-  button("BACK", W / 2 - 50, 310, 100, 22, { act: () => { state = helpFrom; } });
-}
 function drawPause(dt) {
   drawPlay(true);
   ctx.fillStyle = "rgba(4,2,12,0.75)"; ctx.fillRect(0, 0, W, H);
@@ -865,9 +848,8 @@ function drawPause(dt) {
   text("Gift of " + G.stage.name + ": " + g.name, W / 2, 120, { align: "center", size: 14, weight: "italic 500", font: FONT.quote, color: G.stage.colors.ink });
   wrap(g.about, 380, "500 10px " + FONT.ui).forEach((l, i) => text(l, W / 2, 138 + i * 13, { align: "center", size: 10, weight: 500, color: "#ffffff" }));
   button("RESUME", W / 2 - 90, 180, 180, 26, { hot: true, act: resume });
-  button("HOW TO PLAY", W / 2 - 90, 214, 180, 22, { act: () => { helpFrom = "pause"; state = "help"; } });
-  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 90, 242, 180, 22, { act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
-  button("END AND RETURN", W / 2 - 90, 270, 180, 22, { act: () => { Sound.muffle(false); finishToTitle(); } });
+  button(Sound.muted ? "SOUND OFF" : "SOUND ON", W / 2 - 90, 214, 180, 22, { act: () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); } });
+  button("END AND RETURN", W / 2 - 90, 242, 180, 22, { act: () => { Sound.muffle(false); finishToTitle(); } });
   void dt;
 }
 function pause() { if (state === "play" && G && !G.over) { state = "pause"; Sound.muffle(true); } }
@@ -940,8 +922,12 @@ addEventListener("pointermove", (ev) => {
     while (G.piece && G.piece.x < want) { const x = G.piece.x; move(1); if (G.piece.x === x) break; }
     while (G.piece && G.piece.x > want) { const x = G.piece.x; move(-1); if (G.piece.x === x) break; }
   }
+  if (T.flicked) return;
+  const now = performance.now(), vy = (p.y - T.lastY) / Math.max(1, now - (T.lastT || T.t0));
+  // A flick: quick and straight down (a fast stroke, or 30 points down within a quarter-second).
+  if (dy > 18 && dy > Math.abs(dx) * 1.3 && (vy > 0.45 || (dy > 30 && now - T.t0 < 250))) { T.flicked = true; Input.soft = false; hardDrop(); return; }
   if (dy > 26 && dy > Math.abs(dx) * 1.2) { T.down = true; Input.soft = true; }
-  T.lastY = p.y;
+  T.lastY = p.y; T.lastT = now;
 }, { passive: false });
 const release = (ev) => {
   const T = Input.touch; if (!T || T.id !== ev.pointerId) return;
@@ -949,7 +935,7 @@ const release = (ev) => {
   if (state !== "play" || !G) return;
   const p = toGame(ev), dt = performance.now() - T.t0, dy = p.y - T.y0, dx = p.x - T.x0;
   if (!T.moved && dt < 350) rotate(p.x < W / 2 ? -1 : 1);
-  else if (dy > 40 && dt < 260 && dy > Math.abs(dx) * 1.5) hardDrop();
+  else if (!T.flicked && !T.down && dy > 40 && dt < 300 && dy > Math.abs(dx) * 1.5) hardDrop();
 };
 addEventListener("pointerup", release); addEventListener("pointercancel", release);
 addEventListener("contextmenu", (e) => e.preventDefault());
@@ -975,7 +961,7 @@ addEventListener("keydown", (e) => {
   else if (state === "scene") { if (e.code === "Escape") sceneSkip(); else if (e.code === "Enter" || e.code === "Space" || e.code === "ArrowRight") sceneTap(); }
   else if (state === "title") { if (e.code === "Enter" || e.code === "Space") state = "pilgrim"; }
   else if (state === "over" && overT > 0.8) { if (e.code === "Enter" || e.code === "Space") start(G.mode, G.mode === "single" ? G.si : G.mode === "pilgrimage" ? G.startSi || 0 : 0, G.diff); else if (e.code === "Escape") finishToTitle(); }
-  else if ((state === "help" || state === "stages" || state === "master" || state === "pilgrim") && e.code === "Escape") state = state === "help" ? helpFrom : "title";
+  else if ((state === "stages" || state === "master" || state === "pilgrim") && e.code === "Escape") state = "title";
   else if (state === "stages" && (e.code === "ArrowRight" || e.code === "ArrowLeft")) stagePage += e.code === "ArrowRight" ? 1 : -1;
 });
 addEventListener("keyup", (e) => {
@@ -1004,7 +990,6 @@ function frame(now) {
   else if (state === "over") drawOver(dt);
   else if (state === "stages") drawStages(dt);
   else if (state === "master") drawMaster(dt);
-  else if (state === "help") drawHelp(dt);
   else drawTitle(dt);
   if (innerHeight > innerWidth * 1.1) { ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, 0, W, 26); text("Turn your phone sideways to play", W / 2, 17, { align: "center", size: 11, weight: 700, color: "#ffe8c0" }); }
   requestAnimationFrame(frame);
