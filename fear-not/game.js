@@ -9,7 +9,7 @@ const Game = {
   soundWoke() {
     if (Game.music || !Sound.ctx()) return;
     Game.music = true;
-    if (mode === Title) { Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ rain: 0.6 }); }
+    if (mode === Title) { Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0, rain: 0 }); }
   },
   startPart(i) {
     goSideways();
@@ -32,7 +32,7 @@ const Game = {
   },
   toTitle(finished) {
     Title.t = 0; Title.finished = !!finished; mode = Title;
-    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ rain: 0.6, wind: 0 }); Sound.muffle(false);
+    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0, rain: 0 }); Sound.muffle(false);
   },
   pause() {
     if (mode === Pause || !mode || !mode.step || mode === Title || mode === Parts) return;
