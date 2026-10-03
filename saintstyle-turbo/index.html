@@ -878,9 +878,9 @@ function drawFigure(L, x, y, f, opt) {
 // For each mansion: best time, best style, most neumes, and whether its demon
 // has been beaten. `open` is how many mansions may be entered. `tutorial`:
 // the Novitiate is done. `done`: the tricks landed at least once.
-// `speed`: 0 slow motion, 1 medium, 2 turbo. `trace`: for each mansion, where the saint was every
+// `speed`: 0 slow motion (the default), 1 medium, 2 turbo. `trace`: for each mansion, where the saint was every
 // quarter second of his best run (his guardian angel runs to it). `angel`: races run and won against him.
-let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed: 2, trace: {}, angel: {} };
+let save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound: true, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed: 0, trace: {}, angel: {} };
 try {
   const old = JSON.parse(localStorage.getItem("run-the-way") || "{}");
   // The first Run the Way had six zones of the Psalms; keep only the saint and the sound.
@@ -890,10 +890,12 @@ try {
 // Start again from nothing: every mansion, saint, trick, combo and record forgotten (the sound setting kept).
 function resetProgress() {
   const sound = save.sound, speed = save.speed;
-  save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed, trace: {}, angel: {} };
+  save = { v: 2, best: {}, neumes: {}, style: {}, wins: {}, open: 1, saint: 0, sound, landed: 0, tutorial: false, done: {}, coached: {}, combos: {}, rec: { longest: 0, best: 0, bestNames: [] }, xp: {}, speed, trace: {}, angel: {}, slowDefault: true };
   store();
 }
-save.trace = save.trace || {}; save.angel = save.angel || {}; if (save.speed === undefined) save.speed = 2;
+save.trace = save.trace || {}; save.angel = save.angel || {}; if (save.speed === undefined) save.speed = 0;
+// Slow motion is now where everyone starts: once, move every player to it (after that, their own choice is kept).
+if (!save.slowDefault) { save.speed = 0; save.slowDefault = true; }
 // How fast the whole world runs: turbo is the game as it was made; slower gives more time in the air for combos.
 // (The clock runs with the world, so a time is a time at any speed.)
 const SPEEDS = [{ name: "SLOW MO", k: 0.55 }, { name: "MEDIUM", k: 0.75 }, { name: "TURBO", k: 1 }];
