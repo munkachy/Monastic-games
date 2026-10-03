@@ -383,8 +383,8 @@ where you left off:
 Normal and Hard open once the Pilgrimage has been finished at any difficulty.
 Each difficulty keeps its own Continue.
 
-**When you finish**, the Doctors speak to you from heaven, in comic panels
-drawn like icons: each Doctor with a gold halo and a red name-plate, in an
+**When you finish**, the Doctors speak to you from heaven, in panels
+drawn like icons: each Doctor with a gold halo and a name-plate, in an
 arched frame, over the world of their own stage. After Easy, Thérèse,
 Augustine, Francis de Sales, Jerome and Teresa urge you on to Normal. After
 Normal, Thomas, Catherine, Hildegard, John of the Cross and Athanasius send you

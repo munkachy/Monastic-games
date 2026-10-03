@@ -1,7 +1,7 @@
 "use strict";
-// Luminaries: what the Doctors say when the Pilgrimage is finished. Comic panels in the manner
-// of an icon: each Doctor is drawn flat and outlined, with a gold halo and a red name-plate, in an
-// arched frame, and behind them the world of their own stage, under a comic halftone.
+// Luminaries: what the Doctors say when the Pilgrimage is finished. Each Doctor is drawn in the
+// manner of an icon, flat and finely outlined, with a gold halo and a name-plate, in an arched
+// frame; behind them, the world of their own stage.
 
 // ---- How each Doctor looks ------------------------------------------------------------------------
 // skin/shade: face and its shadow; hair: colour, or "bald" (a fringe), or "tonsure"; beard: kind and
@@ -64,15 +64,8 @@ const SCENES = {
 };
 
 // ---- Drawing a Doctor ----------------------------------------------------------------------------
-const INK = "#1a0e08";
-let dotPattern = null;
-function dots() {
-  if (dotPattern) return dotPattern;
-  const cc = document.createElement("canvas"); cc.width = 6; cc.height = 6; const g = cc.getContext("2d");
-  g.fillStyle = "#000"; g.beginPath(); g.arc(3, 3, 1.3, 0, Math.PI * 2); g.fill();
-  dotPattern = ctx.createPattern(cc, "repeat"); return dotPattern;
-}
-function ink(c, w) { c.strokeStyle = INK; c.lineWidth = w || 2.4; c.stroke(); }
+const INK = "#24140c";
+function ink(c, w) { c.strokeStyle = INK; c.lineWidth = (w || 2.4) * 0.62; c.stroke(); }
 function shape(c, pts, close) { c.beginPath(); pts.forEach(([x, y], i) => c[i ? "lineTo" : "moveTo"](x, y)); if (close !== false) c.closePath(); }
 function cross(c, x, y, r, col) { c.fillStyle = col; c.fillRect(x - r * 0.25, y - r, r * 0.5, r * 2); c.fillRect(x - r, y - r * 0.25, r * 2, r * 0.5); }
 
@@ -98,7 +91,7 @@ function portrait(c, id, cx, cy, s, o) {
   // The face: flat colour, a shadow down one side, white highlights in the manner of an icon.
   c.beginPath(); c.ellipse(0, 0, fw, fh, 0, 0, Math.PI * 2); c.fillStyle = P.skin; c.fill();
   c.save(); c.clip(); c.fillStyle = P.shade; c.beginPath(); c.ellipse(fw * 0.55, 4, fw * 0.75, fh * 1.1, 0, 0, Math.PI * 2); c.fill();
-  c.globalAlpha = 0.18; c.fillStyle = dots(); c.fillRect(0, -fh, fw, fh * 2); c.restore();
+  c.restore();
   c.beginPath(); c.ellipse(0, 0, fw, fh, 0, 0, Math.PI * 2); ink(c);
   c.strokeStyle = "rgba(255,246,226,0.85)"; c.lineWidth = 1.2;
   for (const k of [-1, 0, 1]) { c.beginPath(); c.moveTo(-6 + k * 5, -fh + 12 + Math.abs(k) * 2); c.lineTo(-3 + k * 5, -fh + 15 + Math.abs(k) * 2); c.stroke(); }
@@ -139,7 +132,7 @@ function body(c, P) {
   const sh = [[-80, 140], [-74, 66], [-34, 44], [34, 44], [74, 66], [80, 140]];
   shape(c, sh); c.fillStyle = base; c.fill(); ink(c, 2.8);
   c.save(); shape(c, sh); c.clip();
-  c.globalAlpha = 0.2; c.fillStyle = dots(); c.fillRect(20, 40, 70, 110); c.globalAlpha = 1;
+  c.fillStyle = grad(c, -80, 0, 80, 0, [[0, "rgba(255,255,255,0.06)"], [0.55, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0.28)"]]); c.fillRect(-80, 40, 160, 100);
   if (robe === "carmelite" || robe === "carmeliteM") { for (const sd of [-1, 1]) { shape(c, [[sd * 40, 46], [sd * 78, 70], [sd * 82, 140], [sd * 50, 140], [sd * 30, 60]]); c.fillStyle = "#f2ece0"; c.fill(); ink(c); } }
   if (robe === "dominican" || robe === "dominicanF") { for (const sd of [-1, 1]) { shape(c, [[sd * 30, 46], [sd * 78, 66], [sd * 82, 140], [sd * 34, 140], [sd * 18, 70]]); c.fillStyle = "#16120e"; c.fill(); ink(c); } }
   if (robe === "bishop" || robe === "omophorion") { c.beginPath(); c.moveTo(-60, 62); c.quadraticCurveTo(0, 120, 60, 62); c.lineWidth = 16; c.strokeStyle = "#f4f0e6"; c.stroke(); c.lineWidth = 2; c.strokeStyle = INK; c.beginPath(); c.moveTo(-63, 52); c.quadraticCurveTo(0, 128, 63, 52); c.stroke(); c.beginPath(); c.moveTo(-57, 72); c.quadraticCurveTo(0, 112, 57, 72); c.stroke(); for (const [x, y] of [[-38, 84], [0, 92], [38, 84]]) cross(c, x, y, 5, robe === "omophorion" ? "#1a1a1a" : "#b02020"); if (robe === "bishop") { c.strokeStyle = "#e8b830"; c.lineWidth = 3; c.beginPath(); c.moveTo(-34, 46); c.lineTo(-30, 140); c.moveTo(34, 46); c.lineTo(30, 140); c.stroke(); } }
@@ -182,106 +175,107 @@ function sceneTap() {
 function sceneSkip() { if (SC) { SC.i = SC.data.cast.length; SC.t = 1; } }
 function sceneDone(next) { const f = SC.then; SC = null; if (next) start("pilgrimage", 0, next); else f(); }
 
-// Draw a Doctor's world inside a rectangle, under a halftone, as a comic panel's ground.
-function worldIn(c, id, x, y, w, h, t, L) {
+// A Doctor's world inside a rounded rectangle, dimmed a little so the figure stands out.
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function worldIn(c, id, x, y, w, h, t, L, r) {
   const st = STAGES[STAGE_BY_ID[id]];
-  c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
-  c.translate(x, y); c.scale(w / W, h / H); st.bg(c, { t, pulse: 0.3 + 0.3 * Math.sin(t * 2), L: L === undefined ? 2 : L, energy: 0.3 }); c.restore();
-  c.save(); c.globalAlpha = 0.22; c.fillStyle = dots(); c.fillRect(x, y, w, h); c.restore();
+  c.save(); rr(c, x, y, w, h, r === undefined ? 14 : r); c.clip();
+  c.save(); c.translate(x, y); c.scale(w / W, h / H); st.bg(c, { t, pulse: 0.3 + 0.3 * Math.sin(t * 2), L: L === undefined ? 2 : L, energy: 0.3 }); c.restore();
+  c.fillStyle = grad(c, x, y, x, y + h, [[0, "rgba(6,4,14,0.15)"], [1, "rgba(6,4,14,0.55)"]]); c.fillRect(x, y, w, h);
+  c.restore();
   return st;
 }
-// An arched icon frame: gold, with a red line inside it.
-function archPath(c, x, y, w, h) { const r = w / 2; c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + r); c.arc(x + r, y + r, r, Math.PI, 0); c.lineTo(x + w, y + h); c.closePath(); }
-function nameplate(c, str, cx, y, w) { c.fillStyle = "#9a1818"; c.fillRect(cx - w / 2, y, w, 18); c.strokeStyle = "#f0c048"; c.lineWidth = 2; c.strokeRect(cx - w / 2, y, w, 18); text(str, cx, y + 13, { align: "center", size: 10, weight: 700, font: FONT.title, color: "#ffe9a0", spacing: 1.5, max: w - 10 }); }
-// A speech bubble; its tail comes out of the left side (side "l") or the top ("t") toward (tx, ty).
-function bubble(c, x, y, w, h, tx, ty, side) {
-  c.beginPath(); c.moveTo(x + 14, y);
-  if (side === "t") { c.lineTo(tx - 18, y); c.lineTo(tx, ty); c.lineTo(tx + 6, y); }
-  c.lineTo(x + w - 14, y); c.quadraticCurveTo(x + w, y, x + w, y + 14); c.lineTo(x + w, y + h - 14); c.quadraticCurveTo(x + w, y + h, x + w - 14, y + h);
-  c.lineTo(x + 14, y + h); c.quadraticCurveTo(x, y + h, x, y + h - 14);
-  if (side !== "t") { const m = Math.min(y + h - 16, Math.max(y + 16, ty - 6)); c.lineTo(x, m + 12); c.lineTo(tx, ty); c.lineTo(x, m - 10); }
-  c.lineTo(x, y + 14); c.quadraticCurveTo(x, y, x + 14, y); c.closePath();
-  c.fillStyle = "#fffdf4"; c.fill(); c.strokeStyle = INK; c.lineWidth = 3; c.stroke();
+const GOLD = "#e8c46a";
+// An arched frame, as on an icon: a fine gold double line.
+function archPath(c, x, y, w, h) { const r = w / 2; c.beginPath(); c.moveTo(x, y + h); c.lineTo(x, y + r); c.arc(x + r, y + r, r, Math.PI, 0); c.lineTo(x + w, y + h); }
+function archFrame(c, x, y, w, h, a) {
+  c.save(); c.globalAlpha = a === undefined ? 1 : a;
+  archPath(c, x, y, w, h); c.strokeStyle = GOLD; c.lineWidth = 2; c.shadowColor = "rgba(255,210,120,0.6)"; c.shadowBlur = 10; c.stroke(); c.shadowBlur = 0;
+  archPath(c, x + 5, y + 5, w - 10, h - 5); c.strokeStyle = "rgba(200,60,50,0.7)"; c.lineWidth = 1; c.stroke();
+  c.restore();
 }
-function caption(c, str, x, y) {
-  c.font = "700 10px " + FONT.ui; const w = c.measureText(str.toUpperCase()).width + str.length * 0.5 + 22;
-  c.fillStyle = "#ffe48a"; c.fillRect(x, y, w, 20); c.strokeStyle = INK; c.lineWidth = 2.5; c.strokeRect(x, y, w, 20);
-  text(str.toUpperCase(), x + 10, y + 14, { size: 10, weight: 700, color: INK, spacing: 0.5 });
+function nameplate(c, str, cx, y, w) {
+  c.fillStyle = "rgba(14,6,8,0.78)"; rr(c, cx - w / 2, y, w, 18, 9); c.fill();
+  c.strokeStyle = "rgba(232,196,106,0.7)"; c.lineWidth = 1; rr(c, cx - w / 2, y, w, 18, 9); c.stroke();
+  text(str, cx, y + 12.5, { align: "center", size: 8.5, weight: 600, font: FONT.title, color: GOLD, spacing: 2, max: w - 14 });
 }
-// A comic "burst": a spiky star with words in it.
-function burst(c, x, y, r, pts, col) { c.beginPath(); for (let i = 0; i <= pts * 2; i++) { const a = i / (pts * 2) * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? r * 0.72 : r; c.lineTo(x + Math.cos(a) * rr * 1.5, y + Math.sin(a) * rr); } c.closePath(); c.fillStyle = col; c.fill(); c.strokeStyle = INK; c.lineWidth = 3.5; c.stroke(); }
+function label(str, x, y, col, align) { text(str.toUpperCase(), x, y, { align: align || "left", size: 8, weight: 700, color: col || GOLD, spacing: 2.5, max: 340 }); }
+// A glass card for the words, with a hairline leading back to the speaker.
+function card(c, x, y, w, h, col) {
+  c.fillStyle = "rgba(10,8,22,0.78)"; rr(c, x, y, w, h, 12); c.fill();
+  c.strokeStyle = hexA(col, 0.55); c.lineWidth = 1; rr(c, x, y, w, h, 12); c.stroke();
+  c.fillStyle = col; c.fillRect(x, y + 18, 2, h - 36);
+}
 
 function drawScene(dt) {
   if (!SC) { state = "title"; return; }
   SC.t += dt; menuT += dt; SC.blink -= dt; if (SC.blink < -3.2) SC.blink = 0.14;
   const t = menuT, D = SC.data, L = D.cast.length;
-  // The page: dark, with a fine halftone.
-  ctx.fillStyle = "#0d0a14"; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = dots(); ctx.fillRect(0, 0, W, H); ctx.restore();
-  const enter = Math.min(1, SC.t / 0.35), ease = 1 - Math.pow(1 - enter, 3);
+  // The ground: deep night, the same as the game's menus.
+  ctx.fillStyle = grad(ctx, 0, 0, W, H, [[0, "#07040f"], [1, "#160d26"]]); ctx.fillRect(0, 0, W, H);
+  const enter = Math.min(1, SC.t / 0.6), ease = 1 - Math.pow(1 - enter, 3);
 
   if (SC.i < 0) {
-    // The cover: a burst of gold over Thérèse's roses, the difficulty on a badge.
-    worldIn(ctx, "therese", 18, 18, 604, 296, t, 3);
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 604, 296); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(18, 18, 604, 296);
-    ctx.save(); ctx.translate(W / 2, 150); ctx.scale(0.6 + 0.4 * ease, 0.6 + 0.4 * ease); ctx.rotate(-0.05);
-    burst(ctx, 0, 0, 110, 14, "#ffd23a");
-    text("THE PILGRIMAGE", 0, -18, { align: "center", size: 26, weight: 700, font: FONT.title, color: INK, spacing: 2 });
-    text("IS COMPLETE!", 0, 16, { align: "center", size: 30, weight: 800, font: FONT.title, color: "#b01020", spacing: 2 });
+    // The cover: a great halo of fine gold rings, thirty-eight lights on it, one for each Doctor.
+    const cx = W / 2, cy = 164, N = STAGES.length;
+    BG.glow(ctx, cx, cy, 230, "rgba(232,196,106,0.18)", ease);
+    ctx.save(); ctx.globalAlpha = ease; ctx.translate(cx, cy);
+    for (let k = 0; k < 4; k++) { ctx.save(); ctx.rotate(t * (k % 2 ? -0.05 : 0.04) * (k + 1)); ctx.strokeStyle = `rgba(232,196,106,${0.5 - k * 0.1})`; ctx.lineWidth = k ? 0.6 : 1.2; ctx.setLineDash(k === 2 ? [2, 6] : k === 3 ? [18, 10] : []); ctx.beginPath(); ctx.arc(0, 0, 112 + k * 16, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    ctx.setLineDash([]);
+    for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2 + t * 0.02; ctx.strokeStyle = "rgba(232,196,106,0.12)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 84, Math.sin(a) * 84); ctx.lineTo(Math.cos(a) * 104, Math.sin(a) * 104); ctx.stroke(); }
+    STAGES.forEach((st, i) => { const lit = SC.t * 30 > i, a = -Math.PI / 2 + i / N * Math.PI * 2; if (!lit) return; const x = Math.cos(a) * 128, y = Math.sin(a) * 128; ctx.fillStyle = st.colors.accent; ctx.shadowColor = st.colors.accent; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; });
     ctx.restore();
-    ctx.save(); ctx.translate(W / 2 + 150, 228); ctx.rotate(0.12); ctx.fillStyle = "#b01020"; ctx.fillRect(-56, -16, 112, 32); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(-56, -16, 112, 32);
-    text(D.badge, 0, 7, { align: "center", size: 18, weight: 800, font: FONT.title, color: "#ffe9a0", spacing: 3 }); ctx.restore();
-    caption(ctx, D.caption, 30, 268);
+    text("THE PILGRIMAGE", cx, cy - 20, { align: "center", size: 11, weight: 600, font: FONT.title, color: "rgba(255,240,210,0.85)", spacing: 6, alpha: ease });
+    text("COMPLETE", cx, cy + 16, { align: "center", size: 30, weight: 700, font: FONT.title, color: "#fff4d8", spacing: 5, max: 220, glow: "rgba(232,196,106,0.9)", blur: 18 + 6 * Math.sin(t * 2), alpha: ease });
+    ctx.strokeStyle = hexA(GOLD, 0.7 * ease); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - 70, cy + 30); ctx.lineTo(cx + 70, cy + 30); ctx.stroke();
+    text("38 DOCTORS   ·   " + D.badge, cx, cy + 46, { align: "center", size: 8, weight: 600, color: GOLD, spacing: 3, alpha: ease, max: 200 });
+    text(D.caption, cx, 322, { align: "center", size: 16, weight: "italic 500", font: FONT.quote, color: "rgba(255,240,220,0.85)", alpha: Math.min(1, Math.max(0, SC.t - 1.2)) });
   } else if (SC.i < L) {
-    const [id] = D.cast[SC.i], st = STAGES[STAGE_BY_ID[id]], line = sceneLine();
+    const [id] = D.cast[SC.i], st = STAGES[STAGE_BY_ID[id]], line = sceneLine(), col = st.colors.accent;
     SC.shown = Math.min(line.length, SC.shown + dt * SCENE_CPS);
     const talking = SC.shown < line.length;
-    ctx.save(); ctx.translate((1 - ease) * 120, 0); ctx.globalAlpha = ease;
-    const tilt = (SC.i % 2 ? 1 : -1) * 0.012; ctx.translate(W / 2, 166); ctx.rotate(tilt); ctx.translate(-W / 2, -166);
+    ctx.save(); ctx.globalAlpha = ease; ctx.translate((1 - ease) * 30, 0);
     worldIn(ctx, id, 18, 18, 604, 296, t, 2);
-    ctx.fillStyle = grad(ctx, 0, 0, W, 0, [[0, "rgba(0,0,0,0.1)"], [0.45, "rgba(0,0,0,0.05)"], [1, "rgba(0,0,0,0.35)"]]); ctx.fillRect(18, 18, 604, 296);
+    rr(ctx, 18, 18, 604, 296, 14); ctx.strokeStyle = hexA(col, 0.45); ctx.lineWidth = 1; ctx.stroke();
     // The icon in its arch, the Doctor's own world showing through.
-    ctx.save(); archPath(ctx, 40, 34, 200, 280); ctx.clip();
-    ctx.fillStyle = hexA(st.colors.accent, 0.18); ctx.fillRect(40, 34, 200, 280);
-    portrait(ctx, id, 140, 178, 1.38, { talk: talking ? 0.5 + 0.5 * Math.sin(t * 22) : 0, blink: SC.blink > 0 });
+    ctx.save(); archPath(ctx, 44, 40, 192, 274); ctx.closePath(); ctx.clip();
+    ctx.fillStyle = grad(ctx, 0, 40, 0, 314, [[0, hexA(col, 0.22)], [1, "rgba(0,0,0,0.25)"]]); ctx.fillRect(44, 40, 192, 274);
+    portrait(ctx, id, 140, 180, 1.36, { talk: talking ? 0.5 + 0.5 * Math.sin(t * 22) : 0, blink: SC.blink > 0 });
     ctx.restore();
-    archPath(ctx, 40, 34, 200, 280); ctx.strokeStyle = "#f0c048"; ctx.lineWidth = 7; ctx.stroke();
-    archPath(ctx, 46, 40, 188, 276); ctx.strokeStyle = "#9a1818"; ctx.lineWidth = 1.5; ctx.stroke();
-    archPath(ctx, 36, 30, 208, 284); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
-    nameplate(ctx, LOOKS[id].latin, 140, 286, 170);
-    // The speech bubble.
-    const lines = wrap(line.toUpperCase(), 296, "700 13px " + FONT.ui), bh = 30 + lines.length * 19;
-    bubble(ctx, 270, 70, 330, bh, 196, 190);
+    archFrame(ctx, 44, 40, 192, 274);
+    nameplate(ctx, LOOKS[id].latin, 140, 284, 160);
+    // Who is speaking, and what they say.
+    label(st.name, 286, 66, col); text(st.title + "   ·   " + st.life, 286, 82, { size: 12, weight: "italic 500", font: FONT.quote, color: "rgba(255,255,255,0.7)", max: 310 });
+    const lines = wrap(line, 290, "italic 500 19px " + FONT.quote), ch = 34 + lines.length * 25;
+    card(ctx, 270, 98, 330, ch, col);
+    ctx.strokeStyle = hexA(col, 0.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(236, 150); ctx.lineTo(270, 130); ctx.stroke();
     let left = Math.floor(SC.shown);
-    lines.forEach((l, k) => { const part = l.slice(0, Math.max(0, left)); left -= l.length + 1; if (part) text(part, 287, 96 + k * 19, { size: 13, weight: 700, color: INK }); });
-    caption(ctx, st.name + "  ·  " + st.life, 262, 30);
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 604, 296); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(18, 18, 604, 296);
+    lines.forEach((l, k) => { const part = l.slice(0, Math.max(0, left)); left -= l.length + 1; if (part) text(part, 290, 126 + k * 25, { size: 19, weight: "italic 500", font: FONT.quote, color: "#fffaf0" }); });
     ctx.restore();
   } else {
-    // The last panel: all five together, a row of icons, each over their own world.
+    // The last word: all five together, a row of icons over their own worlds.
     const F = D.finale;
     ctx.save(); ctx.globalAlpha = ease;
     F.ids.forEach((id, k) => {
-      const x = 26 + k * 119, y = 26, w = 112, h = 196;
-      worldIn(ctx, id, x, y, w, h, t + k, 2);
-      ctx.save(); archPath(ctx, x + 8, y + 8, w - 16, h - 16); ctx.clip(); ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(x, y, w, h); portrait(ctx, id, x + w / 2, y + 84, 0.62, { blink: SC.blink > 0 && k === Math.floor(t) % 5 }); ctx.restore();
-      archPath(ctx, x + 8, y + 8, w - 16, h - 16); ctx.strokeStyle = "#f0c048"; ctx.lineWidth = 4; ctx.stroke();
-      ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
-      nameplate(ctx, LOOKS[id].latin, x + w / 2, y + h - 30, w - 14);
+      const x = 28 + k * 118, y = 22, w = 110, h = 200, st = STAGES[STAGE_BY_ID[id]];
+      ctx.save(); archPath(ctx, x, y, w, h); ctx.closePath(); ctx.clip(); worldIn(ctx, id, x, y, w, h, t + k, 2, 0);
+      portrait(ctx, id, x + w / 2, y + 88, 0.6, { blink: SC.blink > 0 && k === Math.floor(t) % 5 }); ctx.restore();
+      archFrame(ctx, x, y, w, h);
+      nameplate(ctx, LOOKS[id].latin, x + w / 2, y + h - 28, w - 12);
+      void st;
     });
-    const ls = wrap(F.line.toUpperCase(), 520, "700 13px " + FONT.ui), bh = 22 + ls.length * 18;
-    bubble(ctx, 50, 236, 540, bh, 320, 212, "t");
-    ls.forEach((l, k) => text(l, W / 2, 256 + k * 18, { align: "center", size: 13, weight: 700, color: INK }));
+    const ls = wrap(F.line, 520, "italic 500 20px " + FONT.quote);
+    ls.forEach((l, k) => text(l, W / 2, 252 + k * 26, { align: "center", size: 20, weight: "italic 500", font: FONT.quote, color: "#fff6e4", glow: "rgba(232,196,106,0.35)", blur: 10 }));
     ctx.restore();
-    if (SC.t > 0.5) {
-      if (F.next) { button(F.label, W / 2 - 186, 322, 180, 28, { hot: true, act: () => sceneDone(F.next) }); button("NOT NOW", W / 2 + 6, 322, 180, 28, { act: () => sceneDone(null) }); }
-      else button(F.label, W / 2 - 90, 322, 180, 28, { hot: true, act: () => sceneDone(null) });
+    if (SC.t > 0.6) {
+      if (F.next) { button(F.label, W / 2 - 186, 318, 180, 26, { hot: true, act: () => sceneDone(F.next) }); button("NOT NOW", W / 2 + 6, 318, 180, 26, { act: () => sceneDone(null) }); }
+      else button(F.label, W / 2 - 90, 318, 180, 26, { hot: true, act: () => sceneDone(null) });
     }
     return;
   }
-  // Beneath the panel: skip, the page, and tap to go on.
-  button("SKIP", 18, 326, 70, 22, { size: 9, act: sceneSkip });
-  for (let k = 0; k <= L; k++) { ctx.fillStyle = k === SC.i + 1 ? "#ffe48a" : "rgba(255,255,255,0.3)"; ctx.beginPath(); ctx.arc(W / 2 - L * 8 + k * 16, 337, 3.5, 0, Math.PI * 2); ctx.fill(); }
-  text("TAP TO CONTINUE ▸", W - 22, 342, { align: "right", size: 10, weight: 700, color: "#ffe48a", alpha: 0.6 + 0.4 * Math.sin(t * 4) });
+  // Beneath: skip, where we are, and a quiet word to go on.
+  button("SKIP", 18, 326, 64, 20, { size: 8, act: sceneSkip });
+  for (let k = 0; k <= L; k++) { ctx.fillStyle = k === SC.i + 1 ? GOLD : "rgba(255,255,255,0.22)"; ctx.beginPath(); ctx.arc(W / 2 - L * 7 + k * 14, 336, k === SC.i + 1 ? 3 : 2.2, 0, Math.PI * 2); ctx.fill(); }
+  text("TAP TO CONTINUE", W - 22, 340, { align: "right", size: 8, weight: 700, color: GOLD, spacing: 2.5, alpha: 0.45 + 0.35 * Math.sin(t * 3) });
 }
 window.LUM_SCENE = { startScene, get SC() { return SC; }, sceneTap, sceneSkip, LOOKS, SCENES };
