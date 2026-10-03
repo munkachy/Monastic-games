@@ -14,6 +14,7 @@ const Flight = (() => {
   const BOUND = { x0: 120, y0: 120, x1: NX * BLOCK - 120, y1: NY * BLOCK - 120 };
   const SIGNS = [C.pink, C.cyan, C.red, C.teal, C.pink, C.cyan, C.lav];
   let F = null, P = null, built = null;
+  const tip = (touch, keys) => (usingKeys() ? keys : touch);
 
   // ---- The city, from a fixed seed: the same every time --------------------------------------------
   function build() {
@@ -81,9 +82,8 @@ const Flight = (() => {
     for (const L of built.lights) { L.lit = L.base; L.show = L.lit; L.dying = 0; }
     P = { x: START.x, y: START.y, alt: 450, vz: 0, speed: 150, head: 0.5, breath: 5, light: 100, tether: null, wing: 0, flap: 0, diving: false, diveT: 0, turned: 0, below: false };
     F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, msg: null, msgs: [], stick: null, wingTouch: null, keys: {}, arrive: 0, rescue: 0, fade: 1, dark: 300, pulse: 0, beatOn: 0, toofar: null, warned: false, onBeatT: -9, rain: [], hint: 1, sawFog: false, tethered: 0, lastLight: 0 };
-    for (let i = 0; i < 90; i++) F.rain.push(rainDrop(true));
-    say("Hold on to me, Father. Drag on the left side to steer.");
-    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ rain: 0.7, wind: 0.35, windF: 500 });
+    say(tip("Hold on to me, Father. Drag on the left side to steer.", "Hold on to me, Father. Steer with the arrow keys."));
+    Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0.35, windF: 500, rain: 0 });
     mode = Flight;
   }
   function say(t, who) { F.msg = { text: t, t: 0, who: who || "angel" }; if ((who || "angel") === "angel") Sound.fx.chord(F.msgs.length); F.msgs.push(t); }
@@ -158,8 +158,9 @@ const Flight = (() => {
       const tturn = clamp(d, -turn, turn); P.head += tturn; P.turned += Math.abs(tturn);
     }
     const k = F.keys;
-    if (!P.tether && (k.ArrowLeft || k.KeyA)) { P.head -= 2.3 * dt; P.turned += 2.3 * dt; }
-    if (!P.tether && (k.ArrowRight || k.KeyD)) { P.head += 2.3 * dt; P.turned += 2.3 * dt; }
+    // The arrows: the angel turns toward the way you hold them, as with the stick.
+    const kx = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0), ky = (k.ArrowDown || k.KeyS ? 1 : 0) - (k.ArrowUp || k.KeyW ? 1 : 0);
+    if (!P.tether && (kx || ky)) { const d = angDiff(P.head, Math.atan2(ky, kx)), turn = (2.6 - P.speed / 400) * dt, tt = clamp(d, -turn, turn); P.head += tt; P.turned += Math.abs(tt); }
     // Out of bounds: the angel turns back of its own accord.
     if (P.x < BOUND.x0 || P.x > BOUND.x1 || P.y < BOUND.y0 || P.y > BOUND.y1) {
       const want = Math.atan2((BOUND.y0 + BOUND.y1) / 2 - P.y, (BOUND.x0 + BOUND.x1) / 2 - P.x);
@@ -203,14 +204,14 @@ const Flight = (() => {
   // ---- The lessons of the first flight, one after another ------------------------------------------
   function lessons() {
     const s = F.step;
-    if (s === 0 && P.turned > 1.5) { F.step = 1; say("Now fold my wings: hold on the right side to dive."); }
-    else if (s === 1 && P.alt < FOG - 12) { F.step = 2; say("Feel it? Down here the fog drains us. Tap on the right to beat my wings and climb. On the beat is strongest."); }
-    else if (s === 2 && P.alt > FOG + 30) { F.step = 3; say("Lights are our anchors. Touch a light and hold, to swing round it. Let go to fly on."); }
+    if (s === 0 && P.turned > 1.5) { F.step = 1; say(tip("Now fold my wings: hold on the right side to dive.", "Now fold my wings: hold Shift to dive.")); }
+    else if (s === 1 && P.alt < FOG - 12) { F.step = 2; say(tip("Feel it? Down here the fog drains us. Tap on the right to beat my wings and climb. On the beat is strongest.", "Feel it? Down here the fog drains us. Press Space to beat my wings and climb. On the beat is strongest.")); }
+    else if (s === 2 && P.alt > FOG + 30) { F.step = 3; say(tip("Lights are our anchors. Touch a light and hold, to swing round it. Let go to fly on.", "Lights are our anchors. Near one, hold E to swing round it. Let go to fly on.")); }
     else if (s === 3 && F.tethered > 0) { F.step = 4; say("Good. There: the church. Fly over it, and its light will fill us again."); }
     else if (s === 3 && F.t - F.stepT > 35) { F.step = 4; say("We will practise the lights again. For now: the church. Fly over it, and its light will fill us."); }
     else if (s === 4 && dist(P.x, P.y, CHURCH.x, CHURCH.y) < 190) { F.step = 5; say("Now the gold thread, to the south. That is her prayer, rising. Follow it."); Sound.fx.glory(); }
     else if (s === 5 && dist(P.x, P.y, HOME.x, HOME.y) < 170) { F.step = 6; say("Her window. She has prayed all night. Now the smoke, to the east: her father. Hurry. The dark is closing round him."); }
-    else if (s === 6 && dist(P.x, P.y, CAR.x, CAR.y) < 420 && P.alt > FOG - 40) { F.step = 7; say("Down! Hold on the right, and dive to the street."); }
+    else if (s === 6 && dist(P.x, P.y, CAR.x, CAR.y) < 420 && P.alt > FOG - 40) { F.step = 7; say(tip("Down! Hold on the right, and dive to the street.", "Down! Hold Shift, and dive to the street.")); }
     if (F.step >= 6 && dist(P.x, P.y, CAR.x, CAR.y) < 170 && P.alt < FOG - 40) { F.arrive = 0.001; Sound.fx.whoosh(1.2, 1, false); Sound.fx.heart(1); }
     if (F.step !== F.lastStep) { F.lastStep = F.step; F.stepT = F.t; }
   }
@@ -532,9 +533,9 @@ const Flight = (() => {
     // The controls, while they are being learned.
     if (F.step < 4) {
       const a = 0.45;
-      text("DRAG: STEER", 18, H - 16, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
-      text("TAP: FLAP  ·  HOLD: DIVE", W - 18, H - 16, { align: "right", size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
-      if (F.step === 3) text("TOUCH A LIGHT: SWING", W / 2, H - 16, { align: "center", size: 8, weight: 700, spacing: 2, color: "rgba(242,212,122,0.7)" });
+      text(tip("DRAG: STEER", "ARROWS: STEER"), 18, H - 16, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
+      text(tip("TAP: FLAP  ·  HOLD: DIVE", "SPACE: FLAP  ·  HOLD SHIFT: DIVE"), W - 18, H - 16, { align: "right", size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223," + a + ")" });
+      if (F.step === 3) text(tip("TOUCH A LIGHT: SWING", "HOLD E NEAR A LIGHT: SWING"), W / 2, H - 16, { align: "center", size: 8, weight: 700, spacing: 2, color: "rgba(242,212,122,0.7)" });
     }
     if (F.stick) { ctx.strokeStyle = "rgba(233,230,223,0.3)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(F.stick.x0, F.stick.y0, 44, 0, TAU); ctx.stroke(); circle(F.stick.x0 + F.stick.dx * 44, F.stick.y0 + F.stick.dy * 44, 12, "rgba(233,230,223,0.35)"); }
     pauseButton();
@@ -571,13 +572,14 @@ const Flight = (() => {
     const T = F.wingTouch;
     if (T && T.id === ev.pointerId) { F.wingTouch = null; if (T.dove) endDive(); else flap(); }
   }
-  function key(code, isDown) {
+  function key(code, isDown, e) {
     F.keys[code] = isDown;
+    if (e && e.repeat) return;
     if (code === "Escape" && isDown) { Game.pause(); return; }
     if (F.arrive || F.rescue) return;
-    if ((code === "Space" || code === "ArrowUp" || code === "KeyW") && isDown) flap();
-    if (code === "ArrowDown" || code === "KeyS") { if (isDown) startDive(); else endDive(); }
-    if (code === "KeyE" || code === "ShiftLeft" || code === "ShiftRight") {
+    if (code === "Space" && isDown) flap();
+    if (code === "ShiftLeft" || code === "ShiftRight" || code === "KeyZ") { if (isDown) startDive(); else endDive(); }
+    if (code === "KeyE") {
       if (isDown && !P.tether && F.step >= 3) { const near = lightsInRange().sort((a, b) => dist(P.x, P.y, a.x, a.y) - dist(P.x, P.y, b.x, b.y))[0]; if (near) tetherTo(near); }
       else if (!isDown) release();
     }

@@ -25,18 +25,24 @@ const WHO = {
 // level, cut: "hard" }. A shot without lines moves on by itself after `hold` seconds.
 const Scene = {
   start(shots, done) {
-    const S = { shots, done, i: -1, li: 0, t: 0, lt: 0, fade: 0, fadeDir: 0, next: 0, chord: 0, over: false };
-    Scene.S = S; mode = Scene; Scene.go(0, true);
+    const S = { shots, done, i: -1, li: 0, t: 0, lt: 0, fade: 1, out: false, next: 0, chord: 0, over: false };
+    Scene.S = S; mode = Scene; Scene.enter(0);
   },
-  go(i, instant) {
+  // Move to shot i: through black (a fade out, then the new shot fades in), or a hard cut.
+  go(i) {
     const S = Scene.S;
     if (i >= S.shots.length) { if (!S.over) { S.over = true; S.done(); } return; }
-    const sh = S.shots[i];
-    if (!instant && sh.cut !== "hard") { S.fadeDir = 1; S.next = i; return; }
-    S.i = i; S.li = 0; S.t = 0; S.lt = 0; S.fadeDir = 0; S.fade = sh.cut === "hard" || instant ? 0 : S.fade;
+    if (S.shots[i].cut === "hard") { Scene.enter(i); return; }
+    S.out = true; S.next = i;
+  },
+  enter(i) {
+    const S = Scene.S, sh = S.shots[i];
+    S.i = i; S.li = 0; S.t = 0; S.lt = 0; S.out = false;
+    if (sh.cut === "hard") S.fade = 0;
     if (sh.music) { if (sh.music === "stop") Sound.stop(); else if (sh.now) Sound.play(SONGS[sh.music]); else Sound.queue(SONGS[sh.music]); }
     if (sh.level !== undefined) Sound.setLevel(sh.level);
     if (sh.amb) Sound.ambience(sh.amb);
+    Sound.ambience({ rain: sh.rain || 0 });           // rain is heard only where a shot asks for it
     if (sh.enter) sh.enter();
     Scene.voice();
   },
@@ -55,7 +61,7 @@ const Scene = {
   },
   advance() {
     const S = Scene.S, sh = S.shots[S.i];
-    if (S.fadeDir) return;
+    if (S.out || S.over) return;
     const n = sh.lines ? sh.lines.length : 0;
     if (n && S.lt < 0.3) { S.lt = 0.3; return; }
     if (!n && S.t < 0.5) return;
@@ -66,10 +72,11 @@ const Scene = {
   step(dt) {
     const S = Scene.S, sh = S.shots[S.i];
     S.t += dt; S.lt += dt;
-    if (S.fadeDir > 0) { S.fade += dt / 0.28; if (S.fade >= 1) { S.fade = 1; Scene.go(S.next, true); S.fadeDir = -1; } }
-    else if (S.fade > 0) { S.fade = Math.max(0, S.fade - dt / 0.4); }
-    if (!S.fadeDir && sh && (!sh.lines || !sh.lines.length) && S.t > (sh.hold || 2.5)) Scene.go(S.i + 1);
-    if (!S.fadeDir && sh && sh.lines && sh.auto && S.lt > sh.auto) Scene.advance();
+    if (S.out) { S.fade += dt / 0.28; if (S.fade >= 1) { S.fade = 1; Scene.enter(S.next); } return; }
+    if (S.fade > 0) S.fade = Math.max(0, S.fade - dt / 0.4);
+    if (S.over) return;
+    if ((!sh.lines || !sh.lines.length) && S.t > (sh.hold || 2.5)) Scene.go(S.i + 1);
+    else if (sh.lines && sh.auto && S.lt > sh.auto) Scene.advance();
   },
   draw() {
     const S = Scene.S, sh = S.shots[S.i];
@@ -91,6 +98,7 @@ const Scene = {
       const y0 = A.h + (who.name ? 42 : 34) + (lines.length > 1 ? -4 : 2);
       lines.slice(0, 2).forEach((l, i) => text(l, x, y0 + i * (size + 5), { size, weight: wt, font, italic: who.italic, color: who.name ? "#f1ede4" : who.color, alpha: a }));
       if (a >= 1 && Math.sin(S.lt * 5) > -0.3) poly([W - x + 4, H - 22, W - x + 12, H - 18, W - x + 4, H - 14], "rgba(232,196,106,0.7)");
+      if (a >= 1 && usingKeys()) text("SPACE OR CLICK", W - x, H - 14, { align: "right", size: 7, weight: 700, spacing: 2, color: "rgba(232,196,106,0.45)" });
     }
     if (sh.caption) text(sh.caption, 18, 26, { size: 10, weight: 600, spacing: 2, color: "#e9e6df", alpha: clamp(S.t / 0.8, 0, 1) * 0.85 });
     if (S.fade > 0) rect(0, 0, W, H, "rgba(0,0,0," + S.fade + ")");
@@ -751,21 +759,21 @@ function endCard(t, A) {
 const SCENES = {
   // 1. Bring Daddy Home.
   cold: () => [
-    { draw: radioShot, caption: "2:00 AM", music: "radio", now: true, level: 0, amb: { rain: 0.5 }, zoom: 0.06, fx: 0.42, fy: 0.5,
+    { draw: radioShot, caption: "2:00 AM", music: "radio", now: true, level: 0, zoom: 0.06, fx: 0.42, fy: 0.5,
       lines: [["radio", "…a week now. Every night, a few more blocks of the city go dark."], ["radio", "The power company says it can find no fault. Tonight it was the Eastside…"]] },
     { draw: skylineDarkShot, zoom: 0.04, lines: [["radio", "…keep a flashlight by the bed. Stay indoors."]] },
-    { draw: girlWindowShot, amb: { rain: 0.8 }, zoom: 0.08, fx: 0.42, fy: 0.55, lines: [["girl", "Please bring Daddy home."]] },
+    { draw: girlWindowShot, zoom: 0.08, fx: 0.42, fy: 0.55, lines: [["girl", "Please bring Daddy home."]] },
     { draw: girlHandsShot, hold: 3.2, zoom: 0.05 },
-    { draw: carStreetShot, hold: 3.6, amb: { rain: 1 }, zoom: 0.05, fx: 0.3, fy: 0.8, caption: "Across the city" },
+    { draw: carStreetShot, hold: 3.6, rain: 1, zoom: 0.05, fx: 0.3, fy: 0.8, caption: "Across the city" },
     { draw: mirrorShot, hold: 3.0, zoom: 0.04 },
     { draw: phoneShot, enter: () => Sound.fx.buzz(), lines: [["caption", "Deep in debt to the wrong people."]] },
     { draw: handsGunShot, hold: 3.0, level: 1, enter: () => Sound.fx.heart(0.8), zoom: 0.05 },
-    { draw: (t, A) => carStreetShot(t, A, { shapes: true, lamp: 0.25 }), level: 2, zoom: 0.07, fx: 0.32, fy: 0.75,
+    { draw: (t, A) => carStreetShot(t, A, { shapes: true, lamp: 0.25 }), rain: 1, level: 2, zoom: 0.07, fx: 0.32, fy: 0.75,
       lines: [["whisper", "Just this once."], ["whisper", "Nobody gets hurt."], ["whisper", "You have no choice."]] },
   ],
   // 2. Someone Asked.
   desert: () => [
-    { draw: desertNight, cut: "hard", music: "silence", now: true, amb: { rain: 0, wind: 0.15, windF: 300 }, hold: 4.2, caption: "The same night. A monastery in the desert.", zoom: 0.04, fx: 0.45, fy: 0.7 },
+    { draw: desertNight, cut: "hard", music: "silence", now: true, amb: { wind: 0.15, windF: 300 }, hold: 4.2, caption: "The same night. A monastery in the desert.", zoom: 0.04, fx: 0.45, fy: 0.7 },
     { draw: cellShot, hold: 3.0, music: "desert", now: true, level: 0 },
     { draw: (t, A) => cellShot(t, A, { light: smooth(t / 1.5) }), enter: () => Sound.fx.glory(), level: 1, lines: [["angel", "Get up."], ["angel", "Someone asked."]] },
     { draw: (t, A) => lawrenceBust(t, A, { look: "squint", hand: "shade", L: 1 }), lines: [["lawrence", "Asked? Who… who asked?", "gasp"], ["angel", "A child, in a city far from here. She asked for her father."], ["angel", "We have work to do."]] },
@@ -775,34 +783,34 @@ const SCENES = {
     { draw: (t, A) => lawrenceBust(t, A, { look: "kind", mouth: "smile", L: 0.8 }), lines: [["lawrence", "…Let me find my shoes.", "sigh"], ["angel", "Leave them. Your body will stay here, kneeling. The rest of you comes with me."]] },
     { draw: (t, A) => chapelShot(t, A, { spirit: clamp((t - 1) / 2.5, 0, 1) }), hold: 4.6, enter: () => Sound.fx.glory() },
     { draw: (t, A) => chapelShot(t, A, { spirit: 1 }), lines: [["lawrence", "Should I bring my hat?"], ["angel", "Bring what you like. It is your own imagination I am using."]] },
-    { draw: (t, A) => rooftopShot(t, A, { title: true }), music: "noir", level: 0, now: true, amb: { rain: 1, wind: 0 }, lines: [["angel", "Fear not."]] },
+    { draw: (t, A) => rooftopShot(t, A, { title: true }), music: "noir", level: 0, now: true, amb: { wind: 0 }, lines: [["angel", "Fear not."]] },
   ],
   // 4a. The street, before the fight.
   street: () => [
-    { draw: brimShot, music: "radio", now: true, level: 1, amb: { rain: 1, wind: 0 }, lines: [["lawrence", "What are they?"]] },
+    { draw: brimShot, music: "radio", now: true, level: 1, amb: { wind: 0 }, lines: [["lawrence", "What are they?"]] },
     { draw: (t, A) => demonShot(t, A, { eyes: [[0.3, 0.45, 1], [0.72, 0.38, 0.7], [0.55, 0.7, 0.5]] }), lines: [["angel", "What you will see is a fight. What is really happening is beyond what you can understand."], ["angel", "I am showing it to you with what you already have."]] },
     { draw: (t, A) => eyesShot(t, A, { skin: "#8a6250", shade: "#2a1a16", brow: "#4a4650", irisC: "#5a3a22", side: -1, rim: C.cyan, glasses: true, crow: true, bags: true, open: 0.85, look: 0.5, rain: true }), zoom: 0.03,
       lines: [["angel", "If you had grown up on westerns, this would be a showdown at noon."], ["lawrence", "I grew up on kung fu films."], ["angel", "I know."]] },
   ],
   // 4b. After the fight: what the guardian has seen.
   guardian: () => [
-    { draw: (t, A) => angelShot(t, A, { cool: true, k: 0.8 }), music: "noir", level: 0, amb: { rain: 0.7 }, lines: [["guardian", "Thank you, brothers. I have been calling since midnight."], ["guardian", "His name is Danny. He owes money to a man uptown: Mr. Crane. Half this district owes Mr. Crane."]] },
+    { draw: (t, A) => angelShot(t, A, { cool: true, k: 0.8 }), music: "noir", level: 0, lines: [["guardian", "Thank you, brothers. I have been calling since midnight."], ["guardian", "His name is Danny. He owes money to a man uptown: Mr. Crane. Half this district owes Mr. Crane."]] },
     { draw: guardianStandShot, lines: [["guardian", "And the lights. The first to go out was the sanctuary lamp at St. Brigid's, by the river, a week ago tonight."], ["guardian", "The streets went dark after it, one by one."], ["lawrence", "A sanctuary lamp doesn't go out by itself."], ["angel", "No. It does not."]] },
     { draw: guardianStandShot, lines: [["lawrence", "What happens now?"], ["angel", "Now he chooses. We cannot choose for him."], ["guardian", "But the fog round him is gone. He can see his way."]] },
   ],
   // 5. The choice.
   choice: () => [
-    { draw: (t, A) => eyesShot(t, A, { skin: "#9a6e5a", shade: "#2e1c18", brow: "#140c0a", irisC: "#5a6a78", open: 0.7, side: 1, rim: C.cyan, bags: true, wet: true, tear: true, look: 0.2, lookY: 0.6, browTilt: 0.6 }), music: "home", level: 0, amb: { rain: 0.8 }, hold: 3.4 },
+    { draw: (t, A) => eyesShot(t, A, { skin: "#9a6e5a", shade: "#2e1c18", brow: "#140c0a", irisC: "#5a6a78", open: 0.7, side: 1, rim: C.cyan, bags: true, wet: true, tear: true, look: 0.2, lookY: 0.6, browTilt: 0.6 }), music: "home", level: 0, hold: 3.4 },
     { draw: drawingShot, hold: 4.2, zoom: 0.08 },
-    { draw: drainShot, hold: 3.4, enter: () => setTimeout(() => Sound.fx.splash(true), 1300) },
-    { draw: lightsOnShot, level: 1, enter: () => { Sound.fx.engine(); [1, 1.55, 2.1, 2.65, 3.2].forEach((s, i) => setTimeout(() => Sound.fx.lightOn(i), s * 1000)); }, hold: 5.2 },
+    { draw: drainShot, rain: 1, hold: 3.4, enter: () => setTimeout(() => Sound.fx.splash(true), 1300) },
+    { draw: lightsOnShot, rain: 0.6, level: 1, enter: () => { Sound.fx.engine(); [1, 1.55, 2.1, 2.65, 3.2].forEach((s, i) => setTimeout(() => Sound.fx.lightOn(i), s * 1000)); }, hold: 5.2 },
     { draw: skylineOnShot, hold: 4.0, enter: () => Sound.fx.glory() },
     { draw: doorShot, level: 2, enter: () => Sound.fx.door(), hold: 3.4 },
     { draw: girlFaceShot, hold: 3.0, zoom: 0.06, fx: 0.5, fy: 0.5, lines: [["girl", "Daddy."]] },
   ],
   // 6. Vigils.
   bell: () => [
-    { draw: (t, A) => chapelShot(t, A, { head: t < 0.8 ? -0.1 : -0.1 + 0.35 * smooth((t - 0.8) / 0.3) }), cut: "hard", music: "stop", amb: { rain: 0, wind: 0.08, windF: 300 }, enter: () => Sound.fx.bigBell(), hold: 3.4 },
+    { draw: (t, A) => chapelShot(t, A, { head: t < 0.8 ? -0.1 : -0.1 + 0.35 * smooth((t - 0.8) / 0.3) }), cut: "hard", music: "stop", amb: { wind: 0.08, windF: 300 }, enter: () => Sound.fx.bigBell(), hold: 3.4 },
     { draw: bellTowerShot, enter: () => { setTimeout(() => Sound.fx.bigBell(0.8), 400); setTimeout(() => Sound.fx.bigBell(0.6), 3200); }, hold: 4.8, zoom: 0.05 },
     { draw: brothersShot, lines: [["brother", "You're up early, Father."], ["lawrence", "Something like that."]] },
     { draw: (t, A) => chapelShot(t, A, { kneel: blendPose(pose({ lean: 0.05, head: -0.1, hF: 0.02, kF: 1.55, hB: -0.02, kB: 1.6, sF: 0.6, eF: 1.9, sB: 0.5, eB: 1.9 }), pose({ lean: 0.35, head: 0.1, hF: 0.6, kF: 0.6, hB: -0.1, kB: 0.1, sF: 0.6, eF: 0.4, sB: 0.2, eB: 0.3 }), smooth(t / 2.5)) }), enter: () => setTimeout(() => Sound.fx.sigh(), 600), lines: [["caption", "His knees ache."]] },

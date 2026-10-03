@@ -181,8 +181,12 @@ Sound.muted = !!save.muted;
 let mode = null;
 function toGame(ev) { const r = cv.getBoundingClientRect(); return { x: ((ev.clientX - r.left) / r.width) * (portrait ? PW : W), y: ((ev.clientY - r.top) / r.height) * (portrait ? PH : H) }; }
 function wakeSound() { Sound.init(); if (typeof Game !== "undefined") Game.soundWoke(); }
+// Which hands are on the game: a touch screen, or a keyboard and mouse. The prompts follow it.
+let lastInput = null;
+const usingKeys = () => (lastInput ? lastInput !== "touch" : !matchMedia("(pointer: coarse)").matches);
 addEventListener("pointerdown", (ev) => {
   if (ev.cancelable) ev.preventDefault();
+  lastInput = ev.pointerType === "touch" || ev.pointerType === "pen" ? "touch" : "mouse";
   wakeSound();
   if (portrait) return;
   const p = toGame(ev);
@@ -194,6 +198,7 @@ const pointerUp = (ev) => { if (!portrait && mode && mode.up) mode.up(toGame(ev)
 addEventListener("pointerup", pointerUp); addEventListener("pointercancel", pointerUp);
 addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
+  lastInput = "key";
   wakeSound();
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(e.code)) e.preventDefault();
   if (e.code === "KeyM") { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); return; }

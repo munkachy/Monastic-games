@@ -3,7 +3,7 @@
 // brought over whole: drums, basses, keys, pads, choirs, a mixing desk with a reverb, a
 // ping-pong delay, sidechain pumping from the kick, and a compressor and limiter on the
 // master. Added for this game: a jazz rhythm section (ride, brushes, upright bass, a muted
-// trumpet, vibes), the kung fu film band (gong, zheng, wah guitar), the rain and the wind,
+// trumpet, vibes), the kung fu film band (gong, zheng, wah guitar), the wind in flight, a faint rain,
 // and the short, restrained sounds of the night (blows, breaths, the angel's chord).
 // Songs (music.js) are scores written against these instruments.
 const Sound = (() => {
@@ -477,20 +477,26 @@ const Sound = (() => {
     return { phase: ((k % 1) + 1) % 1, secs: sd * per };
   };
 
-  // ---- The rain and the wind -----------------------------------------------------------------------
+  // ---- The wind, and the rain ------------------------------------------------------------------------
   // Two long beds of noise that never stop once begun; the game sets how loud and how bright.
+  // The rain is very faint, and heard only in a few shots in the street; it fades in and out slowly.
   let amb = null;
   A.ambience = function (o) {
     if (!ac || ac.state === "closed") return;
     if (!amb) {
-      const mk = (type, f, q) => { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const b = ac.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; const g = ac.createGain(); g.gain.value = 0; s.connect(b); b.connect(g); g.connect(sfxBus); s.start(); return { b, g }; };
-      amb = { rain: mk("highpass", 1100, 0.5), hiss: mk("bandpass", 6500, 0.4), wind: mk("bandpass", 420, 0.9) };
-      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 7000; amb.rain.g.disconnect(); amb.rain.g.connect(lp); lp.connect(sfxBus);
+      const mk = (type, f, q, lp) => {
+        const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+        const b = ac.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q;
+        const g = ac.createGain(); g.gain.value = 0; s.connect(b); b.connect(g);
+        if (lp) { const l = ac.createBiquadFilter(); l.type = "lowpass"; l.frequency.value = lp; g.connect(l); l.connect(sfxBus); } else g.connect(sfxBus);
+        s.start(); return { b, g };
+      };
+      amb = { wind: mk("bandpass", 420, 0.9), rain: mk("highpass", 900, 0.5, 2600) };
     }
     const now = ac.currentTime;
-    if (o.rain !== undefined) { amb.rain.g.gain.setTargetAtTime(0.22 * o.rain, now, 0.6); amb.hiss.g.gain.setTargetAtTime(0.05 * o.rain, now, 0.6); }
     if (o.wind !== undefined) amb.wind.g.gain.setTargetAtTime(0.32 * o.wind, now, 0.25);
     if (o.windF !== undefined) amb.wind.b.frequency.setTargetAtTime(o.windF, now, 0.25);
+    if (o.rain !== undefined) amb.rain.g.gain.setTargetAtTime(0.012 * o.rain, now, 1.2);
   };
 
   // ---- Sounds of the night: short and restrained, never a voice ------------------------------------
