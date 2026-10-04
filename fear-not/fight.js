@@ -37,11 +37,11 @@ const Fight = (() => {
   const PRIEST_FIGHT = { trouser: "#2a3656", trouser2: "#1c2640", coat: "#3a4c78", coat2: "#283658", lapel: "#6a7ca8", shoe: "#0c0e18", skin: "#9a6e58", skinSh: "#4e342a", collar: "#ffffff", hat: "#33446c", band: "#e8c46a", glass: "#c4f0ff" };
   const DEMON_RIMS = ["#ff2a2a", "#ff6a2a", "#e0105a"];
   // The rules of each world: how long a demon winds up, how fast his blows are, how hard theirs
-  // land, how long a combo lasts between blows, how often his angel comes, and how long a demon
-  // knocked down stays down.
+  // land, how long a combo lasts between blows, how often his angel takes the blow (every fourth,
+  // from the third: the 3rd, the 7th, the 11th), and how long a demon knocked down stays down.
   const WORLD = {
-    street: { wind: 1, strike: 1, hurt: 1, comboT: 2.6, swoop: 5, floor: 2.6 },
-    kata: { wind: 1.25, strike: 1, hurt: 0, comboT: 3.4, swoop: 5, floor: 4.5 },
+    street: { wind: 1, strike: 1, hurt: 1, comboT: 2.6, swoop: 4, floor: 2.6 },
+    kata: { wind: 1.25, strike: 1, hurt: 0, comboT: 3.4, swoop: 4, floor: 4.5 },
     heights: { wind: 1.7, strike: 0.72, hurt: 0.6, comboT: 3.4, swoop: 3, regen: 6, floor: 3.6 },
     depths: { wind: 0.85, strike: 1, hurt: 1.5, comboT: 1.4, swoop: 0, floor: 1.6 },
   };
@@ -57,6 +57,8 @@ const Fight = (() => {
   const walkP = (ph, trip) => trip ? pose({ lean: 0.95, head: 0.4, sF: 2.1, eF: 0.3, sB: 2.4, eB: 0.2, hF: 0.9, kF: 0.6, hB: -0.9, kB: 0.4 })
     : pose({ lean: 0.32 + 0.14 * Math.sin(ph * 0.5), head: 0.1 * Math.sin(ph * 0.5 + 1), sF: 0.9 + 0.6 * Math.sin(ph * 0.5 + 1), eF: 1.2, sB: -0.6 + 0.5 * Math.sin(ph * 0.5), eB: 0.7, hF: 0.6 * Math.sin(ph), kF: 0.25 + 0.35 * Math.max(0, Math.cos(ph)), hB: -0.6 * Math.sin(ph), kB: 0.25 + 0.35 * Math.max(0, -Math.cos(ph)) });
   // The flying kick; flat out in the air, arms ahead, like a monk's prostration; the cartwheel.
+  // Standing aside for his angel: a step back, an open hand toward the demon, head bowed.
+  const ASIDE = pose({ lean: -0.08, head: 0.35, sF: 1.05, eF: 0.2, sB: -0.35, eB: 0.9, hF: 0.12, kF: 0.12, hB: -0.3, kB: 0.25 });
   const FLYKICK = pose({ lean: -0.3, head: 0.1, hF: 1.9, kF: 0.1, hB: -0.2, kB: 1.4, sF: 2.4, eF: 0.4, sB: -1.4, eB: 0.5 });
   const PROSTRATE = pose({ lean: 1.45, head: -0.55, sF: 1.62, eF: 0.0, sB: 1.52, eB: 0.05, hF: -1.4, kF: 0.05, hB: -1.5, kB: 0.1, lift: 16 });
   const CARTWHEEL = pose({ lean: 0, head: 0, sF: 2.7, eF: 0.1, sB: -2.7, eB: 0.1, hF: 0.7, kF: 0, hB: -0.7, kB: 0 });
@@ -123,9 +125,9 @@ const Fight = (() => {
       say: () => G.practised ? "There they are. As I showed you: never the same blow twice, keep moving, and finish them when they fall." : tip("Tap a demon to strike, then on to the next: never the same blow twice on the same one. Keep the flow, and I will come down to you.", "Arrows to move, Space to strike, then on to the next: never the same blow twice on the same one. Keep the flow, and I will come down to you.") },
     { foes: [["whisper", 0.6], ["grab", 1.4], ["whisper", 4], ["whisper", 8], ["whisper", 11]], gap: [1.9, 2.7],
       say: () => tip("More of them. That big one grabs: if it catches you, it drags us all into the Depths. When it shows its red sign, hold to block it.", "More of them. That big one grabs: if it catches you, it drags us all into the Depths. When it shows its red sign, hold Q to block it.") },
-    { chains: true, foes: [["whisper", 1.5], ["whisper", 4]], gap: [1.8, 2.6],
-      say: () => tip("His guardian, in chains! Tap the chains to bless them. Break them!", "His guardian, in chains! Go to them and press Space to bless them. Break them!") },
-    { foes: [["shield", 0.6], ["whisper", 1.2], ["grab", 4], ["whisper", 7], ["whisper", 10], ["whisper", 13]], gap: [1.4, 2.2],
+    { foes: [["whisper", 0.6], ["grab", 2], ["whisper", 4], ["whisper", 7]], gap: [1.8, 2.6],
+      say: () => "Keep moving. They come up out of the street all round us. His guardian is in their chains: when the street is clear, they will break." },
+    { shield: true, foes: [["shield", 0.6], ["whisper", 1.2], ["grab", 4], ["whisper", 7], ["whisper", 10], ["whisper", 13]], gap: [1.4, 2.2],
       say: () => tip("That one hides behind a shield. Tap it twice, quickly, for a heavy blow.", "That one hides behind a shield. Press C for a heavy blow to break it.") },
     { foes: [["grab", 0.6], ["whisper", 1], ["shield", 3], ["whisper", 5], ["whisper", 8], ["grab", 11], ["whisper", 13]], gap: [1.3, 2.0],
       say: () => "The last of them, all together. Keep moving. Finish them where they fall." },
@@ -152,7 +154,7 @@ const Fight = (() => {
     { say: () => tip("Holy water: hold on a shade a moment, until the ring fills, then let go. Near or far, it reaches.", "Holy water: press F, at a shade near or far."), hint: () => tip("HOLD ON A SHADE · THEN LET GO", "F"), need: 2, hp: 7, done: (e) => e === "water" },
     { say: () => tip("Now drag a shade that is far off: your rosary flies out, wraps round it, and hauls it in.", "Press R: your rosary flies out to a shade far off, wraps round it, and hauls it in."), hint: () => tip("DRAG A FAR SHADE", "R"), need: 2, hp: 7, far: true, done: (e) => e === "stole" },
     { say: () => tip("Now drag a shade that is close, toward another: you throw it.", "Now press T to throw a shade that is close, toward another."), hint: () => tip("DRAG A NEAR SHADE TOWARD ANOTHER", "ARROW + T"), need: 3, hp: 7, done: (e) => e === "throw" },
-    { say: () => "Now flow, with all of it, never the same blow twice. Five in a row, and I will come down to you. And the longer you flow, the harder you strike.", hint: () => "FIVE IN A ROW", need: 3, hp: 8, done: (e) => e === "swoop" },
+    { say: () => "Now flow, with all of it, never the same blow twice. On your third blow, and your seventh, I come down and strike in your place: stand aside and let me. And the longer you flow, the harder you strike.", hint: () => "THREE IN A ROW", need: 3, hp: 8, done: (e) => e === "swoop" },
     { id: "heights", say: () => tip("Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Up there, keep going, then tap the gold, and we come down on them from on high.", "Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Up there, keep going, then press B, and we come down on them from on high."),
       hint: () => G.world === "heights" ? tip("TAP THE GOLD: FROM ON HIGH", "B: FROM ON HIGH") : tip("TWELVE IN A ROW", "TWELVE IN A ROW"), need: 3, hp: 9, done: (e) => e === "heightsOut" },
     { say: () => "And three falls in a row, from tripping or from blows, or a grab that catches you, and they drag you down into the Depths, all of them with you. Ten in a row down there, and we rise again.", hint: () => "", need: 0, wait: 7.5 },
@@ -310,7 +312,7 @@ const Fight = (() => {
   }
 
   // ---- What the player does -------------------------------------------------------------------------
-  const BUSY = ["strike", "zip", "counter", "hurt", "grabbed", "dodge", "bless", "chain", "down", "jumpkick", "dash", "toss", "lash", "haul", "grab", "spike", "finish", "trip", "finisher"];
+  const BUSY = ["strike", "zip", "counter", "hurt", "grabbed", "dodge", "bless", "chain", "down", "jumpkick", "dash", "toss", "lash", "haul", "grab", "spike", "finish", "trip", "aside", "pray"];
   const lying = (f) => f && !f.gone && f.act.kind === "floored";
   const busy = () => BUSY.includes(G.hero.act.kind) || !!G.shift;
   function act(kind, o) { G.hero.act = Object.assign({ kind, t: 0 }, o); }
@@ -327,6 +329,8 @@ const Fight = (() => {
   // before that one. Tapping one demon as fast as you can is strike, heavy, strike, heavy: a trip.
   function fresh(kind, f, instead) {
     if (replaying) return true;
+    // The angel's turn: that blow is his, not Fr. Lawrence's, so it is never a repeat.
+    if (f && ["strike", "heavy", "launch", "slam"].includes(kind) && f.z <= 20 && !lying(f) && angelNext()) { G.prevMove = G.lastMove; G.lastMove = { kind, f }; return true; }
     const L = instead ? G.prevMove : G.lastMove;
     if (L && L.kind === kind && L.f === f && f && !f.gone) { trip(); return false; }
     if (!instead) G.prevMove = G.lastMove;
@@ -371,6 +375,8 @@ const Fight = (() => {
   // with a jumping kick that keeps it there, or a slam that spikes it down.
   function goStrike(f, move) {
     const H0 = G.hero; if (f.gone) return;
+    // On the angel's blows of the combo, Fr. Lawrence stands aside and the angel strikes instead.
+    if (move !== "finish" && f.z <= 20 && !lying(f)) { const k = angelNext(); if (k) { angelBlow(f, k); return; } }
     H0.dir = f.x >= H0.x ? 1 : -1;
     if (move === "finish") {
       // To one lying down: a flip to its side, then the hop and the blow.
@@ -617,7 +623,7 @@ const Fight = (() => {
     if (f.shield && !o.breaks && (o.front !== false)) {
       // The shield turns his blow aside. Clank.
       Sound.fx.hit(0.6); Sound.fx.tick(900, 1); pop(f.x, f.y - 110 * depth(f.y), tip("TAP TWICE", "PRESS C"), C.holy); sparks(f.x - f.dir * 14, f.y - 60, "#ff9a60", 6);
-      if (!G.taught.shield && !G.kata) { G.taught.shield = true; say(WAVES[3].say()); }
+      if (!G.taught.shield && !G.kata) { G.taught.shield = true; say(WAVES.find((w) => w.shield).say()); }
       return false;
     }
     if (o.breaks && f.shield) { f.shield = false; Sound.fx.shatter(); shards(f.x + f.dir * 10, f.y - 60); pop(f.x, f.y - 120 * depth(f.y), "GUARD BROKEN", C.holy); f.dizzy = 2.2; ev("guardbreak"); }
@@ -657,8 +663,6 @@ const Fight = (() => {
     // Each blow of a combo lands in a breath of slow time, deeper as it builds.
     if (H0.combo >= 3) pulse(Math.max(0.36, 0.64 - H0.combo * 0.022), 0.13);
     if (H0.spirit < SPIRIT) { H0.spirit++; if (H0.spirit === SPIRIT && !G.taught.bless) { G.taught.bless = true; say(tip("The Spirit fills you. Tap the gold cross to bless them all.", "The Spirit fills you. Press B to bless them all.")); } }
-    const every = R().swoop;
-    if (every && H0.combo % every === 0) G.callAngel = H0.combo % 10 === 0 ? "sweep" : "strike";
     if (H0.combo >= HEIGHTS_AT && G.world === G.base && !G.shift && !G.over && (!G.kata || G.kata.i >= HEIGHTS_LESSON)) {
       // A long flow lifts them all to the Heights.
       pop(H0.x, H0.y - 160, "TO THE HEIGHTS", C.holy, true); Sound.fx.hah(1.2); Sound.fx.chord(3, 0.8);
@@ -702,29 +706,36 @@ const Fight = (() => {
     const H0 = G.hero;
     if (G.world !== "heights" || G.finishing || G.shift || G.down) return;
     G.finishing = true; G.finishCombo = H0.combo; G.lastMove = null; H0.queue = null;
-    act("finisher", { dur: 1.1, lifted: false, landed: false });
-    H0.inv = 3;
+    // He prays, turned to us; the world falls back to the street; and the angel comes down on them.
+    act("pray", {}); H0.inv = 5; G.angel.act = { kind: "above", t: 0 };
     slowmo(0.4, 0.5, H0.x, H0.y - 100, 1.15);
-    Sound.fx.glory(); Sound.fx.hah(1.3);
+    Sound.fx.glory();
     pop(H0.x, H0.y - 170, "FROM ON HIGH", C.holy, true);
+    shiftTo(G.base); G.smiteWait = true;
   }
-  function finisherLands() {
+  // Where the angel comes down: in the thick of them near him, or before him if none are near.
+  function smiteAt() {
+    const H0 = G.hero, near = alive().filter((f) => Math.abs(f.x - H0.x) < 420);
+    return near.length ? { x: near.reduce((a, f) => a + f.x, 0) / near.length, y: H0.y } : { x: H0.x + H0.dir * 90, y: H0.y };
+  }
+  function finisherLands(x, y) {
     const H0 = G.hero, c = G.finishCombo || 0, mult = 1 + Math.min(2, c * 0.08);
     G.finishing = false;
     let n = 0;
-    for (const f of alive()) { landHit(f, 2.5 * mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true, fromX: H0.x }); if (!f.gone) floor(f, { long: 1.4 }); n++; }
-    G.parts.push({ kind: "ring", x: H0.x, y: H0.y, r: 10, t: 0 }); G.parts.push({ kind: "beam", x: H0.x, t: 0 });
-    dustAt(H0.x - 30, H0.y); dustAt(H0.x + 30, H0.y);
+    for (const f of alive()) { landHit(f, 2.5 * mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true, fromX: x }); if (!f.gone) floor(f, { long: 1.4 }); n++; }
+    G.parts.push({ kind: "ring", x, y, r: 10, t: 0 }); G.parts.push({ kind: "beam", x, t: 0 });
+    dustAt(x - 30, y); dustAt(x + 30, y);
     G.shake = 14; G.flash = 0.8; G.flashC = C.holy; hitStop(0.14);
-    slowmo(0.2, 0.7, H0.x, H0.y - 60, 1.2);
+    slowmo(0.2, 0.7, x, y - 60, 1.2);
     Sound.fx.hit(2.4); Sound.fx.clang();
-    pop(H0.x, H0.y - 150, c > 1 ? "FROM ON HIGH · " + c + " IN A ROW" : "FROM ON HIGH", "#ffffff", true);
+    if (H0.act.kind === "pray") act("idle");
+    pop(x, y - 150, c > 1 ? "FROM ON HIGH · " + c + " IN A ROW" : "FROM ON HIGH", "#ffffff", true);
     H0.spirit = Math.min(SPIRIT, H0.spirit + 3);
     H0.combo = 0; H0.comboT = 0;
     if (n) say("They fell with us. Finish them!");
     ev("heightsOut");
   }
-  const chainsOpen = () => G.world === "street" && !G.kata && !G.guard.freed && WAVES[G.wave] && (WAVES[G.wave].chains || G.wave > 2);
+  const chainsOpen = () => false;     // the chains on his guardian break only when the street is clear
   function tapChains() {
     const H0 = G.hero, g = G.guard;
     if (!chainsOpen()) return false;
@@ -749,6 +760,25 @@ const Fight = (() => {
     ev("dash");
   }
 
+  // ---- His angel's blows -------------------------------------------------------------------------
+  // On the 3rd blow of a combo, the 7th, the 11th (every third in the Heights) the blow is the angel's:
+  // Fr. Lawrence steps aside with an open hand, and the angel darts down, strikes (on every other one,
+  // a sweep of its wings through all of them close by) and is gone again, quick even in slow time.
+  function angelNext() {
+    const every = R().swoop, n = G.hero.combo + 1;
+    if (!every || n % every !== every - 1 || G.angel.act.kind !== "above" || G.shift || G.over || G.finishing) return null;
+    return Math.floor(n / every) % 2 === 1 ? "sweep" : "strike";
+  }
+  // How many of his own blows before the angel's.
+  function angelUntil() { const every = R().swoop; if (!every) return 0; let k = 0; while ((G.hero.combo + 1 + k) % every !== every - 1) k++; return k; }
+  function angelBlow(f, kind) {
+    const H0 = G.hero;
+    H0.dir = f.x >= H0.x ? 1 : -1; H0.queue = null;
+    act("aside", { dur: 0.6, x0: H0.x });
+    H0.inv = Math.max(H0.inv, 0.5);
+    G.lastMove = { kind: "angel", f }; G.prevMove = null;     // the angel's blow: his next on this one is new
+    swoop(kind, f, true);
+  }
   // ---- The Heights and the Depths -------------------------------------------------------------------
   // Pictures of the spiritual struggle, not places. Whoever is fighting goes too: all of them.
   function shiftTo(to) {
@@ -804,17 +834,20 @@ const Fight = (() => {
   // ---- His angel, who waits above ------------------------------------------------------------------
   // He comes down in a dive, strikes (or sweeps through a group, or tears a demon off him, or
   // lifts him away), and climbs back out of sight.
-  function swoop(kind, f) {
+  // `combo`: one of the angel's blows of the combo, which counts as one. "smite": the blow from on
+  // high, onto a place on the street (f is then just a point).
+  function swoop(kind, f, combo) {
     const A = G.angel; if (A.act.kind !== "above") return false;
-    if (kind !== "carry" && (!f || f.gone)) return false;
+    if (kind !== "carry" && kind !== "smite" && (!f || f.gone)) return false;
     const T = kind === "carry" ? G.hero : f;
     A.dir = T.x >= G.view.cx ? -1 : 1; if (Math.abs(T.x - G.hero.x) > 5 && kind !== "carry") A.dir = T.x >= G.hero.x ? 1 : -1;
     A.x = T.x - A.dir * 150; A.y = T.y - 2; A.z = SKY;
-    A.act = { kind, phase: "dive", t: 0, f };
+    A.act = { kind, phase: "dive", t: 0, f, combo: !!combo };
     Sound.fx.whoosh(0.45, 1, false);
-    if (kind !== "carry") slowmo(0.28, 0.75, T.x, T.y - 70, 1.18);
-    if (!G.taught.swoop && kind !== "carry" && !G.kata) { G.taught.swoop = true; say("Now. Together."); }
-    if (kind !== "carry") ev("swoop");
+    if (kind === "smite") slowmo(0.25, 0.8, T.x, T.y - 70, 1.15);
+    else if (kind !== "carry") slowmo(combo ? 0.35 : 0.28, combo ? 0.4 : 0.75, T.x, T.y - 70, 1.18);
+    if (!G.taught.swoop && combo && !G.kata) { G.taught.swoop = true; say("Stand aside, Father. Let me."); }
+    if (combo) ev("swoop");
     return true;
   }
   function stepAngel(dt) {
@@ -824,19 +857,22 @@ const Fight = (() => {
     if (a.kind === "above") { A.z = SKY; A.x = A.lightX; return; }
     const T = a.kind === "carry" ? H0 : a.f;
     if (a.phase === "dive") {
-      const u = clamp(a.t / 0.26, 0, 1), e = u * u;
+      const u = clamp(a.t / (a.kind === "smite" ? 0.34 : 0.18), 0, 1), e = u * u;
       if (T && !(T.gone && a.kind !== "carry")) { A.x = lerp(T.x - A.dir * 150, T.x - A.dir * (a.kind === "carry" ? 10 : 48), e); A.y = T.y - 2; }
       A.z = lerp(SKY, 0, e);
       if (u >= 1) { a.phase = a.kind === "carry" ? "lift" : "hit"; a.t = 0; Sound.fx.hit(1.6); G.shake = 6; G.flash = 0.25; G.flashC = C.holy; }
     } else if (a.phase === "hit") {
-      const u = clamp(a.t / 0.24, 0, 1);
+      const u = clamp(a.t / 0.2, 0, 1);
       if (!a.hit && u > 0.42) {
         a.hit = true;
-        if (a.kind === "sweep") {
-          let n = 0;
-          for (const f of G.foes) if (!f.gone && Math.abs(f.x - A.x) < 200 && Math.abs(f.y - A.y) < 60) { landHit(f, 2, 1.8, { breaks: true, front: false, angel: true, fromX: A.x }); if (!f.gone) floor(f); n++; }
+        if (a.kind === "smite") finisherLands(a.f.x, a.f.y);
+        else if (a.kind === "sweep") {
+          let n = 0, first = null;
+          for (const f of G.foes) if (!f.gone && Math.abs(f.x - A.x) < 200 && Math.abs(f.y - A.y) < 60) { landHit(f, 2, 1.8, { breaks: true, front: false, angel: true, fromX: A.x }); if (!f.gone) floor(f); n++; first = first || f; }
+          if (a.combo && first) countHit(first);
           pop(A.x + A.dir * 40, A.y - 150, n > 1 ? "WING SWEEP ×" + n : "WING SWEEP", C.holy);
         } else if (a.f && !a.f.gone) {
+          if (a.combo) countHit(a.f);
           landHit(a.f, a.kind === "free" ? 2 : 3, 2, { breaks: true, front: false, angel: true, fromX: A.x });
           if (!a.f.gone) floor(a.f);
           pop(a.f.x, a.f.y - 150, a.kind === "free" ? "TORN AWAY" : "HIS ANGEL", C.holy);
@@ -846,7 +882,7 @@ const Fight = (() => {
       }
       if (u >= 1) { a.phase = "rise"; a.t = 0; Sound.fx.flap(1.2); }
     } else if (a.phase === "rise") {
-      const u = clamp(a.t / 0.42, 0, 1);
+      const u = clamp(a.t / 0.32, 0, 1);
       A.z = lerp(0, SKY, u * u); A.x += A.dir * 60 * dt;
       if (u >= 1) A.act = { kind: "above", t: 0 };
     } else if (a.phase === "lift") {
@@ -900,6 +936,7 @@ const Fight = (() => {
     stepWorld(dt, dtRaw);
     if (G.over) { G.over += dtRaw; if (G.over > (G.leaving ? 1.6 : 3.4) && !G.left) { G.left = true; Sound.muffle(false); G.done(); } }
     if (G.shift) return;            // everyone hangs in the air while the world changes round them
+    if (G.smiteWait && G.world === G.base) { G.smiteWait = false; G.smite = true; }
     G.t += dt; G.waveT += dt;
     const H0 = G.hero;
     if (G.kata) stepKata(dt);
@@ -917,8 +954,9 @@ const Fight = (() => {
       if (TT.target && TT.target !== "chains" && !TT.water && held > WATER_MS) { TT.water = true; Sound.fx.tick(2200, 0.8); }
     }
     stepKeys(dt);
-    stepHero(dt); stepRosary(dt); stepAngel(dt); stepGuard(dt);
-    if (G.callAngel) { const kind = G.callAngel; G.callAngel = null; const f = H0.last && !H0.last.gone ? H0.last : nearestFoe(); if (f && G.world !== "depths") swoop(kind, f); }
+    stepHero(dt); stepRosary(dt); stepAngel(dtRaw); stepGuard(dt);
+    // From on high: once the world is the street again, the angel comes down on them.
+    if (G.smite) { G.smite = null; G.angel.act = { kind: "above", t: 0 }; swoop("smite", smiteAt()); }
     for (const f of G.foes) stepFoe(f, dt);
     G.foes = G.foes.filter((f) => !f.gone || f.act.t < 0.6);
     if (!G.kata) attackScheduler(dt);
@@ -928,14 +966,16 @@ const Fight = (() => {
     if (w && !G.over && G.world === "street" && G.spawnQ.length === 0 && alive().length === 0 && G.waveT > 1.5 && (!w.chains || G.guard.freed)) {
       // Not touched once, the whole wave through: the flow unbroken.
       if (!G.hurtWave) { G.banner = { text: "PERFECT FREEFLOW", sub: "Not a blow on you.", c: C.holy, t: 0, small: true }; H0.spirit = Math.min(SPIRIT, H0.spirit + 3); Sound.fx.chord(4, 1); }
-      if (G.wave >= WAVES.length - 1) { if (G.guard.freed) finish(); else { G.wave = 1; nextWave(); } }
+      if (G.wave >= WAVES.length - 1) finish();
       else nextWave();
     }
     if (G.down) { G.down += dtRaw; if (G.down > 2.8) recover(); }
   }
   const nearestFoe = () => alive().sort((a, b) => dist(a.x, a.y, G.hero.x, G.hero.y) - dist(b.x, b.y, G.hero.x, G.hero.y))[0];
   function finish() {
-    G.over = 0.001; say("It is done. The street is clear.");
+    G.over = 0.001;
+    // The street is clear, and the chains on his guardian break.
+    freeGuardian();
     Sound.queue(SONGS.noir); Sound.setLevel(0);
   }
   function recover() {
@@ -1084,13 +1124,8 @@ const Fight = (() => {
       if (u >= 1) after();
     }
     else if (A0.kind === "hurt") { H0.x = keepX(H0.x - H0.dir * 60 * dt * (1 - u)); if (u >= 1) after(); }
-    else if (A0.kind === "finisher") {
-      // Up into the light; the world changes under him; down on them.
-      if (u < 0.4) H0.z = 160 * ease(u / 0.4);
-      if (!A0.lifted && u >= 0.4) { A0.lifted = true; shiftTo(G.base); }
-      if (u > 0.82) H0.z = 160 * (1 - smooth((u - 0.82) / 0.18));
-      if (!A0.landed && u >= 1) { A0.landed = true; H0.z = 0; finisherLands(); act("land", { dur: 0.3, z0: 0 }); }
-    }
+    else if (A0.kind === "aside") { if (u < 0.3) H0.x = keepX(A0.x0 - H0.dir * 30 * ease(u / 0.3)); if (u >= 1) after(); }
+    else if (A0.kind === "pray") { H0.z = 0; if (A0.t > 6) { act("idle"); G.finishing = false; } }
     else if (A0.kind === "trip") { if (u < 0.25) H0.x = keepX(A0.x0 + H0.dir * 46 * ease(u / 0.25)); if (u >= 1) act("idle"); }
     else if (A0.kind === "grabbed") {
       if (A0.t > (A0.tick || 0)) { A0.tick = A0.t + 0.4; hurtHero(5, true); }
@@ -1128,7 +1163,7 @@ const Fight = (() => {
     }
   }
   function freeGuardian() {
-    const g = G.guard; g.freed = true; g.fight = 6; g.nextHit = 0.6;
+    const g = G.guard; g.freed = true; g.fight = 0; g.nextHit = 0;
     G.flash = 0.9; G.flashC = "#e8f6ff"; Sound.fill("hit"); Sound.fx.glory();
     slowmo(0.2, 0.9, g.x, Y0 - 60, 1.2);
     say("Brothers!", "guardian");
@@ -1144,7 +1179,6 @@ const Fight = (() => {
         if (t) { g.nextHit = 0.9; G.parts.push({ kind: "streak", x0: g.x, y0: Y0 - 60, x1: t.x, y1: t.y - 60 * depth(t.y), t: 0 }); landHit(t, 2, 1.5, { breaks: true, front: false, angel: true, fromX: g.x }); if (!t.gone) t.dizzy = Math.max(t.dizzy, 1.6); }
         else g.nextHit = 0.3;
       }
-      if (g.fight <= 0 && G.wave === 2) { nextWave(); }
     }
   }
   // A demon draws back to strike (the gold sign) or to grab (the red).
@@ -1511,7 +1545,7 @@ const Fight = (() => {
   function drawAbove() {
     const A = G.angel, H0 = G.hero;
     if (A.act.kind !== "above" && A.z < SKY * 0.6) return;
-    const v = G.view, x = (A.lightX - v.cx) * v.k + W / 2, every = R().swoop, toward = every ? (H0.combo % every) / every : 0, pul = 0.5 + 0.5 * Math.sin(A.t * 2), dim = G.world === "depths" ? 0.25 : 1;
+    const v = G.view, x = (A.lightX - v.cx) * v.k + W / 2, every = R().swoop, toward = every ? 1 - angelUntil() / Math.max(1, every - 1) : 0, pul = 0.5 + 0.5 * Math.sin(A.t * 2), dim = G.world === "depths" ? 0.25 : 1;
     glowOval(x, -10, 120 + 60 * toward, 60 + 30 * toward, C.holy, (0.16 + 0.22 * toward + 0.05 * pul) * dim);
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = (0.06 + 0.1 * toward) * dim;
     poly([x - 40, 0, x + 40, 0, x + 90, H * 0.55, x - 90, H * 0.55], C.holy); ctx.restore();
@@ -1539,7 +1573,7 @@ const Fight = (() => {
       case "haul": return blendPose(pose(LASH[1]), HAUL, u);
       case "grab": return u < 0.55 ? GRABP : blendPose(FLING, idleP(t), Math.max(0, (u - 0.75) * 4));
       case "hurt": return blendPose(HURT, idleP(t), u);
-      case "finisher": return u < 0.4 ? blendPose(idleP(t), FIN_AIR, smooth(u / 0.25)) : u < 0.82 ? Object.assign({}, FIN_AIR, { spin: (u - 0.4) * TAU * 1.2 }) : FIN_DROP;
+      case "aside": return blendPose(blendPose(idleP(t), ASIDE, smooth(u / 0.2)), idleP(t), Math.max(0, (u - 0.85) / 0.15));
       case "trip": return keyPose([[0, walkP(0, true)], [0.22, DOWNP], [0.72, DOWNP], [1, idleP(t)]], u);
       case "grabbed": return GRABBED(t);
       case "block": return BLOCKP;
@@ -1551,7 +1585,7 @@ const Fight = (() => {
   }
   function drawHero(fl) {
     const H0 = G.hero, s = depth(H0.y), p = heroPose(), sway = H0.act.kind === "idle" ? Math.sin(G.t * 1.7) * 3 : 0;
-    const praying = H0.act.kind === "block";
+    const praying = H0.act.kind === "block" || H0.act.kind === "pray";
     if (fl) { if (H0.z < 60) { if (praying) drawPriestFront(H0.x, H0.y + 2, s, { flipY: true, alpha: 0.16 }); else drawFigure("priest", H0.x + sway, H0.y + 2, s, H0.dir, p, { flipY: true, alpha: 0.16, t: G.t, pal: PRIEST_FIGHT }); } return; }
     // His ring of light on the ground, and his shadow.
     const ringA = 0.5 + 0.15 * Math.sin(G.t * 3);
@@ -1767,11 +1801,10 @@ const Fight = (() => {
     }
     for (let i = 0; i < SPIRIT; i++) { const x = 20 + i * 11, y = 44, on = i < H0.spirit; ctx.save(); ctx.translate(x, y); ctx.rotate(PI / 4); rect(-3, -3, 6, 6, on ? C.holy : "rgba(255,255,255,0.12)"); ctx.restore(); if (on) glow(x, y, 9, C.holy, 0.4); }
     text("SPIRIT", 22 + SPIRIT * 11, 47, { size: 7, weight: 700, spacing: 2, color: "rgba(242,212,122,0.6)" });
-    // Feathers: the blows still to land before his angel comes down (three in the Heights; none
-    // can reach him in the Depths).
-    const every = R().swoop, n = every ? H0.combo % every : 0, ready = G.angel.act.kind === "above";
-    for (let i = 0; i < (every || 5); i++) { const x = 20 + i * 14, y = 60, on = i < n; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2, 0, 0, TAU); ctx.fillStyle = on ? "#fff6dc" : every ? "rgba(255,255,255,0.14)" : "rgba(255,90,58,0.2)"; ctx.fill(); ctx.restore(); if (on) glow(x, y, 8, C.holy, 0.35); }
-    text(!every ? "HIS ANGEL IS FAR" : ready ? "HIS ANGEL" : "HIS ANGEL IS HERE", 22 + (every || 5) * 14, 63, { size: 7, weight: 700, spacing: 2, color: !every ? "#ff8a70" : ready ? "rgba(242,212,122,0.6)" : C.holy });
+    // Feathers: his blows still to land before the angel's (none can come to him in the Depths).
+    const every = R().swoop, ready = G.angel.act.kind === "above", slots = Math.max(1, (every || 4) - 1), toGo = angelUntil(), fill = every ? slots - toGo : 0;
+    for (let i = 0; i < slots; i++) { const x = 20 + i * 14, y = 60, on = i < fill; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2, 0, 0, TAU); ctx.fillStyle = on ? "#fff6dc" : every ? "rgba(255,255,255,0.14)" : "rgba(255,90,58,0.2)"; ctx.fill(); ctx.restore(); if (on) glow(x, y, 8, C.holy, 0.35 + (toGo === 0 ? 0.3 * Math.sin(G.t * 8) : 0)); }
+    text(!every ? "HIS ANGEL IS FAR" : !ready ? "HIS ANGEL IS HERE" : toGo === 0 ? "NEXT BLOW: HIS ANGEL" : "HIS ANGEL", 22 + slots * 14, 63, { size: 7, weight: 700, spacing: 2, color: !every ? "#ff8a70" : !ready || toGo === 0 ? C.holy : "rgba(242,212,122,0.6)" });
     // The combo, and what it opens.
     if (H0.combo >= 2) {
       const k = clamp(H0.comboT / R().comboT, 0, 1);
@@ -1780,7 +1813,7 @@ const Fight = (() => {
       if (H0.combo >= 5) text(H0.combo >= 10 ? "sobria ebrietas" : "sobria", W - 18, 78, { align: "right", size: 15, italic: true, font: FONT.line, weight: 500, color: C.holy, alpha: 0.5 + 0.5 * k });
     }
     // How far to the Heights.
-    if (G.world === G.base && !G.shift && H0.combo >= 4 && (!G.kata || G.kata.i >= HEIGHTS_LESSON)) {
+    if (G.world === G.base && !G.shift && !G.finishing && H0.combo >= 4 && H0.combo < HEIGHTS_AT && (!G.kata || G.kata.i >= HEIGHTS_LESSON)) {
       const left = HEIGHTS_AT - H0.combo;
       text(left + " MORE: THE HEIGHTS", W - 18, 96, { align: "right", size: 8, weight: 800, spacing: 2, color: C.holy, alpha: 0.55 + 0.45 * (H0.combo / HEIGHTS_AT) });
       rect(W - 118, 101, 100, 2, "rgba(255,255,255,0.15)"); rect(W - 118, 101, 100 * H0.combo / HEIGHTS_AT, 2, C.holy);
@@ -1932,12 +1965,12 @@ const Fight = (() => {
       ["Arrows", "move"], ["Space", "strike, toward the arrow held"], ["The one rule", "never the same blow twice on the same demon"], ["X", "counter a gold sign: catch, throw, pin"],
       ["Space, at one down", "finish it: a takedown"], ["Q, held", "block one blow (the red sign too); then again"], ["C", "heavy blow: breaks a shield"],
       ["E", "launch"], ["Space, in the air", "keep it up"], ["V", "slam (in the air: spike)"], ["F", "holy water, near or far"], ["R", "the rosary: wrap a far one, haul it in"],
-      ["T + arrow", "throw a near one into another"], ["B", "bless; in the Heights, come down from on high"], ["12 in a row", "up to the Heights"],
+      ["T + arrow", "throw a near one into another"], ["B", "bless; in the Heights, your angel comes down from on high"], ["3rd, 7th blow", "your angel strikes; you stand aside"], ["12 in a row", "up to the Heights"],
     ] : [
       ["Tap a demon", "strike, then on to the next"], ["The one rule", "never the same blow twice on the same demon"], ["Tap open street", "zip there"], ["Tap a gold sign", "counter: catch, throw, pin"],
       ["Tap one that is down", "finish it: a takedown"], ["Hold open street", "block one blow (the red sign too); then again"], ["Tap twice", "heavy blow: breaks a shield"],
       ["Swipe up on one", "launch"], ["Tap it in the air", "keep it up"], ["Swipe down on one", "slam (in the air: spike)"], ["Hold on one, let go", "holy water, near or far"],
-      ["Drag a far one", "the rosary: wrap it, haul it in"], ["Drag a near one", "throw it into another"], ["Gold button", "bless; in the Heights, come down from on high"], ["12 in a row", "up to the Heights"],
+      ["Drag a far one", "the rosary: wrap it, haul it in"], ["Drag a near one", "throw it into another"], ["Gold button", "bless; in the Heights, your angel comes down from on high"], ["3rd, 7th blow", "your angel strikes; you stand aside"], ["12 in a row", "up to the Heights"],
     ];
   }
   return { start, step, draw, down, move, up, key, moves, get G() { return G; } };
