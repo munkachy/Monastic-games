@@ -5,7 +5,7 @@
 // when play starts.
 
 const Game = {
-  part: 0, music: false, practising: false,
+  part: 0, music: false, practising: false, watching: false,
   soundWoke() {
     if (Game.music || !Sound.ctx()) return;
     Game.music = true;
@@ -14,7 +14,7 @@ const Game = {
   startPart(i) {
     goSideways();
     Game.music = true;
-    Game.part = i; Game.practising = false;
+    Game.part = i; Game.practising = false; Game.watching = false;
     const done = () => Game.partDone(i);
     switch (PARTS[i].id) {
       case "cold": Scene.start(SCENES.cold(), done); break;
@@ -29,8 +29,14 @@ const Game = {
   // The practice on its own, from the parts screen or the pause screen.
   practice() {
     goSideways();
-    Game.music = true; Game.part = PARTS.findIndex((P) => P.id === "fight"); Game.practising = true;
+    Game.music = true; Game.part = PARTS.findIndex((P) => P.id === "fight"); Game.practising = true; Game.watching = false;
     Fight.start(() => { Game.practising = false; Game.toTitle(); }, { kata: true, only: true });
+  },
+  // The Holy Hour: survival, round after round, until he falls.
+  holyHour() {
+    goSideways();
+    Game.music = true; Game.part = PARTS.findIndex((P) => P.id === "fight"); Game.practising = false; Game.watching = true;
+    Fight.start(() => { Game.watching = false; Game.toTitle(); }, { arena: true });
   },
   partDone(i) {
     if (i >= PARTS.length - 1) { save.done = true; save.part = PARTS.length - 1; store(); Game.toTitle(true); return; }
@@ -38,7 +44,7 @@ const Game = {
     Game.startPart(i + 1);
   },
   toTitle(finished) {
-    Title.t = 0; Title.finished = !!finished; mode = Title;
+    Game.watching = false; Title.t = 0; Title.finished = !!finished; mode = Title;
     Sound.play(SONGS.noir); Sound.setLevel(0); Sound.ambience({ wind: 0, rain: 0 }); Sound.muffle(false);
   },
   pause() {
@@ -67,6 +73,7 @@ const Title = {
     } else button(save.done ? "PLAY AGAIN" : "BEGIN", x, by, 190, 40, () => Game.startPart(0), { hot: true, sub: "The first night" });
     button("PARTS", x, by + (cont ? 90 : 50), 92, 30, () => { Parts.t = 0; mode = Parts; }, {});
     button(Sound.muted ? "SOUND OFF" : "SOUND ON", x + 98, by + (cont ? 90 : 50), 92, 30, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
+    button("THE HOLY HOUR", x, by + (cont ? 126 : 86), 190, 34, () => Game.holyHour(), { sub: save.arenaBest ? "Survival · your best: " + save.arenaBest : "Survival: how long can you watch?" });
     text(Title.finished ? "The first night is done. More nights are coming." : "A first build: the first night. Best with sound, phone sideways.", x, H - 22, { size: 9, weight: 500, color: "rgba(233,230,223,0.55)", max: W * 0.55 });
     buttons.push({ x: W - 150, y: H - 34, w: 150, h: 34, act: () => { location.href = "design.html"; } });
     text("Design notes ›", W - 16, H - 14, { align: "right", size: 9, weight: 600, color: "rgba(232,196,106,0.7)" });
@@ -107,17 +114,18 @@ const Pause = {
     Pause.under.draw();
     buttons.length = 0;
     rect(0, 0, W, H, "rgba(4,3,8,0.78)");
-    // In the fight, the moves are listed beside the buttons.
-    const fight = Pause.under === Fight, cx = fight ? Math.max(130, W * 0.24) : W / 2;
+    // In a fight (on the street, or on the roofs on the way), the moves are listed beside the buttons.
+    const fight = Pause.under === Fight || (Pause.under === Flight && Flight.RF && Flight.RF.active()), cx = fight ? Math.max(130, W * 0.24) : W / 2;
     text("PAUSED", cx, 58, { align: "center", font: FONT.title, size: 26, weight: 700, spacing: 6, color: "#ffffff", glow: "rgba(232,196,106,0.5)", blur: 14 });
-    text(Game.practising ? "The practice" : PARTS[Game.part].name, cx, 82, { align: "center", font: FONT.line, italic: true, size: 16, color: C.holy });
+    text(Game.practising ? "The practice" : Game.watching ? "The Holy Hour" : PARTS[Game.part].name, cx, 82, { align: "center", font: FONT.line, italic: true, size: 16, color: C.holy });
     const bw = 200, bx = cx - bw / 2;
     let y = 98;
     const b = (label, act, o, h) => { button(label, bx, y, bw, h || 28, act, o || {}); y += (h || 28) + 7; };
     b("RESUME", () => Game.resume(), { hot: true }, 34);
     if (Game.practising) b("BEGIN THE PRACTICE AGAIN", () => { Sound.muffle(false); Game.practice(); });
+    else if (Game.watching) b("BEGIN THE HOLY HOUR AGAIN", () => { Sound.muffle(false); Game.holyHour(); });
     else b("BEGIN THIS PART AGAIN", () => { Sound.muffle(false); Game.startPart(Game.part); });
-    if (!Game.practising) b("SKIP TO THE NEXT PART", () => { Sound.muffle(false); Game.partDone(Game.part); });
+    if (!Game.practising && !Game.watching) b("SKIP TO THE NEXT PART", () => { Sound.muffle(false); Game.partDone(Game.part); });
     if (fight && !Game.practising) b("PRACTICE THE MOVES", () => { Sound.muffle(false); Game.practice(); });
     b(Sound.muted ? "SOUND: OFF" : "SOUND: ON", () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); });
     b("BACK TO THE TITLE", () => Game.toTitle());
@@ -152,4 +160,5 @@ resize();
 mode = Title;
 // For trying a part directly: ?part=2 starts the flight, and so on.
 (() => { const m = /[?&]part=(\d)/.exec(location.search); if (m) { const i = clamp(+m[1], 0, PARTS.length - 1); setTimeout(() => Game.startPart(i), 50); } })();
+if (/[?&]hour\b/.test(location.search)) setTimeout(() => Game.holyHour(), 50);
 requestAnimationFrame(frame);

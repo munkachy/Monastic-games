@@ -11,7 +11,8 @@
 // to block (one blow at a time; a red sign can only be blocked); tap open street to zip there; hold
 // on a demon a moment, then let go, for holy water; tap twice for a heavy blow; swipe up on a demon
 // to launch it, down to slam it; drag a far demon to throw the rosary round it; drag a near one to
-// throw it; tap one lying down to finish it.
+// throw it; tap one lying down to finish it. One behind a shield can only be met with the rosary,
+// which snatches the shield away: strike the shield, and it is he who is hurt.
 // Keyboard: the arrows move him; Space strikes toward the arrow held; X counters, Q (or Z, or
 // Shift) blocks, C heavy, E launch, V slam, F holy water, R the rosary, T throw, B bless.
 // The longer the flow, the harder every blow lands and the slower time runs. His angel waits
@@ -27,8 +28,12 @@ const Fight = (() => {
   // The street is three screens wide, the car in the middle of it. The camera stays on Fr. Lawrence,
   // and he is kept half a screen from either end, so it never has to stop following him.
   const carX = () => (G ? G.ww / 2 : W * 0.5), CARY = 238;
-  const HX0 = () => W / 2, HX1 = () => G.ww - W / 2;          // where he can go
-  const FX0 = 24, FX1 = () => G.ww - 24;                        // where they can go
+  // In the Holy Hour some places are rooms, with a wall at each end: the camera stops at the walls,
+  // and a demon knocked or thrown into one hits it hard and comes off it.
+  const WALL = 34, walled = () => !!(G && G.room && G.room.walls);
+  const HX0 = () => (walled() ? WALL + 46 : W / 2), HX1 = () => (walled() ? G.ww - WALL - 46 : G.ww - W / 2);   // where he can go
+  const FX0 = () => (walled() ? WALL + 16 : 24), FX1 = () => G.ww - (walled() ? WALL + 16 : 24);                  // where they can go
+  const ground = () => G.world === "street" || G.world === "arena";
   const keepX = (x) => clamp(x, HX0(), HX1());
   const pan = (x) => clamp((x - G.view.cx) / W, -0.8, 0.8);
   // Fr. Lawrence in the fight: a steel-blue coat, a gold band on his hat, the light of his angel
@@ -44,6 +49,7 @@ const Fight = (() => {
     kata: { wind: 1.25, strike: 1, hurt: 0, comboT: 3.4, swoop: 4, floor: 4.5 },
     heights: { wind: 1.7, strike: 0.72, hurt: 0.6, comboT: 3.4, swoop: 3, regen: 6, floor: 3.6 },
     depths: { wind: 0.85, strike: 1, hurt: 1.5, comboT: 1.4, swoop: 0, floor: 1.6 },
+    arena: { wind: 1, strike: 1, hurt: 1, comboT: 2.6, swoop: 4, floor: 2.6 },     // set again each round of the Holy Hour
   };
   const R = () => WORLD[G.world];
   const HEIGHTS_AT = 12, DEPTHS_OUT = 10, WATER_MS = 300;
@@ -128,7 +134,7 @@ const Fight = (() => {
     { foes: [["whisper", 0.6], ["grab", 2], ["whisper", 4], ["whisper", 7]], gap: [1.8, 2.6],
       say: () => "Keep moving. They come up out of the street all round us. His guardian is in their chains: when the street is clear, they will break." },
     { shield: true, foes: [["shield", 0.6], ["whisper", 1.2], ["grab", 4], ["whisper", 7], ["whisper", 10], ["whisper", 13]], gap: [1.4, 2.2],
-      say: () => tip("That one hides behind a shield. Tap it twice, quickly, for a heavy blow.", "That one hides behind a shield. Press C for a heavy blow to break it.") },
+      say: () => tip("That one hides behind a shield. Do not strike it: it will only hurt you. Drag him, and your rosary snatches the shield away.", "That one hides behind a shield. Do not strike it: it will only hurt you. Press R, and your rosary snatches the shield away.") },
     { foes: [["grab", 0.6], ["whisper", 1], ["shield", 3], ["whisper", 5], ["whisper", 8], ["grab", 11], ["whisper", 13]], gap: [1.3, 2.0],
       say: () => "The last of them, all together. Keep moving. Finish them where they fall." },
   ];
@@ -144,7 +150,7 @@ const Fight = (() => {
     { say: () => tip("Watch for the gold sign. When it shows, tap him: you catch the blow, throw him down and pin him.", "Watch for the gold sign. When it shows, press X: you catch the blow, throw him down and pin him."), hint: () => tip("GOLD SIGN: TAP HIM", "GOLD SIGN: X"), need: 2, hp: 6, setup: "gold", done: (e) => e === "counter" },
     { say: () => tip("A red sign is a grab: it cannot be countered. Hold on the open roof to block it, and the light you pray in throws him off.", "A red sign is a grab: it cannot be countered. Hold Q to block it, and the light you pray in throws him off."), hint: () => tip("RED SIGN: HOLD ON THE OPEN ROOF", "RED SIGN: HOLD Q"), need: 1, hp: 6, kind: "grab", setup: "red", done: (e) => e === "blockred" },
     { say: () => tip("A block stops one blow, gold or red. Then let go, and hold again for the next. Block two.", "A block stops one blow, gold or red. Then let go of Q, and hold it again for the next. Block two."), hint: () => tip("HOLD · LET GO · HOLD AGAIN", "HOLD Q · LET GO · HOLD AGAIN"), need: 2, hp: 6, setup: "block", count: 2, done: (e) => e === "blocked" },
-    { say: () => tip("This one hides behind a shield. Tap it twice, quickly: a heavy blow.", "This one hides behind a shield. Press C: a heavy blow."), hint: () => tip("TAP TWICE, QUICKLY", "C"), need: 1, hp: 6, kind: "shield", done: (e) => e === "guardbreak" },
+    { say: () => tip("This one hides behind a shield. Strike the shield and it is you who are hurt. Drag him: your rosary snatches the shield away.", "This one hides behind a shield. Strike the shield and it is you who are hurt. Press R: your rosary snatches the shield away."), hint: () => tip("DRAG HIM: THE ROSARY", "R: THE ROSARY"), need: 1, hp: 6, kind: "shield", done: (e) => e === "guardbreak" },
     { say: () => tip("Swipe up on a shade to launch it, then tap it while it hangs in the air.", "Press E to launch a shade, then Space while it hangs in the air."), hint: () => tip("SWIPE UP ON IT · THEN TAP IT", "E · THEN SPACE"), need: 2, hp: 7, done: (e) => e === "juggle" },
     { say: () => tip("Launch one again, then swipe down on it in the air: slam it to the ground.", "Launch one again, then press V while it is in the air: slam it down."), hint: () => tip("SWIPE UP · THEN SWIPE DOWN ON IT", "E · THEN V"), need: 2, hp: 7, done: (e) => e === "spike" },
     { say: () => tip("When one goes down, it stays down a moment. Get to it before it rises, tap it, and finish it.", "When one goes down, it stays down a moment. Get to it before it rises, press Space toward it, and finish it."),
@@ -162,14 +168,40 @@ const Fight = (() => {
   ];
   const HEIGHTS_LESSON = KATA.findIndex((L) => L.id === "heights");
 
+  // ---- The Holy Hour --------------------------------------------------------------------------------
+  // Survival. Fr. Lawrence keeps the Holy Hour before the Blessed Sacrament, and his angel asks him
+  // the question asked in the garden: could you not watch one hour? Then he is shown the war that is
+  // fought round every hour of prayer, in every place a monk prays: one place to a round, and round
+  // again, harder each time, until he falls. Some places are rooms, with walls.
+  const ROOMS = [
+    { id: "chapel", name: "The Chapel", walls: true, w: 1.5 },
+    { id: "cloister", name: "The Cloister", walls: false, w: 2.4 },
+    { id: "cell", name: "His Cell", walls: true, w: 1.1 },
+    { id: "tower", name: "The Bell Tower", walls: false, w: 2.2 },
+    { id: "crypt", name: "The Crypt", walls: true, w: 1.35 },
+    { id: "desert", name: "The Desert", walls: false, w: 3 },
+  ];
+  const VERSES = [
+    "Watch and pray, that you may not enter into temptation.",
+    "The spirit indeed is willing, but the flesh is weak.",
+    "Be sober, be watchful. Your adversary the devil prowls around like a roaring lion.",
+    "Resist him, firm in your faith.",
+    "He will give his angels charge of you, to guard you in all your ways.",
+    "My soul waits for the Lord more than watchmen for the morning.",
+    "Put on the whole armour of God, that you may stand against the wiles of the devil.",
+    "I have set the Lord always before me. Because he is at my right hand, I shall not be moved.",
+  ];
+
   function start(done, opts) {
     opts = opts || {};
-    const ww = Math.round(W * 3), hx0 = ww / 2 - W * 0.22;
+    const arena = !!opts.arena, room = arena ? ROOMS[0] : null;
+    const ww = Math.round(W * (arena ? room.w : 3)), hx0 = arena ? ww / 2 : ww / 2 - W * 0.22;
     bg = null;
     G = {
       done, opts, t: 0, ts: 1, slowT: 0, slowTs: 1, zoom: { k: 1, x: hx0, y: H / 2 }, cam: { k: 1, x: hx0, y: H / 2 }, view: { k: 1, cx: hx0, cy: H / 2 }, freeze: 0, muffled: false, ww,
       warnT: 0, warnF: null, pulseT: 0, pulseTs: 1, slowVis: 0, takedowns: 0, chainTD: 0,
-      base: opts.kata ? "kata" : "street", world: opts.kata ? "kata" : "street", worldT: 0, shift: null, banner: null, whispers: [], whisperT: 2,
+      base: opts.kata ? "kata" : arena ? "arena" : "street", world: opts.kata ? "kata" : arena ? "arena" : "street", worldT: 0, shift: null, banner: null, whispers: [], whisperT: 2,
+      room, arena: arena ? { phase: "intro", t: 0, round: 0, cast: 0, maxW: 1, maxAlive: 4, hpK: 1, up: 9 } : null,
       wave: -1, waveT: 0, foes: [], parts: [], pops: [], spawnQ: [], nextAtk: 2, touch: null, lastTap: null, msg: null, flash: 0, flashC: "#fff", shake: 0,
       hero: { x: hx0, y: 300, z: 0, dir: 1, act: { kind: "idle", t: 0 }, resolve: 100, spirit: 0, inv: 0, combo: 0, comboT: 0, best: 0, queue: null, hits: 0, last: null },
       angel: { x: hx0, y: 300, z: SKY, dir: 1, act: { kind: "above", t: 0 }, t: 0, lightX: hx0, catchT: 0 },
@@ -177,6 +209,7 @@ const Fight = (() => {
       taught: {}, over: 0, down: 0, keys: {}, launched: false, practised: false, kata: null,
     };
     if (opts.kata) { G.kata = { i: -1, t: 0, setT: 0, again: 0 }; kataNext(); Sound.play(SONGS.fight); Sound.setLevel(0); }
+    else if (arena) { G.hero.y = 292; act("adore"); Sound.play(SONGS.desert); Sound.setLevel(0); }
     else { nextWave(); Sound.play(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); }
     Sound.ambience({ wind: 0, rain: 0 });
     mode = Fight;
@@ -199,14 +232,15 @@ const Fight = (() => {
       // A place on the screen to one side of him, not on top of another of them.
       for (let k = 0; k < 8; k++) {
         const side = (foeId + k) % 2 ? 1 : -1;
-        x = clamp(H0.x + side * (W * 0.2 + Math.random() * W * 0.2), 60, G.ww - 60);
+        x = clamp(H0.x + side * (W * 0.2 + Math.random() * W * 0.2), FX0() + 40, FX1() - 40);
         if (!G.foes.some((o) => !o.gone && Math.abs(o.x - x) < 56 && Math.abs(o.y - y) < 30)) break;
       }
     }
     const f = { id: ++foeId, kind: kind === "shade" ? "whisper" : kind, x, y, z: 0, vz: 0, vx: 0, dir: H0.x >= x ? 1 : -1,
-      hp: hp || (kind === "grab" ? 12 : kind === "shield" ? 10 : 9), act: { kind: "emerge", t: 0, dur: 0.95 }, sign: null, stun: 0, dizzy: 0, shield: kind === "shield", hat: true, hatKind: foeId % 3 === 0 ? 1 : 0,
+      hp: hp || (kind === "grab" ? 12 : kind === "shield" ? 10 : 9) * (G.arena ? G.arena.hpK : 1), act: { kind: "emerge", t: 0, dur: 0.95 }, sign: null, stun: 0, dizzy: 0, shield: kind === "shield", hat: true, hatKind: foeId % 3 === 0 ? 1 : 0,
       slot: Math.random() * TAU, ph: Math.random() * 10, seed: Math.random() * 10, rim: shade ? "#a8acc8" : DEMON_RIMS[foeId % 3], shade, holeT: 0 };
     f.max = f.hp; G.foes.push(f);
+    if (G.arena && f.shield && !G.taught.shieldSeen) { G.taught.shieldSeen = true; say(WAVES.find((w) => w.shield).say()); }
     puff(f.x, f.y - 4, "#000000", 8, true);
     Sound.fx.growl(0.6); Sound.fx.hit(0.35, pan(f.x));
     return f;
@@ -330,7 +364,7 @@ const Fight = (() => {
   function fresh(kind, f, instead) {
     if (replaying) return true;
     // The angel's turn: that blow is his, not Fr. Lawrence's, so it is never a repeat.
-    if (f && ["strike", "heavy", "launch", "slam"].includes(kind) && f.z <= 20 && !lying(f) && angelNext()) { G.prevMove = G.lastMove; G.lastMove = { kind, f }; return true; }
+    if (f && ["strike", "heavy", "launch", "slam"].includes(kind) && f.z <= 20 && !lying(f) && !f.shield && angelNext()) { G.prevMove = G.lastMove; G.lastMove = { kind, f }; return true; }
     const L = instead ? G.prevMove : G.lastMove;
     if (L && L.kind === kind && L.f === f && f && !f.gone) { trip(); return false; }
     if (!instead) G.prevMove = G.lastMove;
@@ -351,7 +385,7 @@ const Fight = (() => {
   }
   // A fall counted: three in a row, and down to the Depths, all of them with him.
   function woe() {
-    if (G.kata || G.world !== "street" || G.shift || G.over || G.down) return;
+    if (G.kata || !ground() || G.shift || G.over || G.down) return;
     G.woe = (G.woe || 0) + 1; G.woeT = 0.8;
     if (G.woe === 2 && !G.taught.woe) { G.taught.woe = true; say("Careful, Father! One more fall, and they drag us all down into the Depths."); }
     if (G.woe >= 3) { G.woe = 0; G.woeDrag = 0.55; pop(G.hero.x, G.hero.y - 165, "THREE FALLS: DRAGGED DOWN", "#ff5a3a"); Sound.fx.growl(1.2); }
@@ -376,7 +410,7 @@ const Fight = (() => {
   function goStrike(f, move) {
     const H0 = G.hero; if (f.gone) return;
     // On the angel's blows of the combo, Fr. Lawrence stands aside and the angel strikes instead.
-    if (move !== "finish" && f.z <= 20 && !lying(f)) { const k = angelNext(); if (k) { angelBlow(f, k); return; } }
+    if (move !== "finish" && f.z <= 20 && !lying(f) && !f.shield) { const k = angelNext(); if (k) { angelBlow(f, k); return; } }
     H0.dir = f.x >= H0.x ? 1 : -1;
     if (move === "finish") {
       // To one lying down: a flip to its side, then the hop and the blow.
@@ -478,7 +512,7 @@ const Fight = (() => {
     if (f ? !fresh("water", f) : (moved("water"), false)) return;
     if (busy() && H0.act.kind !== "hurt") { if (f) H0.queue = { f, move: "water" }; return; }
     if (f) H0.dir = f.x >= H0.x ? 1 : -1; else if (dx) H0.dir = dx > 0 ? 1 : -1;
-    const tx = f ? f.x : clamp(H0.x + (dx || H0.dir) * 260, FX0, FX1()), ty = f ? f.y : clamp(H0.y + (dy || 0) * 140, Y0, Y1);
+    const tx = f ? f.x : clamp(H0.x + (dx || H0.dir) * 260, FX0(), FX1()), ty = f ? f.y : clamp(H0.y + (dy || 0) * 140, Y0, Y1);
     act("toss", { f, which: TOSS, dur: 0.3 * R().strike, tx, ty, fired: false });
     Sound.fx.whoosh(0.2, 0.5, true);
   }
@@ -487,8 +521,9 @@ const Fight = (() => {
     const H0 = G.hero;
     if (!f || f.gone || G.over || G.shift || ["grabbed", "down", "bless"].includes(H0.act.kind)) return;
     if (lying(f)) { finishFoe(f); return; }
-    if (near(f)) { if (fresh("strike", f)) { if (busy() && H0.act.kind !== "hurt") H0.queue = { f, move: "strike" }; else goStrike(f, "strike"); } return; }
-    if (!fresh("arm", f)) return;
+    if (near(f) && !f.shield) { if (fresh("strike", f)) { if (busy() && H0.act.kind !== "hurt") H0.queue = { f, move: "strike" }; else goStrike(f, "strike"); } return; }
+    // Snatching a shield is a move of its own: the rosary again after it, to haul him in, is new.
+    if (!fresh(f.shield ? "snatch" : "arm", f)) return;
     if (busy() && H0.act.kind !== "hurt") { H0.queue = { f, move: "stole" }; return; }
     H0.dir = f.x >= H0.x ? 1 : -1;
     act("lash", { f, which: LASH, dur: 0.44 * R().strike });
@@ -606,8 +641,7 @@ const Fight = (() => {
     const H0 = G.hero;
     if (!f || f.gone || G.over || G.shift || ["grabbed", "down", "bless"].includes(H0.act.kind)) return;
     if (lying(f)) { finishFoe(f); return; }
-    if (f.shield) { landHit(f, 0, 0.5); return; }
-    if (!near(f)) { stole(f); return; }
+    if (f.shield || !near(f)) { stole(f); return; }
     if (!fresh("throw", f)) return;
     if (busy() && H0.act.kind !== "hurt") { H0.queue = { f, move: "throw", dx, dy }; return; }
     let m = Math.hypot(dx, dy); if (m < 0.1) { dx = f.x >= H0.x ? 1 : -1; dy = 0; m = 1; }
@@ -616,13 +650,39 @@ const Fight = (() => {
     f.act = { kind: "held", t: 0 }; f.sign = null; if (G.slowFor === f) G.slowFor = null;
     Sound.fx.effort();
   }
+  // A blow of his own on the shield: it rings off, and it is he who is hurt (a blow taken, a fall
+  // counted). Only the rosary gets past a shield.
+  function shieldBlock(f) {
+    const H0 = G.hero;
+    Sound.fx.clang(pan(f.x)); Sound.fx.hit(0.9); sparks(f.x - f.dir * 14, f.y - 60 * depth(f.y), "#ff9a60", 10);
+    f.act = { kind: "recover", t: 0 }; f.vx = Math.sign(f.x - H0.x || 1) * 60;
+    pop(f.x, f.y - 120 * depth(f.y), tip("THE SHIELD! DRAG HIM: THE ROSARY", "THE SHIELD! R: THE ROSARY"), "#ff8a70");
+    if (!G.taught.shield && !G.kata) { G.taught.shield = true; say(WAVES.find((w) => w.shield).say()); }
+    if (G.kata) { act("hurt", { dur: 0.42 }); H0.combo = 0; H0.comboT = 0; H0.queue = null; G.shake = 6; pop(H0.x, H0.y - 140, "HURT BY THE SHIELD", "#ff8a70"); return; }
+    hurtHero(10);
+  }
+  // The rosary round one behind a shield: it is wound round the shield and yanked, and the shield
+  // is torn out of its hands and goes spinning away off the screen. Left bare, it reels.
+  function snatchShield(f) {
+    const H0 = G.hero, s = depth(f.y);
+    f.shield = false; f.sign = null; if (G.slowFor === f) G.slowFor = null;
+    if (f.act.kind === "wind" || f.act.kind === "lunge") f.act = { kind: "idle", t: 0 };
+    f.dizzy = Math.max(f.dizzy, 2.4); f.vx = Math.sign(H0.x - f.x) * 90;
+    G.parts.push({ kind: "shieldfly", x: f.x + f.dir * 12 * s, y: f.y - 70 * s, vx: Math.sign(H0.x - f.x || -f.dir) * 820, vy: -520, r: 0, vr: Math.sign(H0.x - f.x || 1) * -14, s, t: 0 });
+    sparks(f.x + f.dir * 10, f.y - 70 * s, C.ember, 10);
+    slowmo(0.3, 0.45, (f.x + H0.x) / 2, f.y - 70, 1.16); hitStop(0.06);
+    Sound.fx.chain(true); Sound.fx.clang(pan(f.x));
+    countHit(f);
+    pop(f.x, f.y - 130 * s, "SHIELD SNATCHED", C.holy, true);
+    ev("guardbreak"); ev("stole");
+  }
   function landHit(f, dmg, k, o) {
     o = o || {};
     if (f.gone) return;
     const H0 = G.hero;
     if (f.shield && !o.breaks && (o.front !== false)) {
       // The shield turns his blow aside. Clank.
-      Sound.fx.hit(0.6); Sound.fx.tick(900, 1); pop(f.x, f.y - 110 * depth(f.y), tip("TAP TWICE", "PRESS C"), C.holy); sparks(f.x - f.dir * 14, f.y - 60, "#ff9a60", 6);
+      Sound.fx.hit(0.6); Sound.fx.tick(900, 1); pop(f.x, f.y - 110 * depth(f.y), tip("DRAG HIM: THE ROSARY", "R: THE ROSARY"), C.holy); sparks(f.x - f.dir * 14, f.y - 60, "#ff9a60", 6);
       if (!G.taught.shield && !G.kata) { G.taught.shield = true; say(WAVES.find((w) => w.shield).say()); }
       return false;
     }
@@ -635,7 +695,11 @@ const Fight = (() => {
     if (f.act.kind === "wind" || f.act.kind === "lunge") { f.sign = null; if (G.slowFor === f) G.slowFor = null; }
     const kb = (o.kx === undefined ? 1 : o.kx) * Math.sign(f.x - (o.fromX === undefined ? H0.x : o.fromX) || 1) * (110 + 90 * k);
     if (f.act.kind === "floored") f.vx = kb * 0.4;
-    else if (f.act.kind !== "thrown" && f.act.kind !== "pulled") { f.act = { kind: "hurt", t: 0, dur: 0.32 }; f.vx = kb; }
+    else if (f.act.kind !== "thrown" && f.act.kind !== "pulled") {
+      f.act = { kind: "hurt", t: 0, dur: 0.32 }; f.vx = kb;
+      // Its back to a wall: the blow drives it into the wall.
+      if (walled()) { const room = kb < 0 ? f.x - FX0() : FX1() - f.x; if (room < 70) { f.vx = Math.sign(kb) * Math.max(Math.abs(kb), room * 6 + 140); f.toWall = true; } }
+    }
     if (k > 1.3 && f.hat && Math.random() < 0.6) { f.hat = false; G.parts.push({ kind: "hat", x: f.x, y: f.y - 115 * depth(f.y), vx: f.vx * 0.6, vy: -220, r: 0, vr: 12 * Math.sign(f.vx || 1), hk: f.hatKind, t: 0, s: depth(f.y), floor: f.y }); }
     if (f.stun >= 3 && f.dizzy <= 0) { f.dizzy = 2.0; f.stun = 0; pop(f.x, f.y - 128 * depth(f.y), "DIZZY", "#ffe08a"); }
     if (!o.angel) countHit(f);
@@ -939,12 +1003,23 @@ const Fight = (() => {
     if (G.smiteWait && G.world === G.base) { G.smiteWait = false; G.smite = true; }
     G.t += dt; G.waveT += dt;
     const H0 = G.hero;
+    // The Holy Hour between rounds: kneeling, the angel's word, the way to the next place.
+    if (G.arena && G.arena.phase !== "fight") {
+      stepArena(dtRaw); stepHero(dt); stepRosary(dt); stepAngel(dtRaw);
+      for (const f of G.foes) stepFoe(f, dt);
+      G.foes = G.foes.filter((f) => !f.gone || f.act.t < 0.6);
+      return;
+    }
+    if (G.arena) G.arena.up += dtRaw;
     if (G.kata) stepKata(dt);
-    // Spawns.
-    for (const s of G.spawnQ) if (!s.done && G.waveT > s.at) { s.done = true; spawn(s.kind); }
+    // Spawns. In the Holy Hour only so many at once; the rest wait their turn.
+    for (const s of G.spawnQ) if (!s.done && G.waveT > s.at) {
+      if (G.arena && alive().length >= G.arena.maxAlive) { s.at = G.waveT + 0.5 + Math.random() * 0.8; continue; }
+      s.done = true; spawn(s.kind);
+    }
     G.spawnQ = G.spawnQ.filter((s) => !s.done);
     // The chains phase keeps sending demons until the guardian is free.
-    const w = !G.kata && WAVES[G.wave];
+    const w = !G.kata && (G.arena ? G.arena.w : WAVES[G.wave]);
     if (w && w.chains && !G.guard.freed && G.spawnQ.length === 0 && alive().length < 2 && G.waveT > 3) G.spawnQ.push({ kind: "whisper", at: G.waveT + 2.5 });
     // Hold on the open street to block; hold on a demon a moment, and the holy water is ready to throw.
     const TT = G.touch;
@@ -963,10 +1038,11 @@ const Fight = (() => {
     if (H0.comboT > 0) { H0.comboT -= dt; if (H0.comboT <= 0) H0.combo = 0; }
     if (!G.kata) Sound.setLevel(G.world === "heights" ? 3 : H0.combo >= 12 ? 3 : H0.combo >= 5 ? 2 : 1);
     // The wave is won when its demons are all cast out (and, in the chains phase, the guardian is free).
-    if (w && !G.over && G.world === "street" && G.spawnQ.length === 0 && alive().length === 0 && G.waveT > 1.5 && (!w.chains || G.guard.freed)) {
+    if (w && !G.over && G.world === G.base && G.spawnQ.length === 0 && alive().length === 0 && G.waveT > 1.5 && (!w.chains || G.guard.freed)) {
       // Not touched once, the whole wave through: the flow unbroken.
       if (!G.hurtWave) { G.banner = { text: "PERFECT FREEFLOW", sub: "Not a blow on you.", c: C.holy, t: 0, small: true }; H0.spirit = Math.min(SPIRIT, H0.spirit + 3); Sound.fx.chord(4, 1); }
-      if (G.wave >= WAVES.length - 1) finish();
+      if (G.arena) arenaCleared();
+      else if (G.wave >= WAVES.length - 1) finish();
       else nextWave();
     }
     if (G.down) { G.down += dtRaw; if (G.down > 2.8) recover(); }
@@ -979,6 +1055,8 @@ const Fight = (() => {
     Sound.queue(SONGS.noir); Sound.setLevel(0);
   }
   function recover() {
+    // In the Holy Hour, a fall is the end of the watch.
+    if (G.arena) { arenaEnd(); return; }
     // His angel has carried him to the church to recover. No death: the wave begins again.
     G.down = 0;
     const H0 = G.hero; H0.resolve = 100; H0.combo = 0; H0.spirit = Math.max(H0.spirit, 2); act("idle"); H0.x = G.ww / 2 - W * 0.22; H0.y = 300; H0.z = 0; H0.inv = 1.5;
@@ -987,6 +1065,99 @@ const Fight = (() => {
     G.foes = []; G.spawnQ = []; G.slowFor = null;
     G.wave--; nextWave();
     say("Rested in the church's light. Again, Father: they are not so strong as they look.");
+  }
+  // ---- The Holy Hour, round by round ----------------------------------------------------------------
+  function stepArena(dtRaw) {
+    const A = G.arena, H0 = G.hero; A.t += dtRaw;
+    if (A.phase === "intro") {
+      if (A.t > 1.6 && !A.spoke) { A.spoke = 1; say("Could you not watch one hour with me? That is what he asked of them, in the garden."); Sound.setLevel(1); }
+      if (A.t > 7 && A.spoke === 1) { A.spoke = 2; say("Then watch with me now. They come at every hour of prayer, in every place a monk prays. Let us see how long you can last."); }
+      if (A.t > 15) arenaBegin();
+    } else if (A.phase === "clear") {
+      // The last words of the fight clear away, and only the angel's word is left.
+      if (A.t > 1.1 && G.pops.length) G.pops = G.pops.filter((p) => p.t < 0.4);
+      if (A.t > 0.9 && ["idle", "run"].includes(H0.act.kind)) act("adore");
+      if (A.t > 4.2) { A.phase = "trans"; A.t = 0; Sound.fx.whoosh(0.8, 1, false); }
+    } else if (A.phase === "trans") {
+      if (A.t > 0.55 && !A.moved) { A.moved = true; arenaRoom(); }
+      if (A.t > 1.1) { A.phase = "fight"; A.t = 0; A.moved = false; A.up = 0; arenaRound(); }
+    }
+  }
+  // Up from his knees, and the first round.
+  function arenaBegin() {
+    const A = G.arena; if (!A || A.phase !== "intro") return;
+    A.phase = "fight"; A.t = 0; A.up = 0; G.msg = null;
+    act("idle");
+    Sound.play(SONGS.fight); Sound.setLevel(1);
+    arenaRound();
+  }
+  // Each round harder: more of them, coming sooner, the big ones and the shields among them; their
+  // wind-ups shorter and their blows heavier; one knocked down up again sooner; two, then three,
+  // striking at once.
+  function arenaRound() {
+    const A = G.arena, n = ++A.round;
+    Object.assign(WORLD.arena, { wind: Math.max(0.62, 1 - 0.035 * (n - 1)), hurt: Math.min(2, 1 + 0.07 * (n - 1)), floor: Math.max(1.5, 2.6 - 0.08 * (n - 1)) });
+    A.maxW = n <= 2 ? 1 : n <= 5 ? 2 : 3;
+    A.maxAlive = Math.min(G.room.w < 1.2 ? 5 : 8, 3 + Math.ceil(n / 2));
+    A.hpK = 1 + 0.06 * (n - 1);
+    const count = Math.min(16, 3 + n), foes = [];
+    let at = 0.8;
+    for (let i = 0; i < count; i++) {
+      const r = Math.random();
+      let kind = n >= 3 && r < Math.min(0.24, 0.07 * (n - 2)) ? "shield" : n >= 2 && r > 1 - Math.min(0.3, 0.08 * n) ? "grab" : "whisper";
+      if (i === 1 && n === 2) kind = "grab";
+      if (i === 1 && n === 3) kind = "shield";
+      foes.push([kind, at]); at += i < 2 ? 0.8 : Math.max(0.7, 2.8 - n * 0.15) * (0.7 + Math.random() * 0.6);
+    }
+    A.w = { foes, gap: [Math.max(0.85, 2.6 - 0.16 * n), Math.max(1.3, 3.4 - 0.18 * n)] };
+    G.waveT = 0; G.hurtWave = false; G.nextAtk = 2.4; G.spawnQ = foes.map(([kind, at]) => ({ kind, at }));
+    G.banner = { text: "ROUND " + n, sub: G.room.name, c: C.holy, t: 0 };
+    Sound.fill("hit");
+  }
+  // A round watched through: he kneels, the angel gives him a word, and the next place opens.
+  function arenaCleared() {
+    const A = G.arena, H0 = G.hero;
+    A.phase = "clear"; A.t = 0;
+    if (!G.banner) G.banner = { text: "ROUND " + A.round + " WATCHED", sub: "", c: C.holy, t: 0, small: true };
+    say(VERSES[(A.round - 1) % VERSES.length]);
+    H0.resolve = Math.min(100, H0.resolve + 30); H0.combo = 0; H0.comboT = 0;
+    Sound.setLevel(0);
+  }
+  function arenaRoom() {
+    const A = G.arena, H0 = G.hero, room = ROOMS[A.round % ROOMS.length];
+    G.room = room; G.ww = Math.round(W * room.w);
+    for (const f of G.foes) f.gone = true;
+    G.foes = []; G.spawnQ = []; G.parts = []; G.pops = []; G.rosary = null; G.slowFor = null; G.lastMove = G.prevMove = null; G.woe = 0;
+    H0.x = G.ww / 2; H0.y = 292; H0.z = 0; H0.queue = null; act("idle");
+    G.cam.x = H0.x; G.view.cx = H0.x; G.angel.act = { kind: "above", t: 0 }; G.angel.lightX = H0.x;
+  }
+  // The end of the watch: carried out of it, he kneels again, and the angel counts the rounds.
+  function arenaEnd() {
+    const A = G.arena, H0 = G.hero;
+    G.down = 0; A.phase = "end"; A.t = 0;
+    A.watched = A.round - 1; A.best = H0.best;
+    A.newBest = A.watched > (save.arenaBest || 0);
+    if (A.newBest) save.arenaBest = A.watched;
+    save.arenaCast = Math.max(save.arenaCast || 0, A.cast); store();
+    for (const f of G.foes) f.gone = true;
+    G.foes = []; G.spawnQ = []; G.slowFor = null; G.rosary = null;
+    H0.x = keepX(G.cam.x); H0.z = 0; H0.y = 292; act("adore");
+    G.angel.act = { kind: "above", t: 0 }; G.world = G.base; G.whispers = []; G.shift = null;
+    const n = A.watched;
+    say(n === 0 ? "Even Peter slept, in the garden. Rest now. We will watch again." : "Rest now, Father. You watched with me, " + n + (n === 1 ? " round" : " rounds") + ". Peter, James and John slept through it.");
+    Sound.queue(SONGS.desert); Sound.setLevel(1);
+  }
+  // Slammed into a wall: it hurts, and it reels.
+  function wallSlam(f, hard) {
+    const right = f.x > G.ww / 2, wx = right ? G.ww - WALL : WALL, s = depth(f.y);
+    f.hp -= hard ? 2 : 1;
+    if (f.act.kind !== "floored") f.dizzy = Math.max(f.dizzy, hard ? 1.6 : 1.1);
+    sparks(wx, f.y - 60 * s, "#ffffff", hard ? 10 : 6); dustAt(wx + (right ? -14 : 14), f.y);
+    G.shake = Math.max(G.shake, hard ? 9 : 5); hitStop(hard ? 0.07 : 0.04);
+    Sound.fx.hit(hard ? 1.8 : 1.1, pan(f.x)); Sound.fx.step(2.4);
+    pop(f.x, f.y - 120 * s, hard ? "INTO THE WALL" : "OFF THE WALL", "#ffffff");
+    ev("wall");
+    if (f.hp <= 0) castOut(f);
   }
   function stepHero(dt) {
     const H0 = G.hero, A0 = H0.act; A0.t += dt;
@@ -1029,7 +1200,7 @@ const Fight = (() => {
       // The others: a back kick for the one behind, a sweep for the one beside.
       if (!A0.kicked && u > 0.3) {
         A0.kicked = true;
-        for (const o of A0.others) if (!o.gone) { landHit(o, 2, 1.6, { front: false, breaks: true, noFloor: true }); if (!o.gone) { floor(o); o.vx = Math.sign(o.x - H0.x || 1) * 240; } sparks(o.x, o.y - 60, C.holy, 8); }
+        for (const o of A0.others) if (!o.gone) { landHit(o, 2, 1.6, { front: false, noFloor: true }); if (!o.gone) { floor(o); o.vx = Math.sign(o.x - H0.x || 1) * 240; } sparks(o.x, o.y - 60, C.holy, 8); }
         if (A0.others.length) Sound.fx.whoosh(0.2, 0.7);
       }
       if (u < 0.2) { if (live) { f.x = H0.x + H0.dir * 50 * depth(f.y); f.y = H0.y - 1; } }
@@ -1058,23 +1229,20 @@ const Fight = (() => {
         A0.hit = true;
         if (f && !f.gone && Math.abs(f.x - H0.x) < 110 && Math.abs(f.y - H0.y) < 40) {
           const name = A0.which[2];
+          if (f.shield && !lying(f)) { shieldBlock(f); return; }
           if (name === "heavy") {
             const wasDizzy = f.dizzy > 0 && !f.shield;
             landHit(f, 2, 1.9, { breaks: true, front: false }); Sound.fx.hah(1, H0.dir * 0.3); splashAt(f.x, f.y - 70 * depth(f.y));
             if (wasDizzy && !f.gone && !lying(f)) { floor(f); f.vx = H0.dir * 260; pop(f.x, f.y - 120 * depth(f.y), "FLOORED", "#ffffff"); }
             slowmo(0.35, 0.3, f.x, f.y - 60, 1.1);
           } else if (name === "launch") {
-            if (f.shield) landHit(f, 0, 0.6);
-            else {
-              landHit(f, 1, 1.3, { kx: 0.2, noFloor: true });
-              if (!f.gone) { f.z = Math.max(f.z, 1); f.vz = 480; f.act = { kind: "air", t: 0 }; f.dizzy = Math.max(f.dizzy, 1); G.launched = true; pop(f.x, f.y - 140 * depth(f.y), "LAUNCHED", C.holy); }
-            }
+            landHit(f, 1, 1.3, { kx: 0.2, noFloor: true });
+            if (!f.gone) { f.z = Math.max(f.z, 1); f.vz = 480; f.act = { kind: "air", t: 0 }; f.dizzy = Math.max(f.dizzy, 1); G.launched = true; pop(f.x, f.y - 140 * depth(f.y), "LAUNCHED", C.holy); }
           } else if (name === "slam") {
             const landed = landHit(f, 1.5, 1.6, { kx: 0.3 });
             if (landed !== false && !f.gone) { f.dizzy = Math.max(f.dizzy, 1.0); G.shake = 7; }
           } else {
-            const landed = landHit(f, 1, 1);
-            if (landed === false) { act("hurt", { dur: 0.3, small: true }); return; }
+            landHit(f, 1, 1);
             // Now and then he fumbles the holy water, and it splashes the demon behind him.
             const behind = G.foes.find((o) => !o.gone && o !== f && Math.sign(o.x - H0.x) === -H0.dir && Math.abs(o.x - H0.x) < 120 && Math.abs(o.y - H0.y) < 40);
             if (behind && Math.random() < 0.12) fumble(behind);
@@ -1095,6 +1263,7 @@ const Fight = (() => {
       const f = A0.f;
       if (u >= 1) {
         if (!f || f.gone) { after(); return; }
+        if (f.shield) { snatchShield(f); act("haul", { f, dur: 0.28, snatch: true }); Sound.fx.whoosh(0.3, 0.9, true); return; }
         f.act = { kind: "pulled", t: 0, x0: f.x, y0: f.y, x1: H0.x + H0.dir * 60, y1: H0.y + 1 }; f.sign = null; if (G.slowFor === f) G.slowFor = null;
         act("haul", { f, dur: 0.28 }); Sound.fx.whoosh(0.3, 0.9, true);
       }
@@ -1102,7 +1271,8 @@ const Fight = (() => {
     else if (A0.kind === "haul") {
       const f = A0.f;
       if (u >= 1) {
-        if (f && !f.gone) { f.act = { kind: "hurt", t: 0, dur: 0.5 }; f.x = H0.x + H0.dir * 60; f.y = H0.y + 1; f.z = 0; landHit(f, 1, 0.9, { front: false, kx: 0.1 }); if (!f.gone) f.dizzy = Math.max(f.dizzy, 1.4); pop(f.x, f.y - 130, "THE ROSARY", C.holy); ev("stole"); }
+        if (A0.snatch) { /* the shield is already flying */ }
+        else if (f && !f.gone) { f.act = { kind: "hurt", t: 0, dur: 0.5 }; f.x = H0.x + H0.dir * 60; f.y = H0.y + 1; f.z = 0; landHit(f, 1, 0.9, { front: false, kx: 0.1 }); if (!f.gone) f.dizzy = Math.max(f.dizzy, 1.4); pop(f.x, f.y - 130, "THE ROSARY", C.holy); ev("stole"); }
         if (G.rosary) { G.rosary.phase = "back"; G.rosary.t = 0; }
         after();
       }
@@ -1193,14 +1363,14 @@ const Fight = (() => {
     if (G.over || G.down) return;
     G.nextAtk -= dt;
     const winding = G.foes.filter((f) => !f.gone && (f.act.kind === "wind" || f.act.kind === "lunge")).length;
-    const maxW = G.wave >= 3 || G.world === "depths" ? 2 : 1;
+    const maxW = Math.max(G.arena ? G.arena.maxW : G.wave >= 3 ? 2 : 1, G.world === "depths" ? 2 : 1);
     if (G.nextAtk > 0 || winding >= maxW) return;
     const H0 = G.hero, cands = G.foes.filter((f) => !f.gone && f.act.kind === "idle" && f.dizzy <= 0 && f.z === 0 && Math.abs(f.x - H0.x) < 300);
     if (!cands.length) return;
     const f = cands[Math.floor(Math.random() * cands.length)];
     const grab = f.kind === "grab";
     windUp(f, grab);
-    const gap = (WAVES[G.wave] || WAVES[0]).gap; G.nextAtk = lerp(gap[0], gap[1], Math.random()) * (G.world === "depths" ? 0.75 : 1);
+    const gap = ((G.arena && G.arena.w) || WAVES[G.wave] || WAVES[0]).gap; G.nextAtk = lerp(gap[0], gap[1], Math.random()) * (G.world === "depths" ? 0.75 : 1);
     // The first time each sign shows, time nearly stops and the angel explains.
     if (!grab && !G.taught.gold) { G.taught.gold = true; G.slowFor = f; say(tip("A gold sign: tap him now, to counter!", "A gold sign: press X now, to counter!")); f.act.dur = 1.0; }
     if (grab && !G.taught.red) { G.taught.red = true; G.slowFor = f; say(tip("A red sign cannot be countered. Hold on the open street, to block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
@@ -1218,9 +1388,17 @@ const Fight = (() => {
     if (a.kind === "thrown") {
       f.x += a.vx * dt; f.y = clamp(f.y + a.vy * dt, Y0, Y1); f.vz -= 700 * dt; f.z = Math.max(0, f.z + f.vz * dt);
       for (const o of G.foes) if (o !== f && !o.gone && !a.hits.includes(o) && Math.abs(o.x - f.x) < 44 && Math.abs(o.y - f.y) < 36) {
-        a.hits.push(o); landHit(o, 2, 1.7, { front: false, breaks: true, fromX: f.x }); if (!o.gone && !lying(o)) o.dizzy = Math.max(o.dizzy, 1.6); ev("throwhit"); pop(o.x, o.y - 120, "BOWLED OVER", C.holy);
+        a.hits.push(o);
+        if (o.shield) { Sound.fx.clang(pan(o.x)); sparks(o.x, o.y - 60, "#ff9a60", 8); o.vx = Math.sign(o.x - f.x || 1) * 160; pop(o.x, o.y - 120, "OFF THE SHIELD", "#ff8a70"); continue; }
+        landHit(o, 2, 1.7, { front: false, breaks: true, fromX: f.x }); if (!o.gone && !lying(o)) o.dizzy = Math.max(o.dizzy, 1.6); ev("throwhit"); pop(o.x, o.y - 120, "BOWLED OVER", C.holy);
       }
-      if (f.x < FX0 || f.x > FX1() || a.t > 0.6) { f.x = clamp(f.x, FX0, FX1()); f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.z = 0; f.vz = 0; landHit(f, 2, 1.4, { angel: true, front: false, kx: 0.2, noFloor: true }); if (!f.gone) floor(f); G.shake = 6; }
+      // Into a wall: it hits it hard and comes flying back the other way, into whoever is there.
+      if (walled() && (f.x < FX0() || f.x > FX1()) && (a.bounces || 0) < 2) {
+        a.bounces = (a.bounces || 0) + 1; f.x = clamp(f.x, FX0(), FX1()); a.vx = -a.vx * 0.72; a.t = Math.min(a.t, 0.22); a.hits = [];
+        wallSlam(f, true);
+        return;
+      }
+      if (f.x < FX0() || f.x > FX1() || a.t > 0.6) { f.x = clamp(f.x, FX0(), FX1()); f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.z = 0; f.vz = 0; landHit(f, 2, 1.4, { angel: true, front: false, kx: 0.2, noFloor: true }); if (!f.gone) floor(f); G.shake = 6; }
       return;
     }
     if (a.kind === "pulled") { const u = clamp(a.t / 0.28, 0, 1), e = u * u; f.x = lerp(a.x0, a.x1, e); f.y = lerp(a.y0, a.y1, e); f.z = Math.sin(u * PI) * 20; if (u >= 1 && !(by.kind === "haul" && by.f === f)) { f.z = 0; f.act = { kind: "hurt", t: 0, dur: 0.4 }; } return; }
@@ -1236,9 +1414,13 @@ const Fight = (() => {
     f.x += f.vx * dt; f.vx *= 1 - 6 * dt;
     if (f.holeT > 0) f.holeT -= dt;
     if (a.kind === "castout") return;
-    if (f.x < FX0) { f.x = FX0; f.vx = Math.abs(f.vx) * 0.3; } if (f.x > FX1()) { f.x = FX1(); f.vx = -Math.abs(f.vx) * 0.3; }
+    if (f.x < FX0() || f.x > FX1()) {
+      const right = f.x > FX1(), sp = Math.abs(f.vx); f.x = right ? FX1() : FX0();
+      if (walled() && (sp > 80 || f.toWall)) { f.toWall = false; f.vx = (right ? -1 : 1) * Math.max(160, sp * 0.6); wallSlam(f, sp > 240); if (f.gone) return; }
+      else f.vx = (right ? -1 : 1) * sp * 0.3;
+    }
     if (a.kind === "emerge") { f.dir = H0.x >= f.x ? 1 : -1; if (a.t > a.dur) { f.act = { kind: "idle", t: 0 }; f.holeT = 0.5; } return; }
-    if (a.kind === "hurt") { if (a.t > a.dur) f.act = { kind: "idle", t: 0 }; return; }
+    if (a.kind === "hurt") { if (a.t > a.dur) { f.act = { kind: "idle", t: 0 }; f.toWall = false; } return; }
     if (a.kind === "face") { if (a.t > 1.4) f.act = { kind: "idle", t: 0 }; return; }
     // Down on the street, and up again.
     if (a.kind === "floored") { if (a.t > a.dur) { f.act = { kind: "rise", t: 0, face: a.face }; Sound.fx.growl(0.3); } return; }
@@ -1271,12 +1453,12 @@ const Fight = (() => {
     // Their places stay on the screen: one that would stand past the edge goes round to his other side.
     const ring = 92 + (f.kind === "grab" ? 20 : 0);
     let side = f.x >= H0.x ? 1 : -1;
-    if (H0.x + side * (ring + 30) < 40 || H0.x + side * (ring + 30) > G.ww - 40) side = -side;
-    let tx = clamp(H0.x + side * ring + Math.sin(f.slot + G.t * 0.3) * 30, 40, G.ww - 40), ty = clamp(H0.y + Math.sin(f.slot * 2.1 + G.t * 0.25) * 34, Y0, Y1);
+    if (H0.x + side * (ring + 30) < FX0() + 16 || H0.x + side * (ring + 30) > FX1() - 16) side = -side;
+    let tx = clamp(H0.x + side * ring + Math.sin(f.slot + G.t * 0.3) * 30, FX0() + 16, FX1() - 16), ty = clamp(H0.y + Math.sin(f.slot * 2.1 + G.t * 0.25) * 34, Y0, Y1);
     for (const o of others) { const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy); if (d < 60 && d > 0.1) { tx += dx / d * 50; ty += dy / d * 20; } }
     const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
     if (d > 6) { const sp = f.kind === "grab" ? 55 : 72; f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
-    f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0, FX1());
+    f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0(), FX1());
   }
   // A block is good for one blow: after it, he has to block again.
   function spendBlock() { act("idle"); if (G.touch) G.touch.spent = true; G.qSpent = true; }
@@ -1304,7 +1486,7 @@ const Fight = (() => {
       act("grabbed", { by: f }); f.act = { kind: "grabbing", t: 0 };
       Sound.fx.growl(1);
       // On the street, a grab that catches him drags the whole fight down into the Depths.
-      if (G.world === "street" && !G.kata) { pop(H0.x, H0.y - 140, "DRAGGED DOWN", "#ff5a3a"); G.dragT = 0.45; }
+      if (ground() && !G.kata) { pop(H0.x, H0.y - 140, "DRAGGED DOWN", "#ff5a3a"); G.dragT = 0.45; }
       if (G.kata) G.releaseT = 0.7;
       return;
     }
@@ -1314,6 +1496,7 @@ const Fight = (() => {
     hurtHero(10);
   }
   function castOut(f) {
+    if (G.arena && !f.gone) G.arena.cast++;
     f.gone = true; f.sign = null; f.act = { kind: "castout", t: 0 }; f.vx = Math.sign(f.x - G.hero.x || 1) * 260; f.vz = 260; f.z = Math.max(f.z, 1);
     Sound.fx.yelp(pan(f.x));
     setTimeout(() => { Sound.fx.puff(); }, 380);
@@ -1334,8 +1517,8 @@ const Fight = (() => {
   function stepKeys(dt) {
     const H0 = G.hero, [kx, ky] = arrows(), moving = kx || ky;
     // Timers for the grabs: dragged into the Depths on the street; let go at once in the practice.
-    if (G.dragT) { G.dragT -= dt; if (G.dragT <= 0) { G.dragT = 0; if (G.world === "street" && !G.over && H0.act.kind === "grabbed") shiftTo("depths"); } }
-    if (G.woeDrag) { G.woeDrag -= dt; if (G.woeDrag <= 0) { G.woeDrag = 0; if (G.world === "street" && !G.over && !G.down) { if (H0.act.kind === "grabbed" || H0.act.kind === "trip") act("idle"); shiftTo("depths"); } } }
+    if (G.dragT) { G.dragT -= dt; if (G.dragT <= 0) { G.dragT = 0; if (ground() && !G.over && H0.act.kind === "grabbed") shiftTo("depths"); } }
+    if (G.woeDrag) { G.woeDrag -= dt; if (G.woeDrag <= 0) { G.woeDrag = 0; if (ground() && !G.over && !G.down) { if (H0.act.kind === "grabbed" || H0.act.kind === "trip") act("idle"); shiftTo("depths"); } } }
     if (G.woeT) G.woeT = Math.max(0, G.woeT - dt);
     if (G.releaseT) { G.releaseT -= dt; if (G.releaseT <= 0) { G.releaseT = 0; if (H0.act.kind === "grabbed") act("idle"); } }
     if (moving && (H0.act.kind === "idle" || H0.act.kind === "run")) {
@@ -1351,7 +1534,7 @@ const Fight = (() => {
     o = o || {};
     const H0 = G.hero, [kx, ky] = arrows(), m = Math.hypot(kx, ky);
     const gadget = o.air || o.far || o.near;
-    const cands = alive().filter((f) => (!o.air || f.z > 20) && (!o.far || !near(f)) && (!o.near || near(f)) && !(gadget && lying(f))).map((f) => ({ f, x: f.x, y: f.y }));
+    const cands = alive().filter((f) => (!o.air || f.z > 20) && (!o.far || !near(f) || f.shield) && (!o.near || near(f)) && !(gadget && lying(f))).map((f) => ({ f, x: f.x, y: f.y }));
     if (o.chains && chainsOpen()) cands.push({ chains: true, x: G.guard.x + 46, y: Y0 + 4 });
     let best = null, bs = -1e9;
     for (const c of cands) {
@@ -1362,7 +1545,7 @@ const Fight = (() => {
       else s = -d + (Math.sign(dx) === H0.dir ? 60 : 0);
       if (c.f && c.f.sign === "gold") s += 40;
       if (c.f && lying(c.f) && d < 320) s += 90;      // one that is down is the chance to take
-      if (o.far) s += d * 1.4;
+      if (o.far) s += d * 1.4 + (c.f && c.f.shield ? 400 : 0);
       if (s > bs) { bs = s; best = c; }
     }
     return best;
@@ -1372,8 +1555,8 @@ const Fight = (() => {
   function sparks(x, y, c, n) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 120 + Math.random() * 240; G.parts.push({ kind: "spark", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c, t: 0 }); } }
   function shards(x, y) { for (let i = 0; i < 10; i++) G.parts.push({ kind: "shard", x, y, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, r: Math.random() * TAU, t: 0 }); }
   function puff(x, y, c, n, dark) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 30 + Math.random() * 60; G.parts.push({ kind: dark ? "smoke" : "puff", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, t: 0, c }); } }
-  function pop(x, y, text, c, big) { const cx = G.view.cx; G.pops.push({ x: clamp(x, cx - W / 2 + 60, cx + W / 2 - 60), y: Math.max(70, y), text, c, t: 0, big }); }
-  const LIFE = { hat: 2.5, ring: 0.8, smoke: 0.9, puff: 0.9, flask: 0.5, link: 1.4, streak: 0.3, mark: 0.4, throwflask: 0.3, beam: 1.2, warn: 0.5 };
+  function pop(x, y, text, c, big) { const cx = G.view.cx; G.pops.push({ x: clamp(x, cx - W / 2 + 90, cx + W / 2 - 90), y: Math.max(70, y), text, c, t: 0, big }); }
+  const LIFE = { shieldfly: 1.6, hat: 2.5, ring: 0.8, smoke: 0.9, puff: 0.9, flask: 0.5, link: 1.4, streak: 0.3, mark: 0.4, throwflask: 0.3, beam: 1.2, warn: 0.5 };
   function stepParts(dt) {
     for (const p of G.parts) {
       p.t += dt;
@@ -1381,7 +1564,8 @@ const Fight = (() => {
       else if (p.kind === "puff" || p.kind === "smoke") { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - 3 * dt; p.vy *= 1 - 3 * dt; }
       else if (p.kind === "hat") { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.r += p.vr * dt; if (p.y > p.floor - 4) { p.y = p.floor - 4; p.vy = -p.vy * 0.3; p.vx *= 0.6; p.vr *= 0.5; } }
       else if (p.kind === "ring") p.r += dt * 900;
-      else if (p.kind === "flask" && p.t > 0.45 && !p.done) { p.done = true; splashAt(p.x1, p.y1); if (!p.f.gone) { landHit(p.f, 2, 1.2, { front: false, breaks: true }); if (!p.f.gone) p.f.dizzy = Math.max(p.f.dizzy, 1.8); pop(p.x1, p.y1 - 50, "SPLASH!", "#9fe4ff"); } }
+      else if (p.kind === "shieldfly") { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt; p.r += p.vr * dt; }
+      else if (p.kind === "flask" && p.t > 0.45 && !p.done) { p.done = true; splashAt(p.x1, p.y1); if (!p.f.gone && !p.f.shield) { landHit(p.f, 2, 1.2, { front: false, breaks: true }); if (!p.f.gone) p.f.dizzy = Math.max(p.f.dizzy, 1.8); pop(p.x1, p.y1 - 50, "SPLASH!", "#9fe4ff"); } }
       else if (p.kind === "throwflask" && p.t >= p.dur && !p.done) {
         // The holy water lands: the one it was meant for is stunned, and those beside it splashed.
         p.done = true; splashAt(p.x1, p.y1);
@@ -1389,6 +1573,7 @@ const Fight = (() => {
         for (const f of G.foes) {
           if (f.gone) continue;
           const d = Math.hypot(f.x - p.x1, (f.y - 60 * depth(f.y)) - p.y1);
+          if (f.shield && (f === p.f || d < 40)) { pop(f.x, f.y - 110 * depth(f.y), "OFF THE SHIELD", "#9fe4ff"); continue; }
           if (f === p.f || d < 40) { if (!hit) { landHit(f, 1, 1, { front: false, kx: 0.3 }); hit = true; } else landHit(f, 0.5, 0.6, { front: false, angel: true, kx: 0.2 }); if (!f.gone) f.dizzy = Math.max(f.dizzy, f === p.f ? 1.4 : 0.8); }
           else if (d < 70) f.dizzy = Math.max(f.dizzy, 0.6);
         }
@@ -1398,6 +1583,207 @@ const Fight = (() => {
     G.parts = G.parts.filter((p) => p.t < (LIFE[p.kind] || 0.6));
     for (const p of G.pops) p.t += dt;
     G.pops = G.pops.filter((p) => p.t < 1.1);
+  }
+
+
+  // ---- The places of the Holy Hour -------------------------------------------------------------------
+  // Each drawn once, the whole width of it, into a picture kept off the screen (`back`); only the
+  // candles, the lamps and the light of the Host are drawn every frame (`live`). The floor starts
+  // where the back wall ends, at FY, and a room's walls stand at each end.
+  const FY = Y0 - 16;
+  function roomWalls(w, c, edge) {
+    for (const right of [false, true]) {
+      const x = right ? w - WALL : 0;
+      rect(x, 0, WALL, H, c); rect(right ? x : x + WALL - 3, 0, 3, H, edge);
+      rect(x, FY - 6, WALL, 6, "rgba(0,0,0,0.25)");
+      ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(right ? x - 12 : x + WALL, FY, 12, H - FY);
+    }
+  }
+  function floorOf(w, c0, c1, cx, joint) {
+    const fg = ctx.createLinearGradient(0, FY, 0, H); fg.addColorStop(0, c0); fg.addColorStop(1, c1); ctx.fillStyle = fg; ctx.fillRect(0, FY, w, H - FY);
+    for (let k = 1; k < 7; k++) { const y = FY + k * k * 2.6 + k * 4; line(0, y, w, y, joint, 1); }
+    for (let x = -w; x < 2 * w; x += 64) line(cx + (x - cx) * 0.7, FY, cx + (x - cx) * 1.5, H, joint, 1);
+  }
+  function nightSky(w, top, bottom, seed) {
+    const g = ctx.createLinearGradient(0, 0, 0, FY); g.addColorStop(0, top); g.addColorStop(1, bottom); ctx.fillStyle = g; ctx.fillRect(0, 0, w, FY);
+    stars(seed, Math.round(w / 5), 0, 0, w, FY - 30, 0);
+  }
+  function mesas(w, y, c, seed) {
+    const r = seeded(seed); let x = -40;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(-40, y);
+    while (x < w + 40) { const top = y - 20 - r() * 50, run = 80 + r() * 160; ctx.lineTo(x + 18, top); ctx.lineTo(x + run - 18, top + r() * 6); ctx.lineTo(x + run, y - r() * 10); x += run + r() * 120; ctx.lineTo(x, y - r() * 6); }
+    ctx.lineTo(w + 40, y); ctx.closePath(); ctx.fill();
+  }
+  function arch(x0, x1, top, spring, c) {
+    // The solid wall above an opening, its underside a round arch.
+    const r = (x1 - x0) / 2;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x0, top); ctx.lineTo(x1, top); ctx.lineTo(x1, spring); ctx.arc(x0 + r, spring, r, 0, PI, true); ctx.closePath(); ctx.fill();
+  }
+  const flick = (t, k) => 0.8 + 0.2 * Math.sin(t * 9 + k) * Math.sin(t * 4.3 + k * 2);
+  function candle(x, y, t, k, a) { rect(x - 2, y, 4, 12, "#efe6d6"); circle(x, y - 2, 2.4, "#ffd27a"); glow(x, y - 4, 30, "#ffb04a", (a || 0.5) * flick(t, k)); }
+  const ROOM_ART = {
+    // The chapel of the monastery, at night: adobe, the beams of the roof, the altar, and on it the
+    // monstrance, the Host in a sunburst of gold, the only bright thing in the room.
+    chapel: {
+      back(w) {
+        const cx = w / 2, my = FY - 118;
+        const g = ctx.createLinearGradient(0, 0, 0, FY); g.addColorStop(0, "#0c0705"); g.addColorStop(1, "#26160f"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, FY);
+        rect(0, 0, w, 16, "#0a0604"); for (let x = 20; x < w; x += 70) rect(x, 10, 12, 10, "#1e120c");
+        for (let x = 120; x < w - 90; x += 190) {
+          if (Math.abs(x - cx) < 210) continue;
+          rect(x - 22, 56, 44, 78, "#120a08");
+          ctx.fillStyle = "#070818"; ctx.beginPath(); ctx.moveTo(x - 15, 128); ctx.lineTo(x - 15, 80); ctx.arc(x, 80, 15, PI, TAU); ctx.lineTo(x + 15, 128); ctx.closePath(); ctx.fill();
+          ctx.save(); ctx.clip(); stars(x | 0, 12, x - 15, 62, 30, 66, 0); ctx.restore();
+        }
+        for (let x = 70; x < w - 50; x += 96) { if (Math.abs(x - cx) < 220) continue; rect(x - 1.5, 150, 3, 16, "#0e0806"); rect(x - 6, 154, 12, 3, "#0e0806"); }
+        rect(cx - 124, FY - 6, 248, 8, "#2a1810");
+        rect(cx - 88, FY - 66, 176, 62, "#2e1c14"); rect(cx - 94, FY - 70, 188, 7, "#e8dccb"); rect(cx - 94, FY - 63, 188, 16, "rgba(232,220,203,0.45)");
+        rect(cx - 2, FY - 44, 4, 28, "#8a6a2a"); rect(cx - 10, FY - 36, 20, 4, "#8a6a2a");
+        poly([cx - 15, FY - 70, cx + 15, FY - 70, cx + 6, FY - 78, cx - 6, FY - 78], "#b8923a");
+        rect(cx - 2, my + 18, 4, FY - 78 - my - 18, "#b8923a"); circle(cx, my + 26, 4, "#c8a24a");
+        for (let i = 0; i < 24; i++) { const a = i * TAU / 24, r2 = i % 2 ? 25 : 32; line(cx + Math.cos(a) * 13, my + Math.sin(a) * 13, cx + Math.cos(a) * r2, my + Math.sin(a) * r2, "#d8b050", i % 2 ? 1.4 : 2.4); }
+        circle(cx, my, 13, "#d8b050"); circle(cx, my, 9.5, "#fffaf0");
+        line(cx - 150, 16, cx - 150, 96, "#3a2a1a", 1); rect(cx - 156, 96, 12, 14, "#5a0c0c");
+        floorOf(w, "#2a160e", "#120806", cx, "rgba(0,0,0,0.2)");
+        roomWalls(w, "#24150e", "#3a2418");
+      },
+      live(w, t) {
+        const cx = w / 2, my = FY - 118, fl = flick(t, 0);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.06 + 0.02 * Math.sin(t * 0.9); poly([cx - 18, my, cx + 18, my, cx + 170, H, cx - 170, H], C.holy); ctx.restore();
+        glow(cx, my, 74 + 6 * Math.sin(t * 1.3), C.holy, 0.55); glow(cx, my, 22, "#ffffff", 0.55);
+        for (const [k, i] of [[-72, 0], [-48, 1], [48, 2], [72, 3]]) candle(cx + k, FY - 84 - Math.abs(k) * 0.1, t, i, 0.45);
+        glow(cx - 150, 104, 34, C.red, 0.6 * fl);
+        glowOval(cx, FY + 34, 300, 60, "#ffa040", 0.1 * fl);
+      },
+    },
+    // The cloister: round arches on adobe columns, and through them the garth under the stars, a
+    // well, an olive tree, the mesas far off. Open at both ends.
+    cloister: {
+      back(w) {
+        nightSky(w, "#03040c", "#1e1230", 61);
+        circle(w * 0.3, 52, 13, "#efe8d4"); glow(w * 0.3, 52, 60, "#efe8d4", 0.25);
+        mesas(w, FY - 46, "#22101a", 23);
+        rect(0, FY - 50, w, 50, "#140a10");
+        const r = seeded(29);
+        for (let x = 140; x < w; x += 300 + r() * 260) {
+          if (r() < 0.5) { rect(x - 3, FY - 92, 6, 46, "#0a0608"); ctx.fillStyle = "#0c0a0c"; ctx.beginPath(); ctx.ellipse(x, FY - 104, 34, 22, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(x - 20, FY - 92, 20, 14, 0, 0, TAU); ctx.fill(); }
+          else { rect(x - 22, FY - 66, 44, 18, "#2a1a16"); rect(x - 26, FY - 70, 52, 5, "#3a2420"); rect(x - 16, FY - 110, 4, 44, "#1a100c"); rect(x + 12, FY - 110, 4, 44, "#1a100c"); rect(x - 18, FY - 112, 36, 4, "#1a100c"); }
+        }
+        rect(0, 0, w, 44, "#2c1a14"); rect(0, 40, w, 6, "#3a2420");
+        const step = 156;
+        for (let x = 0; x < w + step; x += step) arch(x, x + step, 44, 124, "#3a2420");
+        for (let x = 0; x <= w + step; x += step) { rect(x - 10, 44, 20, FY - 44, "#3a2420"); rect(x - 14, FY - 14, 28, 14, "#2e1c16"); rect(x - 13, 116, 26, 8, "#2e1c16"); rect(x - 10, 44, 3, FY - 44, "#4a2e26"); }
+        floorOf(w, "#2a1c18", "#140c0a", w / 2, "rgba(0,0,0,0.22)");
+      },
+      live(w, t, x0, x1) {
+        for (let x = 78; x < w; x += 312) { if (x < x0 - 60 || x > x1 + 60) continue; const y = 70 + Math.sin(t * 1.2 + x) * 1.5, fl = flick(t, x); line(x, 46, x, y - 6, "#1a100c", 1); rect(x - 5, y - 6, 10, 12, "#3a2414"); rect(x - 3, y - 4, 6, 8, "#ffcf7a"); glow(x, y, 46, "#ffa040", 0.5 * fl); glowOval(x, FY + 40, 120, 26, "#ffa040", 0.08 * fl); }
+      },
+    },
+    // His cell in the desert: an adobe wall, a small window of stars, the crucifix, the narrow bed,
+    // the stool with his breviary, a candle. Small: they are all close.
+    cell: {
+      back(w) {
+        const g = ctx.createLinearGradient(0, 0, w, FY); g.addColorStop(0, "#2a1a16"); g.addColorStop(1, "#160d0a"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, FY);
+        const wx = w * 0.62, wy = 44;
+        rect(wx - 4, wy - 4, 78, 70, "#120a08"); rect(wx, wy, 70, 62, "#06071a"); ctx.save(); ctx.beginPath(); ctx.rect(wx, wy, 70, 62); ctx.clip(); stars(5, 30, wx, wy, 70, 62, 0); ctx.restore(); rect(wx + 33, wy, 4, 62, "#120a08");
+        const kx = w * 0.36, ky = 52; rect(kx - 2, ky, 4, 54, "#0c0706"); rect(kx - 16, ky + 12, 32, 4, "#0c0706"); circle(kx, ky + 14, 3, "#0c0706");
+        const bx = WALL + 26, by = FY - 30;
+        rect(bx, by, 230, 12, "#1a100c"); rect(bx, by + 12, 8, 30, "#0e0806"); rect(bx + 222, by + 12, 8, 30, "#0e0806");
+        ctx.fillStyle = "#3a2c24"; ctx.beginPath(); ctx.moveTo(bx + 40, by); ctx.quadraticCurveTo(bx + 90, by - 14, bx + 160, by - 10); ctx.quadraticCurveTo(bx + 210, by - 8, bx + 228, by); ctx.closePath(); ctx.fill();
+        rect(bx + 4, by - 10, 46, 10, "#5a4c40");
+        const sx = w - WALL - 120; rect(sx - 26, FY - 44, 52, 6, "#24160f"); rect(sx - 22, FY - 38, 4, 38, "#1a0f0a"); rect(sx + 18, FY - 38, 4, 38, "#1a0f0a"); rect(sx - 4, FY - 50, 22, 6, "#3a0f12");
+        floorOf(w, "#1e130e", "#0e0806", w / 2, "rgba(0,0,0,0.18)");
+        roomWalls(w, "#2a1a14", "#3a2618");
+      },
+      live(w, t) {
+        const wx = w * 0.62, sx = w - WALL - 120;
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.05; poly([wx, 44, wx + 70, 44, wx + 150, H, wx - 30, H], "#9fb4ff"); ctx.restore();
+        candle(sx - 14, FY - 62, t, 3, 0.55); glowOval(sx, FY + 30, 160, 40, "#ffa040", 0.1 * flick(t, 3));
+      },
+    },
+    // On the roof by the bell tower: the parapet, the tower with its bell, the desert far below.
+    tower: {
+      back(w) {
+        nightSky(w, "#04050e", "#221632", 88);
+        circle(w * 0.72, 46, 11, "#efe8d4"); glow(w * 0.72, 46, 54, "#efe8d4", 0.22);
+        mesas(w, FY - 34, "#1e0e16", 41);
+        rect(0, FY - 36, w, 36, "#0e070c");
+        const adobe = "#3a2420", cx = w / 2;
+        ctx.fillStyle = adobe; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - 74, 24, 148, FY, 8) : ctx.rect(cx - 74, 24, 148, FY); ctx.fill();
+        ctx.fillStyle = "#08050a"; ctx.beginPath(); ctx.moveTo(cx - 40, 150); ctx.lineTo(cx - 40, 86); ctx.arc(cx, 86, 40, PI, TAU); ctx.lineTo(cx + 40, 150); ctx.closePath(); ctx.fill();
+        rect(cx - 3, 0, 6, 26, "#2a1a14"); rect(cx - 16, 6, 32, 5, "#2a1a14");
+        for (const k of [-0.32, 0.3]) { const x = w * (0.5 + k); ctx.fillStyle = "#2c1a16"; ctx.beginPath(); ctx.arc(x, FY - 26, 34, PI, TAU); ctx.fill(); rect(x - 34, FY - 26, 68, 4, "#2c1a16"); }
+        rect(0, FY - 28, w, 28, "#3a2420"); rect(0, FY - 30, w, 4, "#4a2e26");
+        for (let x = 30; x < w; x += 110) rect(x, FY - 20, 6, 4, "#1a0e0a");
+        floorOf(w, "#2c1a14", "#140a08", w / 2, "rgba(0,0,0,0.2)");
+      },
+      live(w, t) {
+        const cx = w / 2, a = Math.sin(t * 0.9) * 0.08;
+        glow(cx, 110, 50, "#ffa040", 0.2 * flick(t, 5));
+        ctx.save(); ctx.translate(cx, 64); ctx.rotate(a);
+        rect(-2, 0, 4, 10, "#1a120a"); ctx.beginPath(); ctx.moveTo(-14, 10); ctx.quadraticCurveTo(-16, 40, -28, 52); ctx.lineTo(28, 52); ctx.quadraticCurveTo(16, 40, 14, 10); ctx.closePath(); ctx.fillStyle = "#7a6234"; ctx.fill();
+        circle(0, 54, 5, "#5a4624"); ctx.restore();
+      },
+    },
+    // The crypt under the chapel: low vaults, the brothers' graves in rows of niches, a stone
+    // sarcophagus, and a few candles left burning for the dead.
+    crypt: {
+      back(w) {
+        const g = ctx.createLinearGradient(0, 0, 0, FY); g.addColorStop(0, "#08070a"); g.addColorStop(1, "#1a1418"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, FY);
+        for (let row = 0; row < 3; row++) for (let x = 70 + (row % 2) * 40; x < w - 70; x += 80) {
+          const y = 84 + row * 44, open = (x * 7 + row * 13) % 5 === 0;
+          rect(x - 30, y, 60, 34, "#0a080a"); rect(x - 27, y + 3, 54, 28, open ? "#040305" : "#2a2426");
+          if (!open) { rect(x - 10, y + 12, 20, 2, "#16121a"); rect(x - 7, y + 17, 14, 2, "#16121a"); rect(x - 1, y + 7, 2, 8, "#16121a"); rect(x - 4, y + 9, 8, 2, "#16121a"); }
+        }
+        const bay = 180;
+        for (let x = -bay / 2; x < w + bay; x += bay) arch(x, x + bay, 0, 70, "#0e0b0e");
+        for (let x = bay / 2; x < w; x += bay) { rect(x - 7, 40, 14, 40, "#0e0b0e"); }
+        const cx = w / 2;
+        rect(cx - 70, FY - 46, 140, 46, "#2a2226"); rect(cx - 76, FY - 52, 152, 8, "#3a3034"); rect(cx - 2, FY - 40, 4, 28, "#1a1418"); rect(cx - 10, FY - 32, 20, 4, "#1a1418");
+        floorOf(w, "#1c1618", "#0a0809", cx, "rgba(0,0,0,0.25)");
+        roomWalls(w, "#141012", "#241e22");
+      },
+      live(w, t) {
+        const cx = w / 2;
+        for (const [x, y, k] of [[cx - 50, FY - 64, 0], [cx + 52, FY - 64, 1], [cx - 260, 110, 2], [cx + 250, 154, 3], [cx - 120, 154, 4]]) if (x > WALL + 20 && x < w - WALL - 20) candle(x, y, t, k, 0.4);
+        glowOval(cx, FY + 26, 220, 46, "#ffa040", 0.08 * flick(t, 0));
+      },
+    },
+    // The desert at night: the stars, the mesas, the monastery far off with a candle in its window,
+    // the sand, the creosote. Wide open.
+    desert: {
+      back(w) {
+        nightSky(w, "#03040c", "#2a1630", 77);
+        circle(w * 0.62, 60, 14, "#efe8d4"); glow(w * 0.62, 60, 70, "#efe8d4", 0.22);
+        mesas(w, FY - 20, "#2c1418", 55); mesas(w, FY - 6, "#200e14", 57);
+        const mx = w / 2 + 40, my = FY - 8, adobe = "#3a2420", adobeD = "#26160f";
+        rect(mx - 110, my - 46, 120, 46, adobe); rect(mx + 4, my - 64, 92, 64, adobeD); rect(mx + 60, my - 104, 30, 104, adobe);
+        rect(mx + 68, my - 96, 14, 18, "#0a0608"); rect(mx + 74, my - 120, 2, 16, "#4a3424"); rect(mx + 69, my - 115, 12, 2, "#4a3424");
+        for (const vx of [mx - 96, mx - 70, mx - 44]) rect(vx, my - 30, 8, 11, "#0a0608");
+        rect(mx + 30, my - 40, 10, 14, "#ffb04a");
+        const fg = ctx.createLinearGradient(0, FY - 8, 0, H); fg.addColorStop(0, "#2a1810"); fg.addColorStop(1, "#120a08"); ctx.fillStyle = fg; ctx.fillRect(0, FY - 8, w, H - FY + 8);
+        ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1;
+        for (let k = 0; k < 9; k++) { const y = FY + 10 + k * 13; ctx.beginPath(); ctx.moveTo(0, y); for (let x = 0; x <= w; x += 40) ctx.lineTo(x, y + Math.sin(x * 0.01 + k) * 3); ctx.stroke(); }
+        const r = seeded(19);
+        for (let i = 0; i < Math.round(w / 140); i++) { const x = r() * w, y = FY - 4 + r() * 10, sc = 0.6 + r(); for (let k = -3; k <= 3; k++) line(x, y, x + k * 3 * sc, y - (14 - Math.abs(k) * 2) * sc, "#0b0608", 1.4); }
+      },
+      live(w, t) { const mx = w / 2 + 40, my = FY - 8; glow(mx + 35, my - 33, 36, "#ffa040", 0.6 * flick(t, 2)); },
+    },
+  };
+  let roomCv = null, roomKey = "";
+  function roomLayer() {
+    const key = G.room.id + ":" + G.ww + ":" + W + ":" + H + ":" + DPR + ":" + scale;
+    if (roomCv && roomKey === key) return roomCv;
+    roomKey = key; roomCv = document.createElement("canvas"); roomCv.width = Math.round(G.ww * scale * DPR); roomCv.height = Math.round(H * scale * DPR);
+    const c2 = roomCv.getContext("2d"); c2.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0);
+    const back = useCtx(c2);
+    try { ROOM_ART[G.room.id].back(G.ww); } finally { useCtx(back); }
+    return roomCv;
+  }
+  function drawRoom(t) {
+    const [vx0, vx1] = viewSpan(), k = scale * DPR, x0 = clamp(Math.floor(vx0), 0, G.ww), x1 = clamp(Math.ceil(vx1), 0, G.ww);
+    if (x1 > x0) ctx.drawImage(roomLayer(), x0 * k, 0, (x1 - x0) * k, H * k, x0, 0, x1 - x0, H);
+    ROOM_ART[G.room.id].live(G.ww, t, vx0, vx1);
   }
 
   // ---- Drawing: the four worlds -----------------------------------------------------------------------
@@ -1486,6 +1872,11 @@ const Fight = (() => {
       ctx.strokeStyle = hexA(C.ember, 0.5); ctx.lineWidth = 1.4;
       tiles(400, vx0, vx1, (x0, r) => { for (let i = 0; i < 4; i++) { let x = x0 + r() * 400, y = Y0 + r() * (H - Y0); ctx.beginPath(); ctx.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (r() - 0.5) * 60; y += (r() - 0.3) * 14; ctx.lineTo(x, y); } ctx.stroke(); } });
       glowOval(G.view.cx, H, W * 0.6, 60, "#ff2a1a", 0.18 + 0.05 * Math.sin(t * 2));
+    } else if (world === "arena") drawRoom(t);
+    // A room's walls go with them into the Heights and the Depths: pillars of cloud, or of the dark.
+    if (walled() && (world === "heights" || world === "depths")) for (const right of [false, true]) {
+      const x = right ? G.ww - WALL : 0, hi = world === "heights";
+      rect(x, 0, WALL, H, hi ? "rgba(255,246,228,0.8)" : "#0c0306"); rect(right ? x : x + WALL - 3, 0, 3, H, hi ? C.holy : hexA(C.ember, 0.6));
     }
   }
   // From the screen to the street, through the camera's push-in.
@@ -1512,6 +1903,7 @@ const Fight = (() => {
     ents.push({ y: H0.y, draw: (fl) => drawHero(fl) });
     if (G.angel.act.kind !== "above") ents.push({ y: G.angel.y - 0.5, draw: (fl) => drawAngelE(fl) });
     for (const f of G.foes) ents.push({ y: f.y, draw: (fl) => drawFoe(f, fl) });
+    const SA = standingAngel(); if (SA) ents.push({ y: SA.y, draw: (fl) => { if (!fl) drawStandingAngel(SA); } });
     ents.sort((a, b) => a.y - b.y);
     if (G.world === "street" && !G.shift) for (const e of ents) e.draw(true);
     G.beads = rosaryBeads();
@@ -1536,7 +1928,13 @@ const Fight = (() => {
     if (G.shift) { const u = G.shift.t / 1.1; ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = hexA(G.shift.to === "depths" ? "#ff2a1a" : C.holy, 0.35 * Math.sin(u * PI)); ctx.fillRect(0, 0, W, H); ctx.restore(); }
     if (G.flash > 0) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = hexA(G.flashC, Math.min(0.5, G.flash * 0.6)); ctx.fillRect(0, 0, W, H); ctx.restore(); }
     drawHUD();
-    if (G.down) rect(0, 0, W, H, "rgba(0,0,0," + clamp((G.down - 1.2) / 0.8, 0, 1) * (G.down > 2.4 ? (2.8 - G.down) / 0.4 : 1) + ")");
+    if (G.down) rect(0, 0, W, H, "rgba(0,0,0," + clamp((G.down - 1.2) / 0.8, 0, 1) * (G.down > 2.4 && !G.arena ? (2.8 - G.down) / 0.4 : 1) + ")");
+    if (G.arena) {
+      const A = G.arena;
+      // Between the places, a moment of dark; and out of the dark, at the end.
+      if (A.phase === "trans") rect(0, 0, W, H, "rgba(0,0,0," + clamp(A.t < 0.55 ? A.t / 0.5 : 1 - (A.t - 0.6) / 0.5, 0, 1) + ")");
+      if (A.phase === "end" && A.t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - A.t / 0.8) + ")");
+    }
     if (G.over > (G.leaving ? 0.6 : 1.9)) rect(0, 0, W, H, "rgba(0,0,0," + clamp((G.over - (G.leaving ? 0.6 : 1.9)) / 1.0, 0, 1) + ")");
     if (G.t < 0.6 && !G.shift) rect(0, 0, W, H, "rgba(0,0,0," + (1 - G.t / 0.6) + ")");
   }
@@ -1585,15 +1983,19 @@ const Fight = (() => {
   }
   function drawHero(fl) {
     const H0 = G.hero, s = depth(H0.y), p = heroPose(), sway = H0.act.kind === "idle" ? Math.sin(G.t * 1.7) * 3 : 0;
-    const praying = H0.act.kind === "block" || H0.act.kind === "pray";
-    if (fl) { if (H0.z < 60) { if (praying) drawPriestFront(H0.x, H0.y + 2, s, { flipY: true, alpha: 0.16 }); else drawFigure("priest", H0.x + sway, H0.y + 2, s, H0.dir, p, { flipY: true, alpha: 0.16, t: G.t, pal: PRIEST_FIGHT }); } return; }
+    const adore = H0.act.kind === "adore", praying = H0.act.kind === "block" || H0.act.kind === "pray" || adore;
+    if (fl) { if (H0.z < 60) { if (praying) drawPriestFront(H0.x, H0.y + 2, s, { flipY: true, alpha: 0.16, kneel: adore }); else drawFigure("priest", H0.x + sway, H0.y + 2, s, H0.dir, p, { flipY: true, alpha: 0.16, t: G.t, pal: PRIEST_FIGHT }); } return; }
     // His ring of light on the ground, and his shadow.
     const ringA = 0.5 + 0.15 * Math.sin(G.t * 3);
     ctx.globalAlpha = 0.3; ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(H0.x, H0.y, 22 * s, 5 * s, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     glowOval(H0.x, H0.y + 1, 38 * s, 9 * s, C.holy, 0.35);
     ctx.strokeStyle = hexA(C.holy, ringA); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(H0.x, H0.y + 1, 26 * s, 6.5 * s, 0, 0, TAU); ctx.stroke();
     const hide = H0.inv > 0 && !["dodge", "dash"].includes(H0.act.kind) && Math.sin(G.t * 40) > 0;
-    if (praying) {
+    if (adore) {
+      // At adoration: on his knees, turned to us, the light of the Host on him.
+      glow(H0.x, H0.y - 50 * s, 64 * s, C.holy, 0.16 + 0.03 * Math.sin(G.t * 1.3));
+      drawPriestFront(H0.x, H0.y - H0.z, s, { kneel: true });
+    } else if (praying) {
       // The block: turned to us, in prayer, the light of his angel behind him like a halo.
       const k = Math.min(1, H0.act.t / 0.12), pul = 0.85 + 0.15 * Math.sin(G.t * 9), hx = H0.x, hy = H0.y - H0.z - 74 * s;
       glow(hx, hy - 6 * s, 70 * s * pul, C.holy, 0.35 * k);
@@ -1612,8 +2014,12 @@ const Fight = (() => {
     const P = PRIEST_FIGHT;
     ctx.save(); ctx.translate(x, y); ctx.scale(s, o.flipY ? -s * 0.62 : s);
     if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
-    ctx.fillStyle = P.shoe; ctx.beginPath(); ctx.ellipse(-5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = P.trouser; ctx.fillRect(-8.2, -40, 7.2, 38.5); ctx.fillStyle = P.trouser2; ctx.fillRect(1, -40, 7.2, 38.5);
+    // On his knees, the rest of him is lower by the length of his shins, and the coat meets the floor.
+    if (o.kneel) ctx.translate(0, 24);
+    else {
+      ctx.fillStyle = P.shoe; ctx.beginPath(); ctx.ellipse(-5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = P.trouser; ctx.fillRect(-8.2, -40, 7.2, 38.5); ctx.fillStyle = P.trouser2; ctx.fillRect(1, -40, 7.2, 38.5);
+    }
     poly([-12.5, -84, 12.5, -84, 15.5, -24, 0, -22, -15.5, -24], P.coat);
     poly([0, -84, 12.5, -84, 15.5, -24, 0, -22], P.coat2);
     poly([-6.2, -84, 0, -64, 6.2, -84], "#0d0f18");
@@ -1638,6 +2044,25 @@ const Fight = (() => {
     ctx.beginPath(); ctx.moveTo(-7.2, -100.5); ctx.lineTo(-6.2, -110.5); ctx.quadraticCurveTo(0, -113.5, 6.2, -110.5); ctx.lineTo(7.2, -100.5); ctx.closePath(); ctx.fill();
     ctx.fillStyle = P.band; ctx.fillRect(-7.1, -104, 14.2, 2);
     ctx.restore();
+  }
+  // In the Holy Hour the angel stands beside him while he kneels, and goes up when the fight comes.
+  function standingAngel() {
+    const A = G.arena; if (!A) return null;
+    let a = 0, lift = 0;
+    if (A.phase === "intro") a = smooth((A.t - 0.9) / 1.2);
+    else if (A.phase === "clear") a = smooth((A.t - 0.7) / 0.9);
+    else if (A.phase === "trans") a = 1;
+    else if (A.phase === "end") a = smooth((A.t - 0.6) / 1.2);
+    else if (A.up < 0.9) { a = 1 - A.up / 0.9; lift = A.up * A.up * 300; }
+    if (a <= 0.01) return null;
+    const H0 = G.hero, side = H0.x + 150 > G.ww - (walled() ? WALL + 30 : 30) ? -1 : 1;
+    return { x: H0.x + side * 112, y: H0.y - 18, a, lift, dir: -side };
+  }
+  function drawStandingAngel(SA) {
+    const s = depth(SA.y) * 1.05;
+    glowOval(SA.x, SA.y + 2, 60 * s, 12 * s, C.holy, 0.3 * SA.a * Math.max(0, 1 - SA.lift / 120));
+    glow(SA.x, SA.y - SA.lift - 80 * s, 110 * s, C.holy, 0.25 * SA.a);
+    drawFigure("angel", SA.x, SA.y - SA.lift, s, SA.dir, pose({ wa: -2.15 + 0.08 * Math.sin(G.t * 1.3), wl: 1.05, lift: 8 + 2 * Math.sin(G.t * 1.5), sF: 0.9, eF: 0.7, sB: 0.3, eB: 0.4, head: 0.2, hF: 0.05, kF: 0.1, hB: -0.05, kB: 0.1 }), { t: G.t, shine: 1, alpha: SA.a });
   }
   function drawAngelE(fl) {
     const A = G.angel, a = A.act, s = depth(A.y);
@@ -1777,6 +2202,13 @@ const Fight = (() => {
       else if (p.kind === "link") { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.max(0, a); ctx.strokeStyle = "#1a0a14"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(0, 0, 5, 2.6, 0, 0, TAU); ctx.stroke(); ctx.restore(); ctx.globalAlpha = 1; }
       else if (p.kind === "puff") { const k = p.t / 0.9; glow(p.x, p.y, 10 + k * 20, C.holy, (1 - k) * 0.8); circle(p.x, p.y, (1 - k) * 4, "#fff6dc"); }
       else if (p.kind === "smoke") { const k = p.t / 0.9; ctx.globalAlpha = (1 - k) * 0.7; circle(p.x, p.y, 8 + k * 16, G.world === "heights" ? "#e8dcc0" : "#030205"); ctx.globalAlpha = 1; }
+      else if (p.kind === "shieldfly") {
+        // The snatched shield, spinning away off the screen, its embers going out.
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.scale(p.s * 1.2, p.s * 1.2);
+        poly([-6, -31, 6, -27, 7, 27, -7, 31], "#050308");
+        ctx.strokeStyle = hexA(C.ember, 0.8 * Math.max(0, a)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1, -25); ctx.lineTo(2, -7); ctx.lineTo(-2, 7); ctx.lineTo(3, 23); ctx.stroke();
+        ctx.restore(); glow(p.x, p.y, 22, C.ember, 0.3 * Math.max(0, a));
+      }
       else if (p.kind === "ring") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a)); ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, 0, 0, TAU); ctx.stroke(); }
       else if (p.kind === "hat") { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.scale(p.s, p.s); ctx.fillStyle = "#050308"; ctx.beginPath(); ctx.ellipse(0, 0, 12, 2.2, 0, 0, TAU); ctx.fill(); if (p.hk === 1) { ctx.beginPath(); ctx.arc(0, -1, 6, PI, TAU); ctx.fill(); } else poly([-6, 0, -4, -8, 3, -7, 7, -1], "#050308"); ctx.restore(); }
       else if (p.kind === "flask" || p.kind === "throwflask") { const dur = p.kind === "flask" ? 0.45 : p.dur, k = clamp(p.t / dur, 0, 1), x = lerp(p.x, p.x1, k), y = lerp(p.y, p.y1, k) - Math.sin(k * PI) * (p.kind === "flask" ? 60 : 40); ctx.save(); ctx.translate(x, y); ctx.rotate(k * 12); rect(-2, -5, 4, 8, "#bfe8ff"); rect(-1, -7, 2, 2, "#e9e6df"); ctx.restore(); glow(x, y, 10, C.ice, 0.6); }
@@ -1790,8 +2222,44 @@ const Fight = (() => {
       text(p.text, p.x, y, { align: "center", size: p.big ? 16 : 11, weight: 800, spacing: p.big ? 3 : 2, color: p.c, glow: p.big ? C.holy : p.c, blur: p.big ? 16 : 10, alpha: a });
     }
   }
+  // The angel's words. In the practice they stay until the next lesson.
+  function drawMsg() {
+    const until = G.kata || (G.arena && G.arena.phase !== "fight") ? 60 : 7;
+    if (G.msg && G.msg.t < until) {
+      const a = clamp(G.msg.t / 0.3, 0, 1) * clamp((until - G.msg.t) / 0.8, 0, 1), who = G.msg.who === "guardian";
+      const ls = wrap(G.msg.text, Math.min(W - 240, 480), "italic 500 17px " + FONT.line), bw = Math.min(W - 220, 500);
+      ctx.globalAlpha = 0.55 * a; rect(W / 2 - bw / 2, 8, bw, 14 + ls.length * 20, "#050407"); ctx.globalAlpha = 1;
+      ls.forEach((l, i) => text(l, W / 2, 26 + i * 20, { align: "center", size: 17, weight: 500, italic: true, font: FONT.line, color: who ? "#c4f0ff" : "#f6eccb", alpha: a }));
+    }
+  }
+  function drawBanner() {
+    if (!G.banner) return;
+    const b = G.banner, a = clamp(b.t / 0.4, 0, 1) * clamp((3 - b.t) / 0.8, 0, 1), y = b.small ? 104 : H * 0.42;
+    text(b.text, W / 2, y, { align: "center", font: FONT.title, size: b.small ? 20 : 34, weight: 700, spacing: b.small ? 5 : 8, color: b.c, glow: b.c, blur: 20, alpha: a });
+    if (b.sub) text(b.sub, W / 2, y + (b.small ? 18 : 24), { align: "center", font: FONT.line, italic: true, size: b.small ? 13 : 16, weight: 500, color: b.c, alpha: a * 0.85 });
+  }
+  // The Holy Hour's first screen and last: only his angel's words, and the way on.
+  function drawArenaScreens() {
+    const A = G.arena;
+    drawMsg();
+    if (A.phase === "intro") {
+      const a = clamp((A.t - 0.4) / 0.8, 0, 1) * clamp((4.2 - A.t) / 0.8, 0, 1);
+      text("THE HOLY HOUR", W / 2, H * 0.46, { align: "center", font: FONT.title, size: 30, weight: 700, spacing: 8, color: "#ffffff", glow: C.holy, blur: 20, alpha: a });
+      if (A.t > 2.4) { const pul = 0.6 + 0.4 * Math.sin(G.t * 4); text(tip("TAP TO BEGIN", "SPACE TO BEGIN"), W / 2, H - 16, { align: "center", size: 11, weight: 800, spacing: 3, color: C.holy, glow: C.holy, blur: 10, alpha: pul }); }
+      if (save.arenaBest) text("YOUR BEST: " + save.arenaBest + (save.arenaBest === 1 ? " ROUND" : " ROUNDS"), 16, H - 14, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)" });
+    } else {
+      const a = clamp((A.t - 1.4) / 0.6, 0, 1); if (a <= 0) return;
+      ctx.globalAlpha = a * 0.55; rect(0, 0, W, H, "#050407"); ctx.globalAlpha = 1;
+      const cx = W / 2, y = Math.max(96, H * 0.34);
+      text("THE HOLY HOUR", cx, y, { align: "center", font: FONT.title, size: 26, weight: 700, spacing: 6, color: "#ffffff", glow: C.holy, blur: 16, alpha: a });
+      text(A.watched === 0 ? "Not one round watched" : "You watched " + A.watched + (A.watched === 1 ? " round" : " rounds"), cx, y + 30, { align: "center", font: FONT.line, italic: true, size: 18, color: C.holy, alpha: a });
+      text("CAST OUT " + A.cast + "   ·   LONGEST FLOW " + A.best + "   ·   YOUR BEST " + (save.arenaBest || 0) + (A.newBest ? " (NEW)" : ""), cx, y + 54, { align: "center", size: 9, weight: 700, spacing: 2, color: "#e9e6df", alpha: a, max: W - 40 });
+      if (a >= 1) { button("WATCH AGAIN", cx - 160, y + 70, 150, 34, () => start(G.done, G.opts), { hot: true }); button("BACK TO THE TITLE", cx + 10, y + 70, 150, 34, () => G.done(), {}); }
+    }
+  }
   function drawHUD() {
     const H0 = G.hero;
+    if (G.arena && (G.arena.phase === "intro" || G.arena.phase === "end")) { drawArenaScreens(); pauseButton(); return; }
     text("FR. LAWRENCE", 16, 20, { size: 8, weight: 700, spacing: 2, color: C.holy });
     rect(16, 26, 140, 6, "rgba(255,255,255,0.1)"); rect(16, 26, 140 * H0.resolve / 100, 6, H0.resolve < 30 && Math.sin(G.t * 10) > 0 ? "#ff6a50" : "#e9eef8");
     // Falls in a row: three, and down to the Depths.
@@ -1824,11 +2292,7 @@ const Fight = (() => {
       for (let i = 0; i < DEPTHS_OUT; i++) { const x = W / 2 - (DEPTHS_OUT - 1) * 8 + i * 16, on = i < H0.combo; circle(x, H - 18, 4, on ? C.holy : "rgba(255,90,58,0.3)"); if (on) glow(x, H - 18, 10, C.holy, 0.5); }
       text(DEPTHS_OUT + " IN A ROW TO RISE", W / 2, H - 30, { align: "center", size: 8, weight: 800, spacing: 3, color: "#ff8a70" });
     }
-    if (G.banner) {
-      const b = G.banner, a = clamp(b.t / 0.4, 0, 1) * clamp((3 - b.t) / 0.8, 0, 1), y = b.small ? 104 : H * 0.42;
-      text(b.text, W / 2, y, { align: "center", font: FONT.title, size: b.small ? 20 : 34, weight: 700, spacing: b.small ? 5 : 8, color: b.c, glow: b.c, blur: 20, alpha: a });
-      if (b.sub) text(b.sub, W / 2, y + (b.small ? 18 : 24), { align: "center", font: FONT.line, italic: true, size: b.small ? 13 : 16, weight: 500, color: b.c, alpha: a * 0.85 });
-    }
+    drawBanner();
     // The blessing, when the Spirit is full.
     if (G.world === "heights" && !G.shift && !G.finishing) {
       const bx = W - 52, by = H - 52, pul = 1 + 0.1 * Math.sin(G.t * 8);
@@ -1836,7 +2300,7 @@ const Fight = (() => {
       poly([bx, by + 14, bx - 11, by - 4, bx - 4, by - 4, bx - 4, by - 14, bx + 4, by - 14, bx + 4, by - 4, bx + 11, by - 4], "#8a6020");
       text(tip("FROM ON HIGH", "B · FROM ON HIGH"), W - 12, by + 42, { align: "right", size: 8, weight: 800, spacing: 1.5, color: "#5a4020", max: 110 });
       buttons.push({ x: bx - 36, y: by - 36, w: 72, h: 72, act: () => finisher() });
-    } else if (H0.spirit >= SPIRIT) {
+    } else if (H0.spirit >= SPIRIT && !(G.arena && G.arena.phase !== "fight")) {
       const bx = W - 52, by = H - 52, pul = 1 + 0.08 * Math.sin(G.t * 6);
       glow(bx, by, 50 * pul, C.holy, 0.5); circle(bx, by, 26 * pul, "rgba(20,14,8,0.85)"); ctx.strokeStyle = C.holy; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 26 * pul, 0, TAU); ctx.stroke();
       rect(bx - 2.5, by - 13, 5, 26, "#fff3cf"); rect(bx - 10, by - 6, 20, 5, "#fff3cf");
@@ -1851,14 +2315,7 @@ const Fight = (() => {
       if (label) text(label, right ? ex - 10 : ex + 10, ey + 3, { align: right ? "right" : "left", size: 7, weight: 800, spacing: 1.5, color: col });
     };
     if (!G.shift) { for (const f of alive()) edge(f.x, f.y, f.sign === "red" ? "#ff3040" : f.sign === "gold" ? C.holy : "#ff6a5a"); if (chainsOpen()) edge(G.guard.x, Y0, C.holy, "CHAINS"); }
-    // The angel's words. In the practice they stay until the next lesson.
-    const until = G.kata ? 60 : 7;
-    if (G.msg && G.msg.t < until) {
-      const a = clamp(G.msg.t / 0.3, 0, 1) * clamp((until - G.msg.t) / 0.8, 0, 1), who = G.msg.who === "guardian";
-      const ls = wrap(G.msg.text, Math.min(W - 240, 480), "italic 500 17px " + FONT.line), bw = Math.min(W - 220, 500);
-      ctx.globalAlpha = 0.55 * a; rect(W / 2 - bw / 2, 8, bw, 14 + ls.length * 20, "#050407"); ctx.globalAlpha = 1;
-      ls.forEach((l, i) => text(l, W / 2, 26 + i * 20, { align: "center", size: 17, weight: 500, italic: true, font: FONT.line, color: who ? "#c4f0ff" : "#f6eccb", alpha: a }));
-    }
+    drawMsg();
     // The practice: which lesson, the hint for it, and a way past it.
     if (G.kata) {
       const L = KATA[G.kata.i];
@@ -1866,6 +2323,11 @@ const Fight = (() => {
       if (L && L.hint() && G.world === "kata") { const pul = 0.75 + 0.25 * Math.sin(G.t * 5); text(L.hint(), W / 2, H - 16, { align: "center", size: 12, weight: 800, spacing: 3, color: C.holy, glow: C.holy, blur: 10, alpha: pul, max: W - 60 }); }
       buttons.push({ x: 8, y: 88, w: 150, h: 26, act: () => { if (G.kata) kataEnd(); } });
       text(G.opts.only ? "END PRACTICE ›" : "SKIP PRACTICE ›", 16, 104, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)" });
+    } else if (G.arena) {
+      const A = G.arena;
+      text("ROUND " + A.round + " · " + G.room.name.toUpperCase() + " · CAST OUT " + A.cast, 16, 80, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
+      if (A.round <= 1 && !save.practised && A.phase === "fight") text(tip("TAP: STRIKE · HOLD ON ONE: HOLY WATER · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES", "ARROWS: MOVE · SPACE: STRIKE · X: COUNTER · Q: BLOCK · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES"),
+        W / 2, H - 12, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.5)", max: W - 40 });
     } else if (G.wave <= 0 && !G.practised && G.world === "street") {
       text(tip("TAP: STRIKE · HOLD ON ONE: HOLY WATER · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES", "ARROWS: MOVE · SPACE: STRIKE · X: COUNTER · Q: BLOCK · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES"),
         W / 2, H - 12, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.5)", max: W - 40 });
@@ -1898,14 +2360,15 @@ const Fight = (() => {
   function gesture(T, dx, dy) {
     const tg = T.target;
     if (tg && tg !== "chains" && !tg.gone) {
-      if (dy < -30 && Math.abs(dy) > Math.abs(dx) * 1.1) launch(tg);
+      if (tg.shield && !lying(tg)) stole(tg);
+      else if (dy < -30 && Math.abs(dy) > Math.abs(dx) * 1.1) launch(tg);
       else if (dy > 30 && Math.abs(dy) > Math.abs(dx) * 1.1) slam(tg);
       else if (near(tg)) throwFoe(tg, dx, dy * 0.5);
       else stole(tg);
     }
   }
   function down(s, e) {
-    if (G.over || G.down) return;
+    if (G.over || G.down || (G.arena && G.arena.phase !== "fight")) return;
     const p = toWorld(s), f = foeAt(p);
     G.touch = { id: e.pointerId, x0: s.x, y0: s.y, t0: G.t, r0: performance.now(), target: f || (onChains(p) ? "chains" : null), moved: false, block: false, water: false };
   }
@@ -1916,6 +2379,7 @@ const Fight = (() => {
     if (T.moved && !T.done && !T.block) { const dx = s.x - T.x0, dy = s.y - T.y0; if (Math.hypot(dx, dy) > 40) { T.done = true; gesture(T, dx, dy); } }
   }
   function up(s, e) {
+    if (G.arena && G.arena.phase === "intro" && G.arena.t > 0.8) { arenaBegin(); return; }
     const T = G.touch; if (!T || T.id !== e.pointerId) return;
     G.touch = null;
     if (T.block) { if (G.hero.act.kind === "block") act("idle"); return; }
@@ -1935,6 +2399,11 @@ const Fight = (() => {
     if (!isDown) { if (["KeyQ", "KeyZ", "ShiftLeft", "ShiftRight"].includes(code) && G.hero.act.kind === "block") act("idle"); return; }
     if (e && e.repeat) return;
     if (code === "Escape" || code === "KeyP") { Game.pause(); return; }
+    if (G.arena && G.arena.phase !== "fight") {
+      if (G.arena.phase === "intro" && (code === "Space" || code === "Enter")) arenaBegin();
+      else if (G.arena.phase === "end" && G.arena.t > 1.5 && code === "Enter") start(G.done, G.opts);
+      return;
+    }
     if (G.over || G.down) return;
     const H0 = G.hero, [kx, ky] = arrows();
     const any = () => { const c = pick(); return c && c.f; };
@@ -1963,12 +2432,12 @@ const Fight = (() => {
   function moves() {
     return usingKeys() ? [
       ["Arrows", "move"], ["Space", "strike, toward the arrow held"], ["The one rule", "never the same blow twice on the same demon"], ["X", "counter a gold sign: catch, throw, pin"],
-      ["Space, at one down", "finish it: a takedown"], ["Q, held", "block one blow (the red sign too); then again"], ["C", "heavy blow: breaks a shield"],
+      ["Space, at one down", "finish it: a takedown"], ["Q, held", "block one blow (the red sign too); then again"], ["C", "heavy blow"], ["R, at a shield", "the rosary snatches it; never strike a shield"],
       ["E", "launch"], ["Space, in the air", "keep it up"], ["V", "slam (in the air: spike)"], ["F", "holy water, near or far"], ["R", "the rosary: wrap a far one, haul it in"],
       ["T + arrow", "throw a near one into another"], ["B", "bless; in the Heights, your angel comes down from on high"], ["3rd, 7th blow", "your angel strikes; you stand aside"], ["12 in a row", "up to the Heights"],
     ] : [
       ["Tap a demon", "strike, then on to the next"], ["The one rule", "never the same blow twice on the same demon"], ["Tap open street", "zip there"], ["Tap a gold sign", "counter: catch, throw, pin"],
-      ["Tap one that is down", "finish it: a takedown"], ["Hold open street", "block one blow (the red sign too); then again"], ["Tap twice", "heavy blow: breaks a shield"],
+      ["Tap one that is down", "finish it: a takedown"], ["Hold open street", "block one blow (the red sign too); then again"], ["Tap twice", "heavy blow"], ["Drag one with a shield", "the rosary snatches it; never strike a shield"],
       ["Swipe up on one", "launch"], ["Tap it in the air", "keep it up"], ["Swipe down on one", "slam (in the air: spike)"], ["Hold on one, let go", "holy water, near or far"],
       ["Drag a far one", "the rosary: wrap it, haul it in"], ["Drag a near one", "throw it into another"], ["Gold button", "bless; in the Heights, your angel comes down from on high"], ["3rd, 7th blow", "your angel strikes; you stand aside"], ["12 in a row", "up to the Heights"],
     ];
