@@ -1,7 +1,7 @@
 # SELAH — build prompt
 
-*A plan for a future game. Nothing is playable yet. What exists so far: this
-plan, the pack checker (`pack.js`) and an empty pack template (`packs/`).*
+*The plan for the game. The first build is playable (`index.html`): milestone 1, three
+psalms with their songs, the four ranks, and the Voice setting with pack import.*
 
 **How to read this.** The author's prompt comes first, and it binds: the locked
 decisions, the note language and the copyright architecture. The author made
