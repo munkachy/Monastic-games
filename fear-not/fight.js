@@ -388,7 +388,8 @@ const Fight = (() => {
       // in the air like a monk's prostration (or Superman).
       G.zipN = (G.zipN || 0) + 1;
       const set = d > 220 ? ["flip", "superman", "jumpkick"] : d > 80 ? ["roll", "jumpkick", "cartwheel", "superman", "flip"] : ["lurch", "roll", "cartwheel"];
-      const style = set[(G.zipN + f.id) % set.length];
+      let k = (G.zipN + f.id) % set.length; if (set[k] === G.lastZip) k = (k + 1) % set.length;
+      const style = G.lastZip = set[k];
       act("zip", { f, move, style, dur: clamp(d / 600, 0.16, 0.4) * (style === "superman" ? 1.15 : 1), from: [H0.x, H0.y], to: [tx, f.y + 1] });
       Sound.fx.whoosh(0.22, 0.5);
     } else doMove(f, move);
