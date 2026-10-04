@@ -56,9 +56,9 @@ const KITS = {
     tom1: (I, t, v) => I.tom(t, 53, v), tom2: (I, t, v) => I.tom(t, 48, v), tom3: (I, t, v) => I.tom(t, 43, v, { decay: 0.4 }),
     crash: (I, t, v) => I.crash(t, 0.6 * v), ride: (I, t, v) => I.ride(t, 0.9 * v),
   },
-  // Bass-music drums: a deep, driven kick, a huge snare in a long hall, tight hats, low toms.
+  // Bass-music drums: a deep kick, a huge snare in a long hall, tight hats, low toms.
   dub: {
-    kick: (I, t, v) => I.kick(t, v, { tone: 40, decay: 0.55, drive: 0.55, punch: 140 }),
+    kick: (I, t, v) => I.kick(t, v, { tone: 40, decay: 0.55, drive: 0.12, punch: 140 }),
     snare: (I, t, v) => { I.snare(t, v, { f: 1700, rev: 0.35, decay: 0.22 }); I.clap(t, 0.55 * v, { rev: 0.45 }); },
     clap: (I, t, v) => I.clap(t, v, { rev: 0.5 }),
     rim: (I, t, v) => I.rim(t, 0.9 * v, { f: 2100 }),
@@ -302,7 +302,7 @@ SONGS.ps1 = band({
 // Dub into dubstep, C minor, 140. So many rise up against me: a dub-techno lament in half time, the
 // chord echoing away, tape hiss, a melodica far off. The drops are dubstep: a wobble bass whose LFO
 // moves from eighths to sixteenths to triplets, growls, lasers, chopped voices. The second verses are
-// in 6/8, a choir and a kalimba over a heartbeat. "Arise, O Lord": the harmony lifts toward E-flat, a
+// in 6/8, a choir and a kalimba over a heartbeat. (The basses are clean, with no distortion.) "Arise, O Lord": the harmony lifts toward E-flat, a
 // brass section answers, and the riddim grows heavy. Three Selahs, as in the Hebrew. The song ends on C
 // major: salvation is of the Lord.
 const P3 = {
@@ -366,8 +366,8 @@ SONGS.ps3 = band({
         const { t, s, sd, I } = e, [root] = [P3.Cm11, P3.Cm11, P3.Ab9, P3.G7s, P3.Cm11, P3.Bb, P3.Ab9, P3.G7][B.i];
         if (B.i === 0 && s === 0) { I.impact(t, 0.9); I.zap(t, 0.5); }
         const rates = [[[0, W8], [sd * 8, W16]], [[0, W8T], [sd * 8, W8]], [[0, W16], [sd * 12, W4T]], [[0, W8], [sd * 4, W8T], [sd * 12, W16]]][B.i % 4];
-        if (s === 0) I.wobble(t, root - 12, sd * 7, 0.7, { rates: rates.slice(0, 1), depth: 820 });
-        if (s === 8) I.wobble(t, root - 12 + (B.i % 2 ? 3 : 0), sd * 7.5, 0.7, { rates: rates.slice(1).map(([dt, r]) => [Math.max(0, dt - sd * 8), r]), depth: 900 });
+        if (s === 0) I.wobble(t, root - 12, sd * 7, 1.05, { rates: rates.slice(0, 1), depth: 820 });
+        if (s === 8) I.wobble(t, root - 12 + (B.i % 2 ? 3 : 0), sd * 7.5, 1.05, { rates: rates.slice(1).map(([dt, r]) => [Math.max(0, dt - sd * 8), r]), depth: 900 });
         if (s === 7 && B.i % 2) I.growl(t, root, sd * 1, 0.6, { from: 400, to: 1800 });
         if (L >= 1) { const CH = [[0, 75, "o"], [6, 72, "a"], [10, 70, "o"]]; if (B.i % 4 === 1) for (const [st, m, v] of CH) if (st === s) I.vox(t, m, sd * 1.2, 0.7, { vowel: v }); }
         if (B.fill && s === 12) I.zap(t, 0.6, { from: 3200, to: 100, dur: 0.22 });
@@ -421,7 +421,7 @@ SONGS.ps3 = band({
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P3.Ab9, P3.Eb, P3.Fm9, P3.G7, P3.Ab9, P3.Eb, P3.Fm9, P3.G7][B.i];
         if (B.i === 0 && s === 0) { I.impact(t, 1); I.zap(t, 0.6); }
-        if (s === 0) I.wobble(t, root - 12, sd * 15.5, 0.66, { rates: B.i % 2 ? [[0, W8T], [sd * 8, W16]] : [[0, W8T], [sd * 12, W4T]], depth: 900 });
+        if (s === 0) I.wobble(t, root - 12, sd * 15.5, 1, { rates: B.i % 2 ? [[0, W8T], [sd * 8, W16]] : [[0, W8T], [sd * 12, W4T]], depth: 900 });
         if (s === 0 && B.i % 2 === 0) I.pad(t, up(chord, 60), sd * 16, 0.4, { cut: 2600, voices: 3 });
         const LEAD = [[0, 79], [3, 75], [6, 77], [10, 74], [12, 75]];
         if (L >= 1) for (const [st, m] of LEAD) if (st === s) I.lead(t, m, sd * 2.5, 0.5, { waves: ["sawtooth", "square"], cut: 3600, vib: 12, rev: 0.4, dly: 0.35 });
@@ -512,7 +512,7 @@ SONGS.ps150 = band({
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P150.Db9, P150.Eb9s, P150.Cm9, P150.Fm9][B.i % 4];
         if (B.i === 0 && s === 0) I.impact(t, 0.8);
-        if (s === 0 || s === 10) I.bass(t, root - 12, sd * (s ? 5 : 9), 0.85, { kind: "reese", cut: 520 });
+        if (s === 0 || s === 10) I.bass(t, root - 12, sd * (s ? 5 : 9), 0.85, { kind: "reese", cut: 520, drive: 0.05 });
         const HORN = [[0, 1.5], [3, 1], [6, 3], [12, 2]];
         for (const [st, len] of HORN) if (st === s) I.brass(t, up(chord, 65).slice(1), len * sd, 0.75, { cut: 4000 });
         if (L >= 1 && (s === 2 || s === 10)) I.organ(t, up(chord, 55), sd * 3, 0.45, { bars: ORGAN });

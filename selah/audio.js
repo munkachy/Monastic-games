@@ -364,7 +364,7 @@ const Sound = (() => {
   I.impact = function (t, v, o) {
     o = o || {}; v = v === undefined ? 1 : v;
     const a = osc("sine", 90, t), g = gainAt(t); a.frequency.exponentialRampToValueAtTime(32, t + 0.9);
-    env(g, t, 0.003, 0.8 * v, 0.05, 1.2); a.connect(g); route(g, t, { drum: true, rev: 0.4, drive: 0.4, sfx: o.sfx });
+    env(g, t, 0.003, 0.8 * v, 0.05, 1.2); a.connect(g); route(g, t, { drum: true, rev: 0.4, drive: 0.08, sfx: o.sfx });
     const n = noise(t, 1.5), lp = filt("lowpass", 1800, 0.7, t), gn = gainAt(t); lp.frequency.exponentialRampToValueAtTime(200, t + 1.2);
     env(gn, t, 0.002, 0.35 * v, 0.02, 1.3); n.connect(lp); lp.connect(gn); route(gn, t, { drum: true, rev: 0.6, sfx: o.sfx });
     a.start(t); a.stop(t + 1.6);
@@ -398,41 +398,42 @@ const Sound = (() => {
     n.connect(hp); hp.connect(lp); lp.connect(g); route(g, t, { pan: -0.1 });
   };
   // ---- For the heavier songs: the bass music of the drops ----------------------------------------
-  // A wobble: detuned saws and a square an octave down, through a resonant low-pass that an LFO
-  // opens and shuts. `rate` is the wobble in Hz (or `rates`, [[seconds in, Hz], ...] to change it on
-  // the beat: eighths, sixteenths, triplets); a clean sine sub under it; driven hard.
+  // Clean, with no distortion: in this engine a driven bass turns to grit. A wobble: a saw and a
+  // square through a round low-pass that an LFO opens and shuts, like a wah pedal in time; a second,
+  // fixed low-pass takes off the fizz; a pure sub under it. `rate` is the wobble in Hz (or `rates`,
+  // [[seconds in, Hz], ...] to change it on the beat: eighths, sixteenths, triplets).
   I.wobble = function (t, midi, dur, v, o) {
     o = o || {}; v = v === undefined ? 1 : v;
-    const f = mtof(midi), end = t + dur, g = gainAt(t), lp = filt("lowpass", o.base || 900, o.q || 9, t);
-    const lfo = osc(o.shape || "sine", o.rate || 4, t), lg = gainAt(t, o.depth || 760);
+    const f = mtof(midi), end = t + dur, g = gainAt(t);
+    const lp = filt("lowpass", o.base || 650, o.q || 4, t), soft = filt("lowpass", 2400, 0.5, t);
+    const lfo = osc(o.shape || "triangle", o.rate || 4, t), lg = gainAt(t, o.depth || 520);
     lfo.connect(lg); lg.connect(lp.frequency);
     if (o.rates) for (const [dt, r] of o.rates) lfo.frequency.setValueAtTime(r, t + dt);
-    const oscs = [osc("sawtooth", f, t), osc("sawtooth", f, t), osc("square", f / 2, t)];
-    oscs[0].detune.value = -14; oscs[1].detune.value = 14;
-    for (const a of oscs) a.connect(lp);
-    if (o.glide) for (const a of oscs) { const k = a.type === "square" ? 0.5 : 1; a.frequency.setValueAtTime(mtof(o.glide) * k, t); a.frequency.exponentialRampToValueAtTime(f * k, t + 0.1); }
-    const sub = osc("sine", f / 2, t), sg = gainAt(t, 0.7); sub.connect(sg); sg.connect(g);
-    lp.connect(g);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4 * v, t + 0.01);
-    g.gain.setValueAtTime(0.4 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
-    route(g, t, { drive: o.drive === undefined ? 0.9 : o.drive });
+    const oscs = [osc("sawtooth", f, t), osc("square", f, t)];
+    oscs[0].detune.value = -6; oscs[1].detune.value = 6;
+    const og = gainAt(t, 0.55);
+    for (const a of oscs) a.connect(og);
+    og.connect(lp); lp.connect(soft); soft.connect(g);
+    if (o.glide) for (const a of oscs) { a.frequency.setValueAtTime(mtof(o.glide), t); a.frequency.exponentialRampToValueAtTime(f, t + 0.1); }
+    const sub = osc("sine", f / 2, t), sg = gainAt(t, 0.8); sub.connect(sg); sg.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.42 * v, t + 0.012);
+    g.gain.setValueAtTime(0.42 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
+    route(g, t, { drive: 0 });
     for (const a of [...oscs, sub, lfo]) { a.start(t); a.stop(end + 0.1); }
   };
-  // A growl: a saw frequency-modulated by a sine whose depth swells, through a band-pass that
-  // sweeps like a mouth opening ("yoi"). The talking bass of the drops.
+  // A talking bass: a saw through a band-pass that opens and closes like a mouth (a funk envelope
+  // filter, "yoi"), a sine an octave down for the body. Clean.
   I.growl = function (t, midi, dur, v, o) {
     o = o || {}; v = v === undefined ? 1 : v;
     const f = mtof(midi), end = t + dur;
-    const car = osc("sawtooth", f, t), mod = osc("sine", f * (o.ratio || 1.5), t), mg = gainAt(t, f * 0.2);
-    mg.gain.linearRampToValueAtTime(f * (o.index || 3), t + dur * 0.5); mg.gain.linearRampToValueAtTime(f * 0.4, end);
-    mod.connect(mg); mg.connect(car.frequency);
-    const bp = filt("bandpass", o.from || 320, 3.5, t); bp.frequency.exponentialRampToValueAtTime(o.to || 1500, t + dur * 0.55); bp.frequency.exponentialRampToValueAtTime(o.from || 320, end);
-    const g = gainAt(t), sub = osc("sine", f / 2, t), sg = gainAt(t, 0.6);
-    car.connect(bp); bp.connect(g); sub.connect(sg); sg.connect(g);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * v, t + 0.01);
-    g.gain.setValueAtTime(0.5 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
-    route(g, t, { drive: 0.8 });
-    for (const a of [car, mod, sub]) { a.start(t); a.stop(end + 0.1); }
+    const car = osc("sawtooth", f, t), bp = filt("bandpass", o.from || 320, 2.5, t), soft = filt("lowpass", 2600, 0.5, t);
+    bp.frequency.exponentialRampToValueAtTime(o.to || 1400, t + dur * 0.5); bp.frequency.exponentialRampToValueAtTime(o.from || 320, end);
+    const g = gainAt(t), cg = gainAt(t, 1.4), sub = osc("sine", f / 2, t), sg = gainAt(t, 0.7);
+    car.connect(cg); cg.connect(bp); bp.connect(soft); soft.connect(g); sub.connect(sg); sg.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.45 * v, t + 0.01);
+    g.gain.setValueAtTime(0.45 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
+    route(g, t, { drive: 0 });
+    for (const a of [car, sub]) { a.start(t); a.stop(end + 0.1); }
   };
   // A ride: a ping of metal over a wash. `bell` hits the cup.
   I.ride = function (t, v, o) {
@@ -454,7 +455,7 @@ const Sound = (() => {
   // A sub drop: the floor falling away, into a drop.
   I.subdrop = function (t, v) {
     const a = osc("sine", 70, t), g = gainAt(t); a.frequency.exponentialRampToValueAtTime(28, t + 1.4);
-    env(g, t, 0.01, 0.7 * (v || 1), 0.3, 1.2); a.connect(g); route(g, t, { drive: 0.3 }); a.start(t); a.stop(t + 1.8);
+    env(g, t, 0.01, 0.7 * (v || 1), 0.3, 1.2); a.connect(g); route(g, t, { drive: 0 }); a.start(t); a.stop(t + 1.8);
   };
   // Brass: a section of saws whose filter opens as the players blow into it.
   I.brass = function (t, notes, dur, v, o) {

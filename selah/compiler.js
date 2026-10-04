@@ -7,8 +7,8 @@
 // line, the verses shared among the verse sections, a Selah after the verses where the Hebrew has
 // one), keeps the strokes the chosen rank plays, and places them on the Voice as on a drum kit seen
 // from the throne: hi-hat at the left, snare, toms, the crash at the right, and the kick a bar across
-// the whole line. The words ride the strokes: each line is cut into phrases, a phrase to a stroke,
-// fewer and longer at the lower ranks, single words at the higher. In the instrumental sections the
+// the whole line. The words ride the strokes: a word to a stroke where there are strokes enough,
+// else phrases (fewer and longer at the lower ranks). In the instrumental sections the
 // words are the psalm's Latin. The same text, song and rank always make the same chart.
 const Compiler = (() => {
   const C = {};
@@ -173,7 +173,9 @@ const Compiler = (() => {
     lines.forEach((L, li) => {
       if (!vrow || vrow.verse !== L.verse) { vrow = { verse: L.verse, v: L.verse.v, heading: L.verse.heading || null, lines: [], t0: bars[L.bars[0]].t0 }; rows.push(vrow); }
       const slots = notes.filter((n) => n.type !== "drag" && L.bars.includes(n.bar));
-      const { toks, units } = phrases(L.text);
+      const { toks, units: phr } = phrases(L.text);
+      // a word to a stroke where there are strokes enough; else phrases, joined to fit
+      const units = toks.length <= slots.length ? toks.map((_, i) => [i]) : phr;
       const lrow = { tokens: toks.map((tx) => ({ text: tx, note: -1 })) };
       if (slots.length) {
         const fitted = fit(units, toks, slots.length), k = fitted.length, m = slots.length;
