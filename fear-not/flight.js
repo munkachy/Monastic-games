@@ -21,14 +21,14 @@ const Flight = (() => {
   // The fights on the rooftops on the way: after a leap or two, on the way to the church; after the
   // church; and near her father's car. Each starts on the next roof big enough to fight on.
   const FIGHTS = [
-    { step: 1, leaps: 1, cap: 3, gap: [2.4, 3.2], first: true, foes: [["whisper", 0.4], ["whisper", 0.9], ["whisper", 2.6], ["whisper", 5]],
-      say: () => tip("They have seen us. Down you go, Father: I am right above you. Tap one on our roof, and strike it; tap one on another roof, and I strike it with light.", "They have seen us. Down you go, Father: I am right above you. Arrows and Space to strike; at one on another roof, Space, and I strike it with light."),
+    { step: 1, leaps: 1, cap: 3, gap: [2.4, 3.2], first: true, foes: [["whisper", 0.4], ["whisper", 0.9], ["whisper", 1.6], ["whisper", 3.4], ["whisper", 5.5]],
+      say: () => tip("They have seen us, on every roof round us. Tap one, even on another roof, and I carry you to him: strike as you land. Tap a roof, and we leap there. Hold on one and let go: holy water, as far as you like.", "They have seen us, on every roof round us. Space at one, even on another roof, and I carry you to him: strike as you land. Push an arrow past the edge of our roof, and we leap. F: holy water, as far as you like."),
       after: "Up, Father. On to the church." },
-    { step: 3, leaps: 1, cap: 3, gap: [2, 2.8], foes: [["whisper", 0.4], ["grab", 1], ["whisper", 2.4], ["whisper", 4.4], ["whisper", 7]],
-      say: () => tip("More of them, on every roof round us. That big one grabs: when it shows red, hold on the open roof to block. And drag one on another roof: your rosary hauls it over.", "More of them, on every roof round us. That big one grabs: when it shows red, hold Q to block. And R throws your rosary at one on another roof, and hauls it over."),
+    { step: 3, leaps: 1, cap: 3, gap: [2, 2.8], foes: [["whisper", 0.4], ["grab", 1], ["whisper", 1.8], ["whisper", 3.4], ["whisper", 5], ["whisper", 7]],
+      say: () => tip("More of them. That big one grabs: when it shows red, put two fingers down, and block. Drag one far off, and your rosary hauls it over.", "More of them. That big one grabs: when it shows red, hold Q to block. R throws your rosary at one far off, and hauls it over."),
       after: "Up. Follow her prayer." },
-    { step: 4, leaps: 1, cap: 4, gap: [1.7, 2.5], foes: [["whisper", 0.4], ["shield", 1], ["grab", 3], ["whisper", 4.4], ["whisper", 6.4], ["whisper", 9]],
-      say: () => "They will not let us near him. Throw them off the roofs, Father, and keep moving.",
+    { step: 4, leaps: 1, cap: 4, gap: [1.7, 2.5], foes: [["whisper", 0.4], ["shield", 1], ["grab", 2.4], ["whisper", 3.6], ["whisper", 5], ["whisper", 6.6], ["whisper", 8.4]],
+      say: () => "They will not let us near him. Roof to roof, Father: throw them off, and keep the flow.",
       after: "Up. He is close now." },
   ];
   const roomy = (b) => b && !b.church && b.x1 - b.x0 >= 64 && b.y1 - b.y0 >= 64;
@@ -36,7 +36,7 @@ const Flight = (() => {
     F.fought.push(enc);
     RF.start(enc, (hero) => {
       // He climbs back on, and the flight goes on from his roof.
-      P.x = hero.x; P.y = hero.y; P.alt = P.on.h; P.mode = "stand"; P.head = hero.ang; F.landT = 0.4;
+      P.on = hero.roof; P.x = hero.x; P.y = hero.y; P.alt = hero.roof.h; P.mode = "stand"; P.head = hero.ang; F.landT = 0.4;
       say(enc.after);
     });
   }
@@ -181,7 +181,7 @@ const Flight = (() => {
     const first = roofs().sort((a, b) => dist(START.x, START.y, roofCentre(a).x, roofCentre(a).y) - dist(START.x, START.y, roofCentre(b).x, roofCentre(b).y))[0], c = roofCentre(first);
     P = { x: c.x, y: c.y, alt: first.h, on: first, jump: null, speed: 0, head: 0.55, wing: 0, mode: "stand", flapT: 0 };
     F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, stepLeaps: 0, msg: null, msgs: [], keys: {}, arrive: 0, fade: 1, dark: 300, rain: [], leaps: 0, ups: 0, downs: 0, far: null, hits: [], toldFar: false, fought: [] };
-    RF = RF || RoofFight({ sx, sy, K, roofs, groundAt, drawAngel, get P() { return P; }, get cam() { return cam; } });
+    RF = RF || RoofFight({ sx, sy, K, roofs, roofAt, groundAt, drawAngel, get P() { return P; }, get cam() { return cam; } });
     cam = { x: P.x, y: P.y, z: P.alt + 300, lx: 0, ly: 0 };
     for (let i = 0; i < 120; i++) F.rain.push(rainDrop(true));
     say(tip("Hold on to me, Father. Tap a rooftop near us, and I will leap to it.", "Hold on to me, Father. Press an arrow, and I will leap to the nearest roof that way; or click a roof near us."));

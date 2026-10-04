@@ -7,6 +7,12 @@
 // another roof (or still coming down out of the sky), and his angel, hovering over him, strikes it
 // with a beam of light. Knocked or thrown off the edge of a roof, a demon falls to the street and
 // is gone. Drag one on another roof, and the rosary hauls it across the gap.
+// The fight goes from roof to roof. They come down onto the buildings all round his, and he and his
+// angel leap from one roof to the next to get at them, up and down: tap one of them, even on
+// another roof, and the angel carries him across and he strikes it as he lands; tap a roof, and
+// they leap there. One two roofs off: a leap closer (a leap never breaks the flow), or holy water,
+// which reaches as far as you like. Two fingers on the screen block at once. The blessing, as on
+// the street, only in the Heights.
 // The flight lends it the city (`api`): the camera, the roofs, and the angel's picture.
 
 function RoofFight(api) {
@@ -15,6 +21,8 @@ function RoofFight(api) {
   // Distances on the roofs, in the city's own measure: how close he strikes from, what counts as
   // near enough to throw, and how far round him they keep.
   const REACH = 20, NEAR = 36, RING = 27, FIG = 1.22;      // FIG: the figures drawn a little larger than life, to read
+  const HOP = 100;          // how far apart two roofs may be for one leap
+  const CAP = 3;            // how many on his roof at once: the ring of three
   const RULES = {
     roof: { wind: 1, strike: 1, hurt: 1, comboT: 2.6, swoop: 4, floor: 2.6 },
     heights: { wind: 1.7, strike: 0.72, hurt: 0.6, comboT: 3.4, swoop: 3, regen: 6, floor: 3.6 },
@@ -36,6 +44,10 @@ function RoofFight(api) {
   const zOf = (f) => floorOf(f) + (f.z || 0);
   const heroZ = () => B.roof.h + B.hero.z;
   const mine = (f) => f.roof === B.roof && !["leap", "arrive", "fall", "pulled"].includes(f.act.kind);
+  const inAir = (f) => ["leap", "arrive"].includes(f.act.kind);
+  const hopOK = (b) => b && b !== B.roof && !b.church && gap(B.roof, b) <= HOP;
+  const nearRoofs = () => api.roofs().filter((o) => o !== B.roof && !o.church && gap(o, B.roof) < 170 && o.x1 - o.x0 > 26 && o.y1 - o.y0 > 26);
+  const onRoof = (b) => B.foes.filter((f) => !f.gone && f.roof === b && !["leap", "arrive", "fall", "pulled"].includes(f.act.kind));
   const dTo = (f) => Math.hypot(f.x - B.hero.x, f.y - B.hero.y);
   const near = (f) => mine(f) && dTo(f) < NEAR;
   const lying = (f) => f && !f.gone && f.act.kind === "floored";
@@ -53,7 +65,7 @@ function RoofFight(api) {
       angel: { x: P.x, y: P.y, alt: b.h + 8, head: P.head, wing: 0, mode: "flap", act: { kind: "hover", t: 0 }, t: 0 },
       world: "roof", worldT: 0, shift: null, woe: 0, woeT: 0, lastMove: null, prevMove: null, lastTap: null, over: 0, down: 0, cast: 0, whispers: [], whisperT: 2, hurtWave: false, rosary: null, touch: null, leapT: 1.6,
     };
-    B.near = api.roofs().filter((o) => o !== b && !o.church && gap(o, b) < 120 && o.x1 - o.x0 > 26 && o.y1 - o.y0 > 26);
+    B.near = nearRoofs();
     for (const [kind, at] of enc.foes) B.spawnQ.push({ kind, at });
     say(enc.say());
     Sound.play(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); Sound.fx.whoosh(0.6, 1, true);
@@ -61,9 +73,10 @@ function RoofFight(api) {
   function say(t, who) { B.msg = { text: t, t: 0, who: who || "angel" }; if ((who || "angel") === "angel") Sound.fx.chord(B.t | 0); }
   // They come down out of the dark: on his roof, round him, or on the edge of a roof near his.
   function spawn(kind) {
-    const H0 = B.hero, b0 = B.roof, mineN = B.foes.filter((f) => !f.gone && f.roof === b0).length;
+    const H0 = B.hero, b0 = B.roof, mineN = onRoof(b0).length, first = !B.foes.length;
     let b = b0;
-    if ((mineN >= 2 || Math.random() < 0.45) && B.near.length) b = B.near[Math.floor(Math.random() * B.near.length)];
+    const free = B.near.filter((o) => B.foes.filter((f) => !f.gone && f.roof === o).length < 3);
+    if (!first && (mineN >= 1 || Math.random() < 0.75) && free.length) b = free[Math.floor(Math.random() * free.length)];
     let x, y;
     if (b === b0) { const a = Math.random() * TAU; x = H0.x + Math.cos(a) * 34; y = H0.y + Math.sin(a) * 34; }
     else { x = clamp(H0.x, b.x0 + 10, b.x1 - 10) + (Math.random() - 0.5) * 30; y = clamp(H0.y, b.y0 + 10, b.y1 - 10) + (Math.random() - 0.5) * 30; }
@@ -93,13 +106,13 @@ function RoofFight(api) {
   }
 
   // ---- What he does -------------------------------------------------------------------------------------
-  const BUSY = ["strike", "zip", "counter", "hurt", "grabbed", "bless", "down", "jumpkick", "dash", "toss", "lash", "haul", "grab", "spike", "finish", "trip", "aside", "pray", "point", "dismount", "mount"];
+  const BUSY = ["hop", "strike", "zip", "counter", "hurt", "grabbed", "bless", "down", "jumpkick", "dash", "toss", "lash", "haul", "grab", "spike", "finish", "trip", "aside", "pray", "point", "dismount", "mount"];
   const busy = () => BUSY.includes(B.hero.act.kind) || !!B.shift;
   function act(kind, o) { B.hero.act = Object.assign({ kind, t: 0 }, o); }
   // The one rule. The angel's blows are his, not Fr. Lawrence's, so they are never a repeat.
   function fresh(kind, f, instead) {
     if (replaying) return true;
-    if (f && ["strike", "heavy", "launch", "slam"].includes(kind) && f.z <= 12 && !lying(f) && !f.shield && mine(f) && angelNext()) { B.prevMove = B.lastMove; B.lastMove = { kind, f }; return true; }
+    if (f && ["strike", "heavy", "launch", "slam"].includes(kind) && f.z <= 12 && !lying(f) && !f.shield && !inAir(f) && angelNext()) { B.prevMove = B.lastMove; B.lastMove = { kind, f }; return true; }
     const L = instead ? B.prevMove : B.lastMove;
     if (L && L.kind === kind && L.f === f && f && !f.gone) { trip(); return false; }
     if (!instead) B.prevMove = B.lastMove;
@@ -126,7 +139,7 @@ function RoofFight(api) {
   function tapDemon(f, fromKey) {
     const H0 = B.hero, now = B.t;
     if (["grabbed", "down", "dismount", "mount"].includes(H0.act.kind) || B.over || B.shift || f.gone) return;
-    if (lying(f) && mine(f)) { finishFoe(f); return; }
+    if (lying(f)) { finishFoe(f); return; }
     if (!fromKey && B.lastTap && B.lastTap.f === f && now - B.lastTap.t < 0.34 * Math.max(B.ts, 0.3)) { B.lastTap = null; heavy(f); return; }
     B.lastTap = { f, t: now };
     if (f.sign === "gold" && f.act.kind === "wind") { counter(f); return; }
@@ -136,11 +149,14 @@ function RoofFight(api) {
     goStrike(f, "strike");
   }
   // To a demon on his roof: across to it (a flip, a roll, a flying kick, a cartwheel, flat out like
-  // a prostration: never a walk), then the blow. To one out of his reach: his angel's light.
+  // a prostration: never a walk), then the blow. To one on a roof near his: the angel carries him
+  // across, and he strikes as he lands. To one further off: a leap closer. To one in the air
+  // (coming down out of the sky, or leaping a gap): his angel's light shoots it down.
   function goStrike(f, move) {
     const H0 = B.hero; if (f.gone) return;
-    if (move !== "finish" && f.z <= 12 && !lying(f) && !f.shield && mine(f)) { const k = angelNext(); if (k) { angelBlow(f, k); return; } }
-    if (!mine(f)) { if (move !== "finish") beamAt(f, move); return; }
+    if (inAir(f)) { if (move !== "finish") beamAt(f, move); return; }
+    if (move !== "finish" && f.z <= 12 && !lying(f) && !f.shield) { const k = angelNext(); if (k) { angelBlow(f, mine(f) ? k : "dive"); return; } }
+    if (!mine(f)) { if (hopOK(f.roof)) hopTo(f.roof, { f, move }); else hopToward(f.roof); return; }
     H0.ang = angTo(f);
     const ux = Math.cos(H0.ang), uy = Math.sin(H0.ang), d = dTo(f);
     if (move === "finish") {
@@ -186,6 +202,7 @@ function RoofFight(api) {
     const a = H0.act;
     if (a.kind === "finish" && a.f === f) return;
     moved("takedown");
+    if (!mine(f)) { if (busy() && a.kind !== "hurt") { H0.queue = { f, move: "finish" }; return; } if (hopOK(f.roof)) hopTo(f.roof, { f, move: "finish" }); else hopToward(f.roof); return; }
     if (a.kind === "zip" && a.f === f) { a.move = "finish"; return; }
     if (busy() && a.kind !== "hurt") { H0.queue = { f, move: "finish" }; return; }
     goStrike(f, "finish");
@@ -233,6 +250,7 @@ function RoofFight(api) {
     if (lying(f) && mine(f)) { finishFoe(f); return; }
     if (near(f) && !f.shield) { if (fresh("strike", f)) { if (busy() && H0.act.kind !== "hurt") H0.queue = { f, move: "strike" }; else goStrike(f, "strike"); } return; }
     if (["arrive", "fall"].includes(f.act.kind)) return;
+    if (dTo(f) > 300) { pop(f, "TOO FAR FOR THE ROSARY", "rgba(233,230,223,0.7)"); return; }
     if (!fresh(f.shield ? "snatch" : "arm", f)) return;
     if (busy() && H0.act.kind !== "hurt") { H0.queue = { f, move: "stole" }; return; }
     H0.ang = angTo(f);
@@ -317,7 +335,7 @@ function RoofFight(api) {
     H0.combo++; H0.comboT = R().comboT; H0.hits++; H0.best = Math.max(H0.best, H0.combo);
     if (H0.combo >= 3 && B.woe) B.woe = 0;
     if (H0.combo >= 3) pulse(Math.max(0.36, 0.64 - H0.combo * 0.022), 0.13);
-    if (H0.spirit < SPIRIT) { H0.spirit++; if (H0.spirit === SPIRIT && !B.taught.bless) { B.taught.bless = true; say(tip("The Spirit fills you. Tap the gold cross to bless them all.", "The Spirit fills you. Press B to bless them all.")); } }
+    if (H0.spirit < SPIRIT) H0.spirit++;
     if (H0.combo >= HEIGHTS_AT && B.world === "roof" && !B.shift && !B.over) { pop(H0, "TO THE HEIGHTS", C.holy, true); Sound.fx.hah(1.2); Sound.fx.chord(3, 0.8); shiftTo("heights"); }
     if (B.world === "depths" && H0.combo >= DEPTHS_OUT) B.rising = true;
     void f;
@@ -343,17 +361,26 @@ function RoofFight(api) {
     H0.spirit = 0; act("bless", { dur: 0.95, fired: false });
     Sound.fx.glory();
   }
-  // From on high: the end of the flow in the Heights. He prays; the angel climbs out of sight, and
-  // comes down on them all in a column of light.
+  // The blessing: only in the Heights, at the end of the flow. He makes the sign of the cross over
+  // them; the angel climbs out of sight and comes down on them all in a column of light, and they
+  // all come down together, struck flat.
   function finisher() {
     const H0 = B.hero;
-    if (B.world !== "heights" || B.finishing || B.shift || B.down) return;
+    if (B.world !== "heights" || B.finishing || B.shift || B.down || H0.act.kind === "hop") return;
     B.finishing = true; B.finishCombo = H0.combo; B.lastMove = null; H0.queue = null;
-    act("pray", {}); H0.inv = 5;
+    act("bless", { dur: 0.95, fired: true }); H0.inv = 5;
     slowmo(0.4, 0.5, 1.1);
     Sound.fx.glory();
-    pop(H0, "FROM ON HIGH", C.holy, true);
+    pop(H0, "THE BLESSING", C.holy, true);
     B.angel.act = { kind: "smite", t: 0, phase: "up" };
+  }
+  // The flow broken in the Heights: down they all come, with nothing done, and no blow on him.
+  function fallBack() {
+    const H0 = B.hero;
+    pop(H0, alive().length ? "THE FLOW BROKE: DOWN AGAIN" : "DOWN AGAIN", "#e9e6df");
+    if (alive().length && !B.taught.fall) { B.taught.fall = true; say("The flow broke, and down we come, with nothing done. Twelve again, and up we go."); }
+    H0.combo = 0; H0.comboT = 0;
+    shiftTo("roof");
   }
   function smiteLands() {
     const H0 = B.hero, c = B.finishCombo || 0, mult = 1 + Math.min(2, c * 0.08);
@@ -368,10 +395,38 @@ function RoofFight(api) {
     B.shake = 14; B.flash = 0.8; B.flashC = C.holy; hitStop(0.14); slowmo(0.2, 0.7, 1.15);
     Sound.fx.hit(2.4); Sound.fx.clang();
     if (H0.act.kind === "pray") act("idle");
-    pop(H0, c > 1 ? "FROM ON HIGH · " + c + " IN A ROW" : "FROM ON HIGH", "#ffffff", true);
-    H0.spirit = Math.min(SPIRIT, H0.spirit + 3); H0.combo = 0; H0.comboT = 0;
+    pop(H0, c > 1 ? "THE BLESSING · " + c + " IN A ROW" : "THE BLESSING", "#ffffff", true);
+    H0.combo = 0; H0.comboT = 0;
     if (n) say("They fell with us. Finish them!");
     shiftTo("roof");
+  }
+  // From roof to roof: his angel takes him up and carries him across, beating hard to climb to a
+  // higher roof, gliding down to a lower one. `then`: the blow he strikes as he comes down. A leap
+  // never breaks the flow.
+  function hopTo(b, then) {
+    const H0 = B.hero;
+    if (!b || B.over || B.shift || ["grabbed", "down", "dismount", "mount", "hop"].includes(H0.act.kind)) return;
+    if ((busy() && H0.act.kind !== "hurt") || !["hover", "ferry"].includes(B.angel.act.kind)) { H0.queue = { hop: b, then }; return; }
+    let to;
+    if (then && then.f && !then.f.gone) { const f = then.f, a = Math.atan2(f.y - H0.y, f.x - H0.x), k = then.move === "finish" ? 12 : REACH * 0.85; to = { x: f.x - Math.cos(a) * k, y: f.y - Math.sin(a) * k }; }
+    else { const nx = clamp(H0.x, b.x0, b.x1), ny = clamp(H0.y, b.y0, b.y1); to = { x: lerp((b.x0 + b.x1) / 2, nx, 0.45), y: lerp((b.y0 + b.y1) / 2, ny, 0.45) }; }
+    keepOn(to, b, 6);
+    const h0 = B.roof.h, h1 = b.h, d = Math.hypot(to.x - H0.x, to.y - H0.y);
+    let top = Math.max(h0, h1); for (let i = 1; i < 8; i++) top = Math.max(top, api.groundAt(lerp(H0.x, to.x, i / 8), lerp(H0.y, to.y, i / 8)));
+    H0.ang = Math.atan2(to.y - H0.y, to.x - H0.x); H0.queue = null;
+    act("hop", { from: [H0.x, H0.y], to: [to.x, to.y], h0, h1, c: 2 * (top + 20 + d * 0.06) - (h0 + h1) / 2, dur: clamp(0.36 + d / 520 + Math.max(0, h1 - h0) / 900, 0.4, 0.85), b, then });
+    H0.inv = Math.max(H0.inv, H0.act.dur + 0.1);
+    if (!then) moved("hop");
+    B.angel.act = { kind: "ferry", t: 0 };
+    Sound.fx.whoosh(0.4, 0.7, true); Sound.fx.flap(1.1);
+    if (!B.taught.hop) { B.taught.hop = true; say("A leap never breaks the flow, Father. Roof to roof, after them."); }
+  }
+  // Too far for one leap: the roof within reach that brings him closest.
+  function hopToward(b) {
+    let best = null, bd = gap(B.roof, b);
+    for (const r of api.roofs()) { if (!hopOK(r)) continue; const d = gap(r, b); if (d < bd - 4) { bd = d; best = r; } }
+    if (best) { hopTo(best, null); pop(B.hero, "A LEAP CLOSER", C.holy); }
+    else pop(B.hero, "TOO FAR", "rgba(233,230,223,0.7)");
   }
   // Tap the open roof: he goes there at once, in a flip or a roll.
   function tapRoof(x, y) {
@@ -432,7 +487,11 @@ function RoofFight(api) {
     if (a.kind === "hover") {
       toward(hoverX, hoverY, hoverZ, 3);
       A.head = lerp(A.head, A.head + angDiff(A.head, H0.ang), Math.min(1, dt * 2));
-      if (H0.queue && H0.queue.f && !mine(H0.queue.f) && !busy()) { const q = H0.queue; H0.queue = null; if (!q.f.gone) beamAt(q.f, q.move); }
+      if (H0.queue && !busy()) {
+        const q = H0.queue;
+        if (q.hop) { H0.queue = null; hopTo(q.hop, q.then); }
+        else if (q.f && inAir(q.f)) { H0.queue = null; if (!q.f.gone) beamAt(q.f, q.move); }
+      }
     } else if (a.kind === "beam") {
       const f = a.f;
       if (f && !f.gone) A.head = Math.atan2(f.y - A.y, f.x - A.x);
@@ -454,7 +513,7 @@ function RoofFight(api) {
       const f = a.f;
       if (a.t < 0.16) {
         const u = (a.t / 0.16) ** 2, T = a.kind === "dive" && f && !f.gone ? f : H0;
-        A.x = lerp(a.x0, T.x, u); A.y = lerp(a.y0, T.y, u); A.alt = lerp(a.a0, h + 12, u);
+        A.x = lerp(a.x0, T.x, u); A.y = lerp(a.y0, T.y, u); A.alt = lerp(a.a0, (T === H0 ? h : zOf(T)) + 12, u);
         if (f && !f.gone) A.head = Math.atan2(f.y - A.y, f.x - A.x);
       } else if (a.t < (a.kind === "sweep" ? 0.62 : 0.34)) {
         if (a.kind === "sweep") {
@@ -481,6 +540,12 @@ function RoofFight(api) {
       // He fell: the angel takes him up out of it.
       if (a.t < 0.4) toward(H0.x, H0.y, h + 14, 9);
       else { A.alt += dt * 160; A.x = H0.x; A.y = H0.y; H0.z = A.alt - h - 8; }
+    } else if (a.kind === "ferry") {
+      // Carrying him across, as in the flight.
+      A.x = H0.x; A.y = H0.y; A.alt = heroZ() + 8; A.head = H0.ang;
+      const hp = H0.act.kind === "hop" ? H0.act : null;
+      A.mode = hp && (1 - clamp(hp.t / hp.dur, 0, 1)) * (hp.c - hp.h0) + clamp(hp.t / hp.dur, 0, 1) * (hp.h1 - hp.c) > 0 ? "flap" : "glide";
+      if (!hp) A.act = { kind: "hover", t: 0 };
     } else if (a.kind === "land") {
       // The fight won: down beside him, and he climbs on.
       toward(H0.x + 10, H0.y, h + 4, 5);
@@ -501,7 +566,7 @@ function RoofFight(api) {
   function arrive(to, from) {
     B.world = to; B.worldT = 0; B.woe = 0;
     if (to !== "heights" && !B.finishing) { B.hero.combo = 0; B.hero.comboT = 0; }
-    if (to === "heights") { B.hero.comboT = RULES.heights.comboT; B.banner = { text: "THE HEIGHTS", sub: "Keep the flow, then come down on them.", c: C.holy, t: 0 }; say(tip("Up! Keep the flow going. Then tap the gold, and I come down on them from on high.", "Up! Keep the flow going. Then press B, and I come down on them from on high.")); }
+    if (to === "heights") { B.hero.comboT = RULES.heights.comboT; B.banner = { text: "THE HEIGHTS", sub: "Keep the flow, then bless them.", c: C.holy, t: 0 }; say(tip("Up! Keep the flow going, and bless them when you will: tap the gold cross. Let it break, and we fall back.", "Up! Keep the flow going, and bless them when you will: press B. Let it break, and we fall back.")); }
     else if (to === "depths") { B.banner = { text: "THE DEPTHS", sub: DEPTHS_OUT + " in a row, and we rise.", c: "#ff5a3a", t: 0 }; say("Do not listen to them. Ten in a row, and we rise. I am with you."); B.whisperT = 0.5; }
     else if (from === "depths") {
       B.whispers = [];
@@ -514,7 +579,7 @@ function RoofFight(api) {
     const H0 = B.hero;
     if (B.world === "heights") {
       H0.resolve = Math.min(100, H0.resolve + R().regen * dt);
-      if (B.worldT > 12 || alive().length === 0) finisher();
+      if (!B.finishing && B.worldT > 0.3 && (H0.combo === 0 || alive().length === 0)) fallBack();
     } else if (B.world === "depths") {
       if (B.rising) { B.rising = false; B.depthsWon = true; B.flash = 0.6; B.flashC = C.holy; Sound.fx.glory(); shiftTo("roof"); }
       else if (B.worldT > 25 || alive().length === 0) shiftTo("roof");
@@ -557,7 +622,7 @@ function RoofFight(api) {
       B.over += dtRaw;
       stepHero(dt); stepAngel(dtRaw);
       if (B.over > 0.9 && H0.act.kind !== "mount") { act("mount", { dur: 0.45 }); Sound.fx.flap(1); }
-      if (B.over > 1.6 && !B.left) { B.left = true; Sound.muffle(false); const done = B.done, hero = { x: H0.x, y: H0.y, ang: H0.ang }; B = null; done(hero); }
+      if (B.over > 1.6 && !B.left) { B.left = true; Sound.muffle(false); const done = B.done, hero = { x: H0.x, y: H0.y, ang: H0.ang, roof: B.roof }; B = null; done(hero); }
       return;
     }
     B.t += dt; B.waveT += dt;
@@ -565,6 +630,7 @@ function RoofFight(api) {
     B.spawnQ = B.spawnQ.filter((s) => !s.done);
     // Hold on the open roof to block; hold on a demon a moment, and the holy water is ready.
     const T = B.touch;
+    if (B.two && !B.two.spent && H0.act.kind !== "block" && !busy()) act("block", {});
     if (T && !T.moved) {
       const held = performance.now() - T.r0;
       if (!T.target && !T.spent && held > 230 && !busy() && H0.act.kind !== "block") { act("block", {}); T.block = true; }
@@ -572,30 +638,50 @@ function RoofFight(api) {
     }
     stepKeys(dt);
     stepHero(dt); stepRosary(dt); stepAngel(dtRaw);
-    // Those waiting on the roofs round about come over, one at a time, when there is room.
+    // Those waiting on the roofs next to his come over, one at a time, when there is room in the
+    // ring of three; those further off come a roof nearer, after him.
     B.leapT -= dt;
-    if (B.leapT <= 0) {
+    if (B.leapT <= 0 && H0.act.kind !== "hop") {
       B.leapT = 0.9 + Math.random() * 0.8;
-      const onMine = alive().filter((f) => f.roof === B.roof || f.act.kind === "leap").length;
-      const waiting = alive().filter((f) => f.roof && f.roof !== B.roof && f.act.kind === "idle" && f.dizzy <= 0).sort((a, b) => dTo(a) - dTo(b));
-      if (waiting.length && onMine < B.enc.cap) leapOver(waiting[0]);
+      const onMine = alive().filter((f) => f.roof === B.roof || (f.act.kind === "leap" && f.act.to === B.roof)).length;
+      const waiting = alive().filter((f) => f.roof && f.roof !== B.roof && f.act.kind === "idle" && f.dizzy <= 0 && gap(f.roof, B.roof) <= HOP).sort((a, b) => dTo(a) - dTo(b));
+      if (waiting.length && onMine < CAP) leapTo(waiting[0], B.roof);
+    }
+    for (const f of B.foes) {
+      if (f.gone || !f.roof || f.roof === B.roof || f.act.kind !== "idle" || f.dizzy > 0 || gap(f.roof, B.roof) <= HOP) continue;
+      f.hopT = (f.hopT === undefined ? 1 + Math.random() : f.hopT) - dt;
+      if (f.hopT > 0) continue;
+      f.hopT = 1.4 + Math.random() * 1.4;
+      let best = null, bd = gap(f.roof, B.roof);
+      for (const r of api.roofs()) { if (r === f.roof || r === B.roof || r.church || gap(f.roof, r) > HOP || B.foes.filter((o) => !o.gone && o.roof === r).length >= 3) continue; const d = gap(r, B.roof); if (d < bd - 4) { bd = d; best = r; } }
+      if (best) leapTo(f, best);
     }
     for (const f of B.foes) stepFoe(f, dt);
     B.foes = B.foes.filter((f) => !f.gone || f.act.t < 0.7);
     attackScheduler(dt);
-    if (H0.comboT > 0) { H0.comboT -= dt; if (H0.comboT <= 0) H0.combo = 0; }
+    if (H0.comboT > 0 && H0.act.kind !== "hop") { H0.comboT -= dt; if (H0.comboT <= 0) H0.combo = 0; }
     Sound.setLevel(B.world === "heights" ? 3 : H0.combo >= 12 ? 3 : H0.combo >= 5 ? 2 : 1);
     if (B.spawnQ.length === 0 && alive().length === 0 && B.waveT > 1.5 && B.world === "roof" && !B.down) win();
     if (B.down) { B.down += dtRaw; if (B.down > 2.6) recover(); }
   }
   // The camera: straight down on his roof, close enough to see the blows, drawn in on the great
   // moments and higher in the Heights.
+  // The camera: straight down on him, wide enough to take in those on the roofs round about,
+  // drawn back and leading the way while he leaps, pushed in close on the great moments, higher
+  // in the Heights.
   function camera(dtRaw) {
-    const cam = api.cam, b = B.roof, H0 = B.hero, zk = B.slowT > 0 ? B.zoomK : B.warnT > 0 ? 1.1 : 1;
-    const want = b.h + (B.world === "heights" ? 280 : 200) / zk;
-    cam.z += (want - cam.z) * Math.min(1, dtRaw * (want < cam.z ? 4 : 2));
-    const tx = lerp((b.x0 + b.x1) / 2, H0.x, 0.6), ty = lerp((b.y0 + b.y1) / 2, H0.y, 0.6);
-    cam.x += (tx - cam.x) * Math.min(1, dtRaw * 4); cam.y += (ty - cam.y) * Math.min(1, dtRaw * 4);
+    const cam = api.cam, b = B.roof, H0 = B.hero, zk = B.slowT > 0 ? B.zoomK : B.warnT > 0 ? 1.1 : 1, hop = H0.act.kind === "hop" ? H0.act : null;
+    const close = alive().filter((f) => !["fall", "castout"].includes(f.act.kind) && dTo(f) < 230);
+    let spread = 0, mx = 0, my = 0;
+    for (const f of close) { spread = Math.max(spread, dTo(f)); mx += f.x; my += f.y; }
+    if (close.length) { mx /= close.length; my /= close.length; } else { mx = H0.x; my = H0.y; }
+    const base = B.world === "heights" ? 290 : clamp(150 + spread * 0.75, 200, 300);
+    const want = heroZ() + (base + (hop ? 90 : 0)) / zk;
+    cam.z += (want - cam.z) * Math.min(1, dtRaw * (want < cam.z ? 3 : 2.2));
+    // Toward them a little, ahead of him in a leap, and a touch above him, so he sits just below the
+    // middle of the screen, clear of the angel's words; never far from him.
+    const lead = hop ? 40 : 0, tx = H0.x + clamp((mx - H0.x) * 0.22 + Math.cos(H0.ang) * lead, -110, 110), ty = H0.y - 16 + clamp((my - H0.y) * 0.2 + Math.sin(H0.ang) * lead, -45, 45);
+    cam.x += (tx - cam.x) * Math.min(1, dtRaw * (hop ? 6 : 4)); cam.y += (ty - cam.y) * Math.min(1, dtRaw * (hop ? 6 : 4));
     cam.lx = 0; cam.ly = 0;
     if (B.shake > 0) { const k = K(b.h); cam.x += (Math.random() - 0.5) * B.shake / k; cam.y += (Math.random() - 0.5) * B.shake / k; }
     // The flight's angel stands for this one, so the city is drawn round it.
@@ -628,9 +714,9 @@ function RoofFight(api) {
     const after = () => {
       act("idle");
       if (H0.queue) {
-        const q = H0.queue; H0.queue = null; if (q.f.gone) return;
+        const q = H0.queue; H0.queue = null; if (q.f && q.f.gone) return;
         replaying = true;
-        try { if (q.move === "water") water(q.f); else if (q.move === "stole") stole(q.f); else if (q.move === "throw") throwFoe(q.f, q.dx, q.dy); else if (q.move === "finish") finishFoe(q.f); else goStrike(q.f, q.move); }
+        try { if (q.hop) hopTo(q.hop, q.then); else if (q.move === "water") water(q.f); else if (q.move === "stole") stole(q.f); else if (q.move === "throw") throwFoe(q.f, q.dx, q.dy); else if (q.move === "finish") finishFoe(q.f); else goStrike(q.f, q.move); }
         finally { replaying = false; }
       }
     };
@@ -638,6 +724,19 @@ function RoofFight(api) {
     if (A0.kind === "dismount") { H0.z = 30 * (1 - smooth(u)) + Math.sin(u * PI) * 10; if (u >= 1) { H0.z = 0; act("idle"); Sound.fx.step(1.4); } }
     else if (A0.kind === "mount") { const A = B.angel; H0.x = lerp(H0.x, A.x, Math.min(1, dt * 8)); H0.y = lerp(H0.y, A.y, Math.min(1, dt * 8)); H0.z = Math.sin(u * PI) * 14 + u * 6; }
     else if (A0.kind === "run") { A0.ph += dt * 11; }
+    else if (A0.kind === "hop") {
+      const e = smooth(u), alt = (1 - u) * (1 - u) * A0.h0 + 2 * u * (1 - u) * A0.c + u * u * A0.h1;
+      H0.x = lerp(A0.from[0], A0.to[0], e); H0.y = lerp(A0.from[1], A0.to[1], e); H0.z = alt - B.roof.h;
+      if (u >= 1) {
+        // Down on the new roof: off the angel's back, and the blow, if there is one.
+        B.roof = A0.b; H0.z = 0; B.near = nearRoofs(); dust(H0.x, H0.y, B.roof.h); Sound.fx.step(1.8); B.shake = Math.max(B.shake, 3);
+        if (H0.combo) H0.comboT = Math.max(H0.comboT, 1.2);
+        B.angel.act = { kind: "hover", t: 0 };
+        const T = A0.then;
+        if (T && T.f && !T.f.gone && mine(T.f)) { act("idle"); replaying = true; try { if (T.move === "finish") finishFoe(T.f); else goStrike(T.f, T.move); } finally { replaying = false; } }
+        else after();
+      }
+    }
     else if (["zip", "jumpkick", "dash", "spike"].includes(A0.kind)) {
       const e = A0.kind === "dash" ? ease(u) : smooth(u);
       H0.x = lerp(A0.from[0], A0.to[0], e); H0.y = lerp(A0.from[1], A0.to[1], e);
@@ -705,7 +804,7 @@ function RoofFight(api) {
     else if (A0.kind === "toss") {
       if (!A0.fired && u > 0.42) {
         A0.fired = true; const f = A0.f && !A0.f.gone ? A0.f : null;
-        if (f) B.parts.push({ kind: "flask", x0: H0.x, y0: H0.y, z0: heroZ() + 10, f, x1: f.x, y1: f.y, z1: zOf(f) + 8, t: 0, dur: 0.3 });
+        if (f) B.parts.push({ kind: "flask", x0: H0.x, y0: H0.y, z0: heroZ() + 10, f, x1: f.x, y1: f.y, z1: zOf(f) + 8, t: 0, dur: clamp(0.25 + dTo(f) / 700, 0.3, 0.6) });
       }
       if (u >= 1) after();
     }
@@ -757,8 +856,8 @@ function RoofFight(api) {
         Sound.fx.hah(1); Sound.fx.clang();
       }
       if (u >= 1) act("idle");
-    } else if (A0.kind === "block") { const k = B.keys; if (!(B.touch && B.touch.block && !B.touch.spent) && !k.KeyQ && !k.KeyZ && !k.ShiftLeft && !k.ShiftRight) act("idle"); }
-    if (!["mount", "down"].includes(A0.kind) && B.angel.act.kind !== "carry") keepOn(H0, B.roof, 5);
+    } else if (A0.kind === "block") { const k = B.keys; if (!(B.touch && B.touch.block && !B.touch.spent) && !(B.two && !B.two.spent) && !k.KeyQ && !k.KeyZ && !k.ShiftLeft && !k.ShiftRight) act("idle"); }
+    if (!["mount", "down", "hop"].includes(H0.act.kind) && B.angel.act.kind !== "carry") keepOn(H0, B.roof, 5);
   }
   function hurtHero(dmg, grab) {
     const H0 = B.hero;
@@ -780,7 +879,7 @@ function RoofFight(api) {
     warn(f);
   }
   function attackScheduler(dt) {
-    if (B.over || B.down || B.shift) return;
+    if (B.over || B.down || B.shift || B.hero.act.kind === "hop") return;
     B.nextAtk -= dt;
     const winding = B.foes.filter((f) => !f.gone && (f.act.kind === "wind" || f.act.kind === "lunge")).length;
     const maxW = B.enc.cap >= 4 || B.world === "depths" ? 2 : 1;
@@ -791,13 +890,14 @@ function RoofFight(api) {
     windUp(f, grab);
     B.nextAtk = lerp(B.enc.gap[0], B.enc.gap[1], Math.random()) * (B.world === "depths" ? 0.75 : 1);
     if (!grab && !B.taught.gold) { B.taught.gold = true; B.slowFor = f; say(tip("A gold sign: tap him now, to counter!", "A gold sign: press X now, to counter!")); f.act.dur = 1.0; }
-    if (grab && !B.taught.red) { B.taught.red = true; B.slowFor = f; say(tip("A red sign cannot be countered. Hold on the open roof, to block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
+    if (grab && !B.taught.red) { B.taught.red = true; B.slowFor = f; say(tip("A red sign cannot be countered. Two fingers down, or hold on the open roof: block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
   }
-  // Across from a roof near his: a leap over the gap, onto the edge of his roof.
-  function leapOver(f) {
-    const b0 = f.roof, R0 = B.roof, H0 = B.hero;
-    const to = { x: lerp(clamp(f.x, R0.x0 + 10, R0.x1 - 10), H0.x, 0.3), y: lerp(clamp(f.y, R0.y0 + 10, R0.y1 - 10), H0.y, 0.3) }; keepOn(to, R0, 8);
-    f.act = { kind: "leap", t: 0, dur: 0.7 + gap(b0, R0) / 300, x0: f.x, y0: f.y, h0: b0.h, x1: to.x, y1: to.y, h1: R0.h, top: Math.max(b0.h, R0.h) + 34 };
+  // Theirs: across a gap, onto his roof (by him), or onto a roof nearer his (at its edge, facing him).
+  function leapTo(f, r) {
+    const b0 = f.roof, H0 = B.hero;
+    const to = r === B.roof ? { x: lerp(clamp(f.x, r.x0 + 10, r.x1 - 10), H0.x, 0.3), y: lerp(clamp(f.y, r.y0 + 10, r.y1 - 10), H0.y, 0.3) } : { x: clamp(H0.x, r.x0 + 9, r.x1 - 9) + (Math.random() - 0.5) * 24, y: clamp(H0.y, r.y0 + 9, r.y1 - 9) + (Math.random() - 0.5) * 24 };
+    keepOn(to, r, 8);
+    f.act = { kind: "leap", t: 0, dur: 0.7 + gap(b0, r) / 300, x0: f.x, y0: f.y, h0: b0.h, x1: to.x, y1: to.y, h1: r.h, top: Math.max(b0.h, r.h) + 34, to: r };
     f.alt = b0.h; f.roof = null; f.z = 0;
     Sound.fx.whoosh(0.3, 0.6, true); Sound.fx.growl(0.3);
   }
@@ -824,7 +924,7 @@ function RoofFight(api) {
     if (a.kind === "leap") {
       const u = clamp(a.t / a.dur, 0, 1), e = smooth(u), c = 2 * a.top - (a.h0 + a.h1) / 2;
       f.x = lerp(a.x0, a.x1, e); f.y = lerp(a.y0, a.y1, e); f.alt = (1 - u) * (1 - u) * a.h0 + 2 * u * (1 - u) * c + u * u * a.h1; f.ang = Math.atan2(a.y1 - a.y0, a.x1 - a.x0);
-      if (u >= 1) { f.roof = B.roof; f.z = 0; f.act = { kind: "idle", t: 0 }; dust(f.x, f.y, B.roof.h); Sound.fx.step(2); }
+      if (u >= 1) { f.roof = a.to || B.roof; f.z = 0; f.act = { kind: "idle", t: 0 }; f.hopT = 1.2 + Math.random(); dust(f.x, f.y, f.roof.h); Sound.fx.step(2); }
       return;
     }
     if (a.kind === "fall") {
@@ -889,7 +989,14 @@ function RoofFight(api) {
     // Idle. On his roof: round him, each to its own place in the ring, apart from the others. On a
     // roof near his: at its edge, watching, waiting a turn to come over.
     if (f.dizzy > 0) return;
-    if (f.roof !== B.roof) { f.ang = angTo(f) + PI; f.walk = false; keepOn(f, f.roof, 6); return; }
+    if (f.roof !== B.roof) {
+      const to = { x: clamp(H0.x, f.roof.x0 + 9, f.roof.x1 - 9), y: clamp(H0.y, f.roof.y0 + 9, f.roof.y1 - 9) };
+      for (const o of B.foes) { if (o === f || o.gone || o.roof !== f.roof) continue; const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy); if (d < 16 && d > 0.1) { to.x += dx / d * 16; to.y += dy / d * 16; } }
+      keepOn(to, f.roof, 8);
+      const dx = to.x - f.x, dy = to.y - f.y, d = Math.hypot(dx, dy);
+      if (d > 2) { f.x += dx / d * 26 * dt; f.y += dy / d * 26 * dt; f.walk = true; } else f.walk = false;
+      f.ang = angTo(f) + PI; return;
+    }
     const ring = RING + (f.kind === "grab" ? 5 : 0), sa = f.slot + B.t * 0.25;
     let tx = H0.x + Math.cos(sa) * ring, ty = H0.y + Math.sin(sa) * ring;
     for (const o of B.foes) { if (o === f || o.gone || !mine(o)) continue; const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy); if (d < 16 && d > 0.1) { tx += dx / d * 14; ty += dy / d * 14; } }
@@ -898,7 +1005,7 @@ function RoofFight(api) {
     if (d > 2) { const sp = f.kind === "grab" ? 26 : 34; f.x += dx / d * sp * dt; f.y += dy / d * sp * dt; f.walk = true; } else f.walk = false;
     f.ang = angTo(f) + PI;
   }
-  function spendBlock() { act("idle"); if (B.touch) B.touch.spent = true; B.qSpent = true; }
+  function spendBlock() { act("idle"); if (B.touch) B.touch.spent = true; if (B.two) B.two.spent = true; B.qSpent = true; }
   function resolveAttack(f) {
     const H0 = B.hero, grab = f.sign === "red", close = dTo(f) < 20;
     f.sign = null;
@@ -947,8 +1054,17 @@ function RoofFight(api) {
     if (B.woeT) B.woeT = Math.max(0, B.woeT - dt);
     if (moving && (H0.act.kind === "idle" || H0.act.kind === "run")) {
       if (H0.act.kind !== "run") act("run", { ph: 0 });
-      const m = Math.hypot(kx, ky);
+      const m = Math.hypot(kx, ky), x0 = H0.x, y0 = H0.y;
       H0.x += kx / m * 70 * dt; H0.y += ky / m * 70 * dt; H0.ang = Math.atan2(ky, kx);
+      // Held against the edge of his roof a moment: a leap to the next roof that way.
+      keepOn(H0, B.roof, 5);
+      B.edgeT = Math.hypot(H0.x - x0, H0.y - y0) < 70 * dt * 0.3 ? (B.edgeT || 0) + dt : 0;
+      if (B.edgeT > 0.22) {
+        B.edgeT = 0;
+        let best = null, bs = -1e9;
+        for (const r of api.roofs()) { if (!hopOK(r)) continue; const cx = clamp(H0.x, r.x0, r.x1) - H0.x, cy = clamp(H0.y, r.y0, r.y1) - H0.y, d = Math.hypot(cx, cy) || 1, dot = (cx * kx + cy * ky) / (d * m); if (dot < 0.5) continue; const sc = dot * 100 - d; if (sc > bs) { bs = sc; best = r; } }
+        if (best) hopTo(best, null);
+      }
     } else if (!moving && H0.act.kind === "run") act("idle");
   }
   // The best target the way an arrow points (or, with none, the nearest).
@@ -990,7 +1106,7 @@ function RoofFight(api) {
     else if (code === "KeyF") water(pick());
     else if (code === "KeyR") { const f = pick({ far: true }); if (f) stole(f); else pop(H0, "NONE FAR ENOUGH", "rgba(233,230,223,0.6)"); }
     else if (code === "KeyT") { const f = pick({ near: true }); if (f) throwFoe(f, kx, ky); else pop(H0, "NONE CLOSE ENOUGH", "rgba(233,230,223,0.6)"); }
-    else if (code === "KeyB") { if (B.world === "heights") finisher(); else bless(); }
+    else if (code === "KeyB") { if (B.world === "heights") finisher(); else pop(H0, "BLESS: ONLY IN THE HEIGHTS", "rgba(233,230,223,0.6)"); }
   }
 
   // ---- Touch --------------------------------------------------------------------------------------------
@@ -1012,9 +1128,20 @@ function RoofFight(api) {
     else if (near(tg)) throwFoe(tg, dx, dy);
     else stole(tg);
   }
+  // A tap on a roof with demons on it is a tap on the one there nearest the finger; on an empty roof,
+  // a leap there.
+  function roofTarget(p) {
+    const b = api.roofAt(p); if (!b || b === B.roof) return { roof: b };
+    const k = K(b.h), cam = api.cam, x = cam.x + (p.x - W / 2) / k, y = cam.y + (p.y - H / 2) / k;
+    const f = onRoof(b).sort((a, c) => Math.hypot(a.x - x, a.y - y) - Math.hypot(c.x - x, c.y - y))[0];
+    return { roof: b, f };
+  }
   function down(p, e) {
     if (B.over || B.down) return;
-    B.touch = { id: e.pointerId, x0: p.x, y0: p.y, r0: performance.now(), target: foeAt(p), moved: false, block: false, water: false };
+    // A second finger down: block, at once.
+    if (B.touch && B.touch.id !== e.pointerId) { B.touch.block = true; B.touch.done = true; B.two = { id: e.pointerId, spent: false }; if (!busy() && B.hero.act.kind !== "block") act("block", {}); return; }
+    const f = foeAt(p), rt = f ? null : roofTarget(p);
+    B.touch = { id: e.pointerId, x0: p.x, y0: p.y, r0: performance.now(), target: f || (rt && rt.f) || null, roof: rt && !rt.f ? rt.roof : null, moved: false, block: false, water: false };
   }
   function move(p, e) {
     const T = B.touch; if (!T || T.id !== e.pointerId) return;
@@ -1022,16 +1149,19 @@ function RoofFight(api) {
     if (T.moved && !T.done && !T.block) { const dx = p.x - T.x0, dy = p.y - T.y0; if (Math.hypot(dx, dy) > 40) { T.done = true; gesture(T, dx, dy); } }
   }
   function up(p, e) {
+    if (B.two && e.pointerId === B.two.id) { B.two = null; if (B.hero.act.kind === "block") act("idle"); return; }
     const T = B.touch; if (!T || T.id !== e.pointerId) return;
-    B.touch = null;
+    B.touch = null; B.two = null;
     if (T.block) { if (B.hero.act.kind === "block") act("idle"); return; }
     if (T.done || B.over || B.down) return;
     if (!T.moved) {
       if (T.target && !T.target.gone) { if (T.water && !lying(T.target)) water(T.target); else tapDemon(T.target); return; }
       const f = foeAt(p); if (f) { tapDemon(f); return; }
-      // The open roof, where he stands: he goes there.
+      // The open roof, where he stands: he goes there. Another roof: they leap to it.
       const h = B.roof.h, k = K(h), cam = api.cam, x = cam.x + (p.x - W / 2) / k, y = cam.y + (p.y - H / 2) / k;
-      if (inside(B.roof, x, y, -4)) tapRoof(x, y);
+      if (inside(B.roof, x, y, -4)) { tapRoof(x, y); return; }
+      const b = T.roof || api.roofAt(p);
+      if (b && b !== B.roof && !b.church) { if (hopOK(b)) hopTo(b, null); else hopToward(b); }
     } else { const dx = p.x - T.x0, dy = p.y - T.y0; if (Math.hypot(dx, dy) > 20) gesture(T, dx, dy); }
   }
 
@@ -1040,7 +1170,7 @@ function RoofFight(api) {
   function sparks(f, c, n) { const z = f === B.hero ? heroZ() : zOf(f); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 40 + Math.random() * 70; B.parts.push({ kind: "spark", x: f.x, y: f.y, z: z + 10, vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: 20 + Math.random() * 50, c, t: 0 }); } }
   function shards(f) { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU; B.parts.push({ kind: "shard", x: f.x, y: f.y, z: zOf(f) + 10, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, vz: 40 + Math.random() * 60, r: Math.random() * TAU, t: 0 }); } }
   function dust(x, y, z) { for (let i = 0; i < 8; i++) { const a = Math.random() * TAU; B.parts.push({ kind: "smoke", x, y, z, vx: Math.cos(a) * 30, vy: Math.sin(a) * 30, vz: 0, t: 0 }); } }
-  const LIFE = { shieldfly: 2, hat: 2, ring: 0.7, smoke: 0.8, flask: 0.5, mark: 0.4, beam: 0.35, column: 1, warn: 0.5, drop: 0.6 };
+  const LIFE = { shieldfly: 2, hat: 2, ring: 0.7, smoke: 0.8, flask: 0.7, mark: 0.4, beam: 0.35, column: 1, warn: 0.5, drop: 0.6 };
   function stepParts(dt) {
     for (const p of B.parts) {
       p.t += dt;
@@ -1093,7 +1223,7 @@ function RoofFight(api) {
   function drawAngelHere() {
     const A = B.angel;
     if (A.act.kind === "smite" && A.alt > api.cam.z - 40) return;
-    api.drawAngel({ x: A.x, y: A.y, alt: A.alt, head: A.head, mode: A.mode, wing: A.wing, rider: (B.over > 1.25) || A.act.kind === "carry" && A.act.t > 0.4 });
+    api.drawAngel({ x: A.x, y: A.y, alt: A.alt, head: A.head, mode: A.mode, wing: A.wing, rider: (B.over > 1.25) || (A.act.kind === "carry" && A.act.t > 0.4) || A.act.kind === "ferry" });
   }
   // How he looks this moment: how far each arm reaches, a kick, a spin, a stretch, flat out.
   function heroLook() {
@@ -1139,7 +1269,7 @@ function RoofFight(api) {
   }
   function drawHero() {
     const H0 = B.hero, h = B.roof.h, z = heroZ(), k = K(z), X = sx(H0.x, z), Y = sy(H0.y, z), L = heroLook();
-    if (H0.act.kind === "mount" && B.over > 1.25) return;
+    if ((H0.act.kind === "mount" && B.over > 1.25) || H0.act.kind === "hop") return;
     // His ring of light on the roof.
     const gk = K(h), GX = sx(H0.x, h), GY = sy(H0.y, h);
     glow(GX, GY, 26 * gk, C.holy, 0.22);
@@ -1272,7 +1402,7 @@ function RoofFight(api) {
       else if (p.kind === "ring") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a)); ctx.lineWidth = p.big ? 5 : 3; ctx.beginPath(); ctx.arc(sx(p.x, p.z), sy(p.y, p.z), p.r * k, 0, TAU); ctx.stroke(); }
       else if (p.kind === "hat") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); ctx.scale(k, k); ctx.fillStyle = "#0e0a12"; ctx.beginPath(); ctx.ellipse(0, 0, 6, 4.6, 0, 0, TAU); ctx.fill(); ctx.restore(); }
       else if (p.kind === "shieldfly") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); ctx.scale(k, k); poly([-2, -9, 2, -8, 2, 8, -2, 9], "#050308"); ctx.restore(); glow(sx(p.x, p.z), sy(p.y, p.z), 14, C.ember, 0.3 * a); }
-      else if (p.kind === "flask") { const u = clamp(p.t / p.dur, 0, 1), x = lerp(p.x0, p.x1, u), y = lerp(p.y0, p.y1, u), z = lerp(p.z0, p.z1, u) + Math.sin(u * PI) * 24, X = sx(x, z), Y = sy(y, z); ctx.save(); ctx.translate(X, Y); ctx.rotate(u * 12); rect(-2, -4, 4, 7, "#bfe8ff"); ctx.restore(); glow(X, Y, 10, C.ice, 0.6); }
+      else if (p.kind === "flask") { const u = clamp(p.t / p.dur, 0, 1), x = lerp(p.x0, p.x1, u), y = lerp(p.y0, p.y1, u), z = lerp(p.z0, p.z1, u) + Math.sin(u * PI) * (24 + Math.hypot(p.x1 - p.x0, p.y1 - p.y0) * 0.18), X = sx(x, z), Y = sy(y, z); ctx.save(); ctx.translate(X, Y); ctx.rotate(u * 12); rect(-2, -4, 4, 7, "#bfe8ff"); ctx.restore(); glow(X, Y, 10, C.ice, 0.6); }
       else if (p.kind === "mark") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a) * 0.8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx(p.x, p.z), sy(p.y, p.z), (4 + p.t * 30) * k, 0, TAU); ctx.stroke(); }
       else if (p.kind === "warn") { const f = p.f; if (!f.gone) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = hexA(p.c, Math.max(0, a)); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx(f.x, zOf(f)), sy(f.y, zOf(f)) - 24, 12 + p.t * 110, 0, TAU); ctx.stroke(); ctx.restore(); } }
       else if (p.kind === "beam") {
@@ -1311,13 +1441,11 @@ function RoofFight(api) {
     rect(16, 26, 140, 6, "rgba(255,255,255,0.1)"); rect(16, 26, 140 * H0.resolve / 100, 6, H0.resolve < 30 && Math.sin(B.t * 10) > 0 ? "#ff6a50" : "#e9eef8");
     for (let i = 0; i < 3; i++) { const on = i < B.woe, x = 168 + i * 11; circle(x, 29, 3.6, on ? "#ff5a3a" : "rgba(255,255,255,0.12)"); if (on) glow(x, 29, 9, "#ff3a2a", 0.4 + B.woeT * 0.5); }
     text("FALLS", 201, 32, { size: 7, weight: 700, spacing: 2, color: B.woe ? "#ff8a70" : "rgba(233,230,223,0.35)" });
-    for (let i = 0; i < SPIRIT; i++) { const x = 20 + i * 11, y = 44, on = i < H0.spirit; ctx.save(); ctx.translate(x, y); ctx.rotate(PI / 4); rect(-3, -3, 6, 6, on ? C.holy : "rgba(255,255,255,0.12)"); ctx.restore(); if (on) glow(x, y, 9, C.holy, 0.4); }
-    text("SPIRIT", 22 + SPIRIT * 11, 47, { size: 7, weight: 700, spacing: 2, color: "rgba(242,212,122,0.6)" });
     const every = R().swoop, ready = B.angel.act.kind === "hover", slots = Math.max(1, (every || 4) - 1), toGo = angelUntil(), fill = every ? slots - toGo : 0;
-    for (let i = 0; i < slots; i++) { const x = 20 + i * 14, y = 60, on = i < fill; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2, 0, 0, TAU); ctx.fillStyle = on ? "#fff6dc" : every ? "rgba(255,255,255,0.14)" : "rgba(255,90,58,0.2)"; ctx.fill(); ctx.restore(); if (on) glow(x, y, 8, C.holy, 0.35 + (toGo === 0 ? 0.3 * Math.sin(B.t * 8) : 0)); }
-    text(!every ? "HIS ANGEL IS FAR" : !ready ? "HIS ANGEL IS HERE" : toGo === 0 ? "NEXT BLOW: HIS ANGEL" : "HIS ANGEL", 22 + slots * 14, 63, { size: 7, weight: 700, spacing: 2, color: !every ? "#ff8a70" : !ready || toGo === 0 ? C.holy : "rgba(242,212,122,0.6)" });
+    for (let i = 0; i < slots; i++) { const x = 20 + i * 14, y = 46, on = i < fill; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2, 0, 0, TAU); ctx.fillStyle = on ? "#fff6dc" : every ? "rgba(255,255,255,0.14)" : "rgba(255,90,58,0.2)"; ctx.fill(); ctx.restore(); if (on) glow(x, y, 8, C.holy, 0.35 + (toGo === 0 ? 0.3 * Math.sin(B.t * 8) : 0)); }
+    text(!every ? "HIS ANGEL IS FAR" : !ready ? "HIS ANGEL IS HERE" : toGo === 0 ? "NEXT BLOW: HIS ANGEL" : "HIS ANGEL", 22 + slots * 14, 49, { size: 7, weight: 700, spacing: 2, color: !every ? "#ff8a70" : !ready || toGo === 0 ? C.holy : "rgba(242,212,122,0.6)" });
     const left = alive().length + B.spawnQ.length;
-    text("ON THE ROOFS: " + left, 16, 80, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
+    text("ON THE ROOFS: " + left, 16, 66, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
     if (H0.combo >= 2) {
       const k = clamp(H0.comboT / R().comboT, 0, 1);
       text(H0.combo + "", W - 66, 60, { align: "right", size: 34, weight: 800, italic: true, color: "#ffffff", glow: C.holy, blur: 16, alpha: 0.4 + 0.6 * k });
@@ -1329,6 +1457,7 @@ function RoofFight(api) {
       text(lft + " MORE: THE HEIGHTS", W - 18, 96, { align: "right", size: 8, weight: 800, spacing: 2, color: C.holy, alpha: 0.55 + 0.45 * (H0.combo / HEIGHTS_AT) });
       rect(W - 118, 101, 100, 2, "rgba(255,255,255,0.15)"); rect(W - 118, 101, 100 * H0.combo / HEIGHTS_AT, 2, C.holy);
     }
+    if (B.world === "heights" && !B.shift && !B.finishing) { const k = H0.comboT / R().comboT; rect(W / 2 - 80, H - 18, 160, 4, "rgba(255,255,255,0.25)"); rect(W / 2 - 80, H - 18, 160 * clamp(k, 0, 1), 4, C.holy); text("KEEP THE FLOW · THEN BLESS", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 3, color: "#fff3cf" }); }
     if (B.world === "depths" && !B.shift) {
       for (let i = 0; i < DEPTHS_OUT; i++) { const x = W / 2 - (DEPTHS_OUT - 1) * 8 + i * 16, on = i < H0.combo; circle(x, H - 18, 4, on ? C.holy : "rgba(255,90,58,0.3)"); if (on) glow(x, H - 18, 10, C.holy, 0.5); }
       text(DEPTHS_OUT + " IN A ROW TO RISE", W / 2, H - 30, { align: "center", size: 8, weight: 800, spacing: 3, color: "#ff8a70" });
@@ -1342,14 +1471,8 @@ function RoofFight(api) {
       const bx = W - 52, by = H - 52, pul = 1 + 0.1 * Math.sin(B.t * 8);
       glow(bx, by, 60 * pul, C.holy, 0.7); circle(bx, by, 28 * pul, "rgba(255,240,200,0.9)"); ctx.strokeStyle = "#8a6020"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 28 * pul, 0, TAU); ctx.stroke();
       poly([bx, by + 14, bx - 11, by - 4, bx - 4, by - 4, bx - 4, by - 14, bx + 4, by - 14, bx + 4, by - 4, bx + 11, by - 4], "#8a6020");
-      text(tip("FROM ON HIGH", "B · FROM ON HIGH"), W - 12, by + 42, { align: "right", size: 8, weight: 800, spacing: 1.5, color: "#fff3cf", max: 110 });
+      text(tip("BLESS", "B · BLESS"), W - 12, by + 42, { align: "right", size: 8, weight: 800, spacing: 1.5, color: "#fff3cf", max: 110 });
       buttons.push({ x: bx - 36, y: by - 36, w: 72, h: 72, act: () => finisher() });
-    } else if (H0.spirit >= SPIRIT && !B.over) {
-      const bx = W - 52, by = H - 52, pul = 1 + 0.08 * Math.sin(B.t * 6);
-      glow(bx, by, 50 * pul, C.holy, 0.5); circle(bx, by, 26 * pul, "rgba(20,14,8,0.85)"); ctx.strokeStyle = C.holy; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(bx, by, 26 * pul, 0, TAU); ctx.stroke();
-      rect(bx - 2.5, by - 13, 5, 26, "#fff3cf"); rect(bx - 10, by - 6, 20, 5, "#fff3cf");
-      text(tip("BLESS", "B · BLESS"), bx, by + 40, { align: "center", size: 8, weight: 800, spacing: 2, color: C.holy });
-      buttons.push({ x: bx - 34, y: by - 34, w: 68, h: 68, act: () => bless() });
     }
     // Any of them off the screen: a red mark at the edge, pointing the way.
     for (const f of alive()) {
@@ -1365,7 +1488,7 @@ function RoofFight(api) {
       ctx.globalAlpha = 0.55 * a; rect(W / 2 - bw / 2, 8, bw, 14 + ls.length * 20, "#050407"); ctx.globalAlpha = 1;
       ls.forEach((l, i) => text(l, W / 2, 26 + i * 20, { align: "center", size: 17, weight: 500, italic: true, font: FONT.line, color: "#f6eccb", alpha: a }));
     }
-    if (B.enc.first && B.t < 40 && !B.over) text(tip("TAP ONE ON HIS ROOF: STRIKE · ON ANOTHER ROOF: THE ANGEL'S LIGHT · DRAG ONE FAR OFF: THE ROSARY", "SPACE: STRIKE (FAR OFF: THE ANGEL'S LIGHT) · X: COUNTER · Q: BLOCK · R: ROSARY · T: THROW"),
+    if (B.enc.first && B.t < 40 && !B.over) text(tip("TAP ONE: LEAP AT HIM · TAP A ROOF: LEAP THERE · HOLD ON ONE, LET GO: HOLY WATER, ANY DISTANCE · TWO FINGERS: BLOCK", "SPACE: LEAP AT ONE AND STRIKE · ARROWS PAST THE EDGE: LEAP · F: HOLY WATER · Q: BLOCK · R: ROSARY"),
       W / 2, H - 12, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.5)", max: W - 40 });
     if (B.down) rect(0, 0, W, H, "rgba(0,0,0," + clamp((B.down - 1.2) / 0.8, 0, 1) * (B.down > 2.2 ? (2.6 - B.down) / 0.4 : 1) + ")");
   }
