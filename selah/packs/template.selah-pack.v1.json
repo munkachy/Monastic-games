@@ -1,0 +1,34 @@
+{
+  "selahPack": 1,
+  "id": "my-psalter",
+  "displayName": "My Psalter",
+  "name": "My Psalter, in full",
+  "numbering": "hebrew",
+  "titlesCounted": false,
+  "license": "user-supplied-do-not-redistribute",
+  "language": "en",
+  "psalms": [
+    {
+      "n": 1,
+      "incipit": "Beatus vir",
+      "verses": [
+        { "v": 1, "lines": ["The first half of verse one", "the second half of verse one"] },
+        { "v": 2, "lines": ["The first half of verse two", "the second half of verse two"], "stanzaEnd": true }
+      ]
+    },
+    {
+      "n": 3,
+      "verses": [
+        { "v": 1, "lines": ["A heading, if your psalter counts it as a verse"], "title": true },
+        { "v": 2, "lines": ["A verse with a pause after it", "and its second half"], "pause": true, "douay": 3 },
+        { "v": 3, "lines": ["A verse after a heading of your own"], "heading": "A heading" }
+      ]
+    },
+    {
+      "n": 10,
+      "verses": [
+        { "v": 1, "lines": ["The first verse of a psalm that another numbering joins to the one before"], "sectionStart": true }
+      ]
+    }
+  ]
+}

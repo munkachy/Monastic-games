@@ -1,0 +1,6 @@
+# SELAH: never commit a copyrighted psalter (see selah/PLAN.md, "Copyright architecture").
+# A pack made from your own copy belongs on your device, not in this public repo.
+*grail*.json
+*Grail*.json
+*.private.json
+selah/local/
