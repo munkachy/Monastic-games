@@ -556,24 +556,29 @@ field with placeholder words.
 | `selahPack` | yes | `1` |
 | `id` | yes | Lower-case letters, digits and hyphens, at most 32. `douay` is kept for the built-in text. Importing a pack with the same id as one already on the device replaces it |
 | `displayName` | yes | 1 to 24 characters. The HUD shows "Voice: " and this |
+| `name` | no | The full name, up to 80 characters ("The Grail Psalms") |
 | `numbering` | yes | `"hebrew"` or `"vulgate"`: how the pack numbers its psalms |
 | `titlesCounted` | no | `true` if the psalms' headings count as verses (as in the Douay and the Hebrew Bible), `false` if not (as in most modern English psalters). If it is left out, `true` for vulgate, `false` for hebrew |
 | `license` | yes | A short note, 1 to 80 characters. For a psalter under copyright: `user-supplied-do-not-redistribute` |
 | `language` | no | A tag such as `"en"` |
 | `psalms` | yes | 1 to 150 psalms. A pack may hold only some; the rest are played from the Douay |
 
-**Each psalm:** `n`, its number in the pack's numbering (1 to 150, each once),
-and `verses`, a list of verses in rising order.
+**Each psalm:** `n`, its number in the pack's numbering (1 to 150, each once);
+`incipit` (optional), its Latin opening words, up to 120 characters; and `verses`,
+listed in the order the psalter prints them.
 
 **Each verse:**
 
 | Field | Needed | What it is |
 |---|---|---|
-| `v` | yes | The verse number |
+| `v` | yes | The verse number as this psalter prints it, each number once in a psalm. The numbers need not rise: a psalter may move a verse (the Grail moves one in Psalm 101 and one in Psalm 106) |
 | `lines` | yes | 1 to 12 lines, each at most 400 characters. Two lines are a couplet and split the Voice; three are a triplet; the compiler groups longer verses |
 | `title` | no | `true`: this verse is the psalm's heading. It is shown on the title card and not played |
 | `pause` | no | `true`: a Pause or Selah after this verse. If a psalm has any `pause` marks, they replace the selah table for that psalm |
 | `stanzaEnd` | no | `true`: a stanza ends here. This is not a Selah; it is a breath of half a bar, with the band thinning for a moment |
+| `douay` | no | The Douay verse this one answers to, where its number differs. The game uses it to place Selahs and set pieces |
+| `heading` | no | A heading shown before this verse, up to 80 characters: one of Psalm 118's letters, a stanza mark |
+| `sectionStart` | no | `true`: a second psalm joined into this one begins here (Hebrew 10 within Douay 9, Hebrew 115 within Douay 113) |
 
 **Numbering.** The game keeps the Douay's (Vulgate) numbers. A pack numbered
 from the Hebrew is mapped like this (`SelahPack.toVulgate`, checked against
@@ -591,16 +596,24 @@ Psalter Runner's labels for all 150 psalms):
 | 148–150 | 148–150 |
 
 The selah table and the set pieces are keyed to the Douay's verses. For a pack,
-the game maps verses by number, allowing for `titlesCounted`; where a psalm's
-verse count still differs from the Douay's, it maps them by position.
+the game uses each verse's `douay` number where it has one; otherwise it maps
+verses by number, allowing for `titlesCounted`, and where a psalm's verse count
+still differs from the Douay's, by position.
 
 **Checking.** A pack is refused if it is over 4 MB, is not JSON, has the wrong
 version or a bad id, lacks a required field, has a psalm twice, has verse
-numbers that do not rise, or has an empty line, an over-long line or control
+number twice in one psalm, or has an empty line, an over-long line or control
 characters. Some problems are only warnings, and that psalm is then played from
 the Douay: a missing psalm, a Psalm 118 (Hebrew 119) without 176 verses (the
 Book of Letters needs 22 times 8), or a field version 1 does not know. The
 checker never prints, logs or sends the text.
+
+**One file for SELAH and Lumina.** Lumina (`munkachy/lumina`) reads the same
+file: the author's Grail file, numbered after the Vulgate with every verse's
+`douay` number, Psalm 118's letters as `heading`s and the Latin incipits, works
+in both, imported once on each device. Lumina's `tools/grail-pack.js` makes it
+from a private copy. The Grail has been taken out of Lumina's repository for the
+same reason it never goes into this one.
 
 **On the device.** The pack is read through the file picker, checked, and kept
 in IndexedDB under its id. It never leaves the device: no upload, no analytics

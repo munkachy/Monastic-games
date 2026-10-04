@@ -12,8 +12,10 @@ const SelahPack = (() => {
   P.MAX_BYTES = 4 * 1024 * 1024;
   const isInt = (x) => Number.isInteger(x);
   const isBool = (x) => typeof x === "boolean";
-  const KNOWN_TOP = ["selahPack", "id", "displayName", "numbering", "titlesCounted", "license", "language", "psalms"];
-  const KNOWN_VERSE = ["v", "lines", "title", "pause", "stanzaEnd"];
+  const KNOWN_TOP = ["selahPack", "id", "displayName", "name", "numbering", "titlesCounted", "license", "language", "psalms"];
+  const KNOWN_PSALM = ["n", "incipit", "verses"];
+  const KNOWN_VERSE = ["v", "lines", "title", "pause", "stanzaEnd", "douay", "heading", "sectionStart"];
+  const str = (x, max) => typeof x === "string" && x.trim() !== "" && x.length <= max;
 
   // Check a parsed pack. Returns { ok, errors, warnings, summary }. Errors stop the import;
   // warnings do not (a psalm with a problem is played from the Douay instead).
@@ -32,6 +34,7 @@ const SelahPack = (() => {
     if (pack.titlesCounted !== undefined && !isBool(pack.titlesCounted)) err("titlesCounted", "true or false");
     if (typeof pack.license !== "string" || !pack.license.trim() || pack.license.length > 80) err("license", "a short note, 1 to 80 characters");
     if (pack.language !== undefined && (typeof pack.language !== "string" || pack.language.length > 16)) err("language", "a language tag such as \"en\"");
+    if (pack.name !== undefined && !str(pack.name, 80)) err("name", "the full name, 1 to 80 characters");
     for (const k of Object.keys(pack)) if (!KNOWN_TOP.includes(k)) warn(k, "not part of version 1; ignored");
 
     const seen = new Set();
@@ -44,21 +47,28 @@ const SelahPack = (() => {
       if (!isInt(ps.n) || ps.n < 1 || ps.n > 150) return err(at + ".n", "a psalm number from 1 to 150");
       if (seen.has(ps.n)) err(at + ".n", "psalm " + ps.n + " appears twice");
       seen.add(ps.n);
+      if (ps.incipit !== undefined && !str(ps.incipit, 120)) err(at + ".incipit", "1 to 120 characters");
+      for (const k of Object.keys(ps)) if (!KNOWN_PSALM.includes(k)) warn(at + "." + k, "not part of version 1; ignored");
       if (!Array.isArray(ps.verses) || !ps.verses.length) return err(at + ".verses", "a list of at least one verse");
-      let last = 0, sung = 0;
+      const nums = new Set();
+      let sung = 0;
       ps.verses.forEach((vs, j) => {
         const vat = at + ".verses[" + j + "]";
         if (!vs || typeof vs !== "object") return err(vat, "not a verse object");
+        // Verses are listed in the order the psalter prints them, which may move a verse
+        // (the Grail does, in two psalms), so numbers need not rise; each is used once.
         if (!isInt(vs.v) || vs.v < 1) err(vat + ".v", "a verse number from 1 up");
-        else if (vs.v <= last) err(vat + ".v", "verse numbers must go up (" + vs.v + " after " + last + ")");
-        else last = vs.v;
+        else if (nums.has(vs.v)) err(vat + ".v", "verse " + vs.v + " appears twice");
+        else nums.add(vs.v);
         if (!Array.isArray(vs.lines) || !vs.lines.length || vs.lines.length > MAX_LINES) err(vat + ".lines", "1 to " + MAX_LINES + " lines (a couplet is 2, a triplet 3)");
         else vs.lines.forEach((ln, k) => {
           if (typeof ln !== "string" || !ln.trim()) err(vat + ".lines[" + k + "]", "an empty line");
           else if (ln.length > MAX_LINE) err(vat + ".lines[" + k + "]", "longer than " + MAX_LINE + " characters");
           else if (/[\u0000-\u0008\u000B-\u001F\u007F]/.test(ln)) err(vat + ".lines[" + k + "]", "contains control characters");
         });
-        for (const f of ["title", "pause", "stanzaEnd"]) if (vs[f] !== undefined && !isBool(vs[f])) err(vat + "." + f, "true or false");
+        for (const f of ["title", "pause", "stanzaEnd", "sectionStart"]) if (vs[f] !== undefined && !isBool(vs[f])) err(vat + "." + f, "true or false");
+        if (vs.douay !== undefined && (!isInt(vs.douay) || vs.douay < 1)) err(vat + ".douay", "the Douay verse number, from 1 up");
+        if (vs.heading !== undefined && !str(vs.heading, 80)) err(vat + ".heading", "1 to 80 characters");
         for (const k of Object.keys(vs)) if (!KNOWN_VERSE.includes(k)) warn(vat + "." + k, "not part of version 1; ignored");
         if (!vs.title) sung++;
         verses++;
