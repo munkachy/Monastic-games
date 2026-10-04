@@ -76,9 +76,9 @@ const Sound = (() => {
     shaperNode = ac.createWaveShaper(); shaperNode.curve = softClip(2.2); const sg = ac.createGain(); sg.gain.value = 0.7; shaperNode.connect(sg); sg.connect(duck);
   }
   // For testing the mix: render a song offline, at a given intensity, and return the samples.
-  A.render = async function (song, secs, level) {
+  A.render = async function (song, secs, level, rate) {
     const live = { ac, out, pre, musicGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, M: Object.assign({}, M), duckDepth };
-    const off = new OfflineAudioContext(2, Math.ceil(44100 * secs), 44100);
+    const off = new OfflineAudioContext(2, Math.ceil((rate || 44100) * secs), rate || 44100);
     const wasMuted = A.muted; A.muted = false;
     build(off); A.muted = wasMuted;
     M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = 0.05; M.barT = 0.05; M.level = level || 0; M.fill = null; M.fillNext = null;
@@ -397,6 +397,80 @@ const Sound = (() => {
     g.gain.setValueAtTime(0.03 * (v || 1), t + dur - 0.05); g.gain.linearRampToValueAtTime(0.0001, t + dur);
     n.connect(hp); hp.connect(lp); lp.connect(g); route(g, t, { pan: -0.1 });
   };
+  // ---- For the heavier songs: the bass music of the drops ----------------------------------------
+  // A wobble: detuned saws and a square an octave down, through a resonant low-pass that an LFO
+  // opens and shuts. `rate` is the wobble in Hz (or `rates`, [[seconds in, Hz], ...] to change it on
+  // the beat: eighths, sixteenths, triplets); a clean sine sub under it; driven hard.
+  I.wobble = function (t, midi, dur, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const f = mtof(midi), end = t + dur, g = gainAt(t), lp = filt("lowpass", o.base || 900, o.q || 9, t);
+    const lfo = osc(o.shape || "sine", o.rate || 4, t), lg = gainAt(t, o.depth || 760);
+    lfo.connect(lg); lg.connect(lp.frequency);
+    if (o.rates) for (const [dt, r] of o.rates) lfo.frequency.setValueAtTime(r, t + dt);
+    const oscs = [osc("sawtooth", f, t), osc("sawtooth", f, t), osc("square", f / 2, t)];
+    oscs[0].detune.value = -14; oscs[1].detune.value = 14;
+    for (const a of oscs) a.connect(lp);
+    if (o.glide) for (const a of oscs) { const k = a.type === "square" ? 0.5 : 1; a.frequency.setValueAtTime(mtof(o.glide) * k, t); a.frequency.exponentialRampToValueAtTime(f * k, t + 0.1); }
+    const sub = osc("sine", f / 2, t), sg = gainAt(t, 0.7); sub.connect(sg); sg.connect(g);
+    lp.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4 * v, t + 0.01);
+    g.gain.setValueAtTime(0.4 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
+    route(g, t, { drive: o.drive === undefined ? 0.9 : o.drive });
+    for (const a of [...oscs, sub, lfo]) { a.start(t); a.stop(end + 0.1); }
+  };
+  // A growl: a saw frequency-modulated by a sine whose depth swells, through a band-pass that
+  // sweeps like a mouth opening ("yoi"). The talking bass of the drops.
+  I.growl = function (t, midi, dur, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const f = mtof(midi), end = t + dur;
+    const car = osc("sawtooth", f, t), mod = osc("sine", f * (o.ratio || 1.5), t), mg = gainAt(t, f * 0.2);
+    mg.gain.linearRampToValueAtTime(f * (o.index || 3), t + dur * 0.5); mg.gain.linearRampToValueAtTime(f * 0.4, end);
+    mod.connect(mg); mg.connect(car.frequency);
+    const bp = filt("bandpass", o.from || 320, 3.5, t); bp.frequency.exponentialRampToValueAtTime(o.to || 1500, t + dur * 0.55); bp.frequency.exponentialRampToValueAtTime(o.from || 320, end);
+    const g = gainAt(t), sub = osc("sine", f / 2, t), sg = gainAt(t, 0.6);
+    car.connect(bp); bp.connect(g); sub.connect(sg); sg.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * v, t + 0.01);
+    g.gain.setValueAtTime(0.5 * v, Math.max(t + 0.02, end - 0.03)); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.04);
+    route(g, t, { drive: 0.8 });
+    for (const a of [car, mod, sub]) { a.start(t); a.stop(end + 0.1); }
+  };
+  // A ride: a ping of metal over a wash. `bell` hits the cup.
+  I.ride = function (t, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const n = noise(t, 1.2), hp = filt("highpass", 6500, 0.7, t), g = gainAt(t); env(g, t, 0.001, 0.16 * v, 0.01, o.bell ? 0.6 : 0.45);
+    n.connect(hp); hp.connect(g); route(g, t, { drum: true, pan: o.pan === undefined ? 0.35 : o.pan, rev: 0.15 });
+    for (const r of o.bell ? [1, 2.76] : [1, 1.48]) {
+      const a = osc("square", (o.bell ? 820 : 1180) * r, t), bp = filt("bandpass", 4200, 2, t), ga = gainAt(t); env(ga, t, 0.001, (o.bell ? 0.06 : 0.035) * v, 0.005, o.bell ? 0.7 : 0.3);
+      a.connect(bp); bp.connect(ga); route(ga, t, { drum: true, pan: 0.35 }); a.start(t); a.stop(t + 0.8);
+    }
+  };
+  // A laser: a tone falling fast from high to low.
+  I.zap = function (t, v, o) {
+    o = o || {}; v = v === undefined ? 1 : v;
+    const a = osc(o.wave || "square", o.from || 2400, t), lp = filt("lowpass", 3800, 2, t), g = gainAt(t);
+    a.frequency.exponentialRampToValueAtTime(o.to || 90, t + (o.dur || 0.16)); env(g, t, 0.002, 0.16 * v, 0.02, o.dur || 0.16);
+    a.connect(lp); lp.connect(g); route(g, t, { pan: o.pan, dly: o.dly === undefined ? 0.25 : o.dly, rev: 0.2 }); a.start(t); a.stop(t + (o.dur || 0.16) + 0.1);
+  };
+  // A sub drop: the floor falling away, into a drop.
+  I.subdrop = function (t, v) {
+    const a = osc("sine", 70, t), g = gainAt(t); a.frequency.exponentialRampToValueAtTime(28, t + 1.4);
+    env(g, t, 0.01, 0.7 * (v || 1), 0.3, 1.2); a.connect(g); route(g, t, { drive: 0.3 }); a.start(t); a.stop(t + 1.8);
+  };
+  // Brass: a section of saws whose filter opens as the players blow into it.
+  I.brass = function (t, notes, dur, v, o) {
+    o = o || {}; v = (v === undefined ? 1 : v) / Math.sqrt(notes.length);
+    const lp = filt("lowpass", 500, 1.5, t), g = gainAt(t);
+    lp.frequency.exponentialRampToValueAtTime(o.cut || 3000, t + 0.07); lp.frequency.exponentialRampToValueAtTime((o.cut || 3000) * 0.6, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.3 * v, t + 0.03);
+    g.gain.setValueAtTime(0.26 * v, t + Math.max(0.04, dur - 0.04)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+    lp.connect(g); route(g, t, { rev: o.rev === undefined ? 0.25 : o.rev, dly: o.dly, pan: o.pan });
+    for (const m of notes) for (const c of [-8, 8]) { const a = osc("sawtooth", mtof(m), t); a.detune.value = c; if (o.fall) a.frequency.exponentialRampToValueAtTime(mtof(m - 2), t + dur + 0.1); a.connect(lp); a.start(t); a.stop(t + dur + 0.2); }
+  };
+  // A bowed string line: saws, slow to speak, with vibrato.
+  I.string = function (t, midi, dur, v, o) {
+    o = o || {};
+    I.lead(t, midi, dur, (v === undefined ? 1 : v) * 0.8, { waves: ["sawtooth", "sawtooth"], cut: o.cut || 2400, q: 1, att: o.att || 0.12, rel: 0.3, vib: 11, rev: 0.45, dly: 0.12, pan: o.pan, glide: o.glide, env: false });
+  };
   I.fall = function (t, dur, v) {
     const n = noise(t, dur), bp = filt("bandpass", 6000, 2, t), g = gainAt(t); bp.frequency.exponentialRampToValueAtTime(200, t + dur);
     env(g, t, 0.01, 0.2 * (v || 1), 0.02, dur); n.connect(bp); bp.connect(g); route(g, t, { rev: 0.5 });
@@ -409,7 +483,8 @@ const Sound = (() => {
   // sixteenth with e = { t, s (step in bar), n (steps in bar), b (bar), sd (a sixteenth in
   // seconds), L (intensity 0–3), I (instruments) }.
   const M = { song: null, next: null, step: 0, bar: 0, stepT: 0, barT: 0, level: 0, fill: null, fillNext: null };
-  const barLen = (S, b) => (S.bars ? S.bars[b % S.bars.length] : 16);
+  // Sixteenths in bar b: a song may change its meter as it goes (7/8 is 14, 6/8 is 12, 5/4 is 20).
+  const barLen = (S, b) => (S.len ? S.len(b) : S.bars ? S.bars[b % S.bars.length] : 16);
   // Play a song from its first bar, `lead` seconds from now; returns the audio time of that
   // first downbeat, from which the chart is timed.
   A.play = function (song, lead) {
@@ -480,34 +555,28 @@ const Sound = (() => {
     a.start(t); a.stop(t + dur + 0.1);
     return g;
   }
-  // A word struck: a soft, glassy pluck of the given note (a perfect one rings a little brighter).
-  A.hit = function (midi, perfect) {
+  // A drum struck: a short, soft tick under the band's own drum (which always plays), brighter for
+  // a perfect hit, so the player feels the stroke land.
+  A.tick = function (perfect, lane) {
     if (!ac || A.hitVolume <= 0) return;
-    const t = ac.currentTime, f = mtof(midi);
-    sfxVoice(t, f, "triangle", perfect ? 0.32 : 0.22, perfect ? 0.32 : 0.2, { cut: perfect ? 6500 : 3000, rev: 0.25 });
-    sfxVoice(t, f * 2, "sine", perfect ? 0.1 : 0.05, 0.12, {});
+    const t = ac.currentTime, f = { kick: 900, hat: 5200, snare: 2600, tom1: 1800, tom2: 1500, tom3: 1200, crash: 6000 }[lane] || 2400;
+    const n = noise(t, 0.04), bp = filt("bandpass", f, 2.5, t), g = gainAt(t);
+    env(g, t, 0.001, (perfect ? 0.22 : 0.14) * A.hitVolume, 0.002, 0.03);
+    n.connect(bp); bp.connect(g); g.connect(sfxBus);
   };
-  // A flick: the note thrown upward.
-  A.flick = function (midi) {
+  // A miss: a dull knock, quiet.
+  A.knock = function () {
     if (!ac || A.hitVolume <= 0) return;
-    const t = ac.currentTime, f = mtof(midi);
-    sfxVoice(t, f, "sawtooth", 0.16, 0.18, { cut: 4200, to: f * 2, rev: 0.3 });
+    sfxVoice(ac.currentTime, 110, "sine", 0.12 * A.hitVolume / 0.8, 0.08, { cut: 400 });
   };
-  // A hold: a tone that sounds while the word is held; returns a function to let it go.
-  A.holdTone = function (midi) {
+  // A roll held: a soft hiss that lasts while it is held; returns a function to let it go.
+  A.holdTone = function () {
     if (!ac || A.hitVolume <= 0) return () => { };
-    const t = ac.currentTime, f = mtof(midi), g = gainAt(t), lp = filt("lowpass", 2600, 0.7, t), lfo = osc("sine", 5, t), lg = gainAt(t, 5);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16 * A.hitVolume, t + 0.03);
-    const oscs = [osc("triangle", f, t), osc("sine", f * 2, t)];
-    lfo.connect(lg);
-    for (const a of oscs) { lg.connect(a.detune); a.connect(lp); a.start(t); }
-    lfo.start(t); lp.connect(g); g.connect(sfxBus); const r = gainAt(t, 0.3); g.connect(r); r.connect(revIn);
+    const t = ac.currentTime, n = noise(t, 12), bp = filt("bandpass", 3000, 1.2, t), g = gainAt(t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05 * A.hitVolume, t + 0.05);
+    n.connect(bp); bp.connect(g); g.connect(sfxBus);
     let done = false;
-    return () => {
-      if (done) return; done = true;
-      const u = ac.currentTime; g.gain.cancelScheduledValues(u); g.gain.setValueAtTime(g.gain.value, u); g.gain.exponentialRampToValueAtTime(0.0001, u + 0.25);
-      for (const a of oscs) a.stop(u + 0.3); lfo.stop(u + 0.3);
-    };
+    return () => { if (done) return; done = true; const u = ac.currentTime; g.gain.cancelScheduledValues(u); g.gain.setValueAtTime(g.gain.value, u); g.gain.exponentialRampToValueAtTime(0.0001, u + 0.1); n.stop(u + 0.15); };
   };
   // The calibration click: a dry tick, exactly on time.
   A.click = function (t, accent) {

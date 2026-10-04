@@ -16,7 +16,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church, each with a world, a song, a gift and their own words |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
 | [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
-| [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game in the manner of Phigros where the notes are the words of the Psalms, tapped as they meet the Voice, to techno-funk. A first build: three psalms ([the plan](selah/PLAN.md)) |
+| [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game where you play the drums and the words of the Psalms ride the strokes, to techno-funk, dubstep and odd meters. A first build: three psalms ([the plan](selah/PLAN.md)) |
 
 
 ## Benedictine Bricks
@@ -77,12 +77,12 @@ The first build: one night, in six parts, played with the phone sideways (it loc
 
 The first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): three psalms, played with the phone sideways.
 
-- **The words are the notes.** Each word falls to the Voice, the golden judgment line, and is struck as it meets it. Content words are taps; the divine names, "for ever" and "Alleluia" are held; questions and blows ("Why", "broken") are flicked; the little words (the, and, of) are dragged at the higher ranks and pass unjudged at the lower. A couplet splits the Voice in two.
-- **Selah.** Where the Hebrew has Selah, the Voice stills and the band falls away to a heartbeat: touch nothing until it passes, and the band comes back in at once.
-- **Three psalms, three songs**, on the synth engine from Luminaries: Psalm 1 in deep house on the first psalm tone, Psalm 3 in dub techno (a lament that lifts when it says "Arise"), Psalm 150 in gospel house, where each instrument joins the band as the psalm names it. The band builds with your combo.
-- **Four ranks**, named for the ranks of the liturgical day: Feria, Memoria, Festum, Sollemnitas. Scores out of 1,000,000; all Perfect is AMEN.
-- **The Voice is the text.** The Douay-Rheims is built in (`selah/douay.js`, made by `selah/tools/build-douay.js` from Psalter Runner's checked text). A psalter you own can be imported as a pack file in Settings; it stays on your device and is never sent anywhere. The charts are made from whichever text is chosen.
-- Settings: audio offset with a tap-along calibration, note speed, music volume, hit sounds, no flashing, reduced motion. `?verses=2` in the address plays only the first verses.
+- **You play the drums, and the words ride them.** One straight golden line (the Voice) with the kit along it: hi-hat at the left, snare, toms, crash at the right, and the kick is the whole line, struck anywhere. The words of the psalm ride the strokes in phrases; in the drops the words are the psalm's Latin.
+- **Four ranks, as in Rock Band**, named for the ranks of the liturgical day. Feria: kick and snare on the beat, a cymbal now and then. Memoria: the syncopated kicks and the fills. Festum: the hi-hats (dragged), the toms, the crashes (flicked), two strokes at once. Sollemnitas: every sixteenth and ghost stroke. The band always plays the whole drum part.
+- **Selah.** Where the Hebrew has Selah, the band falls away to a heartbeat: touch nothing until it passes, and the band comes back in at once.
+- **Three songs, each a progressive form** (intro, verses, build, drop, verses in another meter, breakdown, drop, outro) on the synth engine from Luminaries, with new wobble and growl basses, ride, brass and strings: Psalm 1 in progressive house with the wicked in 7/8; Psalm 3 from dub into dubstep, with a 6/8 lament and a lift at "Arise"; Psalm 150 from gospel house into a jungle break, with the timbrel and choir in 5/4 and every instrument joining the band as the psalm names it.
+- **The Voice is the text.** The Douay-Rheims is built in (`selah/douay.js`, made by `selah/tools/build-douay.js` from Psalter Runner's checked text). A psalter you own can be imported as a pack file in Settings; it stays on your device and is never sent anywhere.
+- Settings: audio offset with a tap-along calibration, note speed, music volume, hit ticks, no flashing, reduced motion. `?verses=2` in the address plays only the first verses.
 
 ## Recent highlights
 

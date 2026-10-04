@@ -105,7 +105,7 @@ const UI = (() => {
       // its opening words, in the Voice chosen
       const first = textFor(P.n).psalm.verses.find((v) => !v.title);
       c.querySelector(".first").textContent = first ? first.lines.join(" ") : "";
-      c.querySelector(".meta").textContent = song.title + " · " + song.genre + " · " + song.bpm;
+      c.querySelector(".meta").textContent = song.title + " · " + song.genre + " · " + song.bpm + " · " + song.meters;
       const ranks = c.querySelector(".ranks");
       for (const r of Compiler.RANK_ORDER) {
         const R = Compiler.RANKS[r], rec = save.records[vkey + ":" + P.n + ":" + r];
@@ -113,7 +113,7 @@ const UI = (() => {
         b.className = "rank";
         b.innerHTML = "<b></b><span></span>";
         b.querySelector("b").textContent = R.name;
-        b.querySelector("span").innerHTML = rec ? String(rec.score).padStart(7, "0") + ' <em class="g' + (rec.grade === "AMEN" ? " amen" : "") + '">' + rec.grade + (rec.fc && rec.grade !== "AMEN" ? " ◦" : "") + "</em>" : "Level " + R.level;
+        b.querySelector("span").innerHTML = rec ? String(rec.score).padStart(7, "0") + ' <em class="g' + (rec.grade === "AMEN" ? " amen" : "") + '">' + rec.grade + (rec.fc && rec.grade !== "AMEN" ? " ◦" : "") + "</em>" : R.what;
         b.onclick = () => { Sound.ui(true); play(P, r, false); };
         ranks.appendChild(b);
       }
@@ -129,7 +129,7 @@ const UI = (() => {
     let { psalm, label } = textFor(P.n);
     // For testing: ?verses=2 plays only the first verses.
     if (params.get("verses")) { let k = +params.get("verses"); psalm = Object.assign({}, psalm, { verses: psalm.verses.filter((v) => v.title || k-- > 0) }); }
-    const chart = Compiler.compile(psalm, SONGS[P.song], rank, params.get("verses") ? { minSeconds: 0 } : {});
+    const chart = Compiler.compile(psalm, SONGS[P.song], rank);
     show(""); sheet("results", false); sheet("pause", false);
     $("screen").style.visibility = "visible";
     $("pauseBtn").style.display = "block"; placePause();
