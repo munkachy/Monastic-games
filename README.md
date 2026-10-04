@@ -17,6 +17,8 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
 | [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
 
+**In planning:** [SELAH](selah/PLAN.md), a Phigros-style rhythm game where the notes are words from the Psalms, to techno-funk.
+
 ## Benedictine Bricks
 
 - Stack stones into an abbey tower with real physics ([planck.js](https://github.com/piqnt/planck.js), a port of Box2D).
