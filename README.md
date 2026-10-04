@@ -77,8 +77,8 @@ The first build: one night, in six parts, played with the phone sideways (it loc
 
 The first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): three psalms, played with the phone sideways.
 
-- **You play the drums, and the words ride them.** One straight golden line (the Voice) with the kit along it: hi-hat at the left, snare, toms, crash at the right, and the kick is the whole line, struck anywhere. The words of the psalm ride the strokes in phrases; in the drops the words are the psalm's Latin.
-- **Every note is a tap.** A stroke with a word is the word, glowing in its drum's color; a stroke with no word is a short glowing line.
+- **You play the drums, and the words ride them.** One straight golden line (the Voice) with the kit along it: hi-hat at the left, snare, toms, crash at the right, and the kick is the whole line, struck anywhere. The words of the psalm ride the snare, toms and cymbals in phrases (each box shows a short phrase, or its key word, and the verse under the line lights the whole phrase); in the drops the words are the psalm's Latin.
+- **Every note is a tap.** Every drum but the kick is a box glowing in its drum's color, with a word of the psalm inside or empty; the kick is only a bar across the line.
 - **Four ranks, as in Rock Band**, named for the ranks of the liturgical day. Feria: kick and snare on the beat, a cymbal now and then. Memoria: the syncopated kicks and the fills. Festum: the hi-hats, the toms, the crashes, the kick with a hand. Sollemnitas: every sixteenth and ghost stroke. The band always plays the whole drum part.
 - **Every chart can be played with two thumbs.** Each rank keeps to rules like Rock Band's, and every chart is played through by a model of a person holding the phone sideways (two touches at once at most, how fast a thumb can tap and move, how fast anyone can keep time), which leaves out what no thumb could reach. `node selah/tools/playtest.js` checks every chart.
 - **Selah.** Where the Hebrew has Selah, the band falls away to a heartbeat: touch nothing until it passes, and the band comes back in at once.
