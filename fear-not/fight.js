@@ -1,18 +1,19 @@
 "use strict";
 // Fear Not: the fight. Down on the wet street round the car, side on, with room to move up and
-// down as in Double Dragon. Flowing crowd combat, as in Batman: Arkham Asylum: strikes, counters
-// that catch and pin, vaults, takedowns of demons knocked flat, and the priest's own gadgets in the
-// flow: holy water, his arm stretched out to haul one in, a demon thrown into the others, a launch
-// and a slam. One rule, the drunken master's: never the same blow twice on the same demon, or he
+// down as in Double Dragon. Flowing crowd combat, as in Batman: Arkham Asylum: strikes (flown in on
+// a flip, a roll, a flying kick, a cartwheel or a prostrate dive), counters that catch and pin, a
+// block in prayer, takedowns of demons knocked flat, and the priest's own gadgets in the flow: holy
+// water, the rosary thrown to wrap one and haul it in, a demon thrown into the others, a launch and
+// a slam. One rule, the drunken master's: never the same blow twice on the same demon, or he
 // trips over his own feet. Three falls in a row (trips, or blows taken) and they drag the whole
 // fight down into the Depths, until ten in a row bring him up.
-// Touch: tap a demon to zip to it and strike; tap a gold sign to counter; swipe away from a red
-// sign to dodge, or toward a demon close by to vault over it; tap open street to zip there; hold
-// on the open street to block; hold on a demon a moment, then let go, for holy water; tap twice
-// for a heavy blow; swipe up on a demon to launch it, down to slam it; drag a far demon to reach
-// out and pull it in; drag a near one to throw it; tap one lying down to finish it.
-// Keyboard: the arrows move him; Space strikes toward the arrow held; X counters, Z dodges, Q
-// blocks, C heavy, E launch, V slam, F holy water, R the long arm, T throw, B bless.
+// Touch: tap a demon to zip to it and strike; tap a gold sign to counter; hold on the open street
+// to block (one blow at a time; a red sign can only be blocked); tap open street to zip there; hold
+// on a demon a moment, then let go, for holy water; tap twice for a heavy blow; swipe up on a demon
+// to launch it, down to slam it; drag a far demon to throw the rosary round it; drag a near one to
+// throw it; tap one lying down to finish it.
+// Keyboard: the arrows move him; Space strikes toward the arrow held; X counters, Q (or Z, or
+// Shift) blocks, C heavy, E launch, V slam, F holy water, R the rosary, T throw, B bless.
 // The longer the flow, the harder every blow lands and the slower time runs. His angel waits
 // above, out of sight, and comes down every fifth blow of a combo. Twelve in a row carries the
 // whole fight up to the Heights; there, a blow from on high brings them all down, and the count
@@ -55,6 +56,10 @@ const Fight = (() => {
   // The lurching run: legs crossing, leaning, arms loose; now and then a trip.
   const walkP = (ph, trip) => trip ? pose({ lean: 0.95, head: 0.4, sF: 2.1, eF: 0.3, sB: 2.4, eB: 0.2, hF: 0.9, kF: 0.6, hB: -0.9, kB: 0.4 })
     : pose({ lean: 0.32 + 0.14 * Math.sin(ph * 0.5), head: 0.1 * Math.sin(ph * 0.5 + 1), sF: 0.9 + 0.6 * Math.sin(ph * 0.5 + 1), eF: 1.2, sB: -0.6 + 0.5 * Math.sin(ph * 0.5), eB: 0.7, hF: 0.6 * Math.sin(ph), kF: 0.25 + 0.35 * Math.max(0, Math.cos(ph)), hB: -0.6 * Math.sin(ph), kB: 0.25 + 0.35 * Math.max(0, -Math.cos(ph)) });
+  // The flying kick; flat out in the air, arms ahead, like a monk's prostration; the cartwheel.
+  const FLYKICK = pose({ lean: -0.3, head: 0.1, hF: 1.9, kF: 0.1, hB: -0.2, kB: 1.4, sF: 2.4, eF: 0.4, sB: -1.4, eB: 0.5 });
+  const PROSTRATE = pose({ lean: 1.45, head: -0.55, sF: 1.62, eF: 0.0, sB: 1.52, eB: 0.05, hF: -1.4, kF: 0.05, hB: -1.5, kB: 0.1, lift: 16 });
+  const CARTWHEEL = pose({ lean: 0, head: 0, sF: 2.7, eF: 0.1, sB: -2.7, eB: 0.1, hF: 0.7, kF: 0, hB: -0.7, kB: 0 });
   const TUCK = pose({ lean: 0.5, head: 0.4, sF: 1.6, eF: 2.2, sB: 1.4, eB: 2.2, hF: 2.2, kF: 2.6, hB: 2.0, kB: 2.5 });
   // The strikes he flows through: [wind-up, blow, name].
   const STRIKES = [
@@ -69,7 +74,7 @@ const Fight = (() => {
   const LAUNCH = [{ lean: 0.3, hF: 0.9, kF: 1.8, hB: -0.3, kB: 1.6, sF: 0.8, eF: 1.4, sB: -0.5 }, { lean: -0.55, hF: 2.7, kF: 0.1, hB: -0.1, kB: 0.05, sF: 2.6, eF: 0.3, sB: -1.8, eB: 0.3, lift: 26 }, "launch"];
   const SLAM = [{ sF: 3.0, eF: 0.4, sB: 2.8, eB: 0.4, lean: -0.3, hF: 0.4, kF: 0.4 }, { sF: 1.2, eF: 0.1, sB: 1.1, eB: 0.1, lean: 0.6, hF: 0.9, kF: 1.0, hB: -0.5, kB: 0.6 }, "slam"];
   const TOSS = [{ sF: 2.6, eF: 0.6, sB: -0.6, lean: -0.15, hF: 0.4, kF: 0.4 }, { sF: 1.25, eF: -0.25, sB: -1.0, lean: 0.25, hF: 0.7, kF: 0.3, hB: -0.5 }, "water"];
-  const LASH = [{ sF: 2.4, eF: 0.5, sB: -0.8, lean: -0.2, hF: 0.3, kF: 0.3 }, { sF: 1.6, eF: 0, sB: -1.1, lean: 0.3, hF: 0.7, kF: 0.3, hB: -0.6 }, "arm"];
+  const LASH = [{ sF: 2.9, eF: 0.4, sB: -0.8, lean: -0.25, hF: 0.3, kF: 0.3 }, { sF: 1.7, eF: 0.1, sB: -1.1, lean: 0.3, hF: 0.7, kF: 0.3, hB: -0.6 }, "rosary"];
   const HAUL = pose({ sF: 0.9, eF: 1.5, sB: -0.6, lean: -0.35, hF: 0.6, kF: 0.5, hB: -0.4, kB: 0.6 });
   const GRABP = pose({ sF: 1.5, eF: 0.3, sB: 1.4, eB: 0.4, lean: 0.2, hF: 0.5, kF: 0.6, hB: -0.4, kB: 0.4 });
   const FLING = pose({ sF: 2.8, eF: 0.2, sB: 2.6, eB: 0.2, lean: -0.3, hF: 0.7, kF: 0.3, hB: -0.6, kB: 0.2 });
@@ -117,7 +122,7 @@ const Fight = (() => {
     { foes: [["whisper", 0.6], ["whisper", 1.6], ["whisper", 6], ["whisper", 9]], gap: [2.6, 3.4],
       say: () => G.practised ? "There they are. As I showed you: never the same blow twice, keep moving, and finish them when they fall." : tip("Tap a demon to strike, then on to the next: never the same blow twice on the same one. Keep the flow, and I will come down to you.", "Arrows to move, Space to strike, then on to the next: never the same blow twice on the same one. Keep the flow, and I will come down to you.") },
     { foes: [["whisper", 0.6], ["grab", 1.4], ["whisper", 4], ["whisper", 8], ["whisper", 11]], gap: [1.9, 2.7],
-      say: () => tip("More of them. That big one grabs: if it catches you, it drags us all into the Depths. Swipe away from its red sign.", "More of them. That big one grabs: if it catches you, it drags us all into the Depths. Z away from its red sign.") },
+      say: () => tip("More of them. That big one grabs: if it catches you, it drags us all into the Depths. When it shows its red sign, hold to block it.", "More of them. That big one grabs: if it catches you, it drags us all into the Depths. When it shows its red sign, hold Q to block it.") },
     { chains: true, foes: [["whisper", 1.5], ["whisper", 4]], gap: [1.8, 2.6],
       say: () => tip("His guardian, in chains! Tap the chains to bless them. Break them!", "His guardian, in chains! Go to them and press Space to bless them. Break them!") },
     { foes: [["shield", 0.6], ["whisper", 1.2], ["grab", 4], ["whisper", 7], ["whisper", 10], ["whisper", 13]], gap: [1.4, 2.2],
@@ -133,10 +138,10 @@ const Fight = (() => {
     { say: () => tip("Before we go down, let me show you. Here a moment can be as long as we need. These shades are only pictures. Tap one to strike it.", "Before we go down, let me show you. Here a moment can be as long as we need. These shades are only pictures. Hold an arrow toward one and press Space."),
       hint: () => tip("TAP A SHADE", "ARROW + SPACE"), need: 2, hp: 4, done: (e) => e === "hit" },
     { say: () => tip("Now from one to the next. Never the same blow twice on the same one, or you trip over your own feet. Four in a row.", "Now from one to the next, turning the arrows. Never the same blow twice on the same one, or you trip over your own feet. Four in a row."), hint: () => tip("TAP ONE · THEN ANOTHER", "SPACE ON ONE · THEN ANOTHER"), need: 3, hp: 6, done: () => G.hero.combo >= 4 },
-    { say: () => tip("Tap the open roof, and you are there at once. Get clear of them. Or swipe toward one close by, and you vault over it.", "The arrows move you. Press Z with an arrow to roll clear of them, or toward one close by, to vault over it."), hint: () => tip("TAP THE OPEN ROOF · OR SWIPE OVER ONE", "Z + ARROW"), need: 2, hp: 6, done: (e) => e === "dash" || e === "dodge" },
+    { say: () => tip("Tap the open roof, and you are there at once. Get clear of them.", "The arrows move you. Run clear of them."), hint: () => tip("TAP THE OPEN ROOF", "ARROWS"), need: 2, hp: 6, done: (e) => e === "dash" || e === "run" },
     { say: () => tip("Watch for the gold sign. When it shows, tap him: you catch the blow, throw him down and pin him.", "Watch for the gold sign. When it shows, press X: you catch the blow, throw him down and pin him."), hint: () => tip("GOLD SIGN: TAP HIM", "GOLD SIGN: X"), need: 2, hp: 6, setup: "gold", done: (e) => e === "counter" },
-    { say: () => tip("A red sign cannot be countered. When you see one, swipe away from him.", "A red sign cannot be countered. When you see one, press Z with an arrow away from him."), hint: () => tip("RED SIGN: SWIPE AWAY", "RED SIGN: Z + ARROW AWAY"), need: 1, hp: 6, kind: "grab", setup: "red", done: (e) => e === "dodged" },
-    { say: () => tip("Hold on the open roof to block. Hold, and let him strike.", "Hold Q to block, and let him strike."), hint: () => tip("HOLD ON THE OPEN ROOF", "HOLD Q"), need: 2, hp: 6, setup: "block", done: (e) => e === "blocked" },
+    { say: () => tip("A red sign is a grab: it cannot be countered. Hold on the open roof to block it, and the light you pray in throws him off.", "A red sign is a grab: it cannot be countered. Hold Q to block it, and the light you pray in throws him off."), hint: () => tip("RED SIGN: HOLD ON THE OPEN ROOF", "RED SIGN: HOLD Q"), need: 1, hp: 6, kind: "grab", setup: "red", done: (e) => e === "blockred" },
+    { say: () => tip("A block stops one blow, gold or red. Then let go, and hold again for the next. Block two.", "A block stops one blow, gold or red. Then let go of Q, and hold it again for the next. Block two."), hint: () => tip("HOLD · LET GO · HOLD AGAIN", "HOLD Q · LET GO · HOLD AGAIN"), need: 2, hp: 6, setup: "block", count: 2, done: (e) => e === "blocked" },
     { say: () => tip("This one hides behind a shield. Tap it twice, quickly: a heavy blow.", "This one hides behind a shield. Press C: a heavy blow."), hint: () => tip("TAP TWICE, QUICKLY", "C"), need: 1, hp: 6, kind: "shield", done: (e) => e === "guardbreak" },
     { say: () => tip("Swipe up on a shade to launch it, then tap it while it hangs in the air.", "Press E to launch a shade, then Space while it hangs in the air."), hint: () => tip("SWIPE UP ON IT · THEN TAP IT", "E · THEN SPACE"), need: 2, hp: 7, done: (e) => e === "juggle" },
     { say: () => tip("Launch one again, then swipe down on it in the air: slam it to the ground.", "Launch one again, then press V while it is in the air: slam it down."), hint: () => tip("SWIPE UP · THEN SWIPE DOWN ON IT", "E · THEN V"), need: 2, hp: 7, done: (e) => e === "spike" },
@@ -145,7 +150,7 @@ const Fight = (() => {
     { say: () => tip("Now strike, and keep striking. When the gold shows, time will slow for you: tap him, then flow on. Six in a row.", "Now strike, and keep striking. When the gold shows, time will slow for you: press X, then flow on. Six in a row."),
       hint: () => tip("STRIKE · COUNTER THE GOLD · KEEP GOING", "SPACE · X ON THE GOLD · KEEP GOING"), need: 3, hp: 9, setup: "flowgold", done: () => G.hero.combo >= 6 && G.kata.countered },
     { say: () => tip("Holy water: hold on a shade a moment, until the ring fills, then let go. Near or far, it reaches.", "Holy water: press F, at a shade near or far."), hint: () => tip("HOLD ON A SHADE · THEN LET GO", "F"), need: 2, hp: 7, done: (e) => e === "water" },
-    { say: () => tip("Now drag a shade that is far off: your arm stretches out to it and hauls it in.", "Press R: your arm stretches out to a shade far off and hauls it in."), hint: () => tip("DRAG A FAR SHADE", "R"), need: 2, hp: 7, far: true, done: (e) => e === "stole" },
+    { say: () => tip("Now drag a shade that is far off: your rosary flies out, wraps round it, and hauls it in.", "Press R: your rosary flies out to a shade far off, wraps round it, and hauls it in."), hint: () => tip("DRAG A FAR SHADE", "R"), need: 2, hp: 7, far: true, done: (e) => e === "stole" },
     { say: () => tip("Now drag a shade that is close, toward another: you throw it.", "Now press T to throw a shade that is close, toward another."), hint: () => tip("DRAG A NEAR SHADE TOWARD ANOTHER", "ARROW + T"), need: 3, hp: 7, done: (e) => e === "throw" },
     { say: () => "Now flow, with all of it, never the same blow twice. Five in a row, and I will come down to you. And the longer you flow, the harder you strike.", hint: () => "FIVE IN A ROW", need: 3, hp: 8, done: (e) => e === "swoop" },
     { id: "heights", say: () => tip("Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Up there, keep going, then tap the gold, and we come down on them from on high.", "Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Up there, keep going, then press B, and we come down on them from on high."),
@@ -357,7 +362,7 @@ const Fight = (() => {
     G.lastTap = { f, t: now };
     // The gold sign: a counter, whatever he was doing.
     if (f.sign === "gold" && f.act.kind === "wind") { counter(f); return; }
-    if (f.sign === "red" && f.act.kind === "wind") { pop(f.x, f.y - 120 * depth(f.y), tip("SWIPE AWAY!", "PRESS Z!"), "#ff8a70"); return; }
+    if (f.sign === "red" && f.act.kind === "wind") { pop(f.x, f.y - 120 * depth(f.y), tip("HOLD TO BLOCK!", "HOLD Q!"), "#ff8a70"); return; }
     if (!fresh(f.z > 20 ? "air" : "strike", f)) return;
     if (busy() && H0.act.kind !== "hurt") { H0.queue = { f, move: "strike" }; return; }
     goStrike(f, "strike");
@@ -379,12 +384,16 @@ const Fight = (() => {
     }
     const tx = reachX(f), d = Math.abs(tx - H0.x) + Math.abs(f.y - H0.y);
     if (d > 26) {
-      const styles = ["flip", "roll", "lurch"], style = d > 220 ? "flip" : styles[(G.hero.hits + f.id) % 3];
-      act("zip", { f, move, style, dur: clamp(d / 600, 0.16, 0.4), from: [H0.x, H0.y], to: [tx, f.y + 1] });
+      // Never the same way twice running: a flip, a roll, a flying kick, a cartwheel, or flat out
+      // in the air like a monk's prostration (or Superman).
+      G.zipN = (G.zipN || 0) + 1;
+      const set = d > 220 ? ["flip", "superman", "jumpkick"] : d > 80 ? ["roll", "jumpkick", "cartwheel", "superman", "flip"] : ["lurch", "roll", "cartwheel"];
+      const style = set[(G.zipN + f.id) % set.length];
+      act("zip", { f, move, style, dur: clamp(d / 600, 0.16, 0.4) * (style === "superman" ? 1.15 : 1), from: [H0.x, H0.y], to: [tx, f.y + 1] });
       Sound.fx.whoosh(0.22, 0.5);
     } else doMove(f, move);
   }
-  function doMove(f, move) {
+  function doMove(f, move, style) {
     const H0 = G.hero, sp = R().strike;
     if (move === "finish") {
       const side = Math.sign(f.x - H0.x || H0.dir); H0.dir = side;
@@ -394,7 +403,8 @@ const Fight = (() => {
     if (move === "heavy") { act("strike", { f, which: HEAVY, dur: 0.36 * sp, hit: false }); Sound.fx.effort(); return; }
     if (move === "launch") { act("strike", { f, which: LAUNCH, dur: 0.34 * sp, hit: false }); Sound.fx.effort(); return; }
     if (move === "slam") { act("strike", { f, which: SLAM, dur: 0.32 * sp, hit: false }); Sound.fx.effort(); return; }
-    act("strike", { f, which: STRIKES[H0.hits % STRIKES.length], dur: 0.24 * sp, hit: false });
+    // Coming in with a flying kick, he strikes with the kick; out of the dive, with his palm.
+    act("strike", { f, which: style === "jumpkick" ? STRIKES[2] : style === "superman" ? STRIKES[0] : STRIKES[H0.hits % STRIKES.length], dur: 0.24 * sp, hit: false });
     Sound.fx.effort(H0.dir * 0.3);
   }
   // A heavy blow, a launch or a slam: if he is already on his way to that demon, the move changes.
@@ -465,7 +475,7 @@ const Fight = (() => {
     act("toss", { f, which: TOSS, dur: 0.3 * R().strike, tx, ty, fired: false });
     Sound.fx.whoosh(0.2, 0.5, true);
   }
-  // The long arm: his arm stretches out to a demon far off, takes hold of it, and hauls it in.
+  // The rosary: thrown out to a demon far off, wrapped round it, and hauled in.
   function stole(f) {
     const H0 = G.hero;
     if (!f || f.gone || G.over || G.shift || ["grabbed", "down", "bless"].includes(H0.act.kind)) return;
@@ -474,8 +484,115 @@ const Fight = (() => {
     if (!fresh("arm", f)) return;
     if (busy() && H0.act.kind !== "hurt") { H0.queue = { f, move: "stole" }; return; }
     H0.dir = f.x >= H0.x ? 1 : -1;
-    act("lash", { f, which: LASH, dur: 0.24 * R().strike });
+    act("lash", { f, which: LASH, dur: 0.44 * R().strike });
+    rosaryThrow(f);
     Sound.fx.whoosh(0.3, 0.8, false);
+  }
+  // ---- The rosary ----------------------------------------------------------------------------------
+  // Thrown crucifix first: a real chain of beads (the crucifix, the five beads and the medal of its
+  // tail, then five decades with the larger beads between) that swings with its own weight. It wraps
+  // twice round the demon's middle, he hauls it in, and it slides back into his hand.
+  const RN = 18;
+  const handPos = () => { const H0 = G.hero; return jointAt("priest", H0.x, H0.y - H0.z, depth(H0.y), H0.dir, heroPose(), "hF"); };
+  const waistOf = (f) => { const s = depth(f.y); return { x: f.x, y: f.y - f.z - 56 * s, rx: 16 * s, ry: 5.5 * s, s }; };
+  function rosaryThrow(f) {
+    const hp = handPos();
+    G.rosary = { f, phase: "out", t: 0, L: 6, turns: 0, side: Math.sign(f.x - hp[0]) || 1, nodes: Array.from({ length: RN }, () => ({ x: hp[0], y: hp[1], px: hp[0], py: hp[1] })) };
+  }
+  function stepRosary(dt) {
+    const Q = G.rosary; if (!Q) return;
+    Q.t += dt;
+    const N = Q.nodes, hp = handPos(), f = Q.f, H0 = G.hero;
+    const holding = (H0.act.kind === "lash" || H0.act.kind === "haul") && H0.act.f === f;
+    if ((!f || f.gone || !holding) && Q.phase !== "back") { Q.phase = "back"; Q.t = 0; }
+    let end = null;
+    if (Q.phase === "out") {
+      const w = waistOf(f), u = clamp(Q.t / 0.24, 0, 1), e = ease(u);
+      Q.side = Math.sign(w.x - hp[0]) || 1;
+      end = { x: lerp(hp[0], w.x - Q.side * w.rx, e), y: lerp(hp[1], w.y, e) - Math.sin(u * PI) * 30 * w.s };
+      Q.L = Math.hypot(end.x - hp[0], end.y - hp[1]) * 1.1 + 8;
+      if (u >= 1) { Q.phase = "wrap"; Q.t = 0; Sound.fx.chain(false); }
+    } else if (Q.phase === "wrap" || Q.phase === "haul") {
+      const w = waistOf(f);
+      Q.side = Math.sign(w.x - hp[0]) || 1;
+      Q.turns = Q.phase === "wrap" ? 2 * smooth(Q.t / 0.2) : 2;
+      end = { x: w.x - Q.side * w.rx, y: w.y };
+      Q.L = Math.hypot(end.x - hp[0], end.y - hp[1]) * (Q.phase === "wrap" ? 1.06 : 1.0) + 4;
+      if (Q.phase === "wrap" && Q.t >= 0.2) { Q.phase = "haul"; Q.t = 0; }
+    } else {
+      // Unwound, and drawn back into his hand.
+      Q.turns = Math.max(0, Q.turns - dt * 14);
+      Q.L = Math.max(0, Q.L - dt * 1400);
+      if (Q.L <= 1 && Q.turns <= 0) { G.rosary = null; return; }
+    }
+    // The cord between: weight and swing, its length held, never below the street.
+    const seg = Q.L / (RN - 1), floorY = Math.max(H0.y, f ? f.y : H0.y) - 2;
+    for (let i = 1; i < RN; i++) { const n = N[i], vx = (n.x - n.px) * 0.97, vy = (n.y - n.py) * 0.97; n.px = n.x; n.py = n.y; n.x += vx; n.y = Math.min(floorY, n.y + vy + 520 * dt * dt); }
+    for (let it = 0; it < 8; it++) {
+      N[0].x = hp[0]; N[0].y = hp[1]; if (end) { N[RN - 1].x = end.x; N[RN - 1].y = end.y; }
+      for (let i = 0; i < RN - 1; i++) {
+        const a = N[i], b = N[i + 1], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.001, diff = (d - seg) / d;
+        const aFix = i === 0, bFix = !!end && i + 1 === RN - 1;
+        if (aFix && bFix) continue;
+        if (aFix) { b.x -= dx * diff; b.y -= dy * diff; } else if (bFix) { a.x += dx * diff; a.y += dy * diff; }
+        else { a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5; }
+      }
+    }
+    N[0].x = hp[0]; N[0].y = hp[1]; if (end) { N[RN - 1].x = end.x; N[RN - 1].y = end.y; }
+  }
+  // The beads, laid along the coil round the demon and the cord back to his hand, from the crucifix:
+  // { x, y, kind (0 crucifix, 1 large bead, 2 small, 3 medal), coil, back, a (the cord's direction) }.
+  function rosaryBeads() {
+    const Q = G.rosary; if (!Q) return [];
+    const pts = [];
+    if (Q.turns > 0.01 && Q.f && !Q.f.gone) {
+      const w = waistOf(Q.f), a0 = Q.side > 0 ? PI : 0, steps = Math.max(2, Math.ceil(Q.turns * 26));
+      for (let k = steps; k >= 0; k--) {
+        const a = Q.turns * TAU * k / steps, phi = a0 - Q.side * a;
+        pts.push({ x: w.x + Math.cos(phi) * w.rx, y: w.y + Math.sin(phi) * w.ry + (a / TAU - Q.turns / 2) * 3 * w.s, coil: true, back: Math.sin(phi) < -0.05 });
+      }
+    }
+    for (let i = RN - 1; i >= 0; i--) pts.push({ x: Q.nodes[i].x, y: Q.nodes[i].y, coil: false, back: false });
+    const s = depth(G.hero.y);
+    let total = 0; for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    if (total < 2) return [];
+    const sp = clamp(total / 61, 3.4 * s, 4.6 * s), out = [];
+    out.pts = pts;
+    let i = 1, acc = 0, segLen = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    for (let b = 0; b < 61; b++) {
+      const want = b * sp;
+      while (acc + segLen < want && i < pts.length - 1) { acc += segLen; i++; segLen = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); }
+      if (acc + segLen < want) break;
+      const u = segLen ? (want - acc) / segLen : 0, A = pts[i - 1], B = pts[i];
+      const kind = b === 0 ? 0 : b === 6 ? 3 : (b === 1 || b === 5 || (b >= 7 && (b - 7) % 11 === 10)) ? 1 : 2;
+      out.push({ x: lerp(A.x, B.x, u), y: lerp(A.y, B.y, u), kind, coil: A.coil && B.coil, back: A.back || B.back, a: Math.atan2(A.y - B.y, A.x - B.x) });
+    }
+    return out;
+  }
+  // `which`: the coil's back, the coil's front, or the free cord.
+  function drawRosary(beads, which) {
+    const s = depth(G.hero.y), pick = (b) => which === "free" ? !b.coil : b.coil && (which === "back") === b.back, pts = beads.pts || [];
+    // The fine chain, its whole length back to his hand, catching a little gold light.
+    ctx.lineWidth = Math.max(0.7, 0.8 * s); ctx.strokeStyle = "#a88a48"; ctx.beginPath();
+    for (let k = 1; k < pts.length; k++) { const A = pts[k - 1], B = pts[k]; if (!pick({ coil: A.coil && B.coil, back: A.back || B.back })) continue; ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); }
+    ctx.stroke();
+    for (const b of beads) {
+      if (!pick(b)) continue;
+      if (b.kind === 0) {
+        // The crucifix, hanging from the end, lit.
+        glow(b.x, b.y, 10 * s, C.holy, 0.45);
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a - PI / 2); ctx.scale(s * 1.25, s * 1.25);
+        ctx.fillStyle = "#5a5040"; ctx.fillRect(-1.3, -1, 2.6, 11.4); ctx.fillRect(-4.3, 1.6, 8.6, 2.4);
+        ctx.fillStyle = "#ece6d4"; ctx.fillRect(-0.8, -0.6, 1.6, 10.6); ctx.fillRect(-3.8, 2, 7.6, 1.6);
+        ctx.fillStyle = "#c8a860"; ctx.fillRect(-0.4, 2.4, 0.8, 4.2);
+        ctx.restore();
+      } else if (b.kind === 3) { ctx.fillStyle = "#cfcfd8"; ctx.beginPath(); ctx.ellipse(b.x, b.y, 2.2 * s, 2.9 * s, b.a, 0, TAU); ctx.fill(); ctx.strokeStyle = "#7a7a88"; ctx.lineWidth = 0.6; ctx.stroke(); }
+      else {
+        const r = (b.kind === 1 ? 2.7 : 1.9) * s;
+        circle(b.x, b.y, r, b.back ? "#28180e" : "#4a2c18"); circle(b.x - r * 0.38, b.y - r * 0.38, r * 0.44, b.back ? "#6a4a30" : "#e0b080");
+      }
+    }
+    if (which === "free") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.16; ctx.strokeStyle = C.holy; ctx.lineWidth = 3 * s; ctx.beginPath(); beads.forEach((b, k) => k ? ctx.lineTo(b.x, b.y) : ctx.moveTo(b.x, b.y)); ctx.stroke(); ctx.restore(); }
   }
   // A demon close by, picked up and thrown into the others.
   function throwFoe(f, dx, dy) {
@@ -570,23 +687,6 @@ const Fight = (() => {
     pop(f.x, f.y - 130 * depth(f.y), others.length === 2 ? "TRIPLE COUNTER" : others.length === 1 ? "DOUBLE COUNTER" : "COUNTER", C.holy, others.length > 0);
     if (G.slowFor === f || others.includes(G.slowFor)) G.slowFor = null;
     ev("counter");
-  }
-  function dodge(dx, dy) {
-    const H0 = G.hero;
-    if (["dodge", "down", "grabbed"].includes(H0.act.kind) || G.shift) return;
-    moved("dodge");
-    const m = Math.hypot(dx, dy || 0) || 1, ux = dx / m, uy = (dy || 0) / m;
-    // Toward a demon close by: he vaults clean over its head, as Batman does, and lands behind it.
-    const over = Math.abs(ux) > 0.6 ? alive().filter((f) => !lying(f) && f.z === 0 && Math.sign(f.x - H0.x) === Math.sign(ux) && Math.abs(f.x - H0.x) < 130 && Math.abs(f.y - H0.y) < 42).sort((a, b) => Math.abs(a.x - H0.x) - Math.abs(b.x - H0.x))[0] : null;
-    if (over) {
-      act("dodge", { dur: 0.44, vault: true, from: [H0.x, H0.y], to: [keepX(over.x + Math.sign(ux) * 72), clamp(over.y + 2, Y0, Y1)] });
-      H0.inv = 0.55; Sound.fx.whoosh(0.4, 0.7, true); H0.dir = ux > 0 ? 1 : -1;
-      if (over.act.kind === "wind" || over.act.kind === "lunge") pop(over.x, over.y - 140 * depth(over.y), "VAULT", "#9fe4ff");
-    } else {
-      act("dodge", { dur: 0.36, from: [H0.x, H0.y], to: [keepX(H0.x + ux * 125), clamp(H0.y + uy * 60, Y0, Y1)] });
-      H0.inv = 0.45; Sound.fx.whoosh(0.3, 0.6);
-    }
-    ev("dodge");
   }
   function bless() {
     const H0 = G.hero;
@@ -812,11 +912,11 @@ const Fight = (() => {
     const TT = G.touch;
     if (TT && !TT.moved) {
       const held = performance.now() - TT.r0;
-      if (!TT.target && held > 230 && !busy() && H0.act.kind !== "block") { act("block", {}); TT.block = true; }
+      if (!TT.target && !TT.spent && held > 230 && !busy() && H0.act.kind !== "block") { act("block", {}); TT.block = true; }
       if (TT.target && TT.target !== "chains" && !TT.water && held > WATER_MS) { TT.water = true; Sound.fx.tick(2200, 0.8); }
     }
     stepKeys(dt);
-    stepHero(dt); stepAngel(dt); stepGuard(dt);
+    stepHero(dt); stepRosary(dt); stepAngel(dt); stepGuard(dt);
     if (G.callAngel) { const kind = G.callAngel; G.callAngel = null; const f = H0.last && !H0.last.gone ? H0.last : nearestFoe(); if (f && G.world !== "depths") swoop(kind, f); }
     for (const f of G.foes) stepFoe(f, dt);
     G.foes = G.foes.filter((f) => !f.gone || f.act.t < 0.6);
@@ -868,7 +968,7 @@ const Fight = (() => {
     } else if (["zip", "dodge", "jumpkick", "dash", "spike"].includes(A0.kind)) {
       const [fx, fy] = A0.from, [tx, ty] = A0.to, e = A0.kind === "dodge" || A0.kind === "dash" ? ease(u) : smooth(u);
       H0.x = lerp(fx, tx, e); H0.y = lerp(fy, ty, e);
-      H0.z = A0.style === "flip" ? Math.sin(u * PI) * 60 : A0.kind === "jumpkick" || A0.kind === "spike" ? Math.sin(u * PI * 0.5) * (A0.f ? A0.f.z * 0.8 + 30 : 40) : A0.vault ? Math.sin(u * PI) * 86 : A0.style === "roll" || A0.kind === "dodge" ? Math.sin(u * PI) * 8 : 0;
+      H0.z = A0.style === "flip" ? Math.sin(u * PI) * 60 : A0.style === "superman" ? Math.sin(u * PI) * 40 : A0.style === "jumpkick" ? Math.sin(u * PI) * 48 : A0.style === "cartwheel" ? Math.sin(u * PI) * 22 : A0.kind === "jumpkick" || A0.kind === "spike" ? Math.sin(u * PI * 0.5) * (A0.f ? A0.f.z * 0.8 + 30 : 40) : A0.vault ? Math.sin(u * PI) * 86 : A0.style === "roll" || A0.kind === "dodge" ? Math.sin(u * PI) * 8 : 0;
       if (A0.kind === "jumpkick" && u > 0.55 && !A0.hit) { A0.hit = true; if (!A0.f.gone) { landHit(A0.f, 1, 1.1, { kx: 0.4 }); if (!A0.f.gone) A0.f.vz = Math.max(A0.f.vz, 200); ev("juggle"); } }
       if (A0.kind === "spike" && u > 0.6 && !A0.hit) {
         A0.hit = true;
@@ -877,7 +977,7 @@ const Fight = (() => {
       if (u >= 1) {
         H0.z = A0.kind === "jumpkick" || A0.kind === "spike" ? H0.z : 0;
         if (A0.kind === "zip" && A0.chain) act("chain", { dur: 0.42, hit: false });
-        else if (A0.kind === "zip" && A0.f && !A0.f.gone) doMove(A0.f, A0.move || "strike");
+        else if (A0.kind === "zip" && A0.f && !A0.f.gone) doMove(A0.f, A0.move || "strike", A0.style);
         else if (A0.kind === "jumpkick" || A0.kind === "spike") act("land", { dur: 0.25, z0: H0.z });
         else after();
       }
@@ -961,7 +1061,8 @@ const Fight = (() => {
     else if (A0.kind === "haul") {
       const f = A0.f;
       if (u >= 1) {
-        if (f && !f.gone) { f.act = { kind: "hurt", t: 0, dur: 0.5 }; f.x = H0.x + H0.dir * 60; f.y = H0.y + 1; f.z = 0; landHit(f, 1, 0.9, { front: false, kx: 0.1 }); if (!f.gone) f.dizzy = Math.max(f.dizzy, 1.0); pop(f.x, f.y - 130, "THE LONG ARM", C.holy); ev("stole"); }
+        if (f && !f.gone) { f.act = { kind: "hurt", t: 0, dur: 0.5 }; f.x = H0.x + H0.dir * 60; f.y = H0.y + 1; f.z = 0; landHit(f, 1, 0.9, { front: false, kx: 0.1 }); if (!f.gone) f.dizzy = Math.max(f.dizzy, 1.4); pop(f.x, f.y - 130, "THE ROSARY", C.holy); ev("stole"); }
+        if (G.rosary) { G.rosary.phase = "back"; G.rosary.t = 0; }
         after();
       }
     }
@@ -1010,7 +1111,7 @@ const Fight = (() => {
         if (g.chains <= 0) freeGuardian();
       }
       if (u >= 1) act("idle");
-    } else if (A0.kind === "block") { if (!(G.touch && G.touch.block) && !G.keys.KeyQ) act("idle"); }
+    } else if (A0.kind === "block") { const k = G.keys; if (!(G.touch && G.touch.block && !G.touch.spent) && !k.KeyQ && !k.KeyZ && !k.ShiftLeft && !k.ShiftRight) act("idle"); }
     H0.x = keepX(H0.x); H0.y = clamp(H0.y, Y0, Y1);
   }
   function hurtHero(dmg, grab) {
@@ -1067,7 +1168,7 @@ const Fight = (() => {
     const gap = (WAVES[G.wave] || WAVES[0]).gap; G.nextAtk = lerp(gap[0], gap[1], Math.random()) * (G.world === "depths" ? 0.75 : 1);
     // The first time each sign shows, time nearly stops and the angel explains.
     if (!grab && !G.taught.gold) { G.taught.gold = true; G.slowFor = f; say(tip("A gold sign: tap him now, to counter!", "A gold sign: press X now, to counter!")); f.act.dur = 1.0; }
-    if (grab && !G.taught.red) { G.taught.red = true; G.slowFor = f; say(tip("A red sign cannot be countered. Swipe away from it, to dodge!", "A red sign cannot be countered. Press Z with an arrow away from it, to dodge!")); f.act.dur = 1.1; }
+    if (grab && !G.taught.red) { G.taught.red = true; G.slowFor = f; say(tip("A red sign cannot be countered. Hold on the open street, to block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
   }
   function stepFoe(f, dt) {
     const H0 = G.hero, a = f.act; a.t += dt; f.ph += dt;
@@ -1142,6 +1243,8 @@ const Fight = (() => {
     if (d > 6) { const sp = f.kind === "grab" ? 55 : 72; f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
     f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0, FX1());
   }
+  // A block is good for one blow: after it, he has to block again.
+  function spendBlock() { act("idle"); if (G.touch) G.touch.spent = true; G.qSpent = true; }
   function resolveAttack(f) {
     const H0 = G.hero, grab = f.sign === "red", close = Math.abs(f.x - H0.x) < 90 && Math.abs(f.y - H0.y) < 40;
     f.sign = null;
@@ -1151,8 +1254,18 @@ const Fight = (() => {
       else { f.act = { kind: "recover", t: 0 }; if (H0.act.kind === "dodge" || H0.act.kind === "dash") pop(H0.x, H0.y - 130, "DODGED", "#9fe4ff"); }
       return;
     }
+    if (grab && H0.act.kind === "block") {
+      // The red sign, blocked: the light he prays in throws the grabber off, flat on its back.
+      f.act = { kind: "hurt", t: 0, dur: 0.3 };
+      landHit(f, 1.5, 1.6, { front: false, noFloor: true, fromX: H0.x });
+      if (!f.gone) { floor(f, { long: 1.1 }); f.vx = Math.sign(f.x - H0.x || 1) * 300; }
+      G.flash = 0.45; G.flashC = C.holy; Sound.fx.clang(pan(f.x)); Sound.fx.chord(5, 0.6);
+      slowmo(0.25, 0.35, (f.x + H0.x) / 2, f.y - 60, 1.18);
+      pop(H0.x, H0.y - 130, "BLOCKED: THROWN OFF", C.holy, true);
+      spendBlock(); ev("blockred");
+      return;
+    }
     if (grab) {
-      if (H0.act.kind === "block") pop(H0.x, H0.y - 130, "A GRAB CANNOT BE BLOCKED", "#ff8a70");
       act("grabbed", { by: f }); f.act = { kind: "grabbing", t: 0 };
       Sound.fx.growl(1);
       // On the street, a grab that catches him drags the whole fight down into the Depths.
@@ -1160,7 +1273,7 @@ const Fight = (() => {
       if (G.kata) G.releaseT = 0.7;
       return;
     }
-    if (H0.act.kind === "block") { f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.vx = f.dir * -200; Sound.fx.clang(); pop(H0.x, H0.y - 130, "BLOCKED", C.holy); f.dizzy = 1; hitStop(0.06); ev("blocked"); return; }
+    if (H0.act.kind === "block") { f.act = { kind: "hurt", t: 0, dur: 0.4 }; f.vx = f.dir * -200; Sound.fx.clang(); pop(H0.x, H0.y - 130, "BLOCKED", C.holy); f.dizzy = 1; hitStop(0.06); spendBlock(); ev("blocked"); return; }
     f.act = { kind: "recover", t: 0 };
     if (G.kata) { pop(H0.x, H0.y - 130, "STRUCK", "#ff8a70"); act("hurt", { dur: 0.3 }); H0.combo = 0; H0.comboT = 0; H0.queue = null; G.kata.countered = false; return; }
     hurtHero(10);
@@ -1195,6 +1308,7 @@ const Fight = (() => {
       const m = Math.hypot(kx, ky);
       H0.x += kx / m * 190 * dt; H0.y += ky / m * 120 * dt;
       if (kx) H0.dir = kx > 0 ? 1 : -1;
+      if (H0.act.t > 0.5) ev("run");
     } else if (!moving && H0.act.kind === "run") act("idle");
   }
   // The best target in the direction held (or, with no arrow, the nearest, the one he faces first).
@@ -1365,7 +1479,9 @@ const Fight = (() => {
     for (const f of G.foes) ents.push({ y: f.y, draw: (fl) => drawFoe(f, fl) });
     ents.sort((a, b) => a.y - b.y);
     if (G.world === "street" && !G.shift) for (const e of ents) e.draw(true);
+    G.beads = rosaryBeads();
     for (const e of ents) e.draw(false);
+    if (G.beads.length) drawRosary(G.beads, "free");
     drawParts();
     drawCharge();
     ctx.restore();
@@ -1406,7 +1522,11 @@ const Fight = (() => {
     const H0 = G.hero, a = H0.act, u = a.dur ? clamp(a.t / a.dur, 0, 1) : 0, t = G.t;
     switch (a.kind) {
       case "run": return walkP(a.ph, a.trip > 0 && a.t > a.trip && a.t < a.trip + 0.25);
-      case "zip": case "dash": if (a.style === "flip") return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 2 - 1) ** 2), { spin: u * TAU }); if (a.style === "roll") return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 3 - 2)), { spin: u * TAU }); return walkP(a.t * 22, u > 0.3 && u < 0.6);
+      case "zip": case "dash":
+        if (a.style === "jumpkick") return blendPose(blendPose(idleP(t), FLYKICK, smooth(u / 0.25)), idleP(t), Math.max(0, (u - 0.85) / 0.15));
+        if (a.style === "superman") return blendPose(blendPose(idleP(t), PROSTRATE, smooth(u / 0.2)), idleP(t), Math.max(0, (u - 0.82) / 0.18));
+        if (a.style === "cartwheel") return Object.assign(blendPose(CARTWHEEL, idleP(t), Math.max(0, u * 4 - 3)), { spin: u * TAU });
+        if (a.style === "flip") return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 2 - 1) ** 2), { spin: u * TAU }); if (a.style === "roll") return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 3 - 2)), { spin: u * TAU }); return walkP(a.t * 22, u > 0.3 && u < 0.6);
       case "dodge": if (a.vault) return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 2.4 - 1.4)), { spin: u * TAU });
         return Object.assign(blendPose(TUCK, idleP(t), Math.max(0, u * 3 - 2)), { spin: Math.sign(a.to[0] - a.from[0] || 1) * H0.dir * u * TAU });
       case "jumpkick": return pose({ lean: -0.3, hF: 1.9, kF: 0.1, hB: -0.2, kB: 1.4, sF: 2.4, eF: 0.4, sB: -1.4 });
@@ -1430,31 +1550,59 @@ const Fight = (() => {
   }
   function drawHero(fl) {
     const H0 = G.hero, s = depth(H0.y), p = heroPose(), sway = H0.act.kind === "idle" ? Math.sin(G.t * 1.7) * 3 : 0;
-    if (fl) { if (H0.z < 60) drawFigure("priest", H0.x + sway, H0.y + 2, s, H0.dir, p, { flipY: true, alpha: 0.16, t: G.t, pal: PRIEST_FIGHT }); return; }
+    const praying = H0.act.kind === "block";
+    if (fl) { if (H0.z < 60) { if (praying) drawPriestFront(H0.x, H0.y + 2, s, { flipY: true, alpha: 0.16 }); else drawFigure("priest", H0.x + sway, H0.y + 2, s, H0.dir, p, { flipY: true, alpha: 0.16, t: G.t, pal: PRIEST_FIGHT }); } return; }
     // His ring of light on the ground, and his shadow.
     const ringA = 0.5 + 0.15 * Math.sin(G.t * 3);
     ctx.globalAlpha = 0.3; ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(H0.x, H0.y, 22 * s, 5 * s, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
     glowOval(H0.x, H0.y + 1, 38 * s, 9 * s, C.holy, 0.35);
     ctx.strokeStyle = hexA(C.holy, ringA); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(H0.x, H0.y + 1, 26 * s, 6.5 * s, 0, 0, TAU); ctx.stroke();
     const hide = H0.inv > 0 && !["dodge", "dash"].includes(H0.act.kind) && Math.sin(G.t * 40) > 0;
-    drawFigure("priest", H0.x + sway, H0.y - H0.z, s, H0.dir, p, { t: G.t, pal: PRIEST_FIGHT, rim: C.holy, rimX: -1.8 * H0.dir, rimY: -1, flow: ["zip", "dash", "run", "finish"].includes(H0.act.kind) ? 0.8 : 0.2, flask: H0.act.kind === "toss" || (H0.act.kind === "strike" && H0.act.which === HEAVY), alpha: hide ? 0.6 : 1 });
+    if (praying) {
+      // The block: turned to us, in prayer, the light of his angel behind him like a halo.
+      const k = Math.min(1, H0.act.t / 0.12), pul = 0.85 + 0.15 * Math.sin(G.t * 9), hx = H0.x, hy = H0.y - H0.z - 74 * s;
+      glow(hx, hy - 6 * s, 70 * s * pul, C.holy, 0.35 * k);
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.6 * k;
+      ctx.strokeStyle = C.holy; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(hx, hy - 6 * s, 40 * s * pul, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 1; for (let i = 0; i < 12; i++) { const a = i * TAU / 12 + G.t * 0.6; ctx.beginPath(); ctx.moveTo(hx + Math.cos(a) * 44 * s, hy - 6 * s + Math.sin(a) * 44 * s); ctx.lineTo(hx + Math.cos(a) * 58 * s, hy - 6 * s + Math.sin(a) * 58 * s); ctx.stroke(); }
+      ctx.restore();
+      drawPriestFront(H0.x, H0.y - H0.z, s, {});
+      glow(hx, hy, 14 * s, "#fff6dc", 0.7 * k);
+    } else drawFigure("priest", H0.x + sway, H0.y - H0.z, s, H0.dir, p, { t: G.t, pal: PRIEST_FIGHT, rim: C.holy, rimX: -1.8 * H0.dir, rimY: -1, flow: ["zip", "dash", "run", "finish"].includes(H0.act.kind) ? 0.8 : 0.2, flask: H0.act.kind === "toss" || (H0.act.kind === "strike" && H0.act.which === HEAVY), alpha: hide ? 0.6 : 1 });
     if (H0.act.kind === "bless" || H0.act.kind === "chain") { const hp = jointAt("priest", H0.x, H0.y - H0.z, s, H0.dir, p, "hF"); glow(hp[0], hp[1], 30, C.holy, 0.8); }
-    if (H0.act.kind === "block") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = hexA(C.holy, 0.7); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(H0.x + H0.dir * 8, H0.y - 60 * s, 44 * s, -PI / 2 - 1.1, -PI / 2 + 1.1); ctx.stroke(); ctx.restore(); glow(H0.x + H0.dir * 20, H0.y - 60 * s, 40 * s, C.holy, 0.25); }
-    // The long arm: his coat sleeve stretching out across the street from the elbow, and his hand
-    // closing on the demon and hauling it in.
-    if ((H0.act.kind === "lash" || H0.act.kind === "haul") && H0.act.f && !H0.act.f.gone) {
-      const ep = jointAt("priest", H0.x, H0.y - H0.z, s, H0.dir, p, "eF"), f = H0.act.f, u = H0.act.kind === "lash" ? ease(clamp(H0.act.t / H0.act.dur, 0, 1)) : 1;
-      const ex = lerp(ep[0], f.x - Math.sign(f.x - ep[0]) * 6, u), ey = lerp(ep[1], f.y - f.z - 78 * depth(f.y), u), len = Math.hypot(ex - ep[0], ey - ep[1]);
-      const wv = Math.sin(G.t * 26) * Math.min(14, len * 0.08), mx = (ep[0] + ex) / 2, my = (ep[1] + ey) / 2 - wv;
-      const path = () => { ctx.beginPath(); ctx.moveTo(ep[0], ep[1]); ctx.quadraticCurveTo(mx, my, ex, ey); };
-      ctx.lineCap = "round";
-      path(); ctx.strokeStyle = "#141a2c"; ctx.lineWidth = 7.5 * s; ctx.stroke();
-      path(); ctx.strokeStyle = PRIEST_FIGHT.coat; ctx.lineWidth = 5.5 * s; ctx.stroke();
-      // Folds in the stretched sleeve.
-      for (let i = 1; i < 8; i++) { const v = i / 8, qx = (1 - v) * (1 - v) * ep[0] + 2 * v * (1 - v) * mx + v * v * ex, qy = (1 - v) * (1 - v) * ep[1] + 2 * v * (1 - v) * my + v * v * ey; circle(qx, qy, 1.1 * s, PRIEST_FIGHT.coat2); }
-      ctx.save(); ctx.globalCompositeOperation = "lighter"; path(); ctx.strokeStyle = hexA(C.holy, 0.25); ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
-      circle(ex, ey, 3.4 * s, "#ffffff"); circle(ex + Math.sign(f.x - ep[0]) * 2.5 * s, ey, 3.6 * s, PRIEST_FIGHT.skin);
-    }
+  }
+  // Fr. Lawrence facing us, in prayer: feet together, the long coat, the hands pressed together
+  // before his chest, his eyes closed behind his glasses, the hat with its gold band.
+  function drawPriestFront(x, y, s, o) {
+    const P = PRIEST_FIGHT;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, o.flipY ? -s * 0.62 : s);
+    if (o.alpha !== undefined) ctx.globalAlpha = o.alpha;
+    ctx.fillStyle = P.shoe; ctx.beginPath(); ctx.ellipse(-5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(5.2, -1.6, 4.8, 2.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = P.trouser; ctx.fillRect(-8.2, -40, 7.2, 38.5); ctx.fillStyle = P.trouser2; ctx.fillRect(1, -40, 7.2, 38.5);
+    poly([-12.5, -84, 12.5, -84, 15.5, -24, 0, -22, -15.5, -24], P.coat);
+    poly([0, -84, 12.5, -84, 15.5, -24, 0, -22], P.coat2);
+    poly([-6.2, -84, 0, -64, 6.2, -84], "#0d0f18");
+    poly([-6.2, -84, -2.4, -84, 0, -68, -4, -76], P.lapel); poly([6.2, -84, 2.4, -84, 0, -68, 4, -76], P.lapel);
+    ctx.fillStyle = P.collar; ctx.fillRect(-2.5, -85, 5, 2.4);
+    // His arms come in to the hands at his chest.
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 5.8;
+    ctx.strokeStyle = P.coat; ctx.beginPath(); ctx.moveTo(-11.5, -80); ctx.lineTo(-14, -66); ctx.lineTo(-3, -69); ctx.stroke();
+    ctx.strokeStyle = P.coat2; ctx.beginPath(); ctx.moveTo(11.5, -80); ctx.lineTo(14, -66); ctx.lineTo(3, -69); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(-3.4, -69.6, 6.8, 1.7);
+    ctx.fillStyle = P.skin; ctx.beginPath(); ctx.ellipse(-1.15, -74.5, 2.1, 5.4, 0.1, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.ellipse(1.15, -74.5, 2.1, 5.4, -0.1, 0, TAU); ctx.fill();
+    ctx.strokeStyle = P.skinSh; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(0, -79.5); ctx.lineTo(0, -70); ctx.stroke();
+    // The head: neck, face shaded on one side, closed eyes, glasses, mouth.
+    ctx.fillStyle = P.skinSh; ctx.fillRect(-2.1, -88, 4.2, 4);
+    ctx.fillStyle = P.skin; ctx.beginPath(); ctx.ellipse(0, -94, 6, 7.2, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = P.skinSh; ctx.beginPath(); ctx.ellipse(1.2, -94, 4.8, 7.2, 0, -PI / 2, PI / 2); ctx.fill();
+    ctx.strokeStyle = "#2a1a14"; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-4, -94.5); ctx.quadraticCurveTo(-2.6, -93.4, -1.2, -94.5); ctx.moveTo(1.2, -94.5); ctx.quadraticCurveTo(2.6, -93.4, 4, -94.5); ctx.stroke();
+    ctx.strokeStyle = hexA(P.glass, 0.6); ctx.lineWidth = 0.6; ctx.beginPath(); ctx.arc(-2.6, -94.6, 2.1, 0, TAU); ctx.moveTo(4.7, -94.6); ctx.arc(2.6, -94.6, 2.1, 0, TAU); ctx.moveTo(-0.5, -94.8); ctx.lineTo(0.5, -94.8); ctx.stroke();
+    ctx.strokeStyle = "#5a3a2a"; ctx.beginPath(); ctx.moveTo(-1.3, -90); ctx.lineTo(1.3, -90); ctx.stroke();
+    // The hat.
+    ctx.fillStyle = P.hat; ctx.beginPath(); ctx.ellipse(0, -100.5, 11.5, 2.7, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-7.2, -100.5); ctx.lineTo(-6.2, -110.5); ctx.quadraticCurveTo(0, -113.5, 6.2, -110.5); ctx.lineTo(7.2, -100.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = P.band; ctx.fillRect(-7.1, -104, 14.2, 2);
+    ctx.restore();
   }
   function drawAngelE(fl) {
     const A = G.angel, a = A.act, s = depth(A.y);
@@ -1521,7 +1669,10 @@ const Fight = (() => {
     // A dark red pool under each of them, where his is gold.
     if (f.act.kind !== "castout" && !f.shade) glowOval(f.x, f.y + 1, 30 * s, 7 * s, "#ff1a1a", 0.18);
     const bounce = f.act.kind === "floored" && f.act.t < 0.3 ? Math.sin(f.act.t / 0.3 * PI) * 10 : 0;
+    const bound = G.rosary && G.rosary.f === f && G.beads && G.beads.length;
+    if (bound) drawRosary(G.beads, "back");
     drawFigure("demon", f.x, f.y - f.z - bounce, s, f.dir, p, Object.assign({ rim: f.rim, rimX: f.x < G.hero.x ? -2 : 2 }, o));
+    if (bound) drawRosary(G.beads, "front");
     ctx.globalAlpha = 1;
     // One that is down: a gold mark over it, and a ring that runs out as it gets ready to rise.
     if (f.act.kind === "floored" && !f.gone && !f.act.pinned) {
@@ -1682,7 +1833,7 @@ const Fight = (() => {
       buttons.push({ x: 8, y: 88, w: 150, h: 26, act: () => { if (G.kata) kataEnd(); } });
       text(G.opts.only ? "END PRACTICE ›" : "SKIP PRACTICE ›", 16, 104, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)" });
     } else if (G.wave <= 0 && !G.practised && G.world === "street") {
-      text(tip("TAP: STRIKE · HOLD ON ONE: HOLY WATER · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES", "ARROWS: MOVE · SPACE: STRIKE · X: COUNTER · Z: DODGE · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES"),
+      text(tip("TAP: STRIKE · HOLD ON ONE: HOLY WATER · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES", "ARROWS: MOVE · SPACE: STRIKE · X: COUNTER · Q: BLOCK · NEVER THE SAME BLOW TWICE ON ONE · PAUSE FOR ALL THE MOVES"),
         W / 2, H - 12, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.5)", max: W - 40 });
     }
     pauseButton();
@@ -1717,7 +1868,7 @@ const Fight = (() => {
       else if (dy > 30 && Math.abs(dy) > Math.abs(dx) * 1.1) slam(tg);
       else if (near(tg)) throwFoe(tg, dx, dy * 0.5);
       else stole(tg);
-    } else dodge(dx, dy * 0.6);
+    }
   }
   function down(s, e) {
     if (G.over || G.down) return;
@@ -1747,7 +1898,7 @@ const Fight = (() => {
   }
   function key(code, isDown, e) {
     G.keys[code] = isDown;
-    if (!isDown) { if (code === "KeyQ" && G.hero.act.kind === "block") act("idle"); return; }
+    if (!isDown) { if (["KeyQ", "KeyZ", "ShiftLeft", "ShiftRight"].includes(code) && G.hero.act.kind === "block") act("idle"); return; }
     if (e && e.repeat) return;
     if (code === "Escape" || code === "KeyP") { Game.pause(); return; }
     if (G.over || G.down) return;
@@ -1759,10 +1910,7 @@ const Fight = (() => {
     } else if (code === "KeyX") {
       const gold = alive().filter((f) => f.sign === "gold" && f.act.kind === "wind").sort((a, b) => Math.abs(a.x - H0.x) - Math.abs(b.x - H0.x))[0];
       if (gold) counter(gold); else pop(H0.x, H0.y - 130, "NOTHING TO COUNTER", "rgba(233,230,223,0.6)");
-    } else if (code === "KeyZ" || code === "ShiftLeft" || code === "ShiftRight") {
-      let dx = kx, dy = ky;
-      if (!dx && !dy) { const th = alive().filter((f) => f.sign).sort((a, b) => Math.abs(a.x - H0.x) - Math.abs(b.x - H0.x))[0] || nearestFoe(); dx = th ? (th.x > H0.x ? -1 : 1) : -H0.dir; }
-      dodge(dx, dy);
+    } else if (code === "KeyZ" || code === "ShiftLeft" || code === "ShiftRight") { if (!busy()) act("block", {});
     } else if (code === "KeyC") heavy(any());
     else if (code === "KeyE") launch(any());
     else if (code === "KeyV") { const c = pick({ air: true }) || pick(); if (c) slam(c.f); }
@@ -1781,14 +1929,14 @@ const Fight = (() => {
   function moves() {
     return usingKeys() ? [
       ["Arrows", "move"], ["Space", "strike, toward the arrow held"], ["The one rule", "never the same blow twice on the same demon"], ["X", "counter a gold sign: catch, throw, pin"],
-      ["Space, at one down", "finish it: a takedown"], ["Z + arrow", "dodge; toward one close by, vault over it"], ["Q, held", "block"], ["C", "heavy blow: breaks a shield"],
-      ["E", "launch"], ["Space, in the air", "keep it up"], ["V", "slam (in the air: spike)"], ["F", "holy water, near or far"], ["R", "the long arm: pull one in"],
+      ["Space, at one down", "finish it: a takedown"], ["Q, held", "block one blow (the red sign too); then again"], ["C", "heavy blow: breaks a shield"],
+      ["E", "launch"], ["Space, in the air", "keep it up"], ["V", "slam (in the air: spike)"], ["F", "holy water, near or far"], ["R", "the rosary: wrap a far one, haul it in"],
       ["T + arrow", "throw a near one into another"], ["B", "bless; in the Heights, come down from on high"], ["12 in a row", "up to the Heights"],
     ] : [
       ["Tap a demon", "strike, then on to the next"], ["The one rule", "never the same blow twice on the same demon"], ["Tap open street", "zip there"], ["Tap a gold sign", "counter: catch, throw, pin"],
-      ["Tap one that is down", "finish it: a takedown"], ["Swipe", "dodge; toward one close by, vault over it"], ["Hold open street", "block"], ["Tap twice", "heavy blow: breaks a shield"],
+      ["Tap one that is down", "finish it: a takedown"], ["Hold open street", "block one blow (the red sign too); then again"], ["Tap twice", "heavy blow: breaks a shield"],
       ["Swipe up on one", "launch"], ["Tap it in the air", "keep it up"], ["Swipe down on one", "slam (in the air: spike)"], ["Hold on one, let go", "holy water, near or far"],
-      ["Drag a far one", "the long arm: pull it in"], ["Drag a near one", "throw it into another"], ["Gold button", "bless; in the Heights, come down from on high"], ["12 in a row", "up to the Heights"],
+      ["Drag a far one", "the rosary: wrap it, haul it in"], ["Drag a near one", "throw it into another"], ["Gold button", "bless; in the Heights, come down from on high"], ["12 in a row", "up to the Heights"],
     ];
   }
   return { start, step, draw, down, move, up, key, moves, get G() { return G; } };
