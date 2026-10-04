@@ -1,12 +1,21 @@
 # SELAH — build prompt
 
 *The plan for the game. The first build is playable (`index.html`): milestone 1, three
-psalms with their songs, the four ranks, and the Voice setting with pack import.*
+psalms with their songs, the four ranks, and the Voice setting with pack import, rebuilt
+after the author played it so that the notes are the drums (see "How to read this").*
 
 **How to read this.** The author's prompt comes first, and it binds: the locked
 decisions, the note language and the copyright architecture. The author made
 two changes to it: the music is **funky**, techno-funk in many genres as in
 Luminaries (decision 8), and the interface is **sleek and modern** (decision 9).
+After playing the first build, the author changed it again (decisions 10 to 12):
+**the notes are the drums**, not the rhythm of speech, because a player can feel a
+beat coming and cannot guess a melody; **the Voice is one straight line**; the ranks
+add the drum part **as Rock Band does**; and the music is **more percussive, more
+varied and more progressive**, with dubstep and odd meters. Where the older text
+below (Phigros DNA, the note language, the moving Voice, the set pieces) disagrees
+with these, these win; those passages are kept, marked, for what they still say
+about the words and the feel.
 Sections marked *(proposed)* were filled in by Claude at the author's request.
 They are the plan, but the author may change them, and they never override a
 locked decision. Every quotation of the Psalms here is the Douay-Rheims
@@ -19,6 +28,8 @@ You are building **SELAH**, a mobile-first Phigros-style rhythm game. Read this 
 ## One-sentence pitch
 
 A Phigros-like rhythm game where the notes are **words from the Psalms**. You **tap words** as they hit a moving judgment line. 150 charts. Techno-funk that changes genre with the psalm. The whole Psalter, including the dark ones.
+
+*(As changed by the author: you play the drums — kick, snare, toms, cymbals — on one straight line, and the words of the psalm ride the strokes.)*
 
 Title: **SELAH**
 Tagline: *The Word is the note.*
@@ -34,8 +45,13 @@ Tagline: *The Word is the note.*
 7. **Ship playable, not a mock.** First milestone is three real charts with sound, then the campaign shell.
 8. **Music = funky.** Techno-funk in many genres, a different groove for each kind of psalm, the way Luminaries gives every Doctor a song of their own. Not one techno sound for all 150. Built on the Luminaries synth engine. Details in Music below.
 9. **Interface = sleek and modern.** A current, premium rhythm-game interface (think Phigros, Arcaea, Cytus II): clean type, lots of space, smooth motion. Not pixel fonts, parchment, or medieval UI. Details in Interface below.
+10. **The notes are the drums.** The player plays the song's drum part: mostly the kick and the snare, and the fills when they come. Every psalm's song has its drum part written out bar by bar, and the same part both plays the drums and makes the chart. The words ride the strokes. Details in The drums below.
+11. **One straight line.** The Voice is a single straight judgment line, still, with the drum kit along it: hi-hat at the left, snare, toms, crash at the right; the kick is the whole line, struck anywhere. No splitting, turning or moving lines.
+12. **Ranks as in Rock Band.** The easiest rank plays the kick and snare, on the beat, with a cymbal now and then; each rank above adds more of the drum part (the syncopated kicks and simple fills; then hi-hats, toms and crashes; then sixteenths, ghost strokes and whole fills). The band always plays the full part; the rank decides how much of it is the player's.
 
 ## What Phigros DNA to keep
+
+*(Decisions 10–12 replace the moving, splitting line and "spectacle and chaos": one still line, and difficulty that is more of the drum part.)*
 
 - A **judgment line** (“the Voice”) that can move, rotate, split, multiply, disappear.
 - Notes fly in from any direction and must be hit when they meet the Voice.
@@ -45,6 +61,28 @@ Tagline: *The Word is the note.*
 - Typical chart length **90–180 seconds**. Short psalms loop and intensify. Long psalms chart the spine, not every syllable.
 
 Judgment windows (start here, tune later): Perfect ±80ms · Good ±160ms · Bad ±180ms (tap only) · Miss = combo break.
+
+## The drums *(the note language as the author changed it)*
+
+The notes are the strokes of the drum part. Each stroke has its place on the line, and its kind of hit:
+
+| Hit | Drum | Where on the line | From which rank |
+|---|---|---|---|
+| **Tap** | Kick | The whole line: strike anywhere | Feria |
+| **Tap** | Snare (and clap, rim) | Left of centre | Feria |
+| **Tap** | Toms, high to low | Right of centre, three places | Memoria (in fills) |
+| **Tap**, then **Flick** | Crash | The right end | Feria as a tap; a flick from Festum |
+| **Drag** | Hi-hat; ride | The left end; the right end | Festum (eighths), Sollemnitas (sixteenths) |
+| **Hold** | A roll (into a drop) | The snare's place | Memoria |
+| **Selah** | The band falls away | The line goes still | Feria |
+
+**Writing a drum part.** One character to a sixteenth, per drum: `0`–`3` a stroke charted from that rank up (Feria, Memoria, Festum, Sollemnitas), `g` a ghost stroke (Sollemnitas), `x` a stroke the band plays that no rank charts, `f` a stroke charted at Feria only, `.` nothing. Fills end phrases (every two lines); a crash begins them. Strokes that fall together: one at Feria and Memoria (the crash, then the snare, then a tom, then the kick), two from Festum, and drags beside them.
+
+**The words ride the strokes.** Each line of the psalm takes two bars of a verse section. Its words are cut into phrases (the little words go with the word after them) and the phrases are laid on the line's strokes, spread across its two bars: fewer, longer phrases at the lower ranks, single words at the higher. Strokes with no phrase are still played. A phrase with a divine name is drawn as an accent. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each word as its stroke is struck.
+
+**Selah** keeps its meaning and its judging (below): at the Hebrew's selahs the band falls away for two bars to a held chord and a heartbeat, and the player touches nothing.
+
+*The older note language follows, for its rules about the words.*
 
 ## Note language (grammar → hits)
 
@@ -68,7 +106,7 @@ Do **not** make “the / and / of / a” into real taps. That kills the game.
 
 **Triplets** *(proposed)*. A verse of three lines splits the Voice in three.
 
-## The Voice: how it moves *(proposed)*
+## The Voice: how it moves *(proposed, then set aside by the author: the Voice is one straight line)*
 
 The Voice moves because the words move. Most of its motion comes from the text
 itself. The compiler finds these by meaning lists that cover old and modern
@@ -88,6 +126,26 @@ English alike (arise / rise up, thou / you), so they work for any pack.
 Beyond these, many psalms have their own set pieces (see Set pieces).
 
 ## Music: techno-funk, a new genre for each kind of psalm
+
+**As the author asked after the first build: more percussive, more varied, more progressive.**
+Each song is a form, not a loop: an intro, verse sections, a build with a snare roll, a drop,
+more verses in another meter, a breakdown, the last verses, a second build and drop, an outro.
+Odd meters give the drums something to say: 7/8 (grouped 2 + 2 + 3), 6/8, 5/4. The drops reach
+into bass music (dubstep's wobble and growl basses, half time, lasers, chopped voices; breakbeat;
+a jungle break with its ghost strokes). And each section has its own lead instrument, so no two
+sound alike: electric piano, bell, clavinet, flute, supersaw, organ, bowed strings, brass,
+melodica, kalimba, marimba, choir, harp. The first three:
+
+- **Psalm 1, "Two Ways"** (124): progressive house. The just in 4/4 deep house; the wicked in 7/8
+  progressive funk (clavinet and slap bass stumbling); breakbeat drops with chopped voices; tech
+  house with organ and strings for the tree by the waters; the last drop limps into seven and the
+  song ends on D minor alone.
+- **Psalm 3, "Shield"** (140): dub into dubstep. A half-time dub-techno lament; dubstep drops whose
+  wobble moves from eighths to sixteenths to triplets; the second verses in 6/8 with choir and
+  kalimba; after "Arise", lifted harmony, brass and a heavy riddim; three Selahs; C major at the end.
+- **Psalm 150, "Every Spirit"** (128): gospel house into breakbeat. Claps, octave bass, house piano;
+  a jungle break with horns; the verses of timbrel and choir in 5/4 Afro house (congas, marimba);
+  every instrument the psalm names joins the band as it is named.
 
 Every psalm has its own song, and the song is funky. The genre follows what the
 psalm is doing: a psalm of praise does not sound like a lament, and the
@@ -229,12 +287,14 @@ glass, doves, clipart crosses or worship-app gradients.
 
 ### Four ranks, named for the ranks of the liturgical day
 
-| Rank | Levels | What is in it |
-|---|---|---|
-| **Feria** | 1–5 | Tap, Hold and Selah; one Voice that does not move; at most one note a beat |
-| **Memoria** | 4–9 | Adds Flick and Drag; the Voice moves and splits |
-| **Festum** | 8–13 | Rotations, several Voices, notes from both sides |
-| **Sollemnitas** | 12–16 | Everything: many Voices, sixteenths, the full spectacle |
+*(As changed by the author: the ranks add the drum part, as in Rock Band.)*
+
+| Rank | What you play |
+|---|---|
+| **Feria** | Kick and snare, on the beat; a crash now and then (tapped); Selah |
+| **Memoria** | And the syncopated kicks, the simple fills, the rolls into the drops (held) |
+| **Festum** | And the hi-hat and ride (dragged), the toms, eighth-note fills; the crash is flicked; two strokes at once |
+| **Sollemnitas** | Every stroke: sixteenths, ghost strokes, whole fills |
 
 A hidden fifth rank, **Vigilia**, comes on a dozen of the great set-piece
 psalms. A Full Combo on Sollemnitas opens it.
@@ -249,6 +309,9 @@ round the grade. Records are kept for each Voice separately, since a Grail
 chart is not the same chart as the Douay one.
 
 ### The chart compiler
+
+*(As built after the author's change: the chart comes from the drum part, and the words ride it.
+See "The drums" above. The steps below were the first build's, from the rhythm of speech.)*
 
 Every chart is made from the text by the compiler, then shaped by hand. It must
 work as well on a pack as on the Douay, because charts regenerate from the
@@ -352,13 +415,13 @@ Perfect. Tap a cell to play it.
 
 Five short lessons, each on a real psalm, then calibration.
 
-1. **Tap.** Psalm 116, the shortest: "O Praise the Lord, all ye nations: praise
-   him, all ye people", on one still Voice.
-2. **Hold.** Its second verse: "For his mercy is confirmed upon us: and the truth
-   of the Lord remaineth for ever."
-3. **The split.** Psalm 1, the two ways.
-4. **Flick.** Psalm 2, the potter's vessel.
-5. **Drag and Selah.** Psalm 3 and its three Selahs.
+1. **Kick and snare.** Psalm 116, the shortest: "O Praise the Lord, all ye nations:
+   praise him, all ye people", on the beat.
+2. **The roll.** Its second verse, "For his mercy is confirmed upon us: and the truth
+   of the Lord remaineth for ever", held into a drop.
+3. **Fills.** Psalm 1: the toms at the end of each phrase, and the 7/8 of the wicked.
+4. **Cymbals.** Psalm 2, the potter's vessel: crashes, flicked.
+5. **Hi-hat and Selah.** Psalm 3: the hats dragged, and its three Selahs.
 6. **Calibrate.** Tap along with a click to set the audio offset.
 
 ### Free play
@@ -389,7 +452,9 @@ printed Douay).
 
 Each stanza is its own chart, 60 to 90 seconds long, with its own song.
 
-- **The Voice is the letter.** Each song's judgment line is drawn in neon from
+- **The letter over the line.** *(The Voice stays one straight line, as the author
+  decided; the letter is drawn in neon behind it, and the drums take its shape.)*
+  Each song's judgment line is drawn in neon from
   the strokes of its Hebrew letter. Vau (ו) is a single upright stroke, so its
   Voice stands upright and the notes come in from the sides. Daleth (ד) is a
   corner: two Voices at a right angle. Sin (ש) has three arms: three Voices. Tau
@@ -444,6 +509,10 @@ game saves at each movement, so the marathon can be played in sittings, as the
 Hours are. A Full Combo of the whole marathon is the hardest thing in SELAH.
 
 ## Set pieces *(proposed)*
+
+*(Since the author's change, a set piece that moved the Voice is done in the drums and the music
+instead, on the one still line: Psalm 2's potter's vessel is a crash; Psalm 18's giant running his
+course is a tom run across the kit; Psalm 87's sinking is the drum part thinning to a heartbeat.)*
 
 Signature moments, each taken from the text. They are written into the psalms'
 direction files and keyed to verses, so they also play in a pack's text.

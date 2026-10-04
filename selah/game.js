@@ -13,7 +13,10 @@ const Game = (() => {
   const STILL_IN = 0.1, STILL_OUT = BAD + 0.02;
   const H = 360;
   let W = 640, cv = null, ctx = null, scale = 1, DPR = 1;
-  const C = { void: "#05040a", gold: "#e8c46a", goldHi: "#ffe39a", bone: "#ece4d2", cyan: "#6fe0f0", red: "#e0606a", dim: "rgba(236,228,210,0.42)" };
+  const C = { void: "#05040a", gold: "#e8c46a", goldHi: "#ffe39a", bone: "#ece4d2", cyan: "#6fe0f0", red: "#e0606a", dim: "rgba(236,228,210,0.42)",
+    kick: "#f0a24e", tom: "#7fd8c4" };
+  // The color of each drum's notes.
+  const LANE_COL = { kick: C.kick, snare: C.gold, hat: C.bone, tom1: C.tom, tom2: C.tom, tom3: C.tom, crash: C.cyan };
 
   // ---- The screen -----------------------------------------------------------------------------------
   G.mount = function (canvas) {
@@ -74,8 +77,8 @@ const Game = (() => {
     if (!S) return;
     S.widths = S.chart.notes.map((n) => { ctx.font = font(n); return ctx.measureText(n.word).width; });
   }
-  const font = (n) => n.type === "drag" ? "600 10px Inter, system-ui, sans-serif" : n.accent ? "800 14px Inter, system-ui, sans-serif" : "800 12.5px Inter, system-ui, sans-serif";
-  const noteHalf = (n) => Math.max(16, Math.min(70, S.widths[n.id] / 2 + 6));
+  const font = (n) => n.latin ? "italic 600 14px 'Cormorant Garamond', Georgia, serif" : n.accent ? "800 13px Inter, system-ui, sans-serif" : "800 12px Inter, system-ui, sans-serif";
+  const noteHalf = (n) => (isKick(n) ? 0 : 30);
 
   // The song's time now, as heard.
   function now() {
@@ -90,48 +93,21 @@ const Game = (() => {
     return Sound.heard(ms) - S.T0 - S.offset;
   };
 
-  // ---- The Voice ------------------------------------------------------------------------------------
-  // A segment's pose: centre (px), angle, length; with the sway of the higher ranks.
-  function pose(fi, si, t) {
-    const f = S.chart.frames[fi], s = f.segs[Math.min(si, f.segs.length - 1)];
-    let ang = s.ang, cy = s.cy * H;
-    const m = S.chart.motion;
-    if (m) { ang += Math.sin(t * 0.8 + si * 1.7 + fi) * (m === 1 ? 0.015 : 0.05); cy += Math.sin(t * 0.6 + si) * (m === 1 ? 3 : 9); }
-    return { cx: s.cx * W, cy, ang, len: s.len * W };
-  }
-  // The frame the Voice shows at time t, and how far it has moved from the last (0–1).
-  function frameAt(t) {
-    const F = S.chart.frames, bt = S.chart.barT;
-    let k = 0;
-    for (let i = 0; i < F.length; i++) if (t >= F[i].t0 - bt * 0.5) k = i;
-    const a = (t - (F[k].t0 - bt * 0.5)) / (bt * 0.35);
-    return { k, mix: k === 0 ? 1 : Math.max(0, Math.min(1, a)) };
-  }
-  const ease = (x) => x * x * (3 - 2 * x);
-  function voiceSegs(t) {
-    const { k, mix } = frameAt(t), F = S.chart.frames, out = [];
-    const n = F[k].segs.length;
-    for (let i = 0; i < n; i++) {
-      const b = pose(k, i, t);
-      if (mix < 1 && k > 0) {
-        const a = pose(k - 1, Math.min(i, F[k - 1].segs.length - 1), t), e = ease(mix);
-        out.push({ cx: a.cx + (b.cx - a.cx) * e, cy: a.cy + (b.cy - a.cy) * e, ang: a.ang + (b.ang - a.ang) * e, len: a.len + (b.len - a.len) * e });
-      } else out.push(b);
-    }
-    return out;
-  }
-  // Where a note is: on its segment at its x, out along the normal by the time still to go.
+  // ---- The Voice: one straight line, and the drum kit along it ------------------------------------------
+  // Hi-hat at the left, snare, toms, the crash at the right; the kick is the whole line.
+  const LINE_Y = 0.74, LINE_LEN = 0.86;
+  const line0 = () => ({ cx: W / 2, cy: H * LINE_Y, len: W * LINE_LEN, ang: 0 });
+  const isKick = (n) => n.lane === "kick";
+  // Where a note is: at its place on the line, above it by the time still to go.
   function notePos(n, t, along) {
-    const p = pose(n.frame, n.seg, t), ux = Math.cos(p.ang), uy = Math.sin(p.ang), nx = Math.sin(p.ang), ny = -Math.cos(p.ang);
-    const bx = p.cx + ux * (n.x - 0.5) * p.len, by = p.cy + uy * (n.x - 0.5) * p.len;
-    const d = Math.max(0, (along - t)) * S.speed;
-    return { x: bx + nx * d, y: by + ny * d, bx, by, ang: p.ang, ux, uy, nx, ny, d };
+    const p = line0(), bx = p.cx + (n.x - 0.5) * p.len, by = p.cy, d = Math.max(0, along - t) * S.speed;
+    return { x: bx, y: by - d, bx, by, ang: 0, nx: 0, ny: -1, d };
   }
-  // How far a touch is from a note, along its segment (px), and whether it is on the line's side.
-  function offAxis(n, pt, t) {
-    const p = pose(n.frame, n.seg, t), ux = Math.cos(p.ang), uy = Math.sin(p.ang);
-    const bx = p.cx + ux * (n.x - 0.5) * p.len, by = p.cy + uy * (n.x - 0.5) * p.len;
-    return Math.abs((pt.x - bx) * ux + (pt.y - by) * uy);
+  // How far a touch is from a note, along the line (px). Anywhere on the line is on the kick.
+  function offAxis(n, pt) {
+    const p = line0();
+    if (isKick(n)) return Math.max(0, Math.abs(pt.x - p.cx) - p.len / 2);
+    return Math.abs(pt.x - (p.cx + (n.x - 0.5) * p.len));
   }
 
   // ---- Touch -----------------------------------------------------------------------------------------
@@ -164,17 +140,22 @@ const Game = (() => {
   function tapAt(p, t) {
     for (const n of S.chart.notes) {
       if (n.t - t > 0.1) break;
-      if (n.type === "drag" && !S.st[n.id].done && Math.abs(t - n.t) <= 0.06 && offAxis(n, p, t) <= noteHalf(n) + 10) return;
+      if (n.type === "drag" && !S.st[n.id].done && Math.abs(t - n.t) <= 0.06 && offAxis(n, p) <= noteHalf(n) + 10) return;
     }
-    let best = null, bdt = 9;
+    // the nearest in time, then in place; a drum's own place before the kick, so two hands can
+    // strike a kick and a snare together
+    let best = null, bs = 9;
     for (const n of S.chart.notes) {
+      if (n.t - t > BAD) break;
       if (n.type !== "tap" && n.type !== "hold") continue;
       const st = S.st[n.id];
       if (st.done || st.hit) continue;
       const dt = t - n.t, win = n.type === "tap" ? BAD : GOOD;
       if (dt < -win || dt > win) continue;
-      if (offAxis(n, p, t) > noteHalf(n) + 22) continue;
-      if (Math.abs(dt) < bdt) { best = n; bdt = Math.abs(dt); }
+      const off = offAxis(n, p);
+      if (off > noteHalf(n) + 22) continue;
+      const score = Math.abs(dt) + (isKick(n) ? 0.05 : off * 0.0006);
+      if (score < bs) { best = n; bs = score; }
     }
     if (!best) return;
     const dt = t - best.t, st = S.st[best.id];
@@ -182,7 +163,7 @@ const Game = (() => {
     S.early.push(dt);
     if (best.type === "hold" && grade !== "bad") {
       st.hit = true; st.holding = true; st.grade = grade; st.dt = dt; st.lost = 0;
-      st.stop = Sound.holdTone(tone(best, 0));
+      st.stop = Sound.holdTone();
       burst(best, grade, true);
     } else judge(best, grade);
   }
@@ -193,7 +174,7 @@ const Game = (() => {
       if (st.done) continue;
       const dt = t - n.t;
       if (dt < -GOOD || dt > GOOD) continue;
-      if (offAxis(n, p, t) > noteHalf(n) + 30) continue;
+      if (offAxis(n, p) > noteHalf(n) + 30) continue;
       S.early.push(dt);
       judge(n, Math.abs(dt) <= PERFECT ? "perfect" : "good");
       return true;
@@ -201,7 +182,7 @@ const Game = (() => {
     return false;
   }
   function touchingNear(n, t, extra) {
-    for (const q of pointers.values()) if (offAxis(n, q, t) <= noteHalf(n) + extra) return true;
+    for (const q of pointers.values()) if (offAxis(n, q) <= noteHalf(n) + extra) return true;
     return false;
   }
   function breakSelah(t) {
@@ -219,10 +200,7 @@ const Game = (() => {
     if (grade === "perfect" || grade === "good") {
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
       if (S.level < 3 && S.combo >= 12 * (S.level + 1)) { S.level++; Sound.setLevel(S.level); }
-      if (n) {
-        if (n.type === "flick") Sound.flick(tone(n, 1)); else if (n.type !== "hold") Sound.hit(tone(n, n.line + n.tok), grade === "perfect");
-        burst(n, grade);
-      }
+      if (n) { if (n.type !== "hold") Sound.tick(grade === "perfect", n.lane); burst(n, grade); }
     } else miss(n);
   }
   function miss(n) {
@@ -230,11 +208,7 @@ const Game = (() => {
     else { S.n.miss++; S.judged++; }
     S.combo = 0;
     if (S.level > 0) { S.level--; Sound.setLevel(S.level); }
-    if (n) S.floats.push({ n, t0: now(), kind: "miss" });
-  }
-  function tone(n, k) {
-    const bar = Math.floor(n.t / S.chart.barT), tones = S.song.tones ? S.song.tones(bar) : [72, 76, 79];
-    return tones[Math.abs(k) % tones.length];
+    if (n) { if (n.type !== "drag") Sound.knock(); if (n.word) S.floats.push({ n, t0: now(), kind: "miss" }); }
   }
   // Every frame: notes that have passed unhit, drags and holds under a finger, Selahs kept.
   function sweep(t) {
@@ -262,19 +236,22 @@ const Game = (() => {
   // Listen: the chart played perfectly, for the title and for testing.
   function autoPlay(n, st, t) {
     if (n.type === "hold") {
-      if (!st.hit && t >= n.t) { st.hit = true; st.holding = true; st.grade = "perfect"; st.stop = Sound.holdTone(tone(n, 0)); burst(n, "perfect", true); }
+      if (!st.hit && t >= n.t) { st.hit = true; st.holding = true; st.grade = "perfect"; st.stop = Sound.holdTone(); burst(n, "perfect", true); }
       if (st.holding && t >= n.t2) { st.holding = false; if (st.stop) { st.stop(); st.stop = null; } judge(n, "perfect"); }
     } else if (t >= n.t) { S.early.push(0); judge(n, "perfect"); }
   }
 
   // ---- Effects ------------------------------------------------------------------------------------------
   function burst(n, grade, holdStart) {
-    const p = notePos(n, now(), now()), col = grade === "perfect" ? C.gold : C.bone, k = grade === "perfect" ? 7 : 4;
+    const p = notePos(n, now(), now()), col = grade === "perfect" ? (isKick(n) ? C.kick : C.gold) : C.bone;
+    if (isKick(n)) { S.kickFlash = { t0: now(), col }; }
+    const k = n.type === "drag" ? 2 : grade === "perfect" ? 7 : 4, L = line0();
     for (let i = 0; i < k; i++) {
-      const a = -Math.PI / 2 + p.ang + (Math.random() - 0.5) * 2.2, v = 60 + Math.random() * 90;
-      S.fx.push({ x: p.bx, y: p.by, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 2.5 + Math.random() * 3, life: 0.5, t: 0, col });
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, v = 60 + Math.random() * 90;
+      const x = isKick(n) ? L.cx + (Math.random() - 0.5) * L.len : p.bx;
+      S.fx.push({ x, y: p.by, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: 2.5 + Math.random() * 3, life: 0.5, t: 0, col });
     }
-    if (!holdStart && n.type !== "drag") S.floats.push({ n, t0: now(), kind: grade });
+    if (!holdStart && n.word) S.floats.push({ n, t0: now(), kind: grade });
   }
 
   // ---- The frame ------------------------------------------------------------------------------------------
@@ -319,9 +296,9 @@ const Game = (() => {
     const inSelah = ch.selahs.findIndex((s) => t >= s.t0 && t < s.t1);
     const still = inSelah >= 0 ? 1 : 0;
     background(t, mood, pulse * (1 - still * 0.85), rm);
-    // The Voice.
-    const segs = voiceSegs(t);
-    for (const p of segs) line(p, mood, pulse * (1 - still), still);
+    // The Voice, and the kit marked along it.
+    line(line0(), mood, pulse * (1 - still), still);
+    lanes(still);
     // Unjudged words drift down to the line and fade there.
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
     for (const g of ch.ghosts) {
@@ -340,11 +317,16 @@ const Game = (() => {
       if (n.type !== "hold" && lead < -0.3) continue;
       drawNote(n, st, t, mood);
     }
+    // A kick struck: the whole line flares.
+    if (S.kickFlash && t - S.kickFlash.t0 < 0.18) {
+      const L = line0(), k = (t - S.kickFlash.t0) / 0.18;
+      ctx.fillStyle = hex(S.kickFlash.col, (0.35 * (1 - k)).toFixed(3)); ctx.fillRect(L.cx - L.len / 2, L.cy - 4 - 6 * (1 - k), L.len, 8 + 12 * (1 - k));
+    }
     // Words struck rise from the line; words missed fall away.
     S.floats = S.floats.filter((f) => t - f.t0 < 0.7);
     for (const f of S.floats) {
       const k = (t - f.t0) / 0.7, p = notePos(f.n, t, t);
-      ctx.save(); ctx.translate(p.bx, p.by); ctx.rotate(p.ang);
+      ctx.save(); ctx.translate(clampX(f.n, p.bx), p.by);
       ctx.font = font(f.n);
       const col = f.kind === "miss" ? C.red : f.kind === "perfect" ? C.goldHi : f.kind === "good" ? C.bone : C.dim;
       ctx.fillStyle = hex(col, (1 - k) * (f.kind === "miss" ? 0.6 : 0.95));
@@ -418,30 +400,53 @@ const Game = (() => {
     ctx.fillStyle = hex(C.goldHi, 0.9 - still * 0.5);
     for (const [x, y] of [[x1, y1], [x2, y2]]) { ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill(); }
   }
-  // A note, drawn from its point on the Voice, out along the normal (up, in its own frame).
+  // The places of the kit, marked under the line: faint ticks and their names.
+  function lanes(still) {
+    const L = line0(), names = { hat: "HAT", snare: "SNARE", tom2: "TOMS", crash: "CRASH" };
+    ctx.textAlign = "center"; ctx.font = "600 6.5px Inter, system-ui, sans-serif";
+    for (const k of ["hat", "snare", "tom1", "tom2", "tom3", "crash"]) {
+      const x = L.cx + (Compiler.LANES[k] - 0.5) * L.len;
+      ctx.fillStyle = hex(LANE_COL[k], 0.5 * (1 - still * 0.6)); ctx.fillRect(x - 0.75, L.cy - 6, 1.5, 12);
+      if (names[k]) { ctx.fillStyle = hex(C.bone, 0.32 * (1 - still)); ctx.fillText(names[k], x, L.cy + 18); }
+    }
+    ctx.fillStyle = hex(C.kick, 0.32 * (1 - still)); ctx.fillText("KICK · ANYWHERE ON THE LINE", L.cx + 0.13 * L.len, L.cy + 28);
+  }
+  // A word's place across the screen: over its note, kept from running off the edge.
+  function clampX(n, x) {
+    const w = (S.widths[n.id] || 0) / 2 + 6;
+    return Math.max(w, Math.min(W - w, x));
+  }
+  // A note: a bar where it will meet the line, and its word above it.
   function drawNote(n, st, t, mood) {
-    const p = notePos(n, t, n.t), w = Math.max(28, Math.min(130, S.widths[n.id] + 14));
+    const p = notePos(n, t, n.t), L = line0();
     const appear = Math.max(0, Math.min(1, (2.2 - (n.t - t)) / 0.35));
-    const d = st.holding ? 0 : p.d;
-    ctx.save(); ctx.translate(p.bx, p.by); ctx.rotate(p.ang);
-    const col = n.type === "flick" ? C.cyan : n.type === "drag" ? C.bone : n.accent ? C.goldHi : C.gold;
-    const a = n.type === "drag" ? 0.6 * appear : appear;
-    if (n.type === "hold") {
-      const tail = Math.max(d, (n.t2 - t) * S.speed);
-      ctx.fillStyle = hex(C.gold, (st.holding ? 0.36 : 0.2) * a);
-      ctx.fillRect(-w / 2 + 3, -tail, w - 6, tail - d);
+    const d = st.holding ? 0 : p.d, col = LANE_COL[n.lane] || C.gold;
+    ctx.save(); ctx.translate(p.bx, p.by);
+    if (isKick(n)) {
+      // the kick: a bar across the whole line
+      ctx.fillStyle = hex(col, 0.18 * appear); ctx.fillRect(-L.len / 2 + (0.5 - n.x) * L.len, -d - 6, L.len, 12);
+      ctx.fillStyle = hex(col, 0.85 * appear); roundRect(-L.len / 2 + (0.5 - n.x) * L.len, -d - 2.5, L.len, 5, 2.5); ctx.fill();
+    } else if (n.type === "drag") {
+      ctx.fillStyle = hex(col, 0.55 * appear); roundRect(-14, -d - 1.5, 28, 3, 1.5); ctx.fill();
+    } else {
+      const w = 54;
+      if (n.type === "hold") {
+        const tail = Math.max(d, (n.t2 - t) * S.speed);
+        ctx.fillStyle = hex(col, (st.holding ? 0.36 : 0.2) * appear); ctx.fillRect(-w / 2 + 3, -tail, w - 6, tail - d);
+      }
+      ctx.fillStyle = hex(col, appear); roundRect(-w / 2, -d - 3, w, 6, 3); ctx.fill();
+      if (n.accent) { ctx.fillStyle = hex(C.goldHi, 0.28 * appear); roundRect(-w / 2 - 3, -d - 6.5, w + 6, 13, 6.5); ctx.fill(); }
+      if (n.type === "flick") {
+        ctx.strokeStyle = hex(col, appear); ctx.lineWidth = 1.6; ctx.beginPath();
+        ctx.moveTo(-8, -d - 9); ctx.lineTo(0, -d - 15); ctx.lineTo(8, -d - 9); ctx.stroke();
+      }
     }
-    // the bar that meets the line
-    ctx.fillStyle = hex(col, a); roundRect(-w / 2, -d - 2.6, w, n.type === "drag" ? 3.2 : 5.2, 2.6); ctx.fill();
-    if (n.accent) { ctx.fillStyle = hex(C.goldHi, 0.25 * a); roundRect(-w / 2 - 3, -d - 6, w + 6, 12, 6); ctx.fill(); }
-    if (n.type === "flick") {
-      ctx.strokeStyle = hex(C.cyan, a); ctx.lineWidth = 1.6; ctx.beginPath();
-      ctx.moveTo(-8, -d - 9); ctx.lineTo(0, -d - 15); ctx.lineTo(8, -d - 9); ctx.stroke();
-    }
-    ctx.font = font(n); ctx.textAlign = "center";
-    ctx.fillStyle = hex(n.type === "drag" ? C.bone : col, (n.type === "drag" ? 0.75 : 1) * a);
-    ctx.fillText(n.word, 0, -d - (n.type === "flick" ? 18 : 7));
     ctx.restore();
+    if (n.word) {
+      ctx.font = font(n); ctx.textAlign = "center";
+      ctx.fillStyle = hex(n.latin ? C.gold : n.accent ? C.goldHi : C.bone, (n.latin ? 0.85 : 1) * appear);
+      ctx.fillText(n.word, clampX(n, p.bx), p.by - d - (n.type === "flick" ? 18 : 8));
+    }
   }
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   function selahCard(s, st, t, mood) {
@@ -461,11 +466,13 @@ const Game = (() => {
   function verseText(t) {
     const ch = S.chart, bt = ch.barT;
     let vi = -1;
-    for (let i = 0; i < ch.verses.length; i++) if (t >= ch.verses[i].t0 - bt * 0.6) vi = i;
+    // the verse whose strokes are reaching the line now (it changes an eighth before the next begins)
+    const lead = ch.sd * 2;
+    for (let i = 0; i < ch.verses.length; i++) if (t >= ch.verses[i].t0 - lead) vi = i;
     if (vi < 0) return;
-    const v = ch.verses[vi], fade = Math.min(1, (t - (v.t0 - bt * 0.6)) / 0.3) * Math.min(1, (ch.endT - bt - t) / 0.6 + 0.0001);
+    const v = ch.verses[vi], fade = Math.min(1, (t - (v.t0 - lead)) / 0.2) * Math.min(1, (ch.endT - bt - t) / 0.6 + 0.0001);
     if (fade <= 0) return;
-    let size = 13.5;
+    let size = v.latin ? 15 : 13.5;
     const rows = v.lines.map((l) => l.tokens);
     const maxW = W * 0.84;
     const widthOf = (toks) => { ctx.font = "italic 500 " + size + "px 'Cormorant Garamond', Georgia, serif"; return ctx.measureText(toks.map((x) => x.text).join(" ")).width; };
@@ -480,27 +487,29 @@ const Game = (() => {
       ctx.font = "italic 500 " + size + "px 'Cormorant Garamond', Georgia, serif";
       for (const tk of toks) {
         let col = hex(C.bone, 0.45 * fade);
-        if (tk.note >= 0) { const g = S.st[tk.note].grade; col = g === "perfect" ? hex(C.goldHi, fade) : g === "good" ? hex(C.gold, 0.85 * fade) : g === "miss" || g === "bad" ? hex(C.red, 0.55 * fade) : hex(C.bone, 0.7 * fade); }
-        else if (tk.ghost >= 0 && ch.ghosts[tk.ghost].t <= t) col = hex(C.bone, 0.75 * fade);
+        // the stroke this word rides (in the Latin, which comes round again, the latest one)
+        let id = tk.note;
+        if (tk.notes && tk.notes.length) { id = -1; for (const k of tk.notes) if (ch.notes[k].t <= t + 0.4) id = k; }
+        if (id >= 0) { const g = S.st[id].grade; col = g === "perfect" ? hex(C.goldHi, fade) : g === "good" ? hex(C.gold, 0.85 * fade) : g === "miss" || g === "bad" ? hex(C.red, 0.55 * fade) : hex(C.bone, 0.7 * fade); }
         ctx.fillStyle = col; ctx.fillText(tk.text, x, y);
         x += ctx.measureText(tk.text).width + space;
       }
     });
     if (v.heading) { ctx.font = "600 7.5px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = hex(C.gold, 0.6 * fade); ctx.fillText(v.heading.toUpperCase(), W / 2, top - lh); }
   }
-  // Before the first words: the psalm's number, its incipit, its heading.
+  // Through the intro: the psalm's number, its incipit, its heading (behind the falling notes).
   function titleCard(t) {
-    const ch = S.chart, first = ch.notes.length ? ch.notes[0].t : ch.barT * 2;
-    const a = t < first - 1.2 ? 1 : Math.max(0, (first - 0.5 - t) / 0.7);
+    const ch = S.chart, intro = ch.plan.bars.find((B) => B.sec !== "intro"), end = intro ? intro.t0 : ch.barT * 2;
+    const a = t < end * 0.55 ? 1 : Math.max(0, (end - t) / (end * 0.45));
     if (a <= 0) return;
     ctx.textAlign = "center";
-    ctx.fillStyle = hex(C.bone, 0.9 * a); ctx.font = "200 26px Inter, system-ui, sans-serif";
-    ctx.fillText("PSALM " + ch.psalm, W / 2, H * 0.36);
-    ctx.fillStyle = hex(C.gold, 0.9 * a); ctx.font = "italic 500 16px 'Cormorant Garamond', Georgia, serif";
-    ctx.fillText(ch.incipit, W / 2, H * 0.36 + 22);
+    ctx.fillStyle = hex(C.bone, 0.85 * a); ctx.font = "200 26px Inter, system-ui, sans-serif";
+    ctx.fillText("PSALM " + ch.psalm, W / 2, H * 0.3);
+    ctx.fillStyle = hex(C.gold, 0.85 * a); ctx.font = "italic 500 16px 'Cormorant Garamond', Georgia, serif";
+    ctx.fillText(ch.incipit, W / 2, H * 0.3 + 22);
     if (ch.titleLines.length) {
-      ctx.fillStyle = hex(C.bone, 0.55 * a); ctx.font = "italic 500 12px 'Cormorant Garamond', Georgia, serif";
-      ch.titleLines.slice(0, 2).forEach((l, i) => ctx.fillText(l.length > 90 ? l.slice(0, 88) + "…" : l, W / 2, H * 0.36 + 42 + i * 14));
+      ctx.fillStyle = hex(C.bone, 0.5 * a); ctx.font = "italic 500 12px 'Cormorant Garamond', Georgia, serif";
+      ch.titleLines.slice(0, 2).forEach((l, i) => ctx.fillText(l.length > 90 ? l.slice(0, 88) + "…" : l, W / 2, H * 0.3 + 42 + i * 14));
     }
   }
   function hud(t) {
@@ -525,6 +534,11 @@ const Game = (() => {
   }
   G.state = () => S;
   // For tests: the clock, and where a note meets the Voice (page pixels).
-  G.debug = { now: () => now(), at(n, t) { const p = notePos(n, t, t), r = cv.getBoundingClientRect(); return { x: r.left + p.bx / W * r.width, y: r.top + p.by / H * r.height, nx: p.nx, ny: p.ny }; } };
+  G.debug = {
+    now: () => now(),
+    at(n, t) { const p = notePos(n, t, t), r = cv.getBoundingClientRect(); return { x: r.left + p.bx / W * r.width, y: r.top + p.by / H * r.height }; },
+    // a point on the line, 0 at its left end and 1 at its right (page pixels)
+    line(x) { const L = line0(), r = cv.getBoundingClientRect(); return { x: r.left + (L.cx + (x - 0.5) * L.len) / W * r.width, y: r.top + L.cy / H * r.height }; },
+  };
   return G;
 })();
