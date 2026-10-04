@@ -69,7 +69,7 @@ const UI = (() => {
   const sheet = (id, on) => $(id).classList.toggle("on", on);
   let begun = false;
   function begin() {
-    if (begun) return;
+    if (begun) { if (!Game.running()) toSelect(); return; }
     begun = true;
     Sound.init();
     Sound.setMusicVolume(set().music / 100);
@@ -83,6 +83,10 @@ const UI = (() => {
     Sound.play(SONGS.title);
     toSelect();
   }
+  // Back to the title, the title song still playing; a tap there comes back to the psalms.
+  function toTitle() { sheet("settings", false); show("title"); }
+  $("homeBtn").onclick = () => { Sound.ui(false); toTitle(); };
+  $("brandBtn").onclick = () => { Sound.ui(false); toTitle(); };
   function toSelect() {
     Game.stop(); $("pauseBtn").style.display = "none"; $("screen").style.visibility = "hidden";
     sheet("results", false); sheet("pause", false);
@@ -100,12 +104,12 @@ const UI = (() => {
       const c = document.createElement("div");
       c.className = "card"; c.style.setProperty("--mood", P.mood);
       const vkey = set().voice === "grail" && grail ? "grail" : "douay";
-      c.innerHTML = '<div class="caps">Psalm</div><div class="num">' + P.n + '</div><div class="inc"></div><div class="meta"></div><div class="first"></div><div class="ranks"></div><button class="listen">▸ Listen</button>';
+      c.innerHTML = '<div class="top"><div class="caps">Psalm</div><button class="listen">▸ Listen</button></div><div class="num">' + P.n + '</div><div class="inc"></div><div class="meta"></div><div class="first"></div><div class="ranks"></div>';
       c.querySelector(".inc").textContent = d.incipit;
       // its opening words, in the Voice chosen
       const first = textFor(P.n).psalm.verses.find((v) => !v.title);
       c.querySelector(".first").textContent = first ? first.lines.join(" ") : "";
-      c.querySelector(".meta").textContent = song.title + " · " + song.genre + " · " + song.bpm + " · " + song.meters;
+      c.querySelector(".meta").textContent = "“" + song.title + "” · " + song.genre + " · " + song.bpm + " bpm · " + song.meters;
       const ranks = c.querySelector(".ranks");
       for (const r of Compiler.RANK_ORDER) {
         const R = Compiler.RANKS[r], rec = save.records[vkey + ":" + P.n + ":" + r];
@@ -113,7 +117,7 @@ const UI = (() => {
         b.className = "rank";
         b.innerHTML = "<b></b><span></span>";
         b.querySelector("b").textContent = R.name;
-        b.querySelector("span").innerHTML = rec ? String(rec.score).padStart(7, "0") + ' <em class="g' + (rec.grade === "AMEN" ? " amen" : "") + '">' + rec.grade + (rec.fc && rec.grade !== "AMEN" ? " ◦" : "") + "</em>" : R.what;
+        b.querySelector("span").innerHTML = rec ? String(rec.score).padStart(7, "0") + '<em class="g' + (rec.grade === "AMEN" ? " amen" : "") + '">' + rec.grade + (rec.fc && rec.grade !== "AMEN" ? " ◦" : "") + "</em>" : R.what;
         b.onclick = () => { Sound.ui(true); play(P, r, false); };
         ranks.appendChild(b);
       }
@@ -178,7 +182,7 @@ const UI = (() => {
     $("rVerse").innerHTML = "";
     if (v) {
       const words = v.lines.map((l) => l.tokens.map((x) => x.text).join(" ")).join(" ");
-      $("rVerse").textContent = words;
+      const vt = document.createElement("span"); vt.className = "vt"; vt.textContent = words; $("rVerse").appendChild(vt);
       const sm = document.createElement("small"); sm.textContent = "PSALM " + P.n + ":" + v.v; $("rVerse").appendChild(sm);
     }
     sheet("results", true);
@@ -203,7 +207,11 @@ const UI = (() => {
     });
   }
   $("setBtn").onclick = openSettings; $("voiceChip").onclick = openSettings;
-  $("setDone").onclick = () => { sheet("settings", false); store(); renderCards(); };
+  const closeSettings = () => { sheet("settings", false); store(); renderCards(); };
+  $("setDone").onclick = closeSettings;
+  $("setTitle").onclick = () => { closeSettings(); toTitle(); };
+  // a tap on the dark around the sheet closes it too
+  $("settings").addEventListener("click", (e) => { if (e.target === $("settings")) closeSettings(); });
   $("voiceSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b || b.disabled) return; set().voice = b.dataset.v; store(); openSettings(); };
   $("offset").oninput = () => { set().offset = +$("offset").value; $("offsetVal").textContent = set().offset + " ms"; };
   $("speed").oninput = () => { set().speed = +$("speed").value; $("speedVal").textContent = set().speed; };
@@ -278,6 +286,7 @@ const UI = (() => {
   $("title").addEventListener("pointerup", begin);
   addEventListener("keydown", (e) => {
     if (e.key === "Escape" && Game.running()) pause();
+    else if (e.key === "Escape" && $("settings").classList.contains("on")) closeSettings();
     if (!begun && (e.key === "Enter" || e.key === " ")) begin();
   });
   // For testing: ?psalm=3&rank=festum starts that chart on the first tap.

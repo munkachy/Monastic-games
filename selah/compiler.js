@@ -12,14 +12,24 @@
 // words are the psalm's Latin. The same text, song and rank always make the same chart.
 const Compiler = (() => {
   const C = {};
+  const Thumbs = typeof Hands !== "undefined" ? Hands : require("./hands.js");
 
   // ---- The ranks: what of the drum part each one plays (as in Rock Band) -----------------------------
-  // chord: how many strokes may fall at once (two hands from Festum up).
+  // Every note is a tap. Each rank is kept to rules like the ones Rock Band's charts are kept to
+  // (Easy: kick and snare on the beat; Medium: nothing closer than an eighth, one at a time; Hard: two
+  // at once, still no sixteenths; Expert: the sixteenths), and then every chart is played through by
+  // the two thumbs of hands.js, which take out anything a person could not reach in time.
+  //   chord: how many strokes at once. keeperAlone: the cymbal that keeps time (the hat, the ride) is
+  //     struck only alone, so two at once is the kick with a hand.
+  //   gap: the closest two moments may be, in sixteenths, and never closer than secs.
+  //   spare: the time each thumb must have to spare at every stroke (the lower ranks are never tight).
+  //   nps: about how many strokes a second the rank should ask for, at most, on average (playtest.js
+  //     warns past it).
   C.RANKS = {
-    feria: { name: "Feria", lvl: 0, chord: 1, speed: 0.9, what: "Kick and snare" },
-    memoria: { name: "Memoria", lvl: 1, chord: 1, speed: 1, what: "And the fills" },
-    festum: { name: "Festum", lvl: 2, chord: 2, speed: 1.1, what: "Hats, toms, cymbals" },
-    sollemnitas: { name: "Sollemnitas", lvl: 3, chord: 2, speed: 1.22, what: "Every stroke" },
+    feria: { name: "Feria", lvl: 0, chord: 1, gap: 4, secs: 0.3, spare: 0.15, nps: 2.5, speed: 0.9, what: "Kick and snare" },
+    memoria: { name: "Memoria", lvl: 1, chord: 1, gap: 2, secs: 0.2, spare: 0.08, nps: 3.5, speed: 1, what: "And the fills" },
+    festum: { name: "Festum", lvl: 2, chord: 2, keeperAlone: true, gap: 2, secs: 0.15, spare: 0.04, nps: 5.5, speed: 1.1, what: "Hats and toms" },
+    sollemnitas: { name: "Sollemnitas", lvl: 3, chord: 2, gap: 1, secs: 0.1, spare: 0.02, nps: 7.5, speed: 1.22, what: "Every stroke" },
   };
   C.RANK_ORDER = ["feria", "memoria", "festum", "sollemnitas"];
 
@@ -31,9 +41,17 @@ const Compiler = (() => {
   // ---- The kit along the Voice (0 is its left end, 1 its right) ---------------------------------------
   C.LANES = { hat: 0.07, snare: 0.25, kick: 0.5, tom1: 0.47, tom2: 0.62, tom3: 0.77, crash: 0.93 };
   const LANE_OF = { kick: "kick", snare: "snare", clap: "snare", rim: "snare", hat: "hat", ohat: "hat", tom1: "tom1", tom2: "tom2", tom3: "tom3", crash: "crash", ride: "crash" };
-  const PRIORITY = { hold: 7, crash: 6, snare: 5, tom1: 4, tom2: 4, tom3: 4, kick: 3, hat: 1 };
+  const PIECE = { crash: 6, snare: 5, tom1: 4, tom2: 4, tom3: 4, kick: 3, hat: 1 };
   // Is a stroke charted at this rank? (0–3: from that rank up; f: Feria only; g: Sollemnitas; x: never)
   const charted = (c, lvl) => c >= "0" && c <= "3" ? +c <= lvl : c === "f" ? lvl === 0 : c === "g" ? lvl >= 3 : false;
+  const entry = (c) => c >= "0" && c <= "3" ? +c : c === "g" ? 3 : 0;
+  // How much a stroke matters, when some must go: the lower the rank it enters at, the stronger the
+  // beat it falls on (the downbeat most), and the drum (a crash, a snare, a tom, a kick, the hat last).
+  function weight(n) {
+    const len = n.len || 16, beat = len === 12 ? 6 : 4;
+    const metric = n.step === 0 ? 3 : n.step % beat === 0 ? 2 : n.step % 2 === 0 ? 1 : 0;
+    return (3 - n.lvl) * 10 + metric * 3 + PIECE[n.lane];
+  }
 
   // ---- Words --------------------------------------------------------------------------------------------
   const GLUE = new Set(("a an and the of to in on at by for from with unto upon into is are be been was were am art " +
@@ -83,6 +101,42 @@ const Compiler = (() => {
     return groups;
   }
 
+  // ---- Keeping a chart to its rank ------------------------------------------------------------------------
+  // The strokes in moments (struck at once); at each, no more than the rank has hands for, one to a
+  // drum, the weightiest; then no two moments closer than the rank allows (of two too close, the
+  // lighter goes); then the two thumbs play it through and leave out what they cannot reach.
+  const keeper = (n) => n.lane === "hat" || n.piece === "ride";
+  const minGap = (rank, sd) => Math.max(rank.gap * sd * 0.9, rank.secs);
+  C.reduce = function (notes, rank, sd) {
+    const ms = Thumbs.moments(notes);
+    const heavy = (m) => Math.max(...m.notes.map(weight));
+    for (const m of ms) {
+      const lanes = new Set();
+      m.notes = m.notes.sort((a, b) => weight(b) - weight(a)).filter((n) => !lanes.has(n.lane) && lanes.add(n.lane));
+      if (rank.keeperAlone && m.notes.length > 1) m.notes = m.notes.filter((n) => !keeper(n));
+      m.notes = m.notes.slice(0, rank.chord);
+    }
+    const kept = [], gap = minGap(rank, sd);
+    for (const m of ms) {
+      while (kept.length && m.t - kept[kept.length - 1].t < gap && heavy(m) > heavy(kept[kept.length - 1])) kept.pop();
+      if (!kept.length || m.t - kept[kept.length - 1].t >= gap) kept.push(m);
+    }
+    return Thumbs.reduce(kept.flatMap((m) => m.notes), weight, rank.spare).sort((a, b) => a.t - b.t || weight(b) - weight(a));
+  };
+  // A chart's breaks of its rank's rules (for playtest.js): an empty list if it keeps them all.
+  C.audit = function (chart) {
+    const rank = C.RANKS[chart.rank], gap = minGap(rank, chart.sd), out = [];
+    let prev = null;
+    for (const m of Thumbs.moments(chart.notes)) {
+      if (m.notes.some((n) => n.type !== "tap")) out.push(m.t.toFixed(2) + " s: a stroke that is not a tap");
+      if (m.notes.length > rank.chord) out.push(m.t.toFixed(2) + " s: " + m.notes.length + " at once at " + rank.name);
+      if (rank.keeperAlone && m.notes.length > 1 && m.notes.some(keeper)) out.push(m.t.toFixed(2) + " s: the " + m.notes.find(keeper).piece + " with another stroke at " + rank.name);
+      if (prev && m.t - prev.t < gap - 1e-6) out.push(m.t.toFixed(2) + " s: two moments " + Math.round((m.t - prev.t) * 1000) + " ms apart at " + rank.name);
+      prev = m;
+    }
+    return out;
+  };
+
   C.compile = function (psalm, song, rankId) {
     const rank = C.RANKS[rankId] || C.RANKS.memoria, lvl = rank.lvl;
     const sd = 60 / song.bpm / 4, swing = song.swing || 0;
@@ -128,7 +182,7 @@ const Compiler = (() => {
     const total = t;
     const tAt = (B, s) => B.t0 + s * sd + (s % 2 ? swing * sd : 0);
 
-    // The notes: the strokes this rank plays.
+    // The notes: the strokes this rank plays, each a tap.
     let notes = [];
     for (const B of bars) {
       const pats = song.pats(B);
@@ -139,32 +193,20 @@ const Compiler = (() => {
         if (p.length !== B.len) throw new Error(song.title + ": bar " + B.b + " (" + B.sec + ") " + piece + " has " + p.length + " steps, not " + B.len);
         for (let s = 0; s < p.length; s++) {
           if (!charted(p[s], lvl)) continue;
-          const type = lane === "hat" || piece === "ride" ? "drag" : lane === "crash" ? (lvl >= 2 ? "flick" : "tap") : "tap";
-          notes.push({ type, lane, piece, t: tAt(B, s), bar: B.b, step: s, x: C.LANES[lane] });
+          notes.push({ type: "tap", lane, piece, t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: entry(p[s]), x: C.LANES[lane] });
         }
       }
+      // A roll: the band plays it in thirty-seconds; the chart, in strokes on the snare that quicken,
+      // quarters from the rank it enters at, eighths from Festum, sixteenths in its second half at
+      // Sollemnitas.
       const r = pats.roll;
-      if (r && charted(String(r[3]), lvl)) notes.push({ type: "hold", lane: "snare", piece: r[0], t: tAt(B, r[1]), t2: tAt(B, r[2]), bar: B.b, step: r[1], x: C.LANES.snare });
-    }
-    // At once: no more strokes than the rank has hands for, and one to a place.
-    notes.sort((a, b) => a.t - b.t || (PRIORITY[b.type === "hold" ? "hold" : b.lane] - PRIORITY[a.type === "hold" ? "hold" : a.lane]));
-    const kept = [];
-    for (let i = 0; i < notes.length;) {
-      let j = i; while (j < notes.length && Math.abs(notes[j].t - notes[i].t) < 1e-6) j++;
-      const group = notes.slice(i, j), lanes = new Set();
-      let hands = 0;
-      for (const n of group) {
-        if (lanes.has(n.lane)) continue;
-        if (n.type === "drag") { if (rank.chord > 1) { kept.push(n); lanes.add(n.lane); } continue; }
-        if (hands >= rank.chord) continue;
-        kept.push(n); lanes.add(n.lane); hands++;
+      if (r) for (let s = r[1]; s < r[2]; s++) {
+        const k = s - r[1], half = s >= (r[1] + r[2]) >> 1;
+        const at = k % 4 === 0 ? +r[3] : k % 2 === 0 ? Math.max(2, +r[3]) : half ? 3 : 9;
+        if (at <= lvl) notes.push({ type: "tap", lane: "snare", piece: r[0], t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: at, x: C.LANES.snare, roll: true });
       }
-      i = j;
     }
-    notes = kept;
-    // Nothing struck while a roll is held but the kick and the cymbals.
-    const holds = notes.filter((n) => n.type === "hold");
-    notes = notes.filter((n) => n.type === "hold" || !holds.some((h) => n.t > h.t + 1e-6 && n.t < h.t2 - 1e-6 && (n.lane === "snare" || rank.chord === 1)));
+    notes = C.reduce(notes, rank, sd);
     notes.forEach((n, i) => { n.id = i; n.word = ""; });
 
     // The words: each line's phrases onto its strokes, spread across its two bars.
@@ -172,7 +214,7 @@ const Compiler = (() => {
     let vrow = null;
     lines.forEach((L, li) => {
       if (!vrow || vrow.verse !== L.verse) { vrow = { verse: L.verse, v: L.verse.v, heading: L.verse.heading || null, lines: [], t0: bars[L.bars[0]].t0 }; rows.push(vrow); }
-      const slots = notes.filter((n) => n.type !== "drag" && L.bars.includes(n.bar));
+      const slots = notes.filter((n) => n.lane !== "hat" && L.bars.includes(n.bar));
       const { toks, units: phr } = phrases(L.text);
       // a word to a stroke where there are strokes enough; else phrases, joined to fit
       const units = toks.length <= slots.length ? toks.map((_, i) => [i]) : phr;
@@ -203,7 +245,7 @@ const Compiler = (() => {
         rows.push(lrow);
       }
       lrow.t1 = B.t0 + B.len * sd;
-      for (const n of notes) if (n.bar === B.b && n.type !== "drag" && n.lane !== "kick" && latin.length) {
+      for (const n of notes) if (n.bar === B.b && n.lane !== "hat" && n.lane !== "kick" && latin.length) {
         const w = li++ % latin.length;
         n.word = latin[w].replace(/[,;:.?]+$/, ""); n.latin = true; n.verse = rows.indexOf(lrow);
         lrow.lines[0].tokens[w].notes.push(n.id);
