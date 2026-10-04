@@ -83,7 +83,7 @@ const Sound = (() => {
     const wasMuted = A.muted; A.muted = false;
     build(off); A.muted = wasMuted;
     M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = 0.05; M.barT = 0.05; M.level = level || 0; M.fill = null; M.fillNext = null;
-    duckDepth = song.duck === undefined ? 0.5 : song.duck; dlyL.delayTime.value = dlyR.delayTime.value = song.delay || (60 / song.bpm) * 0.75;
+    duckDepth = song.duck === undefined ? 0.5 : song.duck; dlyL.delayTime.value = dlyR.delayTime.value = song.delay || (60 / song.bpm) * 0.75; musicGain.gain.value = song.gain || 1;
     schedule(secs - 0.3);
     ({ ac, out, pre, musicGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, duckDepth } = live);
     Object.assign(M, live.M);
@@ -429,7 +429,7 @@ const Sound = (() => {
 
   // ---- The conductor -----------------------------------------------------------------------
   // A song: { bpm, swing (0..0.5 of a sixteenth), bars: [sixteenths in each bar, cycling],
-  // duck (pump depth), delay (seconds), play(e) } where play is called on every
+  // duck (pump depth), delay (seconds), gain (how loud, 1 by default), play(e) } where play is called on every
   // sixteenth with e = { t, s (step in bar), n (steps in bar), b (bar), sd (a sixteenth in
   // seconds), L (intensity 0–3), I (instruments) }.
   const M = { song: null, next: null, step: 0, bar: 0, stepT: 0, barT: 0, level: 0, fill: null, fillNext: null };
@@ -438,6 +438,7 @@ const Sound = (() => {
     if (!ac) return;
     M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = ac.currentTime + 0.08; M.barT = M.stepT;
     duckDepth = song.duck === undefined ? 0.5 : song.duck; A.setDelay(song.delay || (60 / song.bpm) * 0.75);
+    musicGain.gain.setTargetAtTime(song.gain || 1, ac.currentTime, 0.05);
     if (song.start) song.start();
   };
   // The next song begins on the next downbeat.
@@ -456,7 +457,7 @@ const Sound = (() => {
       M.stepT += sd; M.step++;
       if (M.step >= n) {
         M.step = 0; M.bar++; M.barT = M.stepT; M.fill = M.fillNext; M.fillNext = null;
-        if (M.next) { const N = M.next; M.next = null; M.song = N; M.bar = 0; duckDepth = N.duck === undefined ? 0.5 : N.duck; A.setDelay(N.delay || (60 / N.bpm) * 0.75); if (N.start) N.start(); }
+        if (M.next) { const N = M.next; M.next = null; M.song = N; M.bar = 0; duckDepth = N.duck === undefined ? 0.5 : N.duck; A.setDelay(N.delay || (60 / N.bpm) * 0.75); musicGain.gain.setTargetAtTime(N.gain || 1, M.stepT, 0.02); if (N.start) N.start(); }
       }
     }
   }
