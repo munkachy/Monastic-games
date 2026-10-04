@@ -1,6 +1,7 @@
 "use strict";
-// SELAH: playing a chart. The Voice (the judgment line), the words falling to it, the touch, the
-// judging, the score, and the club-cathedral drawn around them. Every note is a tap.
+// SELAH: playing a chart. The Voice (the judgment line), the notes falling to it (the kick a bar across
+// it, every other drum a glowing box with its word inside), the touch, the judging, the score, and the
+// club-cathedral drawn around them. Every note is a tap.
 //
 // Time is the audio clock's: what the player hears now (Sound.heard), less the moment the song
 // began, less the player's own offset. Touches are judged at the instant they were stamped, not
@@ -75,53 +76,54 @@ const Game = (() => {
   function measure() {
     if (!S) return;
     sprites.clear();
-    S.looks = S.chart.notes.map(look);
+    S.looks = S.chart.notes.map((n) => look(n));
   }
 
-  // ---- Glowing words ------------------------------------------------------------------------------------
-  // Every drum but the kick is its word, in capitals, glowing in the drum's color; a stroke with no
-  // word is a short glowing line. Each is drawn once, off screen, glow and all, and then stamped where
-  // it falls, so a phone can carry hundreds.
+  // ---- The notes: glowing boxes ----------------------------------------------------------------------------
+  // Every drum but the kick is a box glowing in the drum's color, with its word inside in capitals, or
+  // empty where the stroke has no word. The kick is only the bar across the line. Each box is drawn
+  // once, off screen, glow and all, and then stamped where it falls, so a phone can carry hundreds.
   const sprites = new Map();
   const CORE = { "#e8c46a": "#fff5da", "#ffe39a": "#fffbef", "#7fd8c4": "#ecfffa", "#6fe0f0": "#effdff", "#f0a24e": "#fff1de", "#ece4d2": "#ffffff", "#e0606a": "#ffe3e5" };
-  function glow(text, col, size) {
-    const key = text + "|" + col + "|" + size;
+  const BOX_H = 28, PAD_X = 10, TEXT_MAX = 150;
+  // text: the word (or ""), col: the box's color, size: the word's size, minW: the narrowest the box may be.
+  function box(text, col, size, minW) {
+    const key = text + "|" + col + "|" + size + "|" + minW;
     let sp = sprites.get(key);
     if (sp) return sp;
     const k = DPR * scale, c = document.createElement("canvas"), g = c.getContext("2d");
-    const font = "700 " + size + "px Inter, system-ui, sans-serif", track = size * 0.1;
-    g.font = font;
-    const mark = text === "—";
-    let w = 0;
-    if (mark) w = size * 2.2; else { for (const chr of text) w += g.measureText(chr).width + track; w -= track; }
-    const pad = Math.ceil(size * 0.6);
-    c.width = Math.max(2, Math.ceil((w + pad * 2) * k)); c.height = Math.ceil((size + pad * 2) * k);
+    // a long phrase is set smaller, so that its box stays among its neighbours
+    let font, track, tw = 0;
+    const measure = () => { font = "700 " + size + "px Inter, system-ui, sans-serif"; track = size * 0.1; g.font = font; tw = 0; for (const chr of text) tw += g.measureText(chr).width + track; if (text) tw -= track; };
+    measure();
+    if (tw > TEXT_MAX) { size = Math.max(10, Math.floor(size * TEXT_MAX / tw)); measure(); }
+    const bw = Math.max(minW, Math.ceil(tw + PAD_X * 2)), pad = 12;
+    c.width = Math.ceil((bw + pad * 2) * k); c.height = Math.ceil((BOX_H + pad * 2) * k);
     g.scale(k, k);
-    const cx = pad + w / 2, cy = pad + size / 2;
-    const paint = () => {
-      if (mark) { const h = Math.max(2.5, size * 0.24); rr(g, cx - w / 2, cy - h / 2, w, h, h / 2); g.fill(); return; }
+    const x0 = pad, y0 = pad, r = 7;
+    // the box: a faint fill, then its edge glowing (shadow blur is in the canvas's own pixels, so it is
+    // scaled by hand), then a bright core to the edge
+    rr(g, x0, y0, bw, BOX_H, r); g.fillStyle = hex(col, 0.13); g.fill();
+    g.shadowColor = col; g.shadowBlur = 9 * k; g.strokeStyle = col; g.lineWidth = 1.6;
+    rr(g, x0, y0, bw, BOX_H, r); g.stroke(); g.stroke();
+    g.shadowBlur = 2 * k; g.strokeStyle = CORE[col] || "#ffffff"; g.lineWidth = 0.7;
+    rr(g, x0 + 0.4, y0 + 0.4, bw - 0.8, BOX_H - 0.8, r); g.stroke();
+    if (text) {
+      const paint = () => { let x = x0 + (bw - tw) / 2; for (const chr of text) { g.fillText(chr, x, y0 + BOX_H / 2 + size * 0.05); x += g.measureText(chr).width + track; } };
       g.font = font; g.textBaseline = "middle"; g.textAlign = "left";
-      let x = pad;
-      for (const chr of text) { g.fillText(chr, x, cy + size * 0.05); x += g.measureText(chr).width + track; }
-    };
-    // the glow (shadow blur is in the canvas's own pixels, so it is scaled by hand), then the bright core
-    g.fillStyle = col; g.shadowColor = col; g.shadowBlur = size * 0.75 * k; paint(); paint();
-    g.shadowBlur = size * 0.18 * k; g.fillStyle = CORE[col] || "#ffffff"; paint();
-    sp = { c, w: c.width / k, h: c.height / k, tw: w };
+      g.fillStyle = col; g.shadowBlur = size * 0.6 * k; paint();
+      g.shadowBlur = size * 0.15 * k; g.fillStyle = CORE[col] || "#ffffff"; paint();
+    }
+    sp = { c, w: c.width / k, h: c.height / k, tw: bw };
     sprites.set(key, sp);
     return sp;
   }
-  // A word as large as it can be, up to a width that keeps it among its neighbours.
-  function fitGlow(text, col, size) {
-    let sp = glow(text, col, size);
-    if (sp.tw > 210 && size > 12) sp = glow(text, col, Math.max(12, Math.floor(size * 210 / sp.tw)));
-    return sp;
-  }
-  // How a note looks: its word, or (a stroke with no word) a glowing line; the hat's line is shorter.
-  function look(n) {
-    if (isKick(n)) return n.word ? fitGlow(n.word.toUpperCase(), C.kick, 15) : null;
-    if (!n.word) return glow("—", LANE_COL[n.lane], n.lane === "hat" ? 11 : 15);
-    return fitGlow(n.word.toUpperCase(), n.latin ? C.gold : n.accent ? C.goldHi : LANE_COL[n.lane], n.accent ? 22 : 19);
+  // How a note looks: the kick, only its bar (drawn on the line); every other drum, its box, always in
+  // the drum's color (a divine name a little larger).
+  function look(n, miss) {
+    if (isKick(n)) return null;
+    const col = miss ? C.red : LANE_COL[n.lane];
+    return box(n.word ? n.word.toUpperCase() : "", col, n.accent ? 18 : 16, n.lane === "hat" ? 30 : 44);
   }
   function stamp(sp, x, y, a, s) {
     if (!sp) return;
@@ -129,7 +131,9 @@ const Game = (() => {
     ctx.drawImage(sp.c, x - sp.w * s / 2, y - sp.h * s / 2, sp.w * s, sp.h * s);
     ctx.globalAlpha = 1;
   }
-  const noteHalf = (n) => (isKick(n) ? 0 : 30);
+  // How far from a note's middle a touch still strikes it: anywhere in its box, and never less than a
+  // thumb's width either side.
+  const reach = (n) => (isKick(n) ? 22 : Math.max(52, S.looks[n.id].tw / 2 + 8));
 
   // The song's time now, as heard.
   function now() {
@@ -154,11 +158,12 @@ const Game = (() => {
     const p = line0(), bx = p.cx + (n.x - 0.5) * p.len, by = p.cy, d = Math.max(0, along - t) * S.speed;
     return { x: bx, y: by - d, bx, by, ang: 0, nx: 0, ny: -1, d };
   }
-  // How far a touch is from a note, along the line (px). Anywhere on the line is on the kick.
+  // How far a touch is from a note's middle, where its box is drawn, along the line (px). Anywhere on
+  // the line is on the kick.
   function offAxis(n, pt) {
     const p = line0();
     if (isKick(n)) return Math.max(0, Math.abs(pt.x - p.cx) - p.len / 2);
-    return Math.abs(pt.x - (p.cx + (n.x - 0.5) * p.len));
+    return Math.abs(pt.x - clampX(n, p.cx + (n.x - 0.5) * p.len));
   }
 
   // ---- Touch -----------------------------------------------------------------------------------------
@@ -192,7 +197,7 @@ const Game = (() => {
       const dt = t - n.t;
       if (dt < -BAD || dt > BAD) continue;
       const off = offAxis(n, p);
-      if (off > noteHalf(n) + 22) continue;
+      if (off > reach(n)) continue;
       const tie = (isKick(n) ? 0.002 : 0) + off * 0.00001, inPerfect = Math.abs(dt) <= PERFECT;
       if (inPerfect && !near) { near = true; bs = 9; }
       if (near && !inPerfect) continue;
@@ -325,11 +330,11 @@ const Game = (() => {
       const L = line0(), k = (t - S.kickFlash.t0) / 0.18;
       ctx.fillStyle = hex(S.kickFlash.col, (0.35 * (1 - k)).toFixed(3)); ctx.fillRect(L.cx - L.len / 2, L.cy - 4 - 6 * (1 - k), L.len, 8 + 12 * (1 - k));
     }
-    // Words struck rise from the line and swell as they fade; words missed fall away, red.
+    // Boxes struck rise from the line and swell as they fade; boxes missed fall away, red.
     S.floats = S.floats.filter((f) => t - f.t0 < 0.6);
     for (const f of S.floats) {
-      const k = (t - f.t0) / 0.6, p = notePos(f.n, t, t), x = clampX(f.n, p.bx), y = isKick(f.n) ? p.by - 11 : p.by;
-      if (f.kind === "miss") { if (f.n.word) stamp(fitGlow(f.n.word.toUpperCase(), C.red, 17), x, y + 6 + k * 20, (1 - k) * 0.55); }
+      const k = (t - f.t0) / 0.6, p = notePos(f.n, t, t), x = clampX(f.n, p.bx), y = p.by;
+      if (f.kind === "miss") stamp(look(f.n, true), x, y + 6 + k * 20, (1 - k) * 0.55);
       else stamp(S.looks[f.n.id], x, y - 4 - k * 26, (1 - k) * (f.kind === "perfect" ? 1 : 0.7), 1 + k * 0.3);
     }
     // Sparks.
@@ -415,8 +420,8 @@ const Game = (() => {
     const w = (S.looks[n.id] ? S.looks[n.id].tw : 0) / 2 + 8;
     return Math.max(w, Math.min(W - w, x));
   }
-  // A note. The kick: a bar across the whole line, its word riding above it. Every other drum: its
-  // word, glowing, whose middle meets the line on the stroke (or a short line, a stroke with no word).
+  // A note. The kick: a bar across the whole line, and nothing else. Every other drum: its box, whose
+  // middle meets the line on the stroke.
   function drawNote(n, st, t, mood) {
     const p = notePos(n, t, n.t), L = line0();
     const appear = Math.max(0, Math.min(1, (2.2 - (n.t - t)) / 0.35));
@@ -424,10 +429,9 @@ const Game = (() => {
     if (isKick(n)) {
       ctx.fillStyle = hex(col, 0.16 * appear); ctx.fillRect(L.cx - L.len / 2, y - 6, L.len, 12);
       ctx.fillStyle = hex(col, 0.85 * appear); roundRect(L.cx - L.len / 2, y - 2.5, L.len, 5, 2.5); ctx.fill();
-      stamp(sp, clampX(n, p.bx), y - 11, appear);
       return;
     }
-    stamp(sp, n.word ? clampX(n, p.bx) : p.bx, y, appear);
+    stamp(sp, clampX(n, p.bx), y, appear);
   }
   const roundRect = (x, y, w, h, r) => rr(ctx, x, y, w, h, r);
   function selahCard(s, st, t, mood) {

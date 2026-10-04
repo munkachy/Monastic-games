@@ -48,7 +48,7 @@ Tagline: *The Word is the note.*
 10. **The notes are the drums.** The player plays the song's drum part: mostly the kick and the snare, and the fills when they come. Every psalm's song has its drum part written out bar by bar, and the same part both plays the drums and makes the chart. The words ride the strokes. Details in The drums below.
 11. **One straight line.** The Voice is a single straight judgment line, still, with the drum kit along it: hi-hat at the left, snare, toms, crash at the right; the kick is the whole line, struck anywhere. No splitting, turning or moving lines.
 12. **Ranks as in Rock Band.** The easiest rank plays the kick and snare, on the beat, with a cymbal now and then; each rank above adds more of the drum part (the syncopated kicks and simple fills; then hi-hats, toms and crashes; then sixteenths, ghost strokes and whole fills). The band always plays the full part; the rank decides how much of it is the player's.
-13. **Every note is a tap.** No flicks, holds or drags: a stroke is a touch on time, in its place. A stroke with a word is the word, glowing; a stroke with no word is a short glowing line in its drum's color. The only other thing the player does is keep still at a Selah.
+13. **Every note is a tap.** No flicks, holds or drags: a stroke is a touch on time, in its place. Every drum but the kick is a box glowing in the drum's color, with its word inside, or empty where the stroke has no word: the box is the note, always. The kick is only a bar across the line, and never carries a word. The only other thing the player does is keep still at a Selah.
 14. **A person must be able to play every chart, with two thumbs.** Every chart is checked against a model of a person playing a phone held sideways (two touches at once at most, how fast a thumb can tap and move, how fast anyone can keep time), and the compiler leaves out whatever the model cannot reach. Details in How hard below.
 
 ## What Phigros DNA to keep
@@ -75,11 +75,11 @@ The notes are the strokes of the drum part. Each stroke has its place on the lin
 
 | Drum | Where on the line | Looks like | From which rank |
 |---|---|---|---|
-| Kick | The whole line: strike anywhere | A bar across the line, its word above it | Feria |
-| Snare (and clap, rim) | Left of centre | Its word, or a gold line | Feria |
-| Toms, high to low | Right of centre, three places | Their words, or green lines | Memoria (in fills) |
-| Crash; ride | The right end | Its word, or a cyan line | Feria (crash), Festum (ride) |
-| Hi-hat | The left end | A short white line | Festum (eighths), Sollemnitas (sixteenths) |
+| Kick | The whole line: strike anywhere | An orange bar across the line, with no word | Feria |
+| Snare (and clap, rim) | Left of centre | A gold box, its word inside or empty | Feria |
+| Toms, high to low | Right of centre, three places | Green boxes | Memoria (in fills) |
+| Crash; ride | The right end | Cyan boxes | Feria (crash), Festum (ride) |
+| Hi-hat | The left end | Small white boxes, always empty | Festum (eighths), Sollemnitas (sixteenths) |
 | A roll (into a drop) | The snare's place | Strokes on the snare that quicken: quarters, then eighths from Festum, then sixteenths in its second half at Sollemnitas | Memoria |
 | **Selah**: the band falls away | The line goes still | SELAH; touch nothing | Feria |
 
@@ -122,7 +122,7 @@ taps only, the model found that Festum and Sollemnitas asked for the impossible 
 chart: three touches at once (a held hi-hat, a snare and a kick), and doubled kicks a sixteenth apart
 with the other thumb busy.
 
-**The words ride the strokes.** Each line of the psalm takes two bars of a verse section. Its words are cut into phrases (the little words go with the word after them) and the phrases are laid on the line's strokes, spread across its two bars: fewer, longer phrases at the lower ranks, single words at the higher. Strokes with no phrase are still played. A phrase with a divine name is drawn as an accent. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each word as its stroke is struck.
+**The words ride the strokes.** Each line of the psalm takes two bars of a verse section. Its words are cut into phrases (the little words go with the word after them, so a little word never stands alone) and the phrases are laid on the line's strokes of the snare, toms and cymbals (never the kick or the hat), spread across its two bars: fewer, longer phrases at the lower ranks. A box shows a short phrase whole ("O Lord", "of the just"), or else the phrase's key word: its divine name if it has one, else its longest word. So at Feria the boxes of Psalm 1 read BLESSED, UNGODLY, STOOD, SINNERS, PESTILENCE. Strokes with no phrase are empty boxes, still played. A divine name is set a little larger. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each whole phrase as its stroke is struck. A touch anywhere in a box strikes it.
 
 **Selah** keeps its meaning and its judging (below): at the Hebrew's selahs the band falls away for two bars to a held chord and a heartbeat, and the player touches nothing.
 
@@ -315,8 +315,8 @@ glass, doves, clipart crosses or worship-app gradients.
 - **One mood color for each psalm**, over the gold and bone, drawn from its
   book's color family (see The Five Books). Laments and the pit go cold, nearly
   grey; praise goes warm.
-- **The notes are the words themselves**, set in the heavy sans, glowing in their
-  drum's color; a stroke with no word is a short glowing line. *(As built: every
+- **The notes are the words themselves**, set in the heavy sans inside boxes glowing in
+  their drum's color; a stroke with no word is an empty box. *(As built: every
   note is a tap.)* A Perfect breaks the word into gold squares that rise and
   fade, as Phigros breaks its notes.
 - **The played words stay a moment.** After a verse, the words you hit hang above

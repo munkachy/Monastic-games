@@ -7,9 +7,11 @@
 // line, the verses shared among the verse sections, a Selah after the verses where the Hebrew has
 // one), keeps the strokes the chosen rank plays, and places them on the Voice as on a drum kit seen
 // from the throne: hi-hat at the left, snare, toms, the crash at the right, and the kick a bar across
-// the whole line. The words ride the strokes: a word to a stroke where there are strokes enough,
-// else phrases (fewer and longer at the lower ranks). In the instrumental sections the
-// words are the psalm's Latin. The same text, song and rank always make the same chart.
+// the whole line. The words ride the strokes of the snare, the toms and the cymbals (never the kick
+// or the hat), in phrases: each little word with the word after it, and phrases joined where there
+// are fewer strokes (at the lower ranks); a box shows a short phrase whole, or a long one's key
+// word. In the instrumental sections the words are the psalm's Latin. The same text, song and rank
+// always make the same chart.
 const Compiler = (() => {
   const C = {};
   const Thumbs = typeof Hands !== "undefined" ? Hands : require("./hands.js");
@@ -84,6 +86,20 @@ const Compiler = (() => {
       units.splice(best, 2, units[best].concat(units[best + 1]));
     }
     return units;
+  }
+
+  // What a stroke's box shows of its phrase: the phrase itself if it is short ("O Lord", "my God"),
+  // else its key word: a divine name if it has one, else its longest word. The whole phrase lights
+  // in the verse under the line when the stroke is struck.
+  const trim = (w) => w.replace(/^[^A-Za-z’']+|[^A-Za-z’']+$/g, "");
+  function boxWord(ws) {
+    const whole = trim(ws.join(" "));
+    if (whole.length <= 12) return whole;
+    const words = ws.map(trim).filter(Boolean);
+    const divine = words.find((w) => DIVINE.test(bare(w)));
+    if (divine) return divine;
+    const content = words.filter((w) => !GLUE.has(bare(w)));
+    return (content.length ? content : words).reduce((a, w) => (w.length >= a.length ? w : a), "");
   }
 
   // ---- The form ------------------------------------------------------------------------------------------
@@ -209,21 +225,22 @@ const Compiler = (() => {
     notes = C.reduce(notes, rank, sd);
     notes.forEach((n, i) => { n.id = i; n.word = ""; });
 
-    // The words: each line's phrases onto its strokes, spread across its two bars.
+    // The words: each line's phrases onto its strokes (but the kick's and the hat's), spread across its
+    // two bars.
     const rows = [], cueBar = {};
     let vrow = null;
     lines.forEach((L, li) => {
       if (!vrow || vrow.verse !== L.verse) { vrow = { verse: L.verse, v: L.verse.v, heading: L.verse.heading || null, lines: [], t0: bars[L.bars[0]].t0 }; rows.push(vrow); }
-      const slots = notes.filter((n) => n.lane !== "hat" && L.bars.includes(n.bar));
+      const slots = notes.filter((n) => n.lane !== "hat" && n.lane !== "kick" && L.bars.includes(n.bar));
       const { toks, units: phr } = phrases(L.text);
-      // a word to a stroke where there are strokes enough; else phrases, joined to fit
-      const units = toks.length <= slots.length ? toks.map((_, i) => [i]) : phr;
+      // phrases (a little word never stands alone), joined to fit where there are fewer strokes
+      const units = phr;
       const lrow = { tokens: toks.map((tx) => ({ text: tx, note: -1 })) };
       if (slots.length) {
         const fitted = fit(units, toks, slots.length), k = fitted.length, m = slots.length;
         fitted.forEach((u, q) => {
           const n = slots[k === 1 ? 0 : Math.round(q * (m - 1) / (k - 1))];
-          n.word = u.map((i) => toks[i]).join(" ").replace(/^[^A-Za-z’']+|[,;:.]+$/g, "");
+          n.word = boxWord(u.map((i) => toks[i]));
           n.verse = rows.length - 1; n.line = li;
           if (u.some((i) => DIVINE.test(bare(toks[i])))) n.accent = true;
           for (const i of u) { lrow.tokens[i].note = n.id; for (const c in CUES) if (CUES[c].test(bare(toks[i])) && cueBar[c] === undefined) cueBar[c] = n.bar; }
