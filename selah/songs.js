@@ -6,14 +6,16 @@
 //
 //   0  Feria         kick and snare on the beat, a cymbal now and then
 //   1  Memoria       the syncopated kicks, the simple fills
-//   2  Festum        the hi-hats, the toms, the fills in eighths, the crash as a flick
+//   2  Festum        the hi-hats, the toms, the fills in eighths
 //   3  Sollemnitas   the sixteenths, the ghost strokes, the whole fill
 //   x  played by the band, charted at no rank      g  a ghost stroke (quiet), charted at Sollemnitas
 //   f  charted at Feria only (a kick that the higher ranks trade for a roll)        .  nothing
 //
 // One character to a sixteenth; spaces are only for reading. The pieces: kick, snare, clap and rim
 // (the snare's place on the line), hat and ohat (the hi-hat's), tom1, tom2, tom3, crash and ride (the
-// cymbals'). { roll: [piece, from, to, rank] } is a roll, charted as a hold.
+// cymbals'). { roll: [piece, from, to, rank] } is a roll: the band plays it in thirty-seconds, and the
+// chart in strokes on the snare that quicken (compiler.js). Every note in a chart is a tap, and the
+// compiler keeps each rank to its rules and to what two thumbs can reach (hands.js).
 //
 // The words ride the strokes (compiler.js). In the verse sections, each line of the psalm takes two
 // bars; in the instrumental ones, the words are the psalm's Latin. The band builds with the combo

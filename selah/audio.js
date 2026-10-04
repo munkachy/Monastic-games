@@ -570,15 +570,6 @@ const Sound = (() => {
     if (!ac || A.hitVolume <= 0) return;
     sfxVoice(ac.currentTime, 110, "sine", 0.12 * A.hitVolume / 0.8, 0.08, { cut: 400 });
   };
-  // A roll held: a soft hiss that lasts while it is held; returns a function to let it go.
-  A.holdTone = function () {
-    if (!ac || A.hitVolume <= 0) return () => { };
-    const t = ac.currentTime, n = noise(t, 12), bp = filt("bandpass", 3000, 1.2, t), g = gainAt(t);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05 * A.hitVolume, t + 0.05);
-    n.connect(bp); bp.connect(g); g.connect(sfxBus);
-    let done = false;
-    return () => { if (done) return; done = true; const u = ac.currentTime; g.gain.cancelScheduledValues(u); g.gain.setValueAtTime(g.gain.value, u); g.gain.exponentialRampToValueAtTime(0.0001, u + 0.1); n.stop(u + 0.15); };
-  };
   // The calibration click: a dry tick, exactly on time.
   A.click = function (t, accent) {
     if (!ac) return;

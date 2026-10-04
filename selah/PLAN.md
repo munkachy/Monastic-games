@@ -48,6 +48,8 @@ Tagline: *The Word is the note.*
 10. **The notes are the drums.** The player plays the song's drum part: mostly the kick and the snare, and the fills when they come. Every psalm's song has its drum part written out bar by bar, and the same part both plays the drums and makes the chart. The words ride the strokes. Details in The drums below.
 11. **One straight line.** The Voice is a single straight judgment line, still, with the drum kit along it: hi-hat at the left, snare, toms, crash at the right; the kick is the whole line, struck anywhere. No splitting, turning or moving lines.
 12. **Ranks as in Rock Band.** The easiest rank plays the kick and snare, on the beat, with a cymbal now and then; each rank above adds more of the drum part (the syncopated kicks and simple fills; then hi-hats, toms and crashes; then sixteenths, ghost strokes and whole fills). The band always plays the full part; the rank decides how much of it is the player's.
+13. **Every note is a tap.** No flicks, holds or drags: a stroke is a touch on time, in its place. A stroke with a word is the word, glowing; a stroke with no word is a short glowing line in its drum's color. The only other thing the player does is keep still at a Selah.
+14. **A person must be able to play every chart, with two thumbs.** Every chart is checked against a model of a person playing a phone held sideways (two touches at once at most, how fast a thumb can tap and move, how fast anyone can keep time), and the compiler leaves out whatever the model cannot reach. Details in How hard below.
 
 ## What Phigros DNA to keep
 
@@ -55,34 +57,78 @@ Tagline: *The Word is the note.*
 
 - A **judgment line** (“the Voice”) that can move, rotate, split, multiply, disappear.
 - Notes fly in from any direction and must be hit when they meet the Voice.
-- Four hit types: Tap, Hold, Flick, Drag — plus a fifth unique type: **Selah**.
+- Four hit types: Tap, Hold, Flick, Drag — plus a fifth unique type: **Selah**. *(Set aside by the author: Tap and Selah only, decision 13.)*
 - Combo, accuracy, Perfect / Good / Miss.
 - High difficulty = spectacle and chaos, not “more lanes of the same.”
 - Typical chart length **90–180 seconds**. Short psalms loop and intensify. Long psalms chart the spine, not every syllable.
 
 Judgment windows (start here, tune later): Perfect ±80ms · Good ±160ms · Bad ±180ms (tap only) · Miss = combo break.
 
+*(As built.)* A touch strikes the earliest note it can reach that is within a Perfect of it (else the
+nearest in time), as most rhythm games do, so that a touch a little late for one note never takes the
+next and leaves the first behind. A touch on a drum's place strikes that drum before the kick, so two
+thumbs can strike a kick and a snare together.
+
 ## The drums *(the note language as the author changed it)*
 
-The notes are the strokes of the drum part. Each stroke has its place on the line, and its kind of hit:
+The notes are the strokes of the drum part. Each stroke has its place on the line, and every one is a tap:
 
-| Hit | Drum | Where on the line | From which rank |
+| Drum | Where on the line | Looks like | From which rank |
 |---|---|---|---|
-| **Tap** | Kick | The whole line: strike anywhere | Feria |
-| **Tap** | Snare (and clap, rim) | Left of centre | Feria |
-| **Tap** | Toms, high to low | Right of centre, three places | Memoria (in fills) |
-| **Tap**, then **Flick** | Crash | The right end | Feria as a tap; a flick from Festum |
-| **Drag** | Hi-hat; ride | The left end; the right end | Festum (eighths), Sollemnitas (sixteenths) |
-| **Hold** | A roll (into a drop) | The snare's place | Memoria |
-| **Selah** | The band falls away | The line goes still | Feria |
+| Kick | The whole line: strike anywhere | A bar across the line, its word above it | Feria |
+| Snare (and clap, rim) | Left of centre | Its word, or a gold line | Feria |
+| Toms, high to low | Right of centre, three places | Their words, or green lines | Memoria (in fills) |
+| Crash; ride | The right end | Its word, or a cyan line | Feria (crash), Festum (ride) |
+| Hi-hat | The left end | A short white line | Festum (eighths), Sollemnitas (sixteenths) |
+| A roll (into a drop) | The snare's place | Strokes on the snare that quicken: quarters, then eighths from Festum, then sixteenths in its second half at Sollemnitas | Memoria |
+| **Selah**: the band falls away | The line goes still | SELAH; touch nothing | Feria |
 
-**Writing a drum part.** One character to a sixteenth, per drum: `0`–`3` a stroke charted from that rank up (Feria, Memoria, Festum, Sollemnitas), `g` a ghost stroke (Sollemnitas), `x` a stroke the band plays that no rank charts, `f` a stroke charted at Feria only, `.` nothing. Fills end phrases (every two lines); a crash begins them. Strokes that fall together: one at Feria and Memoria (the crash, then the snare, then a tom, then the kick), two from Festum, and drags beside them.
+**Writing a drum part.** One character to a sixteenth, per drum: `0`–`3` a stroke charted from that rank up (Feria, Memoria, Festum, Sollemnitas), `g` a ghost stroke (Sollemnitas), `x` a stroke the band plays that no rank charts, `f` a stroke charted at Feria only, `.` nothing. Fills end phrases (every two lines); a crash begins them. The compiler then keeps each rank to its rules (How hard, below).
+
+### How hard *(as built)*
+
+The ranks follow the rules Rock Band's charters keep when they cut an Expert drum part down: Hard
+drops the sixteenths but keeps the eighths; Medium keeps the quarter-note grid and nothing an
+eighth apart or closer; Easy is kick and snare on the beat (or the hands alone). In SELAH:
+
+| Rank | At once | Closest two strokes | Thumbs must have to spare | Strokes a second (Psalms 1, 3, 150) |
+|---|---|---|---|---|
+| **Feria** | one | a quarter note, never under 0.3 s | 0.15 s | 1.2–1.8 |
+| **Memoria** | one | an eighth, never under 0.2 s | 0.08 s | 1.9–2.4 |
+| **Festum** | two: the kick with a hand; the hat or ride only alone | an eighth, never under 0.15 s | 0.04 s | 3.5–4.3 |
+| **Sollemnitas** | two | a sixteenth, never under 0.1 s | 0.02 s | 6.0–6.5 |
+
+When two strokes are too close, the lighter goes: the one that enters at the higher rank, on the
+weaker beat (the downbeat is strongest), and the lesser drum (crash, snare, toms, kick, hat last).
+
+**Two thumbs** (`hands.js`). Then every chart is played through by a model of a person holding the
+phone sideways, as most people play rhythm games on a phone, and searched for the best way to share
+the strokes between the thumbs. Its limits come from what is known of how fast people tap, point and
+keep time:
+
+- two touches at once, at most;
+- one thumb taps in one place no faster than 6 times a second (the fastest finger tapping measured in
+  ordinary adults is about 6 to 7 a second; thumbs on glass are slower);
+- one thumb moving from one place to another takes a + b·log2(d/w + 1) seconds (Fitts's law; set so
+  that a short hop takes about 0.18 s, and the whole line about 0.36 s);
+- nothing faster than 10 strokes a second, both thumbs together (Repp's synchronization threshold:
+  faster than one in 100 to 120 ms, people can no longer keep time with a beat);
+- the thumbs do not cross; the kick is struck wherever a thumb already is.
+
+Anything the thumbs cannot reach with the rank's time to spare is left out of the chart.
+`node selah/tools/playtest.js` checks every chart against the model and the rank's rules, and prints
+how dense each one is; it fails if any chart asks for what two thumbs cannot do. Before the change to
+taps only, the model found that Festum and Sollemnitas asked for the impossible 17 to 149 times a
+chart: three touches at once (a held hi-hat, a snare and a kick), and doubled kicks a sixteenth apart
+with the other thumb busy.
 
 **The words ride the strokes.** Each line of the psalm takes two bars of a verse section. Its words are cut into phrases (the little words go with the word after them) and the phrases are laid on the line's strokes, spread across its two bars: fewer, longer phrases at the lower ranks, single words at the higher. Strokes with no phrase are still played. A phrase with a divine name is drawn as an accent. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each word as its stroke is struck.
 
 **Selah** keeps its meaning and its judging (below): at the Hebrew's selahs the band falls away for two bars to a held chord and a heartbeat, and the player touches nothing.
 
-*The older note language follows, for its rules about the words.*
+*The older note language follows, for its rules about the words. (Its Hold, Flick and Drag are set
+aside by decision 13; where the plan below still names them, read a Hold as a roll, a Flick as a
+crash, and a Drag as a run of hats.)*
 
 ## Note language (grammar → hits)
 
@@ -269,11 +315,10 @@ glass, doves, clipart crosses or worship-app gradients.
 - **One mood color for each psalm**, over the gold and bone, drawn from its
   book's color family (see The Five Books). Laments and the pit go cold, nearly
   grey; praise goes warm.
-- **The notes are the words themselves**, set in the heavy sans. Tap is gold (cyan
-  where two Voices must be told apart). Hold is the word drawn out with a glowing
-  tail. Flick is a word with a spark through it. Drag is small, dim words on a
-  thread. A Perfect breaks the word into gold squares that rise and fade, as
-  Phigros breaks its notes.
+- **The notes are the words themselves**, set in the heavy sans, glowing in their
+  drum's color; a stroke with no word is a short glowing line. *(As built: every
+  note is a tap.)* A Perfect breaks the word into gold squares that rise and
+  fade, as Phigros breaks its notes.
 - **The played words stay a moment.** After a verse, the words you hit hang above
   the Voice in bone white, so the verse can be read whole as it passes. The Word
   is the note, and also the thing you read.
@@ -291,10 +336,12 @@ glass, doves, clipart crosses or worship-app gradients.
 
 | Rank | What you play |
 |---|---|
-| **Feria** | Kick and snare, on the beat; a crash now and then (tapped); Selah |
-| **Memoria** | And the syncopated kicks, the simple fills, the rolls into the drops (held) |
-| **Festum** | And the hi-hat and ride (dragged), the toms, eighth-note fills; the crash is flicked; two strokes at once |
+| **Feria** | Kick and snare, on the beat; a crash now and then; Selah |
+| **Memoria** | And the syncopated kicks, the simple fills, the rolls into the drops |
+| **Festum** | And the hi-hat and ride, the toms, eighth-note fills; two strokes at once |
 | **Sollemnitas** | Every stroke: sixteenths, ghost strokes, whole fills |
+
+Every note is a tap; the rules of each rank and the two-thumb check are in How hard, above.
 
 A hidden fifth rank, **Vigilia**, comes on a dozen of the great set-piece
 psalms. A Full Combo on Sollemnitas opens it.
@@ -418,10 +465,10 @@ Five short lessons, each on a real psalm, then calibration.
 1. **Kick and snare.** Psalm 116, the shortest: "O Praise the Lord, all ye nations:
    praise him, all ye people", on the beat.
 2. **The roll.** Its second verse, "For his mercy is confirmed upon us: and the truth
-   of the Lord remaineth for ever", held into a drop.
+   of the Lord remaineth for ever", quickening into a drop.
 3. **Fills.** Psalm 1: the toms at the end of each phrase, and the 7/8 of the wicked.
-4. **Cymbals.** Psalm 2, the potter's vessel: crashes, flicked.
-5. **Hi-hat and Selah.** Psalm 3: the hats dragged, and its three Selahs.
+4. **Cymbals.** Psalm 2, the potter's vessel: the crashes.
+5. **Hi-hat and Selah.** Psalm 3: the hats, two thumbs at once, and its three Selahs.
 6. **Calibrate.** Tap along with a click to set the audio offset.
 
 ### Free play
