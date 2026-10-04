@@ -36,7 +36,7 @@ const Game = (() => {
     cv.style.width = w + "px"; cv.style.height = h + "px";
     cv.style.left = Math.floor((innerWidth - w) / 2) + "px"; cv.style.top = Math.floor((innerHeight - h) / 2) + "px";
     cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
-    if (S) measure();
+    if (S) { sprites.clear(); measure(); }
   }
   G.size = () => ({ W, H, scale });
 
@@ -75,9 +75,62 @@ const Game = (() => {
 
   function measure() {
     if (!S) return;
-    S.widths = S.chart.notes.map((n) => { ctx.font = font(n); return ctx.measureText(n.word).width; });
+    sprites.clear();
+    S.looks = S.chart.notes.map(look);
   }
-  const font = (n) => n.latin ? "italic 600 14px 'Cormorant Garamond', Georgia, serif" : n.accent ? "800 13px Inter, system-ui, sans-serif" : "800 12px Inter, system-ui, sans-serif";
+
+  // ---- Glowing words ------------------------------------------------------------------------------------
+  // Every drum but the kick is its word, in capitals, glowing in the drum's color. Each is drawn once,
+  // off screen, glow and all, and then stamped where it falls, so a phone can carry hundreds.
+  const sprites = new Map();
+  const CORE = { "#e8c46a": "#fff5da", "#ffe39a": "#fffbef", "#7fd8c4": "#ecfffa", "#6fe0f0": "#effdff", "#f0a24e": "#fff1de", "#ece4d2": "#ffffff", "#e0606a": "#ffe3e5" };
+  function glow(text, col, size) {
+    const key = text + "|" + col + "|" + size;
+    let sp = sprites.get(key);
+    if (sp) return sp;
+    const k = DPR * scale, c = document.createElement("canvas"), g = c.getContext("2d");
+    const font = "700 " + size + "px Inter, system-ui, sans-serif", track = size * 0.1;
+    g.font = font;
+    const mark = text === "◆" || text === "•";
+    let w = 0;
+    if (mark) w = size; else { for (const chr of text) w += g.measureText(chr).width + track; w -= track; }
+    const pad = Math.ceil(size * 0.6);
+    c.width = Math.max(2, Math.ceil((w + pad * 2) * k)); c.height = Math.ceil((size + pad * 2) * k);
+    g.scale(k, k);
+    const cx = pad + w / 2, cy = pad + size / 2;
+    const paint = () => {
+      if (text === "◆") { g.beginPath(); g.moveTo(cx, cy - size * 0.42); g.lineTo(cx + size * 0.3, cy); g.lineTo(cx, cy + size * 0.42); g.lineTo(cx - size * 0.3, cy); g.closePath(); g.fill(); return; }
+      if (text === "•") { g.beginPath(); g.arc(cx, cy, size * 0.26, 0, Math.PI * 2); g.fill(); return; }
+      g.font = font; g.textBaseline = "middle"; g.textAlign = "left";
+      let x = pad;
+      for (const chr of text) { g.fillText(chr, x, cy + size * 0.05); x += g.measureText(chr).width + track; }
+    };
+    // the glow (shadow blur is in the canvas's own pixels, so it is scaled by hand), then the bright core
+    g.fillStyle = col; g.shadowColor = col; g.shadowBlur = size * 0.75 * k; paint(); paint();
+    g.shadowBlur = size * 0.18 * k; g.fillStyle = CORE[col] || "#ffffff"; paint();
+    sp = { c, w: c.width / k, h: c.height / k, tw: w };
+    sprites.set(key, sp);
+    return sp;
+  }
+  // A word as large as it can be, up to a width that keeps it among its neighbours.
+  function fitGlow(text, col, size) {
+    let sp = glow(text, col, size);
+    if (sp.tw > 210 && size > 12) sp = glow(text, col, Math.max(12, Math.floor(size * 210 / sp.tw)));
+    return sp;
+  }
+  // How a note looks: its word, or (a stroke with no word) a glowing diamond; the hats a spark.
+  function look(n) {
+    if (isKick(n)) return n.word ? fitGlow(n.word.toUpperCase(), C.kick, 15) : null;
+    if (n.type === "drag") return glow("•", LANE_COL[n.lane], 10);
+    if (!n.word) return glow("◆", LANE_COL[n.lane], 15);
+    return fitGlow(n.word.toUpperCase(), n.latin ? C.gold : n.accent ? C.goldHi : LANE_COL[n.lane], n.accent ? 22 : 19);
+  }
+  function stamp(sp, x, y, a, s) {
+    if (!sp) return;
+    s = s || 1; ctx.globalAlpha = Math.max(0, Math.min(1, a));
+    ctx.drawImage(sp.c, x - sp.w * s / 2, y - sp.h * s / 2, sp.w * s, sp.h * s);
+    ctx.globalAlpha = 1;
+  }
   const noteHalf = (n) => (isKick(n) ? 0 : 30);
 
   // The song's time now, as heard.
@@ -322,16 +375,12 @@ const Game = (() => {
       const L = line0(), k = (t - S.kickFlash.t0) / 0.18;
       ctx.fillStyle = hex(S.kickFlash.col, (0.35 * (1 - k)).toFixed(3)); ctx.fillRect(L.cx - L.len / 2, L.cy - 4 - 6 * (1 - k), L.len, 8 + 12 * (1 - k));
     }
-    // Words struck rise from the line; words missed fall away.
-    S.floats = S.floats.filter((f) => t - f.t0 < 0.7);
+    // Words struck rise from the line and swell as they fade; words missed fall away, red.
+    S.floats = S.floats.filter((f) => t - f.t0 < 0.6);
     for (const f of S.floats) {
-      const k = (t - f.t0) / 0.7, p = notePos(f.n, t, t);
-      ctx.save(); ctx.translate(clampX(f.n, p.bx), p.by);
-      ctx.font = font(f.n);
-      const col = f.kind === "miss" ? C.red : f.kind === "perfect" ? C.goldHi : f.kind === "good" ? C.bone : C.dim;
-      ctx.fillStyle = hex(col, (1 - k) * (f.kind === "miss" ? 0.6 : 0.95));
-      ctx.fillText(f.n.word, 0, f.kind === "miss" ? 10 + k * 18 : -12 - k * 22);
-      ctx.restore();
+      const k = (t - f.t0) / 0.6, p = notePos(f.n, t, t), x = clampX(f.n, p.bx), y = isKick(f.n) ? p.by - 11 : p.by;
+      if (f.kind === "miss") stamp(fitGlow(f.n.word.toUpperCase(), C.red, 17), x, y + 6 + k * 20, (1 - k) * 0.55);
+      else stamp(S.looks[f.n.id], x, y - 4 - k * 26, (1 - k) * (f.kind === "perfect" ? 1 : 0.7), 1 + k * 0.3);
     }
     // Sparks.
     ctx.globalCompositeOperation = "lighter";
@@ -413,40 +462,36 @@ const Game = (() => {
   }
   // A word's place across the screen: over its note, kept from running off the edge.
   function clampX(n, x) {
-    const w = (S.widths[n.id] || 0) / 2 + 6;
+    const w = (S.looks[n.id] ? S.looks[n.id].tw : 0) / 2 + 8;
     return Math.max(w, Math.min(W - w, x));
   }
-  // A note: a bar where it will meet the line, and its word above it.
+  // A note. The kick: a bar across the whole line, its word riding above it. Every other drum: its
+  // word, glowing, whose middle meets the line on the stroke (or a diamond, a stroke with no word).
   function drawNote(n, st, t, mood) {
     const p = notePos(n, t, n.t), L = line0();
     const appear = Math.max(0, Math.min(1, (2.2 - (n.t - t)) / 0.35));
-    const d = st.holding ? 0 : p.d, col = LANE_COL[n.lane] || C.gold;
-    ctx.save(); ctx.translate(p.bx, p.by);
+    const d = st.holding ? 0 : p.d, col = LANE_COL[n.lane] || C.gold, sp = S.looks[n.id], y = p.by - d;
     if (isKick(n)) {
-      // the kick: a bar across the whole line
-      ctx.fillStyle = hex(col, 0.18 * appear); ctx.fillRect(-L.len / 2 + (0.5 - n.x) * L.len, -d - 6, L.len, 12);
-      ctx.fillStyle = hex(col, 0.85 * appear); roundRect(-L.len / 2 + (0.5 - n.x) * L.len, -d - 2.5, L.len, 5, 2.5); ctx.fill();
-    } else if (n.type === "drag") {
-      ctx.fillStyle = hex(col, 0.55 * appear); roundRect(-14, -d - 1.5, 28, 3, 1.5); ctx.fill();
-    } else {
-      const w = 54;
-      if (n.type === "hold") {
-        const tail = Math.max(d, (n.t2 - t) * S.speed);
-        ctx.fillStyle = hex(col, (st.holding ? 0.36 : 0.2) * appear); ctx.fillRect(-w / 2 + 3, -tail, w - 6, tail - d);
-      }
-      ctx.fillStyle = hex(col, appear); roundRect(-w / 2, -d - 3, w, 6, 3); ctx.fill();
-      if (n.accent) { ctx.fillStyle = hex(C.goldHi, 0.28 * appear); roundRect(-w / 2 - 3, -d - 6.5, w + 6, 13, 6.5); ctx.fill(); }
-      if (n.type === "flick") {
-        ctx.strokeStyle = hex(col, appear); ctx.lineWidth = 1.6; ctx.beginPath();
-        ctx.moveTo(-8, -d - 9); ctx.lineTo(0, -d - 15); ctx.lineTo(8, -d - 9); ctx.stroke();
-      }
+      ctx.fillStyle = hex(col, 0.16 * appear); ctx.fillRect(L.cx - L.len / 2, y - 6, L.len, 12);
+      ctx.fillStyle = hex(col, 0.85 * appear); roundRect(L.cx - L.len / 2, y - 2.5, L.len, 5, 2.5); ctx.fill();
+      stamp(sp, clampX(n, p.bx), y - 11, appear);
+      return;
     }
-    ctx.restore();
-    if (n.word) {
-      ctx.font = font(n); ctx.textAlign = "center";
-      ctx.fillStyle = hex(n.latin ? C.gold : n.accent ? C.goldHi : C.bone, (n.latin ? 0.85 : 1) * appear);
-      ctx.fillText(n.word, clampX(n, p.bx), p.by - d - (n.type === "flick" ? 18 : 8));
+    const x = n.word ? clampX(n, p.bx) : p.bx;
+    if (n.type === "hold") {
+      // a roll: a glowing column up to where it ends
+      const tail = Math.max(d, (n.t2 - t) * S.speed);
+      const g = ctx.createLinearGradient(0, p.by - tail, 0, y);
+      g.addColorStop(0, hex(col, 0)); g.addColorStop(1, hex(col, (st.holding ? 0.45 : 0.25) * appear));
+      ctx.fillStyle = g; ctx.fillRect(p.bx - 7, p.by - tail, 14, tail - d);
     }
+    if (n.type === "flick") {
+      // a crash, to be thrown: a chevron over the word
+      const top = y - (sp ? sp.h * 0.32 : 10) - 4;
+      ctx.strokeStyle = hex(col, appear); ctx.lineWidth = 1.8; ctx.lineCap = "round"; ctx.beginPath();
+      ctx.moveTo(x - 7, top + 5); ctx.lineTo(x, top - 1); ctx.lineTo(x + 7, top + 5); ctx.stroke();
+    }
+    stamp(sp, x, y, n.type === "drag" ? 0.8 * appear : appear);
   }
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
   function selahCard(s, st, t, mood) {
