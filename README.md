@@ -16,7 +16,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church, each with a world, a song, a gift and their own words |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
 | [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
-| [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game where you play the drums and the words of the Psalms ride the strokes, to techno-funk, dubstep and odd meters. A first build: three psalms ([the plan](selah/PLAN.md)) |
+| [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game where you play the drums and every word of the Psalms rides the strokes, to techno-funk, drum and bass, dubstep, Afro house and odd meters. Eight psalms so far, Compline among them ([the plan](selah/PLAN.md)) |
 
 
 ## Benedictine Bricks
@@ -76,14 +76,23 @@ The first build: one night, in six parts, played with the phone sideways (it loc
 
 ## SELAH
 
-The first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): three psalms, played with the phone sideways.
+A first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): eight psalms, Compline among them, played with the phone sideways.
 
-- **You play the drums, and the words ride them.** One straight golden line (the Voice) with the kit along it: hi-hat at the left, snare, toms, crash at the right, and the kick is the whole line, struck anywhere. The words of the psalm ride the snare, toms and cymbals in phrases (each box shows a short phrase, or its key word, and the verse under the line lights the whole phrase); in the drops the words are the psalm's Latin.
+- **You play the drums, and the words ride them.** One straight golden line (the Voice) with the kit along it: hi-hat at the left, snare, toms, crash at the right, and the kick is the whole line, struck anywhere. Every word of the psalm is a note: the words ride the snare, toms and cymbals in phrases, a phrase to a box, and where a rank has too few strokes for a line, the line is given more bars, so the easier ranks run a little longer. In the drops the words are the psalm's Latin.
+- **Lectio.** Some words are said again, as a chorus does or as lectio divina dwells on a phrase: "I will sleep, and I will rest" three times, the band falling asleep a little more each time; "in pieces, in pieces, in pieces"; the shortest psalms sung whole two or three times. The verse under the line shows the words said again in gold.
 - **Every note is a tap.** Every drum but the kick is a box glowing in its drum's color, with a word of the psalm inside or empty; the kick is only a bar across the line.
 - **Four ranks, as in Rock Band**, named for the ranks of the liturgical day. Feria: kick and snare on the beat, a cymbal now and then. Memoria: the syncopated kicks and the fills. Festum: the hi-hats, the toms, the crashes, the kick with a hand. Sollemnitas: every sixteenth and ghost stroke. The band always plays the whole drum part.
 - **Every chart can be played with two thumbs.** Each rank keeps to rules like Rock Band's, and every chart is played through by a model of a person holding the phone sideways (two touches at once at most, how fast a thumb can tap and move, how fast anyone can keep time), which leaves out what no thumb could reach. `node selah/tools/playtest.js` checks every chart.
 - **Selah.** Where the Hebrew has Selah, the band falls away to a heartbeat: touch nothing until it passes, and the band comes back in at once.
-- **Three songs, each a progressive form** (intro, verses, build, drop, verses in another meter, breakdown, drop, outro) on the synth engine from Luminaries, with new wobble and growl basses, ride, brass and strings: Psalm 1 in progressive house with the wicked in 7/8; Psalm 3 from dub into dubstep, with a 6/8 lament and a lift at "Arise"; Psalm 150 from gospel house into a jungle break, with the timbrel and choir in 5/4 and every instrument joining the band as the psalm names it.
+- **Eight songs, each a progressive form** (intro, verses, build, drop, verses in another meter, breakdown, drop, outro) on the synth engine from Luminaries:
+  - Psalm 1, progressive house, the wicked in 7/8.
+  - Psalm 2, drum and bass: heaven laughs in 9/8 (three times three, the "perfect" time), the decree turns the harmony to E major, the potter's vessel shatters on the crashes.
+  - Psalm 3, dub into dubstep, a 6/8 lament, a lift at "Arise".
+  - Psalm 4, late-night deep house, a 6/8 lullaby, and the band falling asleep.
+  - Psalm 90, Afro house: the terrors of the night in 12/8 over the West African bell, angels in C major, the lion and the dragon on the crashes.
+  - Psalm 116, gospel disco, sung three times: a disco band, a Balkan brass band in 7/8, then everyone.
+  - Psalm 133, minimal techno for the night watch, sung twice, the second time in 5/8.
+  - Psalm 150, gospel house into a jungle break, every instrument joining as the psalm names it.
 - **The Voice is the text.** The Douay-Rheims is built in (`selah/douay.js`, made by `selah/tools/build-douay.js` from Psalter Runner's checked text). A psalter you own can be imported as a pack file in Settings; it stays on your device and is never sent anywhere.
 - Settings: audio offset with a tap-along calibration, note speed, music volume, hit ticks, no flashing, reduced motion. The arrow by the name goes back to the title. `?verses=2` in the address plays only the first verses.
 

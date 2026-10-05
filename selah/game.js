@@ -85,7 +85,7 @@ const Game = (() => {
   // once, off screen, glow and all, and then stamped where it falls, so a phone can carry hundreds.
   const sprites = new Map();
   const CORE = { "#e8c46a": "#fff5da", "#ffe39a": "#fffbef", "#7fd8c4": "#ecfffa", "#6fe0f0": "#effdff", "#f0a24e": "#fff1de", "#ece4d2": "#ffffff", "#e0606a": "#ffe3e5" };
-  const BOX_H = 28, PAD_X = 10, TEXT_MAX = 150;
+  const BOX_H = 28, PAD_X = 10, TEXT_MAX = 176;
   // text: the word (or ""), col: the box's color, size: the word's size, minW: the narrowest the box may be.
   function box(text, col, size, minW) {
     const key = text + "|" + col + "|" + size + "|" + minW;
@@ -284,6 +284,7 @@ const Game = (() => {
     // The verse played best: the most of its notes hit perfectly.
     let best = null, bestK = -1;
     S.chart.verses.forEach((v, vi) => {
+      if (v.echo) return;
       const mine = S.chart.notes.filter((n) => n.verse === vi);
       if (!mine.length) return;
       const k = mine.filter((n) => S.st[n.id].grade === "perfect").length / mine.length;
@@ -471,7 +472,8 @@ const Game = (() => {
       const y = top + r * lh;
       ctx.font = "italic 500 " + size + "px 'Cormorant Garamond', Georgia, serif";
       for (const tk of toks) {
-        let col = hex(C.bone, 0.45 * fade);
+        // a word said again (lectio, a chorus) is gold, so the psalm's own text stays plain
+        let col = tk.rep ? hex(C.gold, 0.7 * fade) : hex(C.bone, 0.45 * fade);
         // the stroke this word rides (in the Latin, which comes round again, the latest one)
         let id = tk.note;
         if (tk.notes && tk.notes.length) { id = -1; for (const k of tk.notes) if (ch.notes[k].t <= t + 0.4) id = k; }

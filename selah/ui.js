@@ -8,7 +8,12 @@ const UI = (() => {
   // The psalms in this build: their songs and their colors.
   const PSALMS = [
     { n: 1, song: "ps1", mood: "#e8b04a" },
+    { n: 2, song: "ps2", mood: "#e2563c" },
     { n: 3, song: "ps3", mood: "#5ab6cc" },
+    { n: 4, song: "ps4", mood: "#8f86e0" },
+    { n: 90, song: "ps90", mood: "#3fb59c" },
+    { n: 116, song: "ps116", mood: "#f0905a" },
+    { n: 133, song: "ps133", mood: "#4f6fe0" },
     { n: 150, song: "ps150", mood: "#f2d27a", spectrum: true },
   ];
   const params = new URLSearchParams(location.search);
@@ -181,7 +186,8 @@ const UI = (() => {
     const v = r.bestVerse;
     $("rVerse").innerHTML = "";
     if (v) {
-      const words = v.lines.map((l) => l.tokens.map((x) => x.text).join(" ")).join(" ");
+      // the psalm's own words, without any said again
+      const words = v.lines.map((l) => l.tokens.filter((x) => !x.rep).map((x) => x.text).join(" ")).join(" ");
       const vt = document.createElement("span"); vt.className = "vt"; vt.textContent = words; $("rVerse").appendChild(vt);
       const sm = document.createElement("small"); sm.textContent = "PSALM " + P.n + ":" + v.v; $("rVerse").appendChild(sm);
     }

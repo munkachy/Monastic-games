@@ -36,9 +36,11 @@ const Compiler = (() => {
   C.RANK_ORDER = ["feria", "memoria", "festum", "sollemnitas"];
 
   // ---- Where the Hebrew has Selah, in the Douay's verses ---------------------------------------------
-  // Verse numbers only. Psalm 3: after verses 3, 5 and 9 (the Hebrew's 3:3, 3:5, 3:9). The rest of the
-  // Psalter's selahs are added psalm by psalm as their charts are made, each checked by hand.
-  C.SELAHS = { 3: [3, 5, 9] };
+  // Verse numbers only. Psalm 3: after verses 3, 5 and 9 (the Hebrew's 3:3, 3:5, 3:9). Psalm 4: after
+  // verses 3 and 5 (the Hebrew's 4:3, 4:5). The Hebrew of Psalms 1, 2, 90 (91), 116 (117), 133 (134) and
+  // 150 has none. The rest of the Psalter's selahs are added psalm by psalm as their charts are made,
+  // each checked by hand.
+  C.SELAHS = { 3: [3, 5, 9], 4: [3, 5] };
 
   // ---- The kit along the Voice (0 is its left end, 1 its right) ---------------------------------------
   C.LANES = { hat: 0.07, snare: 0.25, kick: 0.5, tom1: 0.47, tom2: 0.62, tom3: 0.77, crash: 0.93 };
@@ -50,7 +52,7 @@ const Compiler = (() => {
   // How much a stroke matters, when some must go: the lower the rank it enters at, the stronger the
   // beat it falls on (the downbeat most), and the drum (a crash, a snare, a tom, a kick, the hat last).
   function weight(n) {
-    const len = n.len || 16, beat = len === 12 ? 6 : 4;
+    const len = n.len || 16, beat = len % 6 === 0 ? 6 : 4;
     const metric = n.step === 0 ? 3 : n.step % beat === 0 ? 2 : n.step % 2 === 0 ? 1 : 0;
     return (3 - n.lvl) * 10 + metric * 3 + PIECE[n.lane];
   }
@@ -62,11 +64,26 @@ const Compiler = (() => {
     "then than this these those when while also even let may o oh").split(" "));
   const DIVINE = /^(lord|god|almighty|christ|jehovah|yahweh|adonai)$/;
   const CUES = { brass: /^(trumpets?|horns?|shofar)$/, harp: /^(psaltery|harps?|lyres?|lutes?)$/, timbrel: /^(timbrels?|tambourines?|drums?)$/,
-    choir: /^(choirs?|dance|dancing)$/, strings: /^strings?$/, organ: /^(organs?|pipes?|flutes?)$/, cymbals: /^cymbals?$/, all: /^(spirit|breath|breathes)$/, arise: /^arise$/ };
+    choir: /^(choirs?|dance|dancing)$/, strings: /^strings?$/, organ: /^(organs?|pipes?|flutes?)$/, cymbals: /^cymbals?$/, all: /^(spirit|breath|breathes)$/, arise: /^arise$/,
+    begotten: /^begotten$/, angels: /^angels$/ };
   const bare = (w) => w.toLowerCase().replace(/[’']/g, "'").replace(/^[^a-z']+|[^a-z']+$/g, "").replace(/'s$/, "");
-  // A line cut into phrases: each little word goes with the word after it (at the end, the one before).
-  function phrases(text) {
-    const toks = text.split(/\s+/).filter(Boolean), out = [];
+  // A line (its words) cut into phrases: each little word goes with the word after it (at the end, the
+  // one before); a phrase too long for a box is cut again, before an "in", an "of", a "who" where it
+  // can be, else near its middle. Returns the phrases as lists of the words' indexes.
+  const LONG = 18, BREAK = new Set("in of to for from with unto upon into on at by and but or nor that which who whom".split(" "));
+  function phrases(toks) {
+    const out = [];
+    const len = (u) => u.reduce((a, i) => a + toks[i].length + 1, -1);
+    const cut = (u) => {
+      if (u.length < 2 || len(u) <= LONG) return [u];
+      let best = -1, score = Infinity;
+      for (let k = 1; k < u.length; k++) {
+        const a = u.slice(0, k), b = u.slice(k), lone = (x) => x.every((i) => GLUE.has(bare(toks[i])));
+        const sc = Math.abs(len(a) - len(b)) + (BREAK.has(bare(toks[u[k]])) ? 0 : 12) + (lone(a) || lone(b) ? 8 : 0);
+        if (sc < score) { score = sc; best = k; }
+      }
+      return [...cut(u.slice(0, best)), ...cut(u.slice(best))];
+    };
     let cur = [];
     toks.forEach((tok, i) => {
       cur.push(i);
@@ -74,7 +91,7 @@ const Compiler = (() => {
       if (!(GLUE.has(b) || !b) || i === toks.length - 1) { out.push(cur); cur = []; }
     });
     if (cur.length) { if (out.length) out[out.length - 1].push(...cur); else out.push(cur); }
-    return { toks, units: out };
+    return out.flatMap(cut);
   }
   // Join the shortest neighbours until there are no more phrases than strokes.
   function fit(units, toks, m) {
@@ -88,18 +105,65 @@ const Compiler = (() => {
     return units;
   }
 
-  // What a stroke's box shows of its phrase: the phrase itself if it is short ("O Lord", "my God"),
-  // else its key word: a divine name if it has one, else its longest word. The whole phrase lights
-  // in the verse under the line when the stroke is struck.
+  // What a stroke's box shows of its phrase: the phrase itself, whole. Only where a line has more
+  // phrases than its longest allowed span has strokes, and phrases had to be joined, does a long one
+  // show its key word: a divine name if it has one, else its longest word. The whole phrase lights in
+  // the verse under the line when the stroke is struck.
   const trim = (w) => w.replace(/^[^A-Za-z’']+|[^A-Za-z’']+$/g, "");
   function boxWord(ws) {
     const whole = trim(ws.join(" "));
-    if (whole.length <= 12) return whole;
+    if (whole.length <= 22) return whole;
     const words = ws.map(trim).filter(Boolean);
     const divine = words.find((w) => DIVINE.test(bare(w)));
     if (divine) return divine;
     const content = words.filter((w) => !GLUE.has(bare(w)));
     return (content.length ? content : words).reduce((a, w) => (w.length >= a.length ? w : a), "");
+  }
+
+  // ---- Lectio: words said again ----------------------------------------------------------------------------
+  // A song may say parts of its psalm again, as a chorus does, or as lectio divina dwells on a phrase
+  // (song.lectio, by the Douay's verse numbers):
+  //   { v, echo: "words", times }     the words, found in verse v, are sung again after their line, as
+  //                                   lines of their own, `times` in all. In a pack whose wording
+  //                                   differs, the verse's line `line` (else its last) is sung again whole.
+  //   { v, stutter: "words", times }  the words are said `times` over where they stand.
+  // And the shortest psalms are sung whole in every verse section (song.whole). The verse under the
+  // line shows a word said again in gold, so the psalm's own text is always plain to see.
+  const norm = (w) => w.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z']+/g, "");
+  // Where a run of words falls among a line's words: [from, to) or null.
+  function findRun(toks, words) {
+    const want = words.split(/\s+/).map(norm).filter(Boolean), have = toks.map(norm);
+    for (let i = 0; i + want.length <= have.length; i++) if (want.every((w, k) => have[i + k] === w)) return [i, i + want.length];
+    return null;
+  }
+  const split = (text) => text.split(/\s+/).filter(Boolean);
+  // The lines a verse is sung in, its lectio and all: [{ toks, rep (each word: said again?), verse, j, echo }].
+  function sung(v, lectio) {
+    const out = [], dv = v.douay || v.v, mine = lectio.filter((L) => L.v === dv);
+    v.lines.forEach((text, j) => {
+      const own = split(text);
+      let toks = own, rep = own.map(() => false);
+      for (const L of mine) {
+        if (!L.stutter) continue;
+        const r = findRun(toks, L.stutter);
+        if (!r) continue;
+        // the run said again; its stop (a comma, a full stop) goes after the last saying of it
+        const run = toks.slice(r[0], r[1]), end = run[run.length - 1], bareRun = [...run.slice(0, -1), end.replace(/[,;:.!?]+$/, "")], more = [];
+        for (let k = 1; k < (L.times || 2); k++) more.push(...(k === (L.times || 2) - 1 ? run : bareRun));
+        toks = [...toks.slice(0, r[0]), ...bareRun, ...more, ...toks.slice(r[1])];
+        rep = [...rep.slice(0, r[1]), ...more.map(() => true), ...rep.slice(r[1])];
+      }
+      out.push({ toks, rep, verse: v, j, echo: 0 });
+      for (const L of mine) {
+        if (!L.echo) continue;
+        const found = v.lines.some((x) => findRun(split(x), L.echo)), r = findRun(own, L.echo);
+        const words = r ? own.slice(r[0], r[1]) : !found && j === (L.line === undefined ? v.lines.length - 1 : L.line) ? own : null;
+        if (!words) continue;
+        const said = words.map((w, i) => (i === words.length - 1 ? w.replace(/[,;:.]+$/, "") : w));
+        for (let k = 1; k < (L.times || 2); k++) out.push({ toks: said, rep: said.map(() => true), verse: v, j, echo: k });
+      }
+    });
+    return out;
   }
 
   // ---- The form ------------------------------------------------------------------------------------------
@@ -153,7 +217,24 @@ const Compiler = (() => {
     return out;
   };
 
+  // ---- A chart -----------------------------------------------------------------------------------------------
+  // Every phrase of the psalm rides a stroke of its own. A line is sung over two bars; where a rank has
+  // too few strokes there for the line's phrases, the line is given two bars more, and again, until
+  // they all fit (the band plays on in its groove), up to eight bars to a line. So the easier ranks
+  // run longer: the slower the rank, the longer the words stay.
+  const MAX_LINE_BARS = 8;
   C.compile = function (psalm, song, rankId) {
+    const extra = new Map();
+    let chart = null;
+    for (let pass = 0; pass < 6; pass++) {
+      chart = build(psalm, song, rankId, extra);
+      if (!chart.short.length) break;
+      for (const [li, add] of chart.short) extra.set(li, (extra.get(li) || 0) + add);
+    }
+    delete chart.short;
+    return chart;
+  };
+  function build(psalm, song, rankId, extra) {
     const rank = C.RANKS[rankId] || C.RANKS.memoria, lvl = rank.lvl;
     const sd = 60 / song.bpm / 4, swing = song.swing || 0;
     const titleLines = psalm.verses.filter((x) => x.title).map((x) => x.lines.join(" "));
@@ -162,31 +243,37 @@ const Compiler = (() => {
     const marked = verses.filter((x) => x.pause);
     const selahAfter = new Set(marked.length ? marked.map((x) => x.v) : (C.SELAHS[psalm.n] || []).map((d) => { const x = verses.find((y) => (y.douay || y.v) === d); return x ? x.v : -1; }));
 
-    // The bars.
-    const bars = [], lines = [];
+    // The bars. Each sung line takes its bars (lineBar: 0 or 1, the first or second of each pair;
+    // lineQ: which bar of the line; echo: which saying-again of words, if it is one; text: the line's
+    // words, plain, so a song can answer them).
+    const bars = [], lines = [], lectio = song.lectio || [];
     const textSecs = song.form.filter((f) => f[1]).length, groups = share(verses, textSecs);
     for (const [name, k] of song.form) {
       const sec = song.sec[name], lenOf = (i) => typeof sec.len === "function" ? sec.len(i) : sec.len || 16;
       if (k) {
-        const vs = groups[k - 1];
+        const vs = song.whole ? verses : groups[k - 1];
         if (!vs.length) continue;
-        const n = vs.reduce((a, v) => a + v.lines.length, 0) * sec.perLine;
-        let i = 0, li0 = lines.length;
+        const mine = [];
+        let i = 0, nth = 0;
         vs.forEach((v, vi) => {
-          v.lines.forEach((text, j) => {
-            const li = lines.length, nth = li - li0, last = vi === vs.length - 1 && j === v.lines.length - 1;
-            lines.push({ text, verse: v, j, bars: [] });
-            for (let q = 0; q < sec.perLine; q++) {
-              const end = q === sec.perLine - 1;
-              bars.push({ sec: name, i, n, len: lenOf(i), line: li, lineBar: q, lineEnd: end, fill: end && (nth % 2 === 1 || last), crash: q === 0 && nth % 2 === 0 });
-              lines[li].bars.push(bars.length - 1); i++;
+          const ls = sung(v, lectio);
+          ls.forEach((L, j) => {
+            const li = lines.length, last = vi === vs.length - 1 && j === ls.length - 1, per = sec.perLine + (extra.get(li) || 0);
+            const text = L.toks.map(norm).join(" ");
+            L.bars = []; lines.push(L);
+            for (let q = 0; q < per; q++) {
+              const end = q === per - 1;
+              const B = { sec: name, i, len: lenOf(i), line: li, lineBar: q % 2, lineQ: q, lineEnd: end, echo: L.echo, text, fill: end && (nth % 2 === 1 || last), crash: q === 0 && nth % 2 === 0 };
+              bars.push(B); mine.push(B); L.bars.push(bars.length - 1); i++;
             }
+            nth++;
           });
           if (selahAfter.has(v.v)) {
             const sb = song.bpm >= 120 ? 2 : 1;
             for (let q = 0; q < sb; q++) bars.push({ sec: "selah", i: q, n: sb, len: lenOf(0), selahOf: v.v });
           }
         });
+        for (const B of mine) B.n = i;
       } else {
         for (let i = 0; i < sec.bars; i++) bars.push({ sec: name, i, n: sec.bars, len: lenOf(i), latin: !!sec.latin, fill: sec.bars >= 4 && (i % 4 === 3 || i === sec.bars - 1), crash: i % 4 === 0 && name !== "intro" });
       }
@@ -226,16 +313,19 @@ const Compiler = (() => {
     notes.forEach((n, i) => { n.id = i; n.word = ""; });
 
     // The words: each line's phrases onto its strokes (but the kick's and the hat's), spread across its
-    // two bars.
-    const rows = [], cueBar = {};
+    // bars. A line with too few strokes for its phrases asks for more bars (short).
+    const rows = [], cueBar = {}, short = [];
     let vrow = null;
     lines.forEach((L, li) => {
-      if (!vrow || vrow.verse !== L.verse) { vrow = { verse: L.verse, v: L.verse.v, heading: L.verse.heading || null, lines: [], t0: bars[L.bars[0]].t0 }; rows.push(vrow); }
+      // a row for each verse, and one of its own for each saying-again of words
+      if (!vrow || vrow.verse !== L.verse || L.echo || vrow.echo) { vrow = { verse: L.verse, v: L.verse.v, echo: !!L.echo, heading: L.echo ? null : L.verse.heading || null, lines: [], t0: bars[L.bars[0]].t0 }; rows.push(vrow); }
       const slots = notes.filter((n) => n.lane !== "hat" && n.lane !== "kick" && L.bars.includes(n.bar));
-      const { toks, units: phr } = phrases(L.text);
-      // phrases (a little word never stands alone), joined to fit where there are fewer strokes
-      const units = phr;
-      const lrow = { tokens: toks.map((tx) => ({ text: tx, note: -1 })) };
+      const toks = L.toks, units = phrases(toks);
+      if (slots.length < units.length && L.bars.length < MAX_LINE_BARS) {
+        const perBar = slots.length / L.bars.length, need = perBar > 0 ? Math.ceil(units.length / perBar) : L.bars.length + 2;
+        short.push([li, Math.min(MAX_LINE_BARS - L.bars.length, Math.max(2, 2 * Math.ceil((need - L.bars.length) / 2)))]);
+      }
+      const lrow = { tokens: toks.map((tx, i) => ({ text: tx, note: -1, rep: L.rep[i] })) };
       if (slots.length) {
         const fitted = fit(units, toks, slots.length), k = fitted.length, m = slots.length;
         fitted.forEach((u, q) => {
@@ -251,12 +341,13 @@ const Compiler = (() => {
       vrow.t1 = bars[L.bars[L.bars.length - 1]].t0 + bars[L.bars[L.bars.length - 1]].len * sd;
     });
     // The Latin, in the instrumental sections: a word to each stroke but the kick and the hats,
-    // from the beginning again at each section.
-    const latin = (song.latin || psalm.incipit || "").split(/\s+/).filter(Boolean);
-    let lrow = null, prevSec = null, li = 0;
+    // from the beginning again at each section (the song's verse of the Vulgate, or the section's own).
+    let latin = [], lrow = null, prevSec = null, li = 0;
     for (const B of bars) {
       if (!B.latin) { prevSec = null; continue; }
       if (B.sec !== prevSec) {
+        const own = song.sec[B.sec].latin;
+        latin = split(typeof own === "string" ? own : song.latin || psalm.incipit || "");
         prevSec = B.sec; li = 0;
         lrow = { latin: true, v: 0, heading: null, t0: B.t0, lines: [{ tokens: latin.map((tx) => ({ text: tx, note: -1, notes: [] })) }] };
         rows.push(lrow);
@@ -284,9 +375,9 @@ const Compiler = (() => {
     return {
       psalm: psalm.n, rank: rankId, rankName: rank.name, speed: rank.speed, bpm: song.bpm, sd, barT: 16 * sd,
       notes, ghosts: [], selahs, verses: rows, plan, titleLines, incipit: psalm.incipit || "",
-      endT: total + 1.2, count: notes.length + selahs.length,
+      endT: total + 1.2, count: notes.length + selahs.length, short,
     };
-  };
+  }
   return C;
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = Compiler;
