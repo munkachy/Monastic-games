@@ -387,6 +387,16 @@ Every note is a tap; the rules of each rank and the two-thumb check are in How h
 A hidden fifth rank, **Vigilia**, comes on a dozen of the great set-piece
 psalms. A Full Combo on Sollemnitas opens it.
 
+### The player's drums *(as the author asked)*
+
+The songs stay as they are, and the player chooses the kit their drum part is played on: each
+song's own (the default), or any of nine (acoustic, 808, house, breakbeat, drum and bass, dub, late
+night, Afro, minimal). The drums have their own volume over the song ("Music" is then the band
+without them), and each drum its own level, from silent to twice as loud: kick; snare (with the
+clap and the rim); hi-hat; toms (with the congas); cymbals (the crash and the ride). The Drums page
+plays a short groove as a kit is chosen, and a stroke of each drum as its level is set. When the
+drums are turned down, the band's pump on the kick fades with them.
+
 ### Score and grades
 
 As in Phigros, a chart is worth 1,000,000: 900,000 for accuracy (a Perfect counts

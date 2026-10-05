@@ -94,7 +94,8 @@ A first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): eight psalms, Com
   - Psalm 133, minimal techno for the night watch, sung twice, the second time in 5/8.
   - Psalm 150, gospel house into a jungle break, every instrument joining as the psalm names it.
 - **The Voice is the text.** The Douay-Rheims is built in (`selah/douay.js`, made by `selah/tools/build-douay.js` from Psalter Runner's checked text). A psalter you own can be imported as a pack file in Settings; it stays on your device and is never sent anywhere.
-- Settings: audio offset with a tap-along calibration, note speed, music volume, hit ticks, no flashing, reduced motion. The arrow by the name goes back to the title. `?verses=2` in the address plays only the first verses.
+- **Drums.** The songs stay as they are, and you choose the kit that plays their drums: each song's own, or an acoustic kit, an 808, house, breakbeat, drum and bass, dub, late night, Afro (congas for toms) or minimal; each one plays a short groove as you choose it. Set the whole kit's volume over the song, and each drum's own level (kick, snare, hi-hat, toms, cymbals, from silent to twice as loud).
+- Settings: audio offset with a tap-along calibration, note speed, music volume (the band without the drums), the Drums page, hit ticks, no flashing, reduced motion. The arrow by the name goes back to the title. `?verses=2` in the address plays only the first verses.
 
 ## Recent highlights
 

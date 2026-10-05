@@ -36,18 +36,29 @@ const eighths = (len, c, c2) => Array.from({ length: len }, (_, i) => (i % 2 ? c
 const VEL = { 0: 1, 1: 0.95, f: 1, 2: 0.82, 3: 0.72, x: 0.62, g: 0.26 };
 
 // ---- The drums ------------------------------------------------------------------------------------
+// The player's drums (set in the Drums sheet, ui.js): which kit plays every song's drum part ("song":
+// each song's own), and how loud each drum is, from 0 to 2. The rest of the band is never touched.
+const DRUMS = { kit: "song", mix: { kick: 1, snare: 1, hats: 1, toms: 1, cymbals: 1 } };
+const DRUM_OF = { kick: "kick", snare: "snare", clap: "snare", rim: "snare", hat: "hats", ohat: "hats", tom1: "toms", tom2: "toms", tom3: "toms", crash: "cymbals", ride: "cymbals" };
+// One stroke of a piece of a kit, at the player's level for that drum.
+function strike(kit, piece, I, t, v, sd) {
+  const m = DRUMS.mix[DRUM_OF[piece]];
+  if (kit[piece] && m !== 0) kit[piece](I, t, v * (m === undefined ? 1 : m), sd);
+}
+// The kit a song's drums are played on: the player's choice, else the song's own.
+const kitFor = (song) => (DRUMS.kit !== "song" && KITS[DRUMS.kit]) || song.kit || KITS.house;
 // Play a bar's patterns on a kit, at the step being played.
 function playDrums(e, pats, kit) {
   const { t, s, sd, I } = e;
   for (const k in pats) {
     if (k === "roll") continue;
     const c = pats[k] && pats[k][s];
-    if (c && c !== "." && kit[k]) kit[k](I, t, VEL[c] || 0.8, sd);
+    if (c && c !== ".") strike(kit, k, I, t, VEL[c] || 0.8, sd);
   }
   const r = pats.roll;
   if (r && s >= r[1] && s < r[2]) {
     const k = (s - r[1]) / Math.max(1, r[2] - r[1]);
-    kit[r[0]](I, t, 0.3 + 0.55 * k, sd); kit[r[0]](I, t + sd / 2, 0.26 + 0.55 * k, sd);
+    strike(kit, r[0], I, t, 0.3 + 0.55 * k, sd); strike(kit, r[0], I, t + sd / 2, 0.26 + 0.55 * k, sd);
   }
 }
 const KITS = {
@@ -131,6 +142,62 @@ KITS.minimal = {
   crash: (I, t, v) => I.crash(t, 0.4 * v), ride: (I, t, v) => I.ride(t, 0.6 * v),
 };
 
+// A live kit: a tight kick with the beater's click, a snare that rings, wooden toms, a cross-stick.
+KITS.acoustic = {
+  kick: (I, t, v) => I.kick(t, v, { tone: 55, decay: 0.24, punch: 175, click: 1.6, drive: 0.05 }),
+  snare: (I, t, v) => { I.snare(t, v, { f: 1750, decay: 0.24, rev: 0.28 }); I.tom(t, 62, 0.22 * v, { decay: 0.09 }); },
+  clap: (I, t, v) => { I.snare(t, v, { f: 1750, decay: 0.24, rev: 0.28 }); I.tom(t, 62, 0.22 * v, { decay: 0.09 }); },
+  rim: (I, t, v) => I.rim(t, 0.8 * v, { f: 1500 }),
+  hat: (I, t, v) => I.hat(t, 0.4 * v, { decay: 0.06, f: 6600 }),
+  ohat: (I, t, v) => I.hat(t, 0.5 * v, { open: true, f: 6000 }),
+  tom1: (I, t, v) => I.tom(t, 57, v, { decay: 0.35 }), tom2: (I, t, v) => I.tom(t, 52, v, { decay: 0.42 }), tom3: (I, t, v) => I.tom(t, 46, v, { decay: 0.55 }),
+  crash: (I, t, v) => I.crash(t, 0.6 * v, { f: 4000, decay: 2.2 }), ride: (I, t, v) => I.ride(t, v, { bell: v > 0.9 }),
+};
+// The 808: the drum machine of hip-hop and trap, a long booming kick, a snappy snare and clap.
+KITS.k808 = {
+  kick: (I, t, v) => I.kick(t, v, { tone: 41, decay: 0.85, punch: 115, sweep: 0.05, click: 0.3 }),
+  snare: (I, t, v) => { I.snare(t, 0.8 * v, { f: 2100, decay: 0.12, rev: 0.1 }); I.clap(t, 0.45 * v, { rev: 0.2 }); },
+  clap: (I, t, v) => I.clap(t, v, { rev: 0.25 }),
+  rim: (I, t, v) => I.rim(t, 0.9 * v, { f: 2500 }),
+  hat: (I, t, v) => I.hat(t, 0.45 * v, { decay: 0.03, f: 8000 }),
+  ohat: (I, t, v) => I.hat(t, 0.5 * v, { open: true, f: 7500 }),
+  tom1: (I, t, v) => I.tom(t, 50, v, { decay: 0.45 }), tom2: (I, t, v) => I.tom(t, 45, v, { decay: 0.5 }), tom3: (I, t, v) => I.tom(t, 40, v, { decay: 0.6 }),
+  crash: (I, t, v) => I.crash(t, 0.5 * v), ride: (I, t, v) => I.ride(t, 0.8 * v),
+};
+// The kits the player can choose, in the order the Drums sheet shows them.
+const KIT_LIST = [
+  ["song", "Each song's own", "Every psalm plays on the kit chosen for its song."],
+  ["acoustic", "Acoustic", "A live kit: a tight kick, a snare that rings, wooden toms."],
+  ["k808", "808", "The drum machine of hip-hop: a long booming kick, a snappy clap."],
+  ["house", "House", "Clean house drums: a round kick, a clap on the snare, bright hats."],
+  ["break", "Breakbeat", "A punchy kick, a cracking snare, a gospel tambourine."],
+  ["dnb", "Drum and bass", "Tight and crisp, for speed."],
+  ["dub", "Dub", "A deep kick, a huge snare in a long hall."],
+  ["lofi", "Late night", "A soft kick, a brushed snare, quiet hats."],
+  ["afro", "Afro", "Claps and shakers, and congas for the toms."],
+  ["minimal", "Minimal", "A deep soft kick, a rim like a clock."],
+];
+// To hear a kit (the Drums sheet): two bars of a groove, a fill on the toms, and a crash to land on,
+// at the levels set. With "each song's own", the house kit stands in.
+function drumDemo(kitId) {
+  const ac = Sound.ctx();
+  if (!ac) return;
+  const kit = KITS[kitId] || KITS.house, I = Sound.I, sd = 60 / 112 / 4, t0 = ac.currentTime + 0.06;
+  const bars = [
+    { kick: "0.....0.0.0.....", snare: "....0.......0...", hat: "2.2.2.2.2.2.2.2.", crash: "0..............." },
+    { kick: "0.......0.......", snare: "....0...........", hat: "2.2.2.2.........", tom1: "........00......", tom2: "..........00....", tom3: "............0.0." },
+    { kick: "0...............", crash: "0..............." },
+  ];
+  bars.forEach((p, b) => { for (const k in p) for (let i = 0; i < 16; i++) if (p[k][i] !== ".") strike(kit, k, I, t0 + (b * 16 + i) * sd, VEL[p[k][i]] || 1, sd); });
+}
+// One stroke of one drum of a kit, now (the Drums sheet, as a level is set).
+function drumOne(kitId, drum) {
+  const ac = Sound.ctx();
+  if (!ac) return;
+  const kit = KITS[kitId] || KITS.house, piece = { kick: "kick", snare: "snare", hats: "hat", toms: "tom2", cymbals: "crash" }[drum];
+  strike(kit, piece, Sound.I, ac.currentTime + 0.02, 1, 60 / 112 / 4);
+}
+
 // Fills, by meter: rank by rank, from a snare stroke at Memoria to a full run of toms at Sollemnitas.
 const FILLS = {
   16: [
@@ -168,7 +235,7 @@ function band(def) {
   S.play = function (e) {
     const B = this.plan && this.plan.bars[e.b];
     if (!B) return;
-    playDrums(e, this.pats(B), this.kit);
+    playDrums(e, this.pats(B), kitFor(this));
     const sec = this.section(B);
     if (sec && sec.play) sec.play.call(this, e, B, Math.max(e.L, B.minL || 0));
   };
