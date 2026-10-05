@@ -18,7 +18,8 @@ const SONGS = load("songs.js", "SONGS"), DOUAY = load("douay.js", "DOUAY");
 const Hands = require(path.join(root, "hands.js")), Compiler = require(path.join(root, "compiler.js"));
 
 const args = process.argv.slice(2), verbose = args.includes("-v"), only = args.filter((a) => /^\d+$/.test(a)).map(Number);
-const PSALMS = [[1, "ps1"], [3, "ps3"], [150, "ps150"]].filter(([n]) => !only.length || only.includes(n));
+// every psalm with a song: SONGS.ps1, SONGS.ps2, ...
+const PSALMS = Object.keys(SONGS).filter((k) => /^ps\d+$/.test(k)).map((k) => [+k.slice(2), k]).sort((a, b) => a[0] - b[0]).filter(([n]) => !only.length || only.includes(n));
 const ms = (s) => Math.round(s * 1000) + " ms";
 const pad = (s, n) => String(s).padEnd(n);
 let bad = 0;

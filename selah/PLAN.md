@@ -91,12 +91,12 @@ The ranks follow the rules Rock Band's charters keep when they cut an Expert dru
 drops the sixteenths but keeps the eighths; Medium keeps the quarter-note grid and nothing an
 eighth apart or closer; Easy is kick and snare on the beat (or the hands alone). In SELAH:
 
-| Rank | At once | Closest two strokes | Thumbs must have to spare | Strokes a second (Psalms 1, 3, 150) |
+| Rank | At once | Closest two strokes | Thumbs must have to spare | Strokes a second (the eight psalms) |
 |---|---|---|---|---|
-| **Feria** | one | a quarter note, never under 0.3 s | 0.15 s | 1.2–1.8 |
-| **Memoria** | one | an eighth, never under 0.2 s | 0.08 s | 1.9–2.4 |
-| **Festum** | two: the kick with a hand; the hat or ride only alone | an eighth, never under 0.15 s | 0.04 s | 3.5–4.3 |
-| **Sollemnitas** | two | a sixteenth, never under 0.1 s | 0.02 s | 6.0–6.5 |
+| **Feria** | one | a quarter note, never under 0.3 s | 0.15 s | 1.2–2.2 |
+| **Memoria** | one | an eighth, never under 0.2 s | 0.08 s | 1.8–2.4 |
+| **Festum** | two: the kick with a hand; the hat or ride only alone | an eighth, never under 0.15 s | 0.04 s | 3.7–4.5 |
+| **Sollemnitas** | two | a sixteenth, never under 0.1 s | 0.02 s | 4.3–6.5 |
 
 When two strokes are too close, the lighter goes: the one that enters at the higher rank, on the
 weaker beat (the downbeat is strongest), and the lesser drum (crash, snare, toms, kick, hat last).
@@ -122,7 +122,17 @@ taps only, the model found that Festum and Sollemnitas asked for the impossible 
 chart: three touches at once (a held hi-hat, a snare and a kick), and doubled kicks a sixteenth apart
 with the other thumb busy.
 
-**The words ride the strokes.** Each line of the psalm takes two bars of a verse section. Its words are cut into phrases (the little words go with the word after them, so a little word never stands alone) and the phrases are laid on the line's strokes of the snare, toms and cymbals (never the kick or the hat), spread across its two bars: fewer, longer phrases at the lower ranks. A box shows a short phrase whole ("O Lord", "of the just"), or else the phrase's key word: its divine name if it has one, else its longest word. So at Feria the boxes of Psalm 1 read BLESSED, UNGODLY, STOOD, SINNERS, PESTILENCE. Strokes with no phrase are empty boxes, still played. A divine name is set a little larger. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each whole phrase as its stroke is struck. A touch anywhere in a box strikes it.
+**Every word is a note** *(as the author asked)*. Each line of the psalm is cut into phrases: the little words go with the word after them, so a little word never stands alone, and a phrase too long for a box (more than 18 letters) is cut again, before an "in", an "of", a "who" where it can be. Every phrase rides a stroke of its own, of the snare, the toms or the cymbals (never the kick or the hat), and its box shows it whole. A line is sung over two bars of a verse section; where a rank has too few strokes there for the line's phrases, the line is given two bars more, and again if need be (up to eight), while the band plays on in its groove. So the easier ranks run longer, the slower the rank the longer the words stay with you: Psalm 1 runs about 1½ minutes at Sollemnitas and 2¼ at Feria. At Feria its boxes read BLESSED, IS THE MAN, WHO HATH, NOT WALKED, IN THE COUNSEL, OF THE UNGODLY, and so on to SHALL PERISH. Strokes with no phrase are empty boxes, still played. A divine name is set a little larger. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each whole phrase as its stroke is struck. A touch anywhere in a box strikes it.
+
+**Lectio** *(as the author asked)*. A song may say parts of its psalm again, as a chorus does, or as lectio divina dwells on a phrase and turns it over. Two ways, set for each psalm in its song (by the Douay's verse numbers): a phrase is *echoed*, sung again as a line of its own after the line it is in, so many times; or it is *stuttered*, said again where it stands. The shortest psalms are sung whole in every verse section, each time with a bigger band or in another meter. The verse under the line shows the words said again in gold, so the psalm's own text is always plain; the results screen quotes only the psalm's own words. With a pack whose wording differs, an echo sings the pack's own line again, and a stutter whose words are not found is left out. In this batch:
+
+| Psalm | Said again |
+|---|---|
+| 2 | "Thou art my son, this day have I begotten thee" twice (the Introit of the Mass at Midnight); "in pieces, in pieces, in pieces"; "blessed are all they that trust in him" three times, the band falling away under it |
+| 4 | "The light of thy countenance, O Lord, is signed upon us" twice; "I will sleep, and I will rest" three times, the band falling further asleep each time |
+| 90 | "and under his wings thou shalt trust" three times (Compline's versicle); "and thou shalt trample under foot the lion and the dragon" twice, on crashes |
+| 116 | the whole psalm three times; "for ever, for ever, for ever" |
+| 133 | the whole psalm twice; "In the nights lift up your hands" twice each time |
 
 **Selah** keeps its meaning and its judging (below): at the Hebrew's selahs the band falls away for two bars to a held chord and a heartbeat, and the player touches nothing.
 
@@ -192,6 +202,28 @@ melodica, kalimba, marimba, choir, harp. The first three:
 - **Psalm 150, "Every Spirit"** (128): gospel house into breakbeat. Claps, octave bass, house piano;
   a jungle break with horns; the verses of timbrel and choir in 5/4 Afro house (congas, marimba);
   every instrument the psalm names joins the band as it is named.
+
+The second batch, chosen to finish Compline (4, 90, 133) and the Schola's psalms (2, 116):
+
+- **Psalm 2, "Rod of Iron"** (172): drum and bass in E Phrygian. The nations rage over a two-step
+  riddim with a war drum on three and a reese bass; heaven, which "shall laugh at them", is in 9/8,
+  three times three, the time the old musicians called *perfect*, with organ, bells, brass and
+  voices laughing; after "this day have I begotten thee" the harmony turns to E major for good; the
+  potter's vessel shatters on the crashes; the beatitude at the end is liquid drum and bass.
+- **Psalm 4, "In Peace"** (112): late-night deep house, swung, an electric piano and a night bird of
+  a flute; two Selahs; a lullaby in 6/8 with celesta and humming choir; bells over "the light of
+  thy countenance"; the band falls asleep through "I will sleep, and I will rest", and the song ends
+  asleep, the Latin of that verse carried on the rim.
+- **Psalm 90, "Under His Wings"** (123): Afro house, congas, shakers, an agogo, a kalimba; choir and
+  strings spread over "under his wings"; the terrors of the night in 12/8 over the West African bell
+  pattern (a laser for the arrow, a growl for the noonday devil, the congas tumbling where a thousand
+  fall); from "his angels" a choir over everything and C major; the lion and the dragon on crashes.
+- **Psalm 116, "All Ye Nations"** (120): gospel disco, the shortest psalm sung three times: a disco
+  band; the nations as a Balkan brass band in 7/8 (2 + 2 + 3), clarinet and accordion; then everyone,
+  gospel choir and horns; an Amen cadence to close.
+- **Psalm 133, "Night Watch"** (118): minimal techno for the servants who stand in the house of the
+  Lord in the nights: a rim like a clock, chords echoing down a nave, the bell for the night office;
+  sung twice, the second time in 5/8; the last blessing in Latin as the song goes out.
 
 Every psalm has its own song, and the song is funky. The genre follows what the
 psalm is doing: a psalm of praise does not sound like a lament, and the
@@ -775,6 +807,8 @@ folder.
    saving, the Schola.
 3. **The Voice setting:** import, check, store, regenerate and remove a pack; the
    Douay export and the template shipped.
+   *Done, with Psalms 1, 3 and 150.* Then a second batch *(done)*: Psalms 2, 4, 90, 116 and 133,
+   finishing Compline and the Schola's psalms, with every word a note and lectio.
 4. **Book I whole** (40 charts), with the compiler and the genre kits grown on it.
 5. **Books II to V and the Book of Letters.**
 6. **The Week, *Uno die*, the Vigilia charts and the glosses.**
