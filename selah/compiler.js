@@ -318,7 +318,7 @@ const Compiler = (() => {
         if (p.length !== B.len) throw new Error(song.title + ": bar " + B.b + " (" + B.sec + ") " + piece + " has " + p.length + " steps, not " + B.len);
         for (let s = 0; s < p.length; s++) {
           if (!charted(p[s], lvl)) continue;
-          notes.push({ type: "tap", lane, piece, t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: entry(p[s]), x: C.LANES[lane] });
+          notes.push({ type: "tap", lane, piece, c: p[s], t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: entry(p[s]), x: C.LANES[lane] });
         }
       }
       // A roll: the band plays it in thirty-seconds; the chart, in strokes on the snare that quicken,
@@ -328,7 +328,7 @@ const Compiler = (() => {
       if (r) for (let s = r[1]; s < r[2]; s++) {
         const k = s - r[1], half = s >= (r[1] + r[2]) >> 1;
         const at = k % 4 === 0 ? +r[3] : k % 2 === 0 ? Math.max(2, +r[3]) : half ? 3 : 9;
-        if (at <= lvl) notes.push({ type: "tap", lane: "snare", piece: r[0], t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: at, x: C.LANES.snare, roll: true });
+        if (at <= lvl) notes.push({ type: "tap", lane: "snare", piece: r[0], c: String(Math.min(3, at)), t: tAt(B, s), bar: B.b, step: s, len: B.len, lvl: at, x: C.LANES.snare, roll: true });
       }
     }
     notes = C.reduce(notes, rank, sd);

@@ -36,14 +36,27 @@ const eighths = (len, c, c2) => Array.from({ length: len }, (_, i) => (i % 2 ? c
 const VEL = { 0: 1, 1: 0.95, f: 1, 2: 0.82, 3: 0.72, x: 0.62, g: 0.26 };
 
 // ---- The drums ------------------------------------------------------------------------------------
-// The player's drums (set in the Drums sheet, ui.js): which kit plays every song's drum part ("song":
-// each song's own), and how loud each drum is, from 0 to 2. The rest of the band is never touched.
-const DRUMS = { kit: "song", mix: { kick: 1, snare: 1, hats: 1, toms: 1, cymbals: 1 } };
+// The drums, as the player sets them (the Drums sheet, ui.js): which kit sounds ("song": each song's
+// own), for the song's own drum part and for the player's hits alike; and two mixes, each a level for
+// the whole kit (0 to 1) and for each drum (0 to 2): `song`, the drum part the band plays, and
+// `yours`, the drums the player's hits play, each on the beat of its note (game.js). The rest of the
+// band is never touched.
+const DRUMS = {
+  kit: "song",
+  song: { all: 1, kick: 1, snare: 1, hats: 1, toms: 1, cymbals: 1 },
+  yours: { all: 0.7, kick: 1, snare: 1, hats: 1, toms: 1, cymbals: 1 },
+};
 const DRUM_OF = { kick: "kick", snare: "snare", clap: "snare", rim: "snare", hat: "hats", ohat: "hats", tom1: "toms", tom2: "toms", tom3: "toms", crash: "cymbals", ride: "cymbals" };
-// One stroke of a piece of a kit, at the player's level for that drum.
-function strike(kit, piece, I, t, v, sd) {
-  const m = DRUMS.mix[DRUM_OF[piece]];
-  if (kit[piece] && m !== 0) kit[piece](I, t, v * (m === undefined ? 1 : m), sd);
+// One stroke of a piece of a kit, at the level the player set for it (in the song's mix, or theirs).
+function strike(kit, piece, I, t, v, sd, who) {
+  const mix = DRUMS[who || "song"], m = mix.all * (mix[DRUM_OF[piece]] === undefined ? 1 : mix[DRUM_OF[piece]]);
+  if (kit[piece] && m > 0) kit[piece](I, t, v * m, sd);
+}
+// A hit of the player's: the note's drum, on the kit, at time t (the beat of the note, or now if
+// that has passed), as loud as the song would play that stroke, at the player's level.
+function playHit(song, n, t, sd) {
+  if (!Sound.ctx()) return;
+  strike(kitFor(song), n.piece, Sound.I, t, VEL[n.c] || 0.9, sd, "yours");
 }
 // The kit a song's drums are played on: the player's choice, else the song's own.
 const kitFor = (song) => (DRUMS.kit !== "song" && KITS[DRUMS.kit]) || song.kit || KITS.house;
@@ -178,7 +191,7 @@ const KIT_LIST = [
   ["minimal", "Minimal", "A deep soft kick, a rim like a clock."],
 ];
 // To hear a kit (the Drums sheet): two bars of a groove, a fill on the toms, and a crash to land on,
-// at the levels set. With "each song's own", the house kit stands in.
+// at the song's levels. With "each song's own", the house kit stands in.
 function drumDemo(kitId) {
   const ac = Sound.ctx();
   if (!ac) return;
@@ -190,12 +203,14 @@ function drumDemo(kitId) {
   ];
   bars.forEach((p, b) => { for (const k in p) for (let i = 0; i < 16; i++) if (p[k][i] !== ".") strike(kit, k, I, t0 + (b * 16 + i) * sd, VEL[p[k][i]] || 1, sd); });
 }
-// One stroke of one drum of a kit, now (the Drums sheet, as a level is set).
-function drumOne(kitId, drum) {
+// One stroke of one drum of a kit, now, in the song's mix or the player's (the Drums sheet, as a
+// level is set; "all", the kick and the snare together).
+function drumOne(kitId, drum, who) {
   const ac = Sound.ctx();
   if (!ac) return;
-  const kit = KITS[kitId] || KITS.house, piece = { kick: "kick", snare: "snare", hats: "hat", toms: "tom2", cymbals: "crash" }[drum];
-  strike(kit, piece, Sound.I, ac.currentTime + 0.02, 1, 60 / 112 / 4);
+  const kit = KITS[kitId] || KITS.house, t = ac.currentTime + 0.02;
+  const pieces = drum === "all" ? ["kick", "snare"] : [{ kick: "kick", snare: "snare", hats: "hat", toms: "tom2", cymbals: "crash" }[drum]];
+  for (const p of pieces) strike(kit, p, Sound.I, t, 1, 60 / 112 / 4, who);
 }
 
 // Fills, by meter: rank by rank, from a snare stroke at Memoria to a full run of toms at Sollemnitas.

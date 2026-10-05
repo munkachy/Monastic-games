@@ -224,8 +224,15 @@ const Game = (() => {
     if (grade === "perfect" || grade === "good") {
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
       if (S.level < 3 && S.combo >= 12 * (S.level + 1)) { S.level++; Sound.setLevel(S.level); }
-      if (n) { Sound.tick(grade === "perfect", n.lane); burst(n, grade); }
+      if (n) { hitSound(n); burst(n, grade); }
     } else miss(n);
+  }
+  // A hit sounds its drum on the kit, quantized: on the beat of its note, if the touch came early
+  // (the band's own stroke of it is scheduled at that very moment), else at once. Not in Listen.
+  function hitSound(n) {
+    const ac = Sound.ctx();
+    if (!ac || S.opts.auto) return;
+    playHit(S.song, n, Math.max(ac.currentTime + 0.003, S.T0 + n.t), S.chart.sd);
   }
   function miss(n) {
     if (n) { const st = S.st[n.id]; if (!st.done) { st.done = true; st.grade = "miss"; S.n.miss++; S.judged++; } }
