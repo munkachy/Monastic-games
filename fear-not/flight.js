@@ -5,8 +5,9 @@
 // close when it lands. Fr. Lawrence rides his angel from rooftop to rooftop: tap a roof near you
 // and the angel leaps to it, gliding down to a lower one, beating its wings hard to climb to a
 // higher one. Only so far at a leap: across the city it goes building by building. Below, the
-// traffic and the people under their umbrellas. Three times on the way the demons come down out of
-// the dark onto the roofs round them, and Fr. Lawrence gets down to fight them there (roof.js).
+// traffic and the people under their umbrellas. Demons roam the roofs, thickest where the lights are
+// out, smouldering red so they are seen from far off: land near them, and Fr. Lawrence gets down to
+// fight them there and then (roof.js); beat them, or leave them behind, and the flight goes on.
 
 const Flight = (() => {
   const BLOCK = 200, STREET = 56, NX = 20, NY = 14, LANE = 12, WALK = 5;
@@ -18,28 +19,16 @@ const Flight = (() => {
   const ROOFS = ["#161d33", "#1b2238", "#1a1c2c", "#20283e", "#262234", "#151a28", "#1d2630", "#22243a"];
   const UMB = ["#2a2a34", "#2a2a34", "#4a2430", "#24384e", "#6a1c26", "#34405e", "#a01e30", "#a08a30", "#24504a", "#5a3a6a"];
   let F = null, P = null, built = null, cars = null, people = null, RF = null;
-  // The fights on the rooftops on the way: after a leap or two, on the way to the church; after the
-  // church; and near her father's car. Each starts on the next roof big enough to fight on.
-  const FIGHTS = [
-    { step: 1, leaps: 1, cap: 3, gap: [2.4, 3.2], first: true, foes: [["whisper", 0.4], ["whisper", 0.9], ["whisper", 1.6], ["whisper", 3.4], ["whisper", 5.5]],
-      say: () => tip("They have seen us, on every roof round us. Tap one, even on another roof, and I carry you to him: strike as you land. Tap a roof, and we leap there. Hold on one and let go: holy water, as far as you like.", "They have seen us, on every roof round us. Space at one, even on another roof, and I carry you to him: strike as you land. Push an arrow past the edge of our roof, and we leap. F: holy water, as far as you like."),
-      after: "Up, Father. On to the church." },
-    { step: 3, leaps: 1, cap: 3, gap: [2, 2.8], foes: [["whisper", 0.4], ["grab", 1], ["whisper", 1.8], ["whisper", 3.4], ["whisper", 5], ["whisper", 7]],
-      say: () => tip("More of them. That big one grabs: when it shows red, put two fingers down, and block. Drag one far off, and your rosary hauls it over.", "More of them. That big one grabs: when it shows red, hold Q to block. R throws your rosary at one far off, and hauls it over."),
-      after: "Up. Follow her prayer." },
-    { step: 4, leaps: 1, cap: 4, gap: [1.7, 2.5], foes: [["whisper", 0.4], ["shield", 1], ["grab", 2.4], ["whisper", 3.6], ["whisper", 5], ["whisper", 6.6], ["whisper", 8.4]],
-      say: () => "They will not let us near him. Roof to roof, Father: throw them off, and keep the flow.",
-      after: "Up. He is close now." },
-  ];
-  const roomy = (b) => b && !b.church && b.x1 - b.x0 >= 64 && b.y1 - b.y0 >= 64;
-  function startFight(enc) {
-    F.fought.push(enc);
+  // A fight, wherever he gets down near them: harder the further on they are.
+  function engage() {
+    F.fights++; F.toldRoam = true;
+    const st = F.step, enc = { first: F.fights === 1, cap: st >= 4 ? 4 : 3, gap: st >= 4 ? [1.7, 2.5] : st >= 3 ? [2, 2.8] : [2.4, 3.2] };
     RF.start(enc, (hero) => {
       // He climbs back on, and the flight goes on from his roof.
-      P.on = hero.roof; P.x = hero.x; P.y = hero.y; P.alt = hero.roof.h; P.mode = "stand"; P.head = hero.ang; F.landT = 0.4;
-      say(enc.after);
+      P.on = hero.roof; P.x = hero.x; P.y = hero.y; P.alt = hero.roof.h; P.mode = "stand"; P.head = hero.ang; F.landT = 0.4; F.calm = 1.2;
     });
   }
+  const fightable = (b) => b && !b.church && b.x1 - b.x0 >= 30 && b.y1 - b.y0 >= 30;
   const tip = (touch, keys) => (usingKeys() ? keys : touch);
 
   // ---- The city, from a fixed seed: the same every time --------------------------------------------
@@ -180,8 +169,9 @@ const Flight = (() => {
     for (const L of built.lights) { L.lit = L.base; L.show = L.lit; L.dying = 0; }
     const first = roofs().sort((a, b) => dist(START.x, START.y, roofCentre(a).x, roofCentre(a).y) - dist(START.x, START.y, roofCentre(b).x, roofCentre(b).y))[0], c = roofCentre(first);
     P = { x: c.x, y: c.y, alt: first.h, on: first, jump: null, speed: 0, head: 0.55, wing: 0, mode: "stand", flapT: 0 };
-    F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, stepLeaps: 0, msg: null, msgs: [], keys: {}, arrive: 0, fade: 1, dark: 300, rain: [], leaps: 0, ups: 0, downs: 0, far: null, hits: [], toldFar: false, fought: [] };
-    RF = RF || RoofFight({ sx, sy, K, roofs, roofAt, groundAt, drawAngel, get P() { return P; }, get cam() { return cam; } });
+    F = { done, t: 0, step: 0, stepT: 0, lastStep: 0, stepLeaps: 0, msg: null, msgs: [], keys: {}, arrive: 0, fade: 1, dark: 300, rain: [], leaps: 0, ups: 0, downs: 0, far: null, hits: [], toldFar: false, fights: 0, calm: 0 };
+    RF = RF || RoofFight({ sx, sy, K, roofs, roofAt, groundAt, drawAngel, lights: () => built.lights, holy: CHURCH, begin: START, car: CAR, stage: () => F.step, gloom: () => clamp((F.dark - 300) / 850, 0, 1), get P() { return P; }, get cam() { return cam; } });
+    RF.roamReset();
     cam = { x: P.x, y: P.y, z: P.alt + 300, lx: 0, ly: 0 };
     for (let i = 0; i < 120; i++) F.rain.push(rainDrop(true));
     say(tip("Hold on to me, Father. Tap a rooftop near us, and I will leap to it.", "Hold on to me, Father. Press an arrow, and I will leap to the nearest roof that way; or click a roof near us."));
@@ -276,6 +266,7 @@ const Flight = (() => {
       if (L.dying) { L.dying += dt; L.show = Math.sin(L.dying * 40) > 0 ? 0.3 : 1; if (L.dying > 0.9) { L.lit = 0; L.show = 0; } }
       else L.show = L.lit;
     }
+    RF.roamStep(dt);
     if (fighting()) { RF.step(dt); return; }
     if (F.arrive) {
       F.arrive += dt;
@@ -289,6 +280,9 @@ const Flight = (() => {
     Sound.setLevel(P.jump ? 2 : F.step >= 1 ? 1 : 0);
     Sound.ambience({ wind: P.jump ? 0.55 : 0.2, windF: P.jump ? 900 : 420 });
     lessons();
+    // Down on a roof near them: the fight is on.
+    if (F.calm) F.calm = Math.max(0, F.calm - dt);
+    if (!F.calm && !P.jump && !F.arrive && fightable(P.on) && RF.roamNear(P.x, P.y, P.on)) engage();
   }
   // ---- The lessons of the first flight, one after another ------------------------------------------
   function lessons() {
@@ -297,11 +291,11 @@ const Flight = (() => {
     else if (s === 1 && F.leaps >= 3 && !P.jump) { F.step = 2; say("There: the church. Its light will fill us."); }
     else if (s === 2 && on && on.church) { F.step = 3; say("Now the gold thread, to the south. That is her prayer, rising. Follow it."); Sound.fx.glory(); }
     else if (s === 3 && on && dist(P.x, P.y, HOME.x, HOME.y) < 200) { F.step = 4; say("Her window. She has prayed all night. Now the smoke, to the east: her father. Hurry. The dark is closing round him."); }
-    else if (s === 4 && nearCar() && !P.jump && F.fought.length >= FIGHTS.length) { F.step = 5; say(tip("There, his car. Tap it, and we dive down to the street.", "There, his car. Press Space, or click it, and we dive down to the street.")); }
+    else if (s === 4 && nearCar() && !P.jump && RF.roamLeft(CAR.x, CAR.y, 400) > 0 && !F.toldGuard) { F.toldGuard = true; say("They will not let us near him. Clear them off the roofs round his car, Father."); }
+    else if (s === 4 && nearCar() && !P.jump && RF.roamLeft(CAR.x, CAR.y, 400) === 0) { F.step = 5; say(tip("There, his car. Tap it, and we dive down to the street.", "There, his car. Press Space, or click it, and we dive down to the street.")); }
     if (F.step !== F.lastStep) { F.lastStep = F.step; F.stepT = F.t; F.stepLeaps = F.leaps; }
-    // A fight, when one is due and the roof is wide enough to stand on.
-    const nf = FIGHTS[F.fought.length];
-    if (nf && F.step >= nf.step && F.leaps - F.stepLeaps >= nf.leaps && !P.jump && !F.arrive && (roomy(P.on) || (nearCar() && P.on && !P.on.church && P.on.x1 - P.on.x0 >= 40 && P.on.y1 - P.on.y0 >= 40))) startFight(nf);
+    // The first time they are in sight.
+    if (!F.toldRoam && F.step >= 1 && RF.roamSeen > 0 && (!F.msg || F.msg.t > 4)) { F.toldRoam = true; say("See the red down there, in the dark? Demons, roaming the roofs: more of them wherever the lights are out. Go to them, and we throw them off."); }
   }
   function target() {
     if (F.step <= 2) return { x: CHURCH.x, y: CHURCH.y, c: C.holy, z: 66 };
@@ -378,9 +372,11 @@ const Flight = (() => {
     vis.sort((a, b) => b.d - a.d);
     const pd = (cam.x - P.x) ** 2 + (cam.y - P.y) ** 2, over = [];
     const inDark = (b) => dist((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, CAR.x, CAR.y) < F.dark;
-    for (const b of vis) { if (b.h > P.alt && b.d < pd) { over.push(b); continue; } b.church ? drawChurch() : drawBuilding(b, inDark(b)); }
+    RF.roamIndex();
+    for (const b of vis) { if (b.h > P.alt && b.d < pd) { over.push(b); continue; } if (b.church) drawChurch(); else { drawBuilding(b, inDark(b)); RF.drawRoamOn(b); } }
+    RF.drawRoamAir();
     if (fighting()) RF.drawWorld(); else { drawShadow(); drawAngel(); }
-    for (const b of over) b.church ? drawChurch() : drawBuilding(b, inDark(b));
+    for (const b of over) if (b.church) drawChurch(); else { drawBuilding(b, inDark(b)); RF.drawRoamOn(b); }
     // The lights themselves: neon and lamps.
     for (const L of built.lights) {
       if (!inView(L.x, L.y, 200) || L.kind === "church") continue;
@@ -393,9 +389,11 @@ const Flight = (() => {
     const dx = sx(CAR.x, 0), dy = sy(CAR.y, 0), gr = ctx.createRadialGradient(dx, dy, 0, dx, dy, Math.max(1, F.dark * k0));
     gr.addColorStop(0, "rgba(2,1,4,0.72)"); gr.addColorStop(0.7, "rgba(2,1,4,0.45)"); gr.addColorStop(1, "rgba(2,1,4,0)"); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
     drawCarEyes(); drawSmoke();
+    RF.drawRoamGlow(!fighting() && !F.arrive);
     // Mist in the air, thicker the higher you are; clouds passing under you up top.
     const haze = clamp((cam.z - 500) / 900, 0, 0.35);
     if (haze > 0) { ctx.fillStyle = "rgba(18,24,44," + haze + ")"; ctx.fillRect(0, 0, W, H); }
+    if (fighting()) RF.drawTint();
     drawRain();
     if (fighting()) { RF.drawHUD(); pauseButton(); } else drawHUD();
     if (F.arrive) rect(0, 0, W, H, "rgba(0,0,0," + clamp((F.arrive - 0.6) / 1.0, 0, 1) + ")");
@@ -708,7 +706,7 @@ const Flight = (() => {
       const b = roofToward(0, 0); if (b) leap(b); else Sound.fx.tick(600, 0.8);
     }
   }
-  // For trying a fight at once, wherever the angel stands: Flight.fight(0).
-  function fight(i) { if (!P.jump && P.on && !fighting()) startFight(FIGHTS[i || 0]); }
+  // For trying a fight at once, wherever the angel stands: Flight.fight(["whisper", "grab"]).
+  function fight(kinds) { if (!P.jump && P.on && !fighting()) { RF.packHere(P.x, P.y, P.on, kinds || ["whisper", "whisper", "whisper"]); engage(); } }
   return { start, step, draw, down, move, up, key, fight, get F() { return F; }, get P() { return P; }, get cam() { return cam; }, get RF() { return RF; }, CHURCH, HOME, CAR };
 })();

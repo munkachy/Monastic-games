@@ -110,6 +110,11 @@ const Fight = (() => {
   const angelDive = pose({ lean: 0.9, head: 0.5, wa: -2.9, wl: 0.45, sF: 2.2, eF: 0.2, sB: 2.0, eB: 0.2, hF: -0.3, kF: 0.2, hB: -0.5, kB: 0.3 });
   const angelStrikeP = (u) => keyPose([[0, pose({ wa: -2.5, wl: 1, sF: 2.4, eF: 0.4, lean: -0.2, lift: 12 })], [0.45, pose({ wa: -0.35, wl: 1.25, sF: 1.6, eF: 0.0, lean: 0.4, lift: 6 })], [1, pose({ wa: -2.0, wl: 1, lift: 8 })]], u);
   const angelRise = pose({ wa: -2.3, wl: 1.25, lean: -0.1, sF: 0.4, eF: 0.3, hF: 0.1, kF: 0.3, hB: -0.1, kB: 0.4, lift: 10 });
+  // The landing after the blessing, as heroes land in the films: down on one knee, a fist on the
+  // street, the other arm flung back, the wings spread wide and high, the head bowed.
+  // (The back shin flat on the street with the knee down, the front foot under its knee, both at the
+  // same height, so both touch the ground; the body leaned far enough forward for the fist to reach.)
+  const angelLand = pose({ lean: 0.9, head: 0.2, wa: -1.7, wl: 1.3, sF: 0.05, eF: 0.0, sB: -2.2, eB: 0.3, hF: 1.45, kF: 2.0, hB: -0.15, kB: 1.42, lift: 0 });
   const angelCarry = pose({ wa: -2.2, wl: 1.2, lean: 0.1, sF: 1.0, eF: 0.6, sB: 0.9, eB: 0.7, hF: 0.1, kF: 0.3, hB: -0.1, kB: 0.4, lift: 10 });
   // Demons: hunched, twitching; the slapstick is all theirs.
   const demonIdle = (t, k) => pose({ lean: 0.35 + 0.08 * Math.sin(t * 2.3 + k), head: 0.3 + 0.2 * Math.sin(t * 3.1 + k), sF: 0.7 + 0.3 * Math.sin(t * 2 + k), eF: 0.8, sB: 0.4, eB: 0.9, hF: 0.25, kF: 0.5, hB: -0.3, kB: 0.4 });
@@ -488,7 +493,7 @@ const Fight = (() => {
     f.sign = null; f.z = 0; f.vz = 0; f.dizzy = 0; f.stun = 0;
     f.worn = f.worn || 0; while (f.worn < WORN.length && f.hp <= f.max * WORN[f.worn]) f.worn++;
     if (G.slowFor === f) G.slowFor = null;
-    dustAt(f.x, f.y); Sound.fx.step(2.2);
+    if (!o.quiet) dustAt(f.x, f.y); Sound.fx.step(2.2);
     if (!G.taught.finish && !G.kata && !G.over) { G.taught.finish = true; say(tip("He is down! Tap him before he rises, and finish him.", "He is down! Space toward him before he rises, and finish him.")); }
   }
   // The blow that finishes one that is down: it is cast out where it lies.
@@ -796,22 +801,39 @@ const Fight = (() => {
     const H0 = G.hero, near = alive().filter((f) => Math.abs(f.x - H0.x) < 420);
     return near.length ? { x: near.reduce((a, f) => a + f.x, 0) / near.length, y: H0.y } : { x: H0.x + H0.dir * 90, y: H0.y };
   }
+  // The angel comes down like a hammer: rings of light run out along the street one after another,
+  // halos rise off the place he struck, stones and dust fly. Each demon is struck down as the first
+  // ring reaches it, harder the longer the flow was.
   function finisherLands(x, y) {
-    const H0 = G.hero, c = G.finishCombo || 0, mult = 1 + Math.min(2, c * 0.08);
+    const H0 = G.hero, c = G.finishCombo || 0;
     G.finishing = false;
-    let n = 0;
-    for (const f of alive()) { landHit(f, 2.5 * mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true, fromX: x }); if (!f.gone) floor(f, { long: 1.4 }); n++; }
-    G.parts.push({ kind: "ring", x, y, r: 10, t: 0 }); G.parts.push({ kind: "beam", x, t: 0 });
-    dustAt(x - 30, y); dustAt(x + 30, y);
-    G.shake = 14; G.flash = 0.8; G.flashC = C.holy; hitStop(0.14);
-    slowmo(0.2, 0.7, x, y - 60, 1.2);
-    Sound.fx.hit(2.4); Sound.fx.clang();
+    G.quake = { x, y, t: 0, mult: 1 + Math.min(2, c * 0.08), hit: [], n: 0 };
+    for (let i = 0; i < 6; i++) G.parts.push({ kind: "shock", x, y, r: 8, sp: 1050 - i * 150, w: 9 - i * 1.1, t: -i * 0.06, c: i % 2 ? C.holy : "#fff6dc" });
+    for (let i = 0; i < 4; i++) G.parts.push({ kind: "halo", x, y, t: -i * 0.11, s: 1 - i * 0.12 });
+    for (let i = 0; i < 22; i++) { const a = Math.random() * TAU; G.parts.push({ kind: "rock", x: x + Math.cos(a) * 14, y: y + Math.sin(a) * 4, z: 2, vx: Math.cos(a) * (120 + Math.random() * 320), vz: 260 + Math.random() * 420, gy: y + (Math.random() - 0.5) * 24, r: Math.random() * TAU, vr: (Math.random() - 0.5) * 20, s: 2 + Math.random() * 4, t: 0 }); }
+    for (let i = 0; i < 12; i++) { const side = i % 2 ? 1 : -1; G.parts.push({ kind: "dust", x: x + side * 10, y: y + (Math.random() - 0.5) * 20, vx: side * (180 + Math.random() * 300), r: 14 + Math.random() * 10, t: Math.random() * -0.1 }); }
+    G.parts.push({ kind: "ring", x, y, r: 10, t: 0 }); G.parts.push({ kind: "impactglow", x, y, t: 0 });
+    G.shake = 26; G.flash = 0.8; G.flashC = C.holy; hitStop(0.2);
+    slowmo(0.15, 0.95, x, y - 60, 1.24);
+    Sound.fx.boom(1.2); Sound.fx.clang();
     if (H0.act.kind === "pray") act("idle");
-    pop(x, y - 150, c > 1 ? "THE BLESSING · " + c + " IN A ROW" : "THE BLESSING", "#ffffff", true);
-    H0.spirit = Math.min(SPIRIT, H0.spirit + 3);
+    G.pops = G.pops.filter((p) => !/BLESSING/.test(p.text));
+    pop(x, y - 160, c > 1 ? "THE BLESSING · " + c + " IN A ROW" : "THE BLESSING", "#ffffff", true);
     H0.combo = 0; H0.comboT = 0;
-    if (n) say("They fell with us. Finish them!");
     ev("heightsOut");
+  }
+  function stepQuake(dt) {
+    const Q = G.quake; Q.t += dt;
+    const r = Q.t * 1000;
+    for (const f of alive()) {
+      if (Q.hit.includes(f)) continue;
+      const d = Math.hypot(f.x - Q.x, (f.y - Q.y) * 3);
+      if (d > r) continue;
+      Q.hit.push(f); Q.n++;
+      landHit(f, 2.5 * Q.mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true, fromX: Q.x });
+      if (!f.gone) { floor(f, { long: 1.4, quiet: true }); f.vx = Math.sign(f.x - Q.x || 1) * Math.max(140, 420 - d * 0.5); f.z = 1; f.vz = Math.max(120, 300 - d * 0.3); }
+    }
+    if (r > 1500) { if (Q.n) say("They fell with us. Finish them!"); G.quake = null; }
   }
   const chainsOpen = () => false;     // the chains on his guardian break only when the street is clear
   function tapChains() {
@@ -919,7 +941,7 @@ const Fight = (() => {
     if (kind !== "carry" && kind !== "smite" && (!f || f.gone)) return false;
     const T = kind === "carry" ? G.hero : f;
     A.dir = T.x >= G.view.cx ? -1 : 1; if (Math.abs(T.x - G.hero.x) > 5 && kind !== "carry") A.dir = T.x >= G.hero.x ? 1 : -1;
-    A.x = T.x - A.dir * 150; A.y = T.y - 2; A.z = SKY;
+    A.x = T.x - A.dir * (kind === "smite" ? 30 : 150); A.y = T.y - 2; A.z = kind === "smite" ? SKY * 1.25 : SKY;
     A.act = { kind, phase: "dive", t: 0, f, combo: !!combo };
     Sound.fx.whoosh(0.45, 1, false);
     if (kind === "smite") slowmo(0.25, 0.8, T.x, T.y - 70, 1.15);
@@ -934,6 +956,18 @@ const Fight = (() => {
     A.lightX = lerp(A.lightX, H0.x, Math.min(1, dt * 3));
     if (a.kind === "above") { A.z = SKY; A.x = A.lightX; return; }
     const T = a.kind === "carry" ? H0 : a.f;
+    if (a.kind === "smite") {
+      // Straight down out of the sky, faster and faster, and down like a hammer: one knee, one fist,
+      // the wings flung wide. A moment so; then up, and away.
+      if (a.phase === "dive") {
+        const u = clamp(a.t / 0.42, 0, 1), e = u * u * u;
+        A.x = lerp(T.x - A.dir * 30, T.x, e); A.y = T.y - 2; A.z = lerp(SKY * 1.25, 0, e);
+        if (u >= 1) { a.phase = "land"; a.t = 0; A.z = 0; finisherLands(T.x, T.y); }
+      } else if (a.phase === "land") { A.z = 0; if (a.t > 0.8) { a.phase = "stand"; a.t = 0; } }
+      else if (a.phase === "stand") { A.z = 0; if (a.t > 0.35) { a.phase = "rise"; a.t = 0; Sound.fx.flap(1.2); } }
+      else { const u = clamp(a.t / 0.4, 0, 1); A.z = lerp(0, SKY, u * u); A.x += A.dir * 40 * dt; if (u >= 1) A.act = { kind: "above", t: 0 }; }
+      return;
+    }
     if (a.phase === "dive") {
       const u = clamp(a.t / (a.kind === "smite" ? 0.34 : 0.18), 0, 1), e = u * u;
       if (T && !(T.gone && a.kind !== "carry")) { A.x = lerp(T.x - A.dir * 150, T.x - A.dir * (a.kind === "carry" ? 10 : 48), e); A.y = T.y - 2; }
@@ -1052,13 +1086,16 @@ const Fight = (() => {
     // Only three close enough to strike at him; the rest prowl further off and wait their turn.
     // The ring is chosen again every little while, by who is nearest (those already in it keep
     // their places a while, so it does not flicker).
+    // One waiting its turn that he goes and fights does not join the ring at once: it has to stay the
+    // nearest a while. Those in the ring keep their places as they follow him about.
     G.ringT = (G.ringT || 0) - dt;
     if (G.ringT <= 0) {
-      G.ringT = 0.4;
+      G.ringT = 0.6;
       const able = G.foes.filter((f) => !f.gone && !["floored", "thrown", "held", "countered", "pulled", "castout"].includes(f.act.kind));
-      able.sort((a, b) => (Math.abs(a.x - H0.x) - (a.inner ? 80 : 0)) - (Math.abs(b.x - H0.x) - (b.inner ? 80 : 0)));
-      able.forEach((f, i) => { f.inner = i < 3; });
+      able.sort((a, b) => (Math.abs(a.x - H0.x) - (a.inner ? 160 : 0)) - (Math.abs(b.x - H0.x) - (b.inner ? 160 : 0)));
+      able.forEach((f, i) => { const was = f.inner; f.inner = i < 3; if (f.inner !== was) f.post = undefined; });
     }
+    if (G.quake) stepQuake(dt);
     for (const f of G.foes) stepFoe(f, dt);
     G.foes = G.foes.filter((f) => !f.gone || f.act.t < 0.6);
     if (!G.kata) attackScheduler(dt);
@@ -1477,15 +1514,31 @@ const Fight = (() => {
     if (f.dizzy > 0) return;
     if (G.kata && f.shade) { f.dir = H0.x >= f.x ? 1 : -1; f.walk = false; return; }
     const others = G.foes.filter((o) => o !== f && !o.gone);
-    // Their places stay within his reach: one that would stand past the edge goes round to his
-    // other side. Those not in the ring of three keep further off, prowling.
-    const outer = f.inner === false && !G.kata, ring = outer ? 210 + 40 * Math.sin(f.slot * 3 + G.t * 0.4) : 92 + (f.kind === "grab" ? 20 : 0);
+    const outer = f.inner === false && !G.kata;
+    if (outer) {
+      // Waiting its turn: each keeps to a place of its own a little way off, toward the back of the
+      // street, and prowls about it. It does not back away when he comes for it (he may fight it if he
+      // likes; it will not strike at him); it only moves its place when he has gone far from it.
+      if (f.post === undefined || Math.abs(f.post - H0.x) > 400) {
+        let side = f.x >= H0.x ? 1 : -1, px = H0.x + side * (190 + Math.random() * 80);
+        if (px < FX0() + 16 || px > FX1() - 16) { side = -side; px = H0.x + side * (190 + Math.random() * 80); }
+        f.post = clamp(px, FX0() + 16, FX1() - 16);
+      }
+      const tx = clamp(f.post + Math.sin(f.slot + G.t * 0.5) * 30, FX0() + 16, FX1() - 16), ty = lerp(Y0, Y1, 0.12 + 0.18 * (0.5 + 0.5 * Math.sin(f.slot * 2.1 + G.t * 0.2)));
+      const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
+      if (d > 6) { const sp = f.kind === "grab" ? 40 : 50; f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
+      f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0(), FX1());
+      return;
+    }
+    // Their places in the ring stay within his reach: one that would stand past the edge goes round
+    // to his other side.
+    const ring = 92 + (f.kind === "grab" ? 20 : 0);
     let side = f.x >= H0.x ? 1 : -1;
     if (H0.x + side * (ring + 30) < FX0() + 16 || H0.x + side * (ring + 30) > FX1() - 16) side = -side;
     let tx = clamp(H0.x + side * ring + Math.sin(f.slot + G.t * 0.3) * 30, FX0() + 16, FX1() - 16), ty = clamp(H0.y + Math.sin(f.slot * 2.1 + G.t * 0.25) * 34, Y0, Y1);
     for (const o of others) { const dx = f.x - o.x, dy = f.y - o.y, d = Math.hypot(dx, dy); if (d < 60 && d > 0.1) { tx += dx / d * 50; ty += dy / d * 20; } }
     const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
-    if (d > 6) { const sp = (f.kind === "grab" ? 55 : 72) * (outer ? 0.7 : 1); f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
+    if (d > 6) { const sp = f.kind === "grab" ? 55 : 72; f.x += dx / d * sp * dt; f.y += dy / d * sp * 0.6 * dt; f.walk = true; } else f.walk = false;
     f.dir = H0.x >= f.x ? 1 : -1; f.y = clamp(f.y, Y0, Y1); f.x = clamp(f.x, FX0(), FX1());
   }
   // A block is good for one blow: after it, he has to block again.
@@ -1584,7 +1637,7 @@ const Fight = (() => {
   function shards(x, y) { for (let i = 0; i < 10; i++) G.parts.push({ kind: "shard", x, y, vx: (Math.random() - 0.5) * 300, vy: -100 - Math.random() * 200, r: Math.random() * TAU, t: 0 }); }
   function puff(x, y, c, n, dark) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 30 + Math.random() * 60; G.parts.push({ kind: dark ? "smoke" : "puff", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 20, t: 0, c }); } }
   function pop(x, y, text, c, big) { const cx = G.view.cx; G.pops.push({ x: clamp(x, cx - W / 2 + 90, cx + W / 2 - 90), y: Math.max(70, y), text, c, t: 0, big }); }
-  const LIFE = { shieldfly: 1.6, hat: 2.5, ring: 0.8, smoke: 0.9, puff: 0.9, flask: 0.5, link: 1.4, streak: 0.3, mark: 0.4, throwflask: 0.3, beam: 1.2, warn: 0.5 };
+  const LIFE = { impactglow: 0.9, shock: 0.95, halo: 1.2, rock: 1.8, dust: 1.5, shieldfly: 1.6, hat: 2.5, ring: 0.8, smoke: 0.9, puff: 0.9, flask: 0.5, link: 1.4, streak: 0.3, mark: 0.4, throwflask: 0.3, beam: 1.2, warn: 0.5 };
   function stepParts(dt) {
     for (const p of G.parts) {
       p.t += dt;
@@ -1592,6 +1645,9 @@ const Fight = (() => {
       else if (p.kind === "puff" || p.kind === "smoke") { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - 3 * dt; p.vy *= 1 - 3 * dt; }
       else if (p.kind === "hat") { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.r += p.vr * dt; if (p.y > p.floor - 4) { p.y = p.floor - 4; p.vy = -p.vy * 0.3; p.vx *= 0.6; p.vr *= 0.5; } }
       else if (p.kind === "ring") p.r += dt * 900;
+      else if (p.kind === "shock") { if (p.t > 0) p.r += dt * p.sp; }
+      else if (p.kind === "rock") { p.x += p.vx * dt; p.vz -= 1000 * dt; p.z += p.vz * dt; p.r += p.vr * dt; if (p.z < 0) { p.z = 0; p.vz = -p.vz * 0.3; p.vx *= 0.55; p.vr *= 0.5; } }
+      else if (p.kind === "dust") { if (p.t > 0) { p.x += p.vx * dt; p.vx *= 1 - 1.6 * dt; p.r += dt * 40; } }
       else if (p.kind === "shieldfly") { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt; p.r += p.vr * dt; }
       else if (p.kind === "flask" && p.t > 0.45 && !p.done) { p.done = true; splashAt(p.x1, p.y1); if (!p.f.gone && !p.f.shield) { landHit(p.f, 2, 1.2, { front: false, breaks: true }); if (!p.f.gone) p.f.dizzy = Math.max(p.f.dizzy, 1.8); pop(p.x1, p.y1 - 50, "SPLASH!", "#9fe4ff"); } }
       else if (p.kind === "throwflask" && p.t >= p.dur && !p.done) {
@@ -1934,6 +1990,7 @@ const Fight = (() => {
     const SA = standingAngel(); if (SA) ents.push({ y: SA.y, draw: (fl) => { if (!fl) drawStandingAngel(SA); } });
     ents.sort((a, b) => a.y - b.y);
     if (G.world === "street" && !G.shift) for (const e of ents) e.draw(true);
+    drawGroundFx();
     G.beads = rosaryBeads();
     for (const e of ents) e.draw(false);
     if (G.beads.length) drawRosary(G.beads, "free");
@@ -2096,10 +2153,14 @@ const Fight = (() => {
     const A = G.angel, a = A.act, s = depth(A.y);
     let p = angelRise;
     if (a.phase === "dive") p = angelDive; else if (a.phase === "hit") p = angelStrikeP(clamp(a.t / 0.24, 0, 1)); else if (a.phase === "lift") p = angelCarry;
+    else if (a.phase === "land") p = blendPose(angelDive, angelLand, smooth(a.t / 0.08));
+    else if (a.phase === "stand") p = blendPose(angelLand, angelRise, smooth(a.t / 0.35));
     if (fl) { if (A.z < 40) drawFigure("angel", A.x, A.y + 2, s, A.dir, p, { flipY: true, alpha: 0.08, t: G.t, dim: true }); return; }
     if (A.z < 120) glowOval(A.x, A.y + 2, 50 * s, 10 * s, C.holy, 0.35 * (1 - A.z / 120));
-    // The streak of his dive.
-    if (a.phase === "dive") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.5; line(A.x - A.dir * 60, A.y - A.z - 260, A.x, A.y - A.z - 60, C.holy, 10); ctx.restore(); }
+    if (a.kind === "smite" && (a.phase === "land" || a.phase === "stand")) glowOval(A.x, A.y + 2, 90 * s, 18 * s, C.holy, 0.6 * (a.phase === "land" ? 1 - a.t / 1.2 : 0.3));
+    // The streak of his dive: down out of the sky in a column of light, for the landing.
+    if (a.phase === "dive" && a.kind === "smite") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.6; line(A.x, A.y - A.z - 420, A.x, A.y - A.z - 40, C.holy, 22); ctx.globalAlpha = 0.9; line(A.x, A.y - A.z - 380, A.x, A.y - A.z - 50, "#ffffff", 5); ctx.restore(); }
+    else if (a.phase === "dive") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.5; line(A.x - A.dir * 60, A.y - A.z - 260, A.x, A.y - A.z - 60, C.holy, 10); ctx.restore(); }
     drawFigure("angel", A.x, A.y - A.z, s * 1.05, A.dir, p, { t: G.t, handGlow: a.phase === "hit" ? 1 : 0, shine: 1.2 });
   }
   function foePose(f) {
@@ -2221,6 +2282,20 @@ const Fight = (() => {
       drawFigure("angel", x, y + 4, 0.95, 1, pose({ wa: fight ? -2.4 : -2.1, wl: fight ? 1.1 : 0.7, lift: 6 + Math.sin(t * 1.5) * 2, sF: fight ? 2.2 : 0.4, eF: 0.3 }), { t, pal: GUARD, shine: 0.8 });
     }
   }
+  // What lies on the street itself, under everyone: the glow of the landing, and its rings of light.
+  function drawGroundFx() {
+    for (const p of G.parts) {
+      const a = Math.max(0, 1 - p.t / LIFE[p.kind]);
+      if (p.kind === "impactglow") {
+        glowOval(p.x, p.y, 160 * (0.6 + 0.4 * (1 - a)), 34, C.holy, 0.7 * a); glowOval(p.x, p.y, 50, 12, "#ffffff", 0.8 * a);
+      } else if (p.kind === "shock" && p.t > 0) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = hexA(p.c || "#fff6dc", a * 0.9); ctx.lineWidth = Math.max(0.5, p.w * a); ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.26, 0, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = hexA(C.holy, a * 0.35); ctx.lineWidth = p.w * 3 * a; ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
   function drawParts() {
     for (const p of G.parts) {
       const a = 1 - p.t / (LIFE[p.kind] || 0.6);
@@ -2237,6 +2312,8 @@ const Fight = (() => {
         ctx.strokeStyle = hexA(C.ember, 0.8 * Math.max(0, a)); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1, -25); ctx.lineTo(2, -7); ctx.lineTo(-2, 7); ctx.lineTo(3, 23); ctx.stroke();
         ctx.restore(); glow(p.x, p.y, 22, C.ember, 0.3 * Math.max(0, a));
       }
+      else if (p.kind === "rock") { ctx.save(); ctx.translate(p.x, p.gy - p.z); ctx.rotate(p.r); poly([-p.s, -p.s * 0.6, p.s * 0.8, -p.s * 0.8, p.s, p.s * 0.5, -p.s * 0.4, p.s * 0.8], "#1c1814"); ctx.strokeStyle = hexA(C.holy, 0.5 * a); ctx.lineWidth = 0.8; ctx.stroke(); ctx.restore(); }
+      else if (p.kind === "dust" && p.t > 0) { const g = ctx.createRadialGradient(p.x, p.y - p.r * 0.4, 0, p.x, p.y - p.r * 0.4, p.r); g.addColorStop(0, "rgba(200,186,160," + 0.38 * a + ")"); g.addColorStop(1, "rgba(200,186,160,0)"); ctx.fillStyle = g; ctx.fillRect(p.x - p.r, p.y - p.r * 1.4, p.r * 2, p.r * 2); }
       else if (p.kind === "ring") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a)); ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, 0, 0, TAU); ctx.stroke(); }
       else if (p.kind === "hat") { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.scale(p.s, p.s); ctx.fillStyle = "#050308"; ctx.beginPath(); ctx.ellipse(0, 0, 12, 2.2, 0, 0, TAU); ctx.fill(); if (p.hk === 1) { ctx.beginPath(); ctx.arc(0, -1, 6, PI, TAU); ctx.fill(); } else poly([-6, 0, -4, -8, 3, -7, 7, -1], "#050308"); ctx.restore(); }
       else if (p.kind === "flask" || p.kind === "throwflask") { const dur = p.kind === "flask" ? 0.45 : p.dur, k = clamp(p.t / dur, 0, 1), x = lerp(p.x, p.x1, k), y = lerp(p.y, p.y1, k) - Math.sin(k * PI) * (p.kind === "flask" ? 60 : 40); ctx.save(); ctx.translate(x, y); ctx.rotate(k * 12); rect(-2, -5, 4, 8, "#bfe8ff"); rect(-1, -7, 2, 2, "#e9e6df"); ctx.restore(); glow(x, y, 10, C.ice, 0.6); }
@@ -2244,6 +2321,15 @@ const Fight = (() => {
       else if (p.kind === "mark") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a) * 0.8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(p.x, p.y, 10 + p.t * 40, 3 + p.t * 10, 0, 0, TAU); ctx.stroke(); }
       else if (p.kind === "warn") { const f = p.f; if (!f.gone) { const hx = f.x, hy = f.y - f.z - 138 * depth(f.y); ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = hexA(p.c, Math.max(0, a)); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(hx, hy, 14 + p.t * 130, 0, TAU); ctx.stroke(); ctx.restore(); } }
       else if (p.kind === "beam") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = Math.max(0, a); poly([p.x - 30, 0, p.x + 30, 0, p.x + 70, H, p.x - 70, H], C.holy); ctx.restore(); }
+      else if (p.kind === "halo" && p.t > 0) {
+        // A ring of light rising off the place he struck, widening as it goes up and fading.
+        const k = p.t / LIFE.halo, e = 1 - (1 - k) * (1 - k), r = (34 + e * 110) * p.s, y = p.y - 10 - e * 190 * p.s;
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ctx.beginPath(); ctx.ellipse(p.x, y, r, r * 0.24, 0, 0, TAU);
+        ctx.strokeStyle = hexA(C.holy, 0.4 * (1 - k)); ctx.lineWidth = 12 * (1 - k) + 2; ctx.stroke();
+        ctx.strokeStyle = hexA("#ffffff", 0.9 * (1 - k)); ctx.lineWidth = 3 * (1 - k) + 0.6; ctx.stroke();
+        ctx.restore();
+      }
     }
     for (const p of G.pops) {
       const a = clamp(1 - (p.t - 0.6) / 0.5, 0, 1), y = p.y - p.t * 26;

@@ -1,7 +1,8 @@
 "use strict";
-// Fear Not: fights on the rooftops, seen from straight above, on the way across the city. Where the
-// angel lands, the demons come down out of the dark onto every roof round about, and Fr. Lawrence
-// gets down off its back to meet them. The same moves as on the street, by the same gestures, and
+// Fear Not: fights on the rooftops, seen from straight above, on the way across the city. The demons
+// roam the roofs all night, in twos and threes, thickest where the lights are out, each smouldering
+// red so it is seen from far off. Land near them, and Fr. Lawrence gets down off his angel's back
+// to meet them, there and then: no battle begun or won, only the city and the dark in it. The same moves as on the street, by the same gestures, and
 // the same one rule (never the same blow twice on the same demon); only seen from above, where a
 // crowd round him is easy to read. Tap one on his roof, and he flies at it and strikes; tap one on
 // another roof (or still coming down out of the sky), and his angel, hovering over him, strikes it
@@ -31,7 +32,7 @@ function RoofFight(api) {
   const COAT = "#3a4c78", COAT2 = "#283658", HAT = "#33446c", BAND = "#e8c46a", SKIN = "#9a6e58", RIMS = ["#ff2a2a", "#ff6a2a", "#e0105a"];
   const WHISPERS = ["No one is coming.", "You are not Padre Pio.", "Go back to your desert.", "It is too late for him.", "You are alone up here.", "What use is a priest?", "Give it up, Father.", "He will do it anyway."];
   const STRIKES = ["palm", "cup", "kick", "knee", "sweep"];
-  let B = null, foeId = 0, replaying = false;
+  let B = null, foeId = 0, replaying = false, taught = {}, roam = [], clock = 0;
   const R = () => RULES[B.world];
   const tip = (touch, keys) => (usingKeys() ? keys : touch);
 
@@ -55,42 +56,247 @@ function RoofFight(api) {
   const angTo = (f) => Math.atan2(f.y - B.hero.y, f.x - B.hero.x);
   const scr = (x, y, z) => ({ x: sx(x, z), y: sy(y, z) });
 
-  // ---- Starting a fight ---------------------------------------------------------------------------------
+  // ---- Meeting them --------------------------------------------------------------------------------------
+  // Where he gets down: those roaming near come at him, and he meets them. `enc`: how hard the city
+  // is by now ({cap, gap}), and whether this is the first time (to teach).
+  const MEET = ["There they are, Father.", "They have seen us.", "In the dark again. Have at them.", "More of them. Down we go."];
   function start(enc, done) {
     const P = api.P, b = P.on;
     B = {
       enc, done, t: 0, ts: 1, slowT: 0, slowTs: 1, zoomK: 1, freeze: 0, pulseT: 0, pulseTs: 1, warnT: 0, warnF: null, slowFor: null, slowVis: 0, muffled: false,
-      roof: b, near: [], shake: 0, flash: 0, flashC: "#fff", foes: [], parts: [], pops: [], spawnQ: [], msg: null, banner: null, taught: {}, waveT: 0, nextAtk: 2.6, keys: {},
+      roof: b, near: [], shake: 0, flash: 0, flashC: "#fff", foes: [], parts: [], pops: [], msg: null, banner: null, waveT: 0, nextAtk: 1.8, keys: {}, tH: 0, tD: 0,
       hero: { x: clamp(P.x, b.x0 + 10, b.x1 - 10), y: clamp(P.y, b.y0 + 10, b.y1 - 10), z: 30, ang: P.head, act: { kind: "dismount", t: 0, dur: 0.45 }, resolve: 100, spirit: 0, combo: 0, comboT: 0, best: 0, inv: 0.8, queue: null, hits: 0 },
       angel: { x: P.x, y: P.y, alt: b.h + 8, head: P.head, wing: 0, mode: "flap", act: { kind: "hover", t: 0 }, t: 0 },
       world: "roof", worldT: 0, shift: null, woe: 0, woeT: 0, lastMove: null, prevMove: null, lastTap: null, over: 0, down: 0, cast: 0, whispers: [], whisperT: 2, hurtWave: false, rosary: null, touch: null, leapT: 1.6,
     };
     B.near = nearRoofs();
-    for (const [kind, at] of enc.foes) B.spawnQ.push({ kind, at });
-    say(enc.say());
-    Sound.play(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); Sound.fx.whoosh(0.6, 1, true);
+    claim(JOIN_R);
+    if (enc.first) say(tip("Demons, Father, on every roof round us. Tap one, even on another roof, and I carry you to him: strike as you land. Tap a roof, and we leap there. Hold on one and let go: holy water, as far as you like.", "Demons, Father, on every roof round us. Space at one, even on another roof, and I carry you to him: strike as you land. Push an arrow past the edge of our roof, and we leap. F: holy water, as far as you like."));
+    else if (Math.random() < 0.4) say(MEET[Math.floor(Math.random() * MEET.length)]);
+    Sound.queue(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); Sound.fx.whoosh(0.6, 1, true); Sound.fx.growl(0.5);
   }
   function say(t, who) { B.msg = { text: t, t: 0, who: who || "angel" }; if ((who || "angel") === "angel") Sound.fx.chord(B.t | 0); }
-  // They come down out of the dark: on his roof, round him, or on the edge of a roof near his.
-  function spawn(kind) {
-    const H0 = B.hero, b0 = B.roof, mineN = onRoof(b0).length, first = !B.foes.length;
-    let b = b0;
-    const free = B.near.filter((o) => B.foes.filter((f) => !f.gone && f.roof === o).length < 3);
-    if (!first && (mineN >= 1 || Math.random() < 0.75) && free.length) b = free[Math.floor(Math.random() * free.length)];
-    let x, y;
-    if (b === b0) { const a = Math.random() * TAU; x = H0.x + Math.cos(a) * 34; y = H0.y + Math.sin(a) * 34; }
-    else { x = clamp(H0.x, b.x0 + 10, b.x1 - 10) + (Math.random() - 0.5) * 30; y = clamp(H0.y, b.y0 + 10, b.y1 - 10) + (Math.random() - 0.5) * 30; }
-    x = clamp(x, b.x0 + 9, b.x1 - 9); y = clamp(y, b.y0 + 9, b.y1 - 9);
-    const a = Math.random() * TAU, far = 420, z0 = Math.max(90, api.cam.z - b.h - 30);
+  function makeFoe(kind, x, y, roof) {
     const f = {
-      id: ++foeId, kind, x: x + Math.cos(a) * far, y: y + Math.sin(a) * far, roof: b, alt: b.h, z: z0, vx: 0, vy: 0, vz: 0, ang: a + PI,
-      hp: kind === "grab" ? 12 : kind === "shield" ? 10 : 9, act: { kind: "arrive", t: 0, dur: 1.0 + Math.random() * 0.4, x0: x + Math.cos(a) * far, y0: y + Math.sin(a) * far, z0, x1: x, y1: y },
+      id: ++foeId, kind, x, y, roof, alt: roof.h, z: 0, vx: 0, vy: 0, vz: 0, ang: Math.random() * TAU,
+      hp: kind === "grab" ? 12 : kind === "shield" ? 10 : 9, act: { kind: "idle", t: 0 },
       sign: null, stun: 0, dizzy: 0, shield: kind === "shield", hat: true, hatKind: foeId % 3 === 0 ? 1 : 0, slot: Math.random() * TAU, ph: Math.random() * 10, seed: Math.random() * 10, rim: RIMS[foeId % 3],
     };
-    f.max = f.hp; B.foes.push(f);
-    Sound.fx.growl(0.5); Sound.fx.whoosh(0.3, 0.5, true);
-    if (f.shield && !B.taught.shieldSeen) { B.taught.shieldSeen = true; say(tip("That one has a shield. Never strike it: it will only hurt you. Drag it, and your rosary snatches the shield away.", "That one has a shield. Never strike it: it will only hurt you. Press R, and your rosary snatches the shield away.")); }
-    return f;
+    f.max = f.hp; return f;
+  }
+  // Those roaming near him come into the fight: on his roof, or on one near it.
+  function claim(r) {
+    const H0 = B.hero;
+    for (const f of roam.slice()) {
+      if (f.roam.hop || f.roam.drop || !f.roof) continue;
+      if (f.roof !== B.roof && (Math.hypot(f.x - H0.x, f.y - H0.y) > r || gap(f.roof, B.roof) > 170)) continue;
+      roam.splice(roam.indexOf(f), 1); f.roam = null;
+      f.act = { kind: "idle", t: 0 }; f.z = 0; f.walk = false; f.hopT = 0.5 + Math.random();
+      B.foes.push(f);
+      if (f.shield && !taught.shieldSeen) { taught.shieldSeen = true; say(tip("That one has a shield. Never strike it: it will only hurt you. Drag it, and your rosary snatches the shield away.", "That one has a shield. Never strike it: it will only hurt you. Press R, and your rosary snatches the shield away.")); }
+      else if (f.kind === "grab" && !taught.grabSeen) { taught.grabSeen = true; say(tip("That big one grabs: when it shows red, put two fingers down, and block. Drag one far off, and your rosary hauls it over.", "That big one grabs: when it shows red, hold Q to block. R throws your rosary at one far off, and hauls it over.")); }
+    }
+  }
+  // One he has left far behind loses him, and goes back to roaming.
+  function release(f) {
+    B.foes.splice(B.foes.indexOf(f), 1);
+    f.sign = null; f.dizzy = 0; f.stun = 0; f.vx = 0; f.vy = 0; f.vz = 0; f.z = 0; f.act = { kind: "idle", t: 0 };
+    f.roam = { home: { x: f.x, y: f.y }, tether: 320, wait: 1 + Math.random(), tx: f.x, ty: f.y, hop: null, drop: null };
+    roam.push(f);
+  }
+
+  // ---- The demons roaming the city ---------------------------------------------------------------------
+  // They wander the roofs in twos and threes, a roof at a time, keeping to the dark: the fewer lights
+  // burning round a roof, the likelier they are on it. Never near the church. As the dark spreads
+  // round the car, there are more of them; those cast out are made up from the dark, far from him.
+  const ROAM_R = 230;      // how near they must be when he gets down for the fight to begin
+  const JOIN_R = 300;      // in a fight, how near the others come to join it
+  const DRAW_R = 520;      // in a fight (or while he stands still), those this near come after him
+  const LEAVE_R = 460;     // in a fight, those left further off than this lose him
+  const any = (a) => a[Math.floor(Math.random() * a.length)];
+  const centre = (r) => ({ x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 });
+  function okRoof(r) { if (r.church || r.x1 - r.x0 < 40 || r.y1 - r.y0 < 40) return false; const c = centre(r); return Math.hypot(c.x - api.holy.x, c.y - api.holy.y) > 420; }
+  function roofInfo(r) {
+    if (r.nb) return r;
+    const c = centre(r);
+    r.nb = api.roofs().filter((o) => o !== r && okRoof(o) && gap(o, r) <= 90);
+    r.lts = api.lights().filter((L) => !L.holy && Math.hypot(L.x - c.x, L.y - c.y) < 170);
+    return r;
+  }
+  const darkness = (r) => { roofInfo(r); let n = 0; for (const L of r.lts) n += L.lit; return clamp(1 - n / 2.5, 0, 1); };
+  const spot = (r) => ({ x: lerp(r.x0 + 10, r.x1 - 10, Math.random()), y: lerp(r.y0 + 10, r.y1 - 10, Math.random()) });
+  // What kind: harder the further on in the story, and the further out from where he starts.
+  function kindFor(dk, r) {
+    const c = centre(r), far = Math.hypot(c.x - api.begin.x, c.y - api.begin.y), st = Math.max(api.stage(), far > 1600 ? 3 : far > 850 ? 1 : 0), k = Math.random();
+    if (st >= 3) return k < 0.2 + dk * 0.06 ? "grab" : k < 0.38 + dk * 0.06 ? "shield" : "whisper";
+    if (st >= 1) return k < 0.14 ? "grab" : k < 0.22 ? "shield" : "whisper";
+    return "whisper";
+  }
+  function addPack(r, n, o) {
+    o = o || {};
+    roofInfo(r);
+    const dk = darkness(r);
+    for (let i = 0; i < n; i++) {
+      const b = i && r.nb.length && Math.random() < 0.3 ? any(r.nb) : r, p = spot(b);
+      const f = makeFoe((o.kinds && o.kinds[i]) || kindFor(dk, b), p.x, p.y, b);
+      f.roam = { home: o.home || { x: p.x, y: p.y }, tether: o.tether || 320, wait: Math.random() * 2, tx: p.x, ty: p.y, hop: null, drop: o.drop ? { t: -i * 0.25, dur: 1.1, z0: 300 } : null };
+      if (f.roam.drop) f.z = 300;
+      roam.push(f);
+    }
+  }
+  // A roof for a new pack: weighted to the dark, and away from him (and, at first, from where he starts).
+  function packRoof(awayX, awayY, away) {
+    let tot = 0; const cand = [];
+    for (const r of api.roofs()) {
+      if (!okRoof(r)) continue;
+      const c = centre(r);
+      if (Math.hypot(c.x - awayX, c.y - awayY) < away) continue;
+      const w = 0.22 + Math.pow(darkness(r), 1.5);
+      tot += w; cand.push([r, tot]);
+    }
+    const x = Math.random() * tot;
+    for (const [r, t] of cand) if (t >= x) return r;
+    return null;
+  }
+  const packSize = (r) => 1 + (darkness(r) > 0.6 ? 1 : 0) + (Math.random() < 0.45 ? 1 : 0);
+  function roamReset() {
+    B = null; roam = []; taught = {}; clock = 0; roamT = 0;
+    const S = api.begin, Car = api.car;
+    // A pair to meet first, a little off the way to the church; and his father's car, guarded.
+    const nearest = (x, y, ok) => api.roofs().filter((r) => okRoof(r) && (!ok || ok(r))).sort((a, b) => Math.hypot(centre(a).x - x, centre(a).y - y) - Math.hypot(centre(b).x - x, centre(b).y - y))[0];
+    const dx = api.holy.x - S.x, dy = api.holy.y - S.y, d = Math.hypot(dx, dy), ux = dx / d, uy = dy / d;
+    const first = nearest(S.x + ux * 560 - uy * 120, S.y + uy * 560 + ux * 120);
+    if (first) addPack(first, 2, { kinds: ["whisper", "whisper"], tether: 160 });
+    const guard = nearest(Car.x, Car.y - 90, (r) => r.x1 - r.x0 >= 50);
+    if (guard) addPack(guard, 4, { kinds: ["whisper", "grab", "shield", "whisper"], home: { x: Car.x, y: Car.y }, tether: 230 });
+    for (let n = 0; n < 50 && roam.length < 42; n++) { const r = packRoof(S.x, S.y, 480); if (r) addPack(r, packSize(r)); }
+  }
+  let roamT = 0;
+  function roamStep(dt) {
+    clock += dt;
+    const P = api.P, fightH = B && !B.over ? B.hero : null;
+    // Where they would go after him: in a fight, his roof; standing still on a roof, there too.
+    const hx = fightH ? fightH.x : P.x, hy = fightH ? fightH.y : P.y, hRoof = fightH ? B.roof : P.on && !P.jump ? P.on : null;
+    for (const f of roam) stepRoamer(f, dt, hRoof, hx, hy);
+    // Those cast out are made up from the dark, far off.
+    roamT -= dt;
+    if (roamT <= 0) {
+      roamT = 3;
+      const n = roam.length + (B ? B.foes.filter((f) => !f.gone).length : 0), want = 38 + Math.round(api.gloom() * 16);
+      if (n < want) { const r = packRoof(hx, hy, 620); if (r) addPack(r, packSize(r), { drop: true }); }
+    }
+  }
+  function stepRoamer(f, dt, hRoof, hx, hy) {
+    const R0 = f.roam; f.ph += dt;
+    if (R0.drop) {
+      // Down out of the dark onto the roof.
+      R0.drop.t += dt; const u = clamp(R0.drop.t / R0.drop.dur, 0, 1);
+      f.z = Math.min(R0.drop.z0, Math.max(0, api.cam.z - f.roof.h - 60)) * (1 - u) * (1 - u);
+      if (u >= 1) { f.z = 0; R0.drop = null; }
+      return;
+    }
+    if (R0.hop) {
+      const J = R0.hop; J.t += dt;
+      const u = clamp(J.t / J.dur, 0, 1), e = smooth(u), c = 2 * J.top - (J.h0 + J.h1) / 2;
+      f.x = lerp(J.x0, J.x1, e); f.y = lerp(J.y0, J.y1, e); f.alt = (1 - u) * (1 - u) * J.h0 + 2 * u * (1 - u) * c + u * u * J.h1; f.ang = Math.atan2(J.y1 - J.y0, J.x1 - J.x0);
+      if (u >= 1) { f.roof = J.to; f.alt = J.to.h; R0.hop = null; R0.tx = f.x; R0.ty = f.y; R0.wait = 0.6 + Math.random() * 1.6; }
+      return;
+    }
+    const dx = R0.tx - f.x, dy = R0.ty - f.y, d = Math.hypot(dx, dy);
+    if (d > 1.5) { const sp = f.kind === "grab" ? 11 : 14; f.x += dx / d * sp * dt; f.y += dy / d * sp * dt; f.ang = Math.atan2(dy, dx); f.walk = true; return; }
+    f.walk = false;
+    R0.wait -= dt;
+    if (R0.wait > 0) return;
+    R0.wait = 1 + Math.random() * 2.4;
+    roofInfo(f.roof);
+    // He is near: after him, a roof at a time.
+    const hd = Math.hypot(hx - f.x, hy - f.y);
+    if (hRoof && hd < DRAW_R && f.roof !== hRoof) {
+      let best = null, bd = gap(f.roof, hRoof);
+      for (const r of f.roof.nb) { const g = r === hRoof ? -1 : gap(r, hRoof); if (g < bd - 4 && roam.filter((o) => o.roof === r).length < 3) { bd = g; best = r; } }
+      if (best && best !== hRoof) { hopRoam(f, best, hx, hy); R0.wait = 0.4 + Math.random() * 0.8; return; }
+      R0.tx = clamp(hx, f.roof.x0 + 9, f.roof.x1 - 9); R0.ty = clamp(hy, f.roof.y0 + 9, f.roof.y1 - 9); f.ang = Math.atan2(hy - f.y, hx - f.x); return;
+    }
+    // Otherwise about the roof, or on to a darker one near it, not too far from where they keep.
+    if (Math.random() < 0.62 || !f.roof.nb.length) { const p = spot(f.roof); R0.tx = p.x; R0.ty = p.y; return; }
+    let best = null, bs = -1e9;
+    for (const r of f.roof.nb) {
+      const c = centre(r), far = Math.hypot(c.x - R0.home.x, c.y - R0.home.y);
+      if (far > R0.tether || roam.filter((o) => o.roof === r).length >= 3) continue;
+      const sc = darkness(r) * 2 + Math.random() - far / R0.tether * 0.6;
+      if (sc > bs) { bs = sc; best = r; }
+    }
+    if (best) hopRoam(f, best);
+    else { const p = spot(f.roof); R0.tx = p.x; R0.ty = p.y; }
+  }
+  function hopRoam(f, r, hx, hy) {
+    const to = hx === undefined ? spot(r) : { x: clamp(hx, r.x0 + 9, r.x1 - 9) + (Math.random() - 0.5) * 20, y: clamp(hy, r.y0 + 9, r.y1 - 9) + (Math.random() - 0.5) * 20 };
+    keepOn(to, r, 8);
+    f.roam.hop = { t: 0, dur: 0.7 + gap(f.roof, r) / 300, x0: f.x, y0: f.y, h0: f.roof.h, x1: to.x, y1: to.y, h1: r.h, top: Math.max(f.roof.h, r.h) + 30, to: r };
+    f.alt = f.roof.h; f.roof = null;
+  }
+  // For the flight: are any near enough, where he has got down, for the fight to begin?
+  function roamNear(x, y, roof) {
+    for (const f of roam) {
+      if (f.roam.hop || f.roam.drop || !f.roof) continue;
+      if (f.roof === roof || (Math.hypot(f.x - x, f.y - y) < ROAM_R && gap(f.roof, roof) <= HOP)) return true;
+    }
+    return false;
+  }
+  // How many are left within r of a place (roaming, or in the fight).
+  function roamLeft(x, y, r) {
+    let n = 0;
+    for (const f of roam) if (Math.hypot(f.x - x, f.y - y) < r) n++;
+    if (B) for (const f of B.foes) if (!f.gone && Math.hypot(f.x - x, f.y - y) < r) n++;
+    return n;
+  }
+  // For trying a fight at once: a pack on his roof.
+  function packHere(x, y, roof, kinds) { addPack(roof, kinds.length, { kinds }); for (const f of roam.slice(-kinds.length)) { const a = Math.random() * TAU; f.x = clamp(x + Math.cos(a) * 34, roof.x0 + 9, roof.x1 - 9); f.y = clamp(y + Math.sin(a) * 34, roof.y0 + 9, roof.y1 - 9); f.roam.tx = f.x; f.roam.ty = f.y; } }
+
+  // ---- Drawing them, from the flight ----------------------------------------------------------------------
+  // Each on its roof, drawn with the building (so the taller ones near the edges of the screen lean
+  // over it); those in the air after all the buildings.
+  let roamIdx = new Map();
+  function roamIndex() {
+    roamIdx = new Map();
+    for (const f of roam) if (f.roof && !f.roam.drop) { const l = roamIdx.get(f.roof); if (l) l.push(f); else roamIdx.set(f.roof, [f]); }
+  }
+  function drawRoamOn(b) {
+    const l = roamIdx.get(b); if (!l) return;
+    for (const f of l) { shadow(f.x, f.y, f.roof.h, 0, f.kind === "grab" ? 1.25 : 1); drawFoe(f); }
+  }
+  function drawRoamAir() { for (const f of roam) if (!f.roof || f.roam.drop) { if (f.roof) shadow(f.x, f.y, f.roof.h, f.z, 1); drawFoe(f); } }
+  // Over the dark: the smoulder of each, and a red ripple now and then, to be seen from far off; and
+  // at the edge of the screen, a mark toward the nearest packs out of sight.
+  let roamSeen = 0;
+  function drawRoamGlow(marks) {
+    const cam = api.cam, out = [];
+    roamSeen = 0;
+    for (const f of roam) {
+      const z = zOf(f), X = sx(f.x, z), Y = sy(f.y, z), k = K(z);
+      if (X < -40 || X > W + 40 || Y < -40 || Y > H + 40) { out.push(f); continue; }
+      roamSeen++;
+      const pul = 0.75 + 0.25 * Math.sin(clock * 3 + f.seed);
+      ctx.save(); ctx.globalCompositeOperation = "lighter";
+      glowOval(X, Y, Math.max(12, 34 * k), Math.max(12, 34 * k), "#ff2010", 0.3 * pul);
+      glow(X + Math.cos(f.ang) * 5 * k, Y + Math.sin(f.ang) * 5 * k, Math.max(7, 7 * k + 3), C.ember, 0.8 * pul);
+      const ph = (clock * 0.5 + f.seed) % 1.8;
+      if (ph < 1) { ctx.strokeStyle = hexA("#ff4a2a", 0.65 * (1 - ph)); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, Math.max(4, (6 + ph * 52) * k), 0, TAU); ctx.stroke(); }
+      ctx.restore();
+    }
+    if (!marks) return;
+    out.sort((a, b) => Math.hypot(a.x - cam.x, a.y - cam.y) - Math.hypot(b.x - cam.x, b.y - cam.y));
+    const shown = [];
+    for (const f of out) {
+      const d = Math.hypot(f.x - cam.x, f.y - cam.y);
+      if (d > 1700 || shown.length >= 4 || shown.some((o) => Math.hypot(o.x - f.x, o.y - f.y) < 180)) continue;
+      shown.push(f);
+      const z = zOf(f), X = sx(f.x, z), Y = sy(f.y, z), a = Math.atan2(Y - H / 2, X - W / 2);
+      const ex = clamp(X, 22, W - 22), ey = clamp(Y, 64, H - 30), al = clamp(1 - d / 1700, 0.4, 0.95) * (0.8 + 0.2 * Math.sin(clock * 4));
+      glow(ex, ey, 20, "#ff2a1a", 0.45 * al);
+      ctx.save(); ctx.translate(ex, ey); ctx.rotate(a); ctx.globalAlpha = al;
+      poly([11, 0, -7, -9, -3, 0, -7, 9], "#ff5a3a"); ctx.restore(); ctx.globalAlpha = 1;
+    }
   }
 
   // ---- Slow time --------------------------------------------------------------------------------------
@@ -127,13 +333,13 @@ function RoofFight(api) {
     act("trip", { dur: 0.95 });
     Sound.fx.gasp(); Sound.fx.hit(0.7); B.shake = 5;
     pop(H0, "TRIPPED: THE SAME BLOW TWICE", "#ff8a70");
-    if (!B.taught.trip) { B.taught.trip = true; say("Never the same blow twice on the same one, or you trip over your own feet. Change your blow, or change your demon."); }
+    if (!taught.trip) { taught.trip = true; say("Never the same blow twice on the same one, or you trip over your own feet. Change your blow, or change your demon."); }
     hurtHero(8, true); woe();
   }
   function woe() {
     if (B.world !== "roof" || B.shift || B.over || B.down) return;
     B.woe++; B.woeT = 0.8;
-    if (B.woe === 2 && !B.taught.woe) { B.taught.woe = true; say("Careful, Father! One more fall, and they drag us down into the Depths."); }
+    if (B.woe === 2 && !taught.woe) { taught.woe = true; say("Careful, Father! One more fall, and they drag us down into the Depths."); }
     if (B.woe >= 3) { B.woe = 0; pop(B.hero, "THREE FALLS: DRAGGED DOWN", "#ff5a3a"); Sound.fx.growl(1.2); shiftTo("depths"); }
   }
   function tapDemon(f, fromKey) {
@@ -216,7 +422,7 @@ function RoofFight(api) {
     f.worn = f.worn || 0; while (f.worn < WORN.length && f.hp <= f.max * WORN[f.worn]) f.worn++;
     if (B.slowFor === f) B.slowFor = null;
     dust(f.x, f.y, floorOf(f)); Sound.fx.step(2.2);
-    if (!B.taught.finish && !B.over) { B.taught.finish = true; say(tip("He is down! Tap him before he rises, and finish him.", "He is down! Space toward him before he rises, and finish him.")); }
+    if (!taught.finish && !B.over) { taught.finish = true; say(tip("He is down! Tap him before he rises, and finish him.", "He is down! Space toward him before he rises, and finish him.")); }
   }
   function takedown(f) {
     const H0 = B.hero;
@@ -378,27 +584,43 @@ function RoofFight(api) {
   function fallBack() {
     const H0 = B.hero;
     pop(H0, alive().length ? "THE FLOW BROKE: DOWN AGAIN" : "DOWN AGAIN", "#e9e6df");
-    if (alive().length && !B.taught.fall) { B.taught.fall = true; say("The flow broke, and down we come, with nothing done. Twelve again, and up we go."); }
+    if (alive().length && !taught.fall) { taught.fall = true; say("The flow broke, and down we come, with nothing done. Twelve again, and up we go."); }
     H0.combo = 0; H0.comboT = 0;
     shiftTo("roof");
   }
-  function smiteLands() {
-    const H0 = B.hero, c = B.finishCombo || 0, mult = 1 + Math.min(2, c * 0.08);
+  // The angel comes down on the roof like a hammer: rings of light run out from it over the roofs
+  // round about, halos rise off the place he struck, stones and dust fly. Each demon is struck down
+  // as the first ring reaches it (and one near an edge goes over); one in the air is knocked out of it.
+  function smiteLands(x, y) {
+    const H0 = B.hero, c = B.finishCombo || 0, h = B.roof.h;
     B.finishing = false;
-    let n = 0;
-    for (const f of alive()) {
-      if (dTo(f) > 220) continue;
-      if (["leap", "arrive"].includes(f.act.kind)) { shotDown(f); n++; continue; }
-      landHit(f, 2.5 * mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true }); if (!f.gone && f.roof) floor(f, { long: 1.4 }); n++;
-    }
-    B.parts.push({ kind: "column", x: H0.x, y: H0.y, z: B.roof.h, t: 0, big: true }); B.parts.push({ kind: "ring", x: H0.x, y: H0.y, z: B.roof.h, r: 8, t: 0, big: true });
-    B.shake = 14; B.flash = 0.8; B.flashC = C.holy; hitStop(0.14); slowmo(0.2, 0.7, 1.15);
-    Sound.fx.hit(2.4); Sound.fx.clang();
+    B.quake = { x, y, t: 0, mult: 1 + Math.min(2, c * 0.08), hit: [], n: 0 };
+    for (let i = 0; i < 6; i++) B.parts.push({ kind: "shock", x, y, z: h, r: 4, sp: 480 - i * 66, w: 8 - i * 1.0, t: -i * 0.06, c: i % 2 ? C.holy : "#fff6dc" });
+    for (let i = 0; i < 4; i++) B.parts.push({ kind: "halo", x, y, z: h, t: -i * 0.11, s: 1 - i * 0.12 });
+    for (let i = 0; i < 18; i++) { const a = Math.random() * TAU, sp = 30 + Math.random() * 70; B.parts.push({ kind: "rock", x, y, z: h + 2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 90 + Math.random() * 120, r: Math.random() * TAU, vr: (Math.random() - 0.5) * 16, s: 1 + Math.random() * 1.6, t: 0 }); }
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; B.parts.push({ kind: "dust", x: x + Math.cos(a) * 6, y: y + Math.sin(a) * 6, z: h, vx: Math.cos(a) * 40, vy: Math.sin(a) * 40, r: 8, t: 0 }); }
+    B.parts.push({ kind: "column", x, y, z: h, t: 0, big: true });
+    B.shake = 20; B.flash = 1; B.flashC = C.holy; hitStop(0.2); slowmo(0.15, 0.95, 1.22);
+    Sound.fx.boom(1.2); Sound.fx.clang();
     if (H0.act.kind === "pray") act("idle");
-    pop(H0, c > 1 ? "THE BLESSING · " + c + " IN A ROW" : "THE BLESSING", "#ffffff", true);
+    B.pops = B.pops.filter((p) => !/BLESSING/.test(p.text));
+    pop(H0, c > 1 ? "THE BLESSING · " + c + " IN A ROW" : "THE BLESSING", "#ffffff", true); B.pops[B.pops.length - 1].z += 40;
     H0.combo = 0; H0.comboT = 0;
-    if (n) say("They fell with us. Finish them!");
     shiftTo("roof");
+  }
+  function stepQuake(dt) {
+    const Q = B.quake; Q.t += dt;
+    const r = Q.t * 460;
+    for (const f of alive()) {
+      if (Q.hit.includes(f) || ["fall", "castout"].includes(f.act.kind)) continue;
+      const d = Math.hypot(f.x - Q.x, f.y - Q.y);
+      if (d > r) continue;
+      Q.hit.push(f); Q.n++;
+      if (inAir(f)) { countHit(f); shotDown(f); continue; }
+      landHit(f, 2.5 * Q.mult, 2.2, { angel: true, front: false, breaks: true, noFloor: true, fromX: Q.x, fromY: Q.y });
+      if (!f.gone && f.roof) { floor(f, { long: 1.4 }); const ux = (f.x - Q.x) / (d || 1), uy = (f.y - Q.y) / (d || 1), sp = Math.max(30, 150 - d * 0.5); f.vx = ux * sp; f.vy = uy * sp; f.z = 1; f.vz = Math.max(40, 110 - d * 0.3); }
+    }
+    if (r > 420) { if (Q.n) say("They fell with us. Finish them!"); B.quake = null; }
   }
   // From roof to roof: his angel takes him up and carries him across, beating hard to climb to a
   // higher roof, gliding down to a lower one. `then`: the blow he strikes as he comes down. A leap
@@ -419,7 +641,7 @@ function RoofFight(api) {
     if (!then) moved("hop");
     B.angel.act = { kind: "ferry", t: 0 };
     Sound.fx.whoosh(0.4, 0.7, true); Sound.fx.flap(1.1);
-    if (!B.taught.hop) { B.taught.hop = true; say("A leap never breaks the flow, Father. Roof to roof, after them."); }
+    if (!taught.hop) { taught.hop = true; say("A leap never breaks the flow, Father. Roof to roof, after them."); }
   }
   // Too far for one leap: the roof within reach that brings him closest.
   function hopToward(b) {
@@ -460,7 +682,7 @@ function RoofFight(api) {
     B.angel.act = { kind, t: 0, f, hit: false, x0: B.angel.x, y0: B.angel.y, a0: B.angel.alt };
     Sound.fx.whoosh(0.45, 1, false);
     slowmo(0.35, 0.4, 1.15);
-    if (!B.taught.swoop) { B.taught.swoop = true; say("Stand aside, Father. Let me."); }
+    if (!taught.swoop) { taught.swoop = true; say("Stand aside, Father. Let me."); }
   }
   // One out of his reach: he points, and the angel's light strikes it.
   function beamAt(f, move) {
@@ -471,7 +693,7 @@ function RoofFight(api) {
     act("point", { dur: 0.3 });
     A.act = { kind: "beam", t: 0, f, move, hit: false };
     Sound.fx.tick(3200, 0.8);
-    if (!B.taught.beam) { B.taught.beam = true; say("Out of your reach, I strike them. But it is still your blow, and the same rule holds."); }
+    if (!taught.beam) { taught.beam = true; say("Out of your reach, I strike them. But it is still your blow, and the same rule holds."); }
   }
   // One knocked out of the air on the way down, or between roofs: down to the street.
   function shotDown(f) {
@@ -533,8 +755,20 @@ function RoofFight(api) {
         if (a.t > (a.kind === "sweep" ? 0.95 : 0.7)) { A.act = { kind: "hover", t: 0 }; Sound.fx.flap(1.2); }
       }
     } else if (a.kind === "smite") {
-      if (a.phase === "up") { A.alt += dt * 900; A.x = lerp(A.x, H0.x, Math.min(1, dt * 4)); A.y = lerp(A.y, H0.y, Math.min(1, dt * 4)); if (a.t > 0.55 && !B.shift) { a.phase = "down"; a.t = 0; a.a0 = A.alt; Sound.fx.whoosh(1, 1, false); } }
-      else if (a.phase === "down") { const u = clamp(a.t / 0.3, 0, 1); A.alt = lerp(a.a0, h + 12, u * u); A.x = H0.x + 6; A.y = H0.y; if (u >= 1) { a.phase = "rise"; a.t = 0; smiteLands(); } }
+      if (a.phase === "up") {
+        A.alt += dt * 900; A.x = lerp(A.x, H0.x, Math.min(1, dt * 4)); A.y = lerp(A.y, H0.y, Math.min(1, dt * 4));
+        if (a.t > 0.55 && !B.shift) {
+          // Where it will come down: in the thick of them on his roof, or close before him.
+          const m = alive().filter(mine), to = m.length ? { x: m.reduce((q, f) => q + f.x, 0) / m.length, y: m.reduce((q, f) => q + f.y, 0) / m.length } : { x: H0.x + Math.cos(H0.ang) * 16, y: H0.y + Math.sin(H0.ang) * 16 };
+          keepOn(to, B.roof, 8);
+          a.phase = "down"; a.t = 0; a.a0 = A.alt; a.tx = to.x; a.ty = to.y; Sound.fx.whoosh(1, 1, false);
+        }
+      } else if (a.phase === "down") {
+        // Straight down, faster and faster, and onto the roof like a hammer.
+        const u = clamp(a.t / 0.34, 0, 1);
+        A.alt = lerp(a.a0, h + 4, u * u * u); A.x = a.tx; A.y = a.ty; A.mode = "flap";
+        if (u >= 1) { a.phase = "land"; a.t = 0; smiteLands(a.tx, a.ty); }
+      } else if (a.phase === "land") { A.alt = h + 4; A.mode = "glide"; if (a.t > 0.8) { a.phase = "rise"; a.t = 0; Sound.fx.flap(1.2); } }
       else { toward(hoverX, hoverY, hoverZ, 5); if (a.t > 0.6) A.act = { kind: "hover", t: 0 }; }
     } else if (a.kind === "carry") {
       // He fell: the angel takes him up out of it.
@@ -615,19 +849,22 @@ function RoofFight(api) {
     if (B.banner) { B.banner.t += dtRaw; if (B.banner.t > 3) B.banner = null; }
     B.flash = Math.max(0, B.flash - dtRaw * 2); B.shake = Math.max(0, B.shake - dtRaw * 20);
     camera(dtRaw);
+    B.tH += ((B.world === "heights" ? 1 : 0) - B.tH) * Math.min(1, dtRaw * 2.5);
+    B.tD += ((B.world === "depths" ? 1 : 0) - B.tD) * Math.min(1, dtRaw * 2.5);
     stepParts(dt);
     if (B.shift) { B.shift.t += dtRaw; if (!B.shift.mid && B.shift.t > 0.45) { B.shift.mid = true; arrive(B.shift.to, B.shift.from); } if (B.shift.t > 0.9) B.shift = null; return; }
     stepWorld(dt);
     if (B.over) {
       B.over += dtRaw;
       stepHero(dt); stepAngel(dtRaw);
-      if (B.over > 0.9 && H0.act.kind !== "mount") { act("mount", { dur: 0.45 }); Sound.fx.flap(1); }
-      if (B.over > 1.6 && !B.left) { B.left = true; Sound.muffle(false); const done = B.done, hero = { x: H0.x, y: H0.y, ang: H0.ang, roof: B.roof }; B = null; done(hero); }
+      if (B.over > 0.5 && H0.act.kind !== "mount") { act("mount", { dur: 0.45 }); Sound.fx.flap(1); }
+      if (B.over > 1.1 && !B.left) { B.left = true; Sound.muffle(false); const done = B.done, hero = { x: H0.x, y: H0.y, ang: H0.ang, roof: B.roof }; B = null; done(hero); }
       return;
     }
     B.t += dt; B.waveT += dt;
-    for (const s of B.spawnQ) if (!s.done && B.waveT > s.at) { s.done = true; spawn(s.kind); }
-    B.spawnQ = B.spawnQ.filter((s) => !s.done);
+    // Others roaming near come to join it; any he has left far behind lose him.
+    if (B.world === "roof" && !B.down) claim(JOIN_R);
+    for (const f of B.foes.slice()) if (!f.gone && f.roof && f.act.kind === "idle" && dTo(f) > LEAVE_R) release(f);
     // Hold on the open roof to block; hold on a demon a moment, and the holy water is ready.
     const T = B.touch;
     if (B.two && !B.two.spent && H0.act.kind !== "block" && !busy()) act("block", {});
@@ -656,12 +893,13 @@ function RoofFight(api) {
       for (const r of api.roofs()) { if (r === f.roof || r === B.roof || r.church || gap(f.roof, r) > HOP || B.foes.filter((o) => !o.gone && o.roof === r).length >= 3) continue; const d = gap(r, B.roof); if (d < bd - 4) { bd = d; best = r; } }
       if (best) leapTo(f, best);
     }
+    if (B.quake) stepQuake(dt);
     for (const f of B.foes) stepFoe(f, dt);
     B.foes = B.foes.filter((f) => !f.gone || f.act.t < 0.7);
     attackScheduler(dt);
     if (H0.comboT > 0 && H0.act.kind !== "hop") { H0.comboT -= dt; if (H0.comboT <= 0) H0.combo = 0; }
     Sound.setLevel(B.world === "heights" ? 3 : H0.combo >= 12 ? 3 : H0.combo >= 5 ? 2 : 1);
-    if (B.spawnQ.length === 0 && alive().length === 0 && B.waveT > 1.5 && B.world === "roof" && !B.down) win();
+    if (alive().length === 0 && B.waveT > 0.8 && B.world === "roof" && !B.down && H0.act.kind !== "hop") clear();
     if (B.down) { B.down += dtRaw; if (B.down > 2.6) recover(); }
   }
   // The camera: straight down on his roof, close enough to see the blows, drawn in on the great
@@ -687,24 +925,23 @@ function RoofFight(api) {
     // The flight's angel stands for this one, so the city is drawn round it.
     const P = api.P; P.x = B.angel.x; P.y = B.angel.y; P.alt = B.angel.alt; P.head = B.angel.head;
   }
-  function win() {
-    const H0 = B.hero;
+  // None left near him: back on his angel's back, and the flight goes on. No more than that.
+  function clear() {
     B.over = 0.001;
-    if (!B.hurtWave) { B.banner = { text: "PERFECT FREEFLOW", sub: "Not a blow on you.", c: C.holy, t: 0, small: true }; Sound.fx.chord(4, 1); }
-    slowmo(0.12, 0.8, 1.2);
+    if (!B.hurtWave && B.cast >= 3) { B.banner = { text: "PERFECT FREEFLOW", sub: "Not a blow on you.", c: C.holy, t: 0, small: true }; Sound.fx.chord(4, 1); }
+    slowmo(0.2, 0.5, 1.12);
     B.angel.act = { kind: "land", t: 0 };
-    say(B.enc.after || "Up, Father. On.");
+    if (!taught.cleared) { taught.cleared = true; say("Up, Father. They roam the whole city, thickest where the lights are out. Go to them when you will."); }
     Sound.queue(SONGS.noir); Sound.setLevel(1);
-    void H0;
   }
   function recover() {
-    // The angel took him up out of it; the fight begins again.
+    // The angel took him up out of it, and sets him down again; its light knocks them off their feet.
     B.down = 0;
     const H0 = B.hero, b = B.roof;
-    H0.resolve = 100; H0.combo = 0; H0.spirit = Math.max(H0.spirit, 2); act("idle"); H0.x = (b.x0 + b.x1) / 2; H0.y = (b.y0 + b.y1) / 2; H0.z = 0; H0.inv = 1.5;
-    B.angel.act = { kind: "hover", t: 0 }; B.world = "roof"; B.whispers = []; B.rosary = null;
-    for (const f of B.foes) f.gone = true;
-    B.foes = []; B.slowFor = null; B.waveT = 0; B.spawnQ = B.enc.foes.map(([kind, at]) => ({ kind, at }));
+    H0.resolve = 100; H0.combo = 0; H0.spirit = Math.max(H0.spirit, 2); act("idle"); H0.x = (b.x0 + b.x1) / 2; H0.y = (b.y0 + b.y1) / 2; H0.z = 0; H0.inv = 2;
+    B.angel.act = { kind: "hover", t: 0 }; B.world = "roof"; B.whispers = []; B.rosary = null; B.slowFor = null; B.nextAtk = 2.5;
+    for (const f of alive()) if (mine(f)) { f.sign = null; floor(f, { long: 1.2 }); }
+    B.flash = 0.6; B.flashC = C.holy;
     say("Rested a moment. Again, Father: they are not so strong as they look.");
   }
   function stepHero(dt) {
@@ -889,8 +1126,8 @@ function RoofFight(api) {
     const f = cands[Math.floor(Math.random() * cands.length)], grab = f.kind === "grab";
     windUp(f, grab);
     B.nextAtk = lerp(B.enc.gap[0], B.enc.gap[1], Math.random()) * (B.world === "depths" ? 0.75 : 1);
-    if (!grab && !B.taught.gold) { B.taught.gold = true; B.slowFor = f; say(tip("A gold sign: tap him now, to counter!", "A gold sign: press X now, to counter!")); f.act.dur = 1.0; }
-    if (grab && !B.taught.red) { B.taught.red = true; B.slowFor = f; say(tip("A red sign cannot be countered. Two fingers down, or hold on the open roof: block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
+    if (!grab && !taught.gold) { taught.gold = true; B.slowFor = f; say(tip("A gold sign: tap him now, to counter!", "A gold sign: press X now, to counter!")); f.act.dur = 1.0; }
+    if (grab && !taught.red) { taught.red = true; B.slowFor = f; say(tip("A red sign cannot be countered. Two fingers down, or hold on the open roof: block it!", "A red sign cannot be countered. Hold Q, to block it!")); f.act.dur = 1.1; }
   }
   // Theirs: across a gap, onto his roof (by him), or onto a roof nearer his (at its edge, facing him).
   function leapTo(f, r) {
@@ -906,8 +1143,8 @@ function RoofFight(api) {
     f.alt = zOf(f); f.roof = null; f.z = 0; f.sign = null; f.vz = 30;
     f.act = { kind: "fall", t: 0 };
     if (B.slowFor === f) B.slowFor = null;
-    pop(f, "OFF THE ROOF", "#ffffff", true); Sound.fx.yelp();
-    if (!B.taught.edge) { B.taught.edge = true; say("Off the roof! Knock them over the edge, or throw them, and they are gone."); }
+    pop(f, "OFF THE ROOF", "#ffffff", !B.quake); Sound.fx.yelp();
+    if (!taught.edge) { taught.edge = true; say("Off the roof! Knock them over the edge, or throw them, and they are gone."); }
   }
   function stepFoe(f, dt) {
     const H0 = B.hero, a = f.act; a.t += dt; f.ph += dt;
@@ -1035,7 +1272,7 @@ function RoofFight(api) {
     setTimeout(() => { Sound.fx.puff(); }, fell ? 0 : 380);
     pop(f, fell ? "GONE" : "CAST OUT", "#ffffff");
     if (B.slowFor === f) B.slowFor = null;
-    if (!alive().length && B.spawnQ.length === 0) slowmo(0.12, 1.1, 1.25);
+    if (!alive().length) slowmo(0.12, 1.1, 1.25);
   }
   function stepRosary(dt) {
     const Q = B.rosary; if (!Q) return;
@@ -1170,7 +1407,7 @@ function RoofFight(api) {
   function sparks(f, c, n) { const z = f === B.hero ? heroZ() : zOf(f); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = 40 + Math.random() * 70; B.parts.push({ kind: "spark", x: f.x, y: f.y, z: z + 10, vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: 20 + Math.random() * 50, c, t: 0 }); } }
   function shards(f) { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU; B.parts.push({ kind: "shard", x: f.x, y: f.y, z: zOf(f) + 10, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, vz: 40 + Math.random() * 60, r: Math.random() * TAU, t: 0 }); } }
   function dust(x, y, z) { for (let i = 0; i < 8; i++) { const a = Math.random() * TAU; B.parts.push({ kind: "smoke", x, y, z, vx: Math.cos(a) * 30, vy: Math.sin(a) * 30, vz: 0, t: 0 }); } }
-  const LIFE = { shieldfly: 2, hat: 2, ring: 0.7, smoke: 0.8, flask: 0.7, mark: 0.4, beam: 0.35, column: 1, warn: 0.5, drop: 0.6 };
+  const LIFE = { shock: 0.9, halo: 1.2, rock: 1.6, dust: 1.4, shieldfly: 2, hat: 2, ring: 0.7, smoke: 0.8, flask: 0.7, mark: 0.4, beam: 0.35, column: 1, warn: 0.5, drop: 0.6 };
   function stepParts(dt) {
     for (const p of B.parts) {
       p.t += dt;
@@ -1181,6 +1418,9 @@ function RoofFight(api) {
         if (p.z < 0) p.z = 0;
       } else if (p.kind === "smoke") { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - 3 * dt; p.vy *= 1 - 3 * dt; }
       else if (p.kind === "ring") p.r += dt * (p.big ? 260 : 120);
+      else if (p.kind === "shock") { if (p.t > 0) p.r += dt * p.sp; }
+      else if (p.kind === "rock") { p.x += p.vx * dt; p.y += p.vy * dt; p.vz -= 320 * dt; p.z += p.vz * dt; p.r += p.vr * dt; const g = api.groundAt(p.x, p.y); if (p.z < g && p.vz < 0) { if (p.z > g - 6) { p.z = g; p.vz = -p.vz * 0.3; p.vx *= 0.5; p.vy *= 0.5; } } if (p.z < 0) { p.z = 0; p.vz = 0; p.vx = 0; p.vy = 0; } }
+      else if (p.kind === "dust") { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - 1.5 * dt; p.vy *= 1 - 1.5 * dt; p.r += dt * 26; }
       else if (p.kind === "flask" && p.t >= p.dur && !p.done) {
         p.done = true;
         for (let i = 0; i < 10; i++) { const a = Math.random() * TAU; B.parts.push({ kind: "drop", x: p.x1, y: p.y1, z: p.z1, vx: Math.cos(a) * 50, vy: Math.sin(a) * 50, vz: 40 + Math.random() * 40, t: 0 }); }
@@ -1213,17 +1453,27 @@ function RoofFight(api) {
     // Shadows first, on whatever is under each.
     for (const f of B.foes) if (!f.gone && f.act.kind !== "fall") shadow(f.x, f.y, floorOf(f), zOf(f) - floorOf(f), f.kind === "grab" ? 1.25 : 1);
     shadow(H0.x, H0.y, h, H0.z, 1);
+    for (const p of B.parts) {
+      const a = Math.max(0, 1 - p.t / LIFE[p.kind]);
+      if (p.kind === "shock" && p.t > 0) {
+        const X = sx(p.x, p.z), Y = sy(p.y, p.z), R = p.r * K(p.z);
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ctx.strokeStyle = hexA(p.c || "#fff6dc", a * 0.9); ctx.lineWidth = Math.max(0.5, p.w * a); ctx.beginPath(); ctx.arc(X, Y, R, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = hexA(C.holy, a * 0.3); ctx.lineWidth = p.w * 3 * a; ctx.stroke();
+        ctx.restore();
+      }
+    }
     for (const e of ents) e.draw();
     drawRosary();
     drawParts();
-    if (B.world === "heights") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,226,160,0.08)"; ctx.fillRect(0, 0, W, H); ctx.restore(); }
     void t;
   }
   function shadow(x, y, z, up, s) { s *= FIG; const k = K(z), X = sx(x + up * 0.1, z), Y = sy(y + up * 0.14, z); ctx.globalAlpha = clamp(0.4 - up / 200, 0.12, 0.4); ctx.fillStyle = "#000"; ctx.beginPath(); ctx.ellipse(X, Y, 9 * k * s, 7 * k * s, 0, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
   function drawAngelHere() {
     const A = B.angel;
     if (A.act.kind === "smite" && A.alt > api.cam.z - 40) return;
-    api.drawAngel({ x: A.x, y: A.y, alt: A.alt, head: A.head, mode: A.mode, wing: A.wing, rider: (B.over > 1.25) || (A.act.kind === "carry" && A.act.t > 0.4) || A.act.kind === "ferry" });
+    if (A.act.kind === "smite" && A.act.phase === "land") { const gh = B.roof.h, k = K(gh); glow(sx(A.x, gh), sy(A.y, gh), 60 * k, C.holy, 0.6 * (1 - A.act.t / 1.2)); }
+    api.drawAngel({ x: A.x, y: A.y, alt: A.alt, head: A.head, mode: A.mode, wing: A.wing, rider: (B.over > 0.85) || (A.act.kind === "carry" && A.act.t > 0.4) || A.act.kind === "ferry" });
   }
   // How he looks this moment: how far each arm reaches, a kick, a spin, a stretch, flat out.
   function heroLook() {
@@ -1269,7 +1519,7 @@ function RoofFight(api) {
   }
   function drawHero() {
     const H0 = B.hero, h = B.roof.h, z = heroZ(), k = K(z), X = sx(H0.x, z), Y = sy(H0.y, z), L = heroLook();
-    if ((H0.act.kind === "mount" && B.over > 1.25) || H0.act.kind === "hop") return;
+    if ((H0.act.kind === "mount" && B.over > 0.85) || H0.act.kind === "hop") return;
     // His ring of light on the roof.
     const gk = K(h), GX = sx(H0.x, h), GY = sy(H0.y, h);
     glow(GX, GY, 26 * gk, C.holy, 0.22);
@@ -1314,7 +1564,7 @@ function RoofFight(api) {
   // A demon from above: a ragged coat of darkness edged in red, a crooked hat, two embers for eyes,
   // the claws. The big ones are bigger; one with a shield holds a slab of dark before it.
   function drawFoe(f) {
-    const z = zOf(f), k = K(z), X = sx(f.x, z), Y = sy(f.y, z), s = (f.kind === "grab" ? 1.25 : 1) * FIG, a = f.act, t = B.t + f.seed, ink = "#050308";
+    const z = zOf(f), k = K(z), X = sx(f.x, z), Y = sy(f.y, z), s = (f.kind === "grab" ? 1.25 : 1) * FIG, a = f.act, t = clock + f.seed, ink = "#050308";
     if (f.act.kind === "castout") {
       const u = a.t / 0.7;
       if (u > 0.4) { if (!f.puffed) { f.puffed = true; B.parts.push({ kind: "ring", x: f.x, y: f.y, z, r: 4, t: 0.2 }); for (let i = 0; i < 8; i++) { const an = Math.random() * TAU; B.parts.push({ kind: "spark", x: f.x, y: f.y, z: z + 8, vx: Math.cos(an) * 50, vy: Math.sin(an) * 50, vz: 60, c: C.holy, t: 0 }); } } return; }
@@ -1350,14 +1600,14 @@ function RoofFight(api) {
     if (a.kind === "castout") return;
     // One that is down: a gold mark, and a ring that runs out as it gets ready to rise.
     if (lying(f) && !a.pinned) {
-      const u = clamp(a.t / a.dur, 0, 1), pul = 0.75 + 0.25 * Math.sin(B.t * 9), my = Y - 20;
+      const u = clamp(a.t / a.dur, 0, 1), pul = 0.75 + 0.25 * Math.sin(clock * 9), my = Y - 20;
       glow(X, my, 16, C.holy, 0.4 * pul);
       ctx.strokeStyle = hexA(u > 0.7 ? "#ff8a70" : C.holy, 0.85); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, my, 10, -PI / 2, -PI / 2 + TAU * (1 - u)); ctx.stroke();
       poly([X - 5, my - 3, X + 5, my - 3, X, my + 4], "#fff3cf");
       if (B.cast < 3) text(tip("TAP · FINISH", "SPACE · FINISH"), X, my - 15, { align: "center", size: 7.5, weight: 800, spacing: 2, color: C.holy, alpha: pul });
     }
     if (f.sign) {
-      const hx = X, hy = Y - 24 * Math.max(1, k * 0.6), pul = 1 + 0.15 * Math.sin(B.t * 18), col = f.sign === "gold" ? C.holy : "#ff3040";
+      const hx = X, hy = Y - 24 * Math.max(1, k * 0.6), pul = 1 + 0.15 * Math.sin(clock * 18), col = f.sign === "gold" ? C.holy : "#ff3040";
       glow(hx, hy, 22 * pul, col, 0.7);
       ctx.save(); ctx.translate(hx, hy); ctx.scale(pul, pul);
       if (f.sign === "gold") { rect(-2, -9, 4, 18, "#fff3cf"); rect(-7, -4, 14, 4, "#fff3cf"); }
@@ -1365,7 +1615,7 @@ function RoofFight(api) {
       ctx.restore();
       const kk = clamp(a.t / a.dur, 0, 1); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy, 15, -PI / 2, -PI / 2 + TAU * (1 - kk)); ctx.stroke();
     }
-    if (f.dizzy > 0) for (let i = 0; i < 3; i++) { const an = B.t * 5 + i * TAU / 3; star(X + Math.cos(an) * 11, Y - 12 + Math.sin(an) * 4, 3.4, "#ffe08a"); }
+    if (f.dizzy > 0) for (let i = 0; i < 3; i++) { const an = clock * 5 + i * TAU / 3; star(X + Math.cos(an) * 11, Y - 12 + Math.sin(an) * 4, 3.4, "#ffe08a"); }
     if (f.hp < f.max) { const bw = 22; rect(X - bw / 2, Y + 13 * k, bw, 2.2, "rgba(255,255,255,0.12)"); rect(X - bw / 2, Y + 13 * k, bw * Math.max(0, f.hp) / f.max, 2.2, f.rim); }
   }
   function star(x, y, r, c) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = i * PI / 5 - PI / 2, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fillStyle = c; ctx.fill(); }
@@ -1399,10 +1649,20 @@ function RoofFight(api) {
       else if (p.kind === "drop") circle(sx(p.x, p.z), sy(p.y, p.z), 1.8, "rgba(196,240,255," + a + ")");
       else if (p.kind === "shard") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); poly([-4, -2, 5, 0, -2, 3], "#050308"); ctx.restore(); }
       else if (p.kind === "smoke") { ctx.globalAlpha = a * 0.6; circle(sx(p.x, p.z), sy(p.y, p.z), (6 + (1 - a) * 12) * k * 0.6, "#030205"); ctx.globalAlpha = 1; }
+      else if (p.kind === "rock") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); ctx.scale(k, k); poly([-p.s, -p.s * 0.6, p.s * 0.8, -p.s * 0.8, p.s, p.s * 0.5, -p.s * 0.4, p.s * 0.8], "#2a2430"); ctx.restore(); }
+      else if (p.kind === "dust") { const X = sx(p.x, p.z), Y = sy(p.y, p.z), R = p.r * k, g = ctx.createRadialGradient(X, Y, 0, X, Y, R); g.addColorStop(0, "rgba(190,180,170," + 0.32 * a + ")"); g.addColorStop(1, "rgba(190,180,170,0)"); ctx.fillStyle = g; ctx.fillRect(X - R, Y - R, R * 2, R * 2); }
       else if (p.kind === "ring") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a)); ctx.lineWidth = p.big ? 5 : 3; ctx.beginPath(); ctx.arc(sx(p.x, p.z), sy(p.y, p.z), p.r * k, 0, TAU); ctx.stroke(); }
       else if (p.kind === "hat") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); ctx.scale(k, k); ctx.fillStyle = "#0e0a12"; ctx.beginPath(); ctx.ellipse(0, 0, 6, 4.6, 0, 0, TAU); ctx.fill(); ctx.restore(); }
       else if (p.kind === "shieldfly") { ctx.save(); ctx.translate(sx(p.x, p.z), sy(p.y, p.z)); ctx.rotate(p.r); ctx.scale(k, k); poly([-2, -9, 2, -8, 2, 8, -2, 9], "#050308"); ctx.restore(); glow(sx(p.x, p.z), sy(p.y, p.z), 14, C.ember, 0.3 * a); }
       else if (p.kind === "flask") { const u = clamp(p.t / p.dur, 0, 1), x = lerp(p.x0, p.x1, u), y = lerp(p.y0, p.y1, u), z = lerp(p.z0, p.z1, u) + Math.sin(u * PI) * (24 + Math.hypot(p.x1 - p.x0, p.y1 - p.y0) * 0.18), X = sx(x, z), Y = sy(y, z); ctx.save(); ctx.translate(X, Y); ctx.rotate(u * 12); rect(-2, -4, 4, 7, "#bfe8ff"); ctx.restore(); glow(X, Y, 10, C.ice, 0.6); }
+      else if (p.kind === "halo" && p.t > 0) {
+        // A ring of light rising off the place he struck, up toward us, widening and fading.
+        const u = p.t / LIFE.halo, e = 1 - (1 - u) * (1 - u), z = p.z + 4 + e * 70 * p.s, R = (12 + e * 46) * p.s * K(z);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.beginPath(); ctx.arc(sx(p.x, z), sy(p.y, z), R, 0, TAU);
+        ctx.strokeStyle = hexA(C.holy, 0.4 * (1 - u)); ctx.lineWidth = 10 * (1 - u) + 2; ctx.stroke();
+        ctx.strokeStyle = hexA("#ffffff", 0.9 * (1 - u)); ctx.lineWidth = 2.6 * (1 - u) + 0.6; ctx.stroke();
+        ctx.restore();
+      }
       else if (p.kind === "mark") { ctx.strokeStyle = hexA(C.holy, Math.max(0, a) * 0.8); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(sx(p.x, p.z), sy(p.y, p.z), (4 + p.t * 30) * k, 0, TAU); ctx.stroke(); }
       else if (p.kind === "warn") { const f = p.f; if (!f.gone) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = hexA(p.c, Math.max(0, a)); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx(f.x, zOf(f)), sy(f.y, zOf(f)) - 24, 12 + p.t * 110, 0, TAU); ctx.stroke(); ctx.restore(); } }
       else if (p.kind === "beam") {
@@ -1428,10 +1688,40 @@ function RoofFight(api) {
   }
 
   // ---- The HUD ----------------------------------------------------------------------------------------
+  // The whole city in the colour of where they are. In the Heights: lighter, warm, as if in sunlit
+  // cloud, with cloud drifting by. In the Depths: red, the dark gone to embers, and embers rising.
+  function drawTint() {
+    if (!B) return;
+    const h = B.tH, d = B.tD;
+    if (h > 0.01) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen"; ctx.fillStyle = "rgba(255,234,190," + (0.46 * h) + ")"; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "source-over";
+      for (let i = 0; i < 7; i++) {
+        const u = (clock * 0.018 * (1 + i * 0.13) + i * 0.37) % 1, x = (u * 1.4 - 0.2) * W, y = H * ((i * 0.29) % 1), r = W * (0.16 + 0.05 * (i % 3));
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, "rgba(255,252,242," + (0.34 * h) + ")"); g.addColorStop(1, "rgba(255,252,242,0)");
+        ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.95); vg.addColorStop(0, "rgba(255,248,230,0)"); vg.addColorStop(1, "rgba(255,248,230," + (0.5 * h) + ")");
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+    if (d > 0.01) {
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply"; ctx.fillStyle = "rgba(255,52,34," + (0.88 * d) + ")"; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "screen"; ctx.fillStyle = "rgba(96,4,0," + (0.3 * d) + ")"; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "source-over";
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.9); vg.addColorStop(0, "rgba(30,0,4," + (0.2 * d) + ")"); vg.addColorStop(1, "rgba(16,0,2," + (0.82 * d) + ")"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 0; i < 26; i++) { const u = (clock * (0.07 + (i % 5) * 0.02) + i * 0.137) % 1, x = W * ((i * 0.618) % 1) + Math.sin(clock + i) * 14, y = H * (1.05 - u * 1.1); glow(x, y, 4 + (i % 3) * 2, "#ff5a1a", 0.5 * d * Math.sin(u * PI)); }
+      ctx.restore();
+    }
+  }
   function drawHUD() {
     const H0 = B.hero;
+    // In the light of the Heights, a shade behind his marks, so they still read.
+    if (B.tH > 0.05) { const g = ctx.createLinearGradient(0, 0, 300, 0); g.addColorStop(0, "rgba(28,20,8," + 0.5 * B.tH + ")"); g.addColorStop(1, "rgba(28,20,8,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, 300, 76); }
     if (B.world === "depths" && !B.shift) {
-      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.9); vg.addColorStop(0, "rgba(30,0,4,0.25)"); vg.addColorStop(1, "rgba(20,0,4,0.8)"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
       for (const w of B.whispers) { const a = Math.min(1, w.t / 0.6) * Math.min(1, (3.4 - w.t) / 0.8); text(w.text, w.x, w.y, { align: "center", font: FONT.line, italic: true, size: 17, weight: 500, color: "#c87a7a", alpha: a * 0.55 }); }
     }
     if (B.slowVis > 0.02) { const a = B.slowVis; ctx.fillStyle = "rgba(6,12,30," + (0.3 * a) + ")"; ctx.fillRect(0, 0, W, H); }
@@ -1444,7 +1734,7 @@ function RoofFight(api) {
     const every = R().swoop, ready = B.angel.act.kind === "hover", slots = Math.max(1, (every || 4) - 1), toGo = angelUntil(), fill = every ? slots - toGo : 0;
     for (let i = 0; i < slots; i++) { const x = 20 + i * 14, y = 46, on = i < fill; ctx.save(); ctx.translate(x, y); ctx.rotate(-0.6); ctx.beginPath(); ctx.ellipse(0, 0, 5.5, 2, 0, 0, TAU); ctx.fillStyle = on ? "#fff6dc" : every ? "rgba(255,255,255,0.14)" : "rgba(255,90,58,0.2)"; ctx.fill(); ctx.restore(); if (on) glow(x, y, 8, C.holy, 0.35 + (toGo === 0 ? 0.3 * Math.sin(B.t * 8) : 0)); }
     text(!every ? "HIS ANGEL IS FAR" : !ready ? "HIS ANGEL IS HERE" : toGo === 0 ? "NEXT BLOW: HIS ANGEL" : "HIS ANGEL", 22 + slots * 14, 49, { size: 7, weight: 700, spacing: 2, color: !every ? "#ff8a70" : !ready || toGo === 0 ? C.holy : "rgba(242,212,122,0.6)" });
-    const left = alive().length + B.spawnQ.length;
+    const left = alive().length;
     text("ON THE ROOFS: " + left, 16, 66, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
     if (H0.combo >= 2) {
       const k = clamp(H0.comboT / R().comboT, 0, 1);
@@ -1493,5 +1783,8 @@ function RoofFight(api) {
     if (B.down) rect(0, 0, W, H, "rgba(0,0,0," + clamp((B.down - 1.2) / 0.8, 0, 1) * (B.down > 2.2 ? (2.6 - B.down) / 0.4 : 1) + ")");
   }
 
-  return { start, step, drawWorld, drawHUD, down, move, up, key, active: () => !!B, get B() { return B; } };
+  return {
+    start, step, drawWorld, drawHUD, drawTint, down, move, up, key, active: () => !!B, get B() { return B; },
+    roamReset, roamStep, roamNear, roamLeft, roamIndex, drawRoamOn, drawRoamAir, drawRoamGlow, packHere, get roam() { return roam; }, get roamSeen() { return roamSeen; },
+  };
 }
