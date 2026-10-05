@@ -60,7 +60,7 @@ const Title = {
   step(dt) { Title.t += dt; },
   draw() {
     const t = Title.t;
-    rooftopShot(t, { w: W, h: H }, { x: 0.72 });
+    rooftopShot(t, { w: W, h: H }, { x: 0.66 });
     const g = ctx.createLinearGradient(0, 0, W * 0.6, 0); g.addColorStop(0, "rgba(3,3,8,0.85)"); g.addColorStop(1, "rgba(3,3,8,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W * 0.6, H);
     const x = Math.max(36, W * 0.07);
     text("FEAR NOT", x, 92, { font: FONT.title, size: 50, weight: 700, spacing: 9, color: "#ffffff", glow: "rgba(232,196,106,0.7)", blur: 24 });
