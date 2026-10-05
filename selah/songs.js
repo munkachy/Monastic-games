@@ -18,7 +18,7 @@
 // compiler keeps each rank to its rules and to what two thumbs can reach (hands.js).
 //
 // The words ride the strokes (compiler.js). In the verse sections, each line of the psalm takes two
-// bars; in the instrumental ones, the words are the psalm's Latin. The band builds with the combo
+// bars; the instrumental ones carry no words. The band builds with the combo
 // (`L`, 0–3) in everything but the drums, which always play in full.
 
 const on = (pat, s) => pat[s] === "x" || pat[s] === "X";
@@ -222,12 +222,11 @@ const P1 = {
 const TONE1 = [[0, 77], [2, 79], [4, 81], [8, 81], [10, 82], [11, 81], [12, 79], [14, 81]];
 SONGS.ps1 = band({
   title: "Two Ways", genre: "Progressive house", meters: "4/4 · 7/8", bpm: 124, swing: 0.06, duck: 0.45,
-  latin: "Beatus vir qui non abiit in consilio impiorum",
   kit: KITS.house, selahChord: [62, 65, 69, 72],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["outro"]],
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) {
         const base = B.i < 2 ? { kick: "0...1...0...1...", hat: "..2...2...2...2." } : { kick: "0...1...0...1...", clap: "....0.......0...", hat: "..2...2...2...2.", ohat: dots(16) };
         return groove(B, base);
@@ -269,7 +268,7 @@ SONGS.ps1 = band({
     },
     // The first drop: breakbeat house.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.....1.0.2.....", snare: "....0..3....0..3", hat: "2323232323232323" }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P1.Dm, P1.Bb, P1.C, P1.Am9][B.i % 4];
@@ -327,7 +326,7 @@ SONGS.ps1 = band({
     },
     // The last drop: everything, and the supersaw sings the tone; its last two bars limp in seven.
     drop2: {
-      bars: 8, latin: true, len: (i) => (i >= 6 ? 14 : 16),
+      bars: 8, len: (i) => (i >= 6 ? 14 : 16),
       drums(B) { return B.len === 14 ? groove(B, { kick: "0.....1.0.1...", snare: "....0..3....0.", hat: "23232323232323" }) : groove(B, { kick: "0...1.1.0.2.1...", snare: "....0..3....0..3", hat: "2323232323232323" }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P1.Dm, P1.Bb, P1.C, P1.Am9, P1.Dm, P1.Bb, P1.A7, P1.A7][B.i];
@@ -364,7 +363,6 @@ const P3 = {
 const W8 = 140 / 60 * 2, W16 = 140 / 60 * 4, W8T = 140 / 60 * 3, W4T = 140 / 60 * 1.5;
 SONGS.ps3 = band({
   title: "Shield", genre: "Dub into dubstep", meters: "4/4 · 6/8", bpm: 140, duck: 0.4, delay: (60 / 140) * 0.75,
-  latin: "Domine, quid multiplicati sunt qui tribulant me?",
   kit: KITS.dub, selahChord: [60, 63, 67, 70],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["outro"]],
   chord(B, i) {
@@ -374,7 +372,7 @@ SONGS.ps3 = band({
   },
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) { return groove(B, B.i < 2 ? { kick: "0" + dots(15), rim: "........1......." } : { kick: "0.........1.....", rim: "........1.......", hat: "..2...2...2...2." }); },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = [P3.Cm11, P3.Cm11, P3.Ab9, P3.G7s][B.i];
@@ -411,7 +409,7 @@ SONGS.ps3 = band({
     },
     // The first drop: dubstep. The wobble moves in eighths, sixteenths, triplets.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.....1...2.....", snare: "........0......3", hat: "2.3.2.3.2.3.2.3." }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root] = [P3.Cm11, P3.Cm11, P3.Ab9, P3.G7s, P3.Cm11, P3.Bb, P3.Ab9, P3.G7][B.i];
@@ -464,7 +462,7 @@ SONGS.ps3 = band({
     },
     // The last drop: wobble in triplets, a lead, and in its last two bars the drums double their time.
     drop2: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) {
         return B.i >= 6 ? groove(B, { kick: "0.1.......0.1...", snare: "....0..3....0..3", hat: "2323232323232323" })
           : groove(B, { kick: "0.....1...2...1.", snare: "........0..3...3", hat: "2.3.2.3.2.3.2.3." });
@@ -505,7 +503,6 @@ const P150 = {
 };
 SONGS.ps150 = band({
   title: "Every Spirit", genre: "Gospel house into breakbeat", meters: "4/4 · 5/4", bpm: 128, swing: 0.05, duck: 0.5,
-  latin: "Laudate Dominum in sanctis ejus. Alleluia.",
   kit: KITS.break, selahChord: [60, 63, 68, 72],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["outro"]],
   // Is this instrument in the band yet? (Everything is, from "every spirit", and in the last drop.)
@@ -521,7 +518,7 @@ SONGS.ps150 = band({
   },
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) { return groove(B, B.i < 2 ? { kick: "0...1...0...1...", clap: "....0.......0..." } : { kick: "0...1...0...1...", clap: "....0.......0...", ohat: "..2...2...2...2." }); },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = [P150.Db9, P150.Eb9s, P150.Cm9, P150.Fm9][B.i];
@@ -558,7 +555,7 @@ SONGS.ps150 = band({
     },
     // The jungle break: an Amen-like groove, ghost strokes and all, with horns.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.1.......21....", snare: "....0..3.2..0..3", ride: "2.2.2.2.2.2.2.2." }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P150.Db9, P150.Eb9s, P150.Cm9, P150.Fm9][B.i % 4];
@@ -612,7 +609,7 @@ SONGS.ps150 = band({
     },
     // Every spirit: the break again, with everything, and tom runs.
     drop2: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.1.......21....", snare: "....0..3.2..0..3", ride: "2323232323232323", tom1: B.i % 2 ? "........3......." : dots(16) }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = [P150.Db9, P150.Eb9s, P150.Cm9, P150.Fm9][B.i % 4];
@@ -665,7 +662,6 @@ const FILL18 = [
 const REESE = [[0, 0, 4], [4, 12, 1], [6, 0, 2], [8, 12, 1], [10, 1, 3], [13, 0, 1], [14, 12, 2]];
 SONGS.ps2 = band({
   title: "Rod of Iron", genre: "Drum and bass", meters: "4/4 · 9/8", bpm: 172, duck: 0.45,
-  latin: "Quare fremuerunt gentes, et populi meditati sunt inania?",
   kit: KITS.dnb, selahChord: [52, 55, 59, 64],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["D", 4], ["outro"]],
   lectio: [
@@ -675,7 +671,7 @@ SONGS.ps2 = band({
   ],
   sec: {
     intro: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) {
         if (B.i < 4) return { kick: at(16, { 0: "0" }), tom3: at(16, { 8: "0" }) };
         return groove(B, { kick: "0.........1.....", snare: "....0.......0...", tom3: at(16, { 8: "0" }), hat: eighths(16, "2") });
@@ -715,7 +711,7 @@ SONGS.ps2 = band({
     },
     // The first drop: drum and bass at full speed.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.........0.1...", snare: "....0..3....0..3", hat: "2323232323232323" }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P2[RAGE[B.i % 4]];
@@ -778,7 +774,7 @@ SONGS.ps2 = band({
     },
     // The rod of iron: the last drop, with the ride, a lead, and the choir.
     drop2: {
-      bars: 8, latin: "Reges eos in virga ferrea, et tamquam vas figuli confringes eos.",
+      bars: 8,
       drums(B) { return groove(B, { kick: "0.........0.1...", snare: "....0..3....0..3", ride: eighths(16, "2"), hat: eighths(16, ".", "3") }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P2[["Em", "F", "Em", "B7", "Em", "F", "C", "B7"][B.i]];
@@ -831,7 +827,7 @@ SONGS.ps2 = band({
 // keeps) is said twice, and bells glitter over it. Then "I will sleep, and I will rest", said three
 // times, and each time the band falls further asleep, until there is only a music box and a breath of
 // a kick; "For thou, O Lord, singularly hast settled me in hope" wakes it gently. The song does not
-// drop again: it ends asleep, the Latin of the sleeping verse carried on the rim.
+// drop again: it ends asleep, a rim ticking under the music box.
 const P4 = {
   F: [41, [57, 60, 64, 67]], Dm: [38, [53, 57, 60, 64]], Gm: [43, [53, 57, 58, 62]], C: [36, [53, 55, 58, 62]],
   Bb: [46, [53, 57, 60, 62]], Am: [45, [55, 60, 64, 67]],
@@ -839,7 +835,6 @@ const P4 = {
 const EVE = ["F", "Dm", "Gm", "C"];
 SONGS.ps4 = band({
   title: "In Peace", genre: "Late-night deep house", meters: "4/4 · 6/8", bpm: 112, swing: 0.12, duck: 0.35,
-  latin: "Cum invocarem exaudivit me Deus justitiae meae.",
   kit: KITS.lofi, selahChord: [53, 57, 60, 64],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["outro"]],
   lectio: [
@@ -848,7 +843,7 @@ SONGS.ps4 = band({
   ],
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) { return B.i < 2 ? { kick: at(16, { 0: "0", 8: "1" }), rim: at(16, { 12: "0" }) } : groove(B, { kick: "0...1...0...1...", rim: at(16, { 4: "0", 12: "0" }), hat: "..2...2...2...2." }); },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = P4[EVE[B.i % 4]];
@@ -885,7 +880,7 @@ SONGS.ps4 = band({
     },
     // A warm drop, not a loud one: a voice singing "ah" over the piano.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", snare: at(16, { 7: "3", 14: "2" }), hat: "2323232323232323", ohat: "..2...2...2...2." }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P4[["F", "Dm", "Bb", "C"][B.i % 4]];
@@ -945,9 +940,9 @@ SONGS.ps4 = band({
         if (!sleep && L >= 2 && s === 0) I.pad(t, up(chord, 60), sd * 16, 0.24, { cut: 1300, att: 0.3, voices: 3 });
       },
     },
-    // Asleep: the Latin of the sleeping verse, on the rim, and the music box running down.
+    // Asleep: a rim ticking, and the music box running down.
     outro: {
-      bars: 4, latin: "In pace in idipsum dormiam, et requiescam.",
+      bars: 4,
       drums(B) { return { kick: at(16, { 0: "0" }), rim: at(16, B.i < 3 ? { 4: "0", 12: "0" } : { 4: "0" }) }; },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = P4.F;
@@ -978,7 +973,6 @@ const KAL = [0, 2, 1, 3, 2, 0, 3, 1];
 const FILL24 = [{ kick: at(24, { 0: "0", 12: "0" }), clap: at(24, { 6: "0" }), tom1: at(24, { 12: "1", 14: "3", 16: "2" }), tom2: at(24, { 18: "1", 19: "3", 20: "2" }), tom3: at(24, { 21: "3", 22: "1", 23: "3" }) }];
 SONGS.ps90 = band({
   title: "Under His Wings", genre: "Afro house", meters: "4/4 · 12/8", bpm: 123, swing: 0.04, duck: 0.4,
-  latin: "Qui habitat in adjutorio Altissimi, in protectione Dei caeli commorabitur.",
   kit: KITS.afro, selahChord: [57, 60, 64, 67],
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["outro"]],
   lectio: [
@@ -987,7 +981,7 @@ SONGS.ps90 = band({
   ],
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) {
         if (B.i < 2) return { kick: at(16, { 0: "0", 8: "0" }), tom2: at(16, { 6: "1", 14: "0" }), hat: eighths(16, "2") };
         return groove(B, { kick: "0...0...0...0...", clap: at(16, { 4: "1", 12: "1" }), tom2: at(16, { 6: "1", 14: "0" }), tom1: at(16, { 3: "2", 11: "2" }), hat: "2.3.2.3.2.3.2.3." });
@@ -1028,9 +1022,9 @@ SONGS.ps90 = band({
         if (B.i === 1 && s === 12) I.subdrop(t, 0.6);
       },
     },
-    // Scapulis suis obumbrabit tibi: Afro-tech, a rolling bass, an arpeggio, voices calling.
+    // The first drop: Afro-tech, a rolling bass, an arpeggio, voices calling.
     drop: {
-      bars: 8, latin: "Scapulis suis obumbrabit tibi, et sub pennis ejus sperabis.",
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", tom2: at(16, { 6: "2", 14: "2" }), tom1: at(16, { 3: "2", 9: "3", 11: "2" }), hat: "2323232323232323", ride: at(16, { 2: "3", 6: "3", 10: "3", 14: "3" }) }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P90[["Am", "Am", "F", "G"][B.i % 4]];
@@ -1098,9 +1092,9 @@ SONGS.ps90 = band({
       drums() { return { kick: "f...f...f...f...", roll: ["snare", 0, 14, 1] }; },
       play(e) { const { t, s, sd, I } = e; if (s === 0) { I.riser(t, sd * 16, 0.9); I.choir(t, [64, 67, 72], sd * 15, 0.45, { vowel: "a", att: 1 }); } },
     },
-    // Super aspidem et basiliscum: the last drop, in C major, brass and choir.
+    // The last drop, in C major, brass and choir.
     drop2: {
-      bars: 8, latin: "Super aspidem et basiliscum ambulabis, et conculcabis leonem et draconem.",
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", tom2: at(16, { 6: "2", 14: "2" }), tom1: at(16, { 3: "2", 9: "3", 11: "2" }), hat: "2323232323232323", ride: at(16, { 2: "3", 6: "3", 10: "3", 14: "3" }) }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P90[DAWN[B.i % 4]];
@@ -1141,7 +1135,6 @@ const REED = [[1, 1], [2, 0.6], [3, 0.5], [5, 0.3]];
 const FILL14B = [{ kick: at(14, { 0: "0", 8: "1" }), snare: at(14, { 4: "0", 8: "0", 10: "2", 12: "1", 13: "3" }) }];
 SONGS.ps116 = band({
   title: "All Ye Nations", genre: "Gospel disco", meters: "4/4 · 7/8", bpm: 120, swing: 0.04, duck: 0.45,
-  latin: "Laudate Dominum, omnes gentes; laudate eum, omnes populi.",
   kit: KITS.house, selahChord: [53, 57, 62, 65], whole: true,
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["break"], ["C", 3], ["build2"], ["drop2"], ["outro"]],
   lectio: [{ v: 2, stutter: "for ever", times: 3 }],
@@ -1155,7 +1148,7 @@ SONGS.ps116 = band({
   },
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) { return groove(B, B.i < 2 ? { kick: "0...0...0...0...", clap: at(16, { 4: "0", 12: "0" }) } : { kick: "0...0...0...0...", clap: "....0.......0...", ohat: "..2...2...2...2." }); },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = P116[PRAISE[B.i % 4]];
@@ -1188,9 +1181,9 @@ SONGS.ps116 = band({
         if (s === 0) I.brass(t, up(P116.F[1], 62), sd * 15, 0.4 + 0.2 * B.i, { cut: 1600 + B.i * 1600 });
       },
     },
-    // Laudate Dominum, omnes gentes: the disco drop, horns and strings.
+    // The disco drop, horns and strings.
     drop: {
-      bars: 8, latin: true,
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", snare: at(16, { 7: "3", 15: "2" }), ohat: "..2...2...2...2.", hat: eighths(16, ".", "3"), tom1: at(16, { 11: "2" }) }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P116[PRAISE[B.i % 4]];
@@ -1244,9 +1237,9 @@ SONGS.ps116 = band({
       drums() { return { kick: "f...f...f...f...", roll: ["snare", 0, 14, 1] }; },
       play(e) { const { t, s, sd, I } = e; if (s === 0) { I.riser(t, sd * 16, 0.9); I.choir(t, [65, 69, 74], sd * 15, 0.5, { vowel: "a", att: 1 }); } },
     },
-    // Quoniam confirmata est: the last drop, everything.
+    // The last drop, everything.
     drop2: {
-      bars: 8, latin: "Quoniam confirmata est super nos misericordia ejus, et veritas Domini manet in aeternum.",
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", snare: at(16, { 7: "3", 15: "2" }), ohat: "..2...2...2...2.", hat: eighths(16, ".", "3"), tom1: at(16, { 11: "2" }), tom2: at(16, { 13: "3" }) }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P116[PRAISE[B.i % 4]];
@@ -1277,7 +1270,7 @@ SONGS.ps116 = band({
 // the Lord in the night. A deep soft kick, a rim ticking like a clock, chords echoing down a long nave,
 // the bell for the night office. Sung whole twice, the second time in 5/8; "In the nights lift up your
 // hands" is said again each time, and the choir lifts with it. The last blessing, "May the Lord out of
-// Sion bless thee", is carried in Latin on the rim as the song goes out.
+// Sion bless thee", is the last line, and the bell tolls the song out.
 const P133 = {
   Dm: [38, [53, 57, 60, 64]], Bb: [46, [53, 57, 62, 65]], Gm: [43, [53, 58, 62, 65]], A: [45, [52, 57, 61, 64]],
   F: [41, [53, 57, 60, 64]], C: [36, [52, 55, 60, 64]],
@@ -1286,7 +1279,6 @@ const WATCH = ["Dm", "Bb", "Gm", "A"];
 const FILL10 = [{ kick: at(10, { 0: "0" }), snare: at(10, { 6: "0" }), tom2: at(10, { 7: "2" }), tom3: at(10, { 8: "1", 9: "3" }) }];
 SONGS.ps133 = band({
   title: "Night Watch", genre: "Minimal techno", meters: "4/4 · 5/8", bpm: 118, duck: 0.4, delay: (60 / 118) * 0.75,
-  latin: "Ecce nunc benedicite Dominum, omnes servi Domini.",
   kit: KITS.minimal, selahChord: [53, 57, 60, 64], whole: true,
   form: [["intro"], ["A", 1], ["build"], ["drop"], ["B", 2], ["outro"]],
   lectio: [{ v: 2, echo: "In the nights lift up your hands", times: 2 }],
@@ -1294,7 +1286,7 @@ SONGS.ps133 = band({
   bellToll(e, v) { e.I.bell(e.t, 50, 4, v, { ratio: 2.76, index: 2.4, rev: 0.7, dly: 0.2 }); },
   sec: {
     intro: {
-      bars: 4, latin: true,
+      bars: 4,
       drums(B) { return { kick: at(16, B.i < 2 ? { 0: "0" } : { 0: "0", 8: "0" }), rim: at(16, { 4: "0", 12: "0" }) }; },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = P133[WATCH[B.i % 4]];
@@ -1329,9 +1321,9 @@ SONGS.ps133 = band({
         if (s === 0) I.pad(t, up(P133.A[1], 57), sd * 16, 0.3 + 0.1 * B.i, { cut: 900 + 1400 * B.i, sweep: 3000, voices: 3 });
       },
     },
-    // In noctibus extollite manus vestras: deeper, the chords opening, the bell melody.
+    // The drop: deeper, the chords opening, the bell melody.
     drop: {
-      bars: 8, latin: "In noctibus extollite manus vestras in sancta, et benedicite Dominum.",
+      bars: 8,
       drums(B) { return groove(B, { kick: "0...0...0...0...", clap: "....0.......0...", rim: at(16, { 3: "2", 7: "3", 10: "2", 14: "3" }), hat: "2323232323232323", ohat: "..2...2...2...2." }); },
       play(e, B, L) {
         const { t, s, sd, I } = e, [root, chord] = P133[WATCH[B.i % 4]];
@@ -1356,9 +1348,9 @@ SONGS.ps133 = band({
         if (L >= 2 && s === 0 && !hands) I.pad(t, up(chord, 57), sd * 10, 0.22, { cut: 1100, voices: 3 });
       },
     },
-    // Benedicat te Dominus ex Sion: the blessing, in Latin on the rim, the bell, and the dark.
+    // After the blessing: the rim, the bell, and the dark.
     outro: {
-      bars: 4, latin: "Benedicat te Dominus ex Sion, qui fecit caelum et terram.",
+      bars: 4,
       drums(B) { return { kick: at(16, { 0: "0" }), rim: at(16, B.i < 3 ? { 4: "0", 8: "0", 12: "0" } : { 4: "0" }) }; },
       play(e, B) {
         const { t, s, sd, I } = e, [root, chord] = [P133.Gm, P133.A, P133.Dm, P133.Dm][B.i];

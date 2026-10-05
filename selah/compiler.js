@@ -10,8 +10,8 @@
 // the whole line. The words ride the strokes of the snare, the toms and the cymbals (never the kick
 // or the hat), in phrases: each little word with the word after it, and phrases joined where there
 // are fewer strokes (at the lower ranks); a box shows a short phrase whole, or a long one's key
-// word. In the instrumental sections the words are the psalm's Latin. The same text, song and rank
-// always make the same chart.
+// word. The instrumental sections (the intros, the drops) carry no words: their strokes are empty
+// boxes. The same text, song and rank always make the same chart.
 const Compiler = (() => {
   const C = {};
   const Thumbs = typeof Hands !== "undefined" ? Hands : require("./hands.js");
@@ -275,7 +275,7 @@ const Compiler = (() => {
         });
         for (const B of mine) B.n = i;
       } else {
-        for (let i = 0; i < sec.bars; i++) bars.push({ sec: name, i, n: sec.bars, len: lenOf(i), latin: !!sec.latin, fill: sec.bars >= 4 && (i % 4 === 3 || i === sec.bars - 1), crash: i % 4 === 0 && name !== "intro" });
+        for (let i = 0; i < sec.bars; i++) bars.push({ sec: name, i, n: sec.bars, len: lenOf(i), fill: sec.bars >= 4 && (i % 4 === 3 || i === sec.bars - 1), crash: i % 4 === 0 && name !== "intro" });
       }
     }
     // The bar after a Selah comes in with a crash.
@@ -340,41 +340,21 @@ const Compiler = (() => {
       vrow.lines.push(lrow);
       vrow.t1 = bars[L.bars[L.bars.length - 1]].t0 + bars[L.bars[L.bars.length - 1]].len * sd;
     });
-    // The Latin, in the instrumental sections: a word to each stroke but the kick and the hats,
-    // from the beginning again at each section (the song's verse of the Vulgate, or the section's own).
-    let latin = [], lrow = null, prevSec = null, li = 0;
-    for (const B of bars) {
-      if (!B.latin) { prevSec = null; continue; }
-      if (B.sec !== prevSec) {
-        const own = song.sec[B.sec].latin;
-        latin = split(typeof own === "string" ? own : song.latin || psalm.incipit || "");
-        prevSec = B.sec; li = 0;
-        lrow = { latin: true, v: 0, heading: null, t0: B.t0, lines: [{ tokens: latin.map((tx) => ({ text: tx, note: -1, notes: [] })) }] };
-        rows.push(lrow);
-      }
-      lrow.t1 = B.t0 + B.len * sd;
-      for (const n of notes) if (n.bar === B.b && n.lane !== "hat" && n.lane !== "kick" && latin.length) {
-        const w = li++ % latin.length;
-        n.word = latin[w].replace(/[,;:.?]+$/, ""); n.latin = true; n.verse = rows.indexOf(lrow);
-        lrow.lines[0].tokens[w].notes.push(n.id);
-      }
-    }
-    rows.sort((a, b) => a.t0 - b.t0);
     notes.forEach((n) => { if (n.verse !== undefined) n.verse = -1; });
-    rows.forEach((r, ri) => r.lines.forEach((l) => l.tokens.forEach((tk) => { if (tk.note >= 0) notes[tk.note].verse = ri; for (const id of tk.notes || []) notes[id].verse = ri; })));
+    rows.forEach((r, ri) => r.lines.forEach((l) => l.tokens.forEach((tk) => { if (tk.note >= 0) notes[tk.note].verse = ri; })));
     // The Selahs: the stillness of each, from its first bar to its last.
     const selahs = [];
     bars.forEach((B) => {
       if (B.sec !== "selah") return;
       const t0 = B.t0, t1 = B.t0 + B.len * sd;
-      if (B.i === 0) selahs.push({ t0, t1, verse: rows.findIndex((r) => !r.latin && r.v === B.selahOf && r.t0 <= t0) });
+      if (B.i === 0) selahs.push({ t0, t1, verse: rows.findIndex((r) => r.v === B.selahOf && r.t0 <= t0) });
       else selahs[selahs.length - 1].t1 = t1;
     });
 
     const plan = { bars, end: bars.length, cue: (name, b) => cueBar[name] !== undefined && b > cueBar[name] };
     return {
       psalm: psalm.n, rank: rankId, rankName: rank.name, speed: rank.speed, bpm: song.bpm, sd, barT: 16 * sd,
-      notes, ghosts: [], selahs, verses: rows, plan, titleLines, incipit: psalm.incipit || "",
+      notes, ghosts: [], selahs, verses: rows, plan, titleLines, songTitle: song.title || "",
       endT: total + 1.2, count: notes.length + selahs.length, short,
     };
   }
