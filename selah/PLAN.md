@@ -88,16 +88,24 @@ The notes are the strokes of the drum part. Each stroke has its place on the lin
 
 ### How hard *(as built)*
 
-The ranks follow the rules Rock Band's charters keep when they cut an Expert drum part down: Hard
-drops the sixteenths but keeps the eighths; Medium keeps the quarter-note grid and nothing an
-eighth apart or closer; Easy is kick and snare on the beat (or the hands alone). In SELAH:
+The two lower ranks follow the rules Rock Band's charters keep when they cut an Expert drum part
+down: Medium keeps the quarter-note grid and nothing an eighth apart or closer; Easy is kick and
+snare on the beat (or the hands alone). The two upper ranks were first built as Rock Band's Hard and
+Expert, and the author, playing them, found Festum far too hard and Memoria too easy. *(As changed by
+the author.)* So the ranks above Memoria now climb by a notch each: in every bar, Festum plays
+Memoria's strokes and at most one more (the weightiest it may add: a tom, a fill, a crash), and
+Sollemnitas at most two more, with the kick and a hand together only on the first beat of a bar.
+Neither has sixteenths.
 
-| Rank | At once | Closest two strokes | Thumbs must have to spare | Strokes a second (the eight psalms) |
-|---|---|---|---|---|
-| **Feria** | one | a quarter note, never under 0.3 s | 0.15 s | 1.2–2.2 |
-| **Memoria** | one | an eighth, never under 0.2 s | 0.08 s | 1.8–2.4 |
-| **Festum** | two: the kick with a hand; the hat or ride only alone | an eighth, never under 0.15 s | 0.04 s | 3.7–4.5 |
-| **Sollemnitas** | two | a sixteenth, never under 0.1 s | 0.02 s | 4.3–6.5 |
+| Rank | At once | Closest two strokes | Each bar | Thumbs must have to spare | Strokes a second (the eight psalms) |
+|---|---|---|---|---|---|
+| **Feria** | one | a quarter note, never under 0.3 s | | 0.15 s | 1.2–2.2 |
+| **Memoria** | one | an eighth, never under 0.2 s | | 0.08 s | 1.8–2.4 |
+| **Festum** | one | an eighth, never under 0.17 s | Memoria's, and at most one more | 0.06 s | 2.1–2.8 |
+| **Sollemnitas** | two, only the kick with a hand, only on the first beat; the hat or ride only alone | an eighth, never under 0.16 s | Memoria's, and at most two more | 0.05 s | 2.5–3.4 |
+
+Before this change Festum asked for 3.7 to 4.5 strokes a second, with bursts over 6, and
+Sollemnitas for 4.3 to 6.5. The notes also fall a little slower at the two upper ranks than they did.
 
 When two strokes are too close, the lighter goes: the one that enters at the higher rank, on the
 weaker beat (the downbeat is strongest), and the lesser drum (crash, snare, toms, kick, hat last).
@@ -371,8 +379,8 @@ glass, doves, clipart crosses or worship-app gradients.
 |---|---|
 | **Feria** | Kick and snare, on the beat; a crash now and then; Selah |
 | **Memoria** | And the syncopated kicks, the simple fills, the rolls into the drops |
-| **Festum** | And the hi-hat and ride, the toms, eighth-note fills; two strokes at once |
-| **Sollemnitas** | Every stroke: sixteenths, ghost strokes, whole fills |
+| **Festum** | A notch more: the toms, a fill, a crash, a hi-hat now and then; still one at a time |
+| **Sollemnitas** | A notch more again: the kick with a hand on the first beat of a bar |
 
 Every note is a tap; the rules of each rank and the two-thumb check are in How hard, above.
 
