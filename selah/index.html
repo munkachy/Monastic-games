@@ -111,6 +111,18 @@
   .switch.on { background: var(--gold); }
   .switch.on::after { transform: translateX(18px); background: #1a1408; }
   .msg { font-size: 12px; color: var(--red); margin-top: 6px; display: none; }
+  .kitpick { display: flex; align-items: center; gap: 8px; }
+  .kitpick .icon-btn { font-size: 18px; line-height: 1; color: var(--bone); }
+  .kitname { min-width: 124px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--gold); white-space: nowrap; }
+  /* the drums mixer: a drum to a row, the song's level and the player's side by side */
+  .mixnote { padding: 8px 0 4px; border-top: 1px solid rgba(236,228,210,0.08); }
+  .mixer { display: grid; grid-template-columns: 74px 1fr 1fr; gap: 4px 14px; align-items: center; padding: 6px 0 2px; }
+  .mixer .mh { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+  .mixer .ml { font-size: 13px; white-space: nowrap; }
+  .mixer .ml.all { color: var(--gold); }
+  .mixer .cell { display: flex; align-items: center; gap: 8px; min-width: 0; height: 34px; }
+  .mixer .cell input { flex: 1; width: auto; min-width: 0; }
+  .mixer .cell .val { min-width: 40px; font-size: 11px; }
   .note { font-size: 11px; color: var(--dim); line-height: 1.45; }
 
   /* Results */
@@ -197,10 +209,29 @@
     <div class="row"><div class="lbl">Audio offset<small>If the words feel late, raise it; early, lower it.</small></div>
       <input type="range" id="offset" min="-200" max="300" step="5"><span class="val" id="offsetVal"></span><button class="btn" id="calibBtn">Calibrate</button></div>
     <div class="row"><div class="lbl">Note speed</div><input type="range" id="speed" min="1" max="10" step="1"><span class="val" id="speedVal"></span></div>
-    <div class="row"><div class="lbl">Music</div><input type="range" id="music" min="0" max="100" step="5"><span class="val" id="musicVal"></span></div>
-    <div class="row"><div class="lbl">Hit sounds<small>A soft tick under each drum you strike.</small></div><button class="switch" id="hits"></button></div>
+    <div class="row"><div class="lbl">Music<small>The band, without the drums.</small></div><input type="range" id="music" min="0" max="100" step="5"><span class="val" id="musicVal"></span></div>
+    <div class="row"><div class="lbl">Drums<small id="drumsNote">The kit; the song's drums and yours, each drum's level.</small></div><button class="btn" id="drumsOpen">Drums…</button></div>
     <div class="row"><div class="lbl">No flashing</div><button class="switch" id="noFlash"></button></div>
     <div class="row"><div class="lbl">Reduced motion<small>The Voice still moves; the rest stays still.</small></div><button class="switch" id="reduced"></button></div>
+  </div>
+</div>
+
+<div class="sheet-back" id="drums">
+  <div class="sheet long">
+    <div class="sheet-head"><h2>Drums</h2><button class="btn" id="drumsPlay">▸ Hear</button><button class="btn primary" id="drumsDone">Done</button></div>
+    <div class="row"><div class="lbl">Kit<small id="kitNote"></small></div>
+      <div class="kitpick"><button class="icon-btn" id="kitPrev" aria-label="Previous kit">‹</button><span class="kitname" id="kitName"></span><button class="icon-btn" id="kitNext" aria-label="Next kit">›</button></div></div>
+    <div class="note mixnote">The song plays its own drum part, and every drum you hit sounds too, on the beat. Turn the song's drums down to play them yourself.</div>
+    <div class="mixer">
+      <div></div><div class="mh">In the song</div><div class="mh">Your hits</div>
+      <div class="ml all">All</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="all" min="0" max="100" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="all" min="0" max="100" step="5"><span class="val"></span></div>
+      <div class="ml">Kick</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="kick" min="0" max="200" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="kick" min="0" max="200" step="5"><span class="val"></span></div>
+      <div class="ml">Snare</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="snare" min="0" max="200" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="snare" min="0" max="200" step="5"><span class="val"></span></div>
+      <div class="ml">Hi-hat</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="hats" min="0" max="200" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="hats" min="0" max="200" step="5"><span class="val"></span></div>
+      <div class="ml">Toms</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="toms" min="0" max="200" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="toms" min="0" max="200" step="5"><span class="val"></span></div>
+      <div class="ml">Cymbals</div><div class="cell"><input type="range" class="mix" data-who="song" data-drum="cymbals" min="0" max="200" step="5"><span class="val"></span></div><div class="cell"><input type="range" class="mix" data-who="yours" data-drum="cymbals" min="0" max="200" step="5"><span class="val"></span></div>
+    </div>
+    <div class="btns"><button class="btn" id="mixKick">Song: kick only</button><button class="btn" id="mixEven">All even</button></div>
   </div>
 </div>
 
@@ -234,13 +265,13 @@
 
 <div id="turn"><div class="phone"></div><div class="caps">Turn your phone sideways</div><div class="serif" style="color:var(--gold);font-size:18px">The Voice runs from side to side.</div></div>
 
-<script src="audio.js?v=20261005a"></script>
-<script src="songs.js?v=20261005a"></script>
-<script src="douay.js?v=20261005a"></script>
-<script src="pack.js?v=20261005a"></script>
-<script src="hands.js?v=20261005a"></script>
-<script src="compiler.js?v=20261005a"></script>
-<script src="game.js?v=20261005a"></script>
-<script src="ui.js?v=20261005a"></script>
+<script src="audio.js?v=20261006b"></script>
+<script src="songs.js?v=20261006b"></script>
+<script src="douay.js?v=20261006b"></script>
+<script src="pack.js?v=20261006b"></script>
+<script src="hands.js?v=20261006b"></script>
+<script src="compiler.js?v=20261006b"></script>
+<script src="game.js?v=20261006b"></script>
+<script src="ui.js?v=20261006b"></script>
 </body>
 </html>

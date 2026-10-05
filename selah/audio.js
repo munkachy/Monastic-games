@@ -6,7 +6,10 @@
 // from it); pause; and the player's own sounds (A.hit and its kin), which go straight to the
 // master on the effects bus, unpumped, the instant a word is struck.
 const Sound = (() => {
-  let ac = null, out, pre, musicGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf = null, shaperNode;
+  let ac = null, out, pre, musicGain, bandGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf = null, shaperNode;
+  // The player's levels: the band (all but the drums) and the drum kit, kept apart (A.setMusicVolume,
+  // A.setDrumVolume), so the drums can be turned up or down over the song as it is.
+  let bandVol = 1, drumVol = 0.8;
   const A = { muted: false };
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
   A.mtof = mtof;
@@ -57,8 +60,9 @@ const Sound = (() => {
     pre = ac.createGain(); pre.gain.value = 0.75; pre.connect(mud);
     musicGain = ac.createGain(); musicGain.connect(pre);
     lpf = ac.createBiquadFilter(); lpf.type = "lowpass"; lpf.frequency.value = 20000; lpf.Q.value = 0.7; lpf.connect(musicGain);
-    duck = ac.createGain(); duck.connect(lpf);
-    drumBus = ac.createGain(); drumBus.connect(lpf);
+    bandGain = ac.createGain(); bandGain.gain.value = bandVol; bandGain.connect(lpf);
+    duck = ac.createGain(); duck.connect(bandGain);
+    drumBus = ac.createGain(); drumBus.gain.value = drumVol; drumBus.connect(lpf);
     sfxBus = ac.createGain(); sfxBus.gain.value = 0.85; sfxBus.connect(pre);
     // The hall: a long, dark reverb (it pumps with the kick, like everything else).
     const conv = ac.createConvolver(); conv.buffer = impulse(2.8, 2.4);
@@ -77,14 +81,14 @@ const Sound = (() => {
   }
   // For testing the mix: render a song offline, at a given intensity, and return the samples.
   A.render = async function (song, secs, level, rate) {
-    const live = { ac, out, pre, musicGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, M: Object.assign({}, M), duckDepth };
+    const live = { ac, out, pre, musicGain, bandGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, M: Object.assign({}, M), duckDepth };
     const off = new OfflineAudioContext(2, Math.ceil((rate || 44100) * secs), rate || 44100);
     const wasMuted = A.muted; A.muted = false;
     build(off); A.muted = wasMuted;
     M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = 0.05; M.barT = 0.05; M.level = level || 0; M.fill = null; M.fillNext = null;
     duckDepth = song.duck === undefined ? 0.5 : song.duck; dlyL.delayTime.value = dlyR.delayTime.value = song.delay || (60 / song.bpm) * 0.75;
     schedule(secs - 0.3);
-    ({ ac, out, pre, musicGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, duckDepth } = live);
+    ({ ac, out, pre, musicGain, bandGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf, shaperNode, duckDepth } = live);
     Object.assign(M, live.M);
     const buf = await off.startRendering();
     return [buf.getChannelData(0), buf.getChannelData(1)];
@@ -112,8 +116,10 @@ const Sound = (() => {
     let n = node;
     if (o.pan) { const p = ac.createStereoPanner(); p.pan.value = o.pan; n.connect(p); n = p; }
     n.connect(o.drum ? drumBus : o.sfx ? sfxBus : duck);
-    if (o.rev) { const g = gainAt(t, o.rev); n.connect(g); g.connect(revIn); }
-    if (o.dly) { const g = gainAt(t, o.dly); n.connect(g); g.connect(dlyIn); }
+    // (a drum's hall and echo come back through the band, so they follow the drums' level, not the band's)
+    const send = o.drum ? Math.min(4, drumVol / Math.max(0.05, bandVol)) : 1;
+    if (o.rev) { const g = gainAt(t, o.rev * send); n.connect(g); g.connect(revIn); }
+    if (o.dly) { const g = gainAt(t, o.dly * send); n.connect(g); g.connect(dlyIn); }
     if (o.drive) { const g = gainAt(t, o.drive); n.connect(g); g.connect(shaperNode); }
   }
   // A plain envelope that is safe to schedule ahead: attack, hold, exponential release.
@@ -136,7 +142,8 @@ const Sound = (() => {
     // The click of the beater.
     const n = noise(t, 0.02), hp = filt("highpass", 2500, 0.7, t), gn = gainAt(t); env(gn, t, 0.001, 0.25 * v * (o.click === undefined ? 1 : o.click), 0.002, 0.012);
     n.connect(hp); hp.connect(gn); route(gn, t, { drum: true });
-    if (o.pump !== false) pump(t, o.pumpDepth, o.pumpRel);
+    // the pump follows the kick: a soft kick (or a kick the player has turned down) pumps less
+    if (o.pump !== false) pump(t, (o.pumpDepth === undefined ? duckDepth : o.pumpDepth) * Math.min(1, v), o.pumpRel);
   };
   I.snare = function (t, v, o) {
     o = o || {}; v = v === undefined ? 1 : v;
@@ -500,7 +507,8 @@ const Sound = (() => {
   A.held = false;      // paused by the game: nothing else may wake the clock
   A.pause = function () { A.held = true; if (ac && ac.state === "running") return ac.suspend(); return Promise.resolve(); };
   A.resume = function () { A.held = false; if (ac && ac.state !== "running" && ac.state !== "closed") return ac.resume(); return Promise.resolve(); };
-  A.setMusicVolume = function (v) { if (musicGain) musicGain.gain.setTargetAtTime(v, ac.currentTime, 0.05); };
+  A.setMusicVolume = function (v) { bandVol = v; if (bandGain) bandGain.gain.setTargetAtTime(v, ac.currentTime, 0.05); };
+  A.setDrumVolume = function (v) { drumVol = v; if (drumBus) drumBus.gain.setTargetAtTime(v, ac.currentTime, 0.05); };
   // When the sound now reaching the ears was made, on the audio clock, for a moment on the
   // page's clock (performance.now(), as touch events are stamped). Falls back on the latency
   // the browser reports where it cannot say.

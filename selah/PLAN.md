@@ -50,6 +50,7 @@ Tagline: *The Word is the note.*
 12. **Ranks as in Rock Band.** The easiest rank plays the kick and snare, on the beat, with a cymbal now and then; each rank above adds more of the drum part (the syncopated kicks and simple fills; then hi-hats, toms and crashes; then sixteenths, ghost strokes and whole fills). The band always plays the full part; the rank decides how much of it is the player's.
 13. **Every note is a tap.** No flicks, holds or drags: a stroke is a touch on time, in its place. Every drum but the kick is a box glowing in the drum's color, with its word inside, or empty where the stroke has no word: the box is the note, always. The kick is only a bar across the line, and never carries a word. The only other thing the player does is keep still at a Selah.
 14. **A person must be able to play every chart, with two thumbs.** Every chart is checked against a model of a person playing a phone held sideways (two touches at once at most, how fast a thumb can tap and move, how fast anyone can keep time), and the compiler leaves out whatever the model cannot reach. Details in How hard below.
+15. **No Latin.** *(As the author asked.)* The words in play are the Voice's (the Douay, or the player's own pack) and nothing else: no verses of the Vulgate, no Latin incipits. The intros, drops and outros carry no words, and a psalm is named by its number and its song's name. Other Latin names in this plan (the seals *Per septimanae circulum* and *Uno die*) are to be given in English when they are built; whether the ranks keep their Latin names is the author's to say.
 
 ## What Phigros DNA to keep
 
@@ -87,16 +88,24 @@ The notes are the strokes of the drum part. Each stroke has its place on the lin
 
 ### How hard *(as built)*
 
-The ranks follow the rules Rock Band's charters keep when they cut an Expert drum part down: Hard
-drops the sixteenths but keeps the eighths; Medium keeps the quarter-note grid and nothing an
-eighth apart or closer; Easy is kick and snare on the beat (or the hands alone). In SELAH:
+The two lower ranks follow the rules Rock Band's charters keep when they cut an Expert drum part
+down: Medium keeps the quarter-note grid and nothing an eighth apart or closer; Easy is kick and
+snare on the beat (or the hands alone). The two upper ranks were first built as Rock Band's Hard and
+Expert, and the author, playing them, found Festum far too hard and Memoria too easy. *(As changed by
+the author.)* So the ranks above Memoria now climb by a notch each: in every bar, Festum plays
+Memoria's strokes and at most one more (the weightiest it may add: a tom, a fill, a crash), and
+Sollemnitas at most two more, with the kick and a hand together only on the first beat of a bar.
+Neither has sixteenths.
 
-| Rank | At once | Closest two strokes | Thumbs must have to spare | Strokes a second (the eight psalms) |
-|---|---|---|---|---|
-| **Feria** | one | a quarter note, never under 0.3 s | 0.15 s | 1.2–2.2 |
-| **Memoria** | one | an eighth, never under 0.2 s | 0.08 s | 1.8–2.4 |
-| **Festum** | two: the kick with a hand; the hat or ride only alone | an eighth, never under 0.15 s | 0.04 s | 3.7–4.5 |
-| **Sollemnitas** | two | a sixteenth, never under 0.1 s | 0.02 s | 4.3–6.5 |
+| Rank | At once | Closest two strokes | Each bar | Thumbs must have to spare | Strokes a second (the eight psalms) |
+|---|---|---|---|---|---|
+| **Feria** | one | a quarter note, never under 0.3 s | | 0.15 s | 1.2–2.2 |
+| **Memoria** | one | an eighth, never under 0.2 s | | 0.08 s | 1.8–2.4 |
+| **Festum** | one | an eighth, never under 0.17 s | Memoria's, and at most one more | 0.06 s | 2.1–2.8 |
+| **Sollemnitas** | two, only the kick with a hand, only on the first beat; the hat or ride only alone | an eighth, never under 0.16 s | Memoria's, and at most two more | 0.05 s | 2.5–3.4 |
+
+Before this change Festum asked for 3.7 to 4.5 strokes a second, with bursts over 6, and
+Sollemnitas for 4.3 to 6.5. The notes also fall a little slower at the two upper ranks than they did.
 
 When two strokes are too close, the lighter goes: the one that enters at the higher rank, on the
 weaker beat (the downbeat is strongest), and the lesser drum (crash, snare, toms, kick, hat last).
@@ -122,7 +131,7 @@ taps only, the model found that Festum and Sollemnitas asked for the impossible 
 chart: three touches at once (a held hi-hat, a snare and a kick), and doubled kicks a sixteenth apart
 with the other thumb busy.
 
-**Every word is a note** *(as the author asked)*. Each line of the psalm is cut into phrases: the little words go with the word after them, so a little word never stands alone, and a phrase too long for a box (more than 18 letters) is cut again, before an "in", an "of", a "who" where it can be. Every phrase rides a stroke of its own, of the snare, the toms or the cymbals (never the kick or the hat), and its box shows it whole. A line is sung over two bars of a verse section; where a rank has too few strokes there for the line's phrases, the line is given two bars more, and again if need be (up to eight), while the band plays on in its groove. So the easier ranks run longer, the slower the rank the longer the words stay with you: Psalm 1 runs about 1½ minutes at Sollemnitas and 2¼ at Feria. At Feria its boxes read BLESSED, IS THE MAN, WHO HATH, NOT WALKED, IN THE COUNSEL, OF THE UNGODLY, and so on to SHALL PERISH. Strokes with no phrase are empty boxes, still played. A divine name is set a little larger. In the instrumental sections (the intro, the drops) the words are the psalm's Latin, from the Vulgate, a word to each stroke but the kick and the hats. The verse under the line lights each whole phrase as its stroke is struck. A touch anywhere in a box strikes it.
+**Every word is a note** *(as the author asked)*. Each line of the psalm is cut into phrases: the little words go with the word after them, so a little word never stands alone, and a phrase too long for a box (more than 18 letters) is cut again, before an "in", an "of", a "who" where it can be. Every phrase rides a stroke of its own, of the snare, the toms or the cymbals (never the kick or the hat), and its box shows it whole. A line is sung over two bars of a verse section; where a rank has too few strokes there for the line's phrases, the line is given two bars more, and again if need be (up to eight), while the band plays on in its groove. So the easier ranks run longer, the slower the rank the longer the words stay with you: Psalm 1 runs about 1½ minutes at Sollemnitas and 2¼ at Feria. At Feria its boxes read BLESSED, IS THE MAN, WHO HATH, NOT WALKED, IN THE COUNSEL, OF THE UNGODLY, and so on to SHALL PERISH. Strokes with no phrase are empty boxes, still played. A divine name is set a little larger. The instrumental sections (the intros, the drops, the outros) carry no words: their strokes are empty boxes, and the verse under the line fades away a bar after its last line (decision 15). The verse under the line lights each whole phrase as its stroke is struck. A touch anywhere in a box strikes it.
 
 **Lectio** *(as the author asked)*. A song may say parts of its psalm again, as a chorus does, or as lectio divina dwells on a phrase and turns it over. Two ways, set for each psalm in its song (by the Douay's verse numbers): a phrase is *echoed*, sung again as a line of its own after the line it is in, so many times; or it is *stuttered*, said again where it stands. The shortest psalms are sung whole in every verse section, each time with a bigger band or in another meter. The verse under the line shows the words said again in gold, so the psalm's own text is always plain; the results screen quotes only the psalm's own words. With a pack whose wording differs, an echo sings the pack's own line again, and a stutter whose words are not found is left out. In this batch:
 
@@ -213,7 +222,7 @@ The second batch, chosen to finish Compline (4, 90, 133) and the Schola's psalms
 - **Psalm 4, "In Peace"** (112): late-night deep house, swung, an electric piano and a night bird of
   a flute; two Selahs; a lullaby in 6/8 with celesta and humming choir; bells over "the light of
   thy countenance"; the band falls asleep through "I will sleep, and I will rest", and the song ends
-  asleep, the Latin of that verse carried on the rim.
+  asleep, a rim ticking under a music box.
 - **Psalm 90, "Under His Wings"** (123): Afro house, congas, shakers, an agogo, a kalimba; choir and
   strings spread over "under his wings"; the terrors of the night in 12/8 over the West African bell
   pattern (a laser for the arrow, a growl for the noonday devil, the congas tumbling where a thousand
@@ -223,7 +232,7 @@ The second batch, chosen to finish Compline (4, 90, 133) and the Schola's psalms
   gospel choir and horns; an Amen cadence to close.
 - **Psalm 133, "Night Watch"** (118): minimal techno for the servants who stand in the house of the
   Lord in the nights: a rim like a clock, chords echoing down a nave, the bell for the night office;
-  sung twice, the second time in 5/8; the last blessing in Latin as the song goes out.
+  sung twice, the second time in 5/8; after the last blessing the bell tolls the song out.
 
 Every psalm has its own song, and the song is funky. The genre follows what the
 psalm is doing: a psalm of praise does not sound like a lament, and the
@@ -370,13 +379,32 @@ glass, doves, clipart crosses or worship-app gradients.
 |---|---|
 | **Feria** | Kick and snare, on the beat; a crash now and then; Selah |
 | **Memoria** | And the syncopated kicks, the simple fills, the rolls into the drops |
-| **Festum** | And the hi-hat and ride, the toms, eighth-note fills; two strokes at once |
-| **Sollemnitas** | Every stroke: sixteenths, ghost strokes, whole fills |
+| **Festum** | A notch more: the toms, a fill, a crash, a hi-hat now and then; still one at a time |
+| **Sollemnitas** | A notch more again: the kick with a hand on the first beat of a bar |
 
 Every note is a tap; the rules of each rank and the two-thumb check are in How hard, above.
 
 A hidden fifth rank, **Vigilia**, comes on a dozen of the great set-piece
 psalms. A Full Combo on Sollemnitas opens it.
+
+### The player's drums *(as the author asked)*
+
+The songs stay as they are. Two things play the drums, on one kit the player chooses (each song's
+own, the default, or any of nine: acoustic, 808, house, breakbeat, drum and bass, dub, late night,
+Afro, minimal):
+
+- **The song's own drum part**, as the band has always played it.
+- **The player's hits.** Every note hit (a Perfect or a Good) sounds its drum, as loud as the song
+  plays that stroke, and quantized: it is played on the beat of its note, at the very moment the
+  band's own stroke of it falls, if the touch came early; if late, at once. A missed note is silent.
+  Not in Listen. (This replaces the soft tick under each hit.)
+
+The Drums page is a small mixer with a column for each: the whole kit (0 to 100%) and each drum (0
+to 200%): kick; snare (with the clap and the rim); hi-hat; toms (with the congas); cymbals (the crash
+and the ride). "Song: kick only" turns the song's drums down to the kick alone, for the player to
+play the rest. "Music" in Settings is the band without the drums. The page plays a short groove as a
+kit is chosen, and a stroke of a drum as its level is set. The band's pump on the kick follows the
+kick's strength, so it fades as the kick is turned down.
 
 ### Score and grades
 
@@ -712,7 +740,7 @@ field with placeholder words.
 | `psalms` | yes | 1 to 150 psalms. A pack may hold only some; the rest are played from the Douay |
 
 **Each psalm:** `n`, its number in the pack's numbering (1 to 150, each once);
-`incipit` (optional), its Latin opening words, up to 120 characters; and `verses`,
+`incipit` (optional), its Latin opening words, up to 120 characters (kept in the file, not shown in play); and `verses`,
 listed in the order the psalter prints them.
 
 **Each verse:**
@@ -819,10 +847,7 @@ folder.
    house's own distribution? Many monasteries now spread the Psalter over two
    weeks. This plan uses the Rule as written; the table is only data, so another
    arrangement could be added as a second choice.
-2. **A Latin Voice?** The Clementine Vulgate is in the public domain, and Latin
-   stress is regular (on the second-to-last syllable, or the third-to-last),
-   which would make it the easiest text of all to chart well. A third built-in
-   Voice, "Vulgata", would let you play the psalms as they are chanted.
+2. ~~**A Latin Voice?**~~ *Answered by the author: no Latin in the game (decision 15).*
 3. **Glosses** on by default, or off?
 
 ## Notes for the builder (from this repo)

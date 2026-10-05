@@ -20,8 +20,21 @@ const UI = (() => {
 
   // ---- The save --------------------------------------------------------------------------------------
   const KEY = "selah.v1";
-  let save = { settings: { voice: "douay", offset: 0, speed: 5, music: 80, hits: true, noFlash: false, reducedMotion: false }, records: {} };
-  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.settings) save = { settings: Object.assign(save.settings, s.settings), records: s.records || {} }; } catch (e) { }
+  // kit: which kit sounds ("song": each song's own); song, yours: the levels (%) of the song's own drum
+  // part and of the drums the player's hits play, for the whole kit (all) and for each drum
+  const EVEN = { all: 100, kick: 100, snare: 100, hats: 100, toms: 100, cymbals: 100 }, YOURS = Object.assign({}, EVEN, { all: 70 });
+  let save = { settings: { voice: "douay", offset: 0, speed: 5, music: 80, kit: "song", song: Object.assign({}, EVEN), yours: Object.assign({}, YOURS), noFlash: false, reducedMotion: false }, records: {} };
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.settings) {
+      const o = s.settings;
+      // from the first drums page: one volume and one mix, for the song's drums; and the old hit-tick switch
+      if (!o.song && o.mix) o.song = Object.assign({ all: Math.min(100, Math.round((o.drums === undefined ? 80 : o.drums) / 0.8)) }, o.mix);
+      if (!o.yours && o.hits === false) o.yours = Object.assign({}, YOURS, { all: 0 });
+      save = { settings: Object.assign(save.settings, o, { song: Object.assign({}, EVEN, o.song), yours: Object.assign({}, YOURS, o.yours) }), records: s.records || {} };
+      delete save.settings.mix; delete save.settings.drums; delete save.settings.hits;
+    }
+  } catch (e) { }
   let fresh = true; try { fresh = !localStorage.getItem(KEY); } catch (e) { }
   if (fresh && window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) save.settings.reducedMotion = true;
   const store = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { } };
@@ -61,7 +74,7 @@ const UI = (() => {
     const d = DOUAY.psalms[n - 1];
     if (set().voice === "grail" && grail) {
       const g = packPsalm(grail, n);
-      if (g) return { psalm: Object.assign({}, g, { incipit: g.incipit || d.incipit }), label: grail.displayName || "Grail" };
+      if (g) return { psalm: g, label: grail.displayName || "Grail" };
       return { psalm: d, label: "Douay (not in your Grail file)" };
     }
     return { psalm: d, label: "Douay" };
@@ -78,7 +91,7 @@ const UI = (() => {
     begun = true;
     Sound.init();
     Sound.setMusicVolume(set().music / 100);
-    Sound.hitVolume = set().hits ? 0.8 : 0;
+    applyDrums();
     // Sideways, and full screen, where the phone allows it.
     try {
       const el = document.documentElement, fs = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -105,16 +118,16 @@ const UI = (() => {
     box.innerHTML = "";
     $("voiceName").textContent = "Voice: " + (set().voice === "grail" && grail ? (grail.displayName || "Grail") : "Douay");
     for (const P of PSALMS) {
-      const d = DOUAY.psalms[P.n - 1], song = SONGS[P.song];
+      const song = SONGS[P.song];
       const c = document.createElement("div");
       c.className = "card"; c.style.setProperty("--mood", P.mood);
       const vkey = set().voice === "grail" && grail ? "grail" : "douay";
       c.innerHTML = '<div class="top"><div class="caps">Psalm</div><button class="listen">▸ Listen</button></div><div class="num">' + P.n + '</div><div class="inc"></div><div class="meta"></div><div class="first"></div><div class="ranks"></div>';
-      c.querySelector(".inc").textContent = d.incipit;
+      c.querySelector(".inc").textContent = "“" + song.title + "”";
       // its opening words, in the Voice chosen
       const first = textFor(P.n).psalm.verses.find((v) => !v.title);
       c.querySelector(".first").textContent = first ? first.lines.join(" ") : "";
-      c.querySelector(".meta").textContent = "“" + song.title + "” · " + song.genre + " · " + song.bpm + " bpm · " + song.meters;
+      c.querySelector(".meta").textContent = song.genre + " · " + song.bpm + " bpm · " + song.meters;
       const ranks = c.querySelector(".ranks");
       for (const r of Compiler.RANK_ORDER) {
         const R = Compiler.RANKS[r], rec = save.records[vkey + ":" + P.n + ":" + r];
@@ -208,7 +221,8 @@ const UI = (() => {
       $("offset").value = s.offset; $("offsetVal").textContent = s.offset + " ms";
       $("speed").value = s.speed; $("speedVal").textContent = s.speed;
       $("music").value = s.music; $("musicVal").textContent = s.music + "%";
-      $("hits").classList.toggle("on", s.hits); $("noFlash").classList.toggle("on", s.noFlash); $("reduced").classList.toggle("on", s.reducedMotion);
+      $("drumsNote").textContent = kitInfo(s.kit)[1] + " · the song's " + s.song.all + "% · yours " + s.yours.all + "%";
+      $("noFlash").classList.toggle("on", s.noFlash); $("reduced").classList.toggle("on", s.reducedMotion);
       sheet("settings", true);
     });
   }
@@ -222,8 +236,48 @@ const UI = (() => {
   $("offset").oninput = () => { set().offset = +$("offset").value; $("offsetVal").textContent = set().offset + " ms"; };
   $("speed").oninput = () => { set().speed = +$("speed").value; $("speedVal").textContent = set().speed; };
   $("music").oninput = () => { set().music = +$("music").value; $("musicVal").textContent = set().music + "%"; Sound.setMusicVolume(set().music / 100); };
+
+  // ---- Drums: the kit; the song's drums and the player's hits, each drum's level -------------------------
+  // The song stays as it is; its drum part and the player's hits are played on the chosen kit, each at
+  // the levels set here. Your hits sound on the beat of their notes (game.js).
+  const kitInfo = (id) => KIT_LIST.find((k) => k[0] === id) || KIT_LIST[0];
+  function applyDrums() {
+    const s = set();
+    DRUMS.kit = kitInfo(s.kit)[0];
+    for (const who of ["song", "yours"]) for (const k in EVEN) DRUMS[who][k] = (s[who][k] === undefined ? 100 : s[who][k]) / 100;
+    // a missed note's soft knock goes with the player's hits
+    Sound.hitVolume = s.yours.all > 0 ? 0.8 : 0;
+  }
+  function showDrums() {
+    const s = set(), [, name, note] = kitInfo(s.kit);
+    $("kitName").textContent = name; $("kitNote").textContent = note;
+    for (const el of document.querySelectorAll("#drums .mix")) { const v = s[el.dataset.who][el.dataset.drum]; el.value = v; el.nextElementSibling.textContent = v + "%"; }
+  }
+  $("drumsOpen").onclick = () => { sheet("settings", false); showDrums(); sheet("drums", true); };
+  const closeDrums = () => { sheet("drums", false); store(); openSettings(); };
+  $("drumsDone").onclick = closeDrums;
+  $("drums").addEventListener("click", (e) => { if (e.target === $("drums")) closeDrums(); });
+  $("drumsPlay").onclick = () => drumDemo(DRUMS.kit);
+  const stepKit = (d) => {
+    const i = KIT_LIST.findIndex((k) => k[0] === kitInfo(set().kit)[0]);
+    set().kit = KIT_LIST[(i + d + KIT_LIST.length) % KIT_LIST.length][0];
+    applyDrums(); showDrums(); store();
+    drumDemo(DRUMS.kit);
+  };
+  $("kitPrev").onclick = () => stepKit(-1); $("kitNext").onclick = () => stepKit(1);
+  // each level: set as it slides, with a stroke of that drum to hear (a few a second at most)
+  let lastOne = 0;
+  for (const el of document.querySelectorAll("#drums .mix")) {
+    el.oninput = () => {
+      set()[el.dataset.who][el.dataset.drum] = +el.value; el.nextElementSibling.textContent = el.value + "%"; applyDrums();
+      const now = performance.now(); if (now - lastOne > 160) { lastOne = now; drumOne(DRUMS.kit, el.dataset.drum, el.dataset.who); }
+    };
+    el.onchange = store;
+  }
+  // the song's drums down to the kick alone, for the player to play the rest
+  $("mixKick").onclick = () => { Object.assign(set().song, { kick: 100, snare: 0, hats: 0, toms: 0, cymbals: 0 }); if (!set().song.all) set().song.all = 100; applyDrums(); showDrums(); store(); drumDemo(DRUMS.kit); };
+  $("mixEven").onclick = () => { set().song = Object.assign({}, EVEN); set().yours = Object.assign({}, YOURS); applyDrums(); showDrums(); store(); drumDemo(DRUMS.kit); };
   const toggle = (id, k, after) => { $(id).onclick = () => { set()[k] = !set()[k]; $(id).classList.toggle("on", set()[k]); store(); after && after(); }; };
-  toggle("hits", "hits", () => { Sound.hitVolume = set().hits ? 0.8 : 0; });
   toggle("noFlash", "noFlash"); toggle("reduced", "reducedMotion");
   // Import: read on the device, check, keep on the device. Nothing leaves it.
   $("grailImport").onclick = () => { $("grailFile").value = ""; $("grailFile").click(); };
@@ -292,6 +346,7 @@ const UI = (() => {
   $("title").addEventListener("pointerup", begin);
   addEventListener("keydown", (e) => {
     if (e.key === "Escape" && Game.running()) pause();
+    else if (e.key === "Escape" && $("drums").classList.contains("on")) closeDrums();
     else if (e.key === "Escape" && $("settings").classList.contains("on")) closeSettings();
     if (!begun && (e.key === "Enter" || e.key === " ")) begin();
   });

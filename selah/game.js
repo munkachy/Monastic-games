@@ -224,8 +224,15 @@ const Game = (() => {
     if (grade === "perfect" || grade === "good") {
       S.combo++; S.maxCombo = Math.max(S.maxCombo, S.combo);
       if (S.level < 3 && S.combo >= 12 * (S.level + 1)) { S.level++; Sound.setLevel(S.level); }
-      if (n) { Sound.tick(grade === "perfect", n.lane); burst(n, grade); }
+      if (n) { hitSound(n); burst(n, grade); }
     } else miss(n);
+  }
+  // A hit sounds its drum on the kit, quantized: on the beat of its note, if the touch came early
+  // (the band's own stroke of it is scheduled at that very moment), else at once. Not in Listen.
+  function hitSound(n) {
+    const ac = Sound.ctx();
+    if (!ac || S.opts.auto) return;
+    playHit(S.song, n, Math.max(ac.currentTime + 0.003, S.T0 + n.t), S.chart.sd);
   }
   function miss(n) {
     if (n) { const st = S.st[n.id]; if (!st.done) { st.done = true; st.grade = "miss"; S.n.miss++; S.judged++; } }
@@ -456,9 +463,10 @@ const Game = (() => {
     const lead = ch.sd * 2;
     for (let i = 0; i < ch.verses.length; i++) if (t >= ch.verses[i].t0 - lead) vi = i;
     if (vi < 0) return;
-    const v = ch.verses[vi], fade = Math.min(1, (t - (v.t0 - lead)) / 0.2) * Math.min(1, (ch.endT - bt - t) / 0.6 + 0.0001);
+    // it fades in as it begins, and away a bar after it ends (the drops have no words)
+    const v = ch.verses[vi], fade = Math.min(1, (t - (v.t0 - lead)) / 0.2) * Math.min(1, (ch.endT - bt - t) / 0.6 + 0.0001) * Math.min(1, Math.max(0, 1 - (t - v.t1 - bt) / 0.6));
     if (fade <= 0) return;
-    let size = v.latin ? 15 : 13.5;
+    let size = 13.5;
     const rows = v.lines.map((l) => l.tokens);
     const maxW = W * 0.84;
     const widthOf = (toks) => { ctx.font = "italic 500 " + size + "px 'Cormorant Garamond', Georgia, serif"; return ctx.measureText(toks.map((x) => x.text).join(" ")).width; };
@@ -474,9 +482,8 @@ const Game = (() => {
       for (const tk of toks) {
         // a word said again (lectio, a chorus) is gold, so the psalm's own text stays plain
         let col = tk.rep ? hex(C.gold, 0.7 * fade) : hex(C.bone, 0.45 * fade);
-        // the stroke this word rides (in the Latin, which comes round again, the latest one)
-        let id = tk.note;
-        if (tk.notes && tk.notes.length) { id = -1; for (const k of tk.notes) if (ch.notes[k].t <= t + 0.4) id = k; }
+        // lit by the stroke it rides
+        const id = tk.note;
         if (id >= 0) { const g = S.st[id].grade; col = g === "perfect" ? hex(C.goldHi, fade) : g === "good" ? hex(C.gold, 0.85 * fade) : g === "miss" || g === "bad" ? hex(C.red, 0.55 * fade) : hex(C.bone, 0.7 * fade); }
         ctx.fillStyle = col; ctx.fillText(tk.text, x, y);
         x += ctx.measureText(tk.text).width + space;
@@ -484,7 +491,7 @@ const Game = (() => {
     });
     if (v.heading) { ctx.font = "600 7.5px Inter, system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = hex(C.gold, 0.6 * fade); ctx.fillText(v.heading.toUpperCase(), W / 2, top - lh); }
   }
-  // Through the intro: the psalm's number, its incipit, its heading (behind the falling notes).
+  // Through the intro: the psalm's number, the song's name, the psalm's heading (behind the falling notes).
   function titleCard(t) {
     const ch = S.chart, intro = ch.plan.bars.find((B) => B.sec !== "intro"), end = intro ? intro.t0 : ch.barT * 2;
     const a = t < end * 0.55 ? 1 : Math.max(0, (end - t) / (end * 0.45));
@@ -493,7 +500,7 @@ const Game = (() => {
     ctx.fillStyle = hex(C.bone, 0.85 * a); ctx.font = "200 26px Inter, system-ui, sans-serif";
     ctx.fillText("PSALM " + ch.psalm, W / 2, H * 0.3);
     ctx.fillStyle = hex(C.gold, 0.85 * a); ctx.font = "italic 500 16px 'Cormorant Garamond', Georgia, serif";
-    ctx.fillText(ch.incipit, W / 2, H * 0.3 + 22);
+    ctx.fillText("“" + ch.songTitle + "”", W / 2, H * 0.3 + 22);
     if (ch.titleLines.length) {
       ctx.fillStyle = hex(C.bone, 0.5 * a); ctx.font = "italic 500 12px 'Cormorant Garamond', Georgia, serif";
       ch.titleLines.slice(0, 2).forEach((l, i) => ctx.fillText(l.length > 90 ? l.slice(0, 88) + "…" : l, W / 2, H * 0.3 + 42 + i * 14));
@@ -510,7 +517,7 @@ const Game = (() => {
     ctx.fillText(acc + "%  ·  VOICE: " + S.opts.voice.toUpperCase(), W - 16, 36);
     ctx.textAlign = "left"; ctx.fillStyle = hex(C.bone, 0.75);
     ctx.font = "600 8px Inter, system-ui, sans-serif"; ctx.fillText("PSALM " + ch.psalm + "  ·  " + ch.rankName.toUpperCase(), 46, 20);
-    ctx.font = "italic 500 11px 'Cormorant Garamond', Georgia, serif"; ctx.fillStyle = hex(C.gold, 0.8); ctx.fillText(ch.incipit, 46, 33);
+    ctx.font = "italic 500 11px 'Cormorant Garamond', Georgia, serif"; ctx.fillStyle = hex(C.gold, 0.8); ctx.fillText("“" + ch.songTitle + "”", 46, 33);
     if (S.combo >= 3) {
       ctx.textAlign = "center"; ctx.fillStyle = C.bone; ctx.font = "200 24px Inter, system-ui, sans-serif"; ctx.fillText(String(S.combo), W / 2, 30);
       ctx.font = "600 7px Inter, system-ui, sans-serif"; ctx.fillStyle = hex(C.gold, 0.8); ctx.fillText("COMBO", W / 2, 40);
