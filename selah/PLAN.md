@@ -389,13 +389,22 @@ psalms. A Full Combo on Sollemnitas opens it.
 
 ### The player's drums *(as the author asked)*
 
-The songs stay as they are, and the player chooses the kit their drum part is played on: each
-song's own (the default), or any of nine (acoustic, 808, house, breakbeat, drum and bass, dub, late
-night, Afro, minimal). The drums have their own volume over the song ("Music" is then the band
-without them), and each drum its own level, from silent to twice as loud: kick; snare (with the
-clap and the rim); hi-hat; toms (with the congas); cymbals (the crash and the ride). The Drums page
-plays a short groove as a kit is chosen, and a stroke of each drum as its level is set. When the
-drums are turned down, the band's pump on the kick fades with them.
+The songs stay as they are. Two things play the drums, on one kit the player chooses (each song's
+own, the default, or any of nine: acoustic, 808, house, breakbeat, drum and bass, dub, late night,
+Afro, minimal):
+
+- **The song's own drum part**, as the band has always played it.
+- **The player's hits.** Every note hit (a Perfect or a Good) sounds its drum, as loud as the song
+  plays that stroke, and quantized: it is played on the beat of its note, at the very moment the
+  band's own stroke of it falls, if the touch came early; if late, at once. A missed note is silent.
+  Not in Listen. (This replaces the soft tick under each hit.)
+
+The Drums page is a small mixer with a column for each: the whole kit (0 to 100%) and each drum (0
+to 200%): kick; snare (with the clap and the rim); hi-hat; toms (with the congas); cymbals (the crash
+and the ride). "Song: kick only" turns the song's drums down to the kick alone, for the player to
+play the rest. "Music" in Settings is the band without the drums. The page plays a short groove as a
+kit is chosen, and a stroke of a drum as its level is set. The band's pump on the kick follows the
+kick's strength, so it fades as the kick is turned down.
 
 ### Score and grades
 

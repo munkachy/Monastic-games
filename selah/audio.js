@@ -9,7 +9,7 @@ const Sound = (() => {
   let ac = null, out, pre, musicGain, bandGain, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, noiseBuf = null, shaperNode;
   // The player's levels: the band (all but the drums) and the drum kit, kept apart (A.setMusicVolume,
   // A.setDrumVolume), so the drums can be turned up or down over the song as it is.
-  let bandVol = 1, drumVol = 1;
+  let bandVol = 1, drumVol = 0.8;
   const A = { muted: false };
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
   A.mtof = mtof;
@@ -100,8 +100,7 @@ const Sound = (() => {
   // The kick pushes everything else down for a moment (the pump).
   let duckDepth = 0.5;
   function pump(t, depth, rel) {
-    // the pump follows the kick: as the player turns the drums down, it fades with them
-    const g = duck.gain, d = (depth === undefined ? duckDepth : depth) * Math.min(1, drumVol / 0.8);
+    const g = duck.gain, d = depth === undefined ? duckDepth : depth;
     if (d <= 0) return;
     g.setValueAtTime(1 - d, t); g.linearRampToValueAtTime(1, t + (rel || 0.2));
   }
@@ -143,7 +142,8 @@ const Sound = (() => {
     // The click of the beater.
     const n = noise(t, 0.02), hp = filt("highpass", 2500, 0.7, t), gn = gainAt(t); env(gn, t, 0.001, 0.25 * v * (o.click === undefined ? 1 : o.click), 0.002, 0.012);
     n.connect(hp); hp.connect(gn); route(gn, t, { drum: true });
-    if (o.pump !== false) pump(t, o.pumpDepth, o.pumpRel);
+    // the pump follows the kick: a soft kick (or a kick the player has turned down) pumps less
+    if (o.pump !== false) pump(t, (o.pumpDepth === undefined ? duckDepth : o.pumpDepth) * Math.min(1, v), o.pumpRel);
   };
   I.snare = function (t, v, o) {
     o = o || {}; v = v === undefined ? 1 : v;
