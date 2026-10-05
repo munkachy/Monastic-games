@@ -114,8 +114,8 @@ const Pause = {
     Pause.under.draw();
     buttons.length = 0;
     rect(0, 0, W, H, "rgba(4,3,8,0.78)");
-    // In a fight (on the street, or on the roofs on the way), the moves are listed beside the buttons.
-    const fight = Pause.under === Fight || (Pause.under === Flight && Flight.RF && Flight.RF.active()), cx = fight ? Math.max(130, W * 0.24) : W / 2;
+    // In a fight (on the street, on the roofs on the way, or in the Holy Hour), the moves are listed beside the buttons.
+    const fight = Pause.under === Fight, cx = fight ? Math.max(130, W * 0.24) : W / 2;
     text("PAUSED", cx, 58, { align: "center", font: FONT.title, size: 26, weight: 700, spacing: 6, color: "#ffffff", glow: "rgba(232,196,106,0.5)", blur: 14 });
     text(Game.practising ? "The practice" : Game.watching ? "The Holy Hour" : PARTS[Game.part].name, cx, 82, { align: "center", font: FONT.line, italic: true, size: 16, color: C.holy });
     const bw = 200, bx = cx - bw / 2;
