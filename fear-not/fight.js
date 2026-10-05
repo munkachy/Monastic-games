@@ -173,7 +173,7 @@ const Fight = (() => {
     { id: "heights", say: () => tip("Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Only there can you bless them: keep the flow, then tap the gold cross. Let the flow break up there, and we fall back with nothing done.", "Now the long flow: twelve in a row, and we rise to the Heights, all of them with us. Only there can you bless them: keep the flow, then press B. Let the flow break up there, and we fall back with nothing done."),
       hint: () => G.world === "heights" ? tip("KEEP THE FLOW · TAP THE GOLD CROSS: BLESS", "KEEP THE FLOW · B: BLESS") : tip("TWELVE IN A ROW", "TWELVE IN A ROW"), need: 3, hp: 9, done: (e) => e === "heightsOut" },
     { say: () => "And three falls in a row, from tripping or from blows, or a grab that catches you, and they drag you down into the Depths, all of them with you. Ten in a row down there, and we rise again.", hint: () => "", need: 0, wait: 7.5 },
-    { say: () => "Enough. They are waiting for us. Down to the street.", hint: () => "", need: 0, wait: 3.2, last: true },
+    { say: () => G.opts.roof ? "Enough. They are waiting for us, the whole gang of them." : "Enough. They are waiting for us. Down to the street.", hint: () => "", need: 0, wait: 3.2, last: true },
   ];
   const HEIGHTS_LESSON = KATA.findIndex((L) => L.id === "heights");
 
@@ -190,6 +190,11 @@ const Fight = (() => {
     { id: "crypt", name: "The Crypt", walls: true, w: 1.35 },
     { id: "desert", name: "The Desert", walls: false, w: 3 },
   ];
+  // A roof in the city, on the flight: the whole gang that roams it comes at him there, one round
+  // of it as in the Holy Hour. Wider as the roof is wider; the hut over the stairs and the lift's
+  // machine room at the ends are walls.
+  const roofW = (o) => clamp(0.9 + (o.roofW || 80) / 110, 1.25, 2.2);
+  const ROOF_LINES = ["The whole gang of them. Keep moving, and never the same blow twice.", "They were waiting for us. Keep the flow, Father.", "Here they all come. I am above you.", "All of them at once. Finish them where they fall."];
   const VERSES = [
     "Watch and pray, that you may not enter into temptation.",
     "The spirit indeed is willing, but the flesh is weak.",
@@ -203,24 +208,25 @@ const Fight = (() => {
 
   function start(done, opts) {
     opts = opts || {};
-    const arena = !!opts.arena, room = arena ? ROOMS[0] : null;
-    const ww = Math.round(W * (arena ? room.w : 3)), hx0 = arena ? ww / 2 : ww / 2 - W * 0.22;
+    const arena = !!opts.arena, roof = !!opts.roof, room = arena ? ROOMS[0] : null;
+    const ww = Math.round(W * (arena ? room.w : roof && !opts.kata ? roofW(opts.roof) : 3)), hx0 = arena || (roof && !opts.kata) ? ww / 2 : ww / 2 - W * 0.22;
     bg = null;
     G = {
       done, opts, t: 0, ts: 1, slowT: 0, slowTs: 1, zoom: { k: 1, x: hx0, y: H / 2 }, cam: { k: 1, x: hx0, y: H / 2 }, view: { k: 1, cx: hx0, cy: H / 2 }, freeze: 0, muffled: false, ww,
       warnT: 0, warnF: null, pulseT: 0, pulseTs: 1, slowVis: 0, takedowns: 0, chainTD: 0,
-      base: opts.kata ? "kata" : arena ? "arena" : "street", world: opts.kata ? "kata" : arena ? "arena" : "street", worldT: 0, shift: null, banner: null, whispers: [], whisperT: 2,
+      base: opts.kata ? "kata" : arena || roof ? "arena" : "street", world: opts.kata ? "kata" : arena || roof ? "arena" : "street", worldT: 0, shift: null, banner: null, whispers: [], whisperT: 2,
       room, arena: arena ? { phase: "intro", t: 0, round: 0, cast: 0, maxW: 1, maxAlive: 4, hpK: 1, up: 9 } : null,
       wave: -1, waveT: 0, foes: [], parts: [], pops: [], spawnQ: [], nextAtk: 2, touch: null, lastTap: null, msg: null, flash: 0, flashC: "#fff", shake: 0,
       hero: { x: hx0, y: 300, z: 0, dir: 1, act: { kind: "idle", t: 0 }, resolve: 100, spirit: 0, inv: 0, combo: 0, comboT: 0, best: 0, queue: null, hits: 0, last: null },
       angel: { x: hx0, y: 300, z: SKY, dir: 1, act: { kind: "above", t: 0 }, t: 0, lightX: hx0, catchT: 0 },
       guard: { chains: 6, freed: false, t: 0, fight: 0, nextHit: 0, x: ww / 2 - 40 },
-      taught: {}, over: 0, down: 0, keys: {}, launched: false, practised: false, kata: null,
+      taught: opts.taught || {}, over: 0, down: 0, keys: {}, launched: false, practised: false, kata: null,
     };
     if (opts.kata) { G.kata = { i: -1, t: 0, setT: 0, again: 0 }; kataNext(); Sound.play(SONGS.fight); Sound.setLevel(0); }
+    else if (roof) { roofBegin(); Sound.play(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); }
     else if (arena) { G.hero.y = 292; act("adore"); Sound.play(SONGS.desert); Sound.setLevel(0); }
     else { nextWave(); Sound.play(SONGS.fight); Sound.setLevel(1); Sound.fill("hit"); }
-    Sound.ambience({ wind: 0, rain: 0 });
+    Sound.ambience(roof ? { wind: 0.15, rain: 0.3 } : { wind: 0, rain: 0 });
     mode = Fight;
   }
   function say(t, who) { G.msg = { text: t, t: 0, who: who || "angel" }; if ((who || "angel") === "angel") Sound.fx.chord(G.t | 0); else if (who === "guardian") Sound.fx.lowChord(1); }
@@ -326,8 +332,10 @@ const Fight = (() => {
     save.practised = true; store();
     for (const f of G.foes) if (!f.gone) { f.gone = true; f.act = { kind: "castout", t: 0.5 }; puff(f.x, f.y - 60, C.holy, 8, false); }
     if (G.opts.only) { G.over = 0.001; G.leaving = true; return; }
-    // Down to the street: the real fight.
     G.taught.gold = G.taught.red = true;
+    // Out of his mind and onto the roof, where they are waiting.
+    if (G.opts.roof) { G.room = { id: "roof", name: "The Roof", walls: true, w: roofW(G.opts.roof) }; G.base = "arena"; G.shift = { from: "kata", to: "arena", t: 0, down: true }; G.hero.combo = 0; G.hero.spirit = Math.min(G.hero.spirit, 4); G.hero.resolve = 100; return; }
+    // Down to the street: the real fight.
     G.base = "street"; G.shift = { from: "kata", to: "street", t: 0, down: true };
     G.hero.combo = 0; G.hero.spirit = Math.min(G.hero.spirit, 4); G.hero.resolve = 100;
   }
@@ -905,6 +913,7 @@ const Fight = (() => {
       if (G.depthsWon) { G.depthsWon = false; for (const f of all) { landHit(f, 3, 1.8, { angel: true, front: false, breaks: true, noFloor: true }); if (!f.gone) floor(f, { long: 1.3 }); } G.hero.spirit = SPIRIT; G.flash = 0.8; G.flashC = C.holy; say("Up, and out! They fell. Finish them!"); }
       else say("I have you. Breathe.");
     }
+    else if (from === "kata" && G.opts.roof) roofBegin();
     else if (from === "kata") { G.banner = { text: "THE STREET", sub: "", c: "#e9e6df", t: 0 }; nextWave(); Sound.setLevel(1); Sound.fill("hit"); }
   }
   function stepWorld(dt, dtRaw) {
@@ -1046,7 +1055,7 @@ const Fight = (() => {
     G.flash = Math.max(0, G.flash - dtRaw * 2); G.shake = Math.max(0, G.shake - dtRaw * 20);
     stepParts(dt);
     stepWorld(dt, dtRaw);
-    if (G.over) { G.over += dtRaw; if (G.over > (G.leaving ? 1.6 : 3.4) && !G.left) { G.left = true; Sound.muffle(false); G.done(); } }
+    if (G.over) { G.over += dtRaw; if (G.over > (G.leaving ? 1.6 : 3.4) && !G.left) { G.left = true; Sound.muffle(false); G.done(G.result); } }
     if (G.shift) return;            // everyone hangs in the air while the world changes round them
     if (G.smiteWait && G.world === G.base) { G.smiteWait = false; G.smite = true; }
     if (G.finishing) { G.finishT = (G.finishT || 0) + dtRaw; if (G.finishT > 6) G.finishing = false; }
@@ -1119,6 +1128,8 @@ const Fight = (() => {
     Sound.queue(SONGS.noir); Sound.setLevel(0);
   }
   function recover() {
+    // On a roof on the flight, a fall: his angel carries him off, and the gang is still there.
+    if (G.arena && G.arena.roof) { G.left = true; Sound.muffle(false); G.done({ won: false }); return; }
     // In the Holy Hour, a fall is the end of the watch.
     if (G.arena) { arenaEnd(); return; }
     // His angel has carried him to the church to recover. No death: the wave begins again.
@@ -1142,6 +1153,8 @@ const Fight = (() => {
       if (A.t > 1.1 && G.pops.length) G.pops = G.pops.filter((p) => p.t < 0.4);
       if (A.t > 0.9 && ["idle", "run"].includes(H0.act.kind)) act("adore");
       if (A.t > 4.2) { A.phase = "trans"; A.t = 0; Sound.fx.whoosh(0.8, 1, false); }
+    } else if (A.phase === "won") {
+      if (A.t > 2.2 && !G.over) { G.over = 0.001; G.leaving = true; G.result = { won: true }; }
     } else if (A.phase === "trans") {
       if (A.t > 0.55 && !A.moved) { A.moved = true; arenaRoom(); }
       if (A.t > 1.1) { A.phase = "fight"; A.t = 0; A.moved = false; A.up = 0; arenaRound(); }
@@ -1154,6 +1167,22 @@ const Fight = (() => {
     act("idle");
     Sound.play(SONGS.fight); Sound.setLevel(1);
     arenaRound();
+  }
+  // On a roof on the flight: the whole gang of them, at once, one round of it, and then back up.
+  function roofBegin() {
+    const o = G.opts.roof, H0 = G.hero;
+    G.room = { id: "roof", name: "The Roof", walls: true, w: roofW(o) }; G.ww = Math.round(W * G.room.w);
+    for (const f of G.foes) f.gone = true;
+    G.foes = []; G.spawnQ = []; G.rosary = null; G.slowFor = null; G.lastMove = G.prevMove = null; G.woe = 0;
+    H0.x = G.ww / 2; H0.y = 300; H0.z = 0; H0.queue = null; act("idle");
+    G.cam.x = H0.x; G.view.cx = H0.x; G.angel.act = { kind: "above", t: 0 }; G.angel.x = H0.x; G.angel.lightX = H0.x;
+    G.base = "arena"; G.world = "arena";
+    G.arena = { phase: "fight", t: 0, round: o.level - 1, cast: 0, maxW: 1, maxAlive: 4, hpK: 1, up: 9, roof: true };
+    arenaRound();
+    G.banner = { text: o.guard ? "HIS FATHER'S CAR" : "ON THE ROOF", sub: G.spawnQ.length + " of them", c: o.guard ? "#ff8a60" : C.holy, t: 0 };
+    say(o.guard ? "They will not let us near him. All of them, Father: never the same blow twice."
+      : o.first ? "There they are, the whole gang of them. As I showed you: never the same blow twice, keep moving, and finish them when they fall."
+      : ROOF_LINES[Math.floor(Math.random() * ROOF_LINES.length)]);
   }
   // Each round harder: more of them, coming sooner, the big ones and the shields among them; their
   // wind-ups shorter and their blows heavier; one knocked down up again sooner; two, then three,
@@ -1175,12 +1204,19 @@ const Fight = (() => {
     }
     A.w = { foes, gap: [Math.max(0.85, 2.6 - 0.16 * n), Math.max(1.3, 3.4 - 0.18 * n)] };
     G.waveT = 0; G.hurtWave = false; G.nextAtk = 2.4; G.spawnQ = foes.map(([kind, at]) => ({ kind, at }));
-    G.banner = { text: "ROUND " + n, sub: G.room.name, c: C.holy, t: 0 };
+    if (!A.roof) G.banner = { text: "ROUND " + n, sub: G.room.name, c: C.holy, t: 0 };
     Sound.fill("hit");
   }
   // A round watched through: he kneels, the angel gives him a word, and the next place opens.
   function arenaCleared() {
     const A = G.arena, H0 = G.hero;
+    if (A.roof) {
+      // The roof is clear: a breath, and back up on his angel's back.
+      A.phase = "won"; A.t = 0;
+      if (!G.banner) G.banner = { text: "THE ROOF IS CLEAR", sub: "", c: C.holy, t: 0, small: true };
+      H0.combo = 0; H0.comboT = 0; Sound.setLevel(0);
+      return;
+    }
     A.phase = "clear"; A.t = 0;
     if (!G.banner) G.banner = { text: "ROUND " + A.round + " WATCHED", sub: "", c: C.holy, t: 0, small: true };
     say(VERSES[(A.round - 1) % VERSES.length]);
@@ -1706,6 +1742,51 @@ const Fight = (() => {
   const flick = (t, k) => 0.8 + 0.2 * Math.sin(t * 9 + k) * Math.sin(t * 4.3 + k * 2);
   function candle(x, y, t, k, a) { rect(x - 2, y, 4, 12, "#efe6d6"); circle(x, y - 2, 2.4, "#ffd27a"); glow(x, y - 4, 30, "#ffb04a", (a || 0.5) * flick(t, k)); }
   const ROOM_ART = {
+    // A roof in the city, at night, in the rain: the towers beyond its parapet, a water tank on its
+    // legs, the air units; at the left end the brick hut over the stairs, its door and its caged
+    // lamp, and at the right the lift's machine room with a neon sign on it.
+    roof: {
+      back(w) {
+        const g = ctx.createLinearGradient(0, 0, 0, FY); g.addColorStop(0, "#02030a"); g.addColorStop(0.7, "#0e1530"); g.addColorStop(1, "#1c1e3c"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, FY);
+        glowOval(w * 0.5, FY - 30, w * 0.7, 70, "#3a2a5a", 0.25);
+        skyline(321, -10, w + 10, FY - 40, 70, 210, "#0a1026", { winA: 0.4, lit: 0.4 });
+        skyline(322, -10, w + 10, FY - 22, 30, 120, "#070b1a", { winA: 0.55, lit: 0.45 });
+        rect(0, FY - 22, w, 22, "#151a2a"); rect(0, FY - 24, w, 3, "#2a3048");
+        for (let x = 20; x < w; x += 52) rect(x, FY - 22, 1, 22, "rgba(0,0,0,0.3)");
+        floorOf(w, "#1a1d2c", "#08090f", w / 2, "rgba(0,0,0,0.28)");
+        const r = seeded(91), tx = w * (0.26 + r() * 0.1);
+        for (const lx of [-18, 18]) rect(tx + lx - 2, FY - 92, 4, 76, "#05060c");
+        line(tx - 18, FY - 60, tx + 18, FY - 40, "#05060c", 2); line(tx + 18, FY - 60, tx - 18, FY - 40, "#05060c", 2);
+        rect(tx - 30, FY - 150, 60, 62, "#0a0b14"); poly([tx - 34, FY - 150, tx, FY - 172, tx + 34, FY - 150], "#0a0b14");
+        for (let k = 0; k < 4; k++) rect(tx - 30, FY - 140 + k * 14, 60, 1.5, "#141826");
+        for (let i = 0; i < 3; i++) {
+          const ax = w * (0.5 + i * 0.14) + r() * 30; if (ax > w - WALL - 110) break;
+          rect(ax, FY - 40, 54, 30, "#0d0f1a"); rect(ax, FY - 42, 54, 3, "#1e2236");
+          ctx.strokeStyle = "#1a1e30"; ctx.lineWidth = 1.5; for (const fx of [18, 40]) { ctx.beginPath(); ctx.arc(ax + fx, FY - 25, 9, 0, TAU); ctx.stroke(); }
+        }
+        rect(w * 0.15, FY - 58, 6, 42, "#0b0d16"); rect(w * 0.15 - 4, FY - 62, 14, 5, "#0b0d16");
+        // The hut over the stairs.
+        const hut = 104;
+        rect(0, hut, WALL + 14, H - hut, "#1e1a22"); rect(0, hut - 6, WALL + 20, 7, "#2c2632");
+        for (let y = hut + 6, row = 0; y < FY + 30; y += 9, row++) for (let x = row % 2 ? 0 : 7; x < WALL + 14; x += 14) rect(x, y, 12, 1, "rgba(0,0,0,0.28)");
+        rect(10, FY - 76, 22, 60, "#0c0a10"); rect(10, FY - 76, 22, 2, "#3a3440"); circle(28, FY - 46, 1.4, "#8a8070");
+        ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(WALL + 14, FY, 12, H - FY);
+        // The lift's machine room.
+        const mx = w - WALL - 14, mt = 84;
+        rect(mx, mt, WALL + 14, H - mt, "#181c28"); rect(mx - 6, mt - 6, WALL + 20, 7, "#262c3c");
+        for (let y = mt + 70; y < FY - 10; y += 22) rect(mx + 6, y, WALL + 2, 10, "#10131c");
+        ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(mx - 12, FY, 12, H - FY);
+      },
+      live(w, t, vx0, vx1) {
+        glow(21, FY - 86, 26, "#ffd9a0", 0.55 * flick(t, 3)); rect(17, FY - 90, 8, 5, "#ffe6b8");
+        glowOval(46, FY + 14, 70, 12, "#ffd9a0", 0.12 * flick(t, 3));
+        const mx = w - WALL - 14;
+        glow(mx + 24, 76, 6, C.red, Math.sin(t * 2.4) > 0.2 ? 0.9 : 0.15);
+        "HOTEL".split("").forEach((ch, i) => neon(ch, mx + 24, 104 + i * 15, 12, C.pink, t, { flicker: i === 3 }));
+        rain(t, 70, vx0, 0, vx1 - vx0, H, { seed: 9, color: "rgba(196,240,255,0.2)" });
+        for (let x = Math.floor(vx0 / 160) * 160 + 40; x < vx1; x += 160) glowOval(x + Math.sin(t + x) * 3, FY + 40 + (x % 3) * 18, 34, 4, "#9fb4ff", 0.07);
+      },
+    },
     // The chapel of the monastery, at night: adobe, the beams of the roof, the altar, and on it the
     // monstrance, the Host in a sunburst of gold, the only bright thing in the room.
     chapel: {
@@ -2429,6 +2510,8 @@ const Fight = (() => {
       if (L && L.hint() && G.world === "kata") { const pul = 0.75 + 0.25 * Math.sin(G.t * 5); text(L.hint(), W / 2, H - 16, { align: "center", size: 12, weight: 800, spacing: 3, color: C.holy, glow: C.holy, blur: 10, alpha: pul, max: W - 60 }); }
       buttons.push({ x: 8, y: 88, w: 150, h: 26, act: () => { if (G.kata) kataEnd(); } });
       text(G.opts.only ? "END PRACTICE ›" : "SKIP PRACTICE ›", 16, 104, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)" });
+    } else if (G.arena && G.arena.roof) {
+      text("ON THE ROOF · " + (alive().length + G.spawnQ.length) + " LEFT · CAST OUT " + G.arena.cast, 16, 80, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
     } else if (G.arena) {
       const A = G.arena;
       text("ROUND " + A.round + " · " + G.room.name.toUpperCase() + " · CAST OUT " + A.cast, 16, 80, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
