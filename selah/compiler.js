@@ -18,20 +18,25 @@ const Compiler = (() => {
 
   // ---- The ranks: what of the drum part each one plays (as in Rock Band) -----------------------------
   // Every note is a tap. Each rank is kept to rules like the ones Rock Band's charts are kept to
-  // (Easy: kick and snare on the beat; Medium: nothing closer than an eighth, one at a time; Hard: two
-  // at once, still no sixteenths; Expert: the sixteenths), and then every chart is played through by
-  // the two thumbs of hands.js, which take out anything a person could not reach in time.
+  // (Easy: kick and snare on the beat; Medium: nothing closer than an eighth, one at a time), and then
+  // every chart is played through by the two thumbs of hands.js, which take out anything a person could
+  // not reach in time. As the author asked after playing, the ranks climb gently: Festum is a notch
+  // above Memoria (the toms and fills, still one at a time, a few strokes more), and Sollemnitas a
+  // notch above Festum (the kick with a hand, a few strokes more again); nothing like Rock Band's Hard.
   //   chord: how many strokes at once. keeperAlone: the cymbal that keeps time (the hat, the ride) is
-  //     struck only alone, so two at once is the kick with a hand.
+  //     struck only alone. kickChord: two at once only if one of them is the kick, and only on the
+  //     first beat of a bar (as a drummer lands a crash with the kick).
   //   gap: the closest two moments may be, in sixteenths, and never closer than secs.
+  //   over: a rank one or two notches above another: in every bar, at most `by` strokes more than that
+  //     rank plays there (the weightiest of what it may add; the lightest go first).
   //   spare: the time each thumb must have to spare at every stroke (the lower ranks are never tight).
   //   nps: about how many strokes a second the rank should ask for, at most, on average (playtest.js
   //     warns past it).
   C.RANKS = {
     feria: { name: "Feria", lvl: 0, chord: 1, gap: 4, secs: 0.3, spare: 0.15, nps: 2.5, speed: 0.9, what: "Kick and snare" },
     memoria: { name: "Memoria", lvl: 1, chord: 1, gap: 2, secs: 0.2, spare: 0.08, nps: 3.5, speed: 1, what: "And the fills" },
-    festum: { name: "Festum", lvl: 2, chord: 2, keeperAlone: true, gap: 2, secs: 0.15, spare: 0.04, nps: 5.5, speed: 1.1, what: "Hats and toms" },
-    sollemnitas: { name: "Sollemnitas", lvl: 3, chord: 2, gap: 1, secs: 0.1, spare: 0.02, nps: 7.5, speed: 1.22, what: "Every stroke" },
+    festum: { name: "Festum", lvl: 2, chord: 1, gap: 2, secs: 0.17, over: { rank: "memoria", by: 1 }, spare: 0.06, nps: 3, speed: 1.04, what: "And the toms" },
+    sollemnitas: { name: "Sollemnitas", lvl: 3, chord: 2, kickChord: true, keeperAlone: true, gap: 2, secs: 0.16, over: { rank: "memoria", by: 2 }, spare: 0.05, nps: 3.5, speed: 1.08, what: "Kick with a hand" },
   };
   C.RANK_ORDER = ["feria", "memoria", "festum", "sollemnitas"];
 
@@ -186,6 +191,7 @@ const Compiler = (() => {
   // drum, the weightiest; then no two moments closer than the rank allows (of two too close, the
   // lighter goes); then the two thumbs play it through and leave out what they cannot reach.
   const keeper = (n) => n.lane === "hat" || n.piece === "ride";
+  const onBeat = (n) => n.step === 0;
   const minGap = (rank, sd) => Math.max(rank.gap * sd * 0.9, rank.secs);
   C.reduce = function (notes, rank, sd) {
     const ms = Thumbs.moments(notes);
@@ -194,6 +200,8 @@ const Compiler = (() => {
       const lanes = new Set();
       m.notes = m.notes.sort((a, b) => weight(b) - weight(a)).filter((n) => !lanes.has(n.lane) && lanes.add(n.lane));
       if (rank.keeperAlone && m.notes.length > 1) m.notes = m.notes.filter((n) => !keeper(n));
+      // two at once only with the kick, on the first beat: the kick and the weightiest hand, else the weightiest alone
+      if (rank.kickChord && m.notes.length > 1) { const k = m.notes.find((n) => n.lane === "kick"), h = m.notes.find((n) => n.lane !== "kick"); m.notes = k && h && onBeat(k) ? [h, k] : [m.notes[0]]; }
       m.notes = m.notes.slice(0, rank.chord);
     }
     const kept = [], gap = minGap(rank, sd);
@@ -201,7 +209,20 @@ const Compiler = (() => {
       while (kept.length && m.t - kept[kept.length - 1].t < gap && heavy(m) > heavy(kept[kept.length - 1])) kept.pop();
       if (!kept.length || m.t - kept[kept.length - 1].t >= gap) kept.push(m);
     }
-    return Thumbs.reduce(kept.flatMap((m) => m.notes), weight, rank.spare).sort((a, b) => a.t - b.t || weight(b) - weight(a));
+    let out = kept.flatMap((m) => m.notes);
+    // a notch above another rank: in each bar, no more than `by` strokes more than it plays there
+    // (the same bars, the same strokes to choose from); the lightest go first, the later of two alike
+    if (rank.over) {
+      const base = C.RANKS[rank.over.rank], baseCount = new Map(), byBar = new Map(), drop = new Set();
+      for (const n of C.reduce(notes.filter((x) => x.lvl <= base.lvl), base, sd)) baseCount.set(n.bar, (baseCount.get(n.bar) || 0) + 1);
+      for (const n of out) { if (!byBar.has(n.bar)) byBar.set(n.bar, []); byBar.get(n.bar).push(n); }
+      for (const [b, ns] of byBar) {
+        const most = Math.max(1, (baseCount.get(b) || 0) + rank.over.by);
+        if (ns.length > most) ns.slice().sort((a, b2) => weight(a) - weight(b2) || b2.t - a.t).slice(0, ns.length - most).forEach((n) => drop.add(n));
+      }
+      out = out.filter((n) => !drop.has(n));
+    }
+    return Thumbs.reduce(out, weight, rank.spare).sort((a, b) => a.t - b.t || weight(b) - weight(a));
   };
   // A chart's breaks of its rank's rules (for playtest.js): an empty list if it keeps them all.
   C.audit = function (chart) {
@@ -211,6 +232,7 @@ const Compiler = (() => {
       if (m.notes.some((n) => n.type !== "tap")) out.push(m.t.toFixed(2) + " s: a stroke that is not a tap");
       if (m.notes.length > rank.chord) out.push(m.t.toFixed(2) + " s: " + m.notes.length + " at once at " + rank.name);
       if (rank.keeperAlone && m.notes.length > 1 && m.notes.some(keeper)) out.push(m.t.toFixed(2) + " s: the " + m.notes.find(keeper).piece + " with another stroke at " + rank.name);
+      if (rank.kickChord && m.notes.length > 1 && !m.notes.some((n) => n.lane === "kick" && onBeat(n))) out.push(m.t.toFixed(2) + " s: two at once off the first beat, or without the kick, at " + rank.name);
       if (prev && m.t - prev.t < gap - 1e-6) out.push(m.t.toFixed(2) + " s: two moments " + Math.round((m.t - prev.t) * 1000) + " ms apart at " + rank.name);
       prev = m;
     }
