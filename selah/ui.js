@@ -61,7 +61,7 @@ const UI = (() => {
     const d = DOUAY.psalms[n - 1];
     if (set().voice === "grail" && grail) {
       const g = packPsalm(grail, n);
-      if (g) return { psalm: Object.assign({}, g, { incipit: g.incipit || d.incipit }), label: grail.displayName || "Grail" };
+      if (g) return { psalm: g, label: grail.displayName || "Grail" };
       return { psalm: d, label: "Douay (not in your Grail file)" };
     }
     return { psalm: d, label: "Douay" };
@@ -105,16 +105,16 @@ const UI = (() => {
     box.innerHTML = "";
     $("voiceName").textContent = "Voice: " + (set().voice === "grail" && grail ? (grail.displayName || "Grail") : "Douay");
     for (const P of PSALMS) {
-      const d = DOUAY.psalms[P.n - 1], song = SONGS[P.song];
+      const song = SONGS[P.song];
       const c = document.createElement("div");
       c.className = "card"; c.style.setProperty("--mood", P.mood);
       const vkey = set().voice === "grail" && grail ? "grail" : "douay";
       c.innerHTML = '<div class="top"><div class="caps">Psalm</div><button class="listen">▸ Listen</button></div><div class="num">' + P.n + '</div><div class="inc"></div><div class="meta"></div><div class="first"></div><div class="ranks"></div>';
-      c.querySelector(".inc").textContent = d.incipit;
+      c.querySelector(".inc").textContent = "“" + song.title + "”";
       // its opening words, in the Voice chosen
       const first = textFor(P.n).psalm.verses.find((v) => !v.title);
       c.querySelector(".first").textContent = first ? first.lines.join(" ") : "";
-      c.querySelector(".meta").textContent = "“" + song.title + "” · " + song.genre + " · " + song.bpm + " bpm · " + song.meters;
+      c.querySelector(".meta").textContent = song.genre + " · " + song.bpm + " bpm · " + song.meters;
       const ranks = c.querySelector(".ranks");
       for (const r of Compiler.RANK_ORDER) {
         const R = Compiler.RANKS[r], rec = save.records[vkey + ":" + P.n + ":" + r];
