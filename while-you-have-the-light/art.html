@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>While You Have the Light: art</title>
+<style>
+  body { margin: 0; background: #0b0b0d; color: #e9e6df; font: 14px/1.5 Montserrat, "Segoe UI", system-ui, sans-serif; }
+  main { padding: 20px 16px 60px; }
+  h1 { font: 700 26px/1.2 Cinzel, Georgia, serif; letter-spacing: 0.12em; margin: 0 0 4px; }
+  .sub { color: #a9a49a; margin-bottom: 18px; }
+  h2 { font: 700 13px/1.3 Montserrat, system-ui, sans-serif; letter-spacing: 0.2em; text-transform: uppercase; color: #e8c46a; margin: 26px 0 8px; }
+  canvas.panel { display: block; background: #000; max-width: none; }
+  #screen { display: none; }
+  a { color: #e8c46a; }
+  .note { color: #a9a49a; font-size: 13px; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="2" height="2"></canvas>
+<main>
+  <h1>WHILE YOU HAVE THE LIGHT</h1>
+  <div class="sub">The art, every piece of it, moving. (Add <code>?t=2.5</code> to stop time, <code>?strip=climbUp</code> for one move frame by frame, <code>?only=monk</code> for one section.)</div>
+  <div id="sections"></div>
+</main>
+<script src="core.js"></script>
+<script src="art.js"></script>
+<script>
+"use strict";
+// The art viewer: each section is a canvas of its own, drawn with art.js through useCtx.
+const DPRv = Math.min(2, window.devicePixelRatio || 1);
+const params = new URLSearchParams(location.search);
+const FREEZE = params.has("t") ? parseFloat(params.get("t")) : null;
+const ONLY = params.get("only"), STRIP = params.get("strip");
+const panels = [];
+function section(key, title, w, h, draw, note) {
+  if (ONLY && !key.startsWith(ONLY)) return;
+  const box = document.getElementById("sections");
+  const hd = document.createElement("h2"); hd.textContent = title; box.appendChild(hd);
+  if (note) { const p = document.createElement("div"); p.className = "note"; p.textContent = note; box.appendChild(p); }
+  const c = document.createElement("canvas"); c.className = "panel"; c.id = "p-" + key;
+  c.width = Math.round(w * DPRv); c.height = Math.round(h * DPRv); c.style.width = w + "px"; c.style.height = h + "px";
+  box.appendChild(c); panels.push({ c, g: c.getContext("2d"), w, h, draw });
+}
+function label(str, x, y, o) { text(str, x, y, Object.assign({ size: 9, weight: 600, color: "#e9e6df" }, o || {})); }
+// A cell of mist with a black ground, as the world will look behind him.
+function cellBg(x, y, w, h, gy, dark) {
+  rect(x, y, w, h, dark ? "#1b1611" : "#8e9194"); rect(x, y + h * 0.55, w, h * 0.45, dark ? "#15110d" : "#7d8083");
+  rect(x, gy, w, y + h - gy, "#0a0a0c");
+  ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+function clipCell(x, y, w, h) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); }
+const DUR = { climbUp: 2.6, climbDown: 2.4, turn: 0.9, stepUp: 0.7, stepDown: 0.7, leap: 1.1, land: 0.7, zip: 0.9, dodge: 0.8, knockdown: 1.6, getUp: 1.3, flare: 1.8, virtue: 2.0, pillar: 1.6, scattered: 1.4 };
+const CYC = { idle: [2.6, 0, 0], walk: [1.5, 34, 0], run: [0.62, 170, 0], fall: [0.9, 0, 320], hang: [2.2, 0, 0], block: [1.6, 0, 0], carry: [2.6, 0, 0] };
+const ONESHOTS = Object.keys(MONK_ANIM).filter((k) => !MONK_CYCLIC.includes(k));
+// One move of the monk in a cell: cyclic ones loop at their pace; one-shots play and hold a beat.
+function monkCell(name, x, y, w, h, z, t, o) {
+  o = o || {};
+  const gy = y + h - 16; cellBg(x, y, w, h, gy, o.dark);
+  clipCell(x, y, w, h);
+  let u, vx = 0, vy = 0;
+  if (CYC[name]) { const [d, cvx, cvy] = CYC[name]; u = (t / d) % 1; vx = cvx; vy = cvy; }
+  else { const d = DUR[name] || 1.1, k = (t / (d + 0.5)) % 1 * (d + 0.5) / d; u = Math.min(1, k); }
+  if (o.u !== undefined) u = o.u;
+  ctx.translate(x + w / 2, gy); ctx.scale(z, z);
+  let ax = 0, ay = 0;
+  if (name === "hang") { const lt = -h / z + 22 / z + 4; ay = lt - MONK_HANG[1]; rect(MONK_HANG[0] - 0.5, lt, 60, 200, "#0a0a0c"); ctx.translate(-12, 0); }
+  if (name === "climbUp" || name === "climbDown") {
+    const lh = 66, ex = 0; rect(ex, -lh, 60, lh, "#0a0a0c");
+    if (name === "climbUp") [ax, ay] = monkClimb("climbUp", u, ex - 8, 0, ex + MONK_EDGE, -lh);
+    else [ax, ay] = monkClimb("climbDown", u, ex + MONK_EDGE, -lh, ex - 14, 0);
+    ctx.translate(-10, 0);
+  }
+  const p = MONK_ANIM[name](u, t), dir = name === "turn" && u >= 0.5 ? -1 : 1;
+  const r = drawMonk(ax, ay, dir, p, { t, vx, vy });
+  drawFlame(r.torch[0], r.torch[1], 1, t, { vx, flare: name === "flare" && u > 0.4 ? 1 : 0 });
+  const hit = MONK_HIT[name];
+  if (hit !== undefined && u >= hit && u < hit + 0.06) { const q = monkJoint(ax, ay, dir, p, ["throw", "lob", "catch", "flick", "pickup", "palm"].includes(name) ? "hF" : ["jumpKick", "spinKick", "sweep", "risingKnee", "diveStomp", "airKick", "underFoot"].includes(name) ? (name === "risingKnee" ? "kF" : "fF") : "torch"); glow(q[0], q[1], 16, "#ffffff", 0.9); }
+  ctx.restore();
+  label(name, x + 5, y + 12);
+  if (!CYC[name]) { rect(x + 4, y + h - 6, (w - 8) * u, 2, "#e8c46a"); if (hit !== undefined) rect(x + 4 + (w - 8) * hit - 0.5, y + h - 8, 1, 6, "#ffffff"); }
+}
+
+// ---- The monk -----------------------------------------------------------------------------------------
+section("monk", "The monk: cycles, at twice size and at true size", 1180, 300, (t, P) => {
+  MONK_CYCLIC.forEach((n, i) => monkCell(n, 10 + i * 166, 10, 160, 170, 2, t));
+  MONK_CYCLIC.forEach((n, i) => monkCell(n, 10 + i * 166, 190, 160, 100, 1, t));
+});
+section("moves", "The monk: every one-shot move (the bar is the move's time; the white tick, its blow)", 1180, Math.ceil(ONESHOTS.length / 8) * 156 + 10, (t) => {
+  ONESHOTS.forEach((n, i) => monkCell(n, 10 + (i % 8) * 146, 10 + Math.floor(i / 8) * 156, 140, 150, 1.7, t));
+});
+const SZ = parseFloat(params.get("z") || "1.6"), SN = parseInt(params.get("n") || "12"), SW = Math.round(1160 / SN), SH = Math.round(80 + 95 * SZ);
+if (STRIP) STRIP.split(",").forEach((name, si) => section(si ? "strip" + si : "strip", "Frame by frame: " + name, 1180, SH + 20, (t) => {
+  const STRIP = name, N = SN, isM = MONK_ANIM[STRIP], sin = params.get("sin") || "envy";
+  for (let i = 0; i < N; i++) {
+    const u = N > 1 ? i / (N - 1) : parseFloat(params.get("u") || "0"), x = 10 + i * SW;
+    if (isM) monkCell(STRIP, x, 10, SW - 3, SH, SZ, t, { u });
+    else { const gy = SH - 4; cellBg(x, 10, SW - 3, SH, gy, params.get("dark") !== "0"); clipCell(x, 10, SW - 3, SH); ctx.translate(x + SW / 2, gy); ctx.scale(SZ, SZ); const p = DEMON_ANIM[STRIP](u, t, sin); drawDemon(sin, 0, 0, 1, p, { t, lit: 1 }); demonEyes(sin, 0, 0, 1, p, { t }); ctx.restore(); }
+    label(u.toFixed(2), x + 5, SH + 6, { size: 8, color: "#a9a49a" });
+  }
+}));
+// ---- The demons --------------------------------------------------------------------------------------
+const DANIMS = Object.keys(DEMON_ANIM);
+function demonPose(sin, name, t, dur) {
+  const cyc = DEMON_CYCLIC.includes(name);
+  const d = dur || (cyc ? (name === "walk" ? 1.3 : name === "run" ? 0.6 : name === "fly" ? 0.7 : 2.2) : 1.4);
+  const u = cyc ? (t / d) % 1 : Math.min(1, ((t / (d + 0.5)) % 1) * (d + 0.5) / d);
+  return [DEMON_ANIM[name](u, t, sin), u];
+}
+SIN_ORDER.forEach((sin) => {
+  const S = SINS[sin];
+  section("d-" + sin, S.name + " (" + S.virtue + " is its contrary)", 1180, 310, (t) => {
+    const big = [["lit", { lit: 1 }], ["in the dark", { lit: 0 }], ["half in the light", { split: 1 }], ["windup", { lit: 1, windup: 1, anim: "windup" }], ["hurt", { lit: 1, hurt: 1, anim: "hurt" }], ["broken", { lit: 1, broken: true, anim: "broken" }], ["broken, dark", { lit: 0, broken: true, anim: "broken" }],
+      sin === "avarice" ? ["carry 3", { lit: 1, carry: 3 }] : sin === "gluttony" ? ["belly 3", { lit: 1, belly: 3 }] : sin === "envy" ? ["mirror", { lit: 1, mirror: 0.5 + 0.5 * Math.sin(t * 4), anim: "mirror" }] : sin === "lust" ? ["tether", { lit: 1, anim: "tether" }] : sin === "pride" ? ["fly", { lit: 1, anim: "fly" }] : sin === "wrath" ? ["charge", { lit: 1, anim: "run" }] : ["float", { lit: 1, anim: "float" }]];
+    big.forEach(([name, o], i) => {
+      const x = 10 + i * 146, y = 10, w = 140, h = 170, gy = y + h - 14;
+      cellBg(x, y, w, h, gy, o.lit === 1 || o.split); clipCell(x, y, w, h);
+      ctx.translate(x + w / 2, gy); ctx.scale(1.9, 1.9);
+      const [p] = demonPose(sin, o.anim || "idle", t);
+      const oo = Object.assign({ t }, o);
+      if (o.split) {
+        drawDemon(sin, 0, 0, 1, p, Object.assign({}, oo, { lit: 0 }));
+        ctx.save(); ctx.beginPath(); ctx.arc(-26, -30, 34 + 6 * Math.sin(t), 0, TAU); ctx.clip(); drawDemon(sin, 0, 0, 1, p, Object.assign({}, oo, { lit: 1 })); ctx.restore();
+        ring(-26, -30, 34 + 6 * Math.sin(t), "rgba(255,179,71,0.5)", 0.5);
+      } else drawDemon(sin, 0, 0, 1, p, oo);
+      demonEyes(sin, 0, 0, 1, p, { t, windup: o.windup ? 1 : 0 });
+      ctx.restore(); label(name, x + 5, y + 12);
+    });
+    DANIMS.forEach((name, i) => {
+      const x = 10 + (i % 10) * 116, y = 190 + Math.floor(i / 10) * 60, w = 112, h = 56, gy = y + h - 6;
+      cellBg(x, y, w, h, gy, true); clipCell(x, y, w, h);
+      ctx.translate(x + w * 0.62, gy); ctx.scale(0.8, 0.8);
+      const [p, u] = demonPose(sin, name, t);
+      drawDemon(sin, 0, 0, 1, p, { t, lit: 1, belly: name === "swallow" && u > 0.7 ? 1 : 0, carry: name === "pickup" && u > 0.5 ? 1 : 0 });
+      demonEyes(sin, 0, 0, 1, p, { t });
+      ctx.restore(); label(name, x + 4, y + 10, { size: 8 });
+      if (!DEMON_CYCLIC.includes(name)) { const hit = DEMON_HIT[name]; rect(x + 3, y + h - 3, (w - 6) * u, 1.5, "#e8c46a"); if (hit !== undefined) rect(x + 3 + (w - 6) * hit, y + h - 5, 1, 4, "#fff"); }
+    });
+  });
+});
+section("sizes", "All seven at true size, in the dark and in the light, beside the monk", 1180, 150, (t) => {
+  rect(0, 0, 1180, 150, "#8e9194"); rect(0, 70, 1180, 80, "#7d8083"); rect(0, 128, 1180, 22, "#0a0a0c");
+  const p0 = MONK_ANIM.idle((t / 2.6) % 1, t), r = drawMonk(30, 128, 1, p0, { t }); drawFlame(r.torch[0], r.torch[1], 1, t);
+  SIN_ORDER.forEach((sin, i) => {
+    const p = DEMON_ANIM.idle((t / 2.2 + i * 0.13) % 1, t, sin), x = 100 + i * 70;
+    drawDemon(sin, x, 128, -1, p, { t, lit: 0 }); demonEyes(sin, x, 128, -1, p, { t });
+    drawDemon(sin, 620 + i * 75, 128, -1, p, { t, lit: 1 }); demonEyes(sin, 620 + i * 75, 128, -1, p, { t });
+  });
+  const pm = MONK_ANIM.idle(0.2, t), r2 = drawMonk(590, 128, 1, pm, { t }); drawFlame(r2.torch[0], r2.torch[1], 1, t);
+});
+// ---- Things, flames, the backdrop -------------------------------------------------------------------
+section("things", "Things lying about, Pride's shard, the flame (normal, flare, gutter, moving), embers", 1180, 210, (t) => {
+  rect(0, 0, 590, 210, "#8e9194"); rect(590, 0, 590, 210, "#16120e");
+  const kinds = Object.keys(OBJECTS);
+  kinds.forEach((k, i) => {
+    const x = 40 + i * 60;
+    drawObject(k, x, 50, k === "beam" ? 0 : Math.sin(t * 0.8 + i) * 0.4, { lit: 0, t }); label(OBJECTS[k].name, x - 20, 85, { size: 8, color: "#111" });
+    drawObject(k, 630 + i * 60, 50, k === "beam" ? 0 : Math.sin(t * 0.8 + i) * 0.4, { lit: 1, t }); label(OBJECTS[k].name, 610 + i * 60, 85, { size: 8 });
+  });
+  drawShard(430, 50, t * 2, false); drawShard(1010, 50, t * 2, true); label("shard", 420, 85, { size: 8, color: "#111" }); label("shard", 1000, 85, { size: 8 });
+  drawObject("beam", 520, 50, t * 0.7, { lit: 0, t }); drawObject("beam", 1110, 50, t * 0.7, { lit: 1, t });
+  const fl = [["normal", {}], ["flare", { flare: 1 }], ["flare 0.5", { flare: 0.5 }], ["gutter", { gutter: 1 }], ["gutter 0.5", { gutter: 0.5 }], ["running right", { vx: 180 }], ["running left", { vx: -180 }], ["small", {}, 0.45]];
+  fl.forEach(([n, o, s], i) => {
+    const x = 640 + i * 66, y = 180; rect(x - 1.2, y, 2.4, 14, "#2a1a0e");
+    drawFlame(x, y, s || 1, t + i, o); label(n, x - 22, 204, { size: 8 });
+    drawFlame(60 + i * 66, y, s || 1, t + i, o); rect(60 + i * 66 - 1.2, y, 2.4, 14, "#0a0a0c"); label(n, 38 + i * 66, 204, { size: 8, color: "#111" });
+  });
+  for (let i = 0; i < 12; i++) { const a = (t * 0.8 + i / 12) % 1; drawEmber(1150 + Math.sin(i * 2.3 + t) * 10, 190 - a * 80, 1 + (i % 3) * 0.4, 1 - a); }
+});
+// The game's picture: the backdrop, a black foreground of rock, and the figures on it.
+function scene(t, P, zoom) {
+  const cx = 300 + t * 26, cy = 300 + Math.sin(t * 0.35) * 70;
+  const mx = 250, my = 300, wp = (q) => [(q[0] - cx) * zoom + W / 2, (q[1] - cy) * zoom + H / 2];
+  const mp = wp([cx - 60, 330]);
+  drawBackdrop(cx, cy, zoom, t, { warm: { x: mp[0], y: mp[1] - 50 * zoom, r: 120 * zoom } });
+  ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(zoom, zoom); ctx.translate(-cx, -cy);
+  // The rock: a floor with crags, a cliff on the left, a slab floating up high.
+  const fx = cx - 400;
+  poly([fx, 700, fx, 330, fx + 120, 334, fx + 160, 326, fx + 300, 330, fx + 360, 322, fx + 420, 330, fx + 600, 328, fx + 640, 318, fx + 700, 330, fx + 900, 334, fx + 900, 700], "#0a0a0c");
+  poly([fx, 330, fx, 120, fx + 40, 130, fx + 70, 180, fx + 64, 230, fx + 96, 268, fx + 90, 330], "#0a0a0c");
+  poly([cx + 90, 210, cx + 200, 206, cx + 186, 222, cx + 150, 240, cx + 132, 232, cx + 108, 226], "#0a0a0c");
+  const m = [cx - 60, 330], p = MONK_ANIM.run((t / 0.62) % 1, t);
+  // The light: what the torch reaches is drawn lit.
+  const mon = drawMonk(m[0], m[1], 1, p, { t, vx: 170 });
+  const lx = mon.torch[0], ly = mon.torch[1], lr = 92;
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; glow(lx, ly, lr * 1.3, C.flame, 0.16); ctx.restore();
+  const foes = [["wrath", cx + 10, "run"], ["envy", cx - 150, "idle"], ["gluttony", cx + 160, "idle"], ["lust", cx + 260, "idle"], ["pride", cx + 140, "fly"], ["avarice", cx - 220, "walk"], ["sloth", cx + 60, "float"]];
+  foes.forEach(([sin, x, a], i) => {
+    const y = sin === "pride" ? 200 : sin === "sloth" ? 300 : 330, [q] = demonPose(sin, a, t + i * 0.3);
+    drawDemon(sin, x, y, -1, q, { t, lit: 0 });
+    ctx.save(); ctx.beginPath(); ctx.arc(lx, ly, lr, 0, TAU); ctx.clip(); drawDemon(sin, x, y, -1, q, { t, lit: 1 }); ctx.restore();
+    demonEyes(sin, x, y, -1, q, { t });
+  });
+  drawObject("flask", cx - 120, 326, 0, { t }); drawObject("skull", cx + 220, 326, 0.3, { t }); drawObject("brand", cx + 330, 328, 0.1, { t });
+  drawFlame(lx, ly, 1, t, { vx: 170 });
+  ctx.restore();
+}
+section("backdrop", "The game's picture: the Limbo backdrop with parallax and fog, the rock, the figures (640 x 360, as on a phone)", 1300, 370, (t) => {
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 640, 360); ctx.clip(); W = 640; scene(t, null, 1); ctx.restore();
+  ctx.save(); ctx.translate(650, 0); ctx.beginPath(); ctx.rect(0, 0, 640, 360); ctx.clip(); drawBackdrop(t * 60, 300 + Math.sin(t * 0.5) * 120, 1.25, t, {}); ctx.restore();
+  label("zoom 1.25, the backdrop alone, panning", 656, 352, { color: "#222" });
+});
+
+function frame(now) {
+  const t = FREEZE !== null ? FREEZE : now / 1000;
+  for (const P of panels) { const old = useCtx(P.g); P.g.setTransform(DPRv, 0, 0, DPRv, 0, 0); P.g.clearRect(0, 0, P.w, P.h); P.draw(t, P); useCtx(old); }
+  if (FREEZE === null) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// How long the figures take to draw: a thousand demons (half lit, half dark) and a thousand monks,
+// on a canvas the size of a phone's at twice its pixels.
+window.bench = function () {
+  const c = document.createElement("canvas"); c.width = 1400; c.height = 720;
+  const g = c.getContext("2d"), old = useCtx(g); g.setTransform(2, 0, 0, 2, 0, 0);
+  const out = {};
+  let t0 = performance.now();
+  for (let i = 0; i < 1000; i++) { const sin = SIN_ORDER[i % 7], p = DEMON_ANIM.walk((i * 0.137) % 1, i * 0.01, sin); drawDemon(sin, 40 + (i * 37) % 600, 300, i % 2 ? 1 : -1, p, { t: i * 0.01, lit: i % 2 }); }
+  g.getImageData(0, 0, 1, 1); out.demons = performance.now() - t0;
+  t0 = performance.now();
+  for (let i = 0; i < 1000; i++) { const p = MONK_ANIM.run((i * 0.137) % 1, i * 0.01); drawMonk(40 + (i * 37) % 600, 300, i % 2 ? 1 : -1, p, { t: i * 0.01, vx: 160 }); }
+  g.getImageData(0, 0, 1, 1); out.monks = performance.now() - t0;
+  t0 = performance.now();
+  for (let i = 0; i < 100; i++) drawBackdrop(i * 13, 300, 1, i * 0.1, {});
+  g.getImageData(0, 0, 1, 1); out.backdrops100 = performance.now() - t0;
+  t0 = performance.now();
+  for (let i = 0; i < 1000; i++) drawFlame(100 + i % 500, 200, 1, i * 0.01, {});
+  g.getImageData(0, 0, 1, 1); out.flames = performance.now() - t0;
+  useCtx(old); return out;
+};
+</script>
+</body>
+</html>
