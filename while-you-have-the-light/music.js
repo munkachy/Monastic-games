@@ -5,8 +5,8 @@
 // uncover", is the whole game in one word. It is in the second mode, the hypodorian: its home is
 // D, and it moves in a narrow, low range, from the C below to the G above and never higher. The
 // harmony keeps to the mode (D minor, C, B-flat, A minor, F, G minor, and never the sharp seventh
-// of a major key), and the organ plays the tune in parallel fifths, as the oldest written harmony
-// did (organum).
+// of a major key), and the organ doubles the tune below, mostly in fifths, as the oldest written
+// harmony did (organum), but always on a note of the bar's chord.
 //
 // The hymn as the Cistercians sang it (they keep the Rule of St Benedict too), from GregoBase
 // (https://gregobase.selapa.net/chant.php?id=9743), transcribed from the Hymnarium cisterciense,
@@ -71,7 +71,12 @@ const SONGS = (() => {
     Gm: { root: 43, v: [50, 55, 58, 62], h: [62, 67, 70, 74] },
     D5: { root: 38, v: [50, 57, 62, 69], h: [62, 69, 74, 77] },
   };
-  const HARM = ["Dm", "C", "Dm", "Bb", "C", "Am", "F", "Dm", "Gm", "C", "Gm", "D5"].map((k) => CH[k]);
+  // (The B-flat falls under the held D that ends the first line, and the third bar and the
+  // eleventh are D minor and A minor, so the tune's E never sounds a tritone against a B-flat.)
+  const HARM = ["Dm", "C", "Bb", "Dm", "C", "Am", "F", "Dm", "Gm", "C", "Am", "D5"].map((k) => CH[k]);
+  // The organ's lower voice under a note of the tune: a note of the bar's own chord a fifth, a
+  // fourth, a sixth or a third below it (in that order of choice), or else the octave.
+  const lower = (m, P) => { const pcs = P.v.map((x) => x % 12); for (const d of [7, 5, 9, 8, 3, 4]) if (pcs.includes(((m - d) % 12 + 12) % 12)) return m - d; return m - 12; };
   // The harpsichord's figure over the four notes of a chord: the lowest, then a pedal on the top
   // note between the others, the old way of making one hand sound like two.
   const FIG = [0, 3, 2, 3, 1, 3, 2, 3];
@@ -98,7 +103,7 @@ const SONGS = (() => {
       }
       // The light finds a demon (or the flow lifts): a low boom on the beat where it comes in,
       // a tom for each step up after that; when the flow breaks, a falling breath.
-      if (e.rose) { if (e.from === 0) I.impact(t, 0.3); else I.tom(t, 45 + 2 * L, 0.6); }
+      if (e.rose) { if (e.from === 0) I.impact(t, 0.3); else I.tom(t, [45, 45, 48, 50, 53][L], 0.6); }
       if (e.fell && L <= 1) I.fall(t, 1.4, 0.35);
       if (L === 0) return;
 
@@ -132,7 +137,7 @@ const SONGS = (() => {
       if (L === 3 && s % 2 === 0) I.shaker(t, s % 4 ? 0.5 : 0.3);
       if (mel) {
         const [m, len] = mel;
-        I.organ(t, L >= 4 ? [m, m - 7, m + 12] : [m, m - 7], len * sd + 0.04, L >= 4 ? 0.65 : 0.6, { stop: L >= 4 ? "plenum" : "principal", att: 0.03, rel: 0.2, rev: 0.45, cut: L >= 4 ? 4200 : 3400, chiff: 0.8 });
+        I.organ(t, L >= 4 ? [m, lower(m, P), m + 12] : [m, lower(m, P)], len * sd + 0.04, L >= 4 ? 0.65 : 0.6, { stop: L >= 4 ? "plenum" : "principal", att: 0.03, rel: 0.2, rev: 0.45, cut: L >= 4 ? 4200 : 3400, chiff: 0.8 });
       }
       if (s % 2 === 0) I.bass(t, P.root + OST[s / 2], sd * 1.7, s % 4 ? 0.11 : 0.14, { kind: "pluck", cut: 1100, floor: 210, q: 5, fd: 0.1, sus: 0.45, drive: 0.25 });
       if (L === 3) return;

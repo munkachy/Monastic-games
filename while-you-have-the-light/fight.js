@@ -620,7 +620,8 @@ const Arena = {
     Sound.fx.castOut(f.sin); Arena.shake(4); Arena.stop(0.09);
     for (let i = 0; i < 30; i++) { const a = Math.random() * TAU, s = 30 + Math.random() * 160; G.parts.push({ kind: "ash", x: cx + (Math.random() - 0.5) * 16, y: cy + (Math.random() - 0.5) * 30, vx: Math.cos(a) * s * 0.5, vy: -40 - Math.random() * 120, t: 0, life: 1 + Math.random() * 0.8, c: Math.random() < 0.5 ? col : "#1a1a1c" }); }
     G.parts.push({ kind: "flash", x: cx, y: cy, t: 0, life: 0.5, c: col, r: 60 });
-    G.castTotal++; save.cast[f.sin] = (save.cast[f.sin] || 0) + 1;
+    // (Practice opens every finisher anyway, so only the arena counts toward the virtues.)
+    G.castTotal++; if (!G.practice) save.cast[f.sin] = (save.cast[f.sin] || 0) + 1;
     if (!G.practice && save.cast[f.sin] === 5) { Arena.toast("THE VIRTUE: " + SINS[f.sin].virtue.toUpperCase(), "Hold on a broken " + SINS[f.sin].name + " to finish it with " + SINS[f.sin].virtue + ".", col); Sound.fx.unlock(); }
     store();
     // What each finisher gives.

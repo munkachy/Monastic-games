@@ -964,7 +964,7 @@ const BACK_LAYERS = [
   { f: 0.24, color: "#404246", fog: "#626568", y: 262, amp: 74, w: 1200, seed: 41, step: [16, 52], spires: 2, rocks: 2, sharp: 1 },
   { f: 0.38, color: "#2a2b2e", fog: "#46484b", y: 306, amp: 66, w: 1100, seed: 53, step: [14, 46], spires: 2, rocks: 0, sharp: 1 },
 ];
-const BACK = { layers: null, res: 0, sky: null, band: null };
+const BACK = { layers: null, res: 0, sky: null, band: null, cv: null };
 function buildBackdrop(res) {
   BACK.res = res; BACK.layers = [];
   BACK_LAYERS.forEach((L, i) => {
@@ -1016,10 +1016,25 @@ function buildBackdrop(res) {
 // Draw the whole screen behind the world. (cx, cy): the camera's centre in world pixels; zoom;
 // t: time; o.warm = { x, y, r } (screen): a faint warmth in the mist about the torch; o.y0: the
 // camera height at which the mountains sit at rest (300 by default).
+// The mist is soft, so the whole of it is painted into one smaller picture (fewer pixels than the
+// screen: a phone fills ten screens' worth of layers and fog every frame otherwise) and laid on
+// in a single pass, stretched to the screen.
 function drawBackdrop(cx, cy, zoom, t, o) {
   o = o || {}; zoom = zoom || 1; t = t || 0;
-  const m = ctx.getTransform(), pr = clamp(Math.hypot(m.a, m.b), 1, 1.6);
-  if (!BACK.layers || Math.abs(pr - BACK.res) > 0.25) buildBackdrop(pr);
+  const m = ctx.getTransform(), dev = Math.hypot(m.a, m.b), k = clamp(dev * 0.42, 0.75, 1);
+  if (!BACK.layers || Math.abs(k - BACK.res) > 0.2) buildBackdrop(k);
+  const bw = Math.max(2, Math.ceil(W * k)), bh = Math.max(2, Math.ceil(H * k));
+  if (!BACK.cv) BACK.cv = document.createElement("canvas");
+  if (BACK.cv.width !== bw || BACK.cv.height !== bh) { BACK.cv.width = bw; BACK.cv.height = bh; }
+  const main = useCtx(BACK.cv.getContext("2d"));
+  ctx.setTransform(k, 0, 0, k, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  paintBackdrop(cx, cy, zoom, t, o);
+  useCtx(main);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(BACK.cv, 0, 0, W, H);
+  if (o.warm) glow(o.warm.x, o.warm.y, o.warm.r, C.amber, 0.13);
+}
+function paintBackdrop(cx, cy, zoom, t, o) {
   ctx.drawImage(BACK.sky, 0, 0, W, H);
   const y0 = o.y0 === undefined ? 300 : o.y0;
   for (let i = 0; i < BACK_LAYERS.length; i++) {
@@ -1039,5 +1054,4 @@ function drawBackdrop(cx, cy, zoom, t, o) {
       }
     }
   }
-  if (o.warm) glow(o.warm.x, o.warm.y, o.warm.r, C.amber, 0.13);
 }

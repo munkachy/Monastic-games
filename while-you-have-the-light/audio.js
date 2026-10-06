@@ -410,8 +410,8 @@ const Sound = (() => {
   const M = { song: null, next: null, step: 0, bar: 0, stepT: 0, barT: 0, level: 0, want: 0, fill: null, fillNext: null };
   const barLen = (S, b) => (S.bars ? S.bars[b % S.bars.length] : 16);
   A.play = function (song) {
-    if (!ac) return;
-    M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = ac.currentTime + 0.08; M.barT = M.stepT; M.level = M.want;
+    if (!ac || !song || !(song.bpm > 0) || typeof song.play !== "function") return;
+    M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = ac.currentTime + 0.08; M.barT = M.stepT; M.level = M.want; M.fresh = true;
     duckDepth = song.duck === undefined ? 0.15 : song.duck; A.setDelay(song.delay || (60 / song.bpm) * 0.75);
     musicGain.gain.setTargetAtTime(song.gain || 1, ac.currentTime, 0.05);
     if (song.start) song.start();
@@ -436,12 +436,13 @@ const Sound = (() => {
   }
   function schedule(until) {
     while (M.song && M.stepT < until) {
+      if (M.fresh) { M.fresh = false; M.level = M.want; }
       const S = M.song, sd = 60 / S.bpm / 4, n = barLen(S, M.bar), from = M.level;
       if (M.want > M.level && M.step % (S.beat || 4) === 0) M.level = M.want;
       else if (M.want < M.level && M.step === 0) M.level = M.want;
       const t = M.stepT + (M.step % 2 ? (S.swing || 0) * sd : 0);
       // A step already gone by (the page was asleep) is skipped, not played late.
-      if (t > ac.currentTime - 0.05) {
+      if (t > ac.currentTime - 0.05 && !A.muted) {
         try { S.play({ t, s: M.step, n, b: M.bar, sd, L: M.level, from, rose: M.level > from, fell: M.level < from, I, fill: M.fill }); } catch (e) { console.error(e); }
       }
       M.stepT += sd; M.step++;
@@ -473,7 +474,15 @@ const Sound = (() => {
   const FL = { on: false, next: 0, voice: null, until: 0 };
   const HEART = 1.25;   // seconds from one heartbeat to the next in the flare: about 48 to the minute
   const openTo = () => (paused ? 520 : 20000);
-  A.muffle = function (on, secs) { paused = !!on; if (lpf && !FL.on) lpf.frequency.setTargetAtTime(openTo(), ac.currentTime, secs || 0.15); };
+  // One way only to move the music's filter, weighing both the flare and the pause, and clearing
+  // whatever was already on its way: so neither can leave the music muffled after the other.
+  function setFilter(tc) {
+    if (!lpf) return;
+    const f = lpf.frequency, now = ac.currentTime;
+    if (f.cancelAndHoldAtTime) f.cancelAndHoldAtTime(now); else { const v = f.value; f.cancelScheduledValues(now); f.setValueAtTime(v, now); }
+    f.setTargetAtTime(FL.on ? 550 : openTo(), now, tc);
+  }
+  A.muffle = function (on, secs) { paused = !!on; if (ac) setFilter(secs > 0 && Number.isFinite(secs) ? secs : 0.15); };
   // The flare. Time slows almost to a stop: the music is muffled (the filter on it closes to about
   // 550 Hz in a quarter of a second), a slow heartbeat sounds close by, and a low choir holds one
   // dark chord. The effects are not touched: in slow time every blow is still crisp. When it ends,
@@ -488,12 +497,12 @@ const Sound = (() => {
   };
   A.flaring = () => FL.on;
   function flareStart(t) {
-    lpf.frequency.setTargetAtTime(550, t, 0.07);
+    setFilter(0.07);
     hush.gain.setTargetAtTime(0.75, t, 0.1);
     return held(t, [38, 45, 50, 53], 0.2);
   }
   function flareEnd(t, voice) {
-    lpf.frequency.setTargetAtTime(openTo(), t, 0.03);
+    setFilter(0.03);
     hush.gain.setTargetAtTime(1, t, 0.03);
     if (voice) voice.release(t, 0.45);
     const n = noise(t, 0.5), bp = filt("bandpass", 260, 1.4, t), g = gainAt(t);
@@ -533,7 +542,8 @@ const Sound = (() => {
   let amb = null;
   A.ambience = function (o) {
     if (!ac || ac.state === "closed") return;
-    o = o || {};
+    o = Object.assign({}, o || {});
+    if (o.wind !== undefined && !Number.isFinite(+o.wind)) delete o.wind;
     if (!amb) {
       const g = ac.createGain(); g.gain.value = 0; g.connect(sfxBus);
       const band = (f, q, k, rate, depth) => {
@@ -556,7 +566,7 @@ const Sound = (() => {
   // muffles them. `pan` is -1..1, `v` a loudness 0..1.
   const fx = {};
   const T0 = () => ac.currentTime + 0.005;
-  const ok = () => !!ac && (rendering || ac.state === "running");
+  const ok = () => !!ac && (rendering || (!A.muted && ac.state === "running"));
   const rnd = (a, b) => a + Math.random() * (b - a);
   // A tone that sweeps from one pitch to another and dies away.
   function tone(t, type, f0, f1, dur, v, o) {
@@ -1008,7 +1018,11 @@ const Sound = (() => {
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
-    fx[name] = function () { const was = fxLoud; fxLoud = k; try { return f.apply(this, arguments); } finally { fxLoud = was; } };
+    fx[name] = function () {
+      const args = Array.prototype.map.call(arguments, (a) => (typeof a === "number" && !isFinite(a) ? undefined : a));
+      // A sound must never break the game: whatever it is given, at worst it is silent.
+      const was = fxLoud; fxLoud = k; try { return f.apply(this, args); } catch (e) { return undefined; } finally { fxLoud = was; }
+    };
   }
   A.fx = fx;
   return A;
