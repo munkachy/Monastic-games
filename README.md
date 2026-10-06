@@ -17,6 +17,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
 | [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
 | [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game where you play the drums and every word of the Psalms rides the strokes, to techno-funk, drum and bass, dubstep, Afro house and odd meters. Eight psalms so far, Compline among them ([the plan](selah/PLAN.md)) |
+| [While You Have the Light](https://munkachy.github.io/Monastic-games/while-you-have-the-light/) | A hooded monk with a torch fights the seven deadly sins in a black, angular world of crags and floating rock. In the torchlight the demons show their true colours and he fights hand to hand in flowing combos; in the dark he has only holy water. A first build: the arena ([design notes](https://munkachy.github.io/Monastic-games/while-you-have-the-light/design.html)) |
 
 
 ## Benedictine Bricks
@@ -96,6 +97,20 @@ A first build of the plan in [`selah/PLAN.md`](selah/PLAN.md): eight psalms, Com
 - **The Voice is the text.** The Douay-Rheims is built in (`selah/douay.js`, made by `selah/tools/build-douay.js` from Psalter Runner's checked text). A psalter you own can be imported as a pack file in Settings; it stays on your device and is never sent anywhere.
 - **Your hits play the drums, on the beat.** Every note you hit sounds its drum, quantized: an early touch sounds exactly on the beat of its note, with the song's own stroke. The Drums page is a small mixer: choose the kit (each song's own, or acoustic, 808, house, breakbeat, drum and bass, dub, late night, Afro or minimal, each heard in a short groove as you choose it), then set the song's own drums and your hits apart, the whole kit and each drum (kick, snare, hi-hat, toms, cymbals, from silent to twice as loud). "Song: kick only" leaves the song only its kick, for you to play the rest.
 - Settings: audio offset with a tap-along calibration, note speed, music volume (the band without the drums), the Drums page, no flashing, reduced motion. The arrow by the name goes back to the title. `?verses=2` in the address plays only the first verses.
+
+## While You Have the Light
+
+The first build: the arena, played with the phone sideways. The name is from the Prologue of the Rule: "Run while you have the light of life, lest the darkness of death overtake you."
+
+- **The look.** As in Limbo: every rock and every figure is a black silhouette against pale mist and angular mountains. The only colours are the torch flame, the seven sins, and the pale blue of holy water.
+- **The light.** The torch casts a circle of light, cut by the rock. Inside it the demons show their true colours and he fights hand to hand; outside it they are black shapes with pale eyes, and he can only throw holy water at them (a few flasks). The light grows with the flow and shrinks when it breaks.
+- **Two speeds.** In the dark he moves like the Prince of Persia of 1989: a careful walk, the hang and the slow pull-up. When a demon comes into the light he turns quick, and can zip through the air to anywhere he can see in the light.
+- **Point and go.** Tap where he should go; he climbs and leaps on his own. What is under your finger decides the rest: a demon in the light, he flies at it and strikes (the blow fits where it is: a flying kick, the Superman with both fists, a dive from above, a rising knee); a demon in the dark, holy water; a thing lying about, he picks it up, and then tap any demon to throw it; a thing thrown at him, it slows in the light: tap to catch it, swipe to send it back. Swipe on a demon: up to launch, down to slam, across to dash through. Two fingers down to block (at the last instant, a parry).
+- **The flare.** The flow fills a flask of oil. Spread two fingers apart and the torch flares: time all but stops, the music is muffled, and you draw one stroke through the demons; let go and he goes through them all.
+- **The seven** fight each in their own way: Pride from the air, Avarice gathers and throws and steals your holy water, Lust's ribbon draws you in, Envy copies your last blow, Gluttony swallows what you throw, Wrath charges into the rock, and Sloth never wounds but drains your flow and your oil.
+- **Finishers.** A demon brought to nothing is broken for a moment: tap to cast it out, or (as they open in the arena) swipe down for a life, up for oil, across for holy water, or hold for the virtue against that sin.
+- **The arena:** waves of the seven, growing, with a line of Scripture between. **Practice:** choose which sins come; nothing can hurt you. `?arena` or `?practice` in the address starts them.
+- Everything is drawn in code (`art.js`, with `art.html` to see every figure and move); the arena and its routes are in `world.js`; the music is built on the old Compline hymn *Christe qui lux es et dies* on the synth engine from Luminaries.
 
 ## Recent highlights
 

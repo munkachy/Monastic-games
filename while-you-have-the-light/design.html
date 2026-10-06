@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>While You Have the Light: design</title>
+<meta name="description" content="Design notes for While You Have the Light: a hooded Benedictine monk with a torch, the seven capital sins as demons, and a light that grows with the flow of the fight.">
+<meta name="theme-color" content="#060607">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060607; --ink: #e9e6df; --dim: #a9a49a; --mute: #807b72; --white: #fbf8f2;
+    --flame: #ffb347; --amber: #e89a3c; --hot: #fff1c4; --warm: #ffcf8a; --ember: #ff6a1e; --holy: #cfe9ff;
+    --mist0: #9a9c9f; --mist1: #74777b; --mist2: #4d5054; --mist3: #2c2e31; --mist4: #18191b;
+    --line: rgba(255,179,71,0.22); --rule: rgba(233,230,223,0.09); --card: rgba(233,230,223,0.035);
+    --pride: #a86ad8; --avarice: #c8b02a; --lust: #e85a9a; --envy: #6ad06a; --gluttony: #f09a4a; --wrath: #ff5a2a; --sloth: #9aa8c0;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 Montserrat, system-ui, sans-serif; overflow-wrap: break-word; }
+  body::before { content: ""; position: fixed; inset: 0; background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,179,71,0.06), transparent 70%); pointer-events: none; }
+  main { max-width: 820px; margin: 0 auto; padding: 0 16px 80px; position: relative; }
+  a { color: var(--flame); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { color: var(--hot); }
+
+  /* The header: a strip of the game's world, then the name. */
+  header { text-align: center; padding: 0 0 26px; border-bottom: 1px solid var(--line); margin-bottom: 26px; }
+  .scene { display: block; margin: 0 -16px; height: clamp(150px, 30vw, 236px); overflow: hidden; }
+  .scene svg { display: block; width: 100%; height: 100%; }
+  h1 { font: 700 clamp(25px, 7.1vw, 58px)/1.08 Cinzel, Georgia, serif; letter-spacing: 0.1em; margin: 18px 0 0; color: #fff; text-shadow: 0 0 26px rgba(255,179,71,0.55), 0 0 2px rgba(255,179,71,0.4); }
+  h1 span { display: block; }
+  .sub { font: italic 500 21px/1.4 "Cormorant Garamond", Georgia, serif; color: var(--warm); margin-top: 12px; }
+  .meta { color: var(--dim); font-size: 13px; margin-top: 10px; letter-spacing: 0.04em; }
+
+  h2 { font: 700 15px/1.3 Montserrat, sans-serif; letter-spacing: 0.2em; text-transform: uppercase; color: var(--flame); margin: 48px 0 14px; scroll-margin-top: 16px; }
+  h2::before { content: ""; display: inline-block; width: 7px; height: 7px; background: var(--flame); transform: rotate(45deg); margin: 0 12px 2px 1px; box-shadow: 0 0 10px rgba(255,179,71,0.8); }
+  h3 { font: 600 17px/1.4 Montserrat, sans-serif; margin: 26px 0 6px; color: #fff; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin: 5px 0; }
+  b { color: var(--white); font-weight: 600; }
+  .v { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 1.16em; color: #f6ecd8; }
+  .la { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; color: var(--dim); }
+  .ref { color: var(--dim); font-size: 13px; letter-spacing: 0.03em; white-space: nowrap; }
+  .small { font-size: 14px; color: var(--dim); }
+
+  blockquote { margin: 14px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--amber); }
+  blockquote p { margin: 0 0 4px; }
+  blockquote .v { font-size: 1.24em; line-height: 1.45; }
+  blockquote cite { display: block; font-style: normal; color: var(--dim); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+  .epi { text-align: center; border: 0; padding: 0; margin: 0 auto 8px; max-width: 600px; }
+  .epi .v { font-size: 1.42em; }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 22px 0 6px; padding: 0; list-style: none; justify-content: center; }
+  .toc li { margin: 0; }
+  .toc a { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-decoration: none; color: var(--dim); border: 1px solid var(--rule); padding: 4px 9px; border-radius: 2px; }
+  .toc a:hover { color: var(--flame); border-color: var(--line); }
+
+  .tw { overflow-x: auto; margin: 8px 0 16px; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+  th { color: var(--flame); font-weight: 600; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; border-bottom-color: var(--line); }
+  td:first-child { font-weight: 600; color: var(--white); }
+  td.plain { font-weight: 400; color: var(--ink); }
+  .sin { display: inline-flex; align-items: center; gap: 8px; }
+  .dot { display: inline-block; flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--c); box-shadow: 0 0 9px var(--c); }
+  .virtue { display: block; font: italic 500 1.08em/1.3 "Cormorant Garamond", Georgia, serif; color: var(--c); margin-top: 2px; }
+  .hex { display: block; font-size: 12px; font-weight: 400; color: var(--mute); letter-spacing: 0.04em; }
+  .s-pride { color: var(--pride); } .s-avarice { color: var(--avarice); } .s-lust { color: var(--lust); } .s-envy { color: var(--envy); }
+  .s-gluttony { color: var(--gluttony); } .s-wrath { color: var(--wrath); } .s-sloth { color: var(--sloth); }
+  table.keys td:first-child { width: 38%; font-weight: 400; color: var(--dim); }
+  .key { display: inline-block; font: 600 12px/1.5 Montserrat, sans-serif; color: var(--white); border: 1px solid rgba(233,230,223,0.28); border-bottom-width: 2px; border-radius: 3px; padding: 0 6px; margin: 1px 0; white-space: nowrap; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 3px; padding: 14px 16px; margin: 14px 0; }
+  .card > :last-child { margin-bottom: 0; }
+  .q { border-left: 2px solid var(--flame); padding: 2px 0 2px 14px; margin: 14px 0; }
+  .q > :last-child { margin-bottom: 0; }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 10px 0 4px; padding: 0; list-style: none; }
+  .swatches li { margin: 0; width: 64px; text-align: center; font-size: 11px; line-height: 1.3; color: var(--dim); }
+  .swatches i { display: block; height: 30px; margin-bottom: 4px; background: var(--c); border: 1px solid rgba(233,230,223,0.12); }
+
+  @media (min-width: 860px) { .scene { -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); } }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13px; text-align: center; }
+
+  /* On a narrow screen, the wider tables become a list of small blocks. */
+  @media (max-width: 600px) {
+    table { font-size: 14px; }
+    .toc { gap: 6px; }
+    .toc a { font-size: 11px; padding: 3px 7px; }
+    th, td { padding: 7px 6px; }
+    table.stack tr:first-child { display: none; }
+    table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
+    table.stack tr { padding: 10px 0; border-bottom: 1px solid var(--rule); }
+    table.stack td { border: 0; padding: 2px 0; }
+    table.stack td[data-k]::before { content: attr(data-k); display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--amber); margin-top: 4px; }
+    table.stack td:first-child { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="scene" aria-hidden="true">
+    <svg viewBox="0 0 800 236" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6a8ab"/><stop offset="0.55" stop-color="#8b8e92"/><stop offset="1" stop-color="#5e6165"/></linearGradient>
+        <linearGradient id="fog" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9cbce" stop-opacity="0"/><stop offset="0.5" stop-color="#c9cbce" stop-opacity="0.18"/><stop offset="1" stop-color="#c9cbce" stop-opacity="0"/></linearGradient>
+        <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffcf8a" stop-opacity="0.75"/><stop offset="0.25" stop-color="#ffb347" stop-opacity="0.35"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+        <radialGradient id="core" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff1c4" stop-opacity="0.95"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient>
+        <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060607" stop-opacity="0"/><stop offset="1" stop-color="#060607" stop-opacity="1"/></linearGradient>
+        <filter id="soft" x="-2" y="-2" width="5" height="5"><feGaussianBlur stdDeviation="1.4"/></filter>
+      </defs>
+      <rect width="800" height="236" fill="url(#sky)"/>
+      <!-- far needles and the farthest range -->
+      <polygon fill="#94979b" points="596,236 612,52 626,236"/>
+      <polygon fill="#94979b" points="640,236 657,30 671,236"/>
+      <polygon fill="#8f9296" points="0,152 40,120 70,134 110,98 140,122 175,90 205,114 240,72 262,98 300,86 340,112 380,66 410,100 450,82 490,106 530,60 560,94 600,78 640,102 680,68 720,98 760,84 800,110 800,236 0,236"/>
+      <rect y="112" width="800" height="44" fill="url(#fog)"/>
+      <!-- the middle range -->
+      <polygon fill="#6f7276" points="0,172 50,142 90,160 140,124 180,152 230,130 270,158 320,120 360,148 420,134 470,162 520,126 560,152 620,138 680,164 730,132 800,152 800,236 0,236"/>
+      <!-- the ladder of floating crags, each tapering to a spike -->
+      <polygon fill="#55585c" points="232,64 288,60 284,70 270,76 262,104 254,78 240,72"/>
+      <polygon fill="#55585c" points="318,30 362,27 358,36 348,42 342,62 336,44 324,38"/>
+      <rect y="150" width="800" height="40" fill="url(#fog)"/>
+      <!-- the near range -->
+      <polygon fill="#45484c" points="0,194 60,170 110,184 170,162 220,186 300,168 360,190 430,172 500,188 560,166 640,186 700,172 800,188 800,236 0,236"/>
+      <polygon fill="#2c2e31" points="120,96 196,92 190,104 176,110 168,140 158,112 140,106 130,104"/>
+      <!-- the torch warms the mist -->
+      <circle cx="590" cy="150" r="120" fill="url(#glow)"/>
+      <!-- the near rock, black -->
+      <polygon fill="#050506" points="0,236 0,118 16,110 30,124 44,116 58,140 74,146 92,170 112,176 124,196 150,204 170,236"/>
+      <polygon fill="#050506" points="462,236 474,206 492,200 498,192 652,192 664,198 690,176 712,172 734,150 760,144 772,122 800,116 800,236"/>
+      <polygon fill="#050506" points="20,40 92,34 86,48 74,52 66,80 58,56 44,60 38,52"/>
+      <!-- the monk: habit, wide sleeve, the hood's point falling behind; torch in hand -->
+      <path fill="#050506" stroke="#ffb347" stroke-opacity="0.55" stroke-width="0.9" stroke-linejoin="round" d="M579 192 L599 192 L596 176 L593 162 L596 157 L602 152 L601 149 L594 151 L593 144 L590 137 L584 134 L579 136 L575 142 L571 150 L573 152 L576 150 L577 157 L571 168 L575 170 L578 165 Z"/>
+      <line x1="601" y1="151" x2="607" y2="124" stroke="#1a120a" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="607" cy="118" r="20" fill="url(#core)"/>
+      <polygon fill="#ff6a1e" points="603,124 604,116 607,108 609,115 611,111 611,124"/>
+      <polygon fill="#ffb347" points="604.5,124 606,116 607.5,111 609,118 610,124"/>
+      <polygon fill="#fff1c4" points="606,124 607,118 608.5,124"/>
+      <!-- eyes in the dark -->
+      <g fill="#e8e8f0"><circle cx="64" cy="150" r="2.6" filter="url(#soft)" opacity="0.8"/><circle cx="72" cy="150" r="2.6" filter="url(#soft)" opacity="0.8"/><circle cx="64" cy="150" r="1"/><circle cx="72" cy="150" r="1"/></g>
+      <g fill="#e8e8f0"><circle cx="748" cy="168" r="2.4" filter="url(#soft)" opacity="0.7"/><circle cx="755" cy="167" r="2.4" filter="url(#soft)" opacity="0.7"/><circle cx="748" cy="168" r="0.9"/><circle cx="755" cy="167" r="0.9"/></g>
+      <rect y="200" width="800" height="36" fill="url(#fade)"/>
+    </svg>
+  </div>
+  <h1><span>WHILE YOU HAVE</span> <span>THE LIGHT</span></h1>
+  <div class="sub">A monk with a torch, and the seven in the dark</div>
+  <div class="meta">Design page · a browser game for phones held sideways · <a href="./">play the first build</a> · <a href="../">Monastic Games</a></div>
+</header>
+
+<blockquote class="epi">
+  <p class="v">Run while you have the light of life, lest the darkness of death overtake you.</p>
+  <p class="la">Currite dum lumen vitae habetis, ne tenebrae mortis vos comprehendant.</p>
+  <cite>The Rule of St. Benedict, Prologue 13</cite>
+</blockquote>
+
+<ul class="toc">
+  <li><a href="#idea">The idea</a></li><li><a href="#look">The look</a></li><li><a href="#light">The light</a></li><li><a href="#speeds">Two speeds</a></li><li><a href="#point">Point and go</a></li><li><a href="#finger">Your finger</a></li><li><a href="#things">Throw and catch</a></li><li><a href="#water">Holy water</a></li><li><a href="#three">Health, flow, oil</a></li><li><a href="#flare">The flare</a></li><li><a href="#seven">The seven</a></li><li><a href="#finishers">Finishers</a></li><li><a href="#music">Music</a></li><li><a href="#arena">The arena</a></li><li><a href="#keys">Keyboard</a></li><li><a href="#level">The first level</a></li><li><a href="#theology">Theology</a></li><li><a href="#decide">Still to decide</a></li>
+</ul>
+
+<h2 id="idea">The idea</h2>
+<p>A hooded Benedictine monk, in the cowl he wears in choir, carries a torch through a dark world of sharp crags, cliffs, tunnels and floating rock. The torch throws a circle of light. Inside the light the demons show what they are, each sin in its own colour, and he fights them hand to hand. Outside it they are black shapes with two pale eyes. There he cannot fight them hand to hand; he can only throw holy water at them, or whatever he is holding.</p>
+<p>It is an action game in the spirit of Castlevania, with fights that flow from one blow to the next. Every blow that lands keeps the flow going, and the flow makes the light grow. So the way to see is to keep going. That is what the sentence from the Prologue of the Rule, which gives the game its name, says. St. Benedict took it from the Lord's own words:</p>
+<blockquote>
+  <p class="v">Yet a little while, the light is among you. Walk whilst you have the light, that the darkness overtake you not. And he that walketh in darkness, knoweth not whither he goeth.</p>
+  <cite>John 12:35</cite>
+</blockquote>
+<p>The music is built on the old Compline hymn <span class="la">Christe, qui lux es et dies, noctis tenebras detegis</span>: "Christ, you are light and day; you uncover the darkness of night." <span class="la">Detegis</span>, "you uncover", is the game in one word.</p>
+<p>It is made for a phone held sideways and played with one or two fingers. It can also be played with a keyboard and mouse. The first build is one arena, fought in waves, with a practice beside it.</p>
+
+<h2 id="look">The look</h2>
+<ul>
+  <li><b>Limbo.</b> As in <i>Limbo</i> (Playdead, 2010), the near world and every figure are black silhouettes. Behind them the mist grows paler with distance, layer on layer of angular mountains. So every black shape stands out against something lighter.</li>
+  <li><b>Another World.</b> The shapes are flat and sharp, as in Éric Chahi's <i>Another World</i> (1991). The rock is flat on top where he stands, and broken and sharp everywhere else, with spikes hanging beneath every overhang.</li>
+  <li><b>Only three kinds of colour.</b> The torch flame, the seven sins, and the faint pale blue-white of holy water. Everything else is grey mist and black. A few things show in the dark anyway: the demons' eyes, flames, holy water and sparks.
+    <ul class="swatches" aria-label="The palette">
+      <li><i style="--c:#9a9c9f"></i>far mist</li>
+      <li><i style="--c:#74777b"></i>mist</li>
+      <li><i style="--c:#4d5054"></i>near mist</li>
+      <li><i style="--c:#2c2e31"></i>dusk</li>
+      <li><i style="--c:#040405"></i>rock</li>
+      <li><i style="--c:#ff6a1e"></i>ember</li>
+      <li><i style="--c:#e89a3c"></i>amber</li>
+      <li><i style="--c:#ffb347"></i>flame</li>
+      <li><i style="--c:#fff1c4"></i>white heat</li>
+      <li><i style="--c:#cfe9ff"></i>holy water</li>
+      <li><i style="--c:#a86ad8"></i>Pride</li>
+      <li><i style="--c:#c8b02a"></i>Avarice</li>
+      <li><i style="--c:#e85a9a"></i>Lust</li>
+      <li><i style="--c:#6ad06a"></i>Envy</li>
+      <li><i style="--c:#f09a4a"></i>Gluttony</li>
+      <li><i style="--c:#ff5a2a"></i>Wrath</li>
+      <li><i style="--c:#9aa8c0"></i>Sloth</li>
+    </ul>
+    The sins keep the colours they have in Benedictine Bricks.</li>
+  <li><b>The Ladder of Divine Ascent.</b> The icon at St. Catherine's Monastery on Sinai (12th century) shows monks climbing the thirty rungs of St. John Climacus's ladder toward Christ, while small black demons try to pull them off. That is the picture the game sets in motion: a monk climbing, and small black shapes in the air around him.</li>
+  <li><b>Prince of Persia.</b> The movement follows Jordan Mechner's <i>Prince of Persia</i> (1989), which was drawn from film of a real person moving. It has weight: a few steps to get running, a crouch before each jump, the hang from a ledge and the pull-up with the legs kicking, the careful step, the turn on the spot.</li>
+  <li><b>The monk.</b> A black habit with the cowl over it: a long robe to the ankles, very wide sleeves, the deep hood up with its point falling behind. His face is lost in the hood. A thin warm rim of torchlight runs along his edges, so he can always be seen. He holds the torch in his far hand. The near hand is free for blows, for catching, and for carrying.</li>
+  <li><b>The demons.</b> Each has its own outline, so it can be told apart even as a black shape. In the light it is drawn in its own colours, with flat, angular shading. They are inhuman, never gory, and Lust is never shown immodestly.</li>
+</ul>
+
+<h2 id="light">The light</h2>
+<p>The torch casts a circle of light around its flame. Rock blocks the light and casts shadows, so a demon behind a crag stays dark even when it is near.</p>
+<div class="tw"><table class="stack">
+  <tr><th></th><th>In the light</th><th>In the dark</th></tr>
+  <tr><td>The demons</td><td data-k="In the light">Shown in their true colours. You can see what each one is.</td><td data-k="In the dark">Black shapes with two pale eyes.</td></tr>
+  <tr><td>What he can do</td><td data-k="In the light">Fly at them and fight hand to hand.</td><td data-k="In the dark">Throw holy water, or throw what he is holding.</td></tr>
+  <tr><td>Things thrown at him</td><td data-k="In the light">Slow down and glint: catch them, or send them back.</td><td data-k="In the dark">Come at full speed.</td></tr>
+  <tr><td>How he moves</td><td data-k="In the light">The quick speed.</td><td data-k="In the dark">The careful dark speed.</td></tr>
+</table></div>
+<ul>
+  <li><b>The light grows with the flow.</b> Each link in a fight widens it. Its reach grows from about twice the monk's height to nearly five times. When the flow ebbs, the light shrinks back. In the flare it floods out far wider still.</li>
+  <li><b>The torch is also a weapon.</b> The light sits on the flame, so when he swings the torch in a blow, the circle of light swings with it.</li>
+  <li><b>The flame gutters.</b> When a demon strikes him, the flame sputters, and the light shrinks and flickers for a moment.</li>
+</ul>
+<p>The colours are a picture of discernment. In the dark you can tell only that something is there. In the light you see what it is, and so you know how to fight it. The desert fathers prized this gift above the others (Cassian, <i>Conferences</i> 2).</p>
+<blockquote>
+  <p class="v">But all things that are reproved, are made manifest by the light; for all that is made manifest is light.</p>
+  <cite>Ephesians 5:13</cite>
+</blockquote>
+<blockquote>
+  <p class="v">And the light shineth in darkness, and the darkness did not comprehend it.</p>
+  <cite>John 1:5</cite>
+</blockquote>
+
+<h2 id="speeds">Two speeds</h2>
+<p>He moves in two ways, and the light decides which.</p>
+<div class="tw"><table class="stack">
+  <tr><th></th><th>The dark speed</th><th>The quick speed</th></tr>
+  <tr><td>When</td><td data-k="The dark speed">No demon in the light.</td><td data-k="The quick speed">A demon in the light, and for two seconds after the last one leaves it.</td></tr>
+  <tr><td>Walking</td><td data-k="The dark speed">A careful, heavy walk.</td><td data-k="The quick speed">A run, about two and a half times as fast.</td></tr>
+  <tr><td>Ledges</td><td data-k="The dark speed">The full climb: a crouch, a spring, the hang, the pull-up with the legs kicking. It takes over a second.</td><td data-k="The quick speed">A quick vault, in under half a second.</td></tr>
+  <tr><td>Turning</td><td data-k="The dark speed">A turn on the spot, as in Prince of Persia, before he can go the other way.</td><td data-k="The quick speed">No turn: he simply goes.</td></tr>
+  <tr><td>The zip</td><td data-k="The dark speed">None.</td><td data-k="The quick speed">A fast flip through the air to any point he can see inside the light.</td></tr>
+</table></div>
+<p>In the dark he goes as a man goes at night with a lamp: one careful step at a time. When the enemy comes into the light, the same light makes him quick. In the quick speed the view also draws back a little, so you can see more of the fight.</p>
+<blockquote>
+  <p class="v">Thy word is a lamp to my feet, and a light to my paths.</p>
+  <cite>Psalm 118:105</cite>
+</blockquote>
+
+<h2 id="point">Point and go</h2>
+<p>You never steer him. You point where he should go, and he finds the way himself: walking, stepping up and down, climbing, leaping across gaps and dropping from ledges. While a route is chosen, it shows for a moment as a faint trail of embers. A point he cannot reach takes him as close as he can get. If he is in the middle of something he cannot break off, such as a climb, or a blow before it lands, your next order waits for him.</p>
+<p>There are no bottomless pits. Every drop lands somewhere. A fall costs time, never a life.</p>
+
+<h2 id="finger">What is under your finger</h2>
+<p>One rule covers nearly everything: what is under your finger decides what he does.</p>
+<div class="tw"><table>
+  <tr><th>Under your finger</th><th>What he does</th></tr>
+  <tr><td>Open ground</td><td>He goes there. In the quick speed, if the place is in the light and in sight, he zips there.</td></tr>
+  <tr><td>A demon in the light</td><td>He flies at it and strikes. The blow fits where the demon is (see below).</td></tr>
+  <tr><td>A demon in the dark</td><td>Holy water: a flask lobbed in an arc. With no flasks left, he goes toward it.</td></tr>
+  <tr><td>A thing lying on the ground</td><td>He goes and picks it up.</td></tr>
+  <tr><td>Any demon, in the light or the dark, while he holds something</td><td>He throws it.</td></tr>
+  <tr><td>Himself, while he holds something</td><td>He drops it.</td></tr>
+  <tr><td>A thing flying at him, inside the light</td><td>It slows for a breath and glints. Tap to catch it; swipe on it to send it back.</td></tr>
+  <tr><td>A broken demon</td><td>A finisher (see <a href="#finishers">Finishers</a>). If it lies in the dark beyond the light, he throws holy water, and that casts it out.</td></tr>
+</table></div>
+
+<h3>Which blow</h3>
+<div class="tw"><table>
+  <tr><th>Where the demon is</th><th>The blow</th></tr>
+  <tr><td>Level with him, close</td><td>A torch swing, a palm strike, a spinning kick, a sweep, or a flying kick.</td></tr>
+  <tr><td>Level with him, far</td><td>The "Superman" (flying, body straight, both fists out), or a flying kick.</td></tr>
+  <tr><td>Above him</td><td>A leap into a rising knee, or an air kick.</td></tr>
+  <tr><td>Below him</td><td>A dive down onto it: a stomp.</td></tr>
+  <tr><td>In the air, near him</td><td>An air kick (or a spinning or flying kick).</td></tr>
+</table></div>
+<p>Of the blows that fit, he takes the one he has used least lately, and never the same blow twice running if another fits. The torch swing also catches demons near it in its arc; the slam strikes those around; the dash strikes everything in its way.</p>
+
+<h3>Gestures</h3>
+<p>A swipe is a finger that travels. Its direction matters; its speed hardly at all.</p>
+<div class="tw"><table>
+  <tr><th>Gesture</th><th>What he does</th></tr>
+  <tr><td>Swipe up on a demon in the light</td><td>Launch: a rising torch strike throws it into the air, and he rises with it to follow up. Gluttony cannot be launched; he slams it instead.</td></tr>
+  <tr><td>Swipe down on a demon in the light</td><td>Slam: an overhead two-handed smash, which strikes those around it too.</td></tr>
+  <tr><td>Swipe across a demon in the light</td><td>Dash: he dashes through it, striking as he passes.</td></tr>
+  <tr><td>Swipe across open ground, in the quick speed</td><td>A roll that way. Little can touch him while he rolls.</td></tr>
+  <tr><td>Two fingers down, held</td><td>Block. Raised at the very last instant, it is a parry: it throws the attacker off (Wrath is thrown, Pride falls, the others on foot are stunned; a thing thrown at him goes straight back), and it counts in the flow.</td></tr>
+  <tr><td>One finger held still on open ground</td><td>Block too, for playing with one hand.</td></tr>
+  <tr><td>Hold on a broken demon</td><td>The Virtue (see <a href="#finishers">Finishers</a>).</td></tr>
+  <tr><td>Spread two fingers apart</td><td>The flare (see <a href="#flare">The flare</a>).</td></tr>
+</table></div>
+
+<h2 id="things">Things to throw, catch and send back</h2>
+<ul>
+  <li><b>Lying about.</b> Stones, jars, beams, skulls and burning brands lie about the Hollow, and three flasks of holy water. Tap one and he goes and picks it up. A flask goes into his store. Anything else he carries in his free hand; then tap any demon, in the light or the dark, and he throws it.</li>
+  <li><b>What they do.</b> A beam knocks a demon flat. A jar shatters. Anything that hits a broken demon casts it out. Every hit counts in the flow.</li>
+  <li><b>The demons throw too.</b> Avarice gathers things into its sack and throws them from the dark. Gluttony spits back what it has swallowed. Pride casts violet shards. Lust, Envy and Wrath may now and then pick up what lies at their feet and throw it.</li>
+  <li><b>Catch.</b> Inside the light, a thing thrown at him slows to a third of its speed and glints. Tap it, and he snatches it out of the air. That is a link in the flow, and now he holds it, ready to throw.</li>
+  <li><b>Send it back.</b> Swipe on it instead, and he bats it back. It flies to the demon that threw it, if that one lies the way you swiped, or else to the nearest demon that way. It strikes twice as hard, counts double in the flow, and lights the demon up in its colour for a moment, even in the dark. Pride's shards cannot be caught; a tap sends them back too.</li>
+  <li><b>Parry.</b> A block at the last instant sends a thrown thing straight back at the one who threw it.</li>
+  <li><b>Gluttony</b> swallows anything thrown at it, his throws too, and spits it back.</li>
+</ul>
+
+<h2 id="water">Holy water</h2>
+<ul>
+  <li><b>Thrown into the dark.</b> Tap a demon in the dark and he lobs a flask at it in an arc, aimed at where it will be. The flask bursts. The splash burns every demon near it and lights them up in their colours for a moment. Holy water burns Gluttony double. A broken demon caught in the splash is cast out.</li>
+  <li><b>Only so many.</b> He starts with five flasks and can carry nine. Flasks come back in these ways: one after every wave; one for each flask found lying about; the flasks that spill from Avarice's hoard; and two from the finisher Scattered. Avarice's touch steals one. With none left, there is a dry click, and he goes toward the demon instead.</li>
+  <li><b>Seen in the dark.</b> A flask always glows a faint pale blue-white. Holy things can be seen in the dark.</li>
+</ul>
+<p>Tapping a demon to throw holy water comes from Canticle Mansion. For what holy water is, and what it is not, see <a href="#theology">Theology, kept straight</a>.</p>
+
+<h2 id="three">Health, flow and oil</h2>
+<p>Three things are kept apart. Each has its own mark at the top of the screen (the lives and the oil in the left corner, the flow in the middle), and each works in its own way.</p>
+<div class="tw"><table class="stack">
+  <tr><th></th><th>On the screen</th><th>It goes up</th><th>It goes down</th></tr>
+  <tr><td>Lives</td><td data-k="On the screen">Six white diamonds.</td><td data-k="It goes up">One after every second wave won. The finisher Under Foot.</td><td data-k="It goes down">A blow from a demon costs one.</td></tr>
+  <tr><td>Flow</td><td data-k="On the screen">The count at the top, and the size of the light.</td><td data-k="It goes up">One or more with every link.</td><td data-k="It goes down">Three seconds without a link, and it ebbs away a link at a time. A blow halves it. Sloth drains it to nothing.</td></tr>
+  <tr><td>Oil</td><td data-k="On the screen">A small amber vial, with a mark at the level the flare needs.</td><td data-k="It goes up">A little with every link. A little more with Cast Out. Nearly half a flask with Pillar of Fire.</td><td data-k="It goes down">It burns while the flare lasts. Sloth's touch takes half.</td></tr>
+</table></div>
+
+<h3>The flow</h3>
+<p>A link is anything that goes right: a blow landing, a catch, a returned throw hitting, a parry, a finisher, holy water hitting. A blow counts once for each demon it strikes (up to three); a thing sent back, a parry and most finishers count twice; Cast Out counts three times. Each link keeps the flow going for three seconds. If no new link comes in time, the flow does not vanish at once. It ebbs away a link at a time. The light grows with the flow, the music builds with it, and the oil fills with it. At 5, 12 and 20 links the count is called out.</p>
+
+<h3>Health</h3>
+<p>Six lives. A blow from a demon costs one. It also halves the flow and makes the flame gutter. Gluttony's blow and Wrath's charge throw him down. For a second after a blow, nothing can touch him.</p>
+<p>Two of the seven strike differently. Avarice's touch steals a flask of holy water instead of a life, as long as he has one. Sloth's touch takes no life at all, but it drains the flow to nothing and half the oil.</p>
+<p>When the last life goes, the light goes out. The screen says so, with John 12:35, and shows the wave reached, the demons cast out, the longest flow, and the best wave so far.</p>
+
+<h3>Why light is not health</h3>
+<p>It would be simple to make the light his health: the more he is hurt, the less he sees. That was decided against, for three reasons.</p>
+<ul>
+  <li>A player in trouble would see less just when he most needs to see. One mistake would bring on the next, and the fight would slide downhill.</li>
+  <li>The light is the fruit of watchfulness, not a store of strength. It grows while he keeps going and shrinks when he stops. A wound can make it gutter for a moment, but cannot put it out.</li>
+  <li>It is truer. A soul can be wounded and still see clearly. And a soul can be quite unhurt and yet grow dim through slackness. That is acedia, and that is what Sloth does.</li>
+</ul>
+
+<h3>The oil</h3>
+<p>The oil is the reserve for the flare. It cannot be borrowed at the last moment; it is gathered beforehand, link by link. So it was for the ten virgins (Matthew 25:1&ndash;13):</p>
+<blockquote>
+  <p class="v">But the wise took oil in their vessels with the lamps.</p>
+  <cite>Matthew 25:4</cite>
+  <p class="v">And the foolish said to the wise: Give us of your oil, for our lamps are gone out.</p>
+  <cite>Matthew 25:8</cite>
+</blockquote>
+
+<h2 id="flare">The flare</h2>
+<p>When the vial holds enough oil (almost a third of the flask, up to the mark on the vial), spread two fingers apart, and the torch flares.</p>
+<ul>
+  <li>The light swells huge, and every demon in it is shown.</li>
+  <li>Time slows almost to a stop. The world moves at about an eighth of its speed; the monk at half.</li>
+  <li>The music is muffled, as if heard through a wall. A slow heartbeat sounds close by, and a low choir holds one chord. The sounds of the fight stay clear.</li>
+  <li>The oil burns fast while it lasts: about a fifth of the flask each second.</li>
+</ul>
+<p><b>One stroke, one flow.</b> While the flare lasts, draw one stroke through the demons you want, in order, up to eight. Let go, and he goes through them one after another, a different blow for each, as one unbroken flow. These blows strike hard, and Envy cannot turn them aside. A broken demon on the stroke is cast out on the way. If the oil runs out while you are drawing, he goes through the ones already marked. A tap during the flare acts as usual, in slow time.</p>
+
+<h2 id="seven">The seven</h2>
+<p>Each sin fights in its own way, so its colour, once the light shows it, tells you how to fight it. They come up out of cracks in the rock. As in the Batman Arkham games, only a few strike at a time. They take turns, and the rest prowl in the dark at a distance.</p>
+<div class="tw"><table>
+  <tr><th>Sin</th><th>How it fights</th></tr>
+  <tr><td style="--c:var(--pride)"><span class="sin"><i class="dot"></i>Pride</span><span class="hex">violet</span><span class="virtue">Humility</span></td><td class="plain">Tall and upright, crowned with horns, on great angular wings. It hovers high above him and throws violet shards down at him; now and then it swoops down through him. Strike it out of the air, or parry it, and it falls "humbled": the fall itself hurts it.</td></tr>
+  <tr><td style="--c:var(--avarice)"><span class="sin"><i class="dot"></i>Avarice</span><span class="hex">gold</span><span class="virtue">Generosity</span></td><td class="plain">Hunched, with long grasping arms and a sack on its back. It gathers loose things into its sack, up to three, and throws them from the dark. Its touch steals a flask of holy water. Cast it out and the hoard spills: everything it took, every flask it stole, and one flask more.</td></tr>
+  <tr><td style="--c:var(--lust)"><span class="sin"><i class="dot"></i>Lust</span><span class="hex">pink</span><span class="virtue">Chastity</span></td><td class="plain">Slender, sinuous and ribboned: a lure, inhuman, never shown immodestly. It keeps its distance and casts a long ribbon that draws him toward it for up to about two and a half seconds, and strikes if he comes close. Block, or strike it, to break the ribbon.</td></tr>
+  <tr><td style="--c:var(--envy)"><span class="sin"><i class="dot"></i>Envy</span><span class="hex">green</span><span class="virtue">Kindness</span></td><td class="plain">Lean and twisted, with a blank mirror for a face. It turns aside a blow of the same kind as his last one, with a green flash, and copies it back at him in his own moves. Vary your blows.</td></tr>
+  <tr><td style="--c:var(--gluttony)"><span class="sin"><i class="dot"></i>Gluttony</span><span class="hex">orange</span><span class="virtue">Temperance</span></td><td class="plain">Huge and slow: a great belly, a small head, a wide mouth. It swallows anything thrown at it (keeping up to three) and spits them back. It cannot be launched. Holy water burns it double. It is too heavy to flinch in the middle of a swing, its blow throws him down, and it takes the most to break.</td></tr>
+  <tr><td style="--c:var(--wrath)"><span class="sin"><i class="dot"></i>Wrath</span><span class="hex">red</span><span class="virtue">Patience</span></td><td class="plain">Bull-like and horned, with fiery cracks in its hide. It charges in a straight line and cannot stop. Step aside and it slams into the rock and is stunned. Block it and it is stunned for a moment; parry it and it is thrown. Its charge throws him down.</td></tr>
+  <tr><td style="--c:var(--sloth)"><span class="sin"><i class="dot"></i>Sloth</span><span class="hex">ashen blue</span><span class="virtue">Diligence</span></td><td class="plain">A drifting wraith with no legs, its head and arms drooping. It drifts slowly through the rock and comes at his back. It never wounds, but its touch drains the flow to nothing and half the oil. A block turns it aside. It must be hunted down.</td></tr>
+</table></div>
+
+<h3>Sloth, the noonday devil</h3>
+<p>The old name for this sin is acedia. Evagrius calls its demon "the noonday demon" and says it troubles the monk more than any other (<i>Praktikos</i> 12). It comes in the middle of the day, makes the day seem endless, and makes the monk hate his cell and his work and long to be somewhere else. Evagrius took the name from the psalm, which in the Greek and the Latin speaks of a demon at noon:</p>
+<blockquote>
+  <p class="v">Of the arrow that flieth in the day, of the business that walketh about in the dark: of invasion, or of the noonday devil.</p>
+  <cite>Psalm 90:6</cite>
+</blockquote>
+<p>St. Benedict knows it too. He sends seniors round the monastery in the reading time to see that no brother is <span class="la">acediosus</span>, wasting the time in idleness or chatter (RB 48:18). So Sloth in the game never wounds. It does not knock him down; it empties him. It takes away the zeal and the reserve, and leaves him standing in a small light.</p>
+
+<h2 id="finishers">Finishers</h2>
+<p>As in Mortal Kombat, a beaten foe is not simply gone. A demon brought to nothing is <b>broken</b>: kneeling, swaying, its colour showing through cracks in it. It stays so for about three and a half seconds. Finish it with a gesture on it; each finisher gives something different. If it is not finished in time, it rises again with about a third of its strength.</p>
+<div class="tw"><table class="stack">
+  <tr><th>Finisher</th><th>Gesture</th><th>What it does</th><th>When it opens</th></tr>
+  <tr><td>Cast Out</td><td data-k="Gesture">Tap</td><td data-k="What it does">A strong rush of flow (three links), and a little oil.</td><td data-k="When it opens">Always open.</td></tr>
+  <tr><td>Under Foot</td><td data-k="Gesture">Swipe down</td><td data-k="What it does">He leaps and stamps down. A life back.</td><td data-k="When it opens">After wave 3.</td></tr>
+  <tr><td>Pillar of Fire</td><td data-k="Gesture">Swipe up</td><td data-k="What it does">The torch thrust straight up, fire rising. Oil for the flare: nearly half a flask.</td><td data-k="When it opens">After wave 5.</td></tr>
+  <tr><td>Scattered</td><td data-k="Gesture">Swipe across</td><td data-k="What it does">A whirling spin of the torch. Two flasks of holy water.</td><td data-k="When it opens">After wave 7.</td></tr>
+  <tr><td>The Virtue</td><td data-k="Gesture">Hold</td><td data-k="What it does">He kneels and raises the torch. The light floods, and every other demon of that sin on the field is broken at once.</td><td data-k="When it opens">For each sin, once five of it have been cast out.</td></tr>
+</table></div>
+<p>A finisher that is not open yet shows "not yet open", and he casts the demon out instead. Once a finisher is open, it stays open in later games. The count of each sin cast out is kept too. The <b>Finishers</b> page on the title screen shows which are open, and five marks for each sin on the way to its virtue. A finisher slows time a little while it plays, and every finisher counts in the flow.</p>
+<blockquote>
+  <p class="v">Thou shalt walk upon the asp and the basilisk: and thou shalt trample under foot the lion and the dragon.</p>
+  <cite>Psalm 90:13 · Under Foot</cite>
+  <p class="v">And the Lord went before them to shew the way by day in a pillar of a cloud, and by night in a pillar of fire: that he might be the guide of their journey at both times.</p>
+  <cite>Exodus 13:21 · Pillar of Fire</cite>
+  <p class="v">Let God arise, and let his enemies be scattered: and let them that hate him flee from before his face.</p>
+  <cite>Psalm 67:2 · Scattered</cite>
+</blockquote>
+
+<h3>The virtues</h3>
+<p>Each sin is finished best by its contrary:
+<span class="s-pride">Humility</span> against Pride,
+<span class="s-avarice">Generosity</span> against Avarice,
+<span class="s-lust">Chastity</span> against Lust,
+<span class="s-envy">Kindness</span> against Envy,
+<span class="s-gluttony">Temperance</span> against Gluttony,
+<span class="s-wrath">Patience</span> against Wrath,
+<span class="s-sloth">Diligence</span> against Sloth.
+He does not strike; he kneels. The light floods, and every other demon of that sin on the field falls broken. That is the point of the picture: a vice is not overcome only by fighting it blow by blow, but by the opposite good taking root. The old monastic writers give each vice its own remedy. The tidy list of seven pairs is a later teaching aid; see <a href="#theology">Theology, kept straight</a>.</p>
+
+<h2 id="music">The music</h2>
+<p>The melody is the hymn <span class="la">Christe, qui lux es et dies</span>, an old Compline hymn. Many medieval uses sang it in Lent; the Cistercian hymnary gives it for Compline on Sundays. The game uses the tune as the Cistercians sang it (they too keep the Rule), from GregoBase no. 9743: the <i>Hymnarium cisterciense</i>, Karlsruhe, Badische Landesbibliothek, Lichtenthal 28, about 1250. It is in the second mode, with its home on D, and moves in a narrow, low range. The harmony keeps to the mode and never uses the sharp seventh of a major key.</p>
+<div class="card">
+  <p class="la" style="font-size:1.12em;margin-bottom:6px">Christe, qui lux es et dies,<br>noctis tenebras detegis,<br>lucisque lumen crederis,<br>lumen beatis praedicans.</p>
+  <p class="small" style="margin:0">Christ, you are light and day; you uncover the darkness of night. We believe you are the light of light, and you proclaim light to the blessed.</p>
+</div>
+<h3>The arena song</h3>
+<p>The fight's song moves at 88 beats a minute and is built in layers. The game adds and takes away layers with the flow. A new layer comes in on the next beat; a layer falls away at the next bar, so the changes always land in time. When the light first finds a demon there is a low boom on the beat; when the flow breaks, a falling breath.</p>
+<div class="tw"><table class="stack">
+  <tr><th>Level</th><th>When</th><th>What plays</th></tr>
+  <tr><td>0</td><td data-k="When">No demon in the light.</td><td data-k="What plays">The mountain wind, a drone on D and A, a bell far off, and two lines of the hymn, high and far off, on a soft flute-like organ stop.</td></tr>
+  <tr><td>1</td><td data-k="When">Demons in the light; flow 0 to 4.</td><td data-k="What plays">A heartbeat on the frame drum, a soft pulse, and an organ chord swelling each bar. The far-off flute now plays every line.</td></tr>
+  <tr><td>2</td><td data-k="When">Flow 5 to 11.</td><td data-k="What plays">A slow pattern on the frame drum, tom-toms at the end of each line, and a harpsichord in broken chords.</td></tr>
+  <tr><td>3</td><td data-k="When">Flow 12 to 19.</td><td data-k="What plays">The great drum, the organ playing the hymn in fifths (as the oldest written harmony did), and a low figure on the bass, played over and over.</td></tr>
+  <tr><td>4</td><td data-k="When">Flow 20 and more.</td><td data-k="What plays">A men's choir and the full organ, with everything in quicker notes.</td></tr>
+</table></div>
+<ul>
+  <li><b>Under the flare</b> the music is muffled: in a quarter of a second it closes in until only the low notes come through (a filter at about 550 Hz). A slow heartbeat sounds close by, and a low choir holds one chord. The sounds of the fight are not muffled; they stay crisp in the slow time. When the flare ends, the music opens again quickly with a rising rush.</li>
+  <li><b>The title</b> has the hymn alone on the organ, slowly: first on a soft flute-like stop over a drone, then in fifths, with a bell at the start of each verse.</li>
+  <li><b>The sounds</b> are short and restrained, made for small phone speakers: the grab of a ledge, the roar of the torch swing, the bright ring of a parry, the glassy hiss of holy water, the sinking tone of Sloth's touch.</li>
+</ul>
+
+<h2 id="arena">The arena (this first build), and practice</h2>
+<h3>The Hollow</h3>
+<p>A deep cleft in the mountain, much wider and taller than the screen: thirty-two times the monk's height from side to side, and sixteen times from top to bottom. Terraced cliffs rise on both sides. On the left a tunnel runs into a cave. A spire of rock stands in the middle. A ladder of floating crags, each one tapering to a spike beneath, rises to the top of the world. There are no bottomless pits. The demons come up out of eight cracks in the rock, from those far from him and out of the light where they can. Fourteen things lie about to be picked up and thrown, and three flasks of holy water.</p>
+<h3>The waves</h3>
+<div class="tw"><table>
+  <tr><th>Wave</th><th>Who comes</th></tr>
+  <tr><td>1</td><td><span class="s-wrath">Wrath</span> ×2</td></tr>
+  <tr><td>2</td><td><span class="s-wrath">Wrath</span> ×2, <span class="s-avarice">Avarice</span></td></tr>
+  <tr><td>3</td><td><span class="s-avarice">Avarice</span>, <span class="s-wrath">Wrath</span>, <span class="s-pride">Pride</span></td></tr>
+  <tr><td>4</td><td><span class="s-envy">Envy</span> ×2, <span class="s-wrath">Wrath</span> ×2</td></tr>
+  <tr><td>5</td><td><span class="s-gluttony">Gluttony</span>, <span class="s-avarice">Avarice</span>, <span class="s-wrath">Wrath</span> ×2</td></tr>
+  <tr><td>6</td><td><span class="s-lust">Lust</span>, <span class="s-envy">Envy</span>, <span class="s-pride">Pride</span>, <span class="s-wrath">Wrath</span> ×2</td></tr>
+  <tr><td>7</td><td><span class="s-sloth">Sloth</span> ×2, <span class="s-wrath">Wrath</span> ×2, <span class="s-avarice">Avarice</span></td></tr>
+  <tr><td>8</td><td>One of each of the seven.</td></tr>
+  <tr><td>9 on</td><td>Mixed and growing: six at wave 9, one more every second wave, up to fourteen, always with at least one Wrath.</td></tr>
+</table></div>
+<ul>
+  <li><b>A few at a time.</b> Only a few are on the field at once: three at first, more as the waves go on, never more than eight. The rest wait their turn. Of those on the field, only two strike at a time at first, never more than four.</li>
+  <li><b>Harder as it goes.</b> In later waves the demons wind up their blows more quickly, and from wave 10 they take more to break.</li>
+  <li><b>Between waves</b> the wave's number comes up with a line of Scripture, and a breath. A flask of holy water comes back after each wave, and a life after every second wave.</li>
+  <li><b>Kept on the phone:</b> the best wave, the finishers opened, and how many of each sin have been cast out.</li>
+</ul>
+<div class="card">
+  <p style="margin-bottom:6px"><b>The lines between waves,</b> in order, then round again (Douay-Rheims; the tenth is the Rule):</p>
+  <ol class="small" style="margin:0">
+    <li><span class="v">The light shineth in darkness, and the darkness did not comprehend it.</span> <span class="ref">John 1:5</span></li>
+    <li><span class="v">Thy word is a lamp to my feet, and a light to my paths.</span> <span class="ref">Psalm 118:105</span></li>
+    <li><span class="v">All things that are reproved, are made manifest by the light.</span> <span class="ref">Ephesians 5:13</span></li>
+    <li><span class="v">Walk whilst you have the light, that the darkness overtake you not.</span> <span class="ref">John 12:35</span></li>
+    <li><span class="v">The Lord is my light and my salvation, whom shall I fear?</span> <span class="ref">Psalm 26:1</span></li>
+    <li><span class="v">For thou lightest my lamp, O Lord: O my God enlighten my darkness.</span> <span class="ref">Psalm 17:29</span></li>
+    <li><span class="v">Let your loins be girt, and lamps burning in your hands.</span> <span class="ref">Luke 12:35</span></li>
+    <li><span class="v">Be sober and watch: because your adversary the devil, as a roaring lion, goeth about seeking whom he may devour.</span> <span class="ref">1 Peter 5:8</span></li>
+    <li><span class="v">Resist the devil, and he will fly from you.</span> <span class="ref">James 4:7</span></li>
+    <li><span class="v">Run while you have the light of life, lest the darkness of death overtake you.</span> <span class="ref">RB Prologue 13</span></li>
+    <li><span class="v">Let God arise, and let his enemies be scattered: and let them that hate him flee from before his face.</span> <span class="ref">Psalm 67:2</span></li>
+    <li><span class="v">Thou shalt walk upon the asp and the basilisk: and thou shalt trample under foot the lion and the dragon.</span> <span class="ref">Psalm 90:13</span></li>
+  </ol>
+</div>
+<h3>Practice</h3>
+<p>From the title screen. Nothing can hurt you, holy water never runs out, and every finisher is open. You choose which of the seven come, and how many are on the field at once, from one to six. You can also turn on endless oil, to flare as often as you like. In practice the demons do not grow harder, and two at most strike at a time.</p>
+<h3>Around the fight</h3>
+<ul>
+  <li><b>The pause</b> lists every move. From it you can go on, begin again, switch between the arena and practice, turn the sound off, or go back to the title. The game pauses by itself when the phone is put aside.</li>
+  <li><b>Hints.</b> The first time something new happens (the first demon in the light, the first thing thrown at him, the first broken demon, the oil ready), one plain line explains it, once.</li>
+  <li><b>Sideways.</b> Where the phone allows, the game turns sideways when play starts. Where it does not, a card asks you to turn the phone.</li>
+</ul>
+
+<h2 id="keys">Keyboard and mouse</h2>
+<p>The mouse does everything a finger does: a click is a tap, a drag is a swipe, and holding the button is a hold.</p>
+<div class="tw"><table class="keys">
+  <tr><th>Key or button</th><th>What it does</th></tr>
+  <tr><td><span class="key">Right button</span> <span class="key">Q</span> <span class="key">Z</span> <span class="key">Shift</span> held</td><td>Block (at the last instant, a parry).</td></tr>
+  <tr><td><span class="key">F</span></td><td>The flare. Then drag the mouse through the demons, or press <span class="key">Space</span> to mark the nearest. <span class="key">F</span> again, or letting go of the mouse, sends him through them.</td></tr>
+  <tr><td><span class="key">←</span> <span class="key">→</span> or <span class="key">A</span> <span class="key">D</span></td><td>Walk (or run, in the quick speed).</td></tr>
+  <tr><td><span class="key">↑</span> or <span class="key">W</span></td><td>Climb up, ahead of him.</td></tr>
+  <tr><td><span class="key">↓</span> or <span class="key">S</span></td><td>Drop down, ahead of him.</td></tr>
+  <tr><td><span class="key">Space</span></td><td>Strike the nearest demon in the light, the way he is facing. With none in the light, throw holy water at the nearest in the dark. If he holds something, he throws that instead, at a demon in the light or in the dark. A broken demon in the light comes first: he casts it out.</td></tr>
+  <tr><td><span class="key">E</span></td><td>Catch a thing thrown at him; pick up a thing near him; or throw what he holds.</td></tr>
+  <tr><td><span class="key">X</span> or <span class="key">1</span></td><td>Cast Out (on the nearest broken demon).</td></tr>
+  <tr><td><span class="key">2</span> <span class="key">3</span> <span class="key">4</span> <span class="key">5</span></td><td>Under Foot, Pillar of Fire, Scattered, the Virtue (on the nearest broken demon).</td></tr>
+  <tr><td><span class="key">C</span> <span class="key">V</span> <span class="key">R</span></td><td>Launch, slam, dash (on the nearest demon in the light).</td></tr>
+  <tr><td><span class="key">P</span> or <span class="key">Esc</span></td><td>Pause.</td></tr>
+  <tr><td><span class="key">M</span></td><td>Sound on or off.</td></tr>
+</table></div>
+
+<h2 id="level">The first level (later)</h2>
+<p>Not in this build. The arena is where the fighting is learned; the level is the climb it is for.</p>
+<ul>
+  <li><b>The mountain.</b> A climb up the mountain at night: first down through the tunnels, then up cliff faces and floating ledges toward the summit.</li>
+  <li><b>The lamps.</b> Unlit lamps line the way. Light one with the torch and it becomes a pool of light, and a place to begin again when the light goes out. It recalls the ancient lighting of the lamps at evening, with the hymn <i>O gladsome light</i> (<span class="la">Phos hilaron</span>).</li>
+  <li><b>The cloud.</b> At the summit, the cloud. There the torch is set down.</li>
+</ul>
+<blockquote>
+  <p class="v">And the people stood afar off. But Moses went to the dark cloud wherein God was.</p>
+  <cite>Exodus 20:21</cite>
+</blockquote>
+<p>St. Gregory of Nyssa (<i>Life of Moses</i>, book II) and Dionysius (<i>Mystical Theology</i> 1.3) read this darkness not as the darkness of sin, but as the place where God is beyond all knowing: a light too bright to see. So the game ends where its own darkness turns inside out. All the way up, darkness is the enemy's ground. At the top, the darkness is God's, and the little light he carried is no longer needed.</p>
+
+<h2 id="theology">Theology, kept straight</h2>
+<h3>The demons</h3>
+<ul>
+  <li><b>Defined.</b> The devil and the other demons were created good by God, but became evil by their own doing (Fourth Lateran Council, 1215; Catechism 391). They are fallen angels.</li>
+  <li><b>Real, but limited.</b> Their power is real, but it is the power of a creature. "He is only a creature, powerful from the fact that he is pure spirit, but still a creature. He cannot prevent the building up of God's reign" (Catechism 395).
+    <blockquote><p class="v">And God is faithful, who will not suffer you to be tempted above that which you are able: but will make also with temptation issue, that you may be able to bear it.</p><cite>1 Corinthians 10:13</cite></blockquote></li>
+  <li><b>Common teaching.</b> A demon cannot move the will. It can work only on the senses and the imagination, and suggest (St. Thomas, ST I q.111 a.2&ndash;4; q.114; I-II q.80 a.1&ndash;3). Not every temptation comes from a demon; many come from our own flesh and from the world (ST I q.114 a.3). <span class="v">But every man is tempted by his own concupiscence, being drawn away and allured</span> (James 1:14).</li>
+  <li><b>A picture.</b> One demon for each sin is a way of speaking, not a claim that each sin has a demon assigned to it. It is the desert's way of speaking: Evagrius writes of "the demon of acedia" (<i>Praktikos</i> 12), and speaks of the other thoughts in the same way. The vice itself is in us; the demon can only press on it.</li>
+  <li><b>The fight is a picture too.</b> Blows and kicks stand for the spiritual combat, as in the Ladder icon. The monk is not performing a solemn exorcism, which only a priest may do, and only with the bishop's express leave (Code of Canon Law, can. 1172).
+    <blockquote><p class="v">For our wrestling is not against flesh and blood; but against principalities and powers, against the rulers of the world of this darkness, against the spirits of wickedness in the high places.</p><cite>Ephesians 6:12</cite></blockquote></li>
+  <li><b>Cast out, not killed.</b> A spirit does not die: angels are by nature immortal (ST I q.50 a.5). A demon finished in the game goes up in ash and leaves the field: it is driven off, not ended.</li>
+</ul>
+
+<h3>The seven capital sins</h3>
+<p>The seven are a tradition of spiritual theology, not a defined list. Evagrius (d. 399) wrote of eight "thoughts": gluttony, fornication, avarice, sadness, anger, acedia, vainglory and pride (<i>Praktikos</i> 6). Cassian brought them to the West (<i>Institutes</i> V&ndash;XII; <i>Conferences</i> 5). St. Gregory the Great made pride the root of all the rest and named seven that spring from it: vainglory, envy, anger, sadness, avarice, gluttony and lust (<i>Moralia in Job</i> XXXI.45). Later writers folded vainglory into pride and set acedia back in the place of sadness. That gives the list the game uses. The Catechism names them as the capital sins "which Christian experience has distinguished, following St. John Cassian and St. Gregory the Great" (Catechism 1866). So the list is old, well tried and very useful; but it is a way of ordering the vices, not a dogma, and the number is not a fence.</p>
+<p>The seven contrary virtues (Humility, Generosity, Chastity, Kindness, Temperance, Patience, Diligence) are a later teaching aid. The principle behind them is old: the monastic writers heal each vice with the good opposite it. For acedia, the remedy in the desert is to stay and persevere; St. Thomas sets acedia, a "sadness about spiritual good", against the joy that comes from charity (ST II-II q.35). The Catechism says it "goes so far as to refuse the joy that comes from God" (Catechism 2094). "Diligence" is the popular name; see <a href="#decide">Still to decide</a>.</p>
+
+<h3>Holy water</h3>
+<p>Holy water is a sacramental, not a sacrament (Catechism 1667&ndash;1670). It does not work by its own force, nor automatically. It works by the prayer of the Church, and it helps the one who uses it with faith: "Sacramentals do not confer the grace of the Holy Spirit in the way that the sacraments do, but by the Church's prayer, they prepare us to receive grace and dispose us to cooperate with it" (Catechism 1670). The older Roman Ritual blesses the water so that it may put to flight every power of the enemy. In the game a flask always burns the demon it reaches. That is a picture of the Church's prayer at work, not a claim that holy water is a weapon that works by itself.</p>
+
+<h3>Two darknesses</h3>
+<p>The game's darkness is the darkness of sin and death: the darkness of John 12:35 and of the Prologue. It is not the dark cloud of Exodus 20:21. That second darkness, the darkness of God beyond knowing, comes only at the very end (see <a href="#level">The first level</a>), and the two must never be confused.</p>
+
+<h3>The light is given</h3>
+<p>The flow is a picture of watchfulness and zeal, not of grace earned by effort. The light is God's gift: <span class="v">For thou lightest my lamp, O Lord</span> (Psalm 17:29). The monk's part is to keep it burning, as the wise virgins kept oil for their lamps. And the colours are a picture of discernment: the light does not make the demons evil; it shows what they already are (Ephesians 5:13).</p>
+
+<h2 id="decide">Still to decide</h2>
+<div class="q">
+  <p><b>Hooded monks in the dark?</b> Should the demons in the dark look like hooded monks, like him, until the light shows them? Then the light would matter even more: in the dark you could not tell a brother from an enemy.</p>
+  <blockquote><p class="v">And no wonder: for Satan himself transformeth himself into an angel of light.</p><cite>2 Corinthians 11:14</cite></blockquote>
+  <p>It must be done with care, so that real monks never look sinister: perhaps only the outline at a distance, never close.</p>
+</div>
+<div class="q"><p><b>How the level's story begins.</b> Who is he, and why does he climb the mountain at night? What sends him out, and what is at the top for him? The arena needs no story; the level does.</p></div>
+<div class="q"><p><b>Does Sloth need anything more?</b> It never wounds; it drains the flow and the oil, and a block turns it aside. Is that enough of a threat to make it worth hunting? Or should it be harder to keep track of, slipping through the rock out of sight?</p></div>
+<div class="q"><p><b>The virtue against Sloth.</b> "Diligence" is the name in the popular list. Joy, or Perseverance, would be closer to Evagrius and St. Thomas. Which should the game use?</p></div>
+<div class="q"><p><b>Practice and the virtues.</b> Demons cast out in practice now count toward opening the virtues. Should they, or should only the arena count?</p></div>
+
+<footer>Monastic Games · design notes · <a href="./">play the first build</a> · <a href="../">home</a></footer>
+</main>
+</body>
+</html>
