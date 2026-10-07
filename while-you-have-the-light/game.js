@@ -17,12 +17,14 @@ const Game = {
     const P = save.practice || { sins: SIN_ORDER.slice(), count: 3, endlessOil: false };
     Game.last = { practice: true }; Arena.start({ practice: true, sins: P.sins, count: P.count, endlessOil: P.endlessOil });
   },
-  again() { if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
+  climb() { goSideways(); Game.music = true; Game.last = { climb: true }; G = null; Climb.start(); },
+  again() { if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
   toTitle() {
     G = null; Title.t = 0; mode = Title;
     Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });
   },
   pause() {
+    if (mode === Climb) { Climb.pause(); return; }
     if (mode !== Arena || !G || G.over) return;
     Pause.t = 0; mode = Pause; Sound.muffle(true, 0.2);
   },
@@ -61,16 +63,16 @@ const Title = {
     text("Run while you have the light of life, lest the darkness of death overtake you.", x + 2, 128, { font: FONT.line, italic: true, size: 14, weight: 500, color: C.warm, max: W * 0.5 });
     text("THE RULE OF ST. BENEDICT, PROLOGUE", x + 2, 142, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)" });
     const by = 166;
-    button("THE ARENA", x, by, 200, 42, () => Game.arena(), { hot: true, sub: save.best ? "Waves of the seven · your best: wave " + save.best : "Waves of the seven, growing" });
+    button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("PRACTICE", x, by + 50, 97, 32, () => { Setup.t = 0; mode = Setup; }, { sub: "Nothing can hurt you" });
     button("FINISHERS", x + 103, by + 50, 97, 32, () => { Book.t = 0; mode = Book; }, {});
     button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 90, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
     buttons.push({ x: x + 103, y: by + 90, w: 97, h: 26, act: () => { location.href = "design.html"; } });
     text("Design notes ›", x + 151, by + 107, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
-    text("A first build: the arena. Best with sound, phone sideways.", x, H - 16, { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", max: W * 0.55 });
+    text("The climb, a first build: the swing, no demons yet. Best with sound, phone sideways.", x, H - 16, { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", max: W * 0.55 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },
-  key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.arena(); },
+  key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
 };
 
 // ---- The practice: which sins come, how many at once ----------------------------------------------------
@@ -175,7 +177,12 @@ const Over = {
     text("THE LIGHT WENT OUT", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
     text("Walk whilst you have the light, that the darkness overtake you not.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
     text("JOHN 12:35", W / 2, 108, { align: "center", size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)", alpha: a });
-    if (G) {
+    if (Game.last && Game.last.climb) {
+      Climb.over().forEach(([k, v], i) => {
+        text(k.toUpperCase(), W / 2 - 8, 140 + i * 22, { align: "right", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.65)", alpha: a });
+        text(String(v), W / 2 + 8, 141 + i * 22, { font: FONT.title, size: 15, weight: 700, color: C.flameHot, alpha: a });
+      });
+    } else if (G) {
       const rows = G.practice ? [["Demons cast out", G.castTotal], ["Longest flow", G.best]] : [["Wave reached", G.wave], ["Demons cast out", G.castTotal], ["Longest flow", G.best], ["Your best wave", save.best || G.wave]];
       rows.forEach(([k, v], i) => {
         text(k.toUpperCase(), W / 2 - 8, 140 + i * 22, { align: "right", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.65)", alpha: a });
@@ -207,7 +214,8 @@ function frame(now) {
 resize();
 Sound.muted = !!save.muted;
 mode = Title;
-// For trying things directly: ?arena starts the arena, ?practice the practice.
+// For trying things directly: ?climb starts the climb, ?arena the arena, ?practice the practice.
+if (/[?&]climb\b/.test(location.search)) setTimeout(() => Game.climb(), 50);
 if (/[?&]arena\b/.test(location.search)) setTimeout(() => Game.arena(), 50);
 if (/[?&]practice\b/.test(location.search)) setTimeout(() => Game.practice(), 50);
 requestAnimationFrame(frame);
