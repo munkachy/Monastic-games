@@ -154,9 +154,11 @@ function monkGeo(J, p, o, dir) {
   A.push([sb, [sb[0] + g[0] * 17 + st[0] * 6, sb[1] + g[1] * 17 + st[1] * 6], PA(J.hip, n, -4.6)]);
   // The far arm, holding the torch: a short shaft with a pitch-soaked head (the caller lays the flame on it).
   sleeve(A, PA(J.sh, n, -0.8), J.eB, J.hB, wind, 9.5);
-  const ta = p.sB + p.eB + p.tq, tvx = Math.sin(ta), tvy = Math.cos(ta);
-  const tip = [J.hB[0] + tvx * TORCH_UP, J.hB[1] + tvy * TORCH_UP];
-  A.push(seg([J.hB[0] - tvx * TORCH_DOWN, J.hB[1] - tvy * TORCH_DOWN], tip, 0.75, 0.95));
+  // Both hands wanted (climbing the rope): the torch held crosswise in his teeth, flame forward and up.
+  const ta = o.teeth ? J.ha + 1.45 : p.sB + p.eB + p.tq, tvx = Math.sin(ta), tvy = o.teeth ? -Math.cos(ta) : Math.cos(ta);
+  const grip = o.teeth ? HL(J, 3.2, 1.8) : J.hB, up = o.teeth ? TORCH_UP * 0.8 : TORCH_UP;
+  const tip = [grip[0] + tvx * up, grip[1] + tvy * up];
+  A.push(seg([grip[0] - tvx * (o.teeth ? 5 : TORCH_DOWN), grip[1] - tvy * (o.teeth ? 5 : TORCH_DOWN)], tip, 0.75, 0.95));
   A.push(seg([tip[0] - tvx * 3.4, tip[1] - tvy * 3.4], tip, 1.45, 1.65));
   // The hood: deep, its brow standing out over the hidden face, its point falling down his back,
   // and the cowl's collar joining it to the shoulders.
