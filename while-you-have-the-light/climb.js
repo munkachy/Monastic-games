@@ -329,8 +329,11 @@ const Climb = (() => {
       if (k < 1) return;
       if (sh.hit) {
         const [gx, gy] = grip();
-        S.rope = { x: sh.tx, y: sh.ty, len: clamp(dist(gx, gy, sh.tx, sh.ty), ROPE_MIN, ROPE_MAX) };
+        // The hook bites at the rock's face: the rope runs from just outside it, never through it.
+        let hx = sh.tx, hy = sh.ty; for (let k = 0; k < 8 && solidAt(hx, hy); k++) { hx -= sh.ux * 1; hy -= sh.uy * 1; }
+        S.rope = { x: hx, y: hy, len: clamp(dist(gx, gy, hx, hy), ROPE_MIN, ROPE_MAX), bends: [], fixed: 0, hx: sh.tx, hy: sh.ty };
         S.ropeVis = S.shotVis; S.shot = null; S.hooked++;
+        wrapRope(S.rope, gx, gy); if (freeOf(S.rope) < ROPE_MIN * 0.5) S.rope.len = (S.rope.fixed || 0) + Math.max(ROPE_MIN * 0.5, dist(gx, gy, pivotOf(S.rope).x, pivotOf(S.rope).y));
         Sound.fx.tether();
         for (let q = 0; q < 5; q++) S.parts.push({ kind: "chip", x: sh.tx, y: sh.ty, vx: (Math.random() - 0.5) * 120 - sh.ux * 60, vy: (Math.random() - 0.5) * 120 - sh.uy * 60, life: 0.4, age: 0 });
       } else { sh.ph = "drop"; sh.t = 0; sh.vx = sh.ux * 160; sh.vy = sh.uy * 160; }
@@ -364,7 +367,7 @@ const Climb = (() => {
     const N = 14, seg = len / (N - 1);
     if (P.length !== N) { P.length = 0; for (let k = 0; k < N; k++) { const x = lerp(ax, bx, k / (N - 1)), y = lerp(ay, by, k / (N - 1)); P.push({ x, y, px: x, py: y }); } }
     const g = 900 * dt * dt;
-    for (let k = 1; k < N - 1; k++) { const p = P[k], vx = (p.x - p.px) * 0.97, vy = (p.y - p.py) * 0.97; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g; }
+    for (let k = 1; k < N - 1; k++) { const p = P[k], vx = (p.x - p.px) * 0.97, vy = (p.y - p.py) * 0.97; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g; if (solidAt(p.x, p.y)) { p.x = p.px; p.y = p.py; } }
     for (let it = 0; it < 8; it++) {
       P[0].x = ax; P[0].y = ay; P[N - 1].x = bx; P[N - 1].y = by;
       for (let k = 0; k < N - 1; k++) {
@@ -376,6 +379,59 @@ const Climb = (() => {
       }
     }
     P[0].x = ax; P[0].y = ay; P[N - 1].x = bx; P[N - 1].y = by;
+    // Slack rope drapes over rock rather than passing through it.
+    for (let k = 1; k < N - 1; k++) { const p = P[k]; if (solidAt(p.x, p.y)) { p.x = p.px; p.y = p.py; if (solidAt(p.x, p.y)) { p.x = lerp(P[k - 1].x, P[k + 1].x, 0.5); p.y = lerp(P[k - 1].y, P[k + 1].y, 0.5) - 2; } } }
+  }
+
+  // ---- The rope round the rock ------------------------------------------------------------------------
+  // The rope is straight pieces bent at the corners of the rock: from the hook, through each bend,
+  // to his hand. It never passes through rock: where the last piece would, it bends at the corner
+  // it met, and he swings about that bend with what is left of the rope (so the swing quickens).
+  // Swing back past the straight and the bend comes off again.
+  const bendsOf = (R) => R.bends || (R.bends = []);
+  const pivotOf = (R) => { const b = bendsOf(R); return b.length ? b[b.length - 1] : R; };
+  const freeOf = (R) => R.len - (R.fixed || 0);
+  function setFixed(R) { let L = 0, p = R; for (const b of bendsOf(R)) { L += dist(p.x, p.y, b.x, b.y); p = b; } R.fixed = L; }
+  // The corner the rope's last piece struck as it swept from (px, py) to (gx, gy) about P: an outer
+  // corner of rock (one solid cell of the four round it), the first one the sweep meets.
+  function sweepCorner(P, px, py, gx, gy) {
+    const a0 = Math.atan2(py - P.y, px - P.x), da = angDiff(a0, Math.atan2(gy - P.y, gx - P.x));
+    const reach = Math.max(dist(P.x, P.y, gx, gy), dist(P.x, P.y, px, py)) + 2, L = dist(P.x, P.y, gx, gy) || 1, ux = (gx - P.x) / L, uy = (gy - P.y) / L;
+    const i0 = Math.floor(Math.min(P.x, px, gx) / CELL) - 1, i1 = Math.ceil(Math.max(P.x, px, gx) / CELL) + 1;
+    const j0 = Math.floor(Math.min(P.y, py, gy) / CELL) - 1, j1 = Math.ceil(Math.max(P.y, py, gy) / CELL) + 1;
+    const swept = [], near = [];
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const s00 = solid(i - 1, j - 1), s10 = solid(i, j - 1), s01 = solid(i - 1, j), s11 = solid(i, j);
+      if (s00 + s10 + s01 + s11 !== 1) continue;
+      const vx = i * CELL, vy = j * CELL, dd = dist(P.x, P.y, vx, vy);
+      if (dd < 3 || dd > reach) continue;
+      const c = { x: vx + (s00 || s01 ? 1.2 : -1.2), y: vy + (s00 || s10 ? 1.2 : -1.2) };
+      if (Math.abs(da) > 0.002) { const t = angDiff(a0, Math.atan2(vy - P.y, vx - P.x)) / da; if (t >= -0.05 && t <= 1.05) swept.push([t, c]); }
+      // and, for a rope already through rock, the corners near its line, nearest the bend first
+      const along = (vx - P.x) * ux + (vy - P.y) * uy, off = Math.abs((vx - P.x) * uy - (vy - P.y) * ux);
+      if (along > 0 && along < L && off < 26) near.push([along + off * 2, c]);
+    }
+    swept.sort((p, q) => p[0] - q[0]); near.sort((p, q) => p[0] - q[0]);
+    return swept.concat(near).map((e) => e[1]);
+  }
+  // After he moves (his grip was at px, py): bends come off where the rope has swung back past
+  // straight, and go on where the last piece now meets rock.
+  function wrapRope(R, px, py) {
+    const B = bendsOf(R), [gx, gy] = grip();
+    for (let k = 0; k < 3 && B.length; k++) {
+      const b = B[B.length - 1], a = B.length > 1 ? B[B.length - 2] : R;
+      const cr = (b.x - a.x) * (gy - b.y) - (b.y - a.y) * (gx - b.x);
+      if (cr * b.s < 0 && los(a.x, a.y, gx, gy)) { B.pop(); setFixed(R); } else break;
+    }
+    for (let k = 0; k < 3; k++) {
+      const P = pivotOf(R);
+      if (los(P.x, P.y, gx, gy)) break;
+      // the first corner the rope can reach in a clear line from its last bend
+      const c = sweepCorner(P, px, py, gx, gy).find((q) => los(P.x, P.y, q.x, q.y)); if (!c) break;
+      c.s = sign((c.x - P.x) * (gy - c.y) - (c.y - P.y) * (gx - c.x)) || 1;
+      B.push(c); setFixed(R);
+      if (freeOf(R) < 4) { R.len = (R.fixed || 0) + dist(c.x, c.y, gx, gy); }
+    }
   }
 
   // ---- The flare -------------------------------------------------------------------------------------
@@ -779,13 +835,13 @@ const Climb = (() => {
     // Both thumbs (or up): climb the rope, hand over hand. Down: let it out.
     S.climbing = !!R && (I.both || S.keys.ArrowUp || S.keys.KeyW);
     // (Not while rock is over his head: then he leans out round it first, and the rope waits.)
-    if (R && S.climbing && !(!S.ground && boxHit(S.x, S.y - 4))) { R.len = Math.max(ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
+    if (R && S.climbing && !(!S.ground && boxHit(S.x, S.y - 4)) && freeOf(R) > ROPE_MIN) { R.len = Math.max((R.fixed || 0) + ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
     if (R && (S.keys.ArrowDown || S.keys.KeyS)) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
-    const [gx, gy] = grip(), rd = R ? dist(gx, gy, R.x, R.y) : 0, taut = R && rd >= R.len - 1;
+    const PV = R ? pivotOf(R) : null, [gx, gy] = grip(), rd = R ? dist(gx, gy, PV.x, PV.y) : 0, taut = R && rd >= freeOf(R) - 1;
     // A ledge anywhere near his hands (or near the top of the rope): he pulls himself up onto it.
     if (!S.ground && !S.held) {
       let L = null;
-      const top = R && S.climbing && R.len <= ROPE_MIN + 8;
+      const top = R && S.climbing && freeOf(R) <= ROPE_MIN + 8;
       if (S.cling) L = ledge(S.cling, 18, 96, true);
       else if (S.climbing) L = ledge(S.dir, 18, top ? 140 : 90, true) || ledge(-S.dir, 18, top ? 140 : 90, true);
       else if (d && near(d, 6)) L = ledge(d, 18, 90, true);
@@ -795,6 +851,7 @@ const Climb = (() => {
     // following the rock in and out and leaning out round the bits that stick out. Nothing
     // held: he stays. Away from it: he lets go. Down (keys): he climbs down.
     if (S.cling) {
+      if (R) { const [cgx, cgy] = grip(); wrapRope(R, S.prevGx === undefined ? cgx : S.prevGx, S.prevGy === undefined ? cgy : S.prevGy); R.len = Math.max(R.len, (R.fixed || 0) + dist(cgx, cgy, pivotOf(R).x, pivotOf(R).y)); }
       const s = S.cling, up = d === s || I.both || S.keys.ArrowUp || S.keys.KeyW, down = S.keys.ArrowDown || S.keys.KeyS;
       if (d === -s) { S.cling = 0; S.vx = -s * 40; }
       else {
@@ -821,7 +878,7 @@ const Climb = (() => {
     if (S.climbing && R && !S.ground) {
       let lean = 0;
       if (boxHit(S.x, S.y - 4)) for (let k = 2; k <= 44 && !lean; k += 2) for (const sd of [-1, 1]) if (!boxHit(S.x + sd * k, S.y - 4) && !boxHit(S.x + sd * k, S.y)) { lean = sd * k; break; }
-      if (lean) { moveX(sign(lean) * Math.min(Math.abs(lean), 150 * dt)); R.len = Math.max(R.len, dist(S.x, S.y - GRIP, R.x, R.y) + 1); S.climbPh += dt * 6; }
+      if (lean) { moveX(sign(lean) * Math.min(Math.abs(lean), 150 * dt)); R.len = Math.max(R.len, (R.fixed || 0) + dist(S.x, S.y - GRIP, PV.x, PV.y) + 1); S.climbPh += dt * 6; }
       // Stalled: no new height for a little while, whatever he is doing to the side.
       if (S.climbY === undefined || S.y < S.climbY - 1) { S.climbY = S.y; S.climbStall = 0; } else S.climbStall = (S.climbStall || 0) + dt;
       if (S.climbStall > 0.6) {
@@ -846,7 +903,7 @@ const Climb = (() => {
       if (taut && d) {
         // Pumping the swing, as on a real one: a push adds speed only with the swing's motion,
         // a little each time, so the arc grows over several swings; against it, only a little check.
-        const nx = (gx - R.x) / rd, ny = (gy - R.y) / rd; let tx = -ny, ty = nx;
+        const nx = (gx - PV.x) / rd, ny = (gy - PV.y) / rd; let tx = -ny, ty = nx;
         if (tx < 0) { tx = -tx; ty = -ty; }
         const vt = S.vx * tx + S.vy * ty, a = Math.abs(vt) < 30 ? PUMP_START : sign(vt) === d ? PUMP_WITH : PUMP_AGAINST;
         S.vx += tx * d * a * dt; S.vy += ty * d * a * dt;
@@ -856,26 +913,28 @@ const Climb = (() => {
     S.vy += GRAV * dt * (S.floatT > 0 ? 0.2 : 1);
     const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
     // On the ground the rope pays out as he walks, unless he is climbing it.
-    if (R && S.ground && !S.climbing) R.len = clamp(rd, ROPE_MIN, ROPE_MAX);
+    if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, ROPE_MAX);
     const n = clamp(Math.ceil(Math.max(Math.abs(S.vx), Math.abs(S.vy)) * dt / 6), 1, 10), h = dt / n;
     let side = 0;
     for (let k = 0; k < n; k++) {
+      const [pgx, pgy] = grip();
       if (S.rope) {
-        // The rope: no going further from the hook than its length.
-        const [qx, qy] = grip(), L = dist(qx, qy, S.rope.x, S.rope.y);
-        if (L > S.rope.len - 0.5) {
-          const nx = (qx - S.rope.x) / L, ny = (qy - S.rope.y) / L, out = S.vx * nx + S.vy * ny;
+        // The rope: no going further from its last bend (or the hook) than what is left of it.
+        const Q = pivotOf(S.rope), F = freeOf(S.rope), [qx, qy] = grip(), L = dist(qx, qy, Q.x, Q.y);
+        if (L > F - 0.5) {
+          const nx = (qx - Q.x) / L, ny = (qy - Q.y) / L, out = S.vx * nx + S.vy * ny;
           if (out > 0) { S.vx -= out * nx; S.vy -= out * ny; }
         }
       }
       const hx = moveX(S.vx * h); if (hx) { side = hx; S.vx = 0; }
       const hy = moveY(S.vy * h); if (hy) S.vy = hy < 0 ? 40 : 0;
       if (S.rope) {
-        const [qx, qy] = grip(), L = dist(qx, qy, S.rope.x, S.rope.y);
-        if (L > S.rope.len) {
-          const nx = (qx - S.rope.x) / L, ny = (qy - S.rope.y) / L, e = L - S.rope.len;
+        const Q = pivotOf(S.rope), F = freeOf(S.rope), [qx, qy] = grip(), L = dist(qx, qy, Q.x, Q.y);
+        if (L > F) {
+          const nx = (qx - Q.x) / L, ny = (qy - Q.y) / L, e = L - F;
           if (moveX(-nx * e)) side = -sign(nx); moveY(-ny * e);
         }
+        wrapRope(S.rope, pgx, pgy);
       }
     }
     S.ground = S.vy >= 0 && boxHit(S.x, S.y + 1);
@@ -889,6 +948,7 @@ const Climb = (() => {
 
   function step(dt) {
     S.rt += dt;
+    { const [pgx, pgy] = grip(); S.prevGx = pgx; S.prevGy = pgy; }
     S.whiteT = Math.max(0, (S.whiteT || 0) - dt); S.meterFlash = Math.max(0, (S.meterFlash || 0) - dt);
     for (const c of S.crosses) c.t += dt; S.crosses = S.crosses.filter((c) => c.t < (c.kind === "smite" ? 1.1 : 0.8));
     if (S.freeze > 0) { S.freeze -= dt; return; }        // a held breath, as the sign strikes
@@ -1226,7 +1286,7 @@ const Climb = (() => {
     // The monk: on the rope, hung from his hand.
     const p = monkPose(); let mx = S.x, my = S.y;
     if (S.rope && !S.ground && !S.cling && !S.act) {
-      const [gx, gy] = grip(), th = Math.atan2(S.rope.x - gx, gy - S.rope.y);
+      const Q = pivotOf(S.rope), [gx, gy] = grip(), th = Math.atan2(Q.x - gx, gy - Q.y);
       if (!S.wall) p.spin = clamp(th, -1.3, 1.3) * S.dir * 0.85;
       const hd = monkJoint(S.x, S.y, S.dir, p, "hF"); mx += gx - hd[0]; my += gy - hd[1];
     }
@@ -1244,8 +1304,14 @@ const Climb = (() => {
     S.handW = hand;
     if (S.held) { S.held.x = hand[0]; S.held.y = hand[1] - 9; drawBoulder(S.held.x - cam.x, S.held.y - cam.y, 0, 1); }
     if (S.rope) {
-      hangRope(S.ropeVis, hand[0], hand[1], S.rope.x, S.rope.y, Math.max(S.rope.len, 10), fdt);
+      const Q = pivotOf(S.rope), B = bendsOf(S.rope);
+      hangRope(S.ropeVis, hand[0], hand[1], Q.x, Q.y, Math.max(freeOf(S.rope), 10), fdt);
       drawRope(S.ropeVis, 1.6);
+      if (B.length) {
+        ctx.beginPath(); ctx.moveTo(Q.x - cam.x, Q.y - cam.y);
+        for (let k = B.length - 2; k >= 0; k--) ctx.lineTo(B[k].x - cam.x, B[k].y - cam.y);
+        ctx.lineTo(S.rope.x - cam.x, S.rope.y - cam.y); ctx.strokeStyle = "#0b0b0d"; ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.stroke();
+      }
     }
     if (S.shot) {
       const sh = S.shot, out = dist(hand[0], hand[1], sh.x, sh.y);
@@ -1255,7 +1321,7 @@ const Climb = (() => {
     // The rock, in front of him: its crags overlap him where he stands or clings against it.
     ctx.fillStyle = C.ink; ctx.fill(P);
     for (const w of vis) drawTablet(w, cam, true);
-    if (S.rope && S.ropeVis.length > 1) { const q = S.ropeVis[S.ropeVis.length - 2]; drawHook(S.rope.x - cam.x, S.rope.y - cam.y, Math.atan2(S.rope.y - q.y, S.rope.x - q.x)); }
+    if (S.rope && S.ropeVis.length > 1) { const B = bendsOf(S.rope), q = B.length ? B[0] : S.ropeVis[S.ropeVis.length - 2], hx = S.rope.hx === undefined ? S.rope.x : S.rope.hx, hy = S.rope.hy === undefined ? S.rope.y : S.rope.hy; drawHook(hx - cam.x, hy - cam.y, Math.atan2(S.rope.y - q.y, S.rope.x - q.x)); }
     if (S.shot && S.shotVis.length > 1) { const sh = S.shot, q = S.shotVis[S.shotVis.length - 2]; drawHook(sh.x - cam.x, sh.y - cam.y, Math.atan2(sh.y - q.y, sh.x - q.x)); }
     for (const q of S.parts) if (q.kind === "chip") rect(q.x - cam.x - 1, q.y - cam.y - 1, 2, 2, "#0b0b0d");
     // The dark, and what the torch can see of the rock around it.
