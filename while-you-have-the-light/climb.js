@@ -555,15 +555,21 @@ const Climb = (() => {
     // (For the flip, the swing's speed over the last moment, not this instant's: at the top of a
     // good swing he is all but still, and that is just where a flip is wanted.)
     const sp = Math.hypot(S.vx, S.vy);
-    if ((quick ? Math.max(sp, S.swingSp || 0) : sp) > (quick ? 80 : 110)) { S.vy -= quick ? 70 : 90; S.flip = { t: 0, s: sign(S.vx || S.dir), dur: quick ? 0.45 : 0.6 }; Sound.fx.whoosh(0.6); }
-    if (Math.abs(S.vy) < 170 && (sp > 60 || (quick && S.flip))) S.hangT = 0.3;
+    if (quick) {
+      if (Math.max(sp, S.swingSp || 0) > 80) { S.vy -= 60; S.flip = { t: 0, s: sign(S.vx || S.dir), dur: SWAP_FLIP, swap: true }; Sound.fx.whoosh(0.6); }
+      return;
+    }
+    if (sp > 110) { S.vy -= 90; S.flip = { t: 0, s: sign(S.vx || S.dir) }; Sound.fx.whoosh(0.6); }
+    if (Math.abs(S.vy) < 170 && sp > 60) S.hangT = 0.3;
   }
-  // Swinging, a tap on fresh rock: he lets go, and if the swing has any speed in it he flips over
-  // the way he is going, hangs a moment, and throws the hook to the new rock as he comes round.
-  // With no speed in it he only drops, and throws at once. Mid-flip he takes hold of nothing.
+  // Swinging, a tap on fresh rock. Hanging still: the hook goes out at once (he drops a little
+  // as it flies). With speed in the swing: he lets go and flips over the way he is going, light
+  // as he turns; then hangs in the air a moment, all but still; then throws the hook to the new
+  // rock. Mid-flip he takes hold of nothing.
+  const SWAP_FLIP = 0.38, HOVER_T = 0.2, HOVER_THROW = 0.05;
   function swapHook(tx, ty) {
     letGo(true);
-    if (S.flip) { S.floatT = Math.max(S.floatT, 0.2); S.next = { x: tx, y: ty, t: 0.14 }; }
+    if (S.flip) S.next = { x: tx, y: ty, t: SWAP_FLIP + HOVER_THROW };
     else { S.shot = null; throwHook(tx, ty); }
   }
   function nextHook(dt) {
@@ -1176,7 +1182,7 @@ const Climb = (() => {
   }
   function hitMonk(kx, cost) {
     if (S.dying || S.invT > 0) return;
-    S.fuel = Math.max(0, S.fuel - (cost || 0.06)); S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
+    S.fuel = Math.max(0, S.fuel - (cost || 0.06)); S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
     S.vx = (sign(kx) || -S.dir) * 200; S.vy = -170; S.ground = false;
     if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.vx * 0.3; S.held.vy = -100; S.held = null; }
     Sound.fx.hurt(); S.shake = 0.25;
@@ -1508,7 +1514,9 @@ const Climb = (() => {
       } else if (d && S.vx * d < 160) S.vx += d * AIR * dt;
       const drag = 1 - 0.1 * dt; S.vx *= drag; S.vy *= drag;
     }
-    S.vy += GRAV * dt * (S.floatT > 0 ? 0.2 : 1);
+    // (Light in a flip from the rope; all but weightless in the hover after it.)
+    if (S.hoverT > 0 && !S.rope) { S.vy *= Math.max(0, 1 - 12 * dt); S.vx *= Math.max(0, 1 - 2.5 * dt); }
+    S.vy += GRAV * dt * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1);
     const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
     // On the ground the rope pays out as he walks, unless he is climbing it.
     if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, ROPE_MAX);
@@ -1598,7 +1606,11 @@ const Climb = (() => {
     if (!S.fightSeen && S.demons.some((f) => alive(f) && dist(f.x, f.y, S.x, S.y) < 420)) { S.fightSeen = true; S.fightHintT = 0; }
     if (S.fightSeen) S.fightHintT += dt;
     S.landT = Math.max(0, S.landT - wdt); S.throwT = Math.max(0, S.throwT - wdt); S.stompT = Math.max(0, (S.stompT || 0) - wdt); S.jumpT = Math.max(0, (S.jumpT || 0) - wdt);
-    if (S.flip) { S.flip.t += wdt; if (S.flip.t > flipDur(S.flip) || S.ground || S.rope || S.cling || S.act) S.flip = null; }
+    S.hoverT = Math.max(0, (S.hoverT || 0) - wdt);
+    if (S.flip) {
+      S.flip.t += wdt; const done = S.flip.t > flipDur(S.flip);
+      if (done || S.ground || S.rope || S.cling || S.act) { if (done && S.flip.swap && !S.ground) S.hoverT = HOVER_T; S.flip = null; }
+    }
     if (S.next) nextHook(wdt);
     S.swingSp = S.rope && !S.ground ? Math.max(Math.hypot(S.vx, S.vy), (S.swingSp || 0) - 150 * wdt) : 0;
     // Against a wall, climbing the rope: he walks up it.
