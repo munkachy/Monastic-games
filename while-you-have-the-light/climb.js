@@ -214,6 +214,25 @@ const Climb = (() => {
     }
     return null;
   }
+  // The nearest top of rock he could climb onto from where he is: up to four and a half cells to
+  // either side, and up from his hands. For when a climb has stalled under rock: he goes round.
+  function ledgeAround() {
+    let best = null;
+    for (let dx = -72; dx <= 72; dx += 6) {
+      const ci = Math.floor((S.x + dx) / CELL);
+      for (let j = Math.floor((S.y - 150) / CELL); j <= Math.floor((S.y - 20) / CELL); j++) {
+        if (!solid(ci, j) || solid(ci, j - 1) || solid(ci, j - 2) || solid(ci, j - 3)) continue;
+        const top = j * CELL, sd = (ci + 0.5) * CELL >= S.x ? 1 : -1;
+        let ce = ci; while (Math.abs(ce - ci) < 8 && solid(ce - sd, j) && !solid(ce - sd, j - 1)) ce -= sd;
+        const edge = sd > 0 ? ce * CELL : (ce + 1) * CELL;
+        let x1 = edge + sd * 12;
+        if (boxHit(x1, top - 0.01)) { x1 = (ci + 0.5) * CELL; if (boxHit(x1, top - 0.01)) continue; }
+        const score = Math.abs(dx) + (S.y - top) * 0.3;
+        if (!best || score < best.score) best = { top, edge, x1, s: sd, h: S.y - top, score };
+      }
+    }
+    return best;
+  }
   function startAct(kind, L) {
     const dur = kind === "stepUp" ? 0.36 : kind === "climbUp" ? 1.3 + 0.05 * Math.round(L.h / CELL) : 0.95;
     S.act = { kind, u: 0, dur, x0: S.x, y0: S.y, x1: L.x1, y1: L.top - 0.01, edge: L.edge, s: L.s };
@@ -558,7 +577,7 @@ const Climb = (() => {
       } else o.y += o.vy * h;
       if (bounced) { if (o.by) Sound.fx.objHit("stone", panX(o.x)); o.by = null; o.vr *= 0.5; o.g = 560; }
       if (o.by === "demon" && S.invT <= 0 && Math.abs(o.x - S.x) < HW + BR + (S.ward ? 8 : 0) && o.y > S.y - HT - BR && o.y < S.y + BR) {
-        if (S.ward) { S.ward = null; o.by = null; o.vx *= -0.6; o.vy = -200; const [cx, cy] = middle(); S.crosses.push({ x: cx, y: cy - 4, t: 0, size: 26, burst: true }); Sound.fx.parry(); S.shake = 0.15; }
+        if (S.ward) { S.ward = null; o.by = null; o.vx *= -0.6; o.vy = -200; const [cx, cy] = middle(); S.crosses.push({ kind: "turn", x: cx, y: cy - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); S.shake = 0.15; }
         else { hitMonk(o.vx); o.by = null; o.vx *= -0.3; o.vy = -120; }
       }
       if (o.by === "monk") for (const f of S.demons) if (alive(f) && Math.abs(o.x - f.x) < D_HW + BR && o.y > f.y - D_HT - BR && o.y < f.y + BR) {
@@ -682,10 +701,11 @@ const Climb = (() => {
     let len = 0; for (let i = 1; i < P.length; i++) len += dist(P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]);
     if (len < 16) return { kind: "tap" };
     const [x0, y0] = P[0], [x1, y1] = P[P.length - 1];
-    let lo = 0; for (let i = 1; i < P.length; i++) if (P[i][1] > P[lo][1]) lo = i;
-    const [xl, yl] = P[lo]; let across = 0, rise = 0;
-    for (let i = lo; i < P.length; i++) { across = Math.max(across, Math.abs(P[i][0] - xl)); rise = Math.max(rise, yl - P[i][1]); }
-    if (yl - y0 > 28 && Math.abs(xl - x0) < (yl - y0) * 0.7 && across > 22 && rise < across * 0.9) return { kind: "cross" };
+    // The turn: the point furthest down that is not yet across.
+    let c = 0, best = -1e9; for (let i = 1; i < P.length; i++) { const v = (P[i][1] - y0) - 1.2 * Math.abs(P[i][0] - x0); if (v > best) { best = v; c = i; } }
+    const [xc, yc] = P[c]; let across = 0, drift = 0;
+    for (let i = c; i < P.length; i++) { across = Math.max(across, Math.abs(P[i][0] - xc)); drift = Math.max(drift, Math.abs(P[i][1] - yc)); }
+    if (yc - y0 > 22 && Math.abs(xc - x0) < (yc - y0) * 0.8 && across > 18 && drift < across * 1.1) return { kind: "cross" };
     const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1, dir = [dx / L, dy / L];
     return { kind: dy < -0.55 * L ? "kick" : dy > 0.55 * L ? "slam" : "hurl", dir };
   }
@@ -696,18 +716,20 @@ const Climb = (() => {
     if (!alive(f) || S.act) return;
     const [cx, cy] = dMid(f);
     if (!reachable(cx, cy, true)) { Sound.fx.tick(420, 0.3); return; }
-    if (S.meter < CROSS_COST) { Sound.fx.gutter(); return; }
+    if (S.meter < CROSS_COST) { S.crosses.push({ kind: "fizzle", x: cx, y: cy, t: 0, size: 18 }); S.meterFlash = 0.8; Sound.fx.gutter(); return; }
     S.meter -= CROSS_COST; breakWard();
-    S.crosses.push({ x: cx, y: cy, t: 0, size: 22 });
+    S.crosses.push({ kind: "smite", x: cx, y: cy, t: 0, size: 24 });
+    f.brokenT = 1.6; S.freeze = 0.12; S.whiteT = 0.22;
     hurtDemon(f, 3, sign(f.x - S.x) * 300, -220, "hurl");
-    Sound.fx.unlock(); Sound.fx.demonBroken(f.sin); S.shake = 0.2;
+    for (let k = 0; k < 30; k++) { const a = Math.random() * TAU, v = 60 + Math.random() * 220; S.parts.push({ kind: "spark", c: k % 2 ? C.flameHot : SINS[f.sin].color, x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.7, age: 0, real: true }); }
+    Sound.fx.unlock(); Sound.fx.demonBroken(f.sin); Sound.fx.castOut(f.sin); S.shake = 0.3;
   }
   // The sign of the cross over himself: a ward that turns the next boulder away. Any move of his
   // own ends it, and so does the boulder it turns.
   function ward() {
     if (S.act || S.atk) return;
     S.ward = { t: 0 }; const [cx, cy] = middle();
-    S.crosses.push({ x: cx, y: cy - 4, t: 0, size: 16 }); Sound.fx.unlock();
+    S.crosses.push({ kind: "ward", x: cx + S.dir * 18, y: cy - 10, t: 0, size: 20 }); Sound.fx.unlock();
   }
   function breakWard() { if (S.ward) { S.ward = null; } }
   // Swinging on the rope, fast, into a demon: a kick, as hard as the swing.
@@ -737,7 +759,7 @@ const Climb = (() => {
     const hx = L.edge - L.s * 7, hy = L.top - 0.01 + Arena.reach(), ok = !boxHit(hx, hy);
     S.hang = { L, need: true, k: 0, fx: S.x, fy: S.y, x: ok ? hx : S.x, y: ok ? hy : S.y };
     S.rope = null; S.cling = 0; S.climbing = false; S.vx = 0; S.vy = 0; S.dir = L.s; S.ward = null;
-    Sound.fx.grab();
+    S.hangs = (S.hangs || 0) + 1; Sound.fx.grab();
   }
   function physics(dt) {
     const I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false } : pads(), d = I.d, wasGround = S.ground, vyIn = S.vy;
@@ -756,7 +778,8 @@ const Climb = (() => {
     const R = S.rope;
     // Both thumbs (or up): climb the rope, hand over hand. Down: let it out.
     S.climbing = !!R && (I.both || S.keys.ArrowUp || S.keys.KeyW);
-    if (R && S.climbing) { R.len = Math.max(ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
+    // (Not while rock is over his head: then he leans out round it first, and the rope waits.)
+    if (R && S.climbing && !(!S.ground && boxHit(S.x, S.y - 4))) { R.len = Math.max(ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
     if (R && (S.keys.ArrowDown || S.keys.KeyS)) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
     const [gx, gy] = grip(), rd = R ? dist(gx, gy, R.x, R.y) : 0, taut = R && rd >= R.len - 1;
     // A ledge anywhere near his hands (or near the top of the rope): he pulls himself up onto it.
@@ -778,25 +801,35 @@ const Climb = (() => {
         S.vx = 0; S.vy = 0; S.dir = s;
         if (up) {
           const k = stepOut(s, WALL_V * dt + 2);
-          if (k > 0) moveX(-s * Math.min(k, 120 * dt));
-          else if (k === 0) { moveY(-WALL_V * dt); S.climbPh += dt * 7; }
+          if (k > 0) { moveX(-s * Math.min(k, 120 * dt)); S.leanT = 0.5; }
+          else if (k === 0) { moveY(-WALL_V * dt); S.climbPh += dt * 7; S.wallStall = 0; }
+          else { S.wallStall = (S.wallStall || 0) + dt; if (S.wallStall > 0.3) { S.wallStall = 0; const L = ledgeAround(); if (L) { startAct("ledge", L); return; } } }
         } else if (down) { if (moveY(WALL_DOWN * dt) > 0) { S.cling = 0; S.ground = true; } S.climbPh -= dt * 7; }
         // Keep his hands on the rock: in toward it where it falls back, a little at a time (but
         // never back in under rock he is leaning out to get past).
         if (!near(s)) {
           let g = 0; for (let k = 2; k <= 44; k += 2) if (near(s, k)) { g = k; break; }
           const m = Math.min(g, 140 * dt);
-          if (!g) S.cling = 0;
+          if (!g) { if (!(S.leanT > 0)) S.cling = 0; }      // leaning out round rock, he keeps his hold a moment
           else if (!boxHit(S.x + s * m, S.y - 10)) moveX(s * m);
         }
         if (S.cling) return;
       }
     }
-    // Climbing the rope against a wall: round the bits of rock that stick out over him.
+    // Climbing the rope with rock over his head: he leans out round it, whichever way is nearer.
+    // And if he stops rising with a wall beside him, he takes to the wall with his hands.
     if (S.climbing && R && !S.ground) {
-      const w = near(S.dir, 7) ? S.dir : near(-S.dir, 7) ? -S.dir : 0;
-      if (w) { const k = stepOut(w, 4); if (k > 0) { moveX(-w * Math.min(k, 140 * dt)); R.len = Math.max(R.len, dist(S.x, S.y - GRIP, R.x, R.y)); } }
-    }
+      let lean = 0;
+      if (boxHit(S.x, S.y - 4)) for (let k = 2; k <= 44 && !lean; k += 2) for (const sd of [-1, 1]) if (!boxHit(S.x + sd * k, S.y - 4) && !boxHit(S.x + sd * k, S.y)) { lean = sd * k; break; }
+      if (lean) { moveX(sign(lean) * Math.min(Math.abs(lean), 150 * dt)); R.len = Math.max(R.len, dist(S.x, S.y - GRIP, R.x, R.y) + 1); S.climbPh += dt * 6; }
+      // Stalled: no new height for a little while, whatever he is doing to the side.
+      if (S.climbY === undefined || S.y < S.climbY - 1) { S.climbY = S.y; S.climbStall = 0; } else S.climbStall = (S.climbStall || 0) + dt;
+      if (S.climbStall > 0.6) {
+        const w = near(S.dir, 9) ? S.dir : near(-S.dir, 9) ? -S.dir : 0;
+        if (w) { S.cling = w; S.dir = w; S.rope = null; S.climbing = false; S.climbStall = 0; Sound.fx.grab(); return; }
+        const L = ledgeAround(); if (L) { S.climbStall = 0; startAct("ledge", L); return; }
+      }
+    } else { S.climbStall = 0; S.climbY = undefined; }
     if (S.ground && !(taut && S.climbing)) {
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
       const want = S.landT > 0 ? 0 : d * WALK * (S.held ? 0.55 : 1);       // slower with a boulder in his arms
@@ -856,6 +889,9 @@ const Climb = (() => {
 
   function step(dt) {
     S.rt += dt;
+    S.whiteT = Math.max(0, (S.whiteT || 0) - dt); S.meterFlash = Math.max(0, (S.meterFlash || 0) - dt);
+    for (const c of S.crosses) c.t += dt; S.crosses = S.crosses.filter((c) => c.t < (c.kind === "smite" ? 1.1 : 0.8));
+    if (S.freeze > 0) { S.freeze -= dt; return; }        // a held breath, as the sign strikes
     if (S.dying) { S.dying += dt; if (S.dying > 1.7) { finish(); return; } }
     const F = S.flare;
     if (F.on) { F.t += dt; S.meter -= dt * METER_DRAIN; if (S.meter <= 0) { S.meter = 0; endFlare(); } }
@@ -874,13 +910,13 @@ const Climb = (() => {
     }
     // The demons, and the stones.
     if (!S.dying) populate(dt);
-    for (const f of S.demons) updDemon(f, wdt);
+    for (const f of S.demons) { updDemon(f, wdt); if (f.brokenT > 0) f.brokenT -= dt; }
     S.demons = S.demons.filter((f) => f.st !== "gone");
     for (const o of S.things) updThing(o, wdt);
     S.things = S.things.filter((o) => o.y < S.y + 1400);
     S.hurtT = Math.max(0, S.hurtT - wdt); S.invT = Math.max(0, S.invT - dt); S.flashT = Math.max(0, S.flashT - dt); S.floatT = Math.max(0, S.floatT - wdt); S.shake = Math.max(0, S.shake - dt);
-    S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
-    for (const c of S.crosses) c.t += dt; S.crosses = S.crosses.filter((c) => c.t < 0.8);
+    S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
+
     if (!S.fightSeen && S.demons.some((f) => alive(f) && dist(f.x, f.y, S.x, S.y) < 420)) { S.fightSeen = true; S.fightHintT = 0; }
     if (S.fightSeen) S.fightHintT += dt;
     S.landT = Math.max(0, S.landT - wdt); S.throwT = Math.max(0, S.throwT - wdt); S.jumpT = Math.max(0, (S.jumpT || 0) - wdt);
@@ -1105,6 +1141,44 @@ const Climb = (() => {
       default: return A.idle((t * 0.5 + f.id * 0.3) % 1, t, s);
     }
   }
+  // A cross of light: the long upright and the short beam, white-hot, glowing.
+  function lightCross(x, y, z, a, w) {
+    if (a <= 0.01) return;
+    ctx.save(); ctx.globalAlpha = a; ctx.lineCap = "round";
+    ctx.shadowColor = "rgba(255,214,140,1)"; ctx.shadowBlur = 14 * scale * DPR;
+    line(x, y - z, x, y + z * 0.9, "#fff7e2", w); line(x - z * 0.58, y - z * 0.32, x + z * 0.58, y - z * 0.32, "#fff7e2", w);
+    ctx.shadowBlur = 0; line(x, y - z, x, y + z * 0.9, "#ffffff", w * 0.4); line(x - z * 0.58, y - z * 0.32, x + z * 0.58, y - z * 0.32, "#ffffff", w * 0.4);
+    ctx.restore();
+  }
+  function drawSign(c, cam) {
+    const x = c.x - cam.x, y = c.y - cam.y, t = c.t;
+    if (c.kind === "smite") {
+      // A shaft of light falls on the demon; the cross burns over it; rays and a ring go out.
+      const k = t / 1.1, a = 1 - k, open = ease(Math.min(1, t / 0.12));
+      const bw = lerp(30, 8, Math.min(1, t / 0.4)), g = ctx.createLinearGradient(0, 0, 0, y);
+      g.addColorStop(0, "rgba(255,240,200,0)"); g.addColorStop(1, "rgba(255,240,200," + (0.55 * a) + ")");
+      ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = g; ctx.fillRect(x - bw / 2, 0, bw, y + 10); ctx.globalCompositeOperation = "source-over";
+      glow(x, y, 90 * open, C.flameHot, 0.6 * a);
+      for (let i = 0; i < 12; i++) { const an = i / 12 * TAU + t * 0.6, r0 = 18 * open, r1 = r0 + 70 * ease(Math.min(1, t / 0.5)); ctx.globalAlpha = 0.5 * a; line(x + Math.cos(an) * r0, y + Math.sin(an) * r0, x + Math.cos(an) * r1, y + Math.sin(an) * r1, "#ffe9b8", i % 2 ? 1 : 2); }
+      ctx.globalAlpha = 1;
+      ring(x, y, 12 + 150 * ease(Math.min(1, t / 0.7)), "rgba(255,236,190," + (0.7 * a) + ")", 2.5 * a + 0.5);
+      lightCross(x, y - 4, c.size * lerp(2.2, 1, open), a, 4.5);
+    } else if (c.kind === "ward") {
+      // The cross appears in the air before him, and fades as the light settles round his body.
+      const a = Math.min(1, t / 0.1) * (1 - t / 0.8), z = c.size * lerp(1.5, 1, ease(Math.min(1, t / 0.2)));
+      glow(x, y, z * 3, C.flameHot, 0.4 * a); lightCross(x, y, z, a, 3.5);
+    } else if (c.kind === "turn") {
+      // A boulder turned: a flash of the cross and a ring.
+      const a = 1 - t / 0.8; ring(x, y, 14 + 70 * ease(t / 0.8), "rgba(255,236,190," + (0.8 * a) + ")", 2); lightCross(x, y, c.size * (1 + t * 0.5), a, 3.5);
+    } else if (c.kind === "fizzle") {
+      // Not enough flare: the sign begins, breaks, and falls.
+      const a = 0.6 * (1 - t / 0.8), z = c.size, dy = t * t * 60;
+      ctx.save(); ctx.globalAlpha = a; ctx.lineCap = "round";
+      line(x - 1, y - z + dy * 0.5, x - 2, y - 2 + dy, "#c9b892", 2); line(x + 1, y + 2 + dy * 1.2, x + 2, y + z * 0.9 + dy * 1.4, "#c9b892", 2);
+      line(x - z * 0.58, y - z * 0.32 + dy, x - 3, y - z * 0.36 + dy * 0.8, "#c9b892", 2); line(x + 3, y - z * 0.3 + dy * 1.1, x + z * 0.58, y - z * 0.26 + dy * 1.3, "#c9b892", 2);
+      ctx.restore();
+    }
+  }
   // A boulder: the stone drawn large.
   function drawBoulder(x, y, rot, lit) { ctx.save(); ctx.translate(x, y); ctx.scale(1.85, 1.85); drawObject("stone", 0, 0, rot, { lit, t: S.rt }); ctx.restore(); }
   function drawRope(P, w, c) {
@@ -1146,7 +1220,7 @@ const Climb = (() => {
       f.lit += ((dist(lx0, ly0, cx, cy) < R0 * 0.9 && los(lx0, ly0, cx, cy)) - f.lit) * 0.15;
       f.p = demonPose(f);
       const al = f.st === "dying" ? 1 - f.t / 0.8 : f.st === "emerge" ? Math.min(1, f.t / 0.5) : 1;
-      drawDemon(f.sin, f.x - cam.x, f.y - cam.y, f.dir, f.p, { t: S.rt, lit: f.lit, hurt: f.hurtT / 0.25, windup: f.st === "windup" ? f.t / 0.55 : 0, alpha: al });
+      drawDemon(f.sin, f.x - cam.x, f.y - cam.y, f.dir, f.p, { t: S.rt, lit: Math.max(f.lit, f.brokenT > 0 ? 1 : 0), hurt: f.hurtT / 0.25, windup: f.st === "windup" ? f.t / 0.55 : 0, alpha: al, broken: f.brokenT > 0 });
     }
     for (const o of S.things) if (o.st !== "held") drawBoulder(o.x - cam.x, o.y - cam.y, o.rot, dist(lx0, ly0, o.x, o.y) < R0 * 0.85 ? 1 : 0);
     // The monk: on the rope, hung from his hand.
@@ -1158,6 +1232,12 @@ const Climb = (() => {
     }
     if (S.cling) mx += S.cling * 2;
     S.lastPose = p; S.drawX = mx; S.drawY = my;
+    if (S.ward) {
+      const b = 0.7 + 0.3 * Math.sin(S.rt * 4), k = scale * DPR;
+      ctx.save(); ctx.shadowColor = "rgba(255,214,140," + b + ")"; ctx.shadowBlur = 12 * k;
+      for (const [ox, oy] of [[-1.4, 0], [1.4, 0], [0, -1.4], [0, 1.4]]) drawMonk(mx - cam.x + ox, my - cam.y + oy, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, tint: "rgba(255,238,196," + (0.75 * b) + ")" });
+      ctx.restore();
+    }
     const r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1), teeth: (S.climbing && !S.ground || !!S.cling) && !S.act && !S.held });
     if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
     const hand = r && r.hand ? [r.hand[0] + cam.x, r.hand[1] + cam.y] : grip();
@@ -1200,16 +1280,8 @@ const Climb = (() => {
       if (f.showHp > 0 && alive(f)) { const a = Math.min(1, f.showHp), y = f.y - D_HT - 10 - cam.y; for (let k = 0; k < D_HP; k++) circle(f.x - cam.x - (D_HP - 1) * 3.5 + k * 7, y, 2.2, k < f.hp ? hexA(SINS[f.sin].color, a) : "rgba(40,40,46," + a + ")"); }
     }
     // The signs of the cross: a cross of light that swells and fades; the ward, steady before him.
-    for (const c of S.crosses) {
-      const a = 1 - c.t / 0.8, z = c.size * (1 + c.t * (c.burst ? 1.6 : 0.6)), x = c.x - cam.x, y = c.y - cam.y;
-      glow(x, y, z * 2, C.flameHot, 0.35 * a);
-      ctx.globalAlpha = a; ctx.lineCap = "round"; line(x, y - z, x, y + z * 0.9, C.flameHot, 2.4); line(x - z * 0.6, y - z * 0.25, x + z * 0.6, y - z * 0.25, C.flameHot, 2.4); ctx.lineCap = "butt"; ctx.globalAlpha = 1;
-    }
-    if (S.ward) {
-      const [cx, cy] = middle(), x = cx - cam.x, y = cy - cam.y - 4, b = 0.75 + 0.25 * Math.sin(S.rt * 4);
-      glow(x, y, 34, C.warm, 0.22 * b); ring(x, y, 26, "rgba(255,241,196," + 0.35 * b + ")", 1.2);
-      ctx.globalAlpha = 0.8 * b; ctx.lineCap = "round"; line(x, y - 12, x, y + 11, C.flameHot, 2); line(x - 7, y - 4, x + 7, y - 4, C.flameHot, 2); ctx.lineCap = "butt"; ctx.globalAlpha = 1;
-    }
+    for (const c of S.crosses) drawSign(c, cam);
+    if (S.ward) { const [cx, cy] = middle(); glow(cx - cam.x, cy - cam.y, 40, C.warm, 0.12 + 0.05 * Math.sin(S.rt * 4)); }
     // A thrown stone keeps a faint glint of the sin that threw it, so its arc can be read in the dark.
     for (const o of S.things) if (o.st === "fly" && o.by === "demon") glow(o.x - cam.x, o.y - cam.y, 9, SINS.wrath.color, 0.45);
 
@@ -1226,6 +1298,7 @@ const Climb = (() => {
       const [cx, cy] = middle();
       if (F.on) { ctx.setLineDash([4, 6]); ring(cx - cam.x, cy - cam.y, FLARE_R, "rgba(255,241,196,0.25)", 1.2); ctx.setLineDash([]); }
     }
+    if (S.whiteT > 0) rect(0, 0, W, H, "rgba(255,246,226," + (S.whiteT * 1.4) + ")");
     hud(hM);
   }
   const pad = (s) => ({ x: s < 0 ? 50 : W - 50, y: H - 50, r: 36 });
@@ -1250,6 +1323,7 @@ const Climb = (() => {
     circle(fb.x, fb.y, fb.r, F.on ? "rgba(255,241,196,0.25)" : "rgba(8,8,10,0.45)");
     ring(fb.x, fb.y, fb.r, "rgba(233,230,223,0.15)", 1.2);
     ctx.beginPath(); ctx.arc(fb.x, fb.y, fb.r + 3, -PI / 2, -PI / 2 + TAU * S.meter); ctx.strokeStyle = F.on ? C.flameHot : ready ? C.flame : "rgba(255,179,71,0.35)"; ctx.lineWidth = 3; ctx.stroke();
+    if (S.meterFlash > 0 && Math.floor(S.rt * 10) % 2) ring(fb.x, fb.y, fb.r + 6, "rgba(220,80,60,0.9)", 2);
     text(usingKeys() ? "F" : "FLARE", fb.x, fb.y + 3, { align: "center", size: usingKeys() ? 10 : 7.5, weight: 800, spacing: 1, color: ready || F.on ? "#fff3dc" : "#77736c" });
     if (!usingKeys()) {
       const f = actBtn(), lab = S.rope || S.hang ? "LET GO" : S.cling ? "LEAP" : S.held ? "DROP" : "";
@@ -1277,6 +1351,12 @@ const Climb = (() => {
         : ["Tap the rock above him: he throws the hook there.  Both thumbs: climb.", "◀ ▶ rock the swing to build it. Hold toward a wall: he climbs it. The button: let go, leap.", "FLARE: time slows (the ring is what is left). Tap anywhere near: appear there."];
       L.forEach((l, i) => text(l, W / 2, H - 58 + i * 15, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 240 }));
     }
+    if (S.hang) {
+      // A sign at the edge he hangs from: push again to climb up.
+      const L = S.hang.L, x = L.edge + L.s * 8 - S.cam.x, y = L.top - 12 - S.cam.y, b = 0.55 + 0.45 * Math.sin(S.rt * 5);
+      ctx.globalAlpha = b; line(x - 5, y + 3, x, y - 2, C.flameHot, 1.6); line(x, y - 2, x + 5, y + 3, C.flameHot, 1.6); ctx.globalAlpha = 1;
+      if (S.hangs <= 3) text(usingKeys() ? "TOWARD THE LEDGE AGAIN: CLIMB UP" : "PUSH TOWARD THE LEDGE AGAIN: CLIMB UP", W / 2, H - 40, { align: "center", size: 8, weight: 800, spacing: 2, color: C.warm, alpha: 0.8 });
+    }
     if (S.fuel < 0.25 && !S.dying) text("THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
   }
 
@@ -1302,7 +1382,7 @@ const Climb = (() => {
       if (f || o) { t.g = { f, o, path: [[p.x, p.y]] }; return; }
       // From himself: perhaps the sign of the cross over himself.
       const [mcx, mcy] = middle();
-      if (!S.held && dist(wx, wy, mcx, mcy) < 30) { t.g = { self: true, path: [[p.x, p.y]] }; return; }
+      if (!S.held && Math.abs(wx - mcx) < 30 && wy > S.y - HT - 30 && wy < S.y + 10) { t.g = { self: true, path: [[p.x, p.y]] }; return; }
       if (S.atk && !S.atk.hit) return;
       if (S.held) { S.atk = null; throwHeld(wx, wy, null); return; }
       if (S.flare.on) { blink(wx, wy); return; }

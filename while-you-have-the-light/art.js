@@ -183,6 +183,10 @@ function drawMonk(x, y, dir, p, o) {
     // The after-image of a zip: one flat dark shape.
     const P = new Path2D(); for (const q of G.A) addPts(P, q); for (const q of G.B) addPts(P, q);
     ctx.globalAlpha *= 0.45; ctx.fillStyle = "#16161a"; ctx.fill(P);
+  } else if (o.tint) {
+    // The whole figure in one colour (an outline is made of it, laid behind him).
+    const P = new Path2D(); for (const q of G.A) addPts(P, q); for (const q of G.B) addPts(P, q);
+    ctx.fillStyle = o.tint; ctx.fill(P);
   } else {
     const PAth = new Path2D(), PB = new Path2D();
     for (const q of G.A) addPts(PAth, q); for (const q of G.B) addPts(PB, q);
