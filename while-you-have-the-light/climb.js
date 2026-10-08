@@ -6,8 +6,9 @@
 // torch is the clock: its light shrinks as it burns, the rock throws its shadows, and the
 // verses of Psalm 118 cut into the rock fill it again, one stanza after another, Aleph to Tau.
 //
-// Touch: tap the rock and he throws the hook there, in an arc (swinging, a tap on fresh rock:
-// he lets go, flips over the way he is going, and hooks it as he comes round). Both pads: climb
+// Touch: tap the rock and he throws the hook there, in an arc (swinging, a tap to one side of
+// him: he lets go, flips over the way he is going, and throws it up at 45 degrees on the side
+// tapped). Both pads: climb
 // the rope (against a wall he walks up it, hand over hand, the torch in his teeth). One pad:
 // swing on it (or walk, slow and careful, on the ground); swing into a wall and hold toward it
 // to cling. At a ledge he pulls himself up, as in the arena. The button above the right pad is
@@ -562,22 +563,25 @@ const Climb = (() => {
     if (sp > 110) { S.vy -= 90; S.flip = { t: 0, s: sign(S.vx || S.dir) }; Sound.fx.whoosh(0.6); }
     if (Math.abs(S.vy) < 170 && sp > 60) S.hangT = 0.3;
   }
-  // Swinging, a tap on fresh rock. Hanging still: the hook goes out at once (he drops a little
-  // as it flies). With speed in the swing: he lets go and flips over the way he is going, light
-  // as he turns; then hangs in the air a moment, all but still; then throws the hook to the new
-  // rock. Mid-flip he takes hold of nothing.
+  // Swinging, a tap on fresh rock. Hanging still: the hook goes out at once to where the tap
+  // was (he drops a little as it flies). With speed in the swing: he lets go and flips over the
+  // way he is going, light as he turns; then hangs in the air a moment, all but still; then
+  // throws the hook up at 45 degrees on the side of him the tap was (by then he has flown past
+  // the place tapped, so the place itself would send it behind him). Mid-flip he takes hold of
+  // nothing.
   const SWAP_FLIP = 0.38, HOVER_T = 0.2, HOVER_THROW = 0.05;
+  const sideOf = (tx) => sign(tx - S.x) || (S.flip ? S.flip.s : S.dir);
   function swapHook(tx, ty) {
     letGo(true);
-    if (S.flip) S.next = { x: tx, y: ty, t: SWAP_FLIP + HOVER_THROW };
+    if (S.flip) S.next = { side: sideOf(tx), t: SWAP_FLIP + HOVER_THROW };
     else { S.shot = null; throwHook(tx, ty); }
   }
   function nextHook(dt) {
     const n = S.next;
     if (S.dying || S.cling || S.hang || S.act || S.atk || S.held || S.rope || S.hurtT > 0) { S.next = null; return; }
     if ((n.t -= dt) > 0) return;
-    S.next = null; if (S.ground && n.y > S.y - 30) return;
-    S.shot = null; throwHook(n.x, n.y);
+    S.next = null; S.shot = null;
+    const [gx, gy] = grip(); throwHook(gx + n.side * 100, gy - 100);
   }
   function action() {
     if (!S || S.dying || S.act) return;
@@ -2453,8 +2457,8 @@ const Climb = (() => {
     if ((S.hintT < 16 || S.hooked < 2) && !(S.fightSeen && S.fightHintT < 12)) {
       const a = clamp(S.hintT / 0.6, 0, 1) * (S.hooked >= 2 ? clamp((16 - S.hintT) / 1.5, 0, 1) : 1);
       const L = usingKeys()
-        ? ["Click the rock: he throws the hook there. Swinging, click the next rock: he flips over to it.", "← → rock the swing to build it. Hold toward a wall: he climbs it.  W: climb the rope.  Space: let go.", "Shift: the flare (the ring is what is left). Then click anywhere near: appear there."]
-        : ["Tap the rock above him: he throws the hook there. Swinging, tap the next rock: he flips over to it.", "◀ ▶ rock the swing to build it. Hold toward a wall: he climbs it.  Both thumbs: climb the rope.", "FLARE: time slows (the ring is what is left). Tap anywhere near: appear there."];
+        ? ["Click the rock: he throws the hook there. Swinging, click to one side: he flips, then hooks up that way.", "← → rock the swing to build it. Hold toward a wall: he climbs it.  W: climb the rope.  Space: let go.", "Shift: the flare (the ring is what is left). Then click anywhere near: appear there."]
+        : ["Tap the rock above him: he throws the hook there. Swinging, tap to one side: he flips, then hooks up that way.", "◀ ▶ rock the swing to build it. Hold toward a wall: he climbs it.  Both thumbs: climb the rope.", "FLARE: time slows (the ring is what is left). Tap anywhere near: appear there."];
       L.forEach((l, i) => text(l, W / 2, H - 58 + i * 15, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 240 }));
     }
     // Hanging from a ledge, or on the rock with bare hands: an arrow showing which way to push
@@ -2500,7 +2504,7 @@ const Climb = (() => {
       if (S.ground && wy > S.y - 30) return;
       // Swinging, a tap on fresh rock: he lets go, flips over, and hooks it as he comes round.
       if (S.rope && !S.ground) { swapHook(wx, wy); return; }
-      if (S.next) { S.next.x = wx; S.next.y = wy; return; }
+      if (S.next) { S.next.side = sideOf(wx); return; }
       throwHook(wx, wy);
     },
     move(p, ev) {
@@ -2564,8 +2568,8 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
-      ? [["CLICK THE ROCK", "He throws the hook there; swinging, he lets go, flips over, and hooks it"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
-      : [["TAP THE ROCK", "He throws the hook there; swinging, he lets go, flips over, and hooks it"], ["BOTH THUMBS", "Climb the rope or the rock; at a ledge, push again to pull up"], ["◀ ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE RIGHT BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward till you move"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
+      ? [["CLICK THE ROCK", "He throws the hook there; swinging, to one side of him: he flips, then hooks up and out that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
+      : [["TAP THE ROCK", "He throws the hook there; swinging, to one side of him: he flips, then hooks up and out that way"], ["BOTH THUMBS", "Climb the rope or the rock; at a ledge, push again to pull up"], ["◀ ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE RIGHT BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward till you move"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     const rh = Math.min(30, (H - 64) / mv.length);
     text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
     mv.forEach(([k, what], i) => {
