@@ -1070,6 +1070,26 @@ const Sound = (() => {
     tone(t, "sine", 180, 70, 0.14, 0.26 * v, { pan });
     for (let k = 0; k < 4; k++) hiss(t + 0.04 + k * 0.035, "bandpass", rnd(700, 1400), 500, 0.03, 0.1 * v, { q: 3, pan });
   };
+  // Lust casting its ribbon: a sweet sliding cry, rising and wavering.
+  fx.ribbon = function (pan) {
+    if (!ok()) return; const t = T0();
+    const a = osc("triangle", 520, t), lfo = osc("sine", 7, t), lg = gainAt(t, 30), g = gainAt(t), bp = filt("bandpass", 1500, 2.5, t);
+    a.frequency.exponentialRampToValueAtTime(980, t + 0.45); a.frequency.exponentialRampToValueAtTime(720, t + 0.7); lfo.connect(lg); lg.connect(a.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.12, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+    a.connect(bp); bp.connect(g); route(g, t, { sfx: true, pan, rev: 0.35 }); a.start(t); lfo.start(t); a.stop(t + 0.8); lfo.stop(t + 0.8);
+  };
+  // A thorn thrown: a thin hiss through the air.
+  fx.thorn = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "bandpass", 4200, 2600, 0.22, 0.16, { q: 3, swell: 0.3, pan });
+    tone(t, "sine", 2400, 1500, 0.12, 0.05, { pan });
+  };
+  // The briars tearing: a dry rasp, and twigs snapping.
+  fx.briar = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "highpass", 2400, 3200, 0.16, 0.22, { q: 0.8, pan });
+    for (let k = 0; k < 3; k++) hiss(t + 0.02 + k * 0.04, "bandpass", rnd(2500, 4200), 1800, 0.02, 0.14, { q: 4, pan });
+  };
   // Gluttony heaving up its fat: a deep wet gurgle rising.
   fx.gurgle = function (pan) {
     if (!ok()) return; const t = T0();
@@ -1088,7 +1108,7 @@ const Sound = (() => {
     empty: 3, flareOn: 1.5, flareOff: 2, oilReady: 2, mark: 4, chain: 4, waveStart: 1.3, waveClear: 1, unlock: 1.8, death: 1.6, tether: 2.5, tetherBreak: 3, steal: 2.5,
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
-    splat: 2.6, gurgle: 2.4,
+    splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];

@@ -73,14 +73,34 @@ function text(str, x, y, o) {
   let size = o.size || 10;
   const fam = o.font || FONT.ui, wt = o.weight || 600, it = o.italic ? "italic " : "";
   ctx.font = it + wt + " " + size + "px " + fam;
-  if (o.max) { const w = ctx.measureText(str).width; if (w > o.max) { size = Math.max(5.5, size * o.max / w); ctx.font = it + wt + " " + size + "px " + fam; } }
-  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = (o.spacing || 0) + "px";
+  let sp = o.spacing || 0;
+  if (ctx.letterSpacing !== undefined) ctx.letterSpacing = sp + "px";
+  // Too wide for its room (spacing and all): smaller, down to 6px; then without the spacing; then
+  // as small as it must be. It always fits.
+  if (o.max) {
+    const fit = (z) => { ctx.font = it + wt + " " + z + "px " + fam; return ctx.measureText(str).width; };
+    let w = fit(size);
+    if (w > o.max) {
+      size = Math.max(6, size * o.max / w); w = fit(size);
+      if (w > o.max && sp) { sp = 0; if (ctx.letterSpacing !== undefined) ctx.letterSpacing = "0px"; w = fit(size); }
+      if (w > o.max) { size *= o.max / w; fit(size); }
+    }
+  }
   ctx.textAlign = o.align || "left"; ctx.textBaseline = o.base || "alphabetic";
   if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.blur || 10; }
   const pa = ctx.globalAlpha;
   if (o.alpha !== undefined) ctx.globalAlpha = pa * o.alpha;
   ctx.fillStyle = o.color || "#ffffff"; ctx.fillText(str, x, y);
   ctx.shadowBlur = 0; ctx.globalAlpha = pa; if (ctx.letterSpacing !== undefined) ctx.letterSpacing = "0px";
+}
+// Words laid out over as many lines as they need within `width` (each line as text() draws it), from
+// y down; or, with o.up, ending at y. Returns how many lines it took.
+function textLines(str, x, y, width, o) {
+  o = o || {};
+  const size = o.size || 10, ls = wrap(str, width, (o.italic ? "italic " : "") + (o.weight || 600) + " " + size + "px " + (o.font || FONT.ui)), lh = o.lh || Math.round(size * 1.35);
+  const y0 = o.up ? y - (ls.length - 1) * lh : y;
+  ls.forEach((l, i) => text(l, x, y0 + i * lh, Object.assign({}, o, { max: width })));
+  return ls.length;
 }
 function wrap(str, width, font) {
   ctx.font = font; const out = []; let line = "";

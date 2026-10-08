@@ -75,7 +75,7 @@ const Title = {
     button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 92, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
     buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
     text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
-    text("The first two domains of the seven are open: the belly's and anger's. Best with sound, phone sideways.", x, H - 16, { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", max: W * 0.55 });
+    textLines("Three of the seven domains are open: the belly's, the flesh's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
@@ -116,6 +116,7 @@ const Setup = {
 // torch, and the flare, endless if you like. Here the domains are named; on the climb they are not.
 const NOV_SUB = {
   gluttony: "Swollen caverns; the pit below",
+  lust: "Long climbs through the briars",
   wrath: "Fire thrown; rock that gives way",
 };
 function novSettings() {
@@ -141,14 +142,16 @@ const Novitiate = {
       ctx.strokeStyle = on ? SINS[s].color : built ? "rgba(233,230,223,0.3)" : "rgba(233,230,223,0.1)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, 61);
       circle(x + bw / 2, y + 18, 8, built ? SINS[s].color : "#202024");
       if (on) glow(x + bw / 2, y + 18, 18, SINS[s].color, 0.4);
-      text(SINS[s].name.toUpperCase(), x + bw / 2, y + 40, { align: "center", size: 8, weight: 800, spacing: 1, color: on ? "#fff" : built ? "#d6d2c8" : "#5c5852", max: bw - 6 });
-      text(built ? NOV_SUB[s] || "" : "To come", x + bw / 2, y + 53, { align: "center", size: 6.5, weight: 500, color: built ? "#a9a49a" : "#4c4944", max: bw - 6 });
+      text(SINS[s].name.toUpperCase(), x + bw / 2, y + 42, { align: "center", size: 8, weight: 800, spacing: 1, color: on ? "#fff" : built ? "#d6d2c8" : "#5c5852", max: bw - 6 });
+      if (!built) text("To come", x + bw / 2, y + 54, { align: "center", size: 7, weight: 500, color: "#4c4944", max: bw - 6 });
     });
-    text("DEMONS IN EACH PLACE", W / 2, 178, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
-    for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 186, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
-    button(N.torch ? "TORCH: ENDLESS" : "TORCH: IT BURNS", W / 2 - 154, 222, 150, 30, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "Take all the time you need" : "As on the climb" });
-    button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 222, 150, 30, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
-    button("BEGIN", W / 2 - 100, 264, 200, 40, () => Game.novitiate(), { hot: true });
+    // What the chosen domain is like, under the row (there is no room in its box).
+    text(NOV_SUB[N.domain] || "", W / 2, 172, { align: "center", font: FONT.line, italic: true, size: 12, color: SINS[N.domain].light, max: W - 40 });
+    text("DEMONS IN EACH PLACE", W / 2, 192, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 199, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
+    button(N.torch ? "TORCH: ENDLESS" : "TORCH: IT BURNS", W / 2 - 154, 234, 150, 32, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "Take all the time you need" : "As on the climb" });
+    button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 234, 150, 32, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
+    button("BEGIN", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true });
     button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
   },
   key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.novitiate(); },
