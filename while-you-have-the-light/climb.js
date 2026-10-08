@@ -11,7 +11,8 @@
 // swing on it (or walk, slow and careful, on the ground); swing into a wall and hold toward it
 // to cling. At a ledge he pulls himself up, as in the arena. The button above the right pad is
 // for everything else: on the rope, let go (at the top of a swing, a flip and a moment hung in
-// the air); on the ground, a jump; on a wall, a leap off it. Held down: the flare. Time
+// the air); on a wall, a leap off it. Held down: the flare. Both thumbs on the ground: he prays
+// (the block). On the ground the hook goes only upward; below is for picking things up. Time
 // all but stops, and each tap puts him there, through rock if need be.
 // Keys: click to throw the hook, arrows or A/D to swing and cling, W (or both arrows) to climb
 // the rope and S to let it out, Space for the button, F to flare, Esc to pause.
@@ -319,7 +320,7 @@ const Climb = (() => {
     sh.x = lerp(sh.bx, gx, ease(k)); sh.y = lerp(sh.by, gy, ease(k));
     if (k >= 1) S.shot = null;
   }
-  // The one button: let go of the rope, jump, or leap off the wall.
+  // The one button: let go of the rope, or leap off the wall.
   function action() {
     if (!S || S.dying || S.act || S.flare.on) return;
     if (S.rope && !S.ground) {
@@ -330,10 +331,7 @@ const Climb = (() => {
       if (Math.abs(S.vy) < 170 && sp > 60) S.hangT = 0.3;
     } else if (S.cling) {
       const s = S.cling; S.cling = 0; S.vx = -s * 210; S.vy = -360; S.dir = -s; S.flip = { t: 0, s: -s, half: true }; Sound.fx.kick(0.6);
-    } else if (S.ground) {
-      if (S.rope) { S.rope = null; Sound.fx.tetherBreak(); }
-      S.vy = -340; S.ground = false; S.jumpT = 0.6; S.landT = 0; Sound.fx.whoosh(0.4);
-    } else if (S.rope) { S.rope = null; Sound.fx.tetherBreak(); }
+    } else if (S.rope) { S.rope = null; S.climbing = false; Sound.fx.tetherBreak(); }
   }
   // The rope as it hangs: a chain of points, falling, held at both ends, never longer than the rope.
   function hangRope(P, ax, ay, bx, by, len, dt) {
@@ -444,12 +442,16 @@ const Climb = (() => {
       const w = near(S.dir, 7) ? S.dir : near(-S.dir, 7) ? -S.dir : 0;
       if (w) { const k = stepOut(w, 4); if (k > 0) { moveX(-w * Math.min(k, 140 * dt)); R.len = Math.max(R.len, dist(S.x, S.y - GRIP, R.x, R.y)); } }
     }
+    // Standing, both thumbs (or down): he turns to us and prays, hands folded round the torch.
+    // Whatever is thrown at him then glances off. He cannot walk while he prays.
+    S.pray = S.ground && !R && !S.act && (I.both || S.keys.ArrowDown || S.keys.KeyS);
+    S.prayT = S.pray ? (S.prayT || 0) + dt : Math.max(0, Math.min(0.25, S.prayT || 0) - dt);
     if (S.ground && !(taut && S.climbing)) {
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
-      const want = S.landT > 0 ? 0 : d * WALK;
+      const want = S.landT > 0 || S.pray ? 0 : d * WALK;
       S.vx += clamp(want - S.vx, -500 * dt, 500 * dt);
       if (d) S.dir = d;
-      if (d && S.landT <= 0 && near(d, 2)) {
+      if (d && !S.pray && S.landT <= 0 && near(d, 2)) {
         const L = ledge(d, 8, 86);
         if (L) { startAct(L.h <= 20 ? "stepUp" : "climbUp", L); return; }
         // Too high to climb onto: he takes hold of the rock and climbs it.
@@ -637,7 +639,7 @@ const Climb = (() => {
     }
     for (let s = Math.floor(-j1 / SLOT) - 1; s <= Math.floor(-j0 / SLOT) + 1; s++) {
       const isl = s >= 0 && island(s); if (!isl) continue;
-      const x0 = isl.x0 * CELL, x1 = (isl.x1 + 1) * CELL, y0 = -(isl.h1 + 1) * CELL, y1 = -isl.h0 * CELL, q = (k) => (hash2(s, k, 77) - 0.5) * 4;
+      const x0 = isl.x0 * CELL, x1 = (isl.x1 + 1) * CELL, y0 = -isl.h1 * CELL, y1 = (1 - isl.h0) * CELL, q = (k) => (hash2(s, k, 77) - 0.5) * 4;
       P.moveTo(X(x0 + 2), Y(y0 + q(2) * 0.4)); P.lineTo(X((x0 + x1) / 2 + q(3)), Y(y0 - 1)); P.lineTo(X(x1 - 2), Y(y0 + 0.5));
       P.lineTo(X(x1 + 1 + q(6) * 0.4), Y((y0 + y1) / 2)); P.lineTo(X(x1 - 4 + q(7)), Y(y1 + 2 + Math.abs(q(8)))); P.lineTo(X((x0 + x1) / 2 + q(9)), Y(y1 + 6 + Math.abs(q(10))));
       P.lineTo(X(x0 + 3), Y(y1 + 2 + Math.abs(q(11)))); P.lineTo(X(x0 - 1 + q(12) * 0.4), Y((y0 + y1) / 2)); P.closePath();
@@ -702,6 +704,12 @@ const Climb = (() => {
     } else if (!S.ground && S.jumpT > 0) p = MONK_ANIM.leap(clamp(0.32 + (0.6 - S.jumpT) * 0.5, 0.32, 0.6));
     else if (!S.ground) p = MONK_ANIM.fall((t * 1.3) % 1);
     else if (S.landT > 0) p = MONK_ANIM.land(1 - S.landT / (S.landMax || 0.35));
+    else if (S.prayT > 0) {
+      // Turning to face us (the arena's turn, to its middle), then the hands folded at the breast.
+      const k = clamp(S.prayT / 0.25, 0, 1), b = 0.5 + 0.5 * Math.sin(t * 1.6);
+      const PR = S_({ lean: 0, head: 0.14 + 0.02 * b, sF: 0.1, eF: 2.85, sB: 0.1, eB: 2.85, tq: PI - 2.95, hF: 0.06, kF: 0.12, hB: -0.06, kB: 0.12 });
+      p = blendPose(MONK_ANIM.turn(k * 0.5), PR, smooth((k - 0.4) / 0.6));
+    }
     else if (Math.abs(S.vx) > 12) p = MONK_ANIM.walk(S.anim % 1);
     else p = MONK_ANIM.idle((t * 0.4) % 1, t);
     if (S.throwT > 0) {
@@ -735,10 +743,8 @@ const Climb = (() => {
     if (dawn > 0.01) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "rgba(200,190,170," + (0.22 * dawn) + ")"); g.addColorStop(1, "rgba(200,190,170,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
     rect(0, 0, W, H, "rgba(12,12,14,0.3)");     // the far mist set back, so the near rock stands out
     const P = rockPath(cam);
-    ctx.fillStyle = C.ink; ctx.fill(P);
     const hTop = -(cam.y) / CELL + 4, hBot = -(cam.y + H) / CELL - 4;
     const vis = []; for (let n = 0; ; n++) { const w = wallAt(n); if (w.h > hTop) break; if (w.h >= hBot) vis.push(w); }
-    for (const w of vis) drawTablet(w, cam, true);
     for (const g of S.ghosts) drawMonk(g.x - cam.x, g.y - cam.y, g.dir, g.p, { ghost: true, alpha: 1 - g.age / 0.9 });
     // The monk: on the rope, hung from his hand.
     const p = monkPose(); let mx = S.x, my = S.y;
@@ -755,14 +761,17 @@ const Climb = (() => {
     if (S.rope) {
       hangRope(S.ropeVis, hand[0], hand[1], S.rope.x, S.rope.y, Math.max(S.rope.len, 10), fdt);
       drawRope(S.ropeVis, 1.6);
-      const q = S.ropeVis[S.ropeVis.length - 2]; drawHook(S.rope.x - cam.x, S.rope.y - cam.y, Math.atan2(S.rope.y - q.y, S.rope.x - q.x));
     }
     if (S.shot) {
       const sh = S.shot, out = dist(hand[0], hand[1], sh.x, sh.y);
       hangRope(S.shotVis, hand[0], hand[1], sh.x, sh.y, Math.max(10, out * (sh.ph === "fly" ? 1.12 : 1.3)), fdt);
       drawRope(S.shotVis, 1.3);
-      const q = S.shotVis[S.shotVis.length - 2]; drawHook(sh.x - cam.x, sh.y - cam.y, Math.atan2(sh.y - q.y, sh.x - q.x));
     }
+    // The rock, in front of him: its crags overlap him where he stands or clings against it.
+    ctx.fillStyle = C.ink; ctx.fill(P);
+    for (const w of vis) drawTablet(w, cam, true);
+    if (S.rope && S.ropeVis.length > 1) { const q = S.ropeVis[S.ropeVis.length - 2]; drawHook(S.rope.x - cam.x, S.rope.y - cam.y, Math.atan2(S.rope.y - q.y, S.rope.x - q.x)); }
+    if (S.shot && S.shotVis.length > 1) { const sh = S.shot, q = S.shotVis[S.shotVis.length - 2]; drawHook(sh.x - cam.x, sh.y - cam.y, Math.atan2(sh.y - q.y, sh.x - q.x)); }
     for (const q of S.parts) if (q.kind === "chip") rect(q.x - cam.x - 1, q.y - cam.y - 1, 2, 2, "#0b0b0d");
     // The dark, and what the torch can see of the rock around it.
     let [lx, ly] = S.torch;
@@ -813,7 +822,7 @@ const Climb = (() => {
     }
     if (!usingKeys()) {
       // The button: what it will do now.
-      const f = actBtn(), lab = S.rope && !S.ground ? "LET GO" : S.cling ? "LEAP" : S.ground ? "JUMP" : S.rope ? "LET GO" : "";
+      const f = actBtn(), lab = S.rope ? "LET GO" : S.cling ? "LEAP" : "FLARE";
       const held = [...S.touches.values()].find((t) => t.act), on = !!held;
       if (held && !held.fired && S.rt - held.t0 > 0.15) { ctx.beginPath(); ctx.arc(f.x, f.y, f.r + 5, -PI / 2, -PI / 2 + TAU * clamp((S.rt - held.t0 - 0.15) / (HOLD_FLARE - 0.15), 0, 1)); ctx.strokeStyle = C.flameHot; ctx.lineWidth = 2.5; ctx.stroke(); }
       circle(f.x, f.y, f.r, on ? "rgba(255,179,71,0.22)" : "rgba(8,8,10,0.45)");
@@ -831,8 +840,8 @@ const Climb = (() => {
     if (S.hintT < 16 || S.hooked < 2) {
       const a = clamp(S.hintT / 0.6, 0, 1) * (S.hooked >= 2 ? clamp((16 - S.hintT) / 1.5, 0, 1) : 1);
       const L = usingKeys()
-        ? ["Click the rock: he throws the hook there.  W, or both arrows: climb the rope.", "← → swing. Hold toward a wall: he climbs it. Space: let go, jump, leap.", "F: the flare. Then click anywhere near: appear there."]
-        : ["Tap the rock: he throws the hook there.  Both thumbs: climb the rope.", "◀ ▶ swing. Hold toward a wall: he climbs it. The button: let go, jump, leap.", "Hold the button: the flare. Then tap anywhere near: appear there."];
+        ? ["Click the rock: he throws the hook there.  W, or both arrows: climb the rope.", "← → swing. Hold toward a wall: he climbs it. S: pray. Space: let go, leap.", "F: the flare. Then click anywhere near: appear there."]
+        : ["Tap the rock above him: he throws the hook there.  Both thumbs: climb, or pray.", "◀ ▶ swing. Hold toward a wall: he climbs it. The button: let go, leap.", "Hold the button: the flare. Then tap anywhere near: appear there."];
       L.forEach((l, i) => text(l, W / 2, H - 58 + i * 15, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 240 }));
     }
     if (S.fuel < 0.25 && !S.dying) text("THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
@@ -853,6 +862,7 @@ const Climb = (() => {
       S.touches.set(id, { pad: 0 });
       if (S.flare.on) { if (dist(wx, wy, cx, cy) < 18) endFlare(); else blink(wx, wy); return; }
       if (S.act) return;
+      if (S.ground && wy > S.y - 30) return;
       throwHook(wx, wy);
     },
     move(p, ev) {
@@ -901,8 +911,8 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
-      ? [["CLICK THE ROCK", "He throws the hook there"], ["W, OR BOTH ARROWS", "Climb the rope; against a wall, walk up it (S lets it out)"], ["← →  OR  A D", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["SPACE", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["F, THEN CLICK", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]]
-      : [["TAP THE ROCK", "He throws the hook there"], ["BOTH THUMBS", "Climb the rope; against a wall, walk up it"], ["◀ ▶", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["THE BUTTON", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["HOLD THE BUTTON, THEN TAP", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]];
+      ? [["CLICK THE ROCK", "He throws the hook there"], ["W, OR BOTH ARROWS", "Climb the rope (S lets it out); standing, S prays (the block)"], ["← →  OR  A D", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["SPACE", "Let go (a flip at the top of a swing), leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["F, THEN CLICK", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]]
+      : [["TAP THE ROCK", "He throws the hook there"], ["BOTH THUMBS", "Climb the rope or the rock; standing, pray (the block)"], ["◀ ▶", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["THE BUTTON", "Let go (a flip at the top of a swing), leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["HOLD THE BUTTON, THEN TAP", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]];
     const rh = Math.min(30, (H - 64) / mv.length);
     text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
     mv.forEach(([k, what], i) => {
