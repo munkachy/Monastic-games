@@ -48,7 +48,7 @@ const Climb = (() => {
   const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
   const BURN = 1 / 150;                            // a full torch lasts two and a half minutes, all the way up
   const FLARE_R = 280, FLARE_T = 3, FLARE_SLOW = 0.12, FLARE_COST = 0.08, BLINK_COST = 0.035, BLINKS = 4;
-  const HOLD_FLARE = 0.35;                         // holding the button this long: the flare
+  const HOLD_FLARE = 0.65;                         // holding the button this long: the flare
   const HW = 7, HT = 44;                           // half the monk's width; his height
   const SLOT = 10, TH = 18;                        // rows to each place a platform may stand; a crossing's height
   const sideC = (s) => (s < 0 ? 19 : COLS - 20);   // the middle of a shaft on the left or the right
@@ -815,7 +815,7 @@ const Climb = (() => {
       // The button: what it will do now.
       const f = actBtn(), lab = S.rope && !S.ground ? "LET GO" : S.cling ? "LEAP" : S.ground ? "JUMP" : S.rope ? "LET GO" : "";
       const held = [...S.touches.values()].find((t) => t.act), on = !!held;
-      if (held && !held.fired) { ctx.beginPath(); ctx.arc(f.x, f.y, f.r + 5, -PI / 2, -PI / 2 + TAU * clamp((S.rt - held.t0) / HOLD_FLARE, 0, 1)); ctx.strokeStyle = C.flameHot; ctx.lineWidth = 2.5; ctx.stroke(); }
+      if (held && !held.fired && S.rt - held.t0 > 0.15) { ctx.beginPath(); ctx.arc(f.x, f.y, f.r + 5, -PI / 2, -PI / 2 + TAU * clamp((S.rt - held.t0 - 0.15) / (HOLD_FLARE - 0.15), 0, 1)); ctx.strokeStyle = C.flameHot; ctx.lineWidth = 2.5; ctx.stroke(); }
       circle(f.x, f.y, f.r, on ? "rgba(255,179,71,0.22)" : "rgba(8,8,10,0.45)");
       ring(f.x, f.y, f.r, lab ? "rgba(255,179,71,0.55)" : "rgba(233,230,223,0.15)", 1.2);
       text(lab || "·", f.x, f.y + 3, { align: "center", size: 7.5, weight: 800, spacing: 1, color: lab ? "#fff3dc" : "#77736c" });
