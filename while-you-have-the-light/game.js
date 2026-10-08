@@ -1,15 +1,16 @@
 "use strict";
-// While You Have the Light: the game. The title, the arena, the practice (choose which sins come;
-// nothing can hurt you; holy water never runs out), the finishers and how they open, the pause
-// (with every move listed), and the end, when the light goes out. Played sideways; where the
-// phone allows, it locks to sideways when play starts.
+// While You Have the Light: the game. The title, the endless climb, the novitiate (one domain to
+// learn, as long as you like), the pause (with every move listed), and the end, when the light
+// goes out. Played sideways; where the phone allows, it locks to sideways when play starts.
+// (The first arena, its practice and its finishers are still here, by ?arena and ?practice, until
+// the seven sins have all been brought up onto the mountain.)
 
 const Game = {
   music: false,
   soundWoke() {
     if (Game.music || !Sound.ctx()) return;
     Game.music = true;
-    if (mode === Title || mode === Setup || mode === Book) { Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); }
+    if (mode === Title || mode === Setup || mode === Book || mode === Novitiate) { Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); }
   },
   arena() { goSideways(); Game.music = true; Game.last = { practice: false }; Arena.start({ practice: false }); },
   practice() {
@@ -18,7 +19,13 @@ const Game = {
     Game.last = { practice: true }; Arena.start({ practice: true, sins: P.sins, count: P.count, endlessOil: P.endlessOil });
   },
   climb() { goSideways(); Game.music = true; Game.last = { climb: true }; G = null; Climb.start(); },
-  again() { if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
+  novitiate() {
+    goSideways(); Game.music = true; Game.last = { climb: true, nov: true }; G = null;
+    const N = novSettings();
+    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare } });
+  },
+  toNovitiate() { G = null; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
+  again() { if (Game.last && Game.last.nov) Game.novitiate(); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
   toTitle() {
     G = null; Title.t = 0; mode = Title;
     Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });
@@ -64,12 +71,11 @@ const Title = {
     text("THE RULE OF ST. BENEDICT, PROLOGUE", x + 2, 142, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)" });
     const by = 166;
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
-    button("PRACTICE", x, by + 50, 97, 32, () => { Setup.t = 0; mode = Setup; }, { sub: "Nothing can hurt you" });
-    button("FINISHERS", x + 103, by + 50, 97, 32, () => { Book.t = 0; mode = Book; }, {});
-    button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 90, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
-    buttons.push({ x: x + 103, y: by + 90, w: 97, h: 26, act: () => { location.href = "design.html"; } });
-    text("Design notes ›", x + 151, by + 107, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
-    text("The climb, a first build: the swing, no demons yet. Best with sound, phone sideways.", x, H - 16, { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", max: W * 0.55 });
+    button("THE NOVITIATE", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "Learn one domain, as long as you like" });
+    button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 92, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
+    buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
+    text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
+    text("The first two domains of the seven are open: the belly's and anger's. Best with sound, phone sideways.", x, H - 16, { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", max: W * 0.55 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
@@ -103,6 +109,49 @@ const Setup = {
     button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
   },
   key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.practice(); },
+};
+
+// ---- The novitiate: one domain, to learn ---------------------------------------------------------------
+// A mountain that is all one domain, its demons coming back as often as they are cast out; the
+// torch, and the flare, endless if you like. Here the domains are named; on the climb they are not.
+const NOV_SUB = {
+  gluttony: "Swollen caverns; the pit below",
+  wrath: "Fire thrown; rock that gives way",
+};
+function novSettings() {
+  const N = save.novitiate || (save.novitiate = { domain: "gluttony", demons: 1, torch: true, flare: false });
+  if (!Climb.BUILT.includes(N.domain)) N.domain = Climb.BUILT[0];
+  return N;
+}
+const Novitiate = {
+  t: 0,
+  step(dt) { Novitiate.t += dt; },
+  draw() {
+    const N = novSettings();
+    drawBackdrop(300 + Novitiate.t * 4, 300, 1, Novitiate.t, {});
+    rect(0, 0, W, H, "rgba(3,3,5,0.66)");
+    text("THE NOVITIATE", W / 2, 38, { align: "center", font: FONT.title, size: 22, weight: 700, spacing: 5, color: "#fff" });
+    text("Learn a domain here before you climb it: as long as you like, and nothing is lost.", W / 2, 58, { align: "center", font: FONT.line, italic: true, size: 13, color: C.warm, max: W - 40 });
+    text("THE DOMAIN", W / 2, 84, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    const D = Climb.DOMAINS, bw = Math.min(84, (W - 40) / D.length - 6), x0 = W / 2 - (bw + 6) * D.length / 2 + 3;
+    D.forEach((s, i) => {
+      const built = Climb.BUILT.includes(s), on = N.domain === s, x = x0 + i * (bw + 6), y = 94;
+      if (built) buttons.push({ x, y, w: bw, h: 62, act: () => { N.domain = s; store(); } });
+      rect(x, y, bw, 62, on ? hexA(SINS[s].color, 0.2) : "rgba(8,8,10,0.7)");
+      ctx.strokeStyle = on ? SINS[s].color : built ? "rgba(233,230,223,0.3)" : "rgba(233,230,223,0.1)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, 61);
+      circle(x + bw / 2, y + 18, 8, built ? SINS[s].color : "#202024");
+      if (on) glow(x + bw / 2, y + 18, 18, SINS[s].color, 0.4);
+      text(SINS[s].name.toUpperCase(), x + bw / 2, y + 40, { align: "center", size: 8, weight: 800, spacing: 1, color: on ? "#fff" : built ? "#d6d2c8" : "#5c5852", max: bw - 6 });
+      text(built ? NOV_SUB[s] || "" : "To come", x + bw / 2, y + 53, { align: "center", size: 6.5, weight: 500, color: built ? "#a9a49a" : "#4c4944", max: bw - 6 });
+    });
+    text("DEMONS IN EACH PLACE", W / 2, 178, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 186, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
+    button(N.torch ? "TORCH: ENDLESS" : "TORCH: IT BURNS", W / 2 - 154, 222, 150, 30, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "Take all the time you need" : "As on the climb" });
+    button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 222, 150, 30, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
+    button("BEGIN", W / 2 - 100, 264, 200, 40, () => Game.novitiate(), { hot: true });
+    button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
+  },
+  key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.novitiate(); },
 };
 
 // ---- The finishers, and the virtues ---------------------------------------------------------------------
@@ -214,8 +263,10 @@ function frame(now) {
 resize();
 Sound.muted = !!save.muted;
 mode = Title;
-// For trying things directly: ?climb starts the climb, ?arena the arena, ?practice the practice.
+// For trying things directly: ?climb starts the climb, ?novitiate opens the novitiate, ?arena the
+// first arena, ?practice its practice.
 if (/[?&]climb\b/.test(location.search)) setTimeout(() => Game.climb(), 50);
 if (/[?&]arena\b/.test(location.search)) setTimeout(() => Game.arena(), 50);
 if (/[?&]practice\b/.test(location.search)) setTimeout(() => Game.practice(), 50);
+if (/[?&]novitiate\b/.test(location.search)) setTimeout(() => Game.toNovitiate(), 50);
 requestAnimationFrame(frame);

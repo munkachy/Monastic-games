@@ -1021,7 +1021,7 @@ function buildBackdrop(res) {
 }
 // Draw the whole screen behind the world. (cx, cy): the camera's centre in world pixels; zoom;
 // t: time; o.warm = { x, y, r } (screen): a faint warmth in the mist about the torch; o.y0: the
-// camera height at which the mountains sit at rest (300 by default).
+// camera height at which the mountains sit at rest (300 by default); o.dim, o.tint: see below.
 // The mist is soft, so the whole of it is painted into one smaller picture (fewer pixels than the
 // screen: a phone fills ten screens' worth of layers and fog every frame otherwise) and laid on
 // in a single pass, stretched to the screen.
@@ -1035,6 +1035,9 @@ function drawBackdrop(cx, cy, zoom, t, o) {
   const main = useCtx(BACK.cv.getContext("2d"));
   ctx.setTransform(k, 0, 0, k, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   paintBackdrop(cx, cy, zoom, t, o);
+  // o.dim: a wash over it all (to set the mist back); o.tint: a colour laid into it (multiplied).
+  if (o.dim) { ctx.fillStyle = o.dim; ctx.fillRect(0, 0, W, H); }
+  if (o.tint) { ctx.globalCompositeOperation = "multiply"; ctx.fillStyle = o.tint; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = "source-over"; }
   useCtx(main);
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(BACK.cv, 0, 0, W, H);
