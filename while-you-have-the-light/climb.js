@@ -59,7 +59,8 @@ const Climb = (() => {
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
-  const SLOT = 10, TH = 18, CH = 48;               // rows to each place a platform may stand; a crossing's height; a cavern's
+  const SLOT = 10, TH = 30, CH = 48;               // rows to each place a platform may stand; a crossing's height; a cavern's
+  const TR = 28;                                   // a crossing's roof (rows up from its foot): high, for long swings under it
 
   // ---- The domains ------------------------------------------------------------------------------
   // The mountain is the seven, one above another, in Cassian's order of the eight thoughts (envy in
@@ -164,7 +165,7 @@ const Climb = (() => {
     slots.set(s, isl); return isl;
   }
   // A crossing. At a domain's threshold its first stretch of floor is long, and a carved gate stands
-  // on it: a great block hung from the roof, with a doorway under it. In Wrath's domain, thin bridges
+  // on it: a great block hung from the high roof, carved at its foot, with a doorway under it. In Wrath's domain, thin bridges
   // of rock lie over some of the pits, and give way under him.
   function trav(sec) {
     if (sec.info) return sec.info;
@@ -177,7 +178,10 @@ const Climb = (() => {
       for (let q = 0; q < len && before(i); q++, i += dir) if (!floor) pit[i] = 1;
       floor = !floor; n++;
     }
-    const T = { en, ex, a, b, dir, pit, bridges: [], bridgeOf: null, door: null, lamps: [] };
+    // The roof, high over the tunnel, rising and falling a little.
+    const roof = new Int16Array(COLS), q = hash2(sec.k, 45, seed) * TAU;
+    for (let i = 0; i < COLS; i++) roof[i] = TR - Math.round(1.5 + 1.5 * Math.sin(i * 0.19 + q));
+    const T = { en, ex, a, b, dir, pit, roof, bridges: [], bridgeOf: null, door: null, lamps: [] };
     if (sec.gate) {
       // The gate: three cells thick, two cells from the way in; its lamp just beyond it.
       const d0 = dir > 0 ? en.R + 3 : en.L - 5;
@@ -203,8 +207,8 @@ const Climb = (() => {
       if (r >= 1 && T.pit[i]) return r === 7 && !!T.bridgeOf && T.bridgeOf[i] > 0 && T.bridges[T.bridgeOf[i] - 1].st !== "gone";   // a pit (or a bridge over it)
       return true;                                                                   // the floor
     }
-    if (r <= 15) return !!T.door && r >= 12 && i >= T.door.i0 && i <= T.door.i1;      // the tunnel, and the gate's block
-    return !(i >= T.ex.L && i <= T.ex.R);                                            // the ceiling, and the way out
+    if (r < T.roof[i]) return !!T.door && r >= 12 && i >= T.door.i0 && i <= T.door.i1;   // the tunnel, and the gate's block hanging from the roof
+    return !(i >= T.ex.L && i <= T.ex.R);                                            // the roof, and the way out
   }
   // ---- Lust's briars ---------------------------------------------------------------------------------
   // A corridor from the top of one shaft, across the whole mountain and steadily up, to the foot of
@@ -1052,6 +1056,17 @@ const Climb = (() => {
     Sound.fx.thorn(panX(f.x));
     const ts = S.things.filter((o) => o.kind === "thorn"); if (ts.length > 10) ts[0].st = "gone";
   }
+  // Briars: under his feet, over his head, at his side, under his hands as he hangs from a ledge or
+  // holds to the rock. They tear him, and throw him off them (and off the ledge, or the rock).
+  function briars() {
+    if (S.invT > 0 || S.dying) return;
+    const probes = [[S.x - 4, S.y + 3, 0, -1], [S.x + 4, S.y + 3, 0, -1], [S.x, S.y - HT - 3, 0, 1], [S.x - HW - 4, S.y - 10, 1, 0], [S.x + HW + 4, S.y - 10, -1, 0], [S.x - HW - 4, S.y - 34, 1, 0], [S.x + HW + 4, S.y - 34, -1, 0]];
+    if (S.hang) { const L = S.hang.L; probes.push([L.edge + L.s * 4, L.top + 3, -L.s, -1], [L.edge + L.s * 3, L.top + 12, -L.s, 0]); }
+    const hit = probes.find(([x, y]) => thornAt(x, y)); if (!hit) return;
+    const [, , nx, ny] = hit; briarHit(hit[0], hit[1]);
+    hitMonk(nx || sign(S.vx) || -S.dir, 0.05);
+    if (ny < 0 && !nx) { S.vy = -330; S.ground = false; } else if (ny > 0) S.vy = 160; else { S.vx = nx * 230; if (ny < 0) S.vy = -200; }
+  }
   // Briars torn: dark leaves and a few drops of red.
   function briarHit(x, y) {
     Sound.fx.briar(panX(x));
@@ -1594,6 +1609,7 @@ const Climb = (() => {
     S.hangs = (S.hangs || 0) + 1; Sound.fx.grab();
   }
   function physics(dt) {
+    briars();
     const I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false, u: false, dn: false } : pads(), d = I.d, wasGround = S.ground, vyIn = S.vy;
     if (S.hang) {
       const H0 = S.hang, s = H0.L.s, up = d === s || I.u;
@@ -1751,16 +1767,7 @@ const Climb = (() => {
       S.cling = d; S.dir = d; S.vx = 0; S.vy = 0; S.rope = null; S.next = null; Sound.fx.grab();
     }
     if (side && !S.cling && Math.abs(vyIn) + Math.abs(S.vx) > 500) Sound.fx.wallSlam(0);
-    // Briars: under his feet, over his head, at his side. They tear him, and throw him off them.
-    if (!(S.invT > 0) && !S.dying) {
-      const probes = [[S.x - 4, S.y + 3, 0, -1], [S.x + 4, S.y + 3, 0, -1], [S.x, S.y - HT - 3, 0, 1], [S.x - HW - 4, S.y - 10, 1, 0], [S.x + HW + 4, S.y - 10, -1, 0], [S.x - HW - 4, S.y - 34, 1, 0], [S.x + HW + 4, S.y - 34, -1, 0]];
-      const hit = probes.find(([x, y]) => thornAt(x, y));
-      if (hit) {
-        const [, , nx, ny] = hit; briarHit(hit[0], hit[1]);
-        hitMonk(nx || sign(S.vx) || -S.dir, 0.05);
-        if (ny < 0) { S.vy = -330; S.ground = false; } else if (ny > 0) S.vy = 160; else S.vx = nx * 230;
-      }
-    }
+
     if (S.rope && !S.ground) swingKick();
     if (boxHit(S.x, S.y)) { const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; } }
   }
