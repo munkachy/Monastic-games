@@ -75,7 +75,7 @@ const Title = {
     button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 92, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
     buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
     text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
-    textLines("Three of the seven domains are open: the belly's, the flesh's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
+    textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
@@ -117,6 +117,7 @@ const Setup = {
 const NOV_SUB = {
   gluttony: "Swollen caverns; the pit below",
   lust: "Long climbs through the briars",
+  avarice: "A mine: chains, and gold that weighs",
   wrath: "Fire thrown; rock that gives way",
 };
 function novSettings() {

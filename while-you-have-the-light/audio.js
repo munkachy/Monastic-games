@@ -1070,6 +1070,23 @@ const Sound = (() => {
     tone(t, "sine", 180, 70, 0.14, 0.26 * v, { pan });
     for (let k = 0; k < 4; k++) hiss(t + 0.04 + k * 0.035, "bandpass", rnd(700, 1400), 500, 0.03, 0.1 * v, { q: 3, pan });
   };
+  // A coin: a small bright clink (v: how loud).
+  fx.coin = function (pan, v) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    I.bell(t, rnd(95, 100), 0.12, 0.05 * v, { ratio: 2.76, index: 0.8, sfx: true, pan });
+    hiss(t, "highpass", 6000, 6000, 0.02, 0.06 * v, { pan });
+  };
+  // Alms given: coins falling one after another into the box, and a small bell.
+  fx.alms = function (pan, n) {
+    if (!ok()) return; const t = T0();
+    for (let k = 0; k < Math.min(n, 9); k++) I.bell(t + 0.05 + k * 0.07, rnd(93, 99), 0.1, 0.04, { ratio: 2.76, index: 0.8, sfx: true, pan });
+    I.bell(t + 0.12 + Math.min(n, 9) * 0.07, 81, 0.9, 0.08, { ratio: 3.5, index: 0.6, sfx: true, rev: 0.4 });
+  };
+  // A chain taking the hook: iron links rattling.
+  fx.chain = function (pan) {
+    if (!ok()) return; const t = T0();
+    for (let k = 0; k < 6; k++) { hiss(t + k * 0.035, "bandpass", rnd(2500, 4200), 2000, 0.025, 0.12, { q: 6, pan }); I.bell(t + k * 0.035, rnd(86, 92), 0.05, 0.02, { ratio: 1.41, index: 2, sfx: true, pan }); }
+  };
   // Worshippers scattering: robes swept up, and feet running off over the rock.
   fx.scatter = function (pan) {
     if (!ok()) return; const t = T0();
@@ -1114,7 +1131,7 @@ const Sound = (() => {
     empty: 3, flareOn: 1.5, flareOff: 2, oilReady: 2, mark: 4, chain: 4, waveStart: 1.3, waveClear: 1, unlock: 1.8, death: 1.6, tether: 2.5, tetherBreak: 3, steal: 2.5,
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
-    splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6,
+    splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
