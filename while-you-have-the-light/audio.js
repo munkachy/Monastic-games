@@ -1070,6 +1070,12 @@ const Sound = (() => {
     tone(t, "sine", 180, 70, 0.14, 0.26 * v, { pan });
     for (let k = 0; k < 4; k++) hiss(t + 0.04 + k * 0.035, "bandpass", rnd(700, 1400), 500, 0.03, 0.1 * v, { q: 3, pan });
   };
+  // Worshippers scattering: robes swept up, and feet running off over the rock.
+  fx.scatter = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "lowpass", 1800, 600, 0.35, 0.16, { q: 0.8, swell: 0.3, pan });
+    for (let k = 0; k < 9; k++) hiss(t + 0.08 + k * 0.07 + rnd(0, 0.03), "bandpass", rnd(500, 900), 300, 0.04, 0.12, { q: 2, pan });
+  };
   // Lust casting its ribbon: a sweet sliding cry, rising and wavering.
   fx.ribbon = function (pan) {
     if (!ok()) return; const t = T0();
@@ -1108,7 +1114,7 @@ const Sound = (() => {
     empty: 3, flareOn: 1.5, flareOff: 2, oilReady: 2, mark: 4, chain: 4, waveStart: 1.3, waveClear: 1, unlock: 1.8, death: 1.6, tether: 2.5, tetherBreak: 3, steal: 2.5,
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
-    splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6,
+    splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
