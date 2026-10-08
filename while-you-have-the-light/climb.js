@@ -51,6 +51,9 @@ const Climb = (() => {
   const GRAV = 760, VMAX = 900, WALK = 70, AIR = 110;
   const PUMP_WITH = 230, PUMP_START = 130, PUMP_AGAINST = 70;   // pumping a swing: with its motion, from stillness, against it
   const HOOK = 280, HOOK_V = 820, CLIMB_V = 72, PAYOUT = 110, ROPE_MIN = 40, ROPE_MAX = 340, GRIP = 42;
+  // The hook has no end to its reach (only a bound so the search finishes): past HOOK it flies
+  // faster, and once it bites he reels the rope in quickly to ROPE_MAX, a length he can swing on.
+  const HOOK_FAR = 3000, HOOK_V_FAR = 2400, REEL_V = 600;
   const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
   const BURN = 1 / 150;                            // a full torch lasts two and a half minutes, all the way up
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
@@ -497,24 +500,32 @@ const Climb = (() => {
   }
 
   // ---- The hook --------------------------------------------------------------------------------------
-  // Where a line from (x, y) at angle a first meets rock, if within the rope's reach.
-  function rayRock(x, y, a) {
+  // Where a line from (x, y) at angle a first meets rock, if within lim.
+  function rayRock(x, y, a, lim) {
     const ux = Math.cos(a), uy = Math.sin(a);
-    for (let d = 6; d <= HOOK; d += 3) if (solidAt(x + ux * d, y + uy * d)) return d;
+    for (let d = 6; d <= (lim || HOOK); d += 3) if (solidAt(x + ux * d, y + uy * d)) return d;
     return 0;
   }
+  // The line nearest to a0 (within 24 degrees) that meets rock within lim: [angle, distance].
+  function nearLine(gx, gy, a0, lim, spread) {
+    for (let k = 0; k <= spread; k++) for (const sg of k ? [-1, 1] : [1]) {
+      const a = a0 + sg * k * 0.052, d = rayRock(gx, gy, a, lim);
+      if (d) return [a, d];
+    }
+    return null;
+  }
   // He throws it: it flies in an arc to the rock. The throw forgives a little: if the line
-  // misses, the nearest line within 24 degrees that meets rock is taken instead.
+  // misses rock near him, the nearest line within 24 degrees that meets rock near him is taken
+  // instead (so a tap just past a ledge still finds the ledge). Only then does it go on along the
+  // line, as far as it must, to the first rock it meets. Tapped far off, it goes straight there.
   function throwHook(tx, ty) {
     breakWard(); if (S.hang) S.hang = null;
-    const [gx, gy] = grip(), a0 = Math.atan2(ty - gy, tx - gx);
-    let a = a0, d = rayRock(gx, gy, a0);
-    for (let k = 1; !d && k <= 8; k++) {
-      if ((d = rayRock(gx, gy, a0 - k * 0.052))) a = a0 - k * 0.052;
-      else if ((d = rayRock(gx, gy, a0 + k * 0.052))) a = a0 + k * 0.052;
-    }
+    const [gx, gy] = grip(), a0 = Math.atan2(ty - gy, tx - gx), far = dist(gx, gy, tx, ty) > HOOK;
+    const got = (far && nearLine(gx, gy, a0, HOOK_FAR, 0)) || nearLine(gx, gy, a0, HOOK, 8) || nearLine(gx, gy, a0, HOOK_FAR, 0) || nearLine(gx, gy, a0, HOOK_FAR, 8);
+    const a = got ? got[0] : a0, d = got ? got[1] : 0;
     const L = d || HOOK, ux = Math.cos(a), uy = Math.sin(a);
-    S.shot = { ox: gx, oy: gy, tx: gx + ux * L, ty: gy + uy * L, ux, uy, hit: !!d, t: 0, T: 0.08 + L / HOOK_V, lift: L * 0.22 * Math.abs(ux), x: gx, y: gy, ph: "fly" };
+    const T = 0.08 + Math.min(L, HOOK) / HOOK_V + Math.max(0, L - HOOK) / HOOK_V_FAR;
+    S.shot = { ox: gx, oy: gy, tx: gx + ux * L, ty: gy + uy * L, ux, uy, hit: !!d, t: 0, T, lift: Math.min(L, HOOK) * 0.22 * Math.abs(ux), x: gx, y: gy, ph: "fly" };
     S.shotVis = [];
     S.throwT = 0.32; S.throwA = a; if (Math.abs(ux) > 0.15 && !S.flip) S.dir = sign(ux);
     Sound.fx.throw(0.45);
@@ -529,10 +540,10 @@ const Climb = (() => {
         const [gx, gy] = grip();
         // The hook bites at the rock's face: the rope runs from just outside it, never through it.
         let hx = sh.tx, hy = sh.ty; for (let k = 0; k < 8 && solidAt(hx, hy); k++) { hx -= sh.ux * 1; hy -= sh.uy * 1; }
-        S.rope = { x: hx, y: hy, len: clamp(dist(gx, gy, hx, hy), ROPE_MIN, ROPE_MAX), bends: [], fixed: 0, hx: sh.tx, hy: sh.ty };
+        S.rope = { x: hx, y: hy, len: Math.max(ROPE_MIN, dist(gx, gy, hx, hy)), bends: [], fixed: 0, hx: sh.tx, hy: sh.ty };
         S.ropeVis = S.shotVis; S.shot = null; S.hooked++;
         wrapRope(S.rope, gx, gy); if (freeOf(S.rope) < ROPE_MIN * 0.5) S.rope.len = (S.rope.fixed || 0) + Math.max(ROPE_MIN * 0.5, dist(gx, gy, pivotOf(S.rope).x, pivotOf(S.rope).y));
-        Sound.fx.tether();
+        Sound.fx.tether(); if (S.rope.len > ROPE_MAX + 60) Sound.fx.whoosh(0.5);
         for (let q = 0; q < 5; q++) S.parts.push({ kind: "chip", x: sh.tx, y: sh.ty, vx: (Math.random() - 0.5) * 120 - sh.ux * 60, vy: (Math.random() - 0.5) * 120 - sh.uy * 60, life: 0.4, age: 0 });
       } else { sh.ph = "drop"; sh.t = 0; sh.vx = sh.ux * 160; sh.vy = sh.uy * 160; }
       return;
@@ -1423,7 +1434,9 @@ const Climb = (() => {
     S.climbing = !!R && (I.both || S.keys.ArrowUp || S.keys.KeyW);
     // (Not while rock is over his head: then he leans out round it first, and the rope waits.)
     if (R && S.climbing && !(!S.ground && boxHit(S.x, S.y - 4)) && freeOf(R) > ROPE_MIN) { R.len = Math.max((R.fixed || 0) + ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
-    if (R && (S.keys.ArrowDown || S.keys.KeyS)) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
+    if (R && (S.keys.ArrowDown || S.keys.KeyS) && R.len < ROPE_MAX) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
+    // A long throw: he reels the rope in fast, and it draws him toward the hook, till it is a length he can swing on.
+    if (R && R.len > ROPE_MAX) { R.len = Math.max(ROPE_MAX, (R.fixed || 0) + ROPE_MIN, R.len - REEL_V * dt); }
     const PV = R ? pivotOf(R) : null, [gx, gy] = grip(), rd = R ? dist(gx, gy, PV.x, PV.y) : 0, taut = R && rd >= freeOf(R) - 1;
     // A ledge near his hands: he pulls himself up onto it only when he is climbing, with bare hands
     // on the rock or hand over hand up the rope. Swinging, he never catches hold of one by himself.
@@ -1523,7 +1536,7 @@ const Climb = (() => {
     S.vy += GRAV * dt * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1);
     const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
     // On the ground the rope pays out as he walks, unless he is climbing it.
-    if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, ROPE_MAX);
+    if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, Math.max(ROPE_MAX, R.len));
     const n = clamp(Math.ceil(Math.max(Math.abs(S.vx), Math.abs(S.vy)) * dt / 6), 1, 10), h = dt / n;
     let side = 0;
     for (let k = 0; k < n; k++) {
@@ -2568,8 +2581,8 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
-      ? [["CLICK THE ROCK", "He throws the hook there; swinging, to one side of him: he flips, then hooks up and out that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
-      : [["TAP THE ROCK", "He throws the hook there; swinging, to one side of him: he flips, then hooks up and out that way"], ["BOTH THUMBS", "Climb the rope or the rock; at a ledge, push again to pull up"], ["◀ ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE RIGHT BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward till you move"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
+      ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
+      : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["BOTH THUMBS", "Climb the rope or the rock; at a ledge, push again to pull up"], ["◀ ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE RIGHT BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward till you move"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     const rh = Math.min(30, (H - 64) / mv.length);
     text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
     mv.forEach(([k, what], i) => {
