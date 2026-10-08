@@ -45,7 +45,7 @@ const Climb = (() => {
   const CELL = 16, COLS = 76, MPX = 27;           // a cell; the world's width in cells; pixels to a metre
   const GRAV = 760, VMAX = 900, WALK = 70, AIR = 110, PUMP = 430;
   const HOOK = 280, HOOK_V = 820, CLIMB_V = 72, PAYOUT = 110, ROPE_MIN = 40, ROPE_MAX = 340, GRIP = 42;
-  const CLING_HOLD = 2.5, CLING_SLIDE = 55;
+  const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
   const BURN = 1 / 150;                            // a full torch lasts two and a half minutes, all the way up
   const FLARE_R = 280, FLARE_T = 3, FLARE_SLOW = 0.12, FLARE_COST = 0.08, BLINK_COST = 0.035, BLINKS = 4;
   const HOLD_FLARE = 0.35;                         // holding the button this long: the flare
@@ -183,7 +183,18 @@ const Climb = (() => {
     }
     return null;
   }
-  const near = (s, gap) => boxHit(S.x + s * (gap || 1.5), S.y - 2);
+  // Rock beside him on side s: beside his body, not just his head (a ceiling is not a wall).
+  function near(s, gap) {
+    const x = S.x + s * (HW + (gap || 1.5)), i = Math.floor(x / CELL);
+    for (let y = S.y - 36; y <= S.y - 6; y += 6) if (solid(i, Math.floor(y / CELL))) return true;
+    return false;
+  }
+  // How far he must lean out from the wall on side s to get past rock just above him (0 if none in the way, -1 if too far).
+  function stepOut(s, up) {
+    if (!boxHit(S.x, S.y - up)) return 0;
+    for (let k = 4; k <= 52; k += 4) if (!boxHit(S.x - s * k, S.y - up) && !boxHit(S.x - s * k, S.y)) return k;
+    return -1;
+  }
   const grip = () => [S.x, S.y - GRIP];
   const middle = () => [S.x, S.y - HT / 2];
 
@@ -191,7 +202,7 @@ const Climb = (() => {
   // The top of the rock just beyond his side s, between lo and hi above his feet, with room to
   // stand on it. edge is the near corner of the ledge; x1 where he will stand.
   function ledge(s, lo, hi, reachOut) {
-    for (const off of reachOut ? [3, 9, 15] : [3]) {
+    for (const off of reachOut ? [3, 9, 15, 21, 27] : [3, 8]) {
       const ci = Math.floor((S.x + s * (HW + off)) / CELL);
       for (let j = Math.floor((S.y - hi) / CELL); j <= Math.floor((S.y - lo) / CELL); j++) {
         if (!solid(ci, j) || solid(ci, j - 1) || solid(ci, j - 2) || solid(ci, j - 3)) continue;
@@ -395,24 +406,43 @@ const Climb = (() => {
     if (R && S.climbing) { R.len = Math.max(ROPE_MIN, R.len - CLIMB_V * dt); S.climbPh += dt * 9; }
     if (R && (S.keys.ArrowDown || S.keys.KeyS)) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
     const [gx, gy] = grip(), rd = R ? dist(gx, gy, R.x, R.y) : 0, taut = R && rd >= R.len - 1;
-    // At the top of the rope, or with a ledge at his hands: he pulls himself up onto it.
+    // A ledge anywhere near his hands (or near the top of the rope): he pulls himself up onto it.
     if (!S.ground) {
       let L = null;
-      if (S.cling) L = ledge(S.cling, 26, 78);
-      else if (S.climbing) L = ledge(S.dir, 26, 78, R.len <= ROPE_MIN + 6) || ledge(-S.dir, 26, 78, R.len <= ROPE_MIN + 6);
-      else if (d && near(d, 4)) L = ledge(d, 26, 78);
+      const top = R && S.climbing && R.len <= ROPE_MIN + 8;
+      if (S.cling) L = ledge(S.cling, 18, 96, true);
+      else if (S.climbing) L = ledge(S.dir, 18, top ? 140 : 90, true) || ledge(-S.dir, 18, top ? 140 : 90, true);
+      else if (d && near(d, 6)) L = ledge(d, 18, 90, true);
       if (L) { startAct("ledge", L); return; }
     }
-    // Clinging: still against the wall, then sliding slowly. Away from the wall: a kick off it.
+    // On the rock with bare hands. Holding toward the wall (or both thumbs, or up): he climbs,
+    // following the rock in and out and leaning out round the bits that stick out. Nothing
+    // held: he stays. Away from it: he lets go. Down (keys): he climbs down.
     if (S.cling) {
-      const s = S.cling; S.clingT += dt;
-      if (!near(s) || (taut && S.climbing)) S.cling = 0;
-      else if (d !== s) S.cling = 0;
+      const s = S.cling, up = d === s || I.both || S.keys.ArrowUp || S.keys.KeyW, down = S.keys.ArrowDown || S.keys.KeyS;
+      if (d === -s) { S.cling = 0; S.vx = -s * 40; }
       else {
-        S.vx = 0; S.vy = S.clingT > CLING_HOLD ? CLING_SLIDE : 0;
-        if (moveY(S.vy * dt) > 0) { S.cling = 0; S.ground = true; }
-        return;
+        S.vx = 0; S.vy = 0; S.dir = s;
+        if (up) {
+          const k = stepOut(s, WALL_V * dt + 2);
+          if (k > 0) moveX(-s * Math.min(k, 120 * dt));
+          else if (k === 0) { moveY(-WALL_V * dt); S.climbPh += dt * 7; }
+        } else if (down) { if (moveY(WALL_DOWN * dt) > 0) { S.cling = 0; S.ground = true; } S.climbPh -= dt * 7; }
+        // Keep his hands on the rock: in toward it where it falls back, a little at a time (but
+        // never back in under rock he is leaning out to get past).
+        if (!near(s)) {
+          let g = 0; for (let k = 2; k <= 44; k += 2) if (near(s, k)) { g = k; break; }
+          const m = Math.min(g, 140 * dt);
+          if (!g) S.cling = 0;
+          else if (!boxHit(S.x + s * m, S.y - 10)) moveX(s * m);
+        }
+        if (S.cling) return;
       }
+    }
+    // Climbing the rope against a wall: round the bits of rock that stick out over him.
+    if (S.climbing && R && !S.ground) {
+      const w = near(S.dir, 7) ? S.dir : near(-S.dir, 7) ? -S.dir : 0;
+      if (w) { const k = stepOut(w, 4); if (k > 0) { moveX(-w * Math.min(k, 140 * dt)); R.len = Math.max(R.len, dist(S.x, S.y - GRIP, R.x, R.y)); } }
     }
     if (S.ground && !(taut && S.climbing)) {
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
@@ -422,7 +452,10 @@ const Climb = (() => {
       if (d && S.landT <= 0 && near(d, 2)) {
         const L = ledge(d, 8, 86);
         if (L) { startAct(L.h <= 20 ? "stepUp" : "climbUp", L); return; }
-      }
+        // Too high to climb onto: he takes hold of the rock and climbs it.
+        S.pushT = (S.pushT || 0) + dt;
+        if (S.pushT > 0.15 && !boxHit(S.x, S.y - 3)) { S.cling = d; S.rope = null; S.climbing = false; S.ground = false; S.vx = 0; S.vy = 0; S.pushT = 0; moveY(-3); Sound.fx.grab(); return; }
+      } else S.pushT = 0;
     } else if (!S.ground) {
       if (taut && d) {
         // Pumping the swing: a push along the arc, the way the thumb says.
@@ -448,7 +481,7 @@ const Climb = (() => {
         }
       }
       const hx = moveX(S.vx * h); if (hx) { side = hx; S.vx = 0; }
-      if (moveY(S.vy * h)) S.vy = 0;
+      const hy = moveY(S.vy * h); if (hy) S.vy = hy < 0 ? 40 : 0;
       if (S.rope) {
         const [qx, qy] = grip(), L = dist(qx, qy, S.rope.x, S.rope.y);
         if (L > S.rope.len) {
@@ -460,7 +493,7 @@ const Climb = (() => {
     S.ground = S.vy >= 0 && boxHit(S.x, S.y + 1);
     if (S.ground && !wasGround && vyIn > 300) { S.landT = vyIn > 620 ? 0.5 : 0.32; S.landMax = S.landT; Sound.fx.land(clamp(vyIn / 700, 0.3, 1)); }
     // Into a wall in the air, holding toward it: cling.
-    if (!S.ground && d && near(d) && !S.climbing && !S.cling) { S.cling = d; S.clingT = 0; S.dir = d; S.vx = 0; S.vy = 0; Sound.fx.grab(); }
+    if (!S.ground && d && near(d) && !S.climbing && !S.cling) { S.cling = d; S.dir = d; S.vx = 0; S.vy = 0; S.rope = null; Sound.fx.grab(); }
     if (side && !S.cling && Math.abs(vyIn) + Math.abs(S.vx) > 500) Sound.fx.wallSlam(0);
     if (boxHit(S.x, S.y)) { const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; } }
   }
@@ -638,12 +671,18 @@ const Climb = (() => {
     return S_({ lean: -0.55, head: -0.5, sF: 2.7 + 0.28 * a, eF: 0.25 + 0.35 * up(a), sB: 2.7 + 0.28 * b, eB: 0.25 + 0.35 * up(b), tq: 0,
       hF: 1.25 + 0.45 * up(a), kF: 1.0 + 0.7 * up(a), hB: 1.25 + 0.45 * up(b), kB: 1.0 + 0.7 * up(b) });
   }
+  // On the rock with bare hands, facing it: a hand up, a knee up, in turn (the torch in his teeth).
+  function wallClimb(ph) {
+    const a = Math.sin(ph), b = -a, up = (v) => Math.max(0, v);
+    return S_({ lean: 0.12, head: -0.35, sF: 2.55 + 0.4 * a, eF: 0.35 + 0.5 * up(b), sB: 2.55 + 0.4 * b, eB: 0.35 + 0.5 * up(a), tq: 0,
+      hF: 0.35 + 0.95 * up(a), kF: 0.5 + 1.3 * up(a), hB: 0.35 + 0.95 * up(b), kB: 0.5 + 1.3 * up(b) });
+  }
   function monkPose() {
     const t = S.t;
     if (S.dying) return MONK_ANIM.fall(0.3);
     if (S.act) return S.act.kind === "stepUp" ? MONK_ANIM.stepUp(S.act.u) : MONK_ANIM.climbUp(actPoseU(S.act));
     let p;
-    if (S.cling) p = MONK_ANIM.hang((t * 0.5) % 1);
+    if (S.cling) p = wallClimb(S.climbPh);
     else if (S.wall) p = wallWalk(S.climbPh);
     else if (S.rope && !S.ground) {
       p = MONK_ANIM.hang((t * 0.6) % 1);
@@ -710,7 +749,7 @@ const Climb = (() => {
     }
     if (S.cling) mx += S.cling * 2;
     S.lastPose = p; S.drawX = mx; S.drawY = my;
-    const r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: F.on ? 0.8 : 1, teeth: S.climbing && !S.ground && !S.act });
+    const r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: F.on ? 0.8 : 1, teeth: (S.climbing && !S.ground || !!S.cling) && !S.act });
     if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
     const hand = r && r.hand ? [r.hand[0] + cam.x, r.hand[1] + cam.y] : grip();
     if (S.rope) {
@@ -792,8 +831,8 @@ const Climb = (() => {
     if (S.hintT < 16 || S.hooked < 2) {
       const a = clamp(S.hintT / 0.6, 0, 1) * (S.hooked >= 2 ? clamp((16 - S.hintT) / 1.5, 0, 1) : 1);
       const L = usingKeys()
-        ? ["Click the rock: he throws the hook there.  W, or both arrows: climb the rope.", "← → swing. Into a wall, hold toward it: cling. Space: let go, jump, leap.", "F: the flare. Then click anywhere near: appear there."]
-        : ["Tap the rock: he throws the hook there.  Both thumbs: climb the rope.", "◀ ▶ swing. Into a wall, hold toward it: cling. The button: let go, jump, leap.", "Hold the button: the flare. Then tap anywhere near: appear there."];
+        ? ["Click the rock: he throws the hook there.  W, or both arrows: climb the rope.", "← → swing. Hold toward a wall: he climbs it. Space: let go, jump, leap.", "F: the flare. Then click anywhere near: appear there."]
+        : ["Tap the rock: he throws the hook there.  Both thumbs: climb the rope.", "◀ ▶ swing. Hold toward a wall: he climbs it. The button: let go, jump, leap.", "Hold the button: the flare. Then tap anywhere near: appear there."];
       L.forEach((l, i) => text(l, W / 2, H - 58 + i * 15, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 240 }));
     }
     if (S.fuel < 0.25 && !S.dying) text("THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
@@ -862,8 +901,8 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
-      ? [["CLICK THE ROCK", "He throws the hook there"], ["W, OR BOTH ARROWS", "Climb the rope; against a wall, walk up it (S lets it out)"], ["← →  OR  A D", "Swing on the rope; walk on the ground"], ["INTO A WALL, HOLD TOWARD IT", "Cling"], ["SPACE", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["F, THEN CLICK", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]]
-      : [["TAP THE ROCK", "He throws the hook there"], ["BOTH THUMBS", "Climb the rope; against a wall, walk up it"], ["◀ ▶", "Swing on the rope; walk on the ground"], ["INTO A WALL, HOLD TOWARD IT", "Cling"], ["THE BUTTON", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["HOLD THE BUTTON, THEN TAP", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]];
+      ? [["CLICK THE ROCK", "He throws the hook there"], ["W, OR BOTH ARROWS", "Climb the rope; against a wall, walk up it (S lets it out)"], ["← →  OR  A D", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["SPACE", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["F, THEN CLICK", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]]
+      : [["TAP THE ROCK", "He throws the hook there"], ["BOTH THUMBS", "Climb the rope; against a wall, walk up it"], ["◀ ▶", "Swing on the rope; walk on the ground"], ["HOLD TOWARD A WALL", "He climbs it with his hands (away: let go)"], ["THE BUTTON", "Let go (a flip at the top of a swing), jump, leap off a wall"], ["AT A LEDGE", "He pulls himself up onto it"], ["HOLD THE BUTTON, THEN TAP", "The flare: appear there, even through rock"], ["THE VERSES ON THE ROCK", "Come near one: the torch is full again"]];
     const rh = Math.min(30, (H - 64) / mv.length);
     text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
     mv.forEach(([k, what], i) => {
