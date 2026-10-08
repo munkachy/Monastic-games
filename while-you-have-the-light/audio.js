@@ -1063,6 +1063,22 @@ const Sound = (() => {
     I.bell(t, 62, 2.4, 0.28, { ratio: 2, index: 0.8, sfx: true, rev: 0.7 });
     I.choir(t + 0.1, [62, 69], 1.6, 0.12, { vowel: "o", att: 0.5, rel: 1.2, rev: 0.7, sfx: true });
   };
+  // Fat bursting: a wet slap and a spatter.
+  fx.splat = function (pan, v) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    hiss(t, "lowpass", 1400, 300, 0.18, 0.36 * v, { q: 1.6, pan });
+    tone(t, "sine", 180, 70, 0.14, 0.26 * v, { pan });
+    for (let k = 0; k < 4; k++) hiss(t + 0.04 + k * 0.035, "bandpass", rnd(700, 1400), 500, 0.03, 0.1 * v, { q: 3, pan });
+  };
+  // Gluttony heaving up its fat: a deep wet gurgle rising.
+  fx.gurgle = function (pan) {
+    if (!ok()) return; const t = T0();
+    const a = osc("sine", 70, t), lfo = osc("sine", 11, t), lg = gainAt(t, 22), g = gainAt(t);
+    a.frequency.linearRampToValueAtTime(140, t + 0.7); lfo.connect(lg); lg.connect(a.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.22, t + 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    a.connect(g); route(g, t, { sfx: true, pan }); a.start(t); lfo.start(t); a.stop(t + 0.85); lfo.stop(t + 0.85);
+    hiss(t, "lowpass", 300, 700, 0.7, 0.14, { q: 2.5, swell: 0.6, pan });
+  };
   // How loud each effect sits against the music: the blows must cut through a fight at its
   // height, the small sounds of the body stay small, and the great moments are big without
   // swamping everything. Each effect's voices pass through this gain, reverb and all.
@@ -1072,6 +1088,7 @@ const Sound = (() => {
     empty: 3, flareOn: 1.5, flareOff: 2, oilReady: 2, mark: 4, chain: 4, waveStart: 1.3, waveClear: 1, unlock: 1.8, death: 1.6, tether: 2.5, tetherBreak: 3, steal: 2.5,
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
+    splat: 2.6, gurgle: 2.4,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
