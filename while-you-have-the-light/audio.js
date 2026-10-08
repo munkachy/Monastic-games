@@ -1007,6 +1007,62 @@ const Sound = (() => {
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t + 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
     a.connect(lp); lp.connect(g); route(g, t, { sfx: true, pan, rev: 0.3 }); a.start(t); a.stop(t + 0.95);
   };
+  // A lamp lit from the torch (or fire kindling in Wrath's hands): a soft catch of flame and, for
+  // a lamp, one small bell.
+  fx.kindle = function (v, pan) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    hiss(t, "lowpass", 400, 1800, 0.35, 0.3 * v, { q: 0.8, swell: 0.3, pan });
+    tone(t, "sine", 140, 220, 0.25, 0.12 * v, { pan });
+    if (v >= 1) I.bell(t + 0.12, 81, 1.4, 0.14, { ratio: 2, index: 0.8, sfx: true, pan, rev: 0.6 });
+  };
+  // Wrath's fire thrown: a breathy roar that rolls away.
+  fx.fireball = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "lowpass", 300, 1400, 0.55, 0.32, { q: 1.2, swell: 0.25, pan, rev: 0.25 });
+    hiss(t, "bandpass", 900, 500, 0.5, 0.12, { q: 1.5, swell: 0.4, pan });
+    tone(t, "sawtooth", 70, 50, 0.4, 0.06, { lp: 300, pan });
+  };
+  fx.fireBurst = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "lowpass", 2400, 300, 0.4, 0.34, { q: 0.9, pan, rev: 0.3 });
+    tone(t, "sine", 120, 45, 0.25, 0.22, { pan });
+  };
+  // Rock beginning to give way: a dry crack and a trickle of grit; then it goes.
+  fx.crack = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "highpass", 2500, 1800, 0.05, 0.3, { pan });
+    hiss(t + 0.07, "bandpass", 1600, 900, 0.04, 0.2, { q: 2, pan });
+    pebbles(t + 0.1, 4, 0.03, pan);
+  };
+  fx.crumble = function (pan) {
+    if (!ok()) return; const t = T0();
+    tone(t, "sine", 90, 36, 0.6, 0.4, { pan });
+    hiss(t, "lowpass", 1800, 140, 0.8, 0.34, { q: 0.8, pan, rev: 0.4 });
+    pebbles(t + 0.05, 10, 0.06, pan);
+  };
+  // Gluttony draws in its breath: a long rising suck of air, low and wet.
+  fx.inhale = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "bandpass", 300, 1300, 2.2, 0.3, { q: 1.4, swell: 0.85, pan, rev: 0.2 });
+    hiss(t, "lowpass", 200, 600, 2.2, 0.18, { q: 2, swell: 0.9, pan });
+    const a = osc("sawtooth", 46, t), lp = filt("lowpass", 240, 4, t), g = gainAt(t);
+    a.frequency.linearRampToValueAtTime(58, t + 2.2);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.08, t + 1.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+    a.connect(lp); lp.connect(g); route(g, t, { sfx: true, pan }); a.start(t); a.stop(t + 2.5);
+  };
+  // Into the pit: the rush of air as he falls, and the torch going down into the dark.
+  fx.abyss = function () {
+    if (!ok()) return; const t = T0();
+    hiss(t, "bandpass", 2200, 260, 1.2, 0.34, { q: 1.2, swell: 0.3, rev: 0.5 });
+    for (let k = 0; k < 6; k++) hiss(t + 0.2 + k * 0.12, "lowpass", rnd(500, 1000), 200, 0.06, 0.1 * (1 - k / 7), { q: 1.4 });
+    tone(t + 0.1, "sine", 300, 60, 1.1, 0.08);
+  };
+  // Waking by the lamp: one low bell, and a breath of choir.
+  fx.wake = function () {
+    if (!ok()) return; const t = T0();
+    I.bell(t, 62, 2.4, 0.28, { ratio: 2, index: 0.8, sfx: true, rev: 0.7 });
+    I.choir(t + 0.1, [62, 69], 1.6, 0.12, { vowel: "o", att: 0.5, rel: 1.2, rev: 0.7, sfx: true });
+  };
   // How loud each effect sits against the music: the blows must cut through a fight at its
   // height, the small sounds of the body stay small, and the great moments are big without
   // swamping everything. Each effect's voices pass through this gain, reverb and all.
@@ -1015,6 +1071,7 @@ const Sound = (() => {
     demonHurt: 3.5, demonBroken: 1.8, castOut: 1.1, finisher: 1.05, pickup: 3, throw: 3, catchIt: 3.5, flick: 3.2, objHit: 2.6, shatter: 2.4, flaskThrow: 3, splash: 1.9, flaskGet: 1.8,
     empty: 3, flareOn: 1.5, flareOff: 2, oilReady: 2, mark: 4, chain: 4, waveStart: 1.3, waveClear: 1, unlock: 1.8, death: 1.6, tether: 2.5, tetherBreak: 3, steal: 2.5,
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
+    kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
