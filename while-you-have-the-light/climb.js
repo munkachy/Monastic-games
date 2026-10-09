@@ -1880,6 +1880,7 @@ const Climb = (() => {
     S.climbing = !!R && I.u;
     // (Not while rock is over his head: then he leans out round it first, and the rope waits.)
     if (R && S.climbing && !(!S.ground && boxHit(S.x, S.y - 4)) && freeOf(R) > ROPE_MIN) { R.len = Math.max((R.fixed || 0) + ROPE_MIN, R.len - CLIMB_V * (1 - 0.8 * heavy()) * dt); S.climbPh += dt * 9; }
+    if (R && S.leapT > 0) R.len = Math.max((R.fixed || 0) + ROPE_MIN, R.len - 380 * dt);
     if (R && I.dn && R.len < ROPE_MAX) R.len = Math.min(ROPE_MAX, R.len + PAYOUT * dt);
     // A long throw: he reels the rope in fast, and it draws him toward the hook, till it is a length he can swing on.
     if (R && R.len > ROPE_MAX) { R.len = Math.max(ROPE_MAX, (R.fixed || 0) + ROPE_MIN, R.len - REEL_V * dt); }
@@ -1950,11 +1951,14 @@ const Climb = (() => {
         const L = ledgeAround(); if (L) { S.climbStall = 0; startAct("ledge", L); return; }
       }
     } else { S.climbStall = 0; S.climbY = undefined; }
-    // On the ground with the rope above him, a push begins a swing: he lifts off, his feet come
-    // up, and the rope takes up a little so the arc clears the ground.
-    if (S.ground && R && d && !S.climbing && !S.held && PV.y < gy - 24 && Math.abs(PV.x - gx) < rd * 0.85) {
-      R.len = (R.fixed || 0) + Math.max(ROPE_MIN, Math.min(freeOf(R), rd) - 16);
-      S.ground = false; S.vy = -150; S.vx = d * 70; S.dir = d; S.liftT = 0.5; Sound.fx.whoosh(0.3);
+    // On the ground with the rope above him, up or a push and he leaps: straight up the rope (up),
+    // or off to that side to start a swing (left or right; with up as well, higher). The rope is
+    // taken up behind him as he goes, so he hangs clear of the ground and swinging at once.
+    if (S.ground && R && (d || I.u) && !S.held && !(S.leapCd > 0) && PV.y < gy - 24) {
+      R.len = Math.min(R.len, (R.fixed || 0) + Math.max(ROPE_MIN, rd));
+      const w = 1 - 0.4 * heavy();
+      S.ground = false; S.vy = -(d && !I.u ? 290 : 340) * w; S.vx = d * 190 * w; if (d) S.dir = d;
+      S.leapT = d && !I.u ? 0.12 : 0.2; S.liftT = 0.5; S.leapCd = 0.45; Sound.fx.whoosh(0.5);
     }
     if (S.ground && !(taut && S.climbing)) {
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
@@ -2081,7 +2085,7 @@ const Climb = (() => {
     for (const o of S.things) updThing(o, wdt);
     S.things = S.things.filter((o) => o.st !== "gone" && o.y < S.y + 1400);
     S.hurtT = Math.max(0, S.hurtT - wdt); S.invT = Math.max(0, S.invT - dt); S.flashT = Math.max(0, S.flashT - dt); S.floatT = Math.max(0, S.floatT - wdt); S.shake = Math.max(0, S.shake - dt);
-    S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
+    S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.leapT = Math.max(0, (S.leapT || 0) - wdt); S.leapCd = Math.max(0, (S.leapCd || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
 
     if (!S.fightSeen && S.demons.some((f) => alive(f) && !f.idol && dist(f.x, f.y, S.x, S.y) < 420)) { S.fightSeen = true; S.fightHintT = 0; }
     if (S.fightSeen) S.fightHintT += dt;
