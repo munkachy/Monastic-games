@@ -201,6 +201,13 @@ addEventListener("pointerdown", (ev) => {
 addEventListener("pointermove", (ev) => { if (!portrait && mode && mode.move) mode.move(toGame(ev), ev); }, { passive: false });
 const pointerUp = (ev) => { if (!portrait && mode && mode.up) mode.up(toGame(ev), ev); };
 addEventListener("pointerup", pointerUp); addEventListener("pointercancel", pointerUp);
+// When the last finger lifts, anything still held is let go (just after, so the pointer's own
+// "up" is heard first); and all of it when the page loses the eye.
+const lastUp = (ev) => { if (ev.touches && ev.touches.length === 0) { const at = performance.now(); setTimeout(() => { if (typeof Climb !== "undefined" && Climb.allUp) Climb.allUp(at); }, 60); } };
+addEventListener("touchend", lastUp); addEventListener("touchcancel", lastUp);
+const letGo = () => { if (typeof Climb !== "undefined" && Climb.allUp) Climb.allUp(Infinity, true); };
+addEventListener("blur", letGo); addEventListener("pagehide", letGo);
+document.addEventListener("visibilitychange", () => { if (document.hidden) letGo(); });
 addEventListener("contextmenu", (e) => e.preventDefault());
 addEventListener("keydown", (e) => {
   lastInput = "key";
