@@ -3162,7 +3162,7 @@ const Climb = (() => {
     if (F.on) text("THE FLARE · TAP A DEMON, A BOULDER, OR ANYWHERE", W / 2, 24, { align: "center", size: 9, weight: 800, spacing: 2, color: C.flameHot, max: W - 140 });
     if (S.fightSeen && S.fightHintT < 12 && !F.on) {
       const a = clamp(S.fightHintT / 0.5, 0, 1) * clamp((12 - S.fightHintT) / 1.5, 0, 1);
-      const L = ["A demon. Tap it: strike.  Swipe up: uppercut.  Down: slam.  Across: hurl.  Swing into it: a kick.", "Tap what is thrown at you: standing, you catch it as it comes. Tap again: fling it.  Swing into it: kick it back.  Hold on a demon (or yourself): the sign of the cross."];
+      const L = ["A demon. Tap it: strike.  Swipe up: uppercut.  Down: slam.  Across: hurl.  Swing into it: a kick.", "Tap what is thrown at you: standing, you catch it as it comes. Tap again: fling it.  Swing into it: kick it back.  " + (usingKeys() ? "Hold on a demon (or yourself): the sign of the cross." : "Hold on a demon: the sign of the cross.  Two fingers at once: bless yourself.")];
       let y = 112; for (const l of L) y += 12 * textLines(l, W / 2, y, W - 120, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, lh: 12 }) + 3;
     }
     if (S.verse) {
@@ -3207,6 +3207,15 @@ const Climb = (() => {
       const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (S.flare.on) endFlare(); else startFlare(); return; }
       const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0, born: performance.now() };
       S.touches.set(id, t);
+      // Two fingers down on the play together: he signs himself (the ward). The first finger's
+      // throw, if it is still in the air, is called back; neither finger's tap or swipe counts.
+      const other = [...S.touches.entries()].find(([k, u]) => k !== id && !u.dpad && !u.act);
+      if (!usingKeys() && other && !other[1].two && t.born - other[1].born < 260) {
+        t.two = other[1].two = true; if (other[1].g) other[1].g.done = true;
+        if (S.shot && S.shot.ph === "fly" && S.shot.t < 0.3) S.shot = null;
+        if (!S.ward) ward();
+        return;
+      }
       if (S.act) return;
       // On a demon or a boulder: wait to see if it is a tap or a swipe.
       // A boulder tapped right on wins over the demon behind it.
@@ -3296,7 +3305,7 @@ const ClimbPause = {
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
       ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow; a kick ends it"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
-      : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow; a kick ends it"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
+      : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow; a kick ends it"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     // Each move over as many lines as it needs; as large as lets them all fit.
     const cw = W - mx - 16;
     let z = 8.5; const lines = (sz) => mv.reduce((n, [, what]) => n + 1 + wrap(what, cw, "500 " + sz + "px " + FONT.ui).length, 0);
