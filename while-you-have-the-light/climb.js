@@ -55,7 +55,7 @@ const Climb = (() => {
   // faster, and once it bites he reels the rope in quickly to ROPE_MAX, a length he can swing on.
   const HOOK_FAR = 3000, HOOK_V_FAR = 2400, REEL_V = 600;
   const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
-  const BURN = 1 / 150;                            // a full torch lasts two and a half minutes, all the way up
+  const BURN = 1 / 300;                            // a full torch lasts five minutes, all the way up: time to look about
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
@@ -75,7 +75,7 @@ const Climb = (() => {
   // Lust's crossings: long corridors climbing steadily across the mountain from side to side, in
   // terraces, floored and hung with briars; and its shafts short, the only straight ways up.
   const SLOPE = { lust: true };
-  const LW = 140, TER = 12, SG = 15;               // its shafts' distance from the middle; a terrace's length; the corridor's height
+  const LW = 140, TER = 12, SG = 24;               // its shafts' distance from the middle; a terrace's length; the corridor's height (room to swing)
   // Avarice's: a mine. Its shafts farther apart than most, with long galleries between hung with
   // chains; in each shaft a shelf of rock across it, with a narrow way through (the needle's eye).
   const MINE = { avarice: true }, AW = 62;
@@ -244,8 +244,8 @@ const Climb = (() => {
       T.C = T.F + SG - 1 + Math.floor(hash2(k, 1100 + t, seed) * 4);
       const inner = t > 0 && t < ter.length - 1;
       T.thorn = inner && bare < 3 && hash2(k, 1200 + t, seed) < 0.62; bare = T.thorn ? bare + 1 : 0;
-      T.pillar = T.thorn && T.b - T.a >= 9 && hash2(k, 1300 + t, seed) < 0.45 ? 3 + Math.floor(hash2(k, 1310 + t, seed) * 4) : 0;
-      T.hang = inner && hash2(k, 1400 + t, seed) < 0.38 ? 2 + Math.floor(hash2(k, 1410 + t, seed) * 2) : 0;
+      T.pillar = T.thorn && T.b - T.a >= 9 && hash2(k, 1300 + t, seed) < 0.3 ? 2 + Math.floor(hash2(k, 1310 + t, seed) * 3) : 0;
+      T.hang = inner && !T.pillar && hash2(k, 1400 + t, seed) < 0.22 ? 2 + Math.floor(hash2(k, 1410 + t, seed) * 2) : 0;
     });
     // Column by column: the floor's height (rows of rock), the roof's first row, the pillar, and
     // which surfaces are briars.
@@ -1012,7 +1012,12 @@ const Climb = (() => {
     Sound.fx.crack(panX(f.x));
     for (let q = 0; q < 7; q++) S.parts.push({ kind: "chip", x: f.x + (Math.random() - 0.5) * 12, y: f.y - 18 - Math.random() * 20, vx: (Math.random() - 0.5) * 200, vy: -60 - Math.random() * 160, life: 0.6, age: 0 });
     scatter(f);
-    if (f.hp <= 0) { setSt(f, "topple"); f.fall = sign(kx) || (f.x > S.x ? 1 : -1); gain(0.2); }
+    if (f.hp <= 0) {
+      setSt(f, "topple"); f.fall = sign(kx) || (f.x > S.x ? 1 : -1); gain(0.2);
+      // The idol thrown down, his torch is filled again: the light it was keeping comes to him.
+      S.fuel = 1; const [mx, my] = middle();
+      for (let k = 0; k < 26; k++) S.parts.push({ kind: "coinfly", x: f.x + (Math.random() - 0.5) * 24, y: f.y - Math.random() * f.ht, tx: mx, ty: my, vx: 0, vy: 0, life: 0.3 + k * 0.03, age: 0, real: true, light: true, quiet: true });
+    }
     return true;
   }
   function scatter(f) {
@@ -1147,6 +1152,11 @@ const Climb = (() => {
   // for alms), each is light again in his torch: "alms deliver from death" (Tobit 12:9).
   const COINS_MAX = 9, COIN_V = 255, ALMS_LIGHT = 0.07;
   const heavy = () => Math.min(COINS_MAX, S.coins || 0) / COINS_MAX;
+  // And his blows are weaker for it: with nine coins on him, two-thirds as hard, and shorter.
+  function blowTo(f, dmg, kx, ky, how) {
+    const w = 1 - 0.35 * heavy(), k = 0.3 + 0.7 * w;
+    return hurtDemon(f, dmg * w, kx * k, ky * k, how);
+  }
   function throwCoins(f) {
     // (Thrown to come down on him: in the time the throw takes, the fall the coins make allowed for.)
     const hx = f.x + f.dir * 8, hy = f.y - f.ht + 6, [tx, ty] = middle(), T = Math.max(0.35, dist(hx, hy, tx, ty) / COIN_V), g = 330;
@@ -1714,21 +1724,21 @@ const Climb = (() => {
         const o = a.o;
         if (S.held === o && alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
           const [cx, cy] = dMid(f);
-          if (o.kind === "fire") { hurtDemon(f, 3, S.dir * 220, -260, "launch"); S.held = null; o.x = cx; o.y = cy; burst(o, cx, cy); }
-          else if (o.kind === "thorn") { hurtDemon(f, 3, S.dir * 220, -240, "launch"); S.held = null; o.st = "gone"; briarHit(cx, cy); }
-          else if (o.kind === "coin") { hurtDemon(f, 2, S.dir * 180, -200, "launch"); S.held = null; o.st = "gone"; Sound.fx.coin(panX(f.x), 1); }
-          else if (o.kind === "fat") { hurtDemon(f, 2, S.dir * 200, -200, "launch"); S.held = null; splat(o, cx, cy, false); }
-          else { hurtDemon(f, 3, S.dir * 280, -240, "launch"); Sound.fx.objHit("stone", panX(f.x)); Sound.fx.punch(1, panX(f.x)); }
+          if (o.kind === "fire") { blowTo(f, 3, S.dir * 220, -260, "launch"); S.held = null; o.x = cx; o.y = cy; burst(o, cx, cy); }
+          else if (o.kind === "thorn") { blowTo(f, 3, S.dir * 220, -240, "launch"); S.held = null; o.st = "gone"; briarHit(cx, cy); }
+          else if (o.kind === "coin") { blowTo(f, 2, S.dir * 180, -200, "launch"); S.held = null; o.st = "gone"; Sound.fx.coin(panX(f.x), 1); }
+          else if (o.kind === "fat") { blowTo(f, 2, S.dir * 200, -200, "launch"); S.held = null; splat(o, cx, cy, false); }
+          else { blowTo(f, 3, S.dir * 280, -240, "launch"); Sound.fx.objHit("stone", panX(f.x)); Sound.fx.punch(1, panX(f.x)); }
           S.shake = 0.22; gain(0.14); breakWard(); impact(f, S.dir, -0.3, 2);
         }
       }
       else if (a.kind === "heave" || a.kind === "catch") {
         if (a.o.st === "rest" || a.o.st === "fly") { a.o.st = "held"; a.o.by = null; S.held = a.o; if (a.kind === "catch") { Sound.fx.catchIt(); gain(0.08); } else Sound.fx.pickup(); }
       } else if (alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
-        if (a.kind === "punch") { impact(f, S.dir, -0.2, 1); hurtDemon(f, 1, S.dir * 150, -60); Sound.fx.punch(0.8, panX(f.x)); gain(0.06); }
-        else if (a.kind === "kick") { impact(f, S.dir * 0.2, -1, 1.4); hurtDemon(f, 1, S.dir * 30, -430, "launch"); Sound.fx.kick(0.9, panX(f.x)); gain(0.06); }
-        else if (a.kind === "slam") { impact(f, a.dir[0] * 0.3, 1, 1.6); hurtDemon(f, 1, a.dir[0] * 140, 680, "hurl"); Sound.fx.punch(1, panX(f.x)); gain(0.06); }
-        else { impact(f, a.dir[0], a.dir[1], 1.8); hurtDemon(f, 1, a.dir[0] * 580, a.dir[1] * 580 - 90, "hurl"); Sound.fx.kick(1, panX(f.x)); gain(0.08); }
+        if (a.kind === "punch") { impact(f, S.dir, -0.2, 1); blowTo(f, 1, S.dir * 150, -60); Sound.fx.punch(0.8, panX(f.x)); gain(0.06); }
+        else if (a.kind === "kick") { impact(f, S.dir * 0.2, -1, 1.4); blowTo(f, 1, S.dir * 30, -430, "launch"); Sound.fx.kick(0.9, panX(f.x)); gain(0.06); }
+        else if (a.kind === "slam") { impact(f, a.dir[0] * 0.3, 1, 1.6); blowTo(f, 1, a.dir[0] * 140, 680, "hurl"); Sound.fx.punch(1, panX(f.x)); gain(0.06); }
+        else { impact(f, a.dir[0], a.dir[1], 1.8); blowTo(f, 1, a.dir[0] * 580, a.dir[1] * 580 - 90, "hurl"); Sound.fx.kick(1, panX(f.x)); gain(0.08); }
         breakWard();
       }
     }
@@ -1776,7 +1786,7 @@ const Climb = (() => {
     S.meter -= CROSS_COST;
     S.crosses.push({ kind: "smite", x: cx, y: cy, t: 0, size: 24 });
     f.brokenT = 1.6; S.freeze = 0.12; S.whiteT = 0.22;
-    hurtDemon(f, 3, sign(f.x - S.x) * 300, -220, "hurl");
+    blowTo(f, 3, sign(f.x - S.x) * 300, -220, "hurl");
     for (let k = 0; k < 30; k++) { const a = Math.random() * TAU, v = 60 + Math.random() * 220; S.parts.push({ kind: "spark", c: k % 2 ? C.flameHot : SINS[f.sin].color, x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.7, age: 0, real: true }); }
     Sound.fx.unlock(); Sound.fx.demonBroken(f.sin); Sound.fx.castOut(f.sin); S.shake = 0.3;
   }
@@ -1808,7 +1818,7 @@ const Climb = (() => {
       if (yIn <= top + 6 && S.y >= top - 2) {
         f.stompCd = S.rt + 0.35;
         impact(f, 0, 1, vyIn > 430 ? 1.8 : 1.2, f.x, f.y - f.ht);
-        hurtDemon(f, vyIn > 430 ? 2 : 1, sign(f.x - S.x) * 40 || 40, 0);
+        blowTo(f, vyIn > 430 ? 2 : 1, sign(f.x - S.x) * 40 || 40, 0);
         if (alive(f) && !f.idol) setSt(f, "down");
         S.y = top - 0.5; S.vy = -330; S.vx *= 0.5; S.stompT = 0.4; S.ground = false;
         Sound.fx.kick(1, panX(f.x)); Sound.fx.land(0.8); S.shake = 0.2; gain(0.08); breakWard();
@@ -1823,7 +1833,7 @@ const Climb = (() => {
     const fx = S.x + sign(S.vx) * 12;
     for (const f of S.demons) if (alive(f) && Math.abs(f.x - fx) < f.hw + 16 && f.y - f.ht < S.y + 4 && f.y > S.y - HT - 6) {
       impact(f, sign(S.vx), -0.2, sp > 380 ? 2 : 1.3);
-      hurtDemon(f, sp > 380 ? 2 : 1, S.vx * 0.9, -160 - sp * 0.2, "hurl");
+      blowTo(f, sp > 380 ? 2 : 1, S.vx * 0.9, -160 - sp * 0.2, "hurl");
       Sound.fx.kick(1, panX(f.x)); S.swingKickT = 0.35; S.kickCd = 0.45; S.shake = 0.15; gain(0.1); breakWard();
       S.vx *= 0.6; S.vy *= 0.6; S.dir = sign(S.vx) || S.dir;
       break;
@@ -2135,7 +2145,7 @@ const Climb = (() => {
       const k = p.real ? dt : wdt; p.age += k; p.x += p.vx * k; p.y += p.vy * k;
       if (p.kind === "chip") p.vy += 500 * k; else if (p.kind === "smoke") { p.vx *= 1 - 2 * k; p.vy *= 1 - 2 * k; }
       else if (p.kind === "glob") p.vy += 600 * k;
-      else if (p.kind === "coinfly") { const u = Math.min(1, p.age / p.life); p.x = lerp(p.x, p.tx, Math.min(1, k * 9)); p.y = lerp(p.y, p.ty, Math.min(1, k * 9)) - Math.sin(u * PI) * 1.5; if (u >= 1 && !p.done) { p.done = true; Sound.fx.coin(panX(p.tx), 0.45); } }
+      else if (p.kind === "coinfly") { const u = Math.min(1, p.age / p.life); p.x = lerp(p.x, p.tx, Math.min(1, k * 9)); p.y = lerp(p.y, p.ty, Math.min(1, k * 9)) - Math.sin(u * PI) * 1.5; if (u >= 1 && !p.done) { p.done = true; if (!p.quiet) Sound.fx.coin(panX(p.tx), 0.45); } }
       else if (p.kind === "draft") { const q = 1 - Math.exp(-k * 4.5); p.px = p.x; p.py = p.y; p.x = lerp(p.x, p.tx, q); p.y = lerp(p.y, p.ty, q); }
     }
     S.parts = S.parts.filter((p) => p.age < p.life);
@@ -3007,11 +3017,11 @@ const Climb = (() => {
       crackLines(isl.x0 * CELL - cam.x, (isl.x1 + 1) * CELL - cam.x, -isl.h1 * CELL - cam.y, s, isl.stage);
     }
     for (const f of S.demons) {
-      if (f.idol) { if (f.showHp > 0 && f.st === "idle") { const a = Math.min(1, f.showHp), y = f.y - f.ht - 10 - cam.y; for (let k = 0; k < f.maxHp; k++) circle(f.x - cam.x - (f.maxHp - 1) * 3.5 + k * 7, y, 2.2, k < f.hp ? hexA(SINS[f.sin].color, a) : "rgba(40,40,46," + a + ")"); } continue; }
+      if (f.idol) { if (f.showHp > 0 && f.st === "idle") { const a = Math.min(1, f.showHp), y = f.y - f.ht - 10 - cam.y; for (let k = 0; k < f.maxHp; k++) circle(f.x - cam.x - (f.maxHp - 1) * 3.5 + k * 7, y, 2.2, k < Math.floor(f.hp + 1e-6) ? hexA(SINS[f.sin].color, a) : k < f.hp ? hexA(SINS[f.sin].color, a * 0.4) : "rgba(40,40,46," + a + ")"); } continue; }
       if (!f.p || f.st === "gone") continue;
       if (f.lit < 0.6 && f.st !== "dying") { const sc = 1 + 0.1 * (f.size || 0); ctx.save(); ctx.translate(f.x - cam.x, f.y - cam.y + (f.dy || 0)); ctx.scale(sc, sc); demonEyes(f.sin, 0, 0, f.dir, f.p, { t: S.rt, windup: f.st === "windup" || f.st === "inhale" || f.st === "heave" ? Math.min(1, f.t / 0.55) : 0, alpha: 1 - f.lit }); ctx.restore(); }
       if (f.fatAt) drawFat(f.fatAt[0], f.fatAt[1], f.fatAt[2], f.lit > 0.5);
-      if (f.showHp > 0 && alive(f)) { const a = Math.min(1, f.showHp), y = f.y - f.ht - 10 - cam.y; for (let k = 0; k < f.maxHp; k++) circle(f.x - cam.x - (f.maxHp - 1) * 3.5 + k * 7, y, 2.2, k < f.hp ? hexA(SINS[f.sin].color, a) : "rgba(40,40,46," + a + ")"); }
+      if (f.showHp > 0 && alive(f)) { const a = Math.min(1, f.showHp), y = f.y - f.ht - 10 - cam.y; for (let k = 0; k < f.maxHp; k++) circle(f.x - cam.x - (f.maxHp - 1) * 3.5 + k * 7, y, 2.2, k < Math.floor(f.hp + 1e-6) ? hexA(SINS[f.sin].color, a) : k < f.hp ? hexA(SINS[f.sin].color, a * 0.4) : "rgba(40,40,46," + a + ")"); }
       if (f.fireAt) drawFire(f.fireAt[0], f.fireAt[1], f.fireAt[2], f.id);
       if (f.loot && alive(f)) { const x = f.x - f.dir * 9 - cam.x, y = f.y - f.ht * 0.62 - cam.y; glow(x, y, 12 + f.loot * 60, C.flame, 0.35 + 0.1 * Math.sin(S.rt * 5)); }
     }
@@ -3192,10 +3202,10 @@ const Climb = (() => {
     down(p, ev) {
       if (!S || S.dying) return;
       const id = pid(ev);
-      if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y }); return; }
-      const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true }); action(); return; }
-      const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true }); if (S.flare.on) endFlare(); else startFlare(); return; }
-      const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0 };
+      if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
+      const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); action(); return; }
+      const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (S.flare.on) endFlare(); else startFlare(); return; }
+      const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0, born: performance.now() };
       S.touches.set(id, t);
       if (S.act) return;
       // On a demon or a boulder: wait to see if it is a tap or a swipe.
@@ -3233,6 +3243,14 @@ const Climb = (() => {
         else if (t.g.f) gesture(k.kind, t.g.f, null, k.dir);
         else if (t.g.o) gesture("tap", null, t.g.o, null);
       }
+    },
+    // No finger left on the glass (or the page put away): let go of whatever is still held, the
+    // pad above all. The browser does not always say when a finger lifts (a swipe it took for
+    // itself, a finger slid off the edge), and a pad held down for ever walks him off a cliff.
+    allUp(at, keysToo) {
+      if (!S) return;
+      for (const [id, t] of S.touches) if (!(t.born > at)) S.touches.delete(id);
+      if (keysToo) S.keys = {};
     },
     key(code, down) {
       if (!S) return;
