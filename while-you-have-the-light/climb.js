@@ -2048,6 +2048,10 @@ const Climb = (() => {
     S.whiteT = Math.max(0, (S.whiteT || 0) - dt); S.meterFlash = Math.max(0, (S.meterFlash || 0) - dt);
     for (const c of S.crosses) c.t += dt; S.crosses = S.crosses.filter((c) => c.t < (c.kind === "smite" ? 1.1 : 0.8));
     if (S.kick) { S.kick.t += dt; if (S.kick.t > 0.2) S.kick = null; }
+    if (S.pend && (S.pend.t -= dt) <= 0) {
+      const { wx, wy } = S.pend; S.pend = null;
+      if (S.rope && !S.ground) swapHook(wx, wy); else if (!S.next && !S.act && !S.atk && !S.held && !S.rope) throwHook(wx, wy);
+    }
     if (S.freeze > 0) { S.freeze -= dt; return; }        // a held breath, as the sign strikes
     // A finger held still on a demon (or on him): the sign of the cross, once the cross is drawn.
     for (const t of S.touches.values()) {
@@ -3217,6 +3221,7 @@ const Climb = (() => {
       if (!usingKeys() && other && !other[1].two && t.born - other[1].born < 260) {
         t.two = other[1].two = true; if (other[1].g) other[1].g.done = true;
         if (S.shot && S.shot.ph === "fly" && S.shot.t < 0.3) S.shot = null;
+        S.pend = null;
         if (!S.ward) ward();
         return;
       }
@@ -3235,7 +3240,9 @@ const Climb = (() => {
       if (S.atk) return;
       if (S.ground && wy > S.y - 30) return;
       // Swinging, a tap on fresh rock: he lets go, flips over, and hooks it as he comes round.
-      if (S.rope && !S.ground) { swapHook(wx, wy); return; }
+      // (On a touch screen, a tenth of a second late: if a second finger follows, it was the
+      // sign of the cross over himself, and he keeps hold of the rope.)
+      if (S.rope && !S.ground) { if (usingKeys()) swapHook(wx, wy); else S.pend = { wx, wy, t: 0.1 }; return; }
       if (S.next) { S.next.side = sideOf(wx); return; }
       throwHook(wx, wy);
     },
