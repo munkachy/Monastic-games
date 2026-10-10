@@ -155,7 +155,7 @@ const Novitiate = {
     text(NOV_SUB[N.domain] || "", W / 2, 172, { align: "center", font: FONT.line, italic: true, size: 12, color: SINS[N.domain].light, max: W - 40 });
     text("DEMONS IN EACH PLACE", W / 2, 192, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
     for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 199, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
-    button(N.torch ? "TORCH: ENDLESS" : "TORCH: IT BURNS", W / 2 - 154, 234, 150, 32, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "Take all the time you need" : "As on the climb" });
+    button(N.torch ? "TORCH: ENDLESS" : "TORCH: BLOWS DIM IT", W / 2 - 154, 234, 150, 32, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "No blow can put it out" : "The higher, the more each takes" });
     button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 234, 150, 32, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
     // A place kept on this mountain: going on from it, or (smaller, beside it) from the foot.
     const K = Climb.keptPlace(N.domain);
