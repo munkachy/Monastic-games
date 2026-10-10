@@ -21,7 +21,7 @@ What is in the game now:
 - "place": "shaft" (a climb straight up, with ledges), "crossing" (a long way across: a tunnel with pits, or Gluttony's caverns, or Lust's terraces of briars), or "any".
 - "demons": 0 to 3, how many demons wait in each place along the way (they come back when cast out).
 - "near": demons right beside him at the start: a list of {"sin": "gluttony" | "lust" | "avarice" | "wrath", "count": 1 to 6}. Demons of any of the four can be put on any mountain.
-- "great": a great demon, 0 (none) to 4 (strongest). Only one kind exists, the Maw of Gluttony; it can be put on any mountain. It moves only while he faces it in his light (at 4 it hunts him even when he turns away), swallows him head and shoulders, and only a stone block, thrown or swung, can hurt it. It is set a little way off, and he is given a block.
+- "great": a great demon, 0 (none) to 4 (strongest). Only one kind exists, the Maw of Gluttony; it can be put on any mountain. It moves only while he faces it in his light (at 4 it hunts him even when he turns away), swallows him head and shoulders, and only a stone block swung into it while he swings on the rope can hurt it (thrown, or struck from the ground, it only drives it back). It is set a little way off, and he is given a block.
 - "block": true ties a stone block from an idol to his belt, to throw or swing.
 - "boon": a relic's power for 20 to 30 seconds, or null: "double" (A Double Portion: every blessing counts twice), "unconsumed" (the torch cannot be dimmed, and its light reaches farther), "friar" (The Flying Friar: he falls slowly and swings high), "vade" (Vade Retro: no demon can come near him).
 - "torch": how much light he has, 0.05 (nearly out) to 1 (full). "endlessTorch": true means no blow can dim it.

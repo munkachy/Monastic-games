@@ -665,7 +665,7 @@ const Climb = (() => {
   // mountain, the page closed), he goes on from there the next time he climbs it: the same mountain,
   // what he carried, what he had done below (the lamps lit, the verses read, the relics taken, the
   // blocks in the carts, the great demons cast down). The light going out, the place is forgotten.
-  const KEEP = "wyhtl-mountains", SEEN = ["legsSeen", "crawlSeen", "fightSeen", "blockSeen", "tiedSeen", "handSeen", "carrySeen", "riseSeen", "greatSeen", "latchSeen", "hurlSeen", "shedSeen", "hauntSeen", "freedSeen", "boonSeen"];
+  const KEEP = "wyhtl-mountains", SEEN = ["pushSeen", "legsSeen", "crawlSeen", "fightSeen", "blockSeen", "tiedSeen", "handSeen", "carrySeen", "riseSeen", "greatSeen", "latchSeen", "hurlSeen", "shedSeen", "hauntSeen", "freedSeen", "boonSeen"];
   const keptAll = () => { try { const o = JSON.parse(localStorage.getItem(KEEP) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
   function forget(dom) { const all = keptAll(); if (!all[dom]) return; delete all[dom]; try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { } Kept.wrote(KEEP); }
   Kept.watch(KEEP);
@@ -1956,12 +1956,21 @@ const Climb = (() => {
     impactAt(S.x, S.y - HT * 0.7, s, -0.5, 1.8, null);
     Sound.fx.spit(); Sound.fx.stone(panX(g.x));
   }
-  // A block into it, thrown or swung: a blow it feels. It is knocked back and stunned a while
-  // (stone, its cracks glowing); the last blow, and it breaks.
+  // A block into it. Only swung into it as he swings on the rope (or as he leaves it) is it a blow it
+  // feels: it is knocked back and stunned a while (stone, its cracks glowing); the last blow, and it
+  // breaks. Thrown, or struck with from the ground, the stone only drives it back.
   function strikeGreat(g, b) {
     if (g.st === "dying" || g.st === "latch" || (g.hitCd || 0) > S.rt) return;
     g.hitCd = S.rt + 0.6;
     const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
+    if (!(S.rt - (S.swungT || -9) < 0.4)) {
+      ev("a great demon driven back", { by: b.flung ? "thrown" : "struck" });
+      g.stunT = Math.max(g.stunT, 1); g.hurtT = 0.15; g.st = "stone"; g.t = 0; g.kx = ux * 230; g.ky = uy * 120 - 30;
+      b.vx = -b.vx * 0.3; b.vy = -Math.abs(b.vy) * 0.3 - 120;
+      impactAt(b.x, b.y - b.ht / 2, ux, uy, 1.4, null); Sound.fx.brickHit(0.7, panX(g.x)); Sound.fx.stone(panX(g.x)); S.shake = Math.max(S.shake, 0.15);
+      if (!S.pushSeen) { S.pushSeen = true; S.say = { text: "IT ONLY STAGGERS", sub: "From the ground the stone only drives it back. Swing on the rope, and swing the block into it.", t: 0 }; }
+      return;
+    }
     g.hp -= 1; g.showHp = 3; g.hurtT = 0.3; g.stunT = 2.5; g.st = "stone"; g.t = 0; g.kx = ux * 170; g.ky = uy * 110 - 30;
     ev("a great demon struck", { hp: g.hp, by: b.flung ? "thrown" : "swung" });
     b.vx = -b.vx * 0.25; b.vy = -Math.abs(b.vy) * 0.25 - 140;
@@ -2013,7 +2022,7 @@ const Climb = (() => {
     return g.x + g.hw > c.x - m && g.x - g.hw < c.x + W + m && g.y > c.y - m && g.y - g.ht < c.y + H + m;
   }
   function greatSays() {
-    if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light. Only a block can hurt it: throw it, or swing it.", t: 0 }; }
+    if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light. Only a block hurts it, swung into it as you swing on the rope.", t: 0 }; }
   }
   function startDread(g, kind, from) {
     S.dread = { g, kind, t: 0, T: DREAD_T[kind], from: from || null };
@@ -3461,6 +3470,7 @@ const Climb = (() => {
     if (S.boonShow) { stepBoonShow(dt); return; }
     S.rt += dt;
     if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
+    if (S.rope && !S.ground) S.swungT = S.rt;         // (swinging: the last moment of it, for the block's blow)
     if (NOV) { if (NOV.torch && !S.latched) S.fuel = 1; if (NOV.flare) S.meter = 1; }       // (an endless torch, but not in a great demon's mouth)
     { const [pgx, pgy] = grip(); S.prevGx = pgx; S.prevGy = pgy; }
     S.whiteT = Math.max(0, (S.whiteT || 0) - dt); S.meterFlash = Math.max(0, (S.meterFlash || 0) - dt);
@@ -4926,7 +4936,7 @@ const ClimbPause = {
       ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["S OR \u2193", "Let the rope out, climb down; on the ground, crawl (into a way too low to stand in, he crawls by himself)"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow that reaches him"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
       : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down; on the ground, ▼ crawls (into a way too low to stand in, he crawls by himself)"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     // (In the seven mountains: the block, and the great demons.)
-    if (Climb.nov) mv.push(usingKeys() ? ["CLICK THE BLOCK ON ITS ROPE, THEN CLICK", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: click one, and he throws it straight at it"] : ["TAP THE BLOCK ON ITS ROPE, THEN TAP", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: tap one, and he throws it straight at it"],
+    if (Climb.nov) mv.push(usingKeys() ? ["CLICK THE BLOCK ON ITS ROPE, THEN CLICK", "He takes it up, then throws it, its rope paying out. A great demon: only the block swung into it as you swing on the rope hurts it (thrown, it only drives it back)"] : ["TAP THE BLOCK ON ITS ROPE, THEN TAP", "He takes it up, then throws it, its rope paying out. A great demon: only the block swung into it as you swing on the rope hurts it (thrown, it only drives it back)"],
       [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes. On the rope it cannot take you in: it strikes you off (swinging hard, unharmed)"]);
     // Each move over as many lines as it needs; as large as lets them all fit.
     const cw = W - mx - 16;
