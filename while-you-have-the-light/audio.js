@@ -1125,6 +1125,45 @@ const Sound = (() => {
     a.connect(g); route(g, t, { sfx: true, pan }); a.start(t); lfo.start(t); a.stop(t + 0.85); lfo.stop(t + 0.85);
     hiss(t, "lowpass", 300, 700, 0.7, 0.14, { q: 2.5, swell: 0.6, pan });
   };
+  // A block tied to his belt: the rope drawn tight, a knot pulled.
+  fx.tie = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "bandpass", 1500, 1100, 0.08, 0.16, { q: 2.5, pan });
+    hiss(t + 0.07, "bandpass", 2400, 1800, 0.05, 0.12, { q: 3, pan });
+    tone(t + 0.06, "triangle", 300, 220, 0.06, 0.08, { pan });
+  };
+  // A block swung into a demon: stone, heavy, into it.
+  fx.brickHit = function (v, pan) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    tone(t, "sine", 130, 40, 0.22, 0.5 * v, { pan });
+    hiss(t, "lowpass", 2200, 400, 0.12, 0.34 * v, { q: 1, pan, rev: 0.15 });
+    tone(t, "triangle", 520, 300, 0.05, 0.12 * v, { pan });
+    pebbles(t + 0.02, 3, 0.05 * v, pan);
+  };
+  // A block falling on the rock: a thud of stone on stone.
+  fx.brickDrop = function (pan, v) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    tone(t, "sine", 110, 48, 0.14, 0.32 * v, { pan });
+    hiss(t, "lowpass", 1400, 300, 0.08, 0.2 * v, { q: 1, pan });
+    pebbles(t + 0.01, 2, 0.04 * v, pan);
+  };
+  // A block into the cart: it lands among the others; then the brother's blessing, a peal of small bells.
+  fx.deliver = function (pan) {
+    if (!ok()) return; const t = T0();
+    tone(t + 0.5, "sine", 120, 50, 0.16, 0.3, { pan });
+    pebbles(t + 0.5, 3, 0.05, pan);
+    for (const [i, m] of [74, 78, 81, 86].entries()) I.bell(t + 0.62 + i * 0.11, m, 1.4, 0.13, { ratio: 2, index: 0.8, sfx: true, pan, rev: 0.5 });
+  };
+  // An idol rising again where it fell: stone grinding, and a low swell under it.
+  fx.rise = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "lowpass", 200, 900, 0.9, 0.3, { q: 1.5, swell: 0.7, pan, rev: 0.3 });
+    pebbles(t + 0.1, 8, 0.05, pan);
+    const a = osc("sawtooth", 40, t), lp = filt("lowpass", 260, 3, t), g = gainAt(t);
+    a.frequency.linearRampToValueAtTime(64, t + 0.9);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.18, t + 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    a.connect(lp); lp.connect(g); route(g, t, { sfx: true, pan, rev: 0.4 }); a.start(t); a.stop(t + 1.15);
+  };
   // How loud each effect sits against the music: the blows must cut through a fight at its
   // height, the small sounds of the body stay small, and the great moments are big without
   // swamping everything. Each effect's voices pass through this gain, reverb and all.
@@ -1135,6 +1174,7 @@ const Sound = (() => {
     swallow: 2.5, spit: 3.5, charge: 1.1, wallSlam: 1.6, drain: 2, mirror: 2.4, swoop: 2.5, spawn: 1.5, tick: 2.5,
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
+    tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];

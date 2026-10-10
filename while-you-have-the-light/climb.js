@@ -178,7 +178,7 @@ const Climb = (() => {
     const pit = new Uint8Array(COLS), stop = dir > 0 ? ex.L - 3 : ex.R + 3, before = (i) => (dir > 0 ? i < stop : i > stop);
     let i = dir > 0 ? en.R + 1 : en.L - 1, n = 0, floor = true;
     while (before(i)) {
-      const len = floor ? (n === 0 && sec.gate ? 9 : 3 + Math.floor(hash2(sec.k, 40 + n, seed) * 3)) : 5 + Math.floor(hash2(sec.k, 60 + n, seed) * 4);
+      const len = floor ? (n === 0 && sec.gate ? (NOV ? 21 : 9) : 3 + Math.floor(hash2(sec.k, 40 + n, seed) * 3)) : 5 + Math.floor(hash2(sec.k, 60 + n, seed) * 4);   // (in the seven mountains, room past the gate for the lay brother)
       for (let q = 0; q < len && before(i); q++, i += dir) if (!floor) pit[i] = 1;
       floor = !floor; n++;
     }
@@ -190,6 +190,7 @@ const Climb = (() => {
       // The gate: three cells thick, two cells from the way in; its lamp just beyond it.
       const d0 = dir > 0 ? en.R + 3 : en.L - 5;
       T.door = { i0: d0, i1: d0 + 2 };
+      if (NOV) T.yard = dir > 0 ? [d0 + 5, d0 + 18] : [d0 - 15, d0 - 2];        // (the lay brother's, past the lamp: no demon or shrine there)
       const lx = (dir > 0 ? d0 + 4.5 : d0 - 1.5) * CELL;
       T.lamps.push({ x: lx, y: -(sec.h0 + 7) * CELL - 0.01, lit: false });
     }
@@ -571,6 +572,7 @@ const Climb = (() => {
       touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
       demons: [], things: [], held: null, atk: null, popK: 0, ids: 0, cast: 0, respawnT: 0, hurtT: 0, invT: 0, flashT: 0, floatT: 0, shake: 0, fightSeen: false, fightHintT: 0, meter: 1, kickCd: 0, swingKickT: 0, hang: null, ward: null, crosses: [],
       crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0,
+      blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false,
     };
     mode = M;
     Sound.play(SONGS.arena); Sound.setLevel(0); Sound.ambience({ wind: 0.7 }); Sound.flare(false); Sound.muffle(false);
@@ -876,7 +878,7 @@ const Climb = (() => {
   // Nothing but air between two points?
   function los(x0, y0, x1, y1) { const n = Math.ceil(dist(x0, y0, x1, y1) / 6); for (let k = 1; k < n; k++) if (solidAt(lerp(x0, x1, k / n), lerp(y0, y1, k / n))) return false; return true; }
   const dMid = (f) => [f.x, f.y - f.ht / 2];
-  const alive = (f) => !!f && f.st !== "gone" && f.st !== "dying" && f.st !== "emerge" && f.st !== "topple" && f.st !== "broken";
+  const alive = (f) => !!f && f.st !== "gone" && f.st !== "dying" && f.st !== "emerge" && f.st !== "topple" && f.st !== "broken" && f.st !== "rise";
   const panX = (x) => clamp((x - S.cam.x - W / 2) / (W / 2), -1, 1);
   const gain = (v) => { S.meter = Math.min(1, S.meter + v); };
   function setSt(f, st) { f.st = st; f.t = 0; f.thrown = false; }
@@ -904,7 +906,7 @@ const Climb = (() => {
       const T = trav(sec), jt = -(sec.h0 + 7), runs = [];
       let a = -1;
       for (let i = T.a; i <= T.b + 1; i++) {
-        const ok = i <= T.b && !T.pit[i] && solid(i, jt) && !solid(i, jt - 1) && !solid(i, jt - 4) && !(i >= T.en.L && i <= T.en.R) && !(T.door && i >= T.door.i0 - 2 && i <= T.door.i1 + 2);
+        const ok = i <= T.b && !T.pit[i] && solid(i, jt) && !solid(i, jt - 1) && !solid(i, jt - 4) && !(i >= T.en.L && i <= T.en.R) && !(T.door && i >= T.door.i0 - 2 && i <= T.door.i1 + 2) && !(T.yard && i >= T.yard[0] && i <= T.yard[1]);
         if (ok && a < 0) a = i; if (!ok && a >= 0) { if (room(i - a)) runs.push([a, i - 1]); a = -1; }
       }
       const c = (T.a + T.b) / 2;
@@ -970,8 +972,10 @@ const Climb = (() => {
   // kept among them, with no mind of its own).
   const IDOL_HP = 3;
   function placeShrine(k, dom, spots, taken) {
-    // (In about half the shafts; in every crossing, cavern and corridor that has room.)
+    // (In about half the shafts; in every crossing, cavern and corridor that has room. In the seven
+    // mountains, none at a gate: the lay brother waits there, and a block must be carried to him.)
     if (secs[k].type === "shaft" && hash2(k, 77, seed) < 0.5) return;
+    if (NOV && secs[k].gate) return;
     let best = null, bs = -1e9;
     for (const sp of spots) {
       const w = sp[3] - sp[2] + 2 * DEM[dom].hw;
@@ -990,6 +994,341 @@ const Climb = (() => {
     }
     S.demons.push({ idol: true, sin: dom, hw: 13, ht: 60, maxHp: IDOL_HP, hp: IDOL_HP, x: best.x, y: best.y, vx: 0, vy: 0, dir: 1, st: "idle", t: 0, cd: 0, x0: best.x, x1: best.x, sec: k,
       ground: true, juggle: 0, hurtT: 0, showHp: 0, lit: 0, id: ++S.ids, size: 0, who, fled: false });
+  }
+  // ---- The blocks ---------------------------------------------------------------------------------
+  // In the seven mountains, an idol thrown down gives up a block of its stone, in its domain's
+  // colour: four squares joined (one of the seven shapes of the falling-stone game), with a little
+  // light of its own. They are for building, later: the stones of the idol for the house of God, as
+  // Benedict on Monte Cassino broke Apollo's idol and built his oratories where its temple had
+  // stood (Gregory, Dialogues II.8). He ties one to his belt on a short rope and takes it on with
+  // him: it drags along the ground and slows him, its weight tells on the rope and the rock, and as
+  // he swings it swings under him and strikes whatever it meets. The rope never catches on the
+  // rock: where the block would snag, it slides behind the rock and comes free. A hard blow knocks
+  // it loose. And the demons want it back: any of them near a block lying loose floats off with it
+  // (Avarice's thief cuts it from his belt) to the nearest shrine, and there the idol rises again,
+  // bigger, with the block inside it (the spirit come back to the house swept and garnished,
+  // Matthew 12:43-45). Hooked as it goes, the demon is pulled down out of the air. Once a block is
+  // found, a lay brother waits at every gate with a cart and its donkey: brought to the cart, the
+  // block goes into it, and home.
+  const BC = 7, TETHER = 54, BLOCK_LOAD = 4, FLOAT_V = 110, CARRY_V = 85, BK = 1.25;
+  const SHAPES = { I: [[0, 0], [1, 0], [2, 0], [3, 0]], O: [[0, 0], [1, 0], [0, 1], [1, 1]], T: [[0, 0], [1, 0], [2, 0], [1, 1]], S: [[1, 0], [2, 0], [0, 1], [1, 1]], Z: [[0, 0], [1, 0], [1, 1], [2, 1]], L: [[0, 0], [0, 1], [0, 2], [1, 2]], J: [[1, 0], [1, 1], [1, 2], [0, 2]] };
+  const SHAPE_KEYS = Object.keys(SHAPES);
+  // (x is its middle, y its foot, like everything else that stands; hw and ht its box.)
+  function newBlock(I) {
+    const shape = SHAPE_KEYS[Math.floor(hash2(I.id, I.sec * 7 + 3, seed) * SHAPE_KEYS.length) % SHAPE_KEYS.length], cells = SHAPES[shape];
+    const w = Math.max(...cells.map((c) => c[0])) + 1, h = Math.max(...cells.map((c) => c[1])) + 1;
+    return { shape, cells, w, h, hw: w * BC / 2, ht: h * BC, dom: I.sin, x: I.x, y: I.y, vx: 0, vy: 0, rot: 0, st: "idol", by: I, home: I, id: ++S.ids, age: 0 };
+  }
+  // Out of an idol as it breaks: thrown up the way it fell.
+  function reveal(b, I) {
+    if (!S.blocks.includes(b)) S.blocks.push(b);
+    // (It falls his way, and for a moment the demons do not see it: it is his to take, if he is quick.)
+    const K = I.big || 1, s = sign(S.x - I.x) || 1;
+    Object.assign(b, { st: "loose", by: null, claim: null, x: I.x + s * 6, y: I.y - 24 * K, vx: s * (40 + Math.random() * 40), vy: -300, nopick: S.rt + 0.35, unseen: S.rt + 1.25, age: 0, rot: 0 });
+    for (let k = 0; k < 14; k++) { const a = Math.random() * TAU, v = 40 + Math.random() * 120; S.parts.push({ kind: "spark", c: SINS[b.dom].light, x: b.x, y: b.y - 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.8, age: 0, real: true }); }
+    if (!S.blockSeen) { S.blockSeen = true; S.say = { text: "A BLOCK FROM THE IDOL", sub: "Go to it and it is tied to your belt. A lay brother waits at the gate above.", t: 0 }; }
+  }
+  function tie(b) {
+    b.st = "tied"; b.by = null; b.claim = null; S.tied = b; Sound.fx.tie(panX(b.x));
+    if (!S.tiedSeen) { S.tiedSeen = true; S.say = { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons. Bring it to the gate.", t: 0 }; }
+  }
+  // A hard blow to him: the knot gives, and the block goes flying.
+  function loosen(kx) {
+    const b = S.tied; if (!b) return;
+    // (He is thrown one way; it goes on the other, toward the blow.)
+    S.tied = null; S.dragging = false; b.st = "loose"; b.vx = -(sign(kx) || -S.dir) * 150; b.vy = Math.min(b.vy, -200); b.nopick = S.rt + 0.8; b.unseen = S.rt + 1.25;
+    Sound.fx.tetherBreak();
+  }
+  // A demon takes a block up, and makes for the nearest shrine with it.
+  function carryOff(f, b) {
+    b.st = "carried"; b.by = f; b.claim = null; f.block = b; f.want = null;
+    f.dest = shrineFor(f, b); setSt(f, "carry"); f.ground = false; f.stuckT = 0; f.ghostT = 0;
+    if (!S.carrySeen && dist(f.x, f.y, S.x, S.y) < 700) { S.carrySeen = true; S.say = { text: "A DEMON HAS THE BLOCK", sub: "Tap it: the hook pulls it down. Stop it before it reaches a shrine.", t: 0 }; }
+  }
+  function shrineFor(f, b) {
+    const cands = S.demons.filter((g) => g.idol && g.st !== "gone");
+    if (b.home && !cands.includes(b.home)) cands.push(b.home);
+    let best = null, bd = 1e9;
+    for (const I of cands) { const d = dist(f.x, f.y, I.x, I.y); if (d < bd) { bd = d; best = I; } }
+    return best;
+  }
+  function dropBlock(f, kx, ky) {
+    const b = f.block; if (!b) return;
+    f.block = null; b.st = "loose"; b.by = null; b.x = f.x; b.y = f.y - f.ht * 0.5 + b.ht / 2;
+    b.vx = (kx || 0) * 0.5; b.vy = Math.min(-100, (ky || 0) * 0.5); b.nopick = S.rt + 0.25; b.unseen = S.rt + 1.25;
+  }
+  // A demon at rest, a block lying loose near it: it rises, and goes for it.
+  function seekBlock(f) {
+    if (S.dying || f.idol || !NOV) return false;
+    let best = null, bd = 300;
+    for (const b of S.blocks) {
+      if (b.st !== "loose" || b.unseen > S.rt) continue;
+      const c = b.claim; if (c && c !== f && c.st === "seize" && c.want === b) continue;
+      const d = dist(f.x, f.y - f.ht / 2, b.x, b.y - b.ht / 2); if (d < bd) { bd = d; best = b; }
+    }
+    if (!best) return false;
+    best.claim = f; f.want = best; setSt(f, "seize"); f.ground = false; f.stuckT = 0; f.ghostT = 0; f.vx = 0; f.vy = 0;
+    Sound.fx.swoop();
+    return true;
+  }
+  // Through the air toward a point (its middle there): round the rock where it can, a little turned
+  // either way; where it cannot (or gets no nearer for a while), through the rock, behind it, slowly.
+  function floatTo(f, tx, ty, sp, dt) {
+    const cx = f.x, cy = f.y - f.ht / 2, d = dist(cx, cy, tx, ty);
+    if (d < 0.5) return d;
+    const ux = (tx - cx) / d, uy = (ty - cy) / d, st = Math.min(d, sp * dt);
+    let mx = 0, my = 0;
+    if (!(f.ghostT > 0) && !boxAt(f.x, f.y, f.hw, f.ht)) {
+      for (const a of [0, 0.6, -0.6, 1.2, -1.2]) {
+        const c = Math.cos(a), s = Math.sin(a), vx = ux * c - uy * s, vy = ux * s + uy * c;
+        if (!boxAt(f.x + vx * st, f.y + vy * st, f.hw, f.ht)) { mx = vx * st; my = vy * st; break; }
+      }
+    }
+    if (!mx && !my) { mx = ux * st * 0.6; my = uy * st * 0.6; }
+    f.x += mx; f.y += my; f.vx = mx / Math.max(dt, 1e-4); f.vy = my / Math.max(dt, 1e-4);
+    if (Math.abs(mx) > 0.05) f.dir = sign(mx);
+    const nd = dist(f.x, f.y - f.ht / 2, tx, ty);
+    if (nd > d - st * 0.3) { f.stuckT = (f.stuckT || 0) + dt; if (f.stuckT > 0.7) { f.ghostT = 1.2; f.stuckT = 0; } } else f.stuckT = 0;
+    if (f.ghostT > 0) f.ghostT -= dt;
+    return nd;
+  }
+  // Done floating (inside the rock, it may be): out into the air nearest, and down.
+  function alight(f) { if (boxAt(f.x, f.y, f.hw, f.ht)) { const sp = dFree(f.x, f.y, f.hw, f.ht); if (sp) { f.x = sp[0]; f.y = sp[1]; } } f.vx = 0; f.vy = 0; setSt(f, "fall"); }
+  function floatDemon(f, dt) {
+    if (f.st === "seize") {
+      const b = f.want;
+      if (!b || b.st !== "loose" || f.t > 9) { if (b && b.claim === f) b.claim = null; f.want = null; alight(f); return; }
+      if (floatTo(f, b.x, b.y - b.ht / 2, FLOAT_V, dt) < f.hw + 12) carryOff(f, b);
+      return;
+    }
+    const b = f.block;
+    if (!b) { alight(f); return; }
+    b.x = f.x + f.dir * 2; b.y = f.y - f.ht - 2;
+    if (!f.dest) { f.dest = shrineFor(f, b); if (!f.dest) { dropBlock(f, 0, 0); alight(f); return; } }
+    const I = f.dest, K = I.big || 1;
+    if (floatTo(f, I.x, I.y - 34 * K, CARRY_V, dt) < 24) rebuild(I, f, b);
+  }
+  // At the shrine: the idol rises again where it fell (or, standing, swells), bigger and harder to
+  // throw down, and the block is in it. No one comes back to worship it.
+  function rebuild(I, f, b) {
+    f.block = null; f.dest = null; b.st = "idol"; b.by = I; b.claim = null;
+    (I.blocks || (I.blocks = [])).push(b);
+    I.rebuilt = (I.rebuilt || 0) + 1; I.big = Math.min(2, 1 + 0.25 * I.rebuilt);
+    I.maxHp = IDOL_HP + 3 * I.rebuilt; I.hp = I.maxHp; I.hw = 13 * I.big; I.ht = 60 * I.big; I.showHp = 2;
+    if (!S.demons.includes(I)) S.demons.push(I);
+    if (I.st !== "idle") setSt(I, "rise");
+    Sound.fx.rise(panX(I.x)); S.shake = Math.max(S.shake, 0.1);
+    for (let k = 0; k < 18; k++) S.parts.push({ kind: "smoke", x: I.x + (Math.random() - 0.5) * 40 * I.big, y: I.y - Math.random() * 50 * I.big, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, r: 4 + Math.random() * 6, life: 1.2, age: 0 });
+    alight(f); f.x0 = I.x - 70; f.x1 = I.x + 70;
+    if (!S.riseSeen && dist(I.x, I.y, S.x, S.y) < 760) { S.riseSeen = true; S.say = { text: "THE IDOL RISES AGAIN", sub: "Bigger now, and harder to throw down. The block is in it.", t: 0 }; }
+  }
+  // The hook thrown at a demon in the air with a block (or going for one): it bites, and the demon
+  // is pulled down out of the air toward him, and lets go of what it holds.
+  function yank(f) {
+    const [hx, hy] = S.handW || grip(), [cx, cy] = dMid(f), d = dist(hx, hy, cx, cy);
+    if (d > 560 || !los(hx, hy, cx, cy - 4)) { Sound.fx.tick(420, 0.3); return; }
+    S.yank = { f, t: 0, T: clamp(d / 1600, 0.06, 0.32) }; Sound.fx.whoosh(0.6);
+  }
+  function stepYank(dt) {
+    const Y = S.yank, f = Y.f; Y.t += dt;
+    if (!alive(f)) { S.yank = null; return; }
+    if (Y.t < Y.T) return;
+    S.yank = null;
+    const [mx, my] = middle(), [cx, cy] = dMid(f), d = dist(mx, my, cx, cy) || 1, ux = (mx - cx) / d, uy = (my - cy) / d;
+    if (f.block) dropBlock(f, ux * 300, uy * 300 - 60);
+    if (f.want && f.want.claim === f) f.want.claim = null; f.want = null; f.dest = null;
+    setSt(f, "thrown"); f.vx = ux * 470; f.vy = uy * 470 + 40; f.ground = false;
+    impact(f, ux, uy, 1.4); Sound.fx.tetherBreak(); Sound.fx.kick(0.8, panX(f.x)); gain(0.1);
+  }
+  // The lay brother's place at a gate (in the seven mountains): just past its lamp, he, then the
+  // cart, then its donkey, facing on.
+  function brotherOf(sec) {
+    if (!NOV || !sec || sec.type !== "trav" || !sec.gate) return null;
+    const T = trav(sec); if (T.bro) return T.bro;
+    const D = T.door; if (!D) return null;
+    const base = T.dir > 0 ? (D.i1 + 1) * CELL : D.i0 * CELL, y = -(sec.h0 + 7) * CELL - 0.01;
+    return (T.bro = { sec: sec.k, dir: T.dir, y, x: base + T.dir * 4.5 * CELL, cart: base + T.dir * 8.5 * CELL, donkey: base + T.dir * 12.5 * CELL, bin: [], cheer: -9 });
+  }
+  const binSlot = (G, s) => [G.cart + G.dir * (-9 + (s % 3) * 9) * BK, G.y - (33 + Math.floor(s / 3) * 5) * BK];
+  // Brought to the cart: the rope untied, the block up and into it, and the brother lifts his
+  // hands over it. His blessing fills the torch.
+  function deliver(G) {
+    const b = S.tied; S.tied = null; S.dragging = false;
+    Object.assign(b, { st: "tobin", t: 0, fx: b.x, fy: b.y, by: G, slot: G.bin.length });
+    G.bin.push(b); G.cheer = S.rt; S.binned++; S.fuel = 1;
+    Sound.fx.deliver(panX(G.cart));
+  }
+  function stepBlocks(dt) {
+    for (const b of S.blocks) {
+      b.age = (b.age || 0) + dt;
+      if (b.st === "loose") stepLoose(b, dt);
+      else if (b.st === "tied") stepTied(b, dt);
+      else if (b.st === "carried") { const f = b.by; if (!f || !alive(f) || f.block !== b) { if (f && f.block === b) f.block = null; b.st = "loose"; b.by = null; } }
+      else if (b.st === "tobin") { b.t += dt; if (b.t >= 0.55) b.st = "bin"; }
+    }
+    // A block lying loose within his reach: he ties it on.
+    if (!S.tied && !S.dying) {
+      const [mx, my] = middle();
+      for (const b of S.blocks) if (b.st === "loose" && !(b.nopick > S.rt) && Math.abs(mx - b.x) < HW + b.hw + 8 && Math.abs(my - (b.y - b.ht / 2)) < HT / 2 + b.ht / 2 + 4) { tie(b); break; }
+    }
+    // At a gate's cart: into it.
+    if (S.tied && !S.dying) {
+      const hNow = -S.y / CELL;
+      for (const sec of sectionsIn(hNow - 10, hNow + 10)) { const G = brotherOf(sec); if (G && Math.abs(S.x - G.cart) < 48 && Math.abs(S.y - G.y) < 56) { deliver(G); break; } }
+    }
+  }
+  function stepLoose(b, dt) {
+    if (boxAt(b.x, b.y, b.hw, b.ht)) { const sp = dFree(b.x, b.y, b.hw, b.ht); if (sp) { b.x = sp[0]; b.y = sp[1]; } else { b.y += 60 * dt; return; } }
+    const n = clamp(Math.ceil(Math.hypot(b.vx, b.vy) * dt / 5), 1, 8), h = dt / n;
+    for (let k = 0; k < n; k++) {
+      b.vy = Math.min(b.vy + 640 * h, 900);
+      const vyIn = b.vy, [hx, hy] = moveBox(b, b.vx * h, b.vy * h, b.hw, b.ht);
+      if (hx) b.vx *= -0.3;
+      if (hy > 0) { if (vyIn > 240) { Sound.fx.brickDrop(panX(b.x), clamp(vyIn / 600, 0.3, 1)); b.vy = -vyIn * 0.2; } else b.vy = 0; b.vx *= 0.6; b.ground = true; }
+      else { if (hy < 0) b.vy = 20; b.ground = false; }
+    }
+    if (b.ground) { b.vx *= Math.pow(0.02, dt); b.rot += (Math.round(b.rot / PI) * PI - b.rot) * Math.min(1, dt * 10); }
+    else b.rot += b.vx * dt * 0.03;
+  }
+  // On the rope from his belt: it falls, it slides, it stops on the rock; and the rope, never longer
+  // than it is, draws it after him (its speed is what that makes of it, so a pull sets it swinging,
+  // and a sudden stop flings it on). Inside the rock (behind it) it goes where it is drawn.
+  function stepTied(b, dt) {
+    const ax = S.x - S.dir * 2, ay = S.y - 20;
+    if (dist(ax, ay, b.x, b.y - b.ht) > TETHER * 3) { b.x = ax; b.y = ay + TETHER + b.ht * 0.5; b.vx = S.vx; b.vy = S.vy; }
+    const x0 = b.x, y0 = b.y, n = clamp(Math.ceil(Math.hypot(b.vx, b.vy) * dt / 4), 1, 10), h = dt / n;
+    let grounded = false;
+    for (let k = 0; k < n; k++) {
+      b.vy += 640 * h;
+      if (b.ground || grounded) b.vx *= Math.pow(0.002, h);           // (on the rock, it scrapes to a stop: before it moves, so its speed keeps it)
+      if (boxAt(b.x, b.y, b.hw, b.ht)) { b.x += b.vx * h; b.y += b.vy * h; }
+      else {
+        const [hx, hy] = moveBox(b, b.vx * h, b.vy * h, b.hw, b.ht);
+        if (hx) b.vx *= -0.2;
+        if (hy > 0) { grounded = true; b.vy = 0; } else if (hy < 0) b.vy *= -0.2;
+      }
+      const tx = b.x, ty = b.y - b.ht, d = dist(ax, ay, tx, ty);
+      if (d > TETHER) { const q = (d - TETHER) / d; b.x += (ax - tx) * q; b.y += (ay - ty) * q; }
+    }
+    b.vx = clamp((b.x - x0) / dt, -900, 900); b.vy = clamp((b.y - y0) / dt, -900, 900);
+    b.ground = grounded && !boxAt(b.x, b.y, b.hw, b.ht);
+    S.dragging = b.ground && dist(ax, ay, b.x, b.y - b.ht) > TETHER - 3;
+    const want = b.ground ? Math.round(b.rot / PI) * PI : Math.atan2(ax - b.x, (b.y - b.ht / 2) - ay);
+    b.rot += (want - b.rot) * Math.min(1, dt * 10);
+    flail(b);
+  }
+  // Swung (or flung) fast into a demon, or an idol: it strikes like a flail.
+  function flail(b) {
+    const sp = Math.hypot(b.vx, b.vy); if (sp < 190) return;
+    const cx = b.x, cy = b.y - b.ht / 2;
+    for (const f of S.demons) {
+      if (!alive(f) || (f.flailCd || 0) > S.rt) continue;
+      if (Math.abs(cx - f.x) < f.hw + b.hw && cy > f.y - f.ht - b.ht / 2 && cy < f.y + b.ht / 2) {
+        const hard = sp > 420;
+        f.flailCd = S.rt + 0.45;
+        impactAt(cx, cy, b.vx, b.vy, hard ? 2.2 : 1.5, f);
+        hurtDemon(f, hard ? 3 : 2, b.vx * 0.7, -150 - sp * 0.15, "launch");
+        Sound.fx.brickHit(hard ? 1 : 0.75, panX(f.x)); gain(0.1); breakWard(); S.shake = Math.max(S.shake, 0.15);
+        break;
+      }
+    }
+  }
+  // Drawing: a block, its four squares each a cut stone of its colour, lit on the upper edges.
+  function drawBlock(b, x, y, k, rot, a) {
+    const c = SINS[b.dom] || SINS.wrath, s = BC * k, w = b.w * s, h = b.h * s;
+    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); if (a !== undefined) ctx.globalAlpha *= a;
+    for (const [i, j] of b.cells) {
+      const px = -w / 2 + i * s, py = -h / 2 + j * s;
+      rect(px, py, s, s, c.deep);
+      rect(px + 0.7, py + 0.7, s - 1.4, s - 1.4, c.color);
+      rect(px + 0.7, py + 0.7, s - 1.4, 1.1, c.light); rect(px + 0.7, py + 0.7, 1.1, s - 1.4, c.light);
+      rect(px + 1.8, py + s - 1.8, s - 2.5, 1.1, c.dark);
+    }
+    ctx.restore();
+  }
+  const GLOWS = [];
+  function drawBlocks(cam, rimP, lights) {
+    GLOWS.length = 0;
+    if (S.blockSeen) for (const sec of sectionsIn(-(cam.y + H) / CELL - 6, -cam.y / CELL + 6)) { const G = brotherOf(sec); if (G) drawBrother(G, cam, rimP, lights); }
+    for (const b of S.blocks) {
+      let x, y, rot = b.rot || 0;
+      if (b.st === "loose") { x = b.x; y = b.y - b.ht / 2; }
+      else if (b.st === "carried") {
+        const f = b.by, q = f.p ? demonJoint(f.sin, f.x, f.y, f.dir, f.p, "hF") : [f.x, f.y - f.ht];
+        x = q[0]; y = q[1] - b.ht / 2 - 2; b.x = x; b.y = y + b.ht / 2; rot = 0;
+      } else if (b.st === "tobin") {
+        const [ex, ey] = binSlot(b.by, b.slot), u = ease(Math.min(1, b.t / 0.55));
+        x = lerp(b.fx, ex, u); y = lerp(b.fy - b.ht / 2, ey, u) - Math.sin(u * PI) * 46; rot = (1 - u) * rot;
+      } else continue;
+      if (x < cam.x - 60 || x > cam.x + W + 60 || y < cam.y - 60 || y > cam.y + H + 60) continue;
+      drawBlock(b, x - cam.x, y - cam.y, 1, rot);
+      lights.push({ x: x - cam.x, y: y - cam.y, r: 40, a: 0.55 });
+      GLOWS.push([b, x, y, rot]);
+    }
+  }
+  // On the rope from his belt, behind him.
+  function drawTied(mx, my, p, cam, lights) {
+    const b = S.tied, hp = monkJoint(mx, my, S.dir, p, "hip"), cx = b.x, cy = b.y - b.ht / 2;
+    const tx = cx + Math.sin(b.rot) * b.ht / 2, ty = cy - Math.cos(b.rot) * b.ht / 2;
+    const d = dist(hp[0], hp[1], tx, ty), sag = Math.max(0, TETHER - d) * 0.5;
+    ctx.strokeStyle = "#0b0b0d"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(hp[0] - cam.x, hp[1] - cam.y);
+    ctx.quadraticCurveTo((hp[0] + tx) / 2 - cam.x, (hp[1] + ty) / 2 + sag - cam.y, tx - cam.x, ty - cam.y); ctx.stroke();
+    drawBlock(b, cx - cam.x, cy - cam.y, 1, b.rot);
+    lights.push({ x: cx - cam.x, y: cy - cam.y, r: 40, a: 0.55 });
+    GLOWS.push([b, cx, cy, b.rot]);
+  }
+  function drawYank(cam) {
+    const Y = S.yank, f = Y.f, [hx, hy] = S.handW || grip(), [cx, cy] = dMid(f), u = clamp(Y.t / Y.T, 0, 1), x = lerp(hx, cx, u), y = lerp(hy, cy, u);
+    line(hx - cam.x, hy - cam.y, x - cam.x, y - cam.y, "#0b0b0d", 1.4);
+    drawHook(x - cam.x, y - cam.y, Math.atan2(cy - hy, cx - hx));
+  }
+  // The lay brother, bearded, his hood back (when a block is brought, his hands lifted over it); his
+  // cart, a deep bin of boards on one great wheel, with a lantern on a pole; and its donkey.
+  function drawBrother(G, cam, rimP, lights) {
+    const sx = G.cart - cam.x, sy = G.y - cam.y;
+    if (sx < -220 || sx > W + 220 || sy < -140 || sy > H + 90) return;
+    const t = S.rt, ink = new Path2D();
+    const C0 = put(G.cart, G.y, G.dir, cam), CT = (u, v) => C0(u * BK, v * BK);
+    // What is in the cart first, so the side of the bin hides all but the tops.
+    G.bin.forEach((b, s) => { if (b.st !== "bin") return; const [x, y] = binSlot(G, s); drawBlock(b, x - cam.x, y - cam.y, 1, 0); });
+    addPoly(ink, [[-17, 12], [17, 12], [18, 34], [-18, 34]], CT);
+    addOval(ink, 0, 9, 9, 9, CT, 16);
+    addPoly(ink, [[16, 15], [33, 18], [33, 19.6], [16, 17]], CT);
+    addPoly(ink, [[-17, 34], [-15.6, 34], [-15.6, 48], [-17, 48]], CT); addPoly(ink, [[-17, 48], [-11, 48], [-11, 49.2], [-17, 49.2]], CT);
+    const D0 = put(G.donkey, G.y, G.dir, cam), DT = (u, v) => D0(u * BK, v * BK), sw = Math.sin(t * 1.7 + G.sec) * 2, ear = Math.sin(t * 0.9 + G.sec * 3) > 0.96 ? 3 : 0;
+    addOval(ink, 0, 21, 14, 7.5, DT, 16);
+    for (const [u, lift] of [[-10, 0], [-6, 0.5], [7, 0], [11, 0.5]]) addPoly(ink, [[u - 1.4, 15], [u + 1.4, 15], [u + 1.1, lift], [u - 1.1, lift]], DT);
+    addPoly(ink, [[9, 23], [14, 22], [21, 31], [17, 34]], DT);
+    addPoly(ink, [[16, 30.5], [22, 34], [28.5, 28.5], [27, 26.5], [19, 28]], DT);
+    addPoly(ink, [[18, 33], [20, 33.5], [17 - ear, 44], [16 - ear, 43.5]], DT); addPoly(ink, [[20, 33], [21.5, 33], [21 - ear * 0.5, 43.5], [19.5 - ear * 0.5, 43]], DT);
+    addPoly(ink, [[-13, 24], [-11.5, 23], [-15 + sw, 11], [-16.5 + sw, 11.5]], DT);
+    const k = clamp((t - G.cheer) / 0.3, 0, 1) * clamp((1.9 - (t - G.cheer)) / 0.4, 0, 1);
+    const B0 = put(G.x, G.y, -G.dir, cam), BT = (u, v) => B0(u * BK, v * BK), br = Math.sin(t * 1.4 + G.sec) * 0.4;
+    addPoly(ink, [[-7, 0], [7, 0], [5.5, 14], [5.8, 29 + br], [3, 33 + br], [-3, 33 + br], [-5.8, 29 + br], [-6.5, 14]], BT);
+    addOval(ink, 0.8, 37.5 + br, 4, 4.4, BT, 12);
+    addPoly(ink, [[1.5, 34.5 + br], [5.5, 35 + br], [4.5, 30 + br], [1.8, 31 + br]], BT);
+    addPoly(ink, [[-5.5, 31 + br], [-1, 33.5 + br], [-3.5, 27 + br]], BT);
+    const arm = (s) => [[s * 2.5, 30 + br], [s * 5.5, 31 + br], [s * (4 + 7 * k) + 1, 19 + 27 * k], [s * (4 + 7 * k) - 1.5, 18.5 + 27 * k]];
+    addPoly(ink, arm(1), BT); addPoly(ink, arm(-1), BT);
+    ctx.fillStyle = C.ink; ctx.fill(ink); rimP.addPath(ink);
+    const [lx, ly] = CT(-11, 46.5); lights.push({ x: lx, y: ly, r: 120, a: 0.8 });
+    GLOWS.push([null, lx + cam.x, ly + cam.y, 0, G, k]);
+  }
+  // Over the dark: each block's own light; the lantern's flame; the blocks in the cart, and his blessing.
+  function blockGlows(cam) {
+    const t = S.rt;
+    for (const [b, x, y, rot, G, k] of GLOWS) {
+      if (!b) {
+        const sx = x - cam.x, sy = y - cam.y;
+        glow(sx, sy, 34, C.flame, 0.35); drawFlame(sx, sy + 3, 0.42, t + G.sec, {});
+        G.bin.forEach((q, s) => { if (q.st !== "bin") return; const [bx, by] = binSlot(G, s); glow(bx - cam.x, by - cam.y - 2, 9, SINS[q.dom].color, 0.35); });
+        if (k > 0.05) { const [hx, hy] = put(G.x, G.y, -G.dir, cam)(0, 52 * BK); glow(hx, hy, 40, C.warm, 0.4 * k); lightCross(hx, hy, 9, 0.8 * k, 2); }
+        continue;
+      }
+      const sx = x - cam.x, sy = y - cam.y, c = SINS[b.dom] || SINS.wrath, inRock = solidAt(x, y);
+      glow(sx, sy, inRock ? 22 : 18, c.color, (inRock ? 0.3 : 0.42) + 0.08 * Math.sin(t * 3 + b.id));
+      if (!inRock) drawBlock(b, sx, sy, 1, rot, 0.55);
+    }
   }
   // ---- The weight of a blow ----------------------------------------------------------------------------
   // Where a blow lands: the world holds still a moment (longer, the harder the blow); a flash, and
@@ -1028,6 +1367,7 @@ const Climb = (() => {
   // The shrine in time: its worshippers turning their heads to his light, or fleeing, and fading
   // into the dark after a while; the idol, struck down, falling, and breaking in pieces.
   function updIdol(f, dt) {
+    if (f.st === "rise" && f.t > 0.9) setSt(f, "idle");
     for (const w of f.who) {
       if (w.st !== "run") continue;
       w.t += dt; w.ph += dt * 12;
@@ -1043,6 +1383,8 @@ const Climb = (() => {
       setSt(f, "broken"); Sound.fx.crumble(panX(f.x)); S.shake = 0.2;
       for (let q = 0; q < 3; q++) S.things.push({ kind: "stone", shard: f.sin, sid: f.id * 3 + q, x: f.x + f.fall * (8 + q * 10), y: f.y - 14 - q * 6, vx: f.fall * (40 + q * 50) + (Math.random() - 0.5) * 40, vy: -160 - Math.random() * 120, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 8, st: "fly", by: null, g: 560, age: 0 });
       for (let q = 0; q < 12; q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: f.x + f.fall * 16 + (Math.random() - 0.5) * 20, y: f.y - 6, vx: (Math.random() - 0.5) * 240, vy: -40 - Math.random() * 200, life: 0.7, age: 0 });
+      // In the seven mountains, a block out of it too: its own, the first time; after, whatever the demons brought it.
+      if (NOV) { const out = f.blocks && f.blocks.length ? f.blocks.splice(0) : f.gave ? [] : [newBlock(f)]; f.gave = true; for (const b of out) reveal(b, f); }
     }
     if (f.st === "broken" && !f.who.length && dist(f.x, f.y, S.x, S.y) > 1600) f.st = "gone";
   }
@@ -1058,6 +1400,8 @@ const Climb = (() => {
   function hurtDemon(f, dmg, kx, ky, how) {
     if (!alive(f)) return false;
     if (f.idol) return hitIdol(f, dmg, kx);
+    if (f.block) dropBlock(f, kx, ky);
+    if (f.want && f.want.claim === f) f.want.claim = null; f.want = null;
     f.hp -= dmg; f.hurtT = 0.25; f.showHp = 2.5;
     if (S.pulled && S.pulled.f === f) { S.pulled = null; Sound.fx.tetherBreak(); }
     Sound.fx.demonHurt(f.sin, panX(f.x));
@@ -1077,6 +1421,7 @@ const Climb = (() => {
     return true;
   }
   function castOut(f) {
+    if (f.block) dropBlock(f, 0, -120);
     setSt(f, "dying"); Sound.fx.castOut(f.sin); S.fuel = Math.min(1, S.fuel + 0.12 + (f.loot || 0)); S.cast++; gain(0.25);
     if (f.loot) { const [mx, my] = middle(); for (let k = 0; k < 18; k++) S.parts.push({ kind: "coinfly", x: f.x + (Math.random() - 0.5) * 20, y: f.y - f.ht * 0.6, tx: mx, ty: my, vx: 0, vy: 0, life: 0.3 + k * 0.03, age: 0, real: true, light: true }); }
     const [cx, cy] = dMid(f);
@@ -1114,6 +1459,7 @@ const Climb = (() => {
     if (f.st === "dying") { if (f.t > 0.8) f.st = "gone"; return; }
     if (f.idol) { updIdol(f, dt); return; }
     if (f.st === "emerge") { if (f.t > 0.9) setSt(f, "idle"); return; }
+    if (f.st === "seize" || f.st === "carry") { floatDemon(f, dt); return; }
     if (f.st === "air" || f.st === "thrown" || f.st === "fall") { flyDemon(f, dt); return; }
     if (dist(f.x, f.y, S.x, S.y) > 760) return;
     f.ground = boxAt(f.x, f.y + 1, f.hw, f.ht);
@@ -1121,6 +1467,7 @@ const Climb = (() => {
     if (f.vx) { moveBox(f, f.vx * dt, 0, f.hw, f.ht); f.vx *= Math.pow(0.01, dt); if (Math.abs(f.vx) < 6) f.vx = 0; }
     // Standing in briars (thrown there, say): they hurt it, and it springs out of them.
     if (thornAt(f.x, f.y + 2) && !(f.thornCd > S.rt)) { f.thornCd = S.rt + 0.6; f.y -= 2; hurtDemon(f, 1, (sign(f.vx) || f.dir) * 120, -300, "launch"); briarHit(f.x, f.y); return; }
+    if ((f.st === "idle" || f.st === "walk" || f.st === "creep") && seekBlock(f)) return;
     const [mx, my] = middle(), [cx, cy] = dMid(f), sees = !S.dying && dist(mx, my, cx, cy) < (f.sin === "lust" ? 430 : 380) && los(cx, cy - 10, mx, my - 6);
     if (f.sin === "gluttony") stepGluttony(f, dt, mx, my, sees); else if (f.sin === "lust") stepLust(f, dt, mx, my, sees); else if (f.sin === "avarice") stepAvarice(f, dt, mx, my, sees); else stepWrath(f, dt, mx, my, sees);
   }
@@ -1151,7 +1498,8 @@ const Climb = (() => {
   // his swing sags, he falls harder; with enough, he hardly climbs at all. Given away (in the boxes
   // for alms), each is light again in his torch: "alms deliver from death" (Tobit 12:9).
   const COINS_MAX = 9, COIN_V = 255, ALMS_LIGHT = 0.07;
-  const heavy = () => Math.min(COINS_MAX, S.coins || 0) / COINS_MAX;
+  // (A block on his rope weighs as much as four of them.)
+  const heavy = () => Math.min(COINS_MAX, (S.coins || 0) + (S.tied ? BLOCK_LOAD : 0)) / COINS_MAX;
   // And his blows are weaker for it: with nine coins on him, two-thirds as hard, and shorter.
   function blowTo(f, dmg, kx, ky, how) {
     const w = 1 - 0.35 * heavy(), k = 0.3 + 0.7 * w;
@@ -1219,6 +1567,8 @@ const Climb = (() => {
   function snatchLight(f) {
     const [mx, my] = middle(); if (dist(mx, my, f.x, f.y - f.ht / 2) > f.hw + HW + 30 || S.dying) return;
     if (S.ward) { S.ward = null; S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
+    // A block on his rope: that, before his light. It cuts it from his belt and is off with it.
+    if (S.tied) { const b = S.tied; S.tied = null; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
     const take = Math.max(0, Math.min(0.09, S.fuel - 0.03));
     S.fuel -= take; f.loot = (f.loot || 0) + Math.max(take, 0.04); Sound.fx.steal(); S.shake = 0.12;
     for (let k = 0; k < 10; k++) S.parts.push({ kind: "spark", c: C.flameHot, x: S.torch[0], y: S.torch[1], vx: (f.x - S.torch[0]) * (2 + Math.random()) , vy: (f.y - f.ht * 0.6 - S.torch[1]) * (2 + Math.random()) - 40, life: 0.4, age: 0 });
@@ -1628,6 +1978,7 @@ const Climb = (() => {
     S.fuel = Math.max(0, S.fuel - (cost || 0.06)); S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
     S.vx = (sign(kx) || -S.dir) * 200; S.vy = -170; S.ground = false;
     if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.vx * 0.3; S.held.vy = -100; S.held = null; }
+    if (S.tied && (cost === undefined || cost >= 0.06)) loosen(kx);        // (a hard blow knocks the block loose)
     Sound.fx.hurt(); S.shake = 0.25;
   }
   const demonAt = (x, y) => { let best = null, bd = 1e9; for (const f of S.demons) { if (!alive(f)) continue; const [cx, cy] = dMid(f), d = dist(x, y, cx, cy); if (Math.abs(x - f.x) < f.hw + 18 && y > f.y - f.ht - 18 && y < f.y + 14 && d < bd) { bd = d; best = f; } } return best; };
@@ -1748,6 +2099,8 @@ const Climb = (() => {
   function gesture(kind, f, o, dir) {
     if (S.act || (S.atk && !S.atk.hit)) return;
     if (S.atk) S.atk = null;          // a blow already landed: straight into the next
+    // A demon in the air with a block (or going for one): the hook, and it is pulled down.
+    if (f && kind === "tap" && (f.block || f.st === "seize")) { yank(f); return; }
     if (f) {
       if (S.held) { if (besides(f)) bash(f); else throwHeld(0, 0, f); return; }
       const [cx, cy] = dMid(f);
@@ -1962,7 +2315,7 @@ const Climb = (() => {
     }
     if (S.ground && !(taut && S.climbing)) {
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
-      const want = S.landT > 0 ? 0 : d * WALK * (S.held ? 0.55 : 1) * (1 - 0.35 * heavy());       // slower with a boulder in his arms, or gold on him
+      const want = S.landT > 0 ? 0 : d * WALK * (S.held ? 0.55 : 1) * (1 - 0.35 * heavy()) * (S.dragging && S.tied && sign(S.tied.x - S.x) !== d ? 0.55 : 1);       // slower with a boulder in his arms, or gold on him; slower still dragging a block
       // On slime or grease his feet hardly hold: he slides, and down a slab that lies askew. And
       // once he has stepped in it, his feet are greased for a while, and he slides everywhere.
       const onSlick = slickAt(S.x, S.y);
@@ -1990,7 +2343,7 @@ const Climb = (() => {
         const vt = S.vx * tx + S.vy * ty, a = (Math.abs(vt) < 30 ? PUMP_START : sign(vt) === d ? PUMP_WITH : PUMP_AGAINST) * (1 - 0.5 * heavy());
         S.vx += tx * d * a * dt; S.vy += ty * d * a * dt;
       } else if (d && S.vx * d < 160) S.vx += d * AIR * dt;
-      const drag = 1 - 0.1 * dt; S.vx *= drag; S.vy *= drag;
+      const drag = 1 - (S.dragging ? 0.6 : 0.1) * dt; S.vx *= drag; S.vy *= drag;      // (a block dragging on the ground under him slows the swing)
     }
     if (S.pulled) pullOf(dt);
     // (Light in a flip from the rope; all but weightless in the hover after it.)
@@ -2088,6 +2441,8 @@ const Climb = (() => {
     S.demons = S.demons.filter((f) => f.st !== "gone");
     for (const o of S.things) updThing(o, wdt);
     S.things = S.things.filter((o) => o.st !== "gone" && o.y < S.y + 1400);
+    if (S.blocks.length) stepBlocks(wdt);
+    if (S.yank) stepYank(wdt);
     S.hurtT = Math.max(0, S.hurtT - wdt); S.invT = Math.max(0, S.invT - dt); S.flashT = Math.max(0, S.flashT - dt); S.floatT = Math.max(0, S.floatT - wdt); S.shake = Math.max(0, S.shake - dt);
     S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.leapT = Math.max(0, (S.leapT || 0) - wdt); S.leapCd = Math.max(0, (S.leapCd || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
 
@@ -2417,6 +2772,9 @@ const Climb = (() => {
       case "getUp": return A.getUp(k(0.5), t, s);
       case "emerge": return A.emerge(k(0.9), t, s);
       case "dying": return A.hurt(1, t, s);
+      // Floating off: going for a block, its arms out for it; with it, holding it up over its head.
+      case "seize": { const p = A.float((t * 0.8 + f.id * 0.3) % 1, t, s); p.sF = 1.5; p.eF = 0.2; p.sB = 1.3; p.eB = 0.3; return p; }
+      case "carry": { const p = A.float((t * 0.8 + f.id * 0.3) % 1, t, s); p.sF = 2.9; p.eF = 0.25; p.sB = 2.8; p.eB = 0.3; return p; }
       default: return A.idle((t * 0.5 + f.id * 0.3) % 1, t, s);
     }
   }
@@ -2557,19 +2915,19 @@ const Climb = (() => {
     const [lx, ly] = S.torch, near = dist(lx, ly, f.x, f.y - 20) < lightR() * 0.85 && los(lx, ly, f.x, f.y - 20);
     for (const w of f.who) drawWorshipper(w, cam, rimP, near);
     if (sx < -120 || sx > W + 120 || sy < -90 || sy > H + 60) return;
-    const B0 = put(f.x, f.y, 1, cam), B = (u, v) => B0(u * IK, v * IK), ink = new Path2D();
+    const K = IK * (f.big || 1), rz = f.st === "rise" ? ease(clamp(f.t / 0.9, 0, 1)) : 1, B0 = put(f.x, f.y, 1, cam), B = (u, v) => B0(u * K, v * K), ink = new Path2D();
     if (dom === "gluttony") for (const u of [22, 29]) { addOval(ink, u, 4.5, 3.3, 4.5, B, 10); addPoly(ink, [[u - 1.3, 8], [u + 1.3, 8], [u + 1.8, 10.5], [u - 1.8, 10.5]], B); }
     else if (dom === "lust") for (const u of [-17, 17]) {
       addPoly(ink, [[u - 3.5, 0], [u + 3.5, 0], [u + 0.8, 2], [u + 0.6, 22], [u - 0.6, 22], [u - 0.8, 2]], B); addPoly(ink, [[u - 5, 22], [u + 5, 22], [u + 3.5, 26], [u - 3.5, 26]], B);
-      if (f.st === "idle" && Math.random() < 0.05) S.parts.push({ kind: "smoke", x: f.x + u * IK, y: f.y - 27 * IK, vx: (Math.random() - 0.5) * 6, vy: -14 - Math.random() * 8, r: 2 + Math.random() * 2, life: 1.8, age: 0 });
+      if (f.st === "idle" && Math.random() < 0.05) S.parts.push({ kind: "smoke", x: f.x + u * K, y: f.y - 27 * K, vx: (Math.random() - 0.5) * 6, vy: -14 - Math.random() * 8, r: 2 + Math.random() * 2, life: 1.8, age: 0 });
     } else if (dom === "avarice") { for (const u of [-24, 24, 31]) addPoly(ink, [[u - 6, 0], [u + 6, 0], [u + 3, 3.5], [u, 4.5], [u - 3, 3.5]], B); }
-    else if (dom === "wrath") { addPoly(ink, [[13, 0], [29, 0], [27, 5], [15, 5]], B); lights.push({ x: sx + 21 * IK, y: sy - 6, r: 50, a: 0.5 }); }
+    else if (dom === "wrath") { addPoly(ink, [[13, 0], [29, 0], [27, 5], [15, 5]], B); lights.push({ x: sx + 21 * K, y: sy - 6, r: 50, a: 0.5 }); }
     if (f.st === "broken") addPoly(ink, [[-8, 0], [8, 0], [7, 4], [2, 5.5], [-3, 4.5], [-7, 4]], B);
     else {
       // Standing (shaken as it is struck), or falling over.
       const ang = f.st === "topple" ? f.fall * (PI / 2) * ease(Math.min(1, f.t / 0.45)) : f.hurtT > 0 ? Math.sin(f.hurtT * 70) * 0.05 : 0;
-      const base = put(f.x - 33 * IK, f.y, 1, cam), px = sx + (f.st === "topple" ? f.fall * 10 : 0), c = Math.cos(ang), sn = Math.sin(ang);
-      const T = (u, v) => { const [x, y] = base(u * IK, v * IK), dx = x - px, dy = y - sy; return [px + dx * c - dy * sn, sy + dx * sn + dy * c]; };
+      const base = put(f.x - 33 * K, f.y, 1, cam), px = sx + (f.st === "topple" ? f.fall * 10 : 0), c = Math.cos(ang), sn = Math.sin(ang);
+      const T = (u, v) => { const [x, y] = base(u * K, v * K * rz), dx = x - px, dy = y - sy; return [px + dx * c - dy * sn, sy + dx * sn + dy * c]; };
       const idol = new Path2D(); idolPath(idol, dom, T);
       ctx.fillStyle = C.ink; ctx.fill(idol); rimP.addPath(idol); idols.push({ path: idol, dom, idol: true });
       if (dom === "wrath" && f.st === "idle") { const a = T(31, 12), b = T(36, 7); rect(Math.min(a[0], b[0]), a[1], Math.abs(b[0] - a[0]), b[1] - a[1], "#3a0c06"); }
@@ -2857,7 +3215,7 @@ const Climb = (() => {
       if (f.idol) continue;
       const [cx, cy] = dMid(f); if (cx < cam.x - 80 || cx > cam.x + W + 80 || cy < cam.y - 100 || cy > cam.y + H + 100) continue;
       const kindled = f.sin === "wrath" && (f.st === "pickup" || f.st === "windup" || (f.st === "throw" && !f.thrown));
-      f.lit += ((kindled || (dist(lx0, ly0, cx, cy) < R0 * 0.9 && los(lx0, ly0, cx, cy))) - f.lit) * 0.15;
+      f.lit += ((kindled || !!f.block || (dist(lx0, ly0, cx, cy) < R0 * 0.9 && los(lx0, ly0, cx, cy))) - f.lit) * 0.15;
       f.p = demonPose(f);
       const al = f.st === "dying" ? 1 - f.t / 0.8 : f.st === "emerge" ? Math.min(1, f.t / 0.5) : 1;
       f.dy = f.ground ? tiltDy(f.x, f.y) : 0;
@@ -2879,6 +3237,8 @@ const Climb = (() => {
       if (o.shard) drawShard(o.x - cam.x, o.y - cam.y + (o.st === "rest" ? tiltDy(o.x, o.y + BR) + 3 : 0), o.rot, lit, o.shard, o.sid);
       else drawBoulder(o.x - cam.x, o.y - cam.y + (o.st === "rest" ? tiltDy(o.x, o.y + BR) : 0), o.rot, lit ? 1 : 0);
     }
+    // The blocks lying about, or carried off (and the lay brothers at the gates, with their carts).
+    drawBlocks(cam, rimP, lights);
     // The monk: on the rope, hung from his hand.
     const p = monkPose(); let mx = S.x, my = S.y;
     if (S.rope && !S.ground && !S.cling && !S.act) {
@@ -2888,6 +3248,7 @@ const Climb = (() => {
     }
     if (S.ground && !S.act && !(S.atk && S.atk.t < S.atk.dash)) my += tiltDy(S.x, S.y);
     S.lastPose = p; S.drawX = mx; S.drawY = my;
+    if (S.tied) drawTied(mx, my, p, cam, lights);
     if (S.ward) {
       // The ward: a light about him like a second habit, and a light in the dark round him. Near
       // its end it dims, and in its last moments it flickers.
@@ -2937,6 +3298,7 @@ const Climb = (() => {
       hangRope(S.shotVis, hand[0], hand[1], sh.x, sh.y, Math.max(10, out * (sh.ph === "fly" ? 1.12 : 1.3)), fdt);
       drawRope(S.shotVis, 1.3);
     }
+    if (S.yank) drawYank(cam);
     // The rock, in front of him: its crags overlap him where he stands or clings against it.
     ctx.fillStyle = C.ink; ctx.fill(P);
     // In the rock: the gates; the lamps; the tablets.
@@ -2987,6 +3349,7 @@ const Climb = (() => {
     }
     ctx.restore();
     for (const w of vis) drawTablet(w, cam, false);
+    blockGlows(cam);
     // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
     // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
     for (const sec of view) {
@@ -3008,11 +3371,11 @@ const Climb = (() => {
     }
     // Moloch's fires: in its belly, and in the pit before it.
     for (const f of S.demons) if (f.idol && f.sin === "wrath") {
-      const T0 = put(f.x - 33 * IK, f.y, 1, cam), T = (u, v) => T0(u * IK, v * IK), [px, py] = [f.x + 21 * IK - cam.x, f.y - 3 - cam.y];
+      const K = IK * (f.big || 1), T0 = put(f.x - 33 * K, f.y, 1, cam), T = (u, v) => T0(u * K, v * K), [px, py] = [f.x + 21 * K - cam.x, f.y - 3 - cam.y];
       if (px < -40 || px > W + 40 || py < -60 || py > H + 40) continue;
       if (f.st === "idle") { const [ex, ey] = T(33.5, 9.5); glow(ex, ey, 7, SINS.wrath.color, 0.5 + 0.2 * Math.sin(t * 3 + f.id)); glow(ex, ey, 3, C.flame, 0.6); }
       glow(px, py, 16, SINS.wrath.color, 0.35 + 0.1 * Math.sin(t * 2.3 + f.id)); glow(px, py - 2, 6, C.flame, 0.5);
-      if (Math.random() < 0.2) S.parts.push({ kind: "ember", x: f.x + 21 * IK + (Math.random() - 0.5) * 8, y: f.y - 4, vx: (Math.random() - 0.5) * 16, vy: -20 - Math.random() * 30, life: 0.8, age: 0 });
+      if (Math.random() < 0.2) S.parts.push({ kind: "ember", x: f.x + 21 * K + (Math.random() - 0.5) * 8, y: f.y - 4, vx: (Math.random() - 0.5) * 16, vy: -20 - Math.random() * 30, life: 0.8, age: 0 });
     }
     for (const c of carved) {
       ctx.globalAlpha = c.k; ctx.fillStyle = "#2c2a28"; ctx.fill(c.path);
@@ -3129,13 +3492,14 @@ const Climb = (() => {
   function hud(hM) {
     const F = S.flare, I = pads(), way = climbWay();
     text(hM + " m", 16, 30, { font: FONT.title, size: 20, weight: 700, color: "#fff", glow: "rgba(255,179,71,0.5)", blur: 10 });
-    text(NOV ? "THE NOVITIATE" : "BEST " + Math.max(save.climbBest || 0, metres(S.top)) + " m", 16, 46, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)" });
+    text(NOV ? "THE MOUNTAIN OF " + SINS[NOV.domain].name.toUpperCase() : "BEST " + Math.max(save.climbBest || 0, metres(S.top)) + " m", 16, 46, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)", max: 190 });
     if (S.coins > 0) { const y = S.relics ? 76 : 62; drawCoin(22, y - 3, 1, true, 1, 4.2); text("× " + S.coins + (S.coins >= 6 ? "  HEAVY" : ""), 30, y, { size: 8, weight: 700, color: S.coins >= 6 ? "#ffb070" : "rgba(232,196,106,0.85)" }); }
     if (S.relics) { glow(22, 60, 8, C.gold, 0.4); rect(18, 58, 8, 5, C.gold); poly([18, 58, 26, 58, 22, 55], C.gold); text("× " + S.relics, 30, 63, { size: 8, weight: 700, color: "rgba(232,196,106,0.85)" }); }
+    if (S.binned) { const y = 62 + (S.relics ? 14 : 0) + (S.coins > 0 ? 14 : 0), c = SINS[NOV ? NOV.domain : "wrath"]; glow(22, y - 3, 8, c.color, 0.35); for (const [i, j] of SHAPES.T) rect(16 + i * 4, y - 6 + j * 4, 3.4, 3.4, c.color); text("× " + S.binned + " IN THE CARTS", 30, y, { size: 8, weight: 700, color: "rgba(233,230,223,0.7)" }); }
     if (S.say) {
       const a = clamp(S.say.t / 0.3, 0, 1) * clamp((3 - S.say.t) / 0.6, 0, 1);
       text(S.say.text, W / 2, 92, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });
-      text(S.say.sub, W / 2, 108, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", alpha: a * 0.85, glow: "rgba(0,0,0,0.9)", blur: 6 });
+      text(S.say.sub, W / 2, 108, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", alpha: a * 0.85, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 });
     }
     pauseButton();
     if (!usingKeys()) {
@@ -3206,6 +3570,7 @@ const Climb = (() => {
   const pid = (ev) => (ev && ev.pointerId !== undefined ? ev.pointerId : "m");
   const M = {
     action, start, edges, solid, island, sectionAt, trav, cave, slope, thornAt, eyeOf, almsOf, ledge, get S() { return S; }, get nov() { return NOV; }, CELL, COLS, HOOK, TH, DOMAINS, BUILT,
+    blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, TETHER, SHAPES },
     step, draw,
     down(p, ev) {
       if (!S || S.dying) return;
@@ -3310,7 +3675,7 @@ const ClimbPause = {
     const b = (label, act, o) => { button(label, cx - bw / 2, y, bw, 30, act, o || {}); y += 38; };
     b("GO ON", () => Climb.resume(), { hot: true });
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(); });
-    b(Climb.nov ? "THE NOVITIATE" : "TO THE NOVITIATE", () => Game.toNovitiate());
+    b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
     b(soundLabel(), cycleSound);
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);

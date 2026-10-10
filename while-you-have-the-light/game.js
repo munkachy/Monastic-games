@@ -1,6 +1,6 @@
 "use strict";
-// While You Have the Light: the game. The title, the endless climb, the novitiate (one domain to
-// learn, as long as you like), the pause (with every move listed), and the end, when the light
+// While You Have the Light: the game. The title, the endless climb, the seven mountains (one domain
+// to a mountain, once the novitiate), the pause (with every move listed), and the end, when the light
 // goes out. Played sideways; where the phone allows, it locks to sideways when play starts.
 // (The first arena, its practice and its finishers are still here, by ?arena and ?practice, until
 // the seven sins have all been brought up onto the mountain.)
@@ -71,7 +71,7 @@ const Title = {
     text("THE RULE OF ST. BENEDICT, PROLOGUE", x + 2, 142, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)" });
     const by = 166;
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
-    button("THE NOVITIATE", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "Learn one domain, as long as you like" });
+    button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
     buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
     text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
@@ -111,9 +111,10 @@ const Setup = {
   key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.practice(); },
 };
 
-// ---- The novitiate: one domain, to learn ---------------------------------------------------------------
-// A mountain that is all one domain, its demons coming back as often as they are cast out; the
-// torch, and the flare, endless if you like. Here the domains are named; on the climb they are not.
+// ---- The seven mountains: one domain to a mountain ---------------------------------------------------------
+// (Once the novitiate.) A mountain that is all one domain, its demons coming back as often as they are
+// cast out; the torch, and the flare, endless if you like. Here the domains are named; on the climb
+// they are not. Its idols, thrown down, give up blocks for the lay brothers at the gates.
 const NOV_SUB = {
   gluttony: "Swollen caverns; the pit below",
   lust: "Long climbs through the briars",
@@ -132,9 +133,9 @@ const Novitiate = {
     const N = novSettings();
     drawBackdrop(300 + Novitiate.t * 4, 300, 1, Novitiate.t, {});
     rect(0, 0, W, H, "rgba(3,3,5,0.66)");
-    text("THE NOVITIATE", W / 2, 38, { align: "center", font: FONT.title, size: 22, weight: 700, spacing: 5, color: "#fff" });
-    text("Learn a domain here before you climb it: as long as you like, and nothing is lost.", W / 2, 58, { align: "center", font: FONT.line, italic: true, size: 13, color: C.warm, max: W - 40 });
-    text("THE DOMAIN", W / 2, 84, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    text("THE SEVEN MOUNTAINS", W / 2, 38, { align: "center", font: FONT.title, size: 22, weight: 700, spacing: 5, color: "#fff", max: W - 40 });
+    text("A mountain for each of the seven. Throw down its idols for their blocks, and bring them to the gate.", W / 2, 58, { align: "center", font: FONT.line, italic: true, size: 13, color: C.warm, max: W - 40 });
+    text("THE MOUNTAIN", W / 2, 84, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
     const D = Climb.DOMAINS, bw = Math.min(84, (W - 40) / D.length - 6), x0 = W / 2 - (bw + 6) * D.length / 2 + 3;
     D.forEach((s, i) => {
       const built = Climb.BUILT.includes(s), on = N.domain === s, x = x0 + i * (bw + 6), y = 94;
