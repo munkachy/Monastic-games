@@ -21,20 +21,21 @@ What is in the game now:
 - "place": "shaft" (a climb straight up, with ledges), "crossing" (a long way across: a tunnel with pits, or Gluttony's caverns, or Lust's terraces of briars), or "any".
 - "demons": 0 to 3, how many demons wait in each place along the way (they come back when cast out).
 - "near": demons right beside him at the start: a list of {"sin": "gluttony" | "lust" | "avarice" | "wrath", "count": 1 to 6}. Demons of any of the four can be put on any mountain.
+- "summit": true puts him on the top of the mountain, out under the open sky, with a block: the greatest of its demons waits there (the Maw at its biggest, stronger than any met on the way). "metres" and "place" do not matter then. (The first summit is about 1000 m up.)
 - "great": a great demon, 0 (none) to 4 (strongest). Only one kind exists, the Maw of Gluttony; it can be put on any mountain. It moves only while he faces it in his light (at 4 it hunts him even when he turns away), swallows him head and shoulders, and only a stone block swung into it while he swings on the rope can hurt it (thrown, or struck from the ground, it only drives it back). It is set a little way off, and he is given a block.
 - "block": true ties a stone block from an idol to his belt, to throw or swing.
 - "boon": a relic's power for 20 to 30 seconds, or null: "double" (A Double Portion: every blessing counts twice), "unconsumed" (the torch cannot be dimmed, and its light reaches farther), "friar" (The Flying Friar: he falls slowly and swings high), "vade" (Vade Retro: no demon can come near him).
 - "torch": how much light he has, 0.05 (nearly out) to 1 (full). "endlessTorch": true means no blow can dim it.
 - "flare": the flare (slowed time) meter, 0 to 1. "endlessFlare": true means it never runs out.
-- Not built yet: the summit and its demon, the angel who carries him home, the home base, the library, other great demons, the hidden side passages, new relics. If he asks for one of these, say plainly that it is not built yet, and make the nearest thing that is (for the summit's demon: the Maw at 4, high on the mountain, with a block).`;
-  const SHAPE = `{"say": "one or two plain sentences to him: what you made (or what is not built yet, and what you made instead); or the answer, if he asked a question", "scene": {"title": "a short name for the scene, at most five words", "mountain": "gluttony", "metres": 0, "place": "any", "demons": 1, "near": [], "great": 0, "block": false, "boon": null, "torch": 1, "endlessTorch": false, "flare": 1, "endlessFlare": false}}`;
+- Not built yet: the angel who carries him home after the summit is won, the home base, the library, other great demons, the hidden side passages, new relics. If he asks for one of these, say plainly that it is not built yet, and make the nearest thing that is.`;
+  const SHAPE = `{"say": "one or two plain sentences to him: what you made (or what is not built yet, and what you made instead); or the answer, if he asked a question", "scene": {"title": "a short name for the scene, at most five words", "mountain": "gluttony", "summit": false, "metres": 0, "place": "any", "demons": 1, "near": [], "great": 0, "block": false, "boon": null, "torch": 1, "endlessTorch": false, "flare": 1, "endlessFlare": false}}`;
   function prompt(ask) {
     const said = R.log.filter((e) => e.who !== "note").slice(-6).map((e) => (e.who === "you" ? "He said: " : "You said: ") + e.text).join("\n");
     return FACTS + "\n\nThe scene he is in now: " + (R.now ? JSON.stringify(Object.assign({}, R.now, { seed: undefined })) : "none yet (he is in the empty white room).") +
       (said ? "\n\nWhat was said before, oldest first:\n" + said : "") +
       "\n\nWhat he asks now: " + JSON.stringify(ask) +
       "\n\nAnswer with only this JSON, nothing else:\n" + SHAPE +
-      "\nUse \"scene\": null only when he asks a question or asks for no scene. When he asks to change the scene he is in (\"harder\", \"more of them\", \"again but in Lust\"), start from the scene now. For anything he does not say, choose what makes the scene he wants (for \"the top\" of a mountain, a great height such as 1500 m).";
+      "\nUse \"scene\": null only when he asks a question or asks for no scene. When he asks to change the scene he is in (\"harder\", \"more of them\", \"again but in Lust\"), start from the scene now. For anything he does not say, choose what makes the scene he wants (for \"the top\" of a mountain or its boss, \"summit\": true).";
   }
   // (Only what the game knows, each within its bounds.)
   const MOUNTAINS = ["gluttony", "lust", "avarice", "wrath"], SINS4 = MOUNTAINS, BOONS = ["double", "unconsumed", "friar", "vade"];
@@ -44,6 +45,7 @@ What is in the game now:
     return {
       title: String(s.title || "The scene").slice(0, 40),
       mountain: MOUNTAINS.includes(s.mountain) ? s.mountain : "gluttony",
+      summit: !!s.summit,
       metres: Math.round(num(s.metres, 0, 3000, 0)),
       place: s.place === "shaft" || s.place === "crossing" ? s.place : "any",
       demons: Math.round(num(s.demons, 0, 3, 1)),
