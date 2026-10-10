@@ -2316,9 +2316,29 @@ const Climb = (() => {
   // (A block on his rope weighs as much as four of them.)
   const heavy = () => Math.min(COINS_MAX, (S.coins || 0) + (S.tied ? BLOCK_LOAD : 0)) / COINS_MAX;
   // And his blows are weaker for it: with nine coins on him, two-thirds as hard, and shorter.
-  function blowTo(f, dmg, kx, ky, how) {
-    const w = 1 - 0.35 * heavy(), k = 0.3 + 0.7 * w;
-    return hurtDemon(f, dmg * w, kx * k, ky * k, how);
+  function blowTo(f, dmg, kx, ky, how, move) {
+    const w = 1 - 0.35 * heavy(), k = 0.3 + 0.7 * w, c = move && alive(f) ? comboHit(move, f) : 1;
+    return hurtDemon(f, dmg * w * c, kx * k, ky * k, how);
+  }
+  // Variety in the fight. Each blow that lands adds to his fervour: a full measure for a move he has
+  // not used in his last two; some for the one before last again (a back and forth); none for the
+  // same again. It ebbs a little with every blow, and is gone if he stops a moment. His blows are
+  // stronger by it: one move mashed stays as it was; two in turn, somewhat (about a third); many
+  // moves, much (up to three parts in four more), growing over the run of blows.
+  function comboHit(move, f) {
+    const C = S.combo && S.rt - S.combo.t < 1.8 ? S.combo : (S.combo = { f: 0, last: [], n: 0, t: S.rt });
+    const nov = !C.last.includes(move) ? 1 : C.last[C.last.length - 1] !== move ? 0.4 : 0;
+    C.f = C.f * 0.85 + nov; C.last.push(move); if (C.last.length > 2) C.last.shift(); C.t = S.rt; C.n++;
+    const k = Math.min(1.75, 1 + 0.12 * C.f);
+    if (k >= 1.2) { const [cx, cy] = dMid(f); C.show = { k, t: S.rt, x: cx, y: cy - f.ht / 2 - 10 }; }
+    ev("combo", { move, k: r2(k) });
+    return k;
+  }
+  // The fervour of a run of blows, shown where it landed: x 1.4, and growing.
+  function drawCombo(cam) {
+    const C = S.combo, D = C && C.show; if (!D || S.rt - D.t > 0.9) return;
+    const u = (S.rt - D.t) / 0.9, a = clamp(1 - u, 0, 1) * clamp((S.rt - D.t) / 0.06, 0, 1);
+    text("\u00d7" + D.k.toFixed(1), D.x - cam.x, D.y - cam.y - 14 * u, { align: "center", font: FONT.title, size: 9 + 6 * (D.k - 1), weight: 700, color: D.k >= 1.6 ? "#fff1b8" : "#e8c46a", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6 });
   }
   function throwCoins(f) {
     // (Thrown to come down on him: in the time the throw takes, the fall the coins make allowed for.)
@@ -2913,7 +2933,7 @@ const Climb = (() => {
         if (S.tied === b && b.st === "hand") {
           if (g) { if (g.st !== "dying" && g.st !== "latch" && closeBy(g, 50)) strikeGreat(g, { vx: S.dir * 420, vy: -40, x: b.x, y: b.y, ht: b.ht, flung: false }); }
           else if (f && alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
-            blowTo(f, 4, S.dir * 320, -260, "launch"); Sound.fx.brickHit(1, panX(f.x)); S.shake = 0.25; gain(0.16); impact(f, S.dir, -0.3, 2.4);
+            blowTo(f, 4, S.dir * 320, -260, "launch", "brick"); Sound.fx.brickHit(1, panX(f.x)); S.shake = 0.25; gain(0.16); impact(f, S.dir, -0.3, 2.4);
           }
         }
       }
@@ -2921,21 +2941,21 @@ const Climb = (() => {
         const o = a.o;
         if (S.held === o && alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
           const [cx, cy] = dMid(f);
-          if (o.kind === "fire") { blowTo(f, 3, S.dir * 220, -260, "launch"); S.held = null; o.x = cx; o.y = cy; burst(o, cx, cy); }
-          else if (o.kind === "thorn") { blowTo(f, 3, S.dir * 220, -240, "launch"); S.held = null; o.st = "gone"; briarHit(cx, cy); }
-          else if (o.kind === "coin") { blowTo(f, 2, S.dir * 180, -200, "launch"); S.held = null; o.st = "gone"; Sound.fx.coin(panX(f.x), 1); }
-          else if (o.kind === "fat") { blowTo(f, 2, S.dir * 200, -200, "launch"); S.held = null; splat(o, cx, cy, false); }
-          else { blowTo(f, 3, S.dir * 280, -240, "launch"); Sound.fx.objHit("stone", panX(f.x)); Sound.fx.punch(1, panX(f.x)); }
+          if (o.kind === "fire") { blowTo(f, 3, S.dir * 220, -260, "launch", "bash"); S.held = null; o.x = cx; o.y = cy; burst(o, cx, cy); }
+          else if (o.kind === "thorn") { blowTo(f, 3, S.dir * 220, -240, "launch", "bash"); S.held = null; o.st = "gone"; briarHit(cx, cy); }
+          else if (o.kind === "coin") { blowTo(f, 2, S.dir * 180, -200, "launch", "bash"); S.held = null; o.st = "gone"; Sound.fx.coin(panX(f.x), 1); }
+          else if (o.kind === "fat") { blowTo(f, 2, S.dir * 200, -200, "launch", "bash"); S.held = null; splat(o, cx, cy, false); }
+          else { blowTo(f, 3, S.dir * 280, -240, "launch", "bash"); Sound.fx.objHit("stone", panX(f.x)); Sound.fx.punch(1, panX(f.x)); }
           S.shake = 0.22; gain(0.14); impact(f, S.dir, -0.3, 2);
         }
       }
       else if (a.kind === "heave" || a.kind === "catch") {
         if (a.o.st === "rest" || a.o.st === "fly") { a.o.st = "held"; a.o.by = null; S.held = a.o; if (a.kind === "catch") { Sound.fx.catchIt(); gain(0.08); } else Sound.fx.pickup(); }
       } else if (alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
-        if (a.kind === "punch") { impact(f, S.dir, -0.2, 1); blowTo(f, 1, S.dir * 150, -60); Sound.fx.punch(0.8, panX(f.x)); gain(0.06); }
-        else if (a.kind === "kick") { impact(f, S.dir * 0.2, -1, 1.4); blowTo(f, 1, S.dir * 30, -430, "launch"); Sound.fx.kick(0.9, panX(f.x)); gain(0.06); }
-        else if (a.kind === "slam") { impact(f, a.dir[0] * 0.3, 1, 1.6); blowTo(f, 1, a.dir[0] * 140, 680, "hurl"); Sound.fx.punch(1, panX(f.x)); gain(0.06); }
-        else { impact(f, a.dir[0], a.dir[1], 1.8); blowTo(f, 1, a.dir[0] * 580, a.dir[1] * 580 - 90, "hurl"); Sound.fx.kick(1, panX(f.x)); gain(0.08); }
+        if (a.kind === "punch") { impact(f, S.dir, -0.2, 1); blowTo(f, 1, S.dir * 150, -60, undefined, "strike"); Sound.fx.punch(0.8, panX(f.x)); gain(0.06); }
+        else if (a.kind === "kick") { impact(f, S.dir * 0.2, -1, 1.4); blowTo(f, 1, S.dir * 30, -430, "launch", "uppercut"); Sound.fx.kick(0.9, panX(f.x)); gain(0.06); }
+        else if (a.kind === "slam") { impact(f, a.dir[0] * 0.3, 1, 1.6); blowTo(f, 1, a.dir[0] * 140, 680, "hurl", "slam"); Sound.fx.punch(1, panX(f.x)); gain(0.06); }
+        else { impact(f, a.dir[0], a.dir[1], 1.8); blowTo(f, 1, a.dir[0] * 580, a.dir[1] * 580 - 90, "hurl", "hurl"); Sound.fx.kick(1, panX(f.x)); gain(0.08); }
       }
     }
     if (u >= 1) { S.atk = null; S.ground = boxHit(S.x, S.y + 1); if (!S.ground) { S.vy = 0; S.floatT = 0.3; } }
@@ -2984,7 +3004,7 @@ const Climb = (() => {
     S.meter -= CROSS_COST;
     S.crosses.push({ kind: "smite", x: cx, y: cy, t: 0, size: 24 });
     f.brokenT = 1.6; S.freeze = 0.12; S.whiteT = 0.22;
-    blowTo(f, 3, sign(f.x - S.x) * 300, -220, "hurl");
+    blowTo(f, 3, sign(f.x - S.x) * 300, -220, "hurl", "cross");
     for (let k = 0; k < 30; k++) { const a = Math.random() * TAU, v = 60 + Math.random() * 220; S.parts.push({ kind: "spark", c: k % 2 ? C.flameHot : SINS[f.sin].color, x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.7, age: 0, real: true }); }
     Sound.fx.unlock(); Sound.fx.demonBroken(f.sin); Sound.fx.castOut(f.sin); S.shake = 0.3;
   }
@@ -3024,7 +3044,7 @@ const Climb = (() => {
       if (yIn <= top + 6 && S.y >= top - 2) {
         f.stompCd = S.rt + 0.35;
         impact(f, 0, 1, vyIn > 430 ? 1.8 : 1.2, f.x, f.y - f.ht);
-        blowTo(f, vyIn > 430 ? 2 : 1, sign(f.x - S.x) * 40 || 40, 0);
+        blowTo(f, vyIn > 430 ? 2 : 1, sign(f.x - S.x) * 40 || 40, 0, undefined, "stomp");
         if (alive(f) && !f.idol) setSt(f, "down");
         S.y = top - 0.5; S.vy = -330; S.vx *= 0.5; S.stompT = 0.4; S.ground = false;
         Sound.fx.kick(1, panX(f.x)); Sound.fx.land(0.8); S.shake = 0.2; gain(0.08);
@@ -3039,7 +3059,7 @@ const Climb = (() => {
     const fx = S.x + sign(S.vx) * 12;
     for (const f of S.demons) if (alive(f) && Math.abs(f.x - fx) < f.hw + 16 && f.y - f.ht < S.y + 4 && f.y > S.y - HT - 6) {
       impact(f, sign(S.vx), -0.2, sp > 380 ? 2 : 1.3);
-      blowTo(f, sp > 380 ? 2 : 1, S.vx * 0.9, -160 - sp * 0.2, "hurl");
+      blowTo(f, sp > 380 ? 2 : 1, S.vx * 0.9, -160 - sp * 0.2, "hurl", "swing");
       Sound.fx.kick(1, panX(f.x)); S.swingKickT = 0.35; S.kickCd = 0.45; S.shake = 0.15; gain(0.1);
       S.vx *= 0.6; S.vy *= 0.6; S.dir = sign(S.vx) || S.dir;
       break;
@@ -4296,6 +4316,7 @@ const Climb = (() => {
     blockGlows(cam);
     if (S.bigs.length) greatGlows(cam);
     if (S.boon) boonGlows(cam);
+    if (S.combo) drawCombo(cam);
     // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
     // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
     for (const sec of view) {
@@ -4591,7 +4612,7 @@ const Climb = (() => {
     blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, takeUp, throwBlock, TETHER, SHAPES, THROW_LEN },
     great: { placeGreat, strikeGreat, latch, punchOut, hurl, bigAt, burstAfter, burstSpot, startDread, onView, GREAT_V, GRASP },
     keptPlace: (dom) => keptAll()[dom] || null, forgetPlace: forget,
-    boons: { BOONS, BOON_ORDER, boonOf, showBoon, grantBoon, VADE_R }, crawl: crawlOf, relicsOf, lightR: () => lightR(),
+    boons: { BOONS, BOON_ORDER, boonOf, showBoon, grantBoon, VADE_R }, crawl: crawlOf, relicsOf, lightR: () => lightR(), combo: (m, f) => comboHit(m, f),
     wall: (n) => { const w = wallAt(n); return { w, pos: wallPos(w) }; }, record, pauseShot: null, pauseRec: null,
     step, draw,
     down(p, ev) {
