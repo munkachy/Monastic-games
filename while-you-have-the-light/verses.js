@@ -87,8 +87,34 @@ const Verses = (() => {
   V.use = function (p, src) {
     V.custom = { list: p.list, psalm: p.psalm, src: String(src || "pasted").slice(0, 40), filled: p.filled };
     try { localStorage.setItem(KEY, JSON.stringify(V.custom)); } catch (e) { }
+    keep();
   };
-  V.reset = function () { V.custom = null; try { localStorage.removeItem(KEY); } catch (e) { } };
+  V.reset = function () { V.custom = null; try { localStorage.removeItem(KEY); } catch (e) { } keep(); };
+
+  // On claude.ai the device may forget them between visits. There they are also kept in the player's
+  // own private place, which only they can read, and taken from it at the start. (Going back to the
+  // Douay is kept there too, so another device does not bring the old verses back.)
+  let cloud = null;
+  function keep() {
+    if (!cloud) return;
+    cloud.set({ json: V.custom ? JSON.stringify(V.custom) : "", t: Date.now() }).catch(() => { });
+  }
+  try {
+    const C = window.claude;
+    if (C && C.use) Promise.all([C.use("db"), C.use("user")]).then(async ([db, user]) => {
+      if (!db || !user || !user.id) return;
+      const id = await user.id(); if (!id) return;
+      const ref = db.collection("data/users/" + id).doc("verses"), s = await ref.get();
+      cloud = ref;
+      if (!s.exists) { if (V.custom) keep(); return; }
+      const d = s.data() || {};
+      let j = null; try { j = d.json ? JSON.parse(d.json) : null; } catch (e) { }
+      if (j && Array.isArray(j.list) && j.list.length === 22) {
+        V.custom = j; try { localStorage.setItem(KEY, JSON.stringify(j)); } catch (e) { }
+      } else if (d.json === "") { V.custom = null; try { localStorage.removeItem(KEY); } catch (e) { } }
+      if (box && !box.hidden) show();
+    }).catch(() => { });
+  } catch (e) { }
 
   // ---- The box for it, over the pause screen ----
   let box = null, ta = null, msg = null, now = null, showAgain = 0;
@@ -118,7 +144,7 @@ const Verses = (() => {
     box.innerHTML = `<div id="verse-panel" role="dialog" aria-labelledby="verse-title">
       <p id="verse-title">THE VERSES ON THE ROCK</p>
       <p id="verse-now"></p>
-      <p id="verse-help">To use another translation: choose a psalter file (such as a Grail pack), or the blank form filled in with each verse after its letter; or paste the filled-in form in the box and use that. Only the twenty-two verses are kept, on this device.</p>
+      <p id="verse-help">To use another translation: choose a psalter file (such as a Grail pack), or the blank form filled in with each verse after its letter; or paste the filled-in form in the box and use that. Only the twenty-two verses are kept, and only for you.</p>
       <div class="verse-row"><button type="button" class="verse-btn" id="verse-save">SAVE THE BLANK FORM</button><button type="button" class="verse-btn" id="verse-show">SHOW IT HERE</button><button type="button" class="verse-btn hot" id="verse-choose">CHOOSE THE FILE</button><input type="file" id="verse-file" accept=".txt,.json,text/plain,application/json"></div>
       <textarea id="verse-text" placeholder="…or paste the filled-in form here"></textarea>
       <div class="verse-row"><button type="button" class="verse-btn hot" id="verse-paste">USE THE TEXT IN THE BOX</button><button type="button" class="verse-btn" id="verse-douay">BACK TO THE DOUAY</button><button type="button" class="verse-btn" id="verse-close">CLOSE</button></div>
