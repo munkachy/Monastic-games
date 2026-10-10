@@ -179,6 +179,12 @@ function pauseButton() {
 let save = { muted: false, best: 0, bestFlow: 0, unlocked: {}, cast: {}, seen: {}, practice: null };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("while-you-have-the-light") || "{}")); } catch (e) { }
 const store = () => { try { localStorage.setItem("while-you-have-the-light", JSON.stringify(save)); } catch (e) { } };
+// The sound: all of it, the effects alone (no music), or none. One button goes round the three.
+const SOUND_MODES = ["all", "effects", "off"];
+const soundMode = () => (SOUND_MODES.includes(save.sound) ? save.sound : save.muted ? "off" : "all");
+const soundLabel = () => ({ all: "SOUND: ALL", effects: "SOUND: NO MUSIC", off: "SOUND: OFF" })[soundMode()];
+function applySound() { if (typeof Sound === "undefined") return; const m = soundMode(); Sound.setMute(m === "off"); Sound.setMusic(m === "all"); }
+function cycleSound() { save.sound = SOUND_MODES[(SOUND_MODES.indexOf(soundMode()) + 1) % 3]; save.muted = save.sound === "off"; store(); applySound(); }
 
 // ---- Input ------------------------------------------------------------------------------------------
 // Every screen of the game is a "mode" with its own step, draw and touch handlers. Touches arrive
@@ -213,7 +219,7 @@ addEventListener("keydown", (e) => {
   lastInput = "key";
   wakeSound();
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(e.code)) e.preventDefault();
-  if (e.code === "KeyM" && typeof Sound !== "undefined") { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); return; }
+  if (e.code === "KeyM" && typeof Sound !== "undefined") { cycleSound(); return; }
   if (mode && mode.key) mode.key(e.code, true, e);
 });
 addEventListener("keyup", (e) => { if (mode && mode.key) mode.key(e.code, false, e); });

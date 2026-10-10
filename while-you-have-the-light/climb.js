@@ -3311,7 +3311,7 @@ const ClimbPause = {
     b("GO ON", () => Climb.resume(), { hot: true });
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(); });
     b(Climb.nov ? "THE NOVITIATE" : "TO THE NOVITIATE", () => Game.toNovitiate());
-    b(Sound.muted ? "SOUND: OFF" : "SOUND: ON", () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); });
+    b(soundLabel(), cycleSound);
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
