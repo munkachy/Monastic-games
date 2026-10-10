@@ -2571,7 +2571,9 @@ const Climb = (() => {
     const C = S.combo && S.rt - S.combo.t < 1.8 ? S.combo : (S.combo = { f: 0, last: [], n: 0, t: S.rt });
     const nov = !C.last.includes(move) ? 1 : C.last[C.last.length - 1] !== move ? 0.4 : 0;
     C.f = C.f * 0.85 + nov; C.last.push(move); if (C.last.length > 2) C.last.shift(); C.t = S.rt; C.n++;
-    const k = Math.min(1.75, 1 + 0.12 * C.f);
+    // (Noted: the first bonus of a run should be high. Once a run of varied blows has begun (its
+    // fervour past 1.5, at the second blow unlike the first), x1.8, and growing by the same steps.)
+    const k = C.f >= 1.5 ? Math.min(2.4, 1.6 + 0.12 * C.f) : 1 + 0.12 * C.f;
     if (k >= 1.2) { const [cx, cy] = dMid(f); C.show = { k, t: S.rt, x: cx, y: cy - f.ht / 2 - 10 }; }
     ev("combo", { move, k: r2(k) });
     return k;
@@ -2580,7 +2582,7 @@ const Climb = (() => {
   function drawCombo(cam) {
     const C = S.combo, D = C && C.show; if (!D || S.rt - D.t > 0.9) return;
     const u = (S.rt - D.t) / 0.9, a = clamp(1 - u, 0, 1) * clamp((S.rt - D.t) / 0.06, 0, 1);
-    text("\u00d7" + D.k.toFixed(1), D.x - cam.x, D.y - cam.y - 14 * u, { align: "center", font: FONT.title, size: 9 + 6 * (D.k - 1), weight: 700, color: D.k >= 1.6 ? "#fff1b8" : "#e8c46a", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6 });
+    text("\u00d7" + D.k.toFixed(1), D.x - cam.x, D.y - cam.y - 14 * u, { align: "center", font: FONT.title, size: 9 + 5 * (D.k - 1), weight: 700, color: D.k >= 2 ? "#fff1b8" : "#e8c46a", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6 });
   }
   function throwCoins(f) {
     // (Thrown to come down on him: in the time the throw takes, the fall the coins make allowed for.)
