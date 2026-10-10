@@ -57,7 +57,8 @@ const Climb = (() => {
   const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
   // The torch does not burn down with time (he may look about as long as he likes): blows dim it,
   // and the higher he is, the more each blow takes; the thief's hand, and a great demon's mouth.
-  const blowCost = (c) => c * Math.min(4, 1 + metres(-S.y) / 350);
+  // (And each time the mountain has been climbed to its top before, its demons strike a quarter harder.)
+  const blowCost = (c) => c * Math.min(4, 1 + metres(-S.y) / 350) * (1 + 0.25 * ((NOV && NOV.climbs) || 0));
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
@@ -656,7 +657,7 @@ const Climb = (() => {
       if (Number.isInteger(R.summitK) && R.summitK % 8 === 7) NOV.summitK = R.summitK;
       else if (Number.isFinite(R.y) && R.y < 0) { NOV.summitK = Infinity; NOV.summitK = summitAbove(sectionAt(Math.max(1, Math.floor(-R.y / CELL))).k); }
     }
-    if (NOV && !NOV.summitK) NOV.summitK = SUMMIT_K;
+    if (NOV && !NOV.summitK) NOV.summitK = SUMMIT_K + 8 * (NOV.climbs || 0);       // (higher each time it has been climbed)
     const e = edges(-2), x = (e.L + e.R + 1) / 2 * CELL;
     S = {
       x, y: -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
@@ -1897,7 +1898,8 @@ const Climb = (() => {
   // It does not leave the mountain's top, and does not follow him down into it.
   function placeSummit(k) {
     const sec = secs[k];
-    if (S.greatDown.has(k) || S.bigs.some((g) => g.summit)) return;
+    if (S.greatDown.has(k)) { S.won = S.won || { t: 9 }; return; }        // (won before he left the mountain: the angel waits)
+    if (S.bigs.some((g) => g.summit)) return;
     const G = GREAT.gluttony, sc = 1.9, hw = G.hw * sc, ht = G.ht * sc, side = hash2(k, 995, seed) < 0.5 ? -1 : 1, i = sec.c + side * 17;
     const at = dFree((i + 0.5) * CELL, -(sec.h0 + summitG(i, sec)) * CELL - 1, hw, ht) || [(i + 0.5) * CELL, -(sec.h0 + SUM_G) * CELL - 1];
     S.bigs.push({ sin: "gluttony", tier: 5, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: -side, hp: 5, maxHp: 5, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
@@ -1954,9 +1956,9 @@ const Climb = (() => {
   }
   function reach(g) {
     if (S.invT > 0 || S.dying) return;
-    // On the rope it does not take him in: it strikes him off it. Swinging hard enough for a kick,
-    // he comes off it unharmed (and it is driven back a little: only a block can hurt it); slower,
-    // the blow comes home (or the ward turns it). So he must swing round it, and strike with a block.
+    // On the rope, swinging hard enough for a kick: he is struck off it unharmed (and it is driven back
+    // a little: only a block can hurt it). Slower, it takes him in, as anywhere (or the ward turns it).
+    // So he must swing round it fast, and strike with a block.
     if (S.rope && !S.ground) {
       const sp = Math.hypot(S.vx, S.vy), s = sign(S.x - g.x) || -S.dir;
       if (sp >= 170) {
@@ -1966,8 +1968,6 @@ const Climb = (() => {
         impactAt(g.x + s * g.hw * 0.6, g.y - g.ht * 0.5, -s, 0, 1.2, null); Sound.fx.kick(1, panX(g.x)); Sound.fx.stone(panX(g.x)); S.shake = 0.18;
         return;
       }
-      if (!S.ward) { ev("struck off the rope by a great demon"); letGo(true); hitMonk(s, 0.1); g.kx = -s * 60; g.stunT = Math.max(g.stunT, 0.5); return; }
-      letGo(true);
     }
     if (S.ward) {
       // The ward turns it: it is thrown back, and stunned a while; and the ward is spent.
@@ -2052,7 +2052,7 @@ const Climb = (() => {
     for (let q = 0; q < 30; q++) { const a = Math.random() * TAU, v = 60 + Math.random() * 220; S.parts.push({ kind: "spark", c: q % 3 ? SINS[g.sin].color : "#ff4a2a", x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 1, age: 0, real: true }); }
     for (let q = 0; q < 16; q++) S.parts.push({ kind: "smoke", x: cx + (Math.random() - 0.5) * 40, y: cy + (Math.random() - 0.5) * 60, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, r: 5 + Math.random() * 7, life: 1.4, age: 0 });
     S.say = g.summit ? { text: "THE SUMMIT IS WON", sub: "The greatest of this mountain's demons is cast down.", t: 0 } : { text: "THE GREAT DEMON IS CAST DOWN", sub: "The torch and the flare are full.", t: 0 };
-    if (g.summit) ev("the summit is won");
+    if (g.summit) { ev("the summit is won"); S.won = { t: 0 }; }
   }
   // Awake, it comes on a block (lying, or on his rope): it seizes it (wrenching it off his rope) and
   // hurls it back at him, hard and straight. If it reaches him it is a blow (his ward turns it);
@@ -2076,6 +2076,90 @@ const Climb = (() => {
   // follows until it is cast down, or until he reads a verse: "Thy word is a lamp to my feet"
   // (Psalm 118:105).
   const DREAD_T = { meet: 1.15, burst: 0.9 };
+  // ---- The angel -------------------------------------------------------------------------------------
+  // The summit won and he on it: the world stops; a beam of light falls on him out of the sky, and an
+  // angel comes down it, and takes him by the top of his head (as Habacuc was taken: Daniel 14:35),
+  // and they go up together into the light. Then home. (Its times: the beam; the angel come down; the
+  // hand laid on him; up; the white; home.)
+  const ANG = { beam: 1.3, down: 3.0, take: 3.6, white: 5.6, home: 7.2 };
+  function startAngel() {
+    ev("the angel came");
+    if (S.rope) letGo(true);
+    if (S.flare.on) endFlare(true);
+    S.shot = null; S.flip = null; S.next = null; S.pend = null; S.atk = null; S.hang = null; S.cling = 0; S.climbing = false; S.vx = 0; S.vy = 0; S.kick = null; S.shake = 0;
+    if (S.held) { S.held.st = "rest"; S.held.by = null; S.held = null; }
+    S.angel = { t: 0, x: S.x, y0: S.y, lifted: false }; S.say = null; S.kept = null; S.verse = null;
+    Sound.fx.angel(); Sound.muffle(false);
+  }
+  function stepAngel(dt) {
+    const A = S.angel; A.t += dt; S.rt += dt * 0.2;      // (the world all but still: the flame still moves)
+    if (!A.lifted && A.t > ANG.take) { A.lifted = true; Sound.fx.lift(); }
+    if (A.t > ANG.take) { const u = A.t - ANG.take; S.y = A.y0 - (40 * u + 70 * u * u); S.ground = false; }
+    // (The camera rises with them, but more slowly: they go up out of it.)
+    const ty = A.y0 - HT / 2 - H * 0.66 - 0.35 * (A.y0 - S.y);
+    S.cam.y += (ty - S.cam.y) * Math.min(1, dt * 3); S.cam.x += (clamp(A.x - W / 2, 0, COLS * CELL - W) - S.cam.x) * Math.min(1, dt * 3);
+    if (A.t > ANG.home) finishWon();
+  }
+  // Where the angel is: its feet. Down the beam to just above his head; then up with him.
+  function angelAt() {
+    const A = S.angel, u = smooth((A.t - ANG.beam) / (ANG.down - ANG.beam));
+    return [A.x + 2, A.t > ANG.take ? S.y - HT - 18 : lerp(A.y0 - 460, A.y0 - HT - 18, u)];
+  }
+  function drawBeam(cam, lights) {
+    const A = S.angel, k = clamp(A.t / ANG.beam, 0, 1) * clamp((ANG.home - A.t) / 0.6, 0, 1), x = A.x - cam.x, yb = A.y0 - cam.y + 4;
+    const w = 26 + 34 * k, g = ctx.createLinearGradient(x - w, 0, x + w, 0);
+    g.addColorStop(0, "rgba(255,244,214,0)"); g.addColorStop(0.5, "rgba(255,246,222," + (0.5 * k) + ")"); g.addColorStop(1, "rgba(255,244,214,0)");
+    ctx.fillStyle = g; ctx.fillRect(x - w, 0, w * 2, Math.max(0, yb));
+    glowOval(x, yb - 4, 70 * k, 14 * k, "#fff1c4", 0.55 * k);
+    lights.push({ x, y: yb - 80, r: 340 * k + 1, a: 0.95 * k });
+  }
+  function drawAngel(cam, mx, my) {
+    const A = S.angel; if (A.t < ANG.beam * 0.6) return;
+    const [fx, fy] = angelAt(), x = fx - cam.x, y = fy - cam.y, a = clamp((A.t - ANG.beam * 0.6) / 0.8, 0, 1), t = A.t;
+    const flap = Math.sin(t * 3.2) * 0.12;
+    ctx.save(); ctx.globalAlpha *= a;
+    glow(x, y - 46, 110, "#fff1c4", 0.45); glow(x, y - 46, 44, "#ffffff", 0.5);
+    // The wings: long, swept up and back, feather on feather, each a little apart.
+    for (const sd of [-1, 1]) for (let f = 0; f < 4; f++) {
+      const r0 = 0.55 + f * 0.17 + flap * sd * 0, ang = -PI / 2 + sd * (0.55 + f * 0.24 + flap);
+      const bx = x + sd * 6, by = y - 62, len = 64 - f * 9;
+      ctx.beginPath(); ctx.moveTo(bx, by);
+      ctx.quadraticCurveTo(bx + Math.cos(ang - sd * 0.5) * len * 0.6, by + Math.sin(ang - sd * 0.5) * len * 0.6, bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
+      ctx.quadraticCurveTo(bx + Math.cos(ang + sd * 0.25) * len * 0.5, by + Math.sin(ang + sd * 0.25) * len * 0.5 + 10, bx + sd * 4, by + 12);
+      ctx.closePath(); ctx.fillStyle = "rgba(255,248,230," + (0.55 - f * 0.08) + ")"; ctx.fill();
+    }
+    // The body: a long robe of light, falling to a point below (it does not stand: it is borne).
+    ctx.beginPath(); ctx.moveTo(x - 6, y - 64); ctx.quadraticCurveTo(x - 15, y - 30, x - 9, y + 2); ctx.quadraticCurveTo(x, y + 14, x + 9, y + 2); ctx.quadraticCurveTo(x + 15, y - 30, x + 6, y - 64); ctx.closePath();
+    ctx.fillStyle = "rgba(255,252,240,0.95)"; ctx.fill();
+    circle(x, y - 71, 6.5, "#fffdf6"); ring(x, y - 73, 10, "rgba(255,226,150,0.85)", 1.4);
+    // The arm reaching down to the top of his head (and holding him, going up).
+    const reach = clamp((A.t - (ANG.down - 0.5)) / 0.7, 0, 1), hx = lerp(x + 10, mx - cam.x, reach), hy = lerp(y - 40, my - cam.y - HT - 1, reach);
+    ctx.beginPath(); ctx.moveTo(x + 4, y - 56); ctx.quadraticCurveTo(x + 14, y - 44, hx, hy); ctx.strokeStyle = "rgba(255,250,236,0.95)"; ctx.lineWidth = 3.2; ctx.lineCap = "round"; ctx.stroke();
+    ctx.restore();
+  }
+  // Over everything: the words, and the white.
+  function drawAngelOver() {
+    const A = S.angel;
+    if (A.t > ANG.take - 0.4) {
+      const a = clamp((A.t - ANG.take + 0.4) / 0.8, 0, 1);
+      text("\u201cThe angel of the Lord took him by the top of his head.\u201d", W / 2, H * 0.18, { align: "center", font: FONT.line, italic: true, size: 16, color: "#fff6e2", alpha: a, glow: "rgba(0,0,0,0.8)", blur: 10, max: W - 40 });
+      text("DANIEL 14:35", W / 2, H * 0.18 + 18, { align: "center", size: 8, weight: 700, spacing: 3, color: "rgba(255,236,200,0.8)", alpha: a, glow: "rgba(0,0,0,0.8)", blur: 8 });
+    }
+    if (A.t > ANG.white) rect(0, 0, W, H, "rgba(255,252,244," + clamp((A.t - ANG.white) / (ANG.home - ANG.white - 0.3), 0, 1) + ")");
+  }
+  // Home: what he brought, kept (not from the white room); the mountain higher and harder the next
+  // time; his place on it forgotten (it is climbed). Then the morning at home.
+  function finishWon() {
+    const r = { dom: NOV.domain, m: metres(S.top), binned: S.binned || 0, cast: S.cast, read: S.read, relics: S.relics, room: !!NOV.room };
+    if (!NOV.room) {
+      save.climbs = save.climbs || {}; save.climbs[NOV.domain] = (save.climbs[NOV.domain] || 0) + 1; r.climbs = save.climbs[NOV.domain];
+      save.bricks = save.bricks || {}; save.bricks[NOV.domain] = (save.bricks[NOV.domain] || 0) + r.binned; r.bricks = save.bricks[NOV.domain];
+      store(); forget(NOV.domain);
+    }
+    ev("carried home", { dom: r.dom, m: r.m, binned: r.binned });
+    S.angel = null; S.won = null;
+    if (typeof Home !== "undefined") Home.show(r); else Game.toNovitiate();
+  }
   const hauntWait = (g) => 6 + Math.random() * 4 - 0.6 * (g.tier - 1);
   const canDread = () => !S.dread && !S.boonShow && !S.latched && !S.dying && !S.verseHold && !S.act;
   // Any of it within the view (grown by m on every side; m < 0, well inside it).
@@ -3530,6 +3614,7 @@ const Climb = (() => {
     // A great demon showing itself, or a relic held up: the world stopped, all but that.
     if (S.dread) { stepDread(dt); return; }
     if (S.boonShow) { stepBoonShow(dt); return; }
+    if (S.angel) { stepAngel(dt); return; }
     S.rt += dt;
     if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
     if (S.rope && !S.ground) S.swungT = S.rt;         // (swinging: the last moment of it, for the block's blow)
@@ -3620,6 +3705,13 @@ const Climb = (() => {
         S.say = { text: "THE SUMMIT", sub: "The top of the mountain, under the open sky. The greatest of its demons waits here.", t: 0 };
         Sound.ambience({ wind: 1 }); keepHere("summit");
       }
+    }
+    // The summit won: on the top, the angel comes for him. (Gone down off it, it waits for him there.)
+    if (S.won && !S.dying) {
+      S.won.t += dt;
+      const su = summitSec(), up = !!su && -S.y / CELL > su.h0 + SUM_G - 1;
+      if (up && S.won.t > 1.8 && S.ground && !S.act && !S.latched && !S.legsIn && !S.crawl) startAngel();
+      else if (!up && !S.won.said && S.won.t > 1) { S.won.said = true; S.say = { text: "THE ANGEL WAITS AT THE TOP", sub: "Go back up onto the summit, and you will be carried home.", t: 0 }; }
     }
     // The verses: come near one and the torch is full again.
     const [mx, my] = middle(), hNow = -S.y / CELL;
@@ -4472,6 +4564,7 @@ const Climb = (() => {
     if (S.ground && !S.act && !(S.atk && S.atk.t < S.atk.dash)) my += tiltDy(S.x, S.y);
     if (S.crawl && !S.boonShow) mx -= S.dir * 10;        // (on his knees, his body laid out over the length of him)
     S.lastPose = p; S.drawX = mx; S.drawY = my;
+    if (S.angel) drawBeam(cam, lights);
     if (S.tied && S.tied.st !== "hand") drawTied(mx, my, p, cam, lights);
     if (S.ward && !S.boonShow) {
       // The ward: a light about him like a second habit, and a light in the dark round him. Near
@@ -4510,6 +4603,7 @@ const Climb = (() => {
     S.handW = hand;
     if (S.tied && S.tied.st === "hand") drawHeld(S.tied, mx, my, p, hand, cam, lights);
     if (S.latched) drawLatch(S.latched, mx, my, cam);
+    if (S.angel) drawAngel(cam, mx, my);
     if (S.legsIn && !S.boonShow) drawLegsSac(mx, my, p, cam);
     if (S.held) {
       S.held.x = hand[0]; S.held.y = hand[1] - (S.held.kind === "fire" || S.held.kind === "thorn" ? 6 : S.held.kind === "coin" ? 4 : S.held.kind === "fat" ? 7 : 9);
@@ -4724,6 +4818,7 @@ const Climb = (() => {
     hud(hM);
     if (S.dread) drawDread(cam);
     if (S.boonShow) drawBoonShow(cam);
+    if (S.angel) drawAngelOver();
   }
   // His block, lost (knocked loose, or stolen) and out of sight: a mark at the edge of the view the
   // way it lies, with its shape and how far it is (as the trackers of the great open-world games).
@@ -4904,7 +4999,7 @@ const Climb = (() => {
     down(p, ev) {
       if (!S || S.dying) return;
       if (S.verseHold) { goOn(); return; }
-      if (S.dread || S.boonShow) return;
+      if (S.dread || S.boonShow || S.angel) return;
       const id = pid(ev);
       if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
       // Held in a great demon's jaws: every tap (but on the thumb's cross) is a blow from inside it.
@@ -4992,7 +5087,7 @@ const Climb = (() => {
       S.keys[code] = down;
       if (S.verseHold) { if (down) goOn(); return; }
       if (!down) return;
-      if ((S.dread || S.boonShow) && code !== "Escape" && code !== "KeyP") return;
+      if ((S.dread || S.boonShow || S.angel) && code !== "Escape" && code !== "KeyP") return;
       if (code === "Escape" || code === "KeyP") M.pause();
       else if (S.latched) { if (!(e && e.repeat)) punchOut(); }          // (in its jaws: any key, a blow)
       else if (code === "Space") action();
@@ -5042,7 +5137,7 @@ const ClimbPause = {
       : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down; on the ground, ▼ crawls (into a way too low to stand in, he crawls by himself)"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     // (In the seven mountains: the block, and the great demons.)
     if (Climb.nov) mv.push(usingKeys() ? ["CLICK THE BLOCK ON ITS ROPE, THEN CLICK", "He takes it up, then throws it, its rope paying out. A great demon: only the block swung into it as you swing on the rope hurts it (thrown, it only drives it back)"] : ["TAP THE BLOCK ON ITS ROPE, THEN TAP", "He takes it up, then throws it, its rope paying out. A great demon: only the block swung into it as you swing on the rope hurts it (thrown, it only drives it back)"],
-      [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes. On the rope it cannot take you in: it strikes you off (swinging hard, unharmed)"]);
+      [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes. On the rope, swing into it hard and it only knocks you off; slowly, and it takes you in"]);
     // Each move over as many lines as it needs; as large as lets them all fit.
     const cw = W - mx - 16;
     let z = 8.5; const lines = (sz) => mv.reduce((n, [, what]) => n + 1 + wrap(what, cw, "500 " + sz + "px " + FONT.ui).length, 0);
