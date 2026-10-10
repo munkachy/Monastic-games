@@ -276,6 +276,12 @@ function dropKeys() {
 // the game up off the screen.) What is in the boxes for writing is left to scroll and be typed in.
 const inBox = (e) => !!(e.target && e.target.closest && e.target.closest("textarea, input, select, #note-panel, #verse-panel, #room-panel"));
 document.addEventListener("touchmove", (e) => { if (e.cancelable && !inBox(e)) e.preventDefault(); }, { passive: false });
+// Nor are taps in quick succession a double tap. (Inside claude.ai the game's own "no zooming" is not
+// heeded: the iPad takes two quick taps for a double tap and zooms or shifts claude.ai's page, a white
+// strip showing under the game, and two more shift it back.) The game hears its touches as pointers,
+// which come first, so nothing of its own is lost.
+for (const t of ["touchstart", "touchend"]) document.addEventListener(t, (e) => { if (e.cancelable && !inBox(e)) e.preventDefault(); }, { passive: false });
+document.addEventListener("dblclick", (e) => { if (!inBox(e)) e.preventDefault(); });
 document.addEventListener("gesturestart", (e) => { if (!inBox(e)) e.preventDefault(); });
 addEventListener("scroll", () => { if (scrollX || scrollY) scrollTo(0, 0); });
 // And if the game has been carried out of sight all the same, a touch on it brings it back.
