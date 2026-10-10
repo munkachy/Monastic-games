@@ -73,8 +73,11 @@ const Title = {
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
-    buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
-    text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
+    // (Not on the copy kept on claude.ai: there the design notes are not beside it.)
+    if (!window.claude) {
+      buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
+      text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
+    }
     textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },

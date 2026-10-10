@@ -575,6 +575,7 @@ const Climb = (() => {
       crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0,
       blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false,
     };
+    REC = { snaps: [], events: [], next: 0 };
     mode = M;
     Sound.play(SONGS.arena); Sound.setLevel(0); Sound.ambience({ wind: 0.7 }); Sound.flare(false); Sound.muffle(false);
   }
@@ -587,6 +588,7 @@ const Climb = (() => {
   }
   const lampsOf = (sec) => (sec.type === "cave" ? cave(sec).lamps : sec.type === "trav" && sec.gate ? trav(sec).lamps : []);
   function lightOut() {
+    ev("the light went out");
     S.dying = 0.001; S.fuel = 0; endFlare(true);
     Sound.fx.death(); Sound.setLevel(0);
   }
@@ -820,12 +822,12 @@ const Climb = (() => {
   function startFlare() {
     if (S.dying || S.flare.on) return;
     if (S.meter < 0.12) { Sound.fx.gutter(); return; }
-    S.flare = { on: true, t: 0 }; S.climbing = false;
+    S.flare = { on: true, t: 0 }; S.climbing = false; ev("flare on");
     Sound.flare(true); Sound.fx.flareOn();
   }
   function endFlare(quiet) {
     if (!S.flare.on) return;
-    S.flare.on = false; Sound.flare(false); if (!quiet) Sound.fx.flareOff();
+    S.flare.on = false; Sound.flare(false); if (!quiet) Sound.fx.flareOff(); ev("flare off");
   }
   function puff(x, y, n, warm) {
     for (let k = 0; k < n; k++) {
@@ -1022,6 +1024,7 @@ const Climb = (() => {
   }
   // Out of an idol as it breaks: thrown up the way it fell.
   function reveal(b, I) {
+    ev("block from an idol", { shape: b.shape, sin: I.sin });
     if (!S.blocks.includes(b)) S.blocks.push(b);
     // (It falls his way, and for a moment the demons do not see it: it is his to take, if he is quick.)
     const K = I.big || 1, s = sign(S.x - I.x) || 1;
@@ -1030,18 +1033,21 @@ const Climb = (() => {
     if (!S.blockSeen) { S.blockSeen = true; S.say = { text: "A BLOCK FROM THE IDOL", sub: "Go to it and it is tied to your belt. A lay brother waits at the gate above.", t: 0 }; }
   }
   function tie(b) {
+    ev("block tied on", { shape: b.shape });
     b.st = "tied"; b.by = null; b.claim = null; S.tied = b; Sound.fx.tie(panX(b.x));
     if (!S.tiedSeen) { S.tiedSeen = true; S.say = { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons. Bring it to the gate.", t: 0 }; }
   }
   // A hard blow to him: the knot gives, and the block goes flying.
   function loosen(kx) {
     const b = S.tied; if (!b) return;
+    ev("block knocked loose");
     // (He is thrown one way; it goes on the other, toward the blow.)
     S.tied = null; S.dragging = false; b.st = "loose"; b.vx = -(sign(kx) || -S.dir) * 150; b.vy = Math.min(b.vy, -200); b.nopick = S.rt + 0.8; b.unseen = S.rt + 1.25;
     Sound.fx.tetherBreak();
   }
   // A demon takes a block up, and makes for the nearest shrine with it.
   function carryOff(f, b) {
+    ev("a demon took the block", { sin: f.sin });
     b.st = "carried"; b.by = f; b.claim = null; f.block = b; f.want = null;
     f.dest = shrineFor(f, b); setSt(f, "carry"); f.ground = false; f.stuckT = 0; f.ghostT = 0;
     if (!S.carrySeen && dist(f.x, f.y, S.x, S.y) < 700) { S.carrySeen = true; S.say = { text: "A DEMON HAS THE BLOCK", sub: "Tap it: the hook pulls it down. Stop it before it reaches a shrine.", t: 0 }; }
@@ -1112,6 +1118,7 @@ const Climb = (() => {
   // At the shrine: the idol rises again where it fell (or, standing, swells), bigger and harder to
   // throw down, and the block is in it. No one comes back to worship it.
   function rebuild(I, f, b) {
+    ev("idol rebuilt", { sin: I.sin, hp: IDOL_HP + 3 * ((I.rebuilt || 0) + 1) });
     f.block = null; f.dest = null; b.st = "idol"; b.by = I; b.claim = null;
     (I.blocks || (I.blocks = [])).push(b);
     I.rebuilt = (I.rebuilt || 0) + 1; I.big = Math.min(2, 1 + 0.25 * I.rebuilt);
@@ -1139,7 +1146,7 @@ const Climb = (() => {
     if (f.block) dropBlock(f, ux * 300, uy * 300 - 60);
     if (f.want && f.want.claim === f) f.want.claim = null; f.want = null; f.dest = null;
     setSt(f, "thrown"); f.vx = ux * 470; f.vy = uy * 470 + 40; f.ground = false;
-    impact(f, ux, uy, 1.4); Sound.fx.tetherBreak(); Sound.fx.kick(0.8, panX(f.x)); gain(0.1);
+    impact(f, ux, uy, 1.4); Sound.fx.tetherBreak(); Sound.fx.kick(0.8, panX(f.x)); gain(0.1); ev("hooked a demon down", { sin: f.sin });
   }
   // The lay brother's place at a gate (in the seven mountains): just past its lamp, he, then the
   // cart, then its donkey, facing on.
@@ -1154,6 +1161,7 @@ const Climb = (() => {
   // Brought to the cart: the rope untied, the block up and into it, and the brother lifts his
   // hands over it. His blessing fills the torch.
   function deliver(G) {
+    ev("block brought to the cart", { gate: G.sec });
     const b = S.tied; S.tied = null; S.dragging = false;
     Object.assign(b, { st: "tobin", t: 0, fx: b.x, fy: b.y, by: G, slot: G.bin.length });
     G.bin.push(b); G.cheer = S.rt; S.binned++; S.fuel = 1;
@@ -1400,6 +1408,7 @@ const Climb = (() => {
   }
   function hurtDemon(f, dmg, kx, ky, how) {
     if (!alive(f)) return false;
+    ev(f.idol ? "idol struck" : "demon struck", { sin: f.sin, dmg: r2(dmg), how: how || undefined, hpBefore: r2(f.hp) });
     if (f.idol) return hitIdol(f, dmg, kx);
     if (f.block) dropBlock(f, kx, ky);
     if (f.want && f.want.claim === f) f.want.claim = null; f.want = null;
@@ -1422,6 +1431,7 @@ const Climb = (() => {
     return true;
   }
   function castOut(f) {
+    ev("cast out", { sin: f.sin });
     if (f.block) dropBlock(f, 0, -120);
     setSt(f, "dying"); Sound.fx.castOut(f.sin); S.fuel = Math.min(1, S.fuel + 0.12 + (f.loot || 0)); S.cast++; gain(0.25);
     if (f.loot) { const [mx, my] = middle(); for (let k = 0; k < 18; k++) S.parts.push({ kind: "coinfly", x: f.x + (Math.random() - 0.5) * 20, y: f.y - f.ht * 0.6, tx: mx, ty: my, vx: 0, vy: 0, life: 0.3 + k * 0.03, age: 0, real: true, light: true }); }
@@ -1567,7 +1577,7 @@ const Climb = (() => {
   }
   function snatchLight(f) {
     const [mx, my] = middle(); if (dist(mx, my, f.x, f.y - f.ht / 2) > f.hw + HW + 30 || S.dying) return;
-    if (S.ward) { S.ward = null; S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
+    if (S.ward) { S.ward = null; ev("ward turned the thief"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
     // A block on his rope: that, before his light. It cuts it from his belt and is off with it.
     if (S.tied) { const b = S.tied; S.tied = null; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
     const take = Math.max(0, Math.min(0.09, S.fuel - 0.03));
@@ -1609,7 +1619,7 @@ const Climb = (() => {
     if (S.dying || S.pulled || dist(hx, hy, mx, my) > 330 || !los(hx, hy, mx, my)) { setSt(f, "idle"); f.cd = 1.2; return; }
     if (S.ward) {
       // His ward turns the ribbon back, and is spent.
-      S.ward = null; S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry();
+      S.ward = null; ev("ward turned the ribbon"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry();
       setSt(f, "hurt"); f.cd = 2.5; return;
     }
     setSt(f, "tether"); S.pulled = { f, t: 0 }; S.pulls = (S.pulls || 0) + 1; Sound.fx.tether();
@@ -1843,7 +1853,7 @@ const Climb = (() => {
     if (o.by !== "demon" || S.invT > 0) return false;
     if (Math.abs(o.x - S.x) >= HW + r + (S.ward ? 10 : 0) || o.y <= S.y - HT - r || o.y >= S.y + r) return false;
     if (S.ward) {
-      S.ward = null;
+      S.ward = null; ev("ward turned a thrown " + o.kind);
       if (o.kind === "stone") { o.by = null; o.vx *= -0.6; o.vy = -200; }
       else { const f = o.from && alive(o.from) ? o.from : null; sendAt(o, o.x, o.y, o.x - o.vx * 2, o.y - o.vy * 2, f); }
       const [cx, cy] = middle(); S.crosses.push({ kind: "turn", x: cx, y: cy - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); S.shake = 0.15;
@@ -1975,6 +1985,7 @@ const Climb = (() => {
   }
   function hitMonk(kx, cost) {
     if (S.dying || S.invT > 0) return;
+    ev("he was hit", { cost: r2(cost || 0.06), wardLost: S.ward ? true : undefined, blockLoosed: S.tied && (cost === undefined || cost >= 0.06) ? true : undefined });
     S.freeze = Math.max(S.freeze || 0, 0.06);
     S.fuel = Math.max(0, S.fuel - (cost || 0.06)); S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
     S.vx = (sign(kx) || -S.dir) * 200; S.vy = -170; S.ground = false;
@@ -2149,6 +2160,7 @@ const Climb = (() => {
   const WARD_T = 45;
   function ward() {
     if (S.act || S.atk) return;
+    ev("ward on");
     S.ward = { t: 0 }; const [cx, cy] = middle();
     S.crosses.push({ kind: "ward", x: cx + S.dir * 18, y: cy - 10, t: 0, size: 20 }); Sound.fx.unlock();
   }
@@ -2437,6 +2449,7 @@ const Climb = (() => {
     for (const o of S.things) updThing(o, wdt);
     S.things = S.things.filter((o) => o.st !== "gone" && o.y < S.y + 1400);
     if (S.blocks.length) stepBlocks(wdt);
+    if (S.rt >= REC.next) { REC.next = S.rt + 0.25; REC.snaps.push(snapNow()); if (REC.snaps.length > REC_N) REC.snaps.shift(); }
     if (S.yank) stepYank(wdt);
     S.hurtT = Math.max(0, S.hurtT - wdt); S.invT = Math.max(0, S.invT - dt); S.flashT = Math.max(0, S.flashT - dt); S.floatT = Math.max(0, S.floatT - wdt); S.shake = Math.max(0, S.shake - dt);
     S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.leapT = Math.max(0, (S.leapT || 0) - wdt); S.leapCd = Math.max(0, (S.leapCd || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
@@ -2452,7 +2465,7 @@ const Climb = (() => {
     if (S.next) nextHook(wdt);
     swingChains(wdt);
     if (S.coins > 0 && !S.dying) { const [mx, my] = middle(); for (const sec of sectionsIn(-S.y / CELL - 12, -S.y / CELL + 12)) for (const b of almsOf(sec)) if (dist(mx, my, b.x, b.y - 8) < 40) giveAlms(b); }
-    if (S.ward && (S.ward.t += dt) > WARD_T) S.ward = null;
+    if (S.ward && (S.ward.t += dt) > WARD_T) { S.ward = null; ev("ward faded"); }
     S.swingSp = S.rope && !S.ground ? Math.max(Math.hypot(S.vx, S.vy), (S.swingSp || 0) - 150 * wdt) : 0;
     // Against a wall, climbing the rope: he walks up it.
     S.wall = 0;
@@ -2468,7 +2481,7 @@ const Climb = (() => {
       if (w.read || w.h < hNow - 40) continue;
       const p = wallPos(w);
       if (dist(mx, my, p.x, p.y) < 70 && !S.dying) {
-        w.read = true; w.lit = 1; S.fuel = 1; S.read++;
+        w.read = true; w.lit = 1; S.fuel = 1; S.read++; ev("verse read", { n: w.n });
         S.verse = { v: CLIMB_VERSES[w.n % 22], t: 0 };
         // (Playing, the game stops here, so the verse can be read; a tap, and it goes on.)
         if (mode === M) { S.verseHold = true; Sound.muffle(true, 0.4); }
@@ -3578,6 +3591,34 @@ const Climb = (() => {
     if (S.fuel < 0.25 && !S.dying) text("THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
   }
 
+  // ---- The record, for notes to Claude ---------------------------------------------------------------
+  // The last half-minute of the climb, four times a second (where he was, what he was doing, the
+  // demons near him and what they were doing), and the last things that happened (blows given and
+  // taken, the ward, the blocks, the verses). A note sent from the pause screen carries it, so what
+  // went wrong can be seen, not only remembered.
+  const REC_N = 120, EV_N = 80;
+  let REC = { snaps: [], events: [], next: 0 };
+  function ev(what, o) { if (!S) return; REC.events.push(Object.assign({ t: Math.round(S.rt * 100) / 100, what }, o || {})); if (REC.events.length > EV_N) REC.events.shift(); }
+  const r2 = (v) => Math.round(v * 100) / 100;
+  function doing() {
+    return S.dying ? "dying" : S.act ? S.act.kind : S.atk ? "striking (" + S.atk.kind + ")" : S.hang ? "hanging from a ledge" : S.cling ? "on the rock" : S.rope ? (S.ground ? "standing, hooked" : S.climbing ? "climbing the rope" : "swinging") : S.flip ? "flipping" : S.ground ? (Math.abs(S.vx) > 5 ? "walking" : "standing") : "in the air";
+  }
+  function snapNow() {
+    const I = pads(), near = [], things = [];
+    for (const f of S.demons) { if (f.st === "gone" || dist(f.x, f.y, S.x, S.y) > 600) continue; near.push({ sin: f.sin, idol: f.idol ? true : undefined, st: f.st, hp: r2(f.hp), dx: Math.round(f.x - S.x), dy: Math.round(f.y - S.y), block: f.block ? f.block.shape : undefined }); if (near.length >= 6) break; }
+    for (const o of S.things) { if (o.st === "gone" || dist(o.x, o.y, S.x, S.y) > 500) continue; things.push({ kind: o.kind, st: o.st, by: o.by || undefined, dx: Math.round(o.x - S.x), dy: Math.round(o.y - S.y) }); if (things.length >= 6) break; }
+    return { t: r2(S.rt), m: metres(-S.y), x: Math.round(S.x), y: Math.round(S.y), vx: Math.round(S.vx), vy: Math.round(S.vy), doing: doing(), pads: (I.l ? "L" : "") + (I.r ? "R" : "") + (I.u ? "U" : "") + (I.dn ? "D" : ""),
+      ward: S.ward ? Math.round(WARD_T - S.ward.t) : 0, torch: r2(S.fuel), flare: r2(S.meter), coins: S.coins || 0, block: S.tied ? S.tied.shape : null, rope: S.rope ? Math.round(freeOf(S.rope)) : null, demons: near, things };
+  }
+  function record() {
+    const sec = sectionAt(Math.max(1, Math.floor(-S.y / CELL)));
+    return { mode: NOV ? "seven mountains" : "endless climb", mountain: NOV ? NOV.domain : sec.dom, section: { k: sec.k, type: sec.type, dom: sec.dom, gate: !!sec.gate }, seed,
+      now: snapNow(), recent: REC.snaps.slice(), events: REC.events.slice(), blocks: S.blocks.map((b) => ({ shape: b.shape, st: b.st })), binned: S.binned, best: metres(S.top) };
+  }
+  // A picture of the moment (taken as the pause begins, before the pause screen is drawn over it).
+  function grabScreen() {
+    try { const k = Math.min(1, 1280 / cv.width), c = document.createElement("canvas"); c.width = Math.round(cv.width * k); c.height = Math.round(cv.height * k); c.getContext("2d").drawImage(cv, 0, 0, c.width, c.height); return c; } catch (e) { return null; }
+  }
   // ---- Touch, mouse and keys ------------------------------------------------------------------------
   // Going on after a verse: the climb moves again (its last words fading), with nothing held over.
   function goOn() { S.verseHold = false; if (S.verse) S.verse.t = Math.max(S.verse.t, 5.6); S.touches.clear(); Sound.muffle(false, 0.3); }
@@ -3585,7 +3626,7 @@ const Climb = (() => {
   const pid = (ev) => (ev && ev.pointerId !== undefined ? ev.pointerId : "m");
   const M = {
     action, start, edges, solid, island, sectionAt, trav, cave, slope, thornAt, eyeOf, almsOf, ledge, get S() { return S; }, get nov() { return NOV; }, CELL, COLS, HOOK, TH, DOMAINS, BUILT,
-    blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, TETHER, SHAPES },
+    blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, TETHER, SHAPES }, record, pauseShot: null, pauseRec: null,
     step, draw,
     down(p, ev) {
       if (!S || S.dying) return;
@@ -3664,6 +3705,7 @@ const Climb = (() => {
     },
     pause() {
       if (mode !== M || S.dying) return;
+      M.pauseShot = grabScreen(); M.pauseRec = record();
       Pause.t = 0; mode = ClimbPause; Sound.muffle(true, 0.2);
     },
     resume() {
@@ -3695,6 +3737,7 @@ const ClimbPause = {
     b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
     b(soundLabel(), cycleSound);
     b("BACK TO THE TITLE", () => Game.toTitle());
+    if (typeof Notes !== "undefined" && Notes.ready) b("A NOTE FOR CLAUDE", () => Notes.open(Climb.pauseShot, Climb.pauseRec), { sub: "What happened; what should change" });
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
       ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow that reaches him"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
