@@ -3507,8 +3507,6 @@ const Climb = (() => {
     let R = 50 + 210 * Math.pow(f, 0.75);
     if (S.flare.on) R = Math.max(R, FLARE_R + 30);
     if (S && S.boon && S.boon.kind === "unconsumed") R *= 1.3;
-    // (Signed with the cross, he has light about him: at the least three parts in four of a full torch's.)
-    if (S.ward && !S.dying) R = Math.max(R, 195 * (0.6 + 0.4 * wardFade()));
     if (S.latched) R *= 1 - 0.65 * clamp((S.latched.latchT || 0) / 0.6, 0, 1);       // (shut in a great demon's mouth, the torch shows little)
     return R;
   }
@@ -4274,7 +4272,9 @@ const Climb = (() => {
       if ((S.ward.n || 1) > 1) for (const [ox, oy] of [[-4.5, 0], [4.5, 0], [0, -4.5], [0, 4.5]]) drawMonk(mx - cam.x + ox, my - cam.y + oy, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, tint: "rgba(255,222,140," + (0.45 * b) + ")" });
       for (const [ox, oy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) drawMonk(mx - cam.x + ox, my - cam.y + oy, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, tint: "rgba(255,246,222," + (0.9 * b) + ")" });
       ctx.restore();
-      lights.push({ x: wx, y: wy, r: 120, a: 0.75 * wardFade() });
+      // (A light of its own about him, not the torch's: near as wide as a full torch's, to see his way
+      // by; the torch burns as it burns, and the blessing does not keep it.)
+      lights.push({ x: wx, y: wy, r: 200, a: 0.9 * wardFade() });
     }
     let r;
     if (S.boonShow) { r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, S.boonShow.t); S.boonShow.up = r.up; }
