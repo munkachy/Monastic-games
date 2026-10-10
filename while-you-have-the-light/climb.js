@@ -1346,7 +1346,7 @@ const Climb = (() => {
   }
   function tie(b) {
     ev("block tied on", { shape: b.shape });
-    b.st = "tied"; b.by = null; b.claim = null; b.rope = TETHER; b.flung = false; S.tied = b; Sound.fx.tie(panX(b.x));
+    b.st = "tied"; b.by = null; b.claim = null; b.rope = TETHER; b.flung = false; S.tied = b; S.lost = null; Sound.fx.tie(panX(b.x));
     if (!S.tiedSeen) { S.tiedSeen = true; S.say = { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons, or tap it and throw it. Bring it to the gate.", t: 0 }; }
   }
   // Tapped, the block on his rope (near him): he takes it up in his hands, to throw. While he
@@ -1373,7 +1373,7 @@ const Climb = (() => {
     const b = S.tied; if (!b) return;
     ev("block knocked loose");
     // (He is thrown one way; it goes on the other, toward the blow.)
-    S.tied = null; S.dragging = false; b.st = "loose"; b.flung = false; b.rope = TETHER; b.vx = -(sign(kx) || -S.dir) * 150; b.vy = Math.min(b.vy, -200); b.nopick = S.rt + 0.8; b.unseen = S.rt + 1.25;
+    S.tied = null; S.lost = b; S.dragging = false; b.st = "loose"; b.flung = false; b.rope = TETHER; b.vx = -(sign(kx) || -S.dir) * 150; b.vy = Math.min(b.vy, -200); b.nopick = S.rt + 0.8; b.unseen = S.rt + 1.25;
     Sound.fx.tetherBreak();
   }
   // A demon takes a block up, and makes for the nearest shrine with it.
@@ -1498,7 +1498,7 @@ const Climb = (() => {
   // hands over it. His blessing fills the torch.
   function deliver(G) {
     ev("block brought to the cart", { gate: G.sec });
-    const b = S.tied; S.tied = null; S.dragging = false;
+    const b = S.tied; S.tied = null; S.lost = null; S.dragging = false;
     Object.assign(b, { st: "tobin", t: 0, fx: b.x, fy: b.y, by: G, slot: G.bin.length });
     G.bin.push(b); G.cheer = S.rt; S.binned++; S.fuel = 1;
     Sound.fx.deliver(panX(G.cart));
@@ -1902,7 +1902,7 @@ const Climb = (() => {
   // either way it falls by him, his to take up again.
   function hurl(g, b) {
     ev("a great demon threw the block back", { shape: b.shape });
-    if (S.tied === b) { S.tied = null; S.dragging = false; Sound.fx.tetherBreak(); }
+    if (S.tied === b) { S.tied = null; S.lost = b; S.dragging = false; Sound.fx.tetherBreak(); }
     const [mx, my] = middle(), hx = g.x + g.dir * g.hw * 0.5, hy = g.y - g.ht * 0.62, T = clamp(dist(hx, hy, mx, my) / 560, 0.15, 0.6);
     Object.assign(b, { st: "loose", by: null, claim: null, flung: false, rope: TETHER, x: hx, y: hy + b.ht / 2, vx: (mx - hx) / T, vy: (my - hy) / T - 0.5 * 640 * T, rot: 0, ground: false, hurled: S.rt, nopick: S.rt + 0.5, unseen: S.rt + 3 });
     g.flingT = 0.35; g.chew = 0.3;
@@ -2383,7 +2383,7 @@ const Climb = (() => {
     const [mx, my] = middle(); if (dist(mx, my, f.x, f.y - f.ht / 2) > f.hw + HW + 30 || S.dying || S.latched) return;
     if (S.ward) { spendWard(); ev("ward turned the thief"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
     // A block on his rope: that, before his light. It cuts it from his belt and is off with it.
-    if (S.tied) { const b = S.tied; S.tied = null; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
+    if (S.tied) { const b = S.tied; S.tied = null; S.lost = b; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
     const take = Math.max(0, Math.min(blowCost(0.09), S.fuel - 0.03));
     S.fuel -= take; f.loot = (f.loot || 0) + Math.max(take, 0.04); Sound.fx.steal(); S.shake = 0.12;
     for (let k = 0; k < 10; k++) S.parts.push({ kind: "spark", c: C.flameHot, x: S.torch[0], y: S.torch[1], vx: (f.x - S.torch[0]) * (2 + Math.random()) , vy: (f.y - f.ht * 0.6 - S.torch[1]) * (2 + Math.random()) - 40, life: 0.4, age: 0 });
@@ -4419,6 +4419,25 @@ const Climb = (() => {
     if (S.dread) drawDread(cam);
     if (S.boonShow) drawBoonShow(cam);
   }
+  // His block, lost (knocked loose, or stolen) and out of sight: a mark at the edge of the view the
+  // way it lies, with its shape and how far it is (as the trackers of the great open-world games).
+  // Gone to a cart, or tied on again, and the mark is gone.
+  function lostMarker() {
+    const b = S.lost;
+    if (!b || S.tied === b || b.st === "bin" || b.st === "tobin" || !S.blocks.includes(b)) { S.lost = null; return; }
+    const bx = b.x - S.cam.x, by = b.y - b.ht / 2 - S.cam.y;
+    if (bx > -6 && bx < W + 6 && by > -6 && by < H + 6) return;
+    const cx = W / 2, cy = H / 2, dx = bx - cx, dy = by - cy, x0 = 30, x1 = W - 30, y0 = 62, y1 = H - 34;
+    const t = Math.min(dx > 0 ? (x1 - cx) / dx : dx < 0 ? (x0 - cx) / dx : 1e9, dy > 0 ? (y1 - cy) / dy : dy < 0 ? (y0 - cy) / dy : 1e9);
+    const x = cx + dx * t, y = cy + dy * t, a = Math.atan2(dy, dx), c = SINS[b.dom] || SINS.wrath, pulse = 0.8 + 0.2 * Math.sin(S.rt * 4);
+    glow(x, y, 22, c.color, 0.25 * pulse);
+    circle(x, y, 14, "rgba(6,6,8,0.82)"); ring(x, y, 14, "rgba(232,196,106," + (0.7 * pulse) + ")", 1.2);
+    const tip = [x + Math.cos(a) * 20, y + Math.sin(a) * 20], l = [x + Math.cos(a + 0.42) * 14.5, y + Math.sin(a + 0.42) * 14.5], r = [x + Math.cos(a - 0.42) * 14.5, y + Math.sin(a - 0.42) * 14.5];
+    poly([tip[0], tip[1], l[0], l[1], r[0], r[1]], "rgba(232,196,106," + (0.85 * pulse) + ")");
+    const z = 3.2, w = (b.w || 3) * z, h = (b.h || 2) * z;
+    for (const [i, j] of b.cells) rect(x - w / 2 + i * z, y - h / 2 + j * z, z - 0.5, z - 0.5, c.color);
+    text(metres(dist(S.x, S.y, b.x, b.y)) + " m", x, y + 25, { align: "center", size: 7, weight: 800, color: "rgba(233,230,223,0.85)", glow: "rgba(0,0,0,0.9)", blur: 4 });
+  }
   // The thumb's cross: where it is, and which ways a thumb on it is pressing. (Left and right have
   // the wider share of it, so that rocking a swing does not climb by mistake.)
   const dpad = () => ({ x: 70, y: H - 72, r: 52 });
@@ -4459,6 +4478,7 @@ const Climb = (() => {
       ctx.globalAlpha = 1;
     }
     if (S.kept && S.rt - S.kept.t < 2.6 && !F.on) text("THE PLACE IS KEPT", W / 2, 24, { align: "center", size: 8, weight: 800, spacing: 3, color: C.warm, alpha: clamp((2.6 - (S.rt - S.kept.t)) / 0.6, 0, 1) * clamp((S.rt - S.kept.t) / 0.2, 0, 1) * 0.85 });
+    if (S.lost) lostMarker();
     pauseButton();
     if (!usingKeys()) {
       // The cross under the left thumb: faint, its arms lit as they are pressed; the arm that
