@@ -25,8 +25,10 @@ const Game = {
     const N = novSettings(), K = fresh ? null : Climb.keptPlace(N.domain);
     Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare }, seed: K ? K.seed : undefined, resume: K || undefined });
   },
+  // A scene from the white room (it is kept, so BEGIN AGAIN makes the same one).
+  scene(sc) { goSideways(); Game.music = true; Game.last = { climb: true, nov: true, room: sc }; G = null; Climb.scene(sc); },
   toNovitiate() { G = null; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
-  again(fresh) { if (Game.last && Game.last.nov) Game.novitiate(fresh); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
+  again(fresh) { if (Game.last && Game.last.room) Game.scene(Game.last.room); else if (Game.last && Game.last.nov) Game.novitiate(fresh); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
   toTitle() {
     G = null; Title.t = 0; mode = Title;
     Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });
@@ -74,8 +76,10 @@ const Title = {
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
-    // (Not on the copy kept on claude.ai: there the design notes are not beside it.)
-    if (!window.claude) {
+    // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
+    // can be asked, the white room is, in their place.)
+    if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
+    else if (!window.claude) {
       buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
       text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
     }
@@ -254,7 +258,8 @@ const Over = {
     }
     if (t > 0.6) {
       button("AGAIN", W / 2 - 104, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
-      button("TITLE", W / 2 + 4, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
+      if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", W / 2 + 4, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
+      else button("TITLE", W / 2 + 4, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
     }
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space") && Over.t > 0.6) { Sound.muffle(false); Game.again(); } if (down && code === "Escape") Game.toTitle(); },

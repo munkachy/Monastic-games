@@ -628,7 +628,7 @@ const Climb = (() => {
       blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false, bigs: [], latched: null, prints: [], greatDown: new Set(), foot: null, kept: null, keptAt: null,
     };
     REC = { snaps: [], events: [], next: 0 };
-    if (NOV) {
+    if (NOV && !NOV.room) {                           // (a scene from the white room keeps nothing, and leaves every kept place alone)
       for (const d of Object.keys(keptAll())) if (d !== NOV.domain) forget(d);      // (one mountain at a time: going to another, he leaves the last)
       if (!opts.resume) forget(NOV.domain);
       else try { restore(opts.resume); } catch (e) { forget(NOV.domain); return start({ nov: opts.nov }); }   // (a kept place spoiled: from the foot)
@@ -646,7 +646,7 @@ const Climb = (() => {
   const lampsOf = (sec) => (sec.type === "cave" ? cave(sec).lamps : sec.type === "trav" && sec.gate ? trav(sec).lamps : []);
   function lightOut() {
     ev("the light went out");
-    if (NOV) forget(NOV.domain);                      // (the light gone out, the place he kept is gone with it)
+    if (NOV && !NOV.room) forget(NOV.domain);         // (the light gone out, the place he kept is gone with it)
     S.dying = 0.001; S.fuel = 0; endFlare(true);
     Sound.fx.death(); Sound.setLevel(0);
   }
@@ -669,7 +669,7 @@ const Climb = (() => {
   const keptAll = () => { try { const o = JSON.parse(localStorage.getItem(KEEP) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
   function forget(dom) { const all = keptAll(); if (!all[dom]) return; delete all[dom]; try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { } }
   function keepPlace(x, y, why) {
-    if (!NOV || S.dying || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (!NOV || NOV.room || S.dying || !Number.isFinite(x) || !Number.isFinite(y)) return;
     if (S.keptAt && y > S.keptAt[1] + CELL) [x, y] = S.keptAt;
     const walls = [], lamps = [], got = [], bins = {}, seen = {};
     for (let n = 0; n < 5000; n++) { const w = wallAt(n); if (w.h > S.top / CELL + 40) break; if (w.read) walls.push(n); }
@@ -710,16 +710,77 @@ const Climb = (() => {
     for (const k of SEEN) if (R.seen && R.seen[k]) S[k] = true;
     if (R.tied && R.tied[0]) { const b = makeBlock(R.tied[0], R.tied[1]); b.x = S.x - 18; b.y = S.y; S.blocks.push(b); b.st = "tied"; b.rope = TETHER; S.tied = b; }
     S.blockSeen = S.blockSeen || S.binned > 0 || !!S.tied;
-    // Only from just below him are the demons and the idols set out again; and where the great ones
-    // wait is worked out from the foot, as it was the first time, so the mountain above is the same.
+    settle(); S.resumed = true;
+    S.say = { text: "GOING ON", sub: "From where you last stopped, " + metres(-S.y) + " m up.", t: 0 };
+    ev("went on from a kept place", { why: R.why, m: metres(-S.y) });
+  }  // Set down where he is now, the mountain below him as if he had climbed it. Only from just below
+  // him are the demons and the idols set out; and where the great ones wait is worked out from the
+  // foot, as it was the first time, so the mountain above is the same.
+  function settle() {
     const k0 = sectionAt(Math.max(1, Math.floor(-S.y / CELL))).k;
     S.popK = Math.max(0, k0 - 1);
     for (let k = 7; k < S.popK; k++) { ensureSecs(k); if (planGreat(k)) S.greatK = k; }
     S.cam.x = clamp(S.x - W / 2, 0, COLS * CELL - W); S.cam.y = S.y - H * 0.62; S.torch = [S.x, S.y - 40];
-    S.hintT = 99; S.hooked = 9; S.invT = 1.5; S.resumed = true;
-    S.say = { text: "GOING ON", sub: "From where you last stopped, " + metres(-S.y) + " m up.", t: 0 };
-    ev("went on from a kept place", { why: R.why, m: metres(-S.y) });
+    S.hintT = 99; S.hooked = 9; S.invT = 1.5;
+    if (S.fightSeen) S.fightHintT = 99;              // (the moves told him once already)
   }
+
+  // ---- A scene from the white room ---------------------------------------------------------------------
+  // A place on a mountain made to order: which mountain, how high, what kind of place; what waits for
+  // him there (demons beside him, a great demon); what he has (a block on his rope, a relic's power,
+  // so much light). Nothing of it is kept, and no place kept on any mountain is touched.
+  const SCENE_PLACE = { shaft: ["shaft"], crossing: ["trav", "cave", "slope"] };
+  function scene(sc) {
+    sc = sc || {};
+    const dom = BUILT.includes(sc.mountain) ? sc.mountain : "gluttony";
+    start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true }, seed: sc.seed });
+    for (const k of SEEN) S[k] = true;                // (he knows the mountain: no lessons on the way)
+    S.fightHintT = 99; S.hintT = 99; S.hooked = 9;
+    // The place: the first of the kind asked for at that height or above it, with ground to stand on.
+    const h = clamp((+sc.metres || 0) * MPX / CELL, 0, 9000), want = SCENE_PLACE[sc.place];
+    // (None of that kind near the height asked: any kind.)
+    const k0 = h < 4 ? 0 : sectionAt(Math.floor(h)).k;
+    let spot = null;
+    for (const kinds of k0 ? [want, null] : []) for (let k = k0; k < k0 + 6 && !spot; k++) {
+      ensureSecs(k); const sec = secs[k];
+      if (sec.gate || (kinds && !kinds.includes(sec.type))) continue;
+      const sp = spotsFor(k, dom); if (sp.length) spot = sp[Math.floor(sp.length / 3)];
+    }
+    if (spot) {
+      const at = freeSpot(spot[0], spot[1]) || [spot[0], spot[1]];
+      S.x = at[0]; S.y = at[1]; S.ground = boxHit(S.x, S.y + 3); S.foot = S.ground ? [S.x, S.y] : null;
+      S.top = -S.y; settle();
+    }
+    const kHere = sectionAt(Math.max(1, Math.floor(-S.y / CELL))).k, side = (q) => (q % 2 ? -1 : 1) * S.dir;
+    if (Number.isFinite(+sc.torch)) S.fuel = clamp(+sc.torch, 0.05, 1);
+    if (Number.isFinite(+sc.flare)) S.meter = clamp(+sc.flare, 0, 1);
+    // Demons beside him: one side and the other, a little farther each.
+    let q = 0;
+    for (const N of Array.isArray(sc.near) ? sc.near.slice(0, 4) : []) {
+      const sin = DEM[N && N.sin] ? N.sin : dom;
+      for (let i = 0; i < clamp(Math.round(+N.count || 1), 1, 6); i++, q++) {
+        const x = S.x + side(q) * (80 + 34 * Math.floor(q / 2)), f = spawnDemon(sin, x, S.y - 2, x - 120, x + 120, kHere);
+        if (f) { f.dir = sign(S.x - f.x) || 1; f.cd = 1.2 + Math.random(); }
+      }
+    }
+    // A great demon, a little way off, on the side he faces: as stone until he looks at it in his light.
+    const tier = clamp(Math.round(+sc.great || 0), 0, 4);
+    if (tier) {
+      const G = GREAT.gluttony, gs = 1 + 0.2 * (tier - 1), hw = G.hw * gs, ht = G.ht * gs;
+      const at = dFree(S.x + S.dir * 190, S.y - 20, hw, ht) || dFree(S.x - S.dir * 190, S.y - 20, hw, ht);
+      if (at) S.bigs.push({ sin: "gluttony", tier, sc: gs, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: sign(S.x - at[0]) || 1, hp: tier, maxHp: tier, st: "stone", t: 0, wake: 0, lit: 0,
+        anim: Math.random() * 9, stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: kHere, id: ++S.ids, growlT: -9, stoneT: -9 });
+    }
+    // A block tied to his belt (always, with a great demon: only a block can hurt it).
+    if (sc.block || tier) {
+      const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], dom); b.x = S.x - S.dir * 18; b.y = S.y;
+      S.blocks.push(b); b.st = "tied"; b.rope = TETHER; S.tied = b;
+    }
+    if (BOONS[sc.boon]) showBoon(sc.boon);
+    S.say = { text: String(sc.title || "THE SCENE").toUpperCase().slice(0, 40), sub: SINS[dom].name + ", " + metres(-S.y) + " m up.", t: 0 };
+    ev("a scene from the white room", { dom, m: metres(-S.y), tier, near: q });
+  }
+
 
   // ---- The relics' boons ---------------------------------------------------------------------------------
   // Each reliquary fills the torch and the flare, and gives a gift for a while, the four by turns:
@@ -4678,7 +4739,7 @@ const Climb = (() => {
   const inDpad = (p) => { const b = dpad(); return !usingKeys() && dist(p.x, p.y, b.x, b.y) < b.r + 18; };
   const pid = (ev) => (ev && ev.pointerId !== undefined ? ev.pointerId : "m");
   const M = {
-    action, start, edges, solid, island, sectionAt, trav, cave, slope, thornAt, eyeOf, almsOf, ledge, get S() { return S; }, get nov() { return NOV; }, CELL, COLS, HOOK, TH, DOMAINS, BUILT,
+    action, start, scene, edges, solid, island, sectionAt, trav, cave, slope, thornAt, eyeOf, almsOf, ledge, get S() { return S; }, get nov() { return NOV; }, CELL, COLS, HOOK, TH, DOMAINS, BUILT,
     blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, takeUp, throwBlock, TETHER, SHAPES, THROW_LEN },
     great: { placeGreat, strikeGreat, latch, punchOut, hurl, bigAt, burstAfter, burstSpot, startDread, onView, GREAT_V, GRASP },
     keptPlace: (dom) => keptAll()[dom] || null, forgetPlace: forget,
@@ -4812,8 +4873,10 @@ const ClimbPause = {
     let y = 66;
     const b = (label, act, o) => { button(label, cx - bw / 2, y, bw, 30, act, o || {}); y += 38; };
     b("GO ON", () => Climb.resume(), { hot: true });
-    b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(true); }, Climb.nov ? { sub: "From the foot of the mountain" } : {});
-    b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
+    const room = Climb.nov && Climb.nov.room && typeof Room !== "undefined";
+    b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(true); }, room ? { sub: "The same scene, from its start" } : Climb.nov ? { sub: "From the foot of the mountain" } : {});
+    if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Say another scene" });
+    else b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
     b(soundLabel(), cycleSound);
     b("BACK TO THE TITLE", () => Game.toTitle());
     if (typeof Verses !== "undefined") b("THE VERSES", () => Verses.open(), { sub: Verses.custom ? "Your own, from a file" : "Douay-Rheims, or your own" });
