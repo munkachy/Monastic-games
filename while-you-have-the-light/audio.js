@@ -1268,6 +1268,21 @@ const Sound = (() => {
     for (const [i, m] of [81, 86, 88, 93].entries()) I.bell(t + 0.58 + i * 0.08, m, 1.3, 0.15, { ratio: 2, index: 0.8, sfx: true, rev: 0.6 });
     I.swell(t + 0.2, 0.4, 0.35, { sfx: true });
   };
+  // The angel coming down: a choir that rises out of nothing, a chord of D opening upward, and high
+  // bells as it comes near; then (lift) as he is taken up: the chord climbs, and the bells ring out.
+  fx.angel = function () {
+    if (!ok()) return; const t = T0();
+    I.swell(t, 1.6, 0.3, { sfx: true });
+    I.choir(t + 0.1, [50, 57, 62], 3.2, 0.24, { vowel: "o", att: 1.2, rel: 1.6, rev: 0.8, sfx: true });
+    I.choir(t + 0.9, [66, 69, 74], 2.6, 0.22, { vowel: "a", att: 0.9, rel: 1.6, rev: 0.8, vib: 3, sfx: true });
+    for (const [i, m] of [86, 90, 93, 98].entries()) I.bell(t + 1.6 + i * 0.22, m, 2, 0.1, { ratio: 2, index: 0.7, sfx: true, rev: 0.8 });
+  };
+  fx.lift = function () {
+    if (!ok()) return; const t = T0();
+    I.choir(t, [62, 66, 69, 74], 2.8, 0.26, { vowel: "a", att: 0.3, rel: 1.8, rev: 0.8, vib: 3, sfx: true });
+    I.choir(t + 0.7, [74, 78, 81], 2.4, 0.22, { vowel: "i", att: 0.5, rel: 1.8, rev: 0.8, vib: 4, sfx: true });
+    for (const [i, m] of [81, 86, 90, 93, 98].entries()) I.bell(t + 0.2 + i * 0.12, m, 2.2, 0.13, { ratio: 2, index: 0.8, sfx: true, rev: 0.8 });
+  };
   // A boon running out: two soft falling bells.
   fx.boonEnd = function () {
     if (!ok()) return; const t = T0();
@@ -1284,7 +1299,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
-    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
