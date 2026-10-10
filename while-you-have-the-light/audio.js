@@ -39,15 +39,44 @@ const Sound = (() => {
     }
     return b;
   }
+  // Called on every touch and key. The first time, the sound is made. After that: if the page was
+  // put away (or the sound cut off by a call, an alarm, another app), the whole of it is made again,
+  // on this touch, and the same song goes on in it, the wind and the flare as they were. (Safari can
+  // wake an old one "running" and silent; a new one is sure.) Otherwise, if asleep, it is woken.
+  let slept = false, rebootT = -1e9;
   A.init = function () {
     // On iPhones, play as media, so the side switch that silences the ringer does not silence the music.
     try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { }
-    // Safari can leave the sound "suspended" or "interrupted" (a call, a notification, another app): wake it.
-    if (ac) { if (ac.state !== "running" && ac.state !== "closed") ac.resume(); return; }
+    if (ac) {
+      if (slept || ac.state === "closed") A.reboot();
+      else if (ac.state !== "running") { try { ac.resume().catch(() => { }); } catch (e) { } }
+      return;
+    }
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    build(new C({ latencyHint: "interactive" }));
+    build(new C({ latencyHint: "interactive" })); watch(ac);
     setInterval(tick, 25);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running" && ac.state !== "closed") ac.resume(); });
+    const away = () => { slept = true; };
+    document.addEventListener("visibilitychange", () => { if (document.hidden) away(); });
+    addEventListener("pagehide", away);
+  };
+  // (A context the system stops by itself, once it has been running, is one to replace.)
+  function watch(c) {
+    let ran = c.state === "running";
+    c.onstatechange = () => { if (c !== ac) return; if (c.state === "running") ran = true; else if (ran) slept = true; };
+  }
+  A.reboot = function () {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C || rendering || !ac) return;
+    const now = performance.now(); if (now - rebootT < 400) return; rebootT = now;
+    slept = false;
+    const old = ac, song = M.song, flaring = FL.on;
+    try { old.onstatechange = null; if (old.state !== "closed") old.close().catch(() => { }); } catch (e) { }
+    amb = null; FL.on = false; FL.voice = null;
+    build(new C({ latencyHint: "interactive" })); watch(ac);
+    try { ac.resume().catch(() => { }); } catch (e) { }
+    if (song) { M.song = null; A.play(song); }
+    if (ambLast) A.ambience(ambLast);
+    setFilter(0.01);
+    if (flaring) A.flare(true);
   };
   function build(context) {
     ac = context; waves = {};
@@ -476,7 +505,7 @@ const Sound = (() => {
   let paused = false;
   const FL = { on: false, next: 0, voice: null, until: 0 };
   const HEART = 1.25;   // seconds from one heartbeat to the next in the flare: about 48 to the minute
-  const openTo = () => (paused ? 520 : 20000);
+  const openTo = () => (paused ? 900 : 20000);           // (paused, the music far off, but still there)
   // One way only to move the music's filter, weighing both the flare and the pause, and clearing
   // whatever was already on its way: so neither can leave the music muffled after the other.
   function setFilter(tc) {
@@ -542,11 +571,12 @@ const Sound = (() => {
   // ---- The wind ------------------------------------------------------------------------------------
   // A long bed of noise that never stops once begun, gusting by itself: a low howl and, above it, a
   // thin whistle through the rocks. The game sets how loud.
-  let amb = null;
+  let amb = null, ambLast = null;
   A.ambience = function (o) {
     if (!ac || ac.state === "closed") return;
     o = Object.assign({}, o || {});
     if (o.wind !== undefined && !Number.isFinite(+o.wind)) delete o.wind;
+    ambLast = Object.assign(ambLast || {}, o);           // (kept, to be made again if the sound is)
     if (!amb) {
       const g = ac.createGain(); g.gain.value = 0; g.connect(sfxBus);
       const band = (f, q, k, rate, depth) => {
@@ -1164,6 +1194,49 @@ const Sound = (() => {
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.18, t + 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
     a.connect(lp); lp.connect(g); route(g, t, { sfx: true, pan, rev: 0.4 }); a.start(t); a.stop(t + 1.15);
   };
+  // A great demon waking in the light: a wet growl, low, rising out of the stone.
+  fx.growl = function (pan, v) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    const a = osc("sawtooth", 46, t), b = osc("sawtooth", 69, t), lfo = osc("sine", 9, t), lg = gainAt(t, 0.5), am = gainAt(t, 0.5), lp = filt("lowpass", 380, 4, t), g = gainAt(t);
+    a.frequency.linearRampToValueAtTime(58, t + 0.5); b.frequency.linearRampToValueAtTime(84, t + 0.5);
+    lp.frequency.linearRampToValueAtTime(720, t + 0.35); lp.frequency.exponentialRampToValueAtTime(260, t + 0.9);
+    lfo.connect(lg); lg.connect(am.gain); a.connect(am); b.connect(am); am.connect(lp); lp.connect(g);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.26 * v, t + 0.18); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+    route(g, t, { sfx: true, pan, rev: 0.35 });
+    a.start(t); b.start(t); lfo.start(t); a.stop(t + 1); b.stop(t + 1); lfo.stop(t + 1);
+    hiss(t, "bandpass", 500, 300, 0.8, 0.12 * v, { q: 2, swell: 0.3, pan });
+  };
+  // Going still: stone settling, a dry grind.
+  fx.stone = function (pan) {
+    if (!ok()) return; const t = T0();
+    hiss(t, "lowpass", 900, 180, 0.22, 0.2, { q: 1.4, pan });
+    tone(t, "sine", 90, 55, 0.12, 0.14, { pan });
+    pebbles(t + 0.02, 2, 0.03, pan);
+  };
+  // Its jaws shutting: two hard clacks, and a wet gulp.
+  fx.chomp = function (pan) {
+    if (!ok()) return; const t = T0();
+    for (const k of [0, 0.09]) { hiss(t + k, "bandpass", 2600, 1800, 0.03, 0.3, { q: 2, pan }); tone(t + k, "triangle", 700, 300, 0.03, 0.15, { pan }); }
+    tone(t + 0.14, "sine", 200, 70, 0.35, 0.4, { pan });
+    hiss(t + 0.14, "lowpass", 600, 200, 0.3, 0.22, { q: 2, pan });
+  };
+  // A blow struck from inside it: muffled, deep.
+  fx.thump = function (v, pan) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    tone(t, "sine", 110, 50, 0.12, 0.42 * v, { pan });
+    hiss(t, "lowpass", 500, 200, 0.08, 0.2 * v, { q: 1, pan });
+  };
+  // A great demon cast down: a long roar falling away, and the stone of it breaking.
+  fx.greatFall = function (pan) {
+    if (!ok()) return; const t = T0();
+    const a = osc("sawtooth", 90, t), lp = filt("lowpass", 900, 3, t), g = gainAt(t);
+    a.frequency.exponentialRampToValueAtTime(28, t + 1.6); lp.frequency.exponentialRampToValueAtTime(150, t + 1.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.3, t + 0.08); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+    a.connect(lp); lp.connect(g); route(g, t, { sfx: true, pan, rev: 0.6 }); a.start(t); a.stop(t + 1.75);
+    hiss(t + 0.3, "lowpass", 2400, 300, 0.9, 0.3, { q: 1, pan, rev: 0.4 });
+    pebbles(t + 0.35, 10, 0.06, pan);
+    I.bell(t + 0.5, 50, 3, 0.2, { ratio: 1.41, index: 1.2, sfx: true, pan, rev: 0.8 });
+  };
   // How loud each effect sits against the music: the blows must cut through a fight at its
   // height, the small sounds of the body stay small, and the great moments are big without
   // swamping everything. Each effect's voices pass through this gain, reverb and all.
@@ -1175,6 +1248,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];

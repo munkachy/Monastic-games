@@ -184,7 +184,8 @@ const SOUND_MODES = ["all", "effects", "off"];
 const soundMode = () => (SOUND_MODES.includes(save.sound) ? save.sound : save.muted ? "off" : "all");
 const soundLabel = () => ({ all: "SOUND: ALL", effects: "SOUND: NO MUSIC", off: "SOUND: OFF" })[soundMode()];
 function applySound() { if (typeof Sound === "undefined") return; const m = soundMode(); Sound.setMute(m === "off"); Sound.setMusic(m === "all"); }
-function cycleSound() { save.sound = SOUND_MODES[(SOUND_MODES.indexOf(soundMode()) + 1) % 3]; save.muted = save.sound === "off"; store(); applySound(); }
+// (Going round the three also makes the sound afresh: if it has gone silent, this brings it back.)
+function cycleSound() { save.sound = SOUND_MODES[(SOUND_MODES.indexOf(soundMode()) + 1) % 3]; save.muted = save.sound === "off"; store(); if (typeof Sound !== "undefined" && Sound.reboot && Sound.ctx()) Sound.reboot(); applySound(); }
 
 // ---- Input ------------------------------------------------------------------------------------------
 // Every screen of the game is a "mode" with its own step, draw and touch handlers. Touches arrive
