@@ -122,7 +122,7 @@ const Climb = (() => {
     }
   }
   function sectionAt(h) {
-    if (h < 1) h = 1;
+    if (!(h >= 1)) h = 1; else if (h > 2e5) h = 2e5;     // (never for ever, whatever it is asked)
     while (!secs.length || secs[secs.length - 1].h1 < h) ensureSecs(secs.length);
     let lo = 0, hi = secs.length - 1;
     while (lo < hi) { const m = (lo + hi) >> 1; if (secs[m].h1 < h) lo = m + 1; else hi = m; }
@@ -754,12 +754,17 @@ const Climb = (() => {
     const kHere = sectionAt(Math.max(1, Math.floor(-S.y / CELL))).k, side = (q) => (q % 2 ? -1 : 1) * S.dir;
     if (Number.isFinite(+sc.torch)) S.fuel = clamp(+sc.torch, 0.05, 1);
     if (Number.isFinite(+sc.flare)) S.meter = clamp(+sc.flare, 0, 1);
-    // Demons beside him: one side and the other, a little farther each.
+    // Demons beside him: one side and the other, a little farther each; on the floor he stands on
+    // where there is room on it (not over a pit), wherever there is room if not.
     let q = 0;
+    const onFloor = (D, x) => solidAt(x, S.y + 4) && solidAt(x - D.hw + 2, S.y + 4) && solidAt(x + D.hw - 2, S.y + 4) && !boxAt(x, S.y - 0.5, D.hw, D.ht) && los(S.x, S.y - 20, x, S.y - 20);
     for (const N of Array.isArray(sc.near) ? sc.near.slice(0, 4) : []) {
-      const sin = DEM[N && N.sin] ? N.sin : dom;
+      const sin = DEM[N && N.sin] ? N.sin : dom, D = DEM[sin];
       for (let i = 0; i < clamp(Math.round(+N.count || 1), 1, 6); i++, q++) {
-        const x = S.x + side(q) * (80 + 34 * Math.floor(q / 2)), f = spawnDemon(sin, x, S.y - 2, x - 120, x + 120, kHere);
+        let x = null;
+        for (let d = 70 + 34 * Math.floor(q / 2); d < 360 && x === null; d += 12) for (const sd of [side(q), -side(q)]) if (x === null && onFloor(D, S.x + sd * d)) x = S.x + sd * d;
+        const y = x === null ? S.y - 2 : S.y - 0.01; if (x === null) x = S.x + side(q) * (80 + 34 * Math.floor(q / 2));
+        const f = spawnDemon(sin, x, y, x - 120, x + 120, kHere);
         if (f) { f.dir = sign(S.x - f.x) || 1; f.cd = 1.2 + Math.random(); }
       }
     }
@@ -767,7 +772,9 @@ const Climb = (() => {
     const tier = clamp(Math.round(+sc.great || 0), 0, 4);
     if (tier) {
       const G = GREAT.gluttony, gs = 1 + 0.2 * (tier - 1), hw = G.hw * gs, ht = G.ht * gs;
-      const at = dFree(S.x + S.dir * 190, S.y - 20, hw, ht) || dFree(S.x - S.dir * 190, S.y - 20, hw, ht);
+      let at = null;
+      for (const d of [190, 150, 240, 120, 300, 90]) for (const sd of [S.dir, -S.dir]) if (!at) at = dFree(S.x + sd * d, S.y - 20, hw, ht);
+      if (!at) at = dFree(S.x, S.y - HT - ht, hw, ht);
       if (at) S.bigs.push({ sin: "gluttony", tier, sc: gs, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: sign(S.x - at[0]) || 1, hp: tier, maxHp: tier, st: "stone", t: 0, wake: 0, lit: 0,
         anim: Math.random() * 9, stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: kHere, id: ++S.ids, growlT: -9, stoneT: -9 });
     }
@@ -2265,7 +2272,7 @@ const Climb = (() => {
   }
   function populate(dt) {
     const hNow = -S.y / CELL;
-    for (; ;) { ensureSecs(S.popK); if (secs[S.popK].h0 > hNow + 30) break; placeFor(S.popK); S.popK++; }
+    for (let n = 0; n < 200 && Number.isFinite(hNow); n++) { ensureSecs(S.popK); if (secs[S.popK].h0 > hNow + 30) break; placeFor(S.popK); S.popK++; }
     // In the novitiate, when all the demons of the place he is in are gone, others come.
     if (NOV && NOV.demons > 0) {
       const k = sectionAt(Math.max(1, Math.floor(hNow))).k;
@@ -2581,7 +2588,8 @@ const Climb = (() => {
         // It draws in its breath, and everything near is drawn to its mouth.
         f.dir = mx < f.x ? -1 : 1;
         if (f.t > 0.35 && f.t < 2.4) inhale(f, ox, oy, dt);
-        if (f.t > 0.35 && d < 30) { if (!swallowLegs(f)) setSt(f, "bite"); }
+        // (Drawn in to it on his feet, its mouth is up at his head: near enough, so long as it is at him.)
+        if (f.t > 0.35 && (d < 30 || (Math.abs(ox - S.x) < HW + 12 && oy > S.y - HT - 16 && oy < S.y + 8))) { if (!swallowLegs(f)) setSt(f, "bite"); }
         else if (f.t > 2.5) { setSt(f, "idle"); f.cd = 2.2 + Math.random() * 1.5; }
         break;
       case "bite":
@@ -3418,6 +3426,16 @@ const Climb = (() => {
     if (boxHit(S.x, S.y)) { const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; } }
   }
 
+  // Lost out of the world (some fault gave him no place, or an endless speed): back where he last
+  // stood firm, everything he was doing let go, and the fault kept for a note.
+  function unlose() {
+    fault(new Error("lost out of the world: " + JSON.stringify([S.x, S.y, S.vx, S.vy, S.rope && [S.rope.x, S.rope.y, S.rope.len], S.act && S.act.kind])));
+    const p = (S.foot && Number.isFinite(S.foot[0] + S.foot[1]) && S.foot) || (S.keptAt && Number.isFinite(S.keptAt[0] + S.keptAt[1]) && S.keptAt) || [(edges(-2).L + edges(-2).R + 1) / 2 * CELL, -0.01];
+    S.x = p[0]; S.y = p[1]; S.vx = 0; S.vy = 0; S.rope = null; S.shot = null; S.act = null; S.cling = 0; S.hang = null; S.flip = null; S.next = null; S.climbing = false;
+    if (!Number.isFinite(S.torch[0] + S.torch[1])) S.torch = [S.x, S.y - 40];
+    if (!Number.isFinite(S.cam.x + S.cam.y)) { S.cam.x = clamp(S.x - W / 2, 0, COLS * CELL - W); S.cam.y = S.y - H * 0.62; }
+    ev("lost out of the world, set back");
+  }
   function step(dt) {
     // Stopped at a verse, to read it: nothing moves till he goes on.
     if (S.verseHold) { if (S.verse) S.verse.t = Math.min(S.verse.t + dt, 0.6); return; }
@@ -3425,6 +3443,7 @@ const Climb = (() => {
     if (S.dread) { stepDread(dt); return; }
     if (S.boonShow) { stepBoonShow(dt); return; }
     S.rt += dt;
+    if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
     if (NOV) { if (NOV.torch && !S.latched) S.fuel = 1; if (NOV.flare) S.meter = 1; }       // (an endless torch, but not in a great demon's mouth)
     { const [pgx, pgy] = grip(); S.prevGx = pgx; S.prevGy = pgy; }
     S.whiteT = Math.max(0, (S.whiteT || 0) - dt); S.meterFlash = Math.max(0, (S.meterFlash || 0) - dt);
@@ -3502,6 +3521,7 @@ const Climb = (() => {
     if (stepN !== S.stepN) { if (S.ground && S.greaseT > 0 && Math.abs(S.vx) > 12 && !S.act) { S.prints.push({ x: S.x + S.dir * (stepN % 2 ? 3 : -2), y: S.y, t: S.rt, a: clamp(S.greaseT / 3, 0.35, 1), dir: S.dir }); if (S.prints.length > 40) S.prints.shift(); } S.stepN = stepN; }
     if (S.prints.length && S.rt - S.prints[0].t > 9) S.prints.shift();
     if (S.rope && !S.ground && !S.cling && Math.abs(S.vx) > 30) S.dir = sign(S.vx);
+    if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
     S.top = Math.max(S.top, -S.y);
     // The verses: come near one and the torch is full again.
     const [mx, my] = middle(), hNow = -S.y / CELL;
@@ -3576,7 +3596,9 @@ const Climb = (() => {
   // (The niches cut into the walls are hollows the light goes into: HOLES holds their cells.)
   const HOLES = new Set(), holeKey = (i, j) => (j + 1e6) * 256 + i;
   function visPoly(ox, oy, R) {
-    const N = 180, pts = new Float32Array(N * 2), i0 = Math.floor(ox / CELL), j0 = Math.floor(oy / CELL), inRock = solid(i0, j0);
+    const N = 180, pts = new Float32Array(N * 2), i0 = Math.floor(ox / CELL), j0 = Math.floor(oy / CELL);
+    if (!Number.isFinite(ox + oy + R)) return pts;
+    const inRock = solid(i0, j0);
     for (let k = 0; k < N; k++) {
       const a = (k / N) * TAU, dx = Math.cos(a), dy = Math.sin(a), sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
       const tdx = Math.abs(CELL / (dx || 1e-9)), tdy = Math.abs(CELL / (dy || 1e-9));
@@ -4727,7 +4749,8 @@ const Climb = (() => {
   function record() {
     const sec = sectionAt(Math.max(1, Math.floor(-S.y / CELL)));
     return { mode: NOV ? "seven mountains" : "endless climb", mountain: NOV ? NOV.domain : sec.dom, section: { k: sec.k, type: sec.type, dom: sec.dom, gate: !!sec.gate }, seed,
-      now: snapNow(), recent: REC.snaps.slice(), events: REC.events.slice(), blocks: S.blocks.map((b) => ({ shape: b.shape, st: b.st })), binned: S.binned, best: metres(S.top) };
+      now: snapNow(), recent: REC.snaps.slice(), events: REC.events.slice(), blocks: S.blocks.map((b) => ({ shape: b.shape, st: b.st })), binned: S.binned, best: metres(S.top),
+      faults: typeof FAULTS !== "undefined" ? FAULTS.slice() : [] };
   }
   // A picture of the moment (taken as the pause begins, before the pause screen is drawn over it).
   function grabScreen() {
@@ -4845,7 +4868,7 @@ const Climb = (() => {
     },
     pause() {
       if (mode !== M || S.dying) return;
-      M.pauseShot = grabScreen(); M.pauseRec = record();
+      M.pauseShot = grabScreen(); try { M.pauseRec = record(); } catch (e) { fault(e); M.pauseRec = { faults: FAULTS.slice() }; }
       Pause.t = 0; mode = ClimbPause; Sound.muffle(true, 0.2);
     },
     resume() {
@@ -4866,7 +4889,7 @@ const Climb = (() => {
 const ClimbPause = {
   step(dt) { Pause.t += dt; },
   draw() {
-    Climb.draw();
+    try { Climb.draw(); } catch (e) { fault(e); }     // (the pause must come up even if the mountain cannot be drawn)
     rect(0, 0, W, H, "rgba(3,3,5,0.82)");
     const cx = Math.min(W * 0.26, 170), bw = 200;
     text("PAUSED", cx, 46, { align: "center", font: FONT.title, size: 22, weight: 700, spacing: 5, color: "#fff" });

@@ -33,6 +33,16 @@ addEventListener("resize", resize);
 addEventListener("orientationchange", () => setTimeout(resize, 120));
 
 // ---- Little helpers ------------------------------------------------------------------------------
+// Faults in the game's own code, the last few (each with how often it came), so a note sent after
+// one carries it.
+const FAULTS = [];
+function fault(e) {
+  const m = String((e && (e.stack || e.message)) || e).slice(0, 500), last = FAULTS[FAULTS.length - 1];
+  if (last && last.m === m) { last.n++; return; }
+  FAULTS.push({ m, n: 1, at: new Date().toISOString() }); if (FAULTS.length > 6) FAULTS.shift();
+}
+addEventListener("error", (e) => fault(e.error || e.message));
+addEventListener("unhandledrejection", (e) => fault(e.reason));
 const PI = Math.PI, TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, k) => a + (b - a) * k;
