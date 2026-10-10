@@ -6,7 +6,7 @@
 // doing, the blows, the ward, the blocks), in the page's store, where Claude reads it.
 
 const Notes = (() => {
-  const VERSION = "v=20261010t";                 // (kept in step with index.html's)
+  const VERSION = "v=20261010u";                 // (kept in step with index.html's)
   const N = { ready: false, db: null, assets: null };
   const C = window.claude;
   if (C && typeof C.use === "function") {
