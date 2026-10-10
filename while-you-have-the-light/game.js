@@ -276,7 +276,11 @@ function frame(now) {
   if (portrait) { drawTurnCard(now / 1000); requestAnimationFrame(frame); return; }
   ctx.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0);
   try { if (mode.step) mode.step(dt); mode.draw(dt); }
-  catch (e) { console.error(e); }
+  catch (e) {
+    console.error(e); fault(e);
+    // (Whatever failed, the pause can still be reached: from it, the title, or a note about it.)
+    if (mode === Climb) { try { ctx.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0); pauseButton(); } catch (q) { } }
+  }
   requestAnimationFrame(frame);
 }
 resize();
