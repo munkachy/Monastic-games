@@ -226,6 +226,17 @@ const letGo = () => { if (typeof Climb !== "undefined" && Climb.allUp) Climb.all
 addEventListener("blur", letGo); addEventListener("pagehide", letGo);
 document.addEventListener("visibilitychange", () => { if (document.hidden) letGo(); });
 addEventListener("contextmenu", (e) => e.preventDefault());
+// A drag on the game is never a scroll. (The iPad does not always heed "touch-action: none"; and in
+// claude.ai's frame, a drag the page lets go of scrolls claude.ai's own page instead, and carries
+// the game up off the screen.) What is in the boxes for writing is left to scroll and be typed in.
+const inBox = (e) => !!(e.target && e.target.closest && e.target.closest("textarea, input, select, #note-panel, #verse-panel, #room-panel"));
+document.addEventListener("touchmove", (e) => { if (e.cancelable && !inBox(e)) e.preventDefault(); }, { passive: false });
+document.addEventListener("gesturestart", (e) => { if (!inBox(e)) e.preventDefault(); });
+addEventListener("scroll", () => { if (scrollX || scrollY) scrollTo(0, 0); });
+// And if the game has been carried out of sight all the same, a touch on it brings it back.
+let cvSeen = 1;
+try { new IntersectionObserver((es) => { cvSeen = es[es.length - 1].intersectionRatio; }, { threshold: [0, 0.25, 0.5, 0.75, 0.9, 1] }).observe(cv); } catch (e) { }
+addEventListener("pointerdown", () => { if (cvSeen < 0.9 && !portrait) { try { cv.scrollIntoView({ block: "center", inline: "center" }); } catch (e) { } } }, true);
 addEventListener("keydown", (e) => {
   lastInput = "key";
   wakeSound();
