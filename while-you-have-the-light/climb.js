@@ -83,6 +83,14 @@ const Climb = (() => {
   // chains; in each shaft a shelf of rock across it, with a narrow way through (the needle's eye).
   const MINE = { avarice: true }, AW = 62;
   let NOV = null;                                  // the novitiate: { domain, demons, torch, flare }, or null for the climb
+  // The summit (in the seven mountains; the endless climb has none). Past the last shaft, the way
+  // comes out on the mountain's top, under the open sky: a broad crown of rock, a great arch of stone
+  // over it (to hook and swing from), a spire on either side. The greatest of the mountain's demons
+  // waits there. It is the section after a shaft, never at a gate: k % 8 === 7, and above any place
+  // he has kept on that mountain.
+  const SUMMIT_K = 39, SUM_G = 8, SUM_AW = 43, SUM_SPAN = 24, SUM_TOP = 28;
+  const summitAbove = (k) => { let v = Math.max(SUMMIT_K, k + 3); while (v % 8 !== 7) v++; return v; };
+  const summitK = () => (NOV && NOV.summitK) || Infinity;
   const domIdx = (k) => (k < 1 ? 0 : Math.floor((k - 1) / SPD));
   const domOf = (k) => (NOV ? NOV.domain : k < 1 ? null : BUILT[domIdx(k) % BUILT.length]);
   const isGate = (k) => k >= 1 && (k - 1) % SPD === 0;
@@ -106,6 +114,9 @@ const Climb = (() => {
       const k = secs.length, prev = secs[k - 1];
       if (!prev) { secs.push({ type: "shaft", h0: 1, h1: 44, c: MID - 19, k, dom: NOV ? NOV.domain : null }); continue; }
       const dom = domOf(k);
+      // (The summit: its sky goes up for ever. Anything asked for above it is more of the same sky.)
+      if (prev.type === "summit") { secs.push({ type: "summit", filler: true, h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev.from, c: prev.c }); continue; }
+      if (prev.type === "shaft" && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
       if (prev.type === "shaft") {
         const gate = isGate(k), cave = !gate && !!WIDE[dom], slope = !gate && !!SLOPE[dom];
         if (slope) {
@@ -388,6 +399,7 @@ const Climb = (() => {
     if (sec.type === "trav") return travSolid(i, h, sec);
     if (sec.type === "slope") return slopeSolid(i, h, sec);
     if (sec.type === "cave") return cave(sec).g[(h - sec.h0) * COLS + i] === 1;
+    if (sec.type === "summit") return summitSolid(i, h, sec);
     const e = edges(j); if (i < e.L || i > e.R) return true;
     const E = sec.eye === undefined ? eyeOf(sec) : sec.eye;
     if (E && h >= E.h0 && h <= E.h1) return !(i >= E.i0 && i <= E.i1) || eyeShut();
@@ -395,6 +407,28 @@ const Climb = (() => {
     return !!isl && isl.st !== "gone" && h >= isl.h0 && h <= isl.h1 && i >= isl.x0 && i <= isl.x1;
   }
   const solidAt = (x, y) => solid(Math.floor(x / CELL), Math.floor(y / CELL));
+  // The summit's rock: the crown (G rows up from the summit's foot), with the last shaft coming up
+  // through it, its walls going on straight up, toward one rim (out of the middle of the ground where
+  // the fight is); the arch, its piers at the crown's rim (so the ground
+  // between them is all one), its span high over it, and crags hanging from the span; beyond the
+  // piers, the mountain's shoulders falling away.
+  function summitG(i, sec) { const ad = Math.abs(i - sec.c); return ad < SUM_AW + 3 ? SUM_G : Math.max(2, Math.round(SUM_G - (ad - SUM_AW - 2) * 0.35)); }
+  function summitInfo(sec) {
+    const e = edges(-(sec.h0 - 1)), mc = Math.round((e.L + e.R) / 2);
+    sec.m0 = e.L; sec.m1 = e.R;
+    sec.teeth = [[-15, 3], [8, 4], [24, 2]].filter(([u]) => Math.abs(sec.c + u - mc) > 5);
+  }
+  function summitSolid(i, h, sec) {
+    if (sec.filler) return false;
+    if (sec.m0 === undefined) summitInfo(sec);
+    const r = h - sec.h0, d = i - sec.c, ad = Math.abs(d);
+    if (r < summitG(i, sec)) return !(i >= sec.m0 && i <= sec.m1);
+    if (ad >= SUM_AW && ad < SUM_AW + 3 && r < SUM_TOP) return true;
+    if (ad < SUM_AW + 3 && r >= SUM_SPAN && r < SUM_TOP) return true;
+    for (const [u, len] of sec.teeth) if ((d === u && r >= SUM_SPAN - len && r < SUM_SPAN) || (d === u + 1 && r >= SUM_SPAN - len + 1 && r < SUM_SPAN)) return true;
+    return false;
+  }
+  const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type === "summit" ? secs[summitK()] : null);
   // ---- The low ways ----------------------------------------------------------------------------------
   // Here and there, at the foot of a wall, a way too low to stand in: a crawlway, cut into the rock
   // some paces, and at its end a little chamber where a reliquary lies hidden (its glow shows
@@ -615,6 +649,14 @@ const Climb = (() => {
     NOV = opts.nov ? Object.assign({}, opts.nov) : null;
     seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0;
     const r = seeded(seed); PH = [r() * TAU, r() * TAU, r() * TAU];
+    // Where the summit is: as asked; or as kept with his place; or (a place kept before there were
+    // summits) above the place kept.
+    if (NOV && !NOV.room && opts.resume && !NOV.summitK) {
+      const R = opts.resume;
+      if (Number.isInteger(R.summitK) && R.summitK % 8 === 7) NOV.summitK = R.summitK;
+      else if (Number.isFinite(R.y) && R.y < 0) { NOV.summitK = Infinity; NOV.summitK = summitAbove(sectionAt(Math.max(1, Math.floor(-R.y / CELL))).k); }
+    }
+    if (NOV && !NOV.summitK) NOV.summitK = SUMMIT_K;
     const e = edges(-2), x = (e.L + e.R + 1) / 2 * CELL;
     S = {
       x, y: -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
@@ -682,7 +724,7 @@ const Climb = (() => {
     }
     for (const k of SEEN) if (S[k]) seen[k] = true;
     const all = keptAll();
-    all[NOV.domain] = { v: 1, seed, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
+    all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
       coins: S.coins || 0, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
     try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
     Kept.wrote(KEEP);
@@ -740,9 +782,13 @@ const Climb = (() => {
     S.fightHintT = 99; S.hintT = 99; S.hooked = 9;
     // The place: the first of the kind asked for at that height or above it, with ground to stand on.
     const h = clamp((+sc.metres || 0) * MPX / CELL, 0, 9000), want = SCENE_PLACE[sc.place];
+    ensureSecs(NOV.summitK); const su = secs[NOV.summitK];
+    const top = !!sc.summit || h >= su.h0 - 2;             // (asked for the top, or for higher than it)
     // (None of that kind near the height asked: any kind.)
-    const k0 = h < 4 ? 0 : sectionAt(Math.floor(h)).k;
+    const k0 = h < 4 || top ? 0 : sectionAt(Math.floor(h)).k;
     let spot = null;
+    // On the summit: by the last shaft's mouth, under the arch, the greatest demon across from him.
+    if (top) { const sd = hash2(NOV.summitK, 995, seed) < 0.5 ? -1 : 1, i = su.c - sd * 12; spot = [(i + 0.5) * CELL, -(su.h0 + summitG(i, su)) * CELL - 0.01]; S.dir = sd; }
     for (const kinds of k0 ? [want, null] : []) for (let k = k0; k < k0 + 6 && !spot; k++) {
       ensureSecs(k); const sec = secs[k];
       if (sec.gate || (kinds && !kinds.includes(sec.type))) continue;
@@ -771,7 +817,7 @@ const Climb = (() => {
       }
     }
     // A great demon, a little way off, on the side he faces: as stone until he looks at it in his light.
-    const tier = clamp(Math.round(+sc.great || 0), 0, 4);
+    const tier = top ? 0 : clamp(Math.round(+sc.great || 0), 0, 4);
     if (tier) {
       const G = GREAT.gluttony, gs = 1 + 0.2 * (tier - 1), hw = G.hw * gs, ht = G.ht * gs;
       let at = null;
@@ -781,7 +827,7 @@ const Climb = (() => {
         anim: Math.random() * 9, stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: kHere, id: ++S.ids, growlT: -9, stoneT: -9 });
     }
     // A block tied to his belt (always, with a great demon: only a block can hurt it).
-    if (sc.block || tier) {
+    if (sc.block || tier || top) {
       const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], dom); b.x = S.x - S.dir * 18; b.y = S.y;
       S.blocks.push(b); b.st = "tied"; b.rope = TETHER; S.tied = b;
     }
@@ -1292,6 +1338,8 @@ const Climb = (() => {
       const c = (T.a + T.b) / 2;
       runs.sort((p, q) => Math.abs((p[0] + p[1]) / 2 - c) - Math.abs((q[0] + q[1]) / 2 - c));
       for (const r of runs) out.push([(r[0] + r[1] + 1) / 2 * CELL, jt * CELL - 0.01, r[0] * CELL + D.hw, (r[1] + 1) * CELL - D.hw]);
+    } else if (sec.type === "summit") {
+      if (!sec.filler) for (const q of [-14, 14, -21, 21]) { const i = sec.c + q; out.push([(i + 0.5) * CELL, -(sec.h0 + summitG(i, sec)) * CELL - 0.01, (i - 5) * CELL, (i + 5) * CELL]); }
     } else if (sec.type === "slope") {
       // On the bare terraces (not the first or the last, where he comes and goes).
       const V = slope(sec), at = (v) => V.iA + V.dir * v;
@@ -1313,6 +1361,7 @@ const Climb = (() => {
   function placeFor(k, demonsOnly) {
     // (A cavern or a corridor of briars is long: twice as many demons in it, met along the way over.)
     ensureSecs(k); const sec = secs[k], sin = sec.dom || "wrath", n = demonsFor(k) * (sec.type === "cave" || sec.type === "slope" ? 2 : 1);
+    if (sec.type === "summit") { if (!demonsOnly && !sec.filler) placeSummit(k); return; }
     if (!DEM[sin]) return;
     const spots = spotsFor(k, sin), taken = [];
     // The best place first; then each further one as far as it can be from those already taken.
@@ -1817,12 +1866,12 @@ const Climb = (() => {
   // fight his way out, his light going all the while. A block it comes on, it seizes and hurls back
   // at him, hard: but it cannot be rid of the stone that hurts it, and the block falls by him.
   const GREAT = { gluttony: { hw: 20, ht: 84 } };
-  const GREAT_V = [0, 52, 62, 72, 84], GRASP = [0, 5, 8, 11, 14];   // by tier: how fast it comes; the blows it takes to get out of it
+  const GREAT_V = [0, 52, 62, 72, 84, 92], GRASP = [0, 5, 8, 11, 14, 18];   // by tier: how fast it comes; the blows it takes to get out of it
   // The first in the cavern of the fourth crossing, in the room over the chasm, across the way. After
   // it, here and there by chance (more often the higher he goes), never two within three sections.
   // (Where one would wait in section k, given where the last one waited: nothing is changed.)
   function planGreat(k) {
-    if (!NOV || !GREAT[NOV.domain] || k < 7) return null;
+    if (!NOV || !GREAT[NOV.domain] || k < 7 || k >= summitK()) return null;
     const sec = secs[k], G = GREAT[NOV.domain], tier = clamp(1 + Math.floor((k - 7) / 8), 1, 4), sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc;
     if (sec.gate) return null;
     let at = null, dir = 1;
@@ -1844,6 +1893,17 @@ const Climb = (() => {
       stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: k, id: ++S.ids, growlT: -9, stoneT: -9 });
     ev("a great demon waits", { k, tier });
   }
+  // The greatest of them, on the summit: bigger than any met on the way, and stronger (five blows).
+  // It does not leave the mountain's top, and does not follow him down into it.
+  function placeSummit(k) {
+    const sec = secs[k];
+    if (S.greatDown.has(k) || S.bigs.some((g) => g.summit)) return;
+    const G = GREAT.gluttony, sc = 1.9, hw = G.hw * sc, ht = G.ht * sc, side = hash2(k, 995, seed) < 0.5 ? -1 : 1, i = sec.c + side * 17;
+    const at = dFree((i + 0.5) * CELL, -(sec.h0 + summitG(i, sec)) * CELL - 1, hw, ht) || [(i + 0.5) * CELL, -(sec.h0 + SUM_G) * CELL - 1];
+    S.bigs.push({ sin: "gluttony", tier: 5, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: -side, hp: 5, maxHp: 5, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
+      stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: k, id: ++S.ids, growlT: -9, stoneT: -9, summit: true });
+    ev("the summit's demon waits", { k });
+  }
   const bigAt = (x, y) => { for (const g of S.bigs) if (g.st !== "dying" && g.st !== "latch" && Math.abs(x - g.x) < g.hw + 14 && y > g.y - g.ht - 14 && y < g.y + 10) return g; return null; };
   function stepGreat(dt) {
     for (const g of S.bigs) updGreat(g, dt);
@@ -1862,15 +1922,16 @@ const Climb = (() => {
     const lit = dist(lx, ly, cx, cy) < R + g.ht * 0.3 && (solidAt(cx, cy) || [0.15, 0.5, 0.85].some((q) => { const y = g.y - g.ht * q; return dist(lx, ly, cx, y) < R && los(lx, ly, cx, y); }));
     const facing = g.tier >= 4 || (cx - S.x) * S.dir > -14;
     // Seen for the first time (in his light, out in the open): the dread. From then on it follows him.
-    if (!g.met && lit && !solidAt(cx, cy) && onView(g, -10) && canDread()) { g.met = true; S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); startDread(g, "meet"); return; }
+    if (!g.met && lit && !solidAt(cx, cy) && onView(g, -10) && canDread()) { g.met = true; if (!g.summit) { S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); } startDread(g, "meet"); return; }
     if (S.haunt === g) {
       if (onView(g, 40) || dist(cx, cy, mx, my) < 300) g.lostT = 0; else g.lostT += dt;
       if (g.lostT > g.wait && canDread()) { if (burstAfter(g)) return; g.lostT = g.wait - 1.5; }      // (no room for it near him: it tries again soon)
     }
-    const awake = lit && facing && g.stunT <= 0 && !S.dying && !S.latched;
+    const below = g.summit && S.y > -(secs[g.sec].h0 + 2) * CELL;     // (gone down off the summit: it waits for him there)
+    const awake = lit && facing && g.stunT <= 0 && !S.dying && !S.latched && !below;
     if (awake && g.st !== "hunt") {
       g.st = "hunt"; g.t = 0; ev("a great demon woke", { tier: g.tier });
-      if (g.met && S.haunt !== g) { S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); }      // (woken again, it follows him again)
+      if (g.met && S.haunt !== g && !g.summit) { S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); }      // (woken again, it follows him again)
       if (S.rt - g.growlT > 1.6) { g.growlT = S.rt; Sound.fx.growl(panX(g.x), 0.75 + 0.08 * g.tier); }
       greatSays();
     } else if (!awake && g.st === "hunt") {
@@ -1990,7 +2051,8 @@ const Climb = (() => {
     for (let q = 0; q < 26; q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: cx + (Math.random() - 0.5) * g.hw * 2, y: cy + (Math.random() - 0.5) * g.ht * 0.8, vx: (Math.random() - 0.5) * 320, vy: -80 - Math.random() * 240, life: 0.9, age: 0 });
     for (let q = 0; q < 30; q++) { const a = Math.random() * TAU, v = 60 + Math.random() * 220; S.parts.push({ kind: "spark", c: q % 3 ? SINS[g.sin].color : "#ff4a2a", x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 1, age: 0, real: true }); }
     for (let q = 0; q < 16; q++) S.parts.push({ kind: "smoke", x: cx + (Math.random() - 0.5) * 40, y: cy + (Math.random() - 0.5) * 60, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 30, r: 5 + Math.random() * 7, life: 1.4, age: 0 });
-    S.say = { text: "THE GREAT DEMON IS CAST DOWN", sub: "The torch and the flare are full.", t: 0 };
+    S.say = g.summit ? { text: "THE SUMMIT IS WON", sub: "The greatest of this mountain's demons is cast down.", t: 0 } : { text: "THE GREAT DEMON IS CAST DOWN", sub: "The torch and the flare are full.", t: 0 };
+    if (g.summit) ev("the summit is won");
   }
   // Awake, it comes on a block (lying, or on his rope): it seizes it (wrenching it off his rope) and
   // hurls it back at him, hard and straight. If it reaches him it is a blow (his ward turns it);
@@ -3550,6 +3612,15 @@ const Climb = (() => {
     if (S.rope && !S.ground && !S.cling && Math.abs(S.vx) > 30) S.dir = sign(S.vx);
     if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
     S.top = Math.max(S.top, -S.y);
+    // Out on the summit, the first time: the wind, the sky, and what waits there.
+    if (NOV && !S.atSummit && S.ground && !S.dying) {
+      const su = summitSec();
+      if (su && -S.y / CELL > su.h0 + 2) {
+        S.atSummit = true; ev("the summit", { m: metres(-S.y) });
+        S.say = { text: "THE SUMMIT", sub: "The top of the mountain, under the open sky. The greatest of its demons waits here.", t: 0 };
+        Sound.ambience({ wind: 1 }); keepHere("summit");
+      }
+    }
     // The verses: come near one and the torch is full again.
     const [mx, my] = middle(), hNow = -S.y / CELL;
     for (let n = 0; ; n++) {
@@ -3593,7 +3664,7 @@ const Climb = (() => {
     if (lv !== S.level && !S.dying) { S.level = lv; Sound.setLevel(lv); }
     // The camera: a little below the middle, so more of the way up shows; ahead of him in a crossing.
     const sec = sectionAt(Math.max(1, Math.floor(hNow))), cv = sec.type === "cave", sl = sec.type === "slope", look = sec.type === "trav" ? trav(sec).dir * 90 : cv ? cave(sec).dir * 140 : sl ? slope(sec).dir * 120 : 0;
-    const tx = clamp(S.x + look - W / 2, 0, COLS * CELL - W), ty = Math.min(S.y - HT / 2 - H * (sec.type === "trav" || sl ? 0.5 : cv ? 0.42 : 0.58), 70 - H);
+    const tx = clamp(S.x + look - W / 2, 0, COLS * CELL - W), ty = Math.min(S.y - HT / 2 - H * (sec.type === "summit" ? 0.74 : sec.type === "trav" || sl ? 0.5 : cv ? 0.42 : 0.58), 70 - H);
     S.cam.x += (tx - S.cam.x) * (1 - Math.exp(-dt * 4)); S.cam.y += (ty - S.cam.y) * (1 - Math.exp(-dt * 4));
     if (!S.dying && Math.random() < (F.on ? 0.9 : boonOn("unconsumed") ? 0.75 : 0.3)) S.parts.push({ kind: "ember", x: S.torch[0] + (Math.random() - 0.5) * 4, y: S.torch[1] - 6, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, life: 0.8, age: 0 });
     for (const p of S.parts) {
@@ -3643,6 +3714,32 @@ const Climb = (() => {
   let DK = null;
   // The dark over everything, but where the torch can see; and, without shadows, a little way round
   // the other lights (lamps, fire, the glow from a pit): lights = [{ x, y, r, a, sx }] on the screen.
+  // The night sky over the summit: dark blue going up, paler at the mountain's rim; the stars, and the
+  // moon; turning slowly as the camera goes (the sky is far: it moves less than the rock).
+  // (lit: the second pass, over the dark: the glow low over the far mountains, the stars and the moon.)
+  function drawSky(cam, yb, t, lit) {
+    const y1 = Math.min(H, yb + 24), top = yb * 0.4 - 560;
+    if (!lit) {
+      const g = ctx.createLinearGradient(0, top, 0, y1);
+      g.addColorStop(0, "rgba(5,7,16,0.98)"); g.addColorStop(0.6, "rgba(14,19,38,0.94)"); g.addColorStop(0.92, "rgba(36,42,66,0.72)"); g.addColorStop(1, "rgba(60,62,80,0.4)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, y1);
+      return;
+    }
+    const hz = ctx.createLinearGradient(0, yb - 520, 0, yb - SUM_G * CELL);
+    hz.addColorStop(0, "rgba(8,11,28,0.55)"); hz.addColorStop(0.7, "rgba(24,32,66,0.4)"); hz.addColorStop(1, "rgba(80,92,136,0.3)");
+    ctx.fillStyle = hz; ctx.fillRect(0, 0, W, Math.min(H, yb));
+    const span = W * 1.6;
+    for (let n = 0; n < 110; n++) {
+      const x = ((hash2(n, 1, 7) * span - cam.x * 0.04) % span + span) % span - W * 0.3, y = yb * 0.4 + 40 - hash2(n, 2, 7) * 460;
+      if (y < -4 || y > y1 - 12 || x < -4 || x > W + 4) continue;
+      const a = (0.35 + 0.5 * hash2(n, 3, 7)) * (0.75 + 0.25 * Math.sin(t * (0.6 + hash2(n, 4, 7) * 2) + n));
+      const z = hash2(n, 5, 7) < 0.1 ? 1.4 : 0.8;
+      if (z > 1) glow(x, y, 4, "#cfd8ff", a * 0.5);
+      rect(x - z / 2, y - z / 2, z, z, "rgba(225,230,255," + a.toFixed(3) + ")");
+    }
+    const mx = W * 0.72 - ((cam.x * 0.012) % 160), my = yb * 0.4 - 30;
+    if (my > -40 && my < y1) { glow(mx, my, 70, "#9fb0d8", 0.18); glow(mx, my, 26, "#e8ecff", 0.35); circle(mx, my, 13, "#e9e7dc"); circle(mx + 4, my - 3, 3, "rgba(190,188,176,0.6)"); circle(mx - 4, my + 4, 2.2, "rgba(190,188,176,0.5)"); }
+  }
   function darkness(cam, tx, ty, R, lights, shade) {
     const k = 0.5, w = Math.ceil(W * k), h = Math.ceil(H * k);
     if (!DK) DK = document.createElement("canvas");
@@ -4324,6 +4421,9 @@ const Climb = (() => {
     drawBackdrop(600 + cam.x * 0.6, 300 + clamp(cam.y * 0.05, -70, 70), 1, t, { y0: 300, dim: "rgba(12,12,14,0.3)", tint: m[0] + m[1] + m[2] < 760 ? rgbs(m, 1) : null });
     const dawn = clamp(metres(S.top) / 1500, 0, 1);
     if (dawn > 0.01) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "rgba(200,190,170," + (0.22 * dawn) + ")"); g.addColorStop(1, "rgba(200,190,170,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    // Over the summit, the open sky. (sky: how much of the screen it fills, for the dark below.)
+    const su = summitSec(), skyB = su ? -su.h0 * CELL - cam.y : -1, sky = clamp(skyB / H, 0, 1);
+    if (skyB > -40) drawSky(cam, skyB, t, false);
     const P = rockPath(cam), view = sectionsIn(-(cam.y + H) / CELL - 4, -cam.y / CELL + 4), lights = [];
     const hTop = -(cam.y) / CELL + 4, hBot = -(cam.y + H) / CELL - 4;
     const vis = []; for (let n = 0; ; n++) { const w = wallAt(n); if (w.h > hTop) break; if (w.h >= hBot) vis.push(w); }
@@ -4468,7 +4568,12 @@ const Climb = (() => {
     const vp = visPoly(lx, ly, R);
     S.light.moveTo(vp[0] - cam.x, vp[1] - cam.y); for (let k = 2; k < vp.length; k += 2) S.light.lineTo(vp[k] - cam.x, vp[k + 1] - cam.y); S.light.closePath();
     const tx = S.torch[0] - cam.x, ty = S.torch[1] - cam.y;
-    darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 0.95));
+    darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 0.95 - 0.22 * sky));      // (under the open sky, the moon's light)
+    // (The sky's own lights are not darkened: over the dark, where no rock stands in front of them.)
+    if (skyB > -40) {
+      const yr = Math.min(H, skyB - SUM_G * CELL + 4), Q = new Path2D(); Q.rect(-10, -10, W + 20, H + 20); Q.addPath(P);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, yr); ctx.clip(); ctx.clip(Q, "evenodd"); drawSky(cam, skyB, t, true); ctx.restore();
+    }
     ctx.save(); ctx.clip(S.light);
     glow(tx, ty, R * 0.9, C.flame, 0.1);
     const rim = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
