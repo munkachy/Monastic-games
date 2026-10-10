@@ -190,7 +190,7 @@ What is in the game now:
     logEl.scrollTop = logEl.scrollHeight;
   }
   function setBusy(on) { sendB.disabled = on; }
-  function hide() { if (box) { box.hidden = true; if (document.activeElement === ta) ta.blur(); } }
+  function hide() { dropKeys(); if (box) box.hidden = true; }
   R.open = () => {
     if (!box) build();
     R.go = null; R.busy = false; setBusy(false);

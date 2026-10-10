@@ -192,7 +192,7 @@ const Verses = (() => {
   }
   function show() { now.textContent = "Now: " + V.name() + (V.custom && V.custom.filled < 22 ? " (" + V.custom.filled + " of 22 verses yours)" : ""); }
   V.open = function () { if (!box) build(); show(); msg.textContent = ""; box.hidden = false; };
-  function close() { if (box) box.hidden = true; }
+  function close() { dropKeys(); if (box) box.hidden = true; }
   V.isOpen = () => !!box && !box.hidden;
   return V;
 })();

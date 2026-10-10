@@ -184,11 +184,48 @@ function pauseButton() {
   ctx.globalAlpha = 0.7; rect(x + 8, y + 6, 4, 16, "#e9e6df"); rect(x + 17, y + 6, 4, 16, "#e9e6df"); ctx.globalAlpha = 1;
 }
 
+// ---- What is kept, kept twice ----------------------------------------------------------------------
+// On claude.ai the device may forget what the game keeps (a reload can come back with nothing). There
+// each thing kept is also kept in the player's own private place, which only he can read, with the
+// time it was written; at the start, whichever of the two was written last is taken. Kept.wrote(key)
+// after writing a key; Kept.watch(key, fn) to hear when an older copy here is replaced from there.
+const Kept = (() => {
+  const K = {}, keys = new Map(), pend = new Map();
+  let col = null;
+  const T = (key) => { try { return +localStorage.getItem(key + "@t") || 0; } catch (e) { return 0; } };
+  function push(key) {
+    if (!col) return;
+    clearTimeout(pend.get(key));
+    pend.set(key, setTimeout(() => { let json = null; try { json = localStorage.getItem(key); } catch (e) { } col.doc(key).set({ json: json === null ? "" : json, gone: json === null, t: T(key) || Date.now() }).catch(() => { }); }, 300));
+  }
+  async function pull(key) {
+    const s = await col.doc(key).get(), d = s.exists ? s.data() || {} : null;
+    let has = false; try { has = localStorage.getItem(key) !== null; } catch (e) { }
+    if (d && +d.t > T(key)) {
+      try { if (d.gone) localStorage.removeItem(key); else localStorage.setItem(key, String(d.json)); localStorage.setItem(key + "@t", String(+d.t)); } catch (e) { }
+      const fn = keys.get(key); if (fn) try { fn(d.gone ? null : String(d.json)); } catch (e) { }
+    } else if (has && (!d || T(key) > +d.t)) { if (!T(key)) K.wrote(key); else push(key); }
+  }
+  K.watch = (key, fn) => { keys.set(key, fn || null); if (col) pull(key).catch(() => { }); };
+  K.wrote = (key) => { try { localStorage.setItem(key + "@t", String(Date.now())); } catch (e) { } push(key); };
+  try {
+    const C = window.claude;
+    if (C && C.use) Promise.all([C.use("db"), C.use("user")]).then(async ([db, user]) => {
+      if (!db || !user || !user.id) return;
+      const id = await user.id(); if (!id) return;
+      col = db.collection("data/users/" + id);
+      for (const key of keys.keys()) await pull(key).catch(() => { });
+    }).catch(() => { });
+  } catch (e) { }
+  return K;
+})();
+
 // ---- The save -----------------------------------------------------------------------------------
 // The arena's best, the finishers opened, how many of each sin cast out, the hints seen.
 let save = { muted: false, best: 0, bestFlow: 0, unlocked: {}, cast: {}, seen: {}, practice: null };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("while-you-have-the-light") || "{}")); } catch (e) { }
-const store = () => { try { localStorage.setItem("while-you-have-the-light", JSON.stringify(save)); } catch (e) { } };
+const store = () => { try { localStorage.setItem("while-you-have-the-light", JSON.stringify(save)); } catch (e) { } Kept.wrote("while-you-have-the-light"); };
+Kept.watch("while-you-have-the-light", (json) => { try { Object.assign(save, JSON.parse(json || "{}")); if (typeof applySound === "function") applySound(); } catch (e) { } });
 // The sound: all of it, the effects alone (no music), or none. One button goes round the three.
 const SOUND_MODES = ["all", "effects", "off"];
 const soundMode = () => (SOUND_MODES.includes(save.sound) ? save.sound : save.muted ? "off" : "all");
@@ -211,6 +248,7 @@ addEventListener("pointerdown", (ev) => {
   lastInput = ev.pointerType === "touch" || ev.pointerType === "pen" ? "touch" : "mouse";
   wakeSound();
   if (portrait) return;
+  dropKeys();
   const p = toGame(ev);
   if (hitButton(p)) { if (typeof Sound !== "undefined" && Sound.fx && Sound.fx.tick) Sound.fx.tick(1500, 0.5); return; }
   if (mode && mode.down) mode.down(p, ev);
@@ -226,6 +264,13 @@ const letGo = () => { if (typeof Climb !== "undefined" && Climb.allUp) Climb.all
 addEventListener("blur", letGo); addEventListener("pagehide", letGo);
 document.addEventListener("visibilitychange", () => { if (document.hidden) letGo(); });
 addEventListener("contextmenu", (e) => e.preventDefault());
+// Done with writing (a box closed, or the game touched): the keyboard let go of, so it leaves no
+// space of its own behind. (On the iPad a box hidden while its writing still has the keyboard
+// leaves the keyboard's room standing, a white strip over the game.)
+function dropKeys() {
+  const a = document.activeElement;
+  if (a && a !== document.body && /^(TEXTAREA|INPUT|SELECT)$/.test(a.tagName)) { try { a.blur(); } catch (e) { } setTimeout(() => { try { scrollTo(0, 0); } catch (e) { } }, 60); }
+}
 // A drag on the game is never a scroll. (The iPad does not always heed "touch-action: none"; and in
 // claude.ai's frame, a drag the page lets go of scrolls claude.ai's own page instead, and carries
 // the game up off the screen.) What is in the boxes for writing is left to scroll and be typed in.

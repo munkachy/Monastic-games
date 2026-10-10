@@ -6,7 +6,7 @@
 // doing, the blows, the ward, the blocks), in the page's store, where Claude reads it.
 
 const Notes = (() => {
-  const VERSION = "v=20261010s";                 // (kept in step with index.html's)
+  const VERSION = "v=20261010t";                 // (kept in step with index.html's)
   const N = { ready: false, db: null, assets: null };
   const C = window.claude;
   if (C && typeof C.use === "function") {
@@ -66,7 +66,7 @@ const Notes = (() => {
     try { ta.focus(); } catch (e) { }
     setTimeout(() => { try { if (document.activeElement !== ta) ta.focus(); } catch (e) { } }, 60);
   };
-  function close() { if (box) box.hidden = true; busy = false; }
+  function close() { dropKeys(); if (box) box.hidden = true; busy = false; }
   N.isOpen = () => !!box && !box.hidden;
 
   async function send() {
@@ -100,5 +100,6 @@ const Notes = (() => {
       busy = false; sendB.disabled = false;
     }
   }
+  N.version = VERSION;
   return N;
 })();
