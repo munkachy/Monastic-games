@@ -12,9 +12,9 @@
 // bar, so a change always lands in time.
 // Songs (music.js) are scores written against these instruments. Nothing here needs core.js.
 const Sound = (() => {
-  let ac = null, out, pre, musicGain, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf = null, shaperNode, waves = {};
+  let ac = null, out, pre, musicGain, musicOn, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf = null, shaperNode, waves = {};
   let rendering = false, fxLoud = 1;
-  const A = { muted: false };
+  const A = { muted: false, noMusic: false };
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
   const dv = (x, d) => (x === undefined ? d : x);
   A.mtof = mtof;
@@ -67,7 +67,9 @@ const Sound = (() => {
     const low = ac.createBiquadFilter(); low.type = "lowshelf"; low.frequency.value = 130; low.gain.value = -6; low.connect(mud);
     const hp = ac.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 50; hp.Q.value = 0.7; hp.connect(low);
     pre = ac.createGain(); pre.gain.value = 0.75; pre.connect(hp);
-    musicGain = ac.createGain(); musicGain.connect(pre);
+    // The music's own switch (for those who want the effects alone): after everything else on it.
+    musicOn = ac.createGain(); musicOn.gain.value = A.noMusic ? 0 : 1; musicOn.connect(pre);
+    musicGain = ac.createGain(); musicGain.connect(musicOn);
     // The muffle: a low-pass on the music alone, which the flare (and the pause) close; and a hush
     // after it, which lowers the music a little while the flare lasts.
     hush = ac.createGain(); hush.connect(musicGain);
@@ -99,9 +101,9 @@ const Sound = (() => {
   // the start (for testing them one by one); the song may be null.
   A.render = async function (song, secs, level, o) {
     o = o || {};
-    const live = { ac, out, pre, musicGain, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf, shaperNode, waves, duckDepth, M: Object.assign({}, M) };
+    const live = { ac, out, pre, musicGain, musicOn, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf, shaperNode, waves, duckDepth, M: Object.assign({}, M) };
     const off = new OfflineAudioContext(2, Math.ceil(44100 * secs), 44100);
-    const wasMuted = A.muted; A.muted = false;
+    const wasMuted = A.muted, wasNoMusic = A.noMusic; A.muted = false; A.noMusic = false;
     try {
       build(off); A.muted = wasMuted;
       M.song = song; M.next = null; M.step = 0; M.bar = 0; M.stepT = 0.05; M.barT = 0.05; M.level = M.want = level || 0; M.fill = null; M.fillNext = null;
@@ -116,14 +118,15 @@ const Sound = (() => {
       }
       if (o.fx) { rendering = true; o.fx(fx, A); }
     } finally {
-      rendering = false; A.muted = wasMuted;
-      ({ ac, out, pre, musicGain, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf, shaperNode, waves, duckDepth } = live);
+      rendering = false; A.muted = wasMuted; A.noMusic = wasNoMusic;
+      ({ ac, out, pre, musicGain, musicOn, hush, duck, lpf, drumBus, revIn, dlyIn, dlyL, dlyR, sfxBus, caveIn, noiseBuf, shaperNode, waves, duckDepth } = live);
       Object.assign(M, live.M);
     }
     const buf = await off.startRendering();
     return [buf.getChannelData(0), buf.getChannelData(1)];
   };
   A.setMute = function (m) { A.muted = m; if (out) out.gain.setTargetAtTime(m ? 0 : 0.9, ac.currentTime, 0.05); };
+  A.setMusic = function (on) { A.noMusic = !on; if (musicOn) musicOn.gain.setTargetAtTime(on ? 1 : 0, ac.currentTime, 0.05); };
   A.setDelay = function (secs) { if (dlyL) { dlyL.delayTime.setTargetAtTime(secs, ac.currentTime, 0.05); dlyR.delayTime.setTargetAtTime(secs, ac.currentTime, 0.05); } };
   // The drum pushes everything else down for a moment (the pump). Gentle here: this is a church.
   let duckDepth = 0.15;
@@ -442,7 +445,7 @@ const Sound = (() => {
       else if (M.want < M.level && M.step === 0) M.level = M.want;
       const t = M.stepT + (M.step % 2 ? (S.swing || 0) * sd : 0);
       // A step already gone by (the page was asleep) is skipped, not played late.
-      if (t > ac.currentTime - 0.05 && !A.muted) {
+      if (t > ac.currentTime - 0.05 && !A.muted && !A.noMusic) {
         try { S.play({ t, s: M.step, n, b: M.bar, sd, L: M.level, from, rose: M.level > from, fell: M.level < from, I, fill: M.fill }); } catch (e) { console.error(e); }
       }
       M.stepT += sd; M.step++;

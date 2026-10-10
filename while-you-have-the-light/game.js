@@ -72,7 +72,7 @@ const Title = {
     const by = 166;
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE NOVITIATE", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "Learn one domain, as long as you like" });
-    button(Sound.muted ? "SOUND OFF" : "SOUND ON", x, by + 92, 97, 26, () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); }, {});
+    button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
     buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
     text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
     textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
@@ -204,7 +204,7 @@ const Pause = {
     b("GO ON", () => Game.resume(), { hot: true });
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(); });
     b(G && G.practice ? "TO THE ARENA" : "TO PRACTICE", () => { Sound.muffle(false); if (G && G.practice) Game.arena(); else Game.practice(); });
-    b(Sound.muted ? "SOUND: OFF" : "SOUND: ON", () => { Sound.setMute(!Sound.muted); save.muted = Sound.muted; store(); });
+    b(soundLabel(), cycleSound);
     b("BACK TO THE TITLE", () => Game.toTitle());
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42), mv = Arena.moves(), rh = Math.min(28, (H - 64) / mv.length);
     text("THE MOVES", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
@@ -265,7 +265,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 resize();
-Sound.muted = !!save.muted;
+applySound();
 mode = Title;
 // For trying things directly: ?climb starts the climb, ?novitiate opens the novitiate, ?arena the
 // first arena, ?practice its practice.
