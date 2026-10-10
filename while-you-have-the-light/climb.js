@@ -59,6 +59,7 @@ const Climb = (() => {
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
+  const CRAWL_H = 24, CRAWL_V = 34, CW_H = 2, CW_C = 5;      // crawling: his height, and his pace; a crawlway's height (rows: room to crawl, not to stand), and its chamber's (room to hold a relic up)
   const SLOT = 10, TH = 30, CH = 52;               // rows to each place a platform may stand; a crossing's height; a cavern's
   const TR = 28;                                   // a crossing's roof (rows up from its foot): high, for long swings under it
 
@@ -349,7 +350,9 @@ const Climb = (() => {
     // Glow-worms on the roof, faint as stars: the only thing that shows where it is in the dark.
     const worms = [];
     for (let i = Math.min(uA, uB); i <= Math.max(uA, uB); i++) if (hash2(k, 700 + i, seed) < 0.55) worms.push({ x: (i + hash2(k, 800 + i, seed)) * CELL, y: -(H0 + ceil[i]) * CELL + CELL + 1 + hash2(k, 900 + i, seed) * 3, ph: hash2(k, 1000 + i, seed) * TAU });
-    return (sec.info = { en, ex, dir, vA, vB, uA, uB, lo, hi, ceil, base, g, plats, lamps, relics, worms, face });
+    const V = (sec.info = { en, ex, dir, vA, vB, uA, uB, lo, hi, ceil, base, g, plats, lamps, relics, worms, face });
+    crawlOf(sec);                                  // (and the crawlway on from the hollow, cut into its rock)
+    return V;
   }
   // ---- Avarice's needle's eye ------------------------------------------------------------------------
   // In each of its shafts, a shelf of rock across the way up, with one narrow way through it: "it is
@@ -377,6 +380,9 @@ const Climb = (() => {
   function solid(i, j) {
     if (j >= 0 || i < 1 || i >= COLS - 1) return true;
     const h = -j, sec = sectionAt(h);
+    // (A crawlway, and the chamber at its end.)
+    const cw = sec.crawl === undefined ? crawlOf(sec) : sec.crawl;
+    if (cw && i >= cw.lo && i <= cw.hi) { const r = h - sec.h0 - cw.r0, u = (i - cw.i0) * cw.dir; if (r >= 0 && (u < cw.L ? r < CW_H : r < CW_C)) return false; }
     if (sec.type === "trav") return travSolid(i, h, sec);
     if (sec.type === "slope") return slopeSolid(i, h, sec);
     if (sec.type === "cave") return cave(sec).g[(h - sec.h0) * COLS + i] === 1;
@@ -387,6 +393,37 @@ const Climb = (() => {
     return !!isl && isl.st !== "gone" && h >= isl.h0 && h <= isl.h1 && i >= isl.x0 && i <= isl.x1;
   }
   const solidAt = (x, y) => solid(Math.floor(x / CELL), Math.floor(y / CELL));
+  // ---- The low ways ----------------------------------------------------------------------------------
+  // Here and there, at the foot of a wall, a way too low to stand in: a crawlway, cut into the rock
+  // some paces, and at its end a little chamber where a reliquary lies hidden (its glow shows
+  // faintly through the rock, to one who looks). In a crossing, in the far wall at the floor; in
+  // Lust's corridors, in the wall at the far end; in Gluttony's caverns, on from the hollow at the
+  // foot of the far cliff. (Metroid's narrow ways for the morph ball, made for a monk on his knees.)
+  function crawlOf(sec) {
+    if (sec.crawl !== undefined) return sec.crawl;
+    sec.crawl = null;
+    if (sec.k < 2) return null;
+    let i0, r0, dir, R = null;              // the mouth (its first cell, its floor's row up from h0); the way in, into the rock
+    if (sec.type === "trav") {
+      if (hash2(sec.k, 2100, seed) > 0.6) return null;
+      const T = trav(sec); dir = T.dir; i0 = dir > 0 ? T.b + 1 : T.a - 1; r0 = 8;
+    } else if (sec.type === "slope") {
+      if (hash2(sec.k, 2100, seed) > 0.6) return null;
+      const V = slope(sec); dir = V.dir; i0 = dir > 0 ? V.hi + 1 : V.lo - 1; r0 = V.fl[dir > 0 ? V.hi : V.lo];
+    } else if (sec.type === "cave") {
+      const V = cave(sec); dir = V.dir; i0 = V.face + dir * 3; r0 = 0; R = V.relics[V.relics.length - 1];
+    } else return null;
+    const L = 7 + Math.floor(hash2(sec.k, 2102, seed) * 6), c0 = i0 + dir * L, c1 = c0 + dir * 2, lo = Math.min(i0, c1), hi = Math.max(i0, c1);
+    if (lo < 2 || hi > COLS - 3) return null;
+    if (!R) R = { x: 0, y: 0, got: false };
+    R.x = (c1 + 0.5) * CELL; R.y = -(sec.h0 + r0 - 1) * CELL - 1;          // (at the chamber's far end)
+    sec.crawl = { dir, i0, r0, L, c0, c1, lo, hi, relics: [R] };
+    // (A cavern keeps its rock in a grid of its own, drawn from it: the crawlway is cut into that too.)
+    if (sec.type === "cave") { const V = sec.info; for (let i = lo; i <= hi; i++) { const u = (i - i0) * dir; for (let r = r0; r < r0 + (u < L ? CW_H : CW_C); r++) V.base[r * COLS + i] = V.g[r * COLS + i] = 0; } }
+    return sec.crawl;
+  }
+  const NO_RELICS = [];
+  const relicsOf = (sec) => { const cw = crawlOf(sec); return sec.type === "cave" ? cave(sec).relics : cw ? cw.relics : NO_RELICS; };
   // The verses on the walls: one in each shaft, about halfway up.
   function wallAt(n) {
     while (walls.length <= n) {
@@ -403,9 +440,10 @@ const Climb = (() => {
 
   // ---- The monk's body against the rock ---------------------------------------------------------
   let S = null;
+  const bodyH = () => (S && S.crawl ? CRAWL_H : HT);
   function boxHit(x, y) {
     const i0 = Math.floor((x - HW) / CELL), i1 = Math.floor((x + HW - 0.001) / CELL);
-    const j0 = Math.floor((y - HT) / CELL), j1 = Math.floor((y - 0.001) / CELL);
+    const j0 = Math.floor((y - bodyH()) / CELL), j1 = Math.floor((y - 0.001) / CELL);
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) if (solid(i, j)) return true;
     return false;
   }
@@ -421,7 +459,7 @@ const Climb = (() => {
     if (!dy) return 0;
     const y0 = S.y; S.y += dy;
     if (!boxHit(S.x, S.y)) return 0;
-    S.y = dy > 0 ? Math.floor(S.y / CELL) * CELL - 0.01 : (Math.floor((S.y - HT) / CELL) + 1) * CELL + HT + 0.01;
+    S.y = dy > 0 ? Math.floor(S.y / CELL) * CELL - 0.01 : (Math.floor((S.y - bodyH()) / CELL) + 1) * CELL + bodyH() + 0.01;
     if (boxHit(S.x, S.y)) S.y = y0;
     return dy > 0 ? 1 : -1;
   }
@@ -436,7 +474,7 @@ const Climb = (() => {
   // Rock beside him on side s: beside his body, not just his head (a ceiling is not a wall).
   function near(s, gap) {
     const x = S.x + s * (HW + (gap || 1.5)), i = Math.floor(x / CELL);
-    for (let y = S.y - 36; y <= S.y - 6; y += 6) if (solid(i, Math.floor(y / CELL))) return true;
+    for (let y = S.y - Math.min(36, bodyH() - 6); y <= S.y - 6; y += 6) if (solid(i, Math.floor(y / CELL))) return true;
     return false;
   }
   // A wall he can take hold of from the air: rock beside him (within a few steps of the face he
@@ -476,7 +514,7 @@ const Climb = (() => {
     return -1;
   }
   const grip = () => [S.x, S.y - GRIP];
-  const middle = () => [S.x, S.y - HT / 2];
+  const middle = () => [S.x, S.y - bodyH() / 2];
 
   // ---- Ledges: stepping up, climbing up -------------------------------------------------------------
   // The top of the rock just beyond his side s, between lo and hi above his feet, with room to
@@ -613,7 +651,7 @@ const Climb = (() => {
   // mountain, the page closed), he goes on from there the next time he climbs it: the same mountain,
   // what he carried, what he had done below (the lamps lit, the verses read, the relics taken, the
   // blocks in the carts, the great demons cast down). The light going out, the place is forgotten.
-  const KEEP = "wyhtl-mountains", SEEN = ["fightSeen", "blockSeen", "tiedSeen", "handSeen", "carrySeen", "riseSeen", "greatSeen", "latchSeen", "hurlSeen", "shedSeen"];
+  const KEEP = "wyhtl-mountains", SEEN = ["crawlSeen", "fightSeen", "blockSeen", "tiedSeen", "handSeen", "carrySeen", "riseSeen", "greatSeen", "latchSeen", "hurlSeen", "shedSeen", "hauntSeen", "freedSeen", "boonSeen"];
   const keptAll = () => { try { const o = JSON.parse(localStorage.getItem(KEEP) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
   function forget(dom) { const all = keptAll(); if (!all[dom]) return; delete all[dom]; try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { } }
   function keepPlace(x, y, why) {
@@ -623,7 +661,7 @@ const Climb = (() => {
     for (let n = 0; n < 5000; n++) { const w = wallAt(n); if (w.h > S.top / CELL + 40) break; if (w.read) walls.push(n); }
     for (const sec of secs) {
       lampsOf(sec).forEach((L, i) => { if (L.lit) lamps.push([sec.k, i]); });
-      if (sec.type === "cave" && sec.info) sec.info.relics.forEach((R, i) => { if (R.got) got.push([sec.k, i]); });
+      if ((sec.type === "cave" && sec.info) || sec.crawl) relicsOf(sec).forEach((R, i) => { if (R.got) got.push([sec.k, i]); });
       const G = sec.gate && sec.type === "trav" ? brotherOf(sec) : null;
       if (G && G.bin.length) bins[sec.k] = G.bin.map((b) => [b.shape, b.dom]);
     }
@@ -649,7 +687,7 @@ const Climb = (() => {
     for (const n of R.walls || []) if (Number.isInteger(n) && n >= 0 && n < 5000) wallAt(n).read = true;
     const secAt = (k) => (Number.isInteger(k) && k >= 0 && k < 4000 ? (ensureSecs(k), secs[k]) : null);
     for (const [k, i] of R.lamps || []) { const sec = secAt(k), L = sec && lampsOf(sec)[i]; if (L) L.lit = true; }
-    for (const [k, i] of R.got || []) { const sec = secAt(k), Rl = sec && sec.type === "cave" && cave(sec).relics[i]; if (Rl) Rl.got = true; }
+    for (const [k, i] of R.got || []) { const sec = secAt(k), Rl = sec && relicsOf(sec)[i]; if (Rl) Rl.got = true; }
     for (const key of Object.keys(R.bins || {})) {
       const sec = secAt(+key), G = sec && brotherOf(sec); if (!G) continue;
       for (const [shape, dom] of R.bins[key]) { const b = makeBlock(shape, dom); Object.assign(b, { st: "bin", by: G, slot: G.bin.length }); G.bin.push(b); S.blocks.push(b); }
@@ -667,6 +705,169 @@ const Climb = (() => {
     S.hintT = 99; S.hooked = 9; S.invT = 1.5; S.resumed = true;
     S.say = { text: "GOING ON", sub: "From where you last stopped, " + metres(-S.y) + " m up.", t: 0 };
     ev("went on from a kept place", { why: R.why, m: metres(-S.y) });
+  }
+
+  // ---- The relics' boons ---------------------------------------------------------------------------------
+  // Each reliquary fills the torch and the flare, and gives a gift for a while, the four by turns:
+  // the world stops a moment, and he turns to us and holds it up to be seen (a little Alleluia
+  // sung); then it is his while it lasts. A Double Portion (Elisha's of Elijah's spirit, 2 Kings
+  // 2:9): every blessing counts twice; the ward turns two blows, and comes back when spent.
+  // Unconsumed (the bush that burned and was not burnt, Exodus 3:2): the torch does not burn down,
+  // and its light reaches farther. The Flying Friar (St Joseph of Cupertino, who rose in prayer):
+  // he falls slowly, and swings high. Vade Retro (St Benedict's medal): no demon can come near him.
+  const BOONS = {
+    double: { name: "A DOUBLE PORTION", sub: "Every blessing counts twice: your ward turns two blows, and comes back.", T: 30 },
+    unconsumed: { name: "UNCONSUMED", sub: "The torch burns, yet is not used up; and its light reaches farther.", T: 30 },
+    friar: { name: "THE FLYING FRIAR", sub: "Light as a feather: you fall slowly, and swing high.", T: 25 },
+    vade: { name: "VADE RETRO", sub: "St Benedict\u2019s medal: no demon can come near you.", T: 20 },
+  };
+  const BOON_ORDER = ["double", "unconsumed", "friar", "vade"], BOON_SHOW = 2.8, VADE_R = 92, FRIAR_FALL = 230;
+  const boonOf = (n) => BOON_ORDER[(Math.floor(hash2(7, 77, seed) * 4) + n) % 4];
+  const boonOn = (k) => !!S && !!S.boon && S.boon.kind === k;
+  function showBoon(kind) {
+    upFromCrawl();
+    S.boonShow = { kind, t: 0, T: BOON_SHOW, up: null };
+    Sound.fx.boon(); ev("a relic", { boon: kind });
+  }
+  function stepBoonShow(dt) {
+    const B = S.boonShow; B.t += dt;
+    if (B.t >= B.T) { S.boonShow = null; grantBoon(B.kind); }
+  }
+  function grantBoon(kind) {
+    const D = BOONS[kind]; if (!D) return;
+    S.boon = { kind, t: 0, T: D.T, regrow: 0 };
+    S.say = { text: D.name, sub: D.sub, t: 0.6 };
+    if (kind === "double") S.ward = { t: 0, n: 2 };
+    if (kind === "vade") S.ward = { t: 0, n: Math.max(1, S.ward ? S.ward.n || 1 : 1) };
+    S.boonSeen = true; ev("a boon", { kind });
+  }
+  function stepBoon(dt) {
+    const B = S.boon; B.t += dt;
+    if (B.kind === "double") {
+      // (Spent, the ward comes back: a layer at a time.)
+      if (!S.ward || (S.ward.n || 1) < 2) {
+        B.regrow += dt;
+        if (B.regrow > 2.5) { B.regrow = 0; if (S.ward) S.ward.n = 2; else S.ward = { t: 0, n: 1 }; const [cx, cy] = middle(); S.crosses.push({ kind: "ward", x: cx + S.dir * 18, y: cy - 10, t: 0, size: 16 }); Sound.fx.kindle(0.6); }
+      } else B.regrow = 0;
+      if (S.ward) S.ward.t = 0;
+    } else if (B.kind === "vade") {
+      if (!S.ward) S.ward = { t: 0, n: 1 }; S.ward.t = 0;
+      vadeRetro(dt);
+    } else if (B.kind === "friar" && Math.random() < 0.12) {
+      S.parts.push({ kind: "spark", c: "#f3ead6", x: S.x + (Math.random() - 0.5) * 16, y: S.y - Math.random() * 40, vx: (Math.random() - 0.5) * 24, vy: 12 + Math.random() * 14, life: 1.2, age: 0, real: true });
+    }
+    if (B.t >= B.T) {
+      S.boon = null; Sound.fx.boonEnd(); ev("a boon ended", { kind: B.kind });
+      // (Its ward lingers a while after it, and fades as any ward does.)
+      if (S.ward && (B.kind === "double" || B.kind === "vade")) { S.ward.n = 1; S.ward.t = WARD_T - 10; }
+    }
+  }
+  // St Benedict's medal: any demon that comes near him is driven back, and what is thrown at him
+  // turned away before it reaches him.
+  function vadeRetro(dt) {
+    const [mx, my] = middle();
+    for (const f of S.demons) {
+      if (!alive(f) || f.idol) continue;
+      const [cx, cy] = dMid(f); if (dist(cx, cy, mx, my) > VADE_R + f.hw) continue;
+      // (Pressed outward all the while it is inside the ring, as by a wind; and struck back now and then.)
+      moveBox(f, (sign(cx - mx) || 1) * 150 * dt, 0, f.hw, f.ht);
+      if ((f.vadeT || 0) > S.rt) continue;
+      f.vadeT = S.rt + 0.9;
+      hurtDemon(f, 0.5, (sign(cx - mx) || 1) * 280, -200, "hurl");
+      S.crosses.push({ kind: "turn", x: cx, y: cy, t: 0, size: 18 }); Sound.fx.parry();
+    }
+    for (const o of S.things) {
+      if (o.by !== "demon" || o.st !== "fly" || dist(o.x, o.y, mx, my) > VADE_R) continue;
+      o.by = null; o.vx = (sign(o.x - mx) || 1) * Math.max(120, Math.abs(o.vx) * 0.6); o.vy = -160;
+      S.crosses.push({ kind: "turn", x: o.x, y: o.y, t: 0, size: 14 });
+    }
+  }
+  function vadeGreat(g) {
+    const s = sign(g.x - S.x) || -S.dir;
+    g.kx = s * 220; g.ky = -60; g.stunT = Math.max(g.stunT, 1.2); g.st = "stone"; g.t = 0; g.hurtT = 0.2;
+    S.crosses.push({ kind: "smite", x: g.x, y: g.y - g.ht / 2, t: 0, size: 24 }); Sound.fx.stone(panX(g.x)); Sound.fx.parry();
+    ev("the medal drove back a great demon");
+  }
+  // What each boon is held up as: a medallion of gold, with its sign on it. Two crosses for the
+  // double portion; the flame in the bush; a feather; St Benedict's cross, with the four letters
+  // of its quarters as four points.
+  function drawToken(kind, x, y, r, a) {
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha *= a;
+    glow(x, y, r * 3.2, C.gold, 0.45);
+    circle(x, y, r, "#8a6420"); circle(x, y, r * 0.84, "#ecc874");
+    const ink = "#5e3f0c", w = Math.max(1, r * 0.17);
+    ctx.fillStyle = ink; ctx.lineCap = "round";
+    if (kind === "double") {
+      for (const u of [-0.32, 0.32]) { line(x + u * r, y - 0.5 * r, x + u * r, y + 0.52 * r, ink, w); line(x + u * r - 0.22 * r, y - 0.17 * r, x + u * r + 0.22 * r, y - 0.17 * r, ink, w); }
+    } else if (kind === "unconsumed") {
+      ctx.beginPath(); ctx.moveTo(x, y - 0.62 * r); ctx.quadraticCurveTo(x + 0.44 * r, y - 0.05 * r, x + 0.16 * r, y + 0.26 * r); ctx.quadraticCurveTo(x, y + 0.36 * r, x - 0.16 * r, y + 0.26 * r); ctx.quadraticCurveTo(x - 0.44 * r, y - 0.05 * r, x, y - 0.62 * r); ctx.fill();
+      for (const u of [-0.42, 0, 0.42]) line(x, y + 0.62 * r, x + u * r, y + 0.3 * r, ink, w * 0.8);
+    } else if (kind === "friar") {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(0.55);
+      ctx.beginPath(); ctx.moveTo(0, -0.7 * r); ctx.quadraticCurveTo(0.42 * r, -0.1 * r, 0.04 * r, 0.52 * r); ctx.quadraticCurveTo(-0.32 * r, -0.05 * r, 0, -0.7 * r); ctx.fill();
+      line(0.04 * r, 0.5 * r, 0.1 * r, 0.76 * r, ink, w * 0.7); line(0, -0.55 * r, 0.04 * r, 0.48 * r, "#ecc874", w * 0.45);
+      ctx.restore();
+    } else {
+      line(x, y - 0.62 * r, x, y + 0.62 * r, ink, w * 1.3); line(x - 0.62 * r, y - 0.04 * r, x + 0.62 * r, y - 0.04 * r, ink, w * 1.3);
+      for (const [u, v] of [[-0.36, -0.38], [0.36, -0.38], [-0.36, 0.34], [0.36, 0.34]]) circle(x + u * r, y + v * r, Math.max(0.6, r * 0.09), ink);
+    }
+    ctx.restore();
+  }
+  // Him, turned to us, holding it up: the hood's arch with the shadow in it, the habit falling to
+  // his feet, one arm raised high (its wide sleeve fallen back to the elbow) with what he holds up,
+  // the other holding the torch out at his side. Lit at the edges from the torch, and from above by
+  // what he holds. (x, y): his feet; s: the side the torch is on; t: the time since he turned.
+  // Returns the torch's tip, the hand that holds the torch, and the hand that is raised.
+  function drawMonkFront(x, y, s, t) {
+    const up = smooth(clamp(t / 0.35, 0, 1)), at = (u, v) => [x + s * u, y + v];
+    const P = (pts) => { const p = new Path2D(), a = at(pts[0][0], pts[0][1]); p.moveTo(a[0], a[1]); for (let i = 1; i < pts.length; i++) { const b = at(pts[i][0], pts[i][1]); p.lineTo(b[0], b[1]); } p.closePath(); return p; };
+    const hx = lerp(-10, -6.5, up), hy = lerp(-24, -60, up), ex = lerp(-10.5, -11.8, up), ey = lerp(-17, -46, up);
+    const body = P([[-9.2, -1], [-4, 0.4], [4, 0.4], [9.2, -1], [7.5, -14], [8, -26], [7.6, -32.5], [3.8, -35.8], [-3.8, -35.8], [-7.6, -32.5], [-8, -26], [-7.5, -14]]);
+    const hood = P([[-6.8, -33.5], [-7.7, -38.6], [-6.8, -43.4], [-4, -46.2], [0, -47.2], [4, -46.2], [6.8, -43.4], [7.7, -38.6], [6.8, -33.5], [0, -32]]);
+    const arm = P([[-7.2, -33.2], [ex - 2.2, ey], [hx - 1.9, hy + 1.2], [hx + 1.9, hy + 1.6], [ex + 2.1, ey + 1.2], [-4.2, -30.6]]);
+    const sleeve = P([[-8, -33], [ex - 3.6, ey + 3], [ex + 3.2, ey + 5.8], [-3.4, -29.6]]);
+    const tarm = P([[7.2, -33.2], [12.6, -37.4], [14.6, -44.6], [12.4, -45.2], [10.6, -39.6], [4.4, -30.6]]);
+    const tsleeve = P([[7.9, -33], [13.6, -36.2], [12.8, -40.8], [4, -29.6]]);
+    const feet = new Path2D(); feet.ellipse(x - 3.3, y - 0.8, 2.8, 1.5, 0, 0, TAU); feet.ellipse(x + 3.3, y - 0.8, 2.8, 1.5, 0, 0, TAU);
+    const hand = new Path2D(), [hhx, hhy] = at(hx, hy); hand.arc(hhx, hhy, 1.9, 0, TAU);
+    const all = [body, hood, sleeve, arm, tarm, tsleeve, feet, hand];
+    const tb = at(13.4, -40), tt = at(15.6, -57);
+    const pa = ctx.globalAlpha;
+    for (const [dx, dy, c, a] of [[s * 1.3, -0.6, MONK_RIM2, 0.3], [s * 0.7, -0.3, MONK_RIM, 1], [-s * 0.4, -1.2 * up, C.gold, 0.6 * up]]) {
+      ctx.save(); ctx.translate(dx, dy); ctx.globalAlpha = pa * a; ctx.fillStyle = c; for (const p of all) ctx.fill(p); ctx.restore();
+    }
+    ctx.globalAlpha = pa; ctx.fillStyle = MONK_INK; for (const p of all) ctx.fill(p);
+    line(tb[0], tb[1], tt[0], tt[1], MONK_INK, 1.7);
+    // In the hood's shadow, the faintest warm edge of a cheek on the torch's side.
+    const [cx, cy] = at(2.3, -39.4); ctx.globalAlpha = pa * 0.45; ctx.fillStyle = MONK_RIM2; ctx.beginPath(); ctx.ellipse(cx, cy, 1.1, 2.6, s * 0.2, 0, TAU); ctx.fill(); ctx.globalAlpha = pa;
+    return { torch: tt, hand: at(13.2, -44.2), up: [hhx, hhy] };
+  }
+  // Over all (the world stopped): the dark round him, what he holds up shining, its rays turning,
+  // and under him, its name and what it gives.
+  function drawBoonShow(cam) {
+    const B = S.boonShow, D = BOONS[B.kind], t = B.t, a = clamp(t / 0.3, 0, 1) * clamp((B.T - t) / 0.35, 0, 1);
+    const fx = S.drawX - cam.x, fy = S.drawY - cam.y;
+    const vg = ctx.createRadialGradient(fx, fy - 30, 60, fx, fy - 30, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0," + (0.55 * a) + ")"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    const lift = smooth(clamp(t / 0.35, 0, 1)), [ux, uy] = B.up || [fx, fy - 60], tx = ux, ty = uy - 9.5;
+    if (lift > 0.05) {
+      const fa = clamp((B.T - t) / 0.35, 0, 1);
+      for (let i = 0; i < 12; i++) { const an = i / 12 * TAU + t * 0.7, l = (18 + 8 * Math.sin(t * 6 + i * 1.7)) * lift; ctx.globalAlpha = 0.45 * fa; line(tx + Math.cos(an) * 11, ty + Math.sin(an) * 11, tx + Math.cos(an) * (11 + l), ty + Math.sin(an) * (11 + l), C.gold, 1.3); }
+      ctx.globalAlpha = 1;
+      drawToken(B.kind, tx, ty, 8 * (0.55 + 0.45 * lift), lift * fa);
+    }
+    const ny = clamp(fy + 34, 132, H - 30);
+    text(D.name, W / 2, ny, { align: "center", font: FONT.title, size: 15, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });
+    text(D.sub, W / 2, ny + 16, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", alpha: a * 0.9, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 60 });
+  }
+  // While one lasts: the medal's ring of light about him, and its crosses going round.
+  function boonGlows(cam) {
+    if (!boonOn("vade")) return;
+    const [mx, my] = middle(), x = mx - cam.x, y = my - cam.y, B = S.boon, k = clamp((B.T - B.t) / 2, 0.3, 1) * (0.75 + 0.25 * Math.sin(S.rt * 5));
+    glow(x, y, VADE_R * 1.1, C.gold, 0.08 * k);
+    ctx.globalAlpha = 0.35 * k; ring(x, y, VADE_R, C.gold, 1.2); ctx.globalAlpha = 1;
+    for (let i = 0; i < 4; i++) { const an = S.rt * 0.9 + i * TAU / 4, cx = x + Math.cos(an) * VADE_R, cy = y + Math.sin(an) * VADE_R; ctx.globalAlpha = 0.8 * k; line(cx, cy - 4, cx, cy + 4, C.gold, 1.4); line(cx - 3, cy - 1, cx + 3, cy - 1, C.gold, 1.4); ctx.globalAlpha = 1; }
   }
 
   // ---- The hook --------------------------------------------------------------------------------------
@@ -720,6 +921,7 @@ const Climb = (() => {
   // instead (so a tap just past a ledge still finds the ledge). Only then does it go on along the
   // line, as far as it must, to the first rock it meets. Tapped far off, it goes straight there.
   function throwHook(tx, ty) {
+    if (!upFromCrawl()) { Sound.fx.tick(420, 0.3); return; }
     if (S.hang) S.hang = null;
     const [gx, gy] = grip(), a0 = Math.atan2(ty - gy, tx - gx), far = dist(gx, gy, tx, ty) > HOOK;
     const got = (far && nearLine(gx, gy, a0, HOOK_FAR, 0)) || nearLine(gx, gy, a0, HOOK, 8) || nearLine(gx, gy, a0, HOOK_FAR, 0) || nearLine(gx, gy, a0, HOOK_FAR, 8);
@@ -825,6 +1027,7 @@ const Climb = (() => {
   }
   function action() {
     if (!S || S.dying || S.act) return;
+    if (S.crawl) { upFromCrawl(); return; }
     if (S.hang) { S.hang = null; S.ground = false; return; }
     if (S.next) { S.next = null; return; }           // mid-flip: he lets the next throw go
     if (S.tied && S.tied.st === "hand") { const b = S.tied; b.st = "tied"; b.vx = S.dir * 40; b.vy = -30; Sound.fx.brickDrop(panX(b.x), 0.4); return; }   // the block in his hands: he sets it down
@@ -841,7 +1044,7 @@ const Climb = (() => {
     const N = 14, seg = len / (N - 1);
     if (P.length !== N) { P.length = 0; for (let k = 0; k < N; k++) { const x = lerp(ax, bx, k / (N - 1)), y = lerp(ay, by, k / (N - 1)); P.push({ x, y, px: x, py: y }); } }
     const g = 900 * dt * dt;
-    for (let k = 1; k < N - 1; k++) { const p = P[k], vx = (p.x - p.px) * 0.97, vy = (p.y - p.py) * 0.97; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g; if (solidAt(p.x, p.y)) { p.x = p.px; p.y = p.py; } }
+    if (dt > 0) for (let k = 1; k < N - 1; k++) { const p = P[k], vx = (p.x - p.px) * 0.97, vy = (p.y - p.py) * 0.97; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g; if (solidAt(p.x, p.y)) { p.x = p.px; p.y = p.py; } }
     for (let it = 0; it < 8; it++) {
       P[0].x = ax; P[0].y = ay; P[N - 1].x = bx; P[N - 1].y = by;
       for (let k = 0; k < N - 1; k++) {
@@ -1314,7 +1517,7 @@ const Climb = (() => {
       const [mx, my] = middle();
       if (Math.abs(b.x - S.x) < HW + b.hw + 2 && Math.abs(b.y - b.ht / 2 - my) < HT / 2 + b.ht / 2) {
         b.hurled = 0;
-        if (S.ward) { S.ward = null; ev("the ward turned the thrown block"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); }
+        if (S.ward) { spendWard(); ev("the ward turned the thrown block"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); }
         else if (!(S.invT > 0)) { hitMonk(sign(b.vx), 0.08); Sound.fx.brickHit(1, panX(b.x)); impactAt(b.x, b.y - b.ht / 2, b.vx, b.vy, 2, null); }
         b.vx = sign(b.vx) * 40; b.vy = -140; b.nopick = S.rt + 0.4;          // (dropping at his feet, just past him: his again)
       }
@@ -1559,11 +1762,18 @@ const Climb = (() => {
     const cx = g.x, cy = g.y - g.ht / 2, [mx, my] = middle(), [lx, ly] = S.torch, R = lightR() * 0.95;
     const lit = dist(lx, ly, cx, cy) < R + g.ht * 0.3 && (solidAt(cx, cy) || [0.15, 0.5, 0.85].some((q) => { const y = g.y - g.ht * q; return dist(lx, ly, cx, y) < R && los(lx, ly, cx, y); }));
     const facing = g.tier >= 4 || (cx - S.x) * S.dir > -14;
+    // Seen for the first time (in his light, out in the open): the dread. From then on it follows him.
+    if (!g.met && lit && !solidAt(cx, cy) && onView(g, -10) && canDread()) { g.met = true; S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); startDread(g, "meet"); return; }
+    if (S.haunt === g) {
+      if (onView(g, 40) || dist(cx, cy, mx, my) < 300) g.lostT = 0; else g.lostT += dt;
+      if (g.lostT > g.wait && canDread()) { if (burstAfter(g)) return; g.lostT = g.wait - 1.5; }      // (no room for it near him: it tries again soon)
+    }
     const awake = lit && facing && g.stunT <= 0 && !S.dying && !S.latched;
     if (awake && g.st !== "hunt") {
       g.st = "hunt"; g.t = 0; ev("a great demon woke", { tier: g.tier });
+      if (g.met && S.haunt !== g) { S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); }      // (woken again, it follows him again)
       if (S.rt - g.growlT > 1.6) { g.growlT = S.rt; Sound.fx.growl(panX(g.x), 0.75 + 0.08 * g.tier); }
-      if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light. Only a block can hurt it: throw it, or swing it.", t: 0 }; }
+      greatSays();
     } else if (!awake && g.st === "hunt") {
       g.st = "stone"; g.t = 0;
       if (S.rt - g.stoneT > 0.8) { g.stoneT = S.rt; Sound.fx.stone(panX(g.x)); }
@@ -1571,6 +1781,7 @@ const Climb = (() => {
     g.wake = clamp(g.wake + (g.st === "hunt" ? 7 : -9) * dt, 0, 1);
     g.anim += dt * g.wake;                     // (its stirring, which stops dead when it is stone)
     if (g.st !== "hunt") return;
+    if (boonOn("vade") && dist(cx, cy, mx, my) < VADE_R + g.hw) { vadeGreat(g); return; }
     floatTo(g, mx, my, GREAT_V[g.tier] * (0.3 + 0.7 * g.wake), dt);
     g.dir = sign(mx - g.x) || g.dir;         // (its eyes on him, whichever way it is going round the rock)
     // At him: it takes him in. At a block (lying, or on his rope): it seizes it and hurls it back at him.
@@ -1585,7 +1796,7 @@ const Climb = (() => {
     if (S.invT > 0 || S.dying) return;
     if (S.ward) {
       // The ward turns it: it is thrown back, and stunned a while; and the ward is spent.
-      ev("the ward turned a great demon"); S.ward = null;
+      ev("the ward turned a great demon"); spendWard();
       const s = sign(g.x - S.x) || -S.dir;
       g.kx = s * 240; g.ky = -70; g.stunT = 2; g.hurtT = 0.3; g.st = "stone"; g.t = 0;
       S.crosses.push({ kind: "smite", x: g.x, y: g.y - g.ht / 2, t: 0, size: 28 }); S.invT = 0.8; S.whiteT = 0.15;
@@ -1598,7 +1809,7 @@ const Climb = (() => {
   // Taken in: its jaws close over his head and shoulders, and it holds him up, his legs kicking.
   function latch(g) {
     ev("taken in by a great demon", { tier: g.tier });
-    S.latched = g; g.st = "latch"; g.t = 0; g.latchT = 0; g.blows = 0; g.need = GRASP[g.tier]; g.kx = 0; g.ky = 0; g.wake = 1;
+    S.latched = g; S.crawl = false; g.st = "latch"; g.t = 0; g.latchT = 0; g.blows = 0; g.need = GRASP[g.tier]; g.kx = 0; g.ky = 0; g.wake = 1;
     if (S.rope) letGo(true);
     S.flip = null; S.next = null; S.pend = null; S.hang = null; S.cling = 0; S.climbing = false; S.act = null; S.atk = null; S.hoverT = 0; S.vx = 0; S.vy = 0;
     if (S.flare.on) endFlare(true);
@@ -1610,7 +1821,7 @@ const Climb = (() => {
   function holdHim(g, dt) {
     g.latchT += dt; g.anim += dt * 1.5; g.x = S.x; g.y = S.y - 4;
     // (The longer it holds him, the faster his light goes.)
-    if (!S.dying) { S.fuel -= dt * (0.04 + 0.05 * g.latchT); if (S.fuel <= 0) lightOut(); }
+    if (!S.dying && !boonOn("unconsumed")) { S.fuel -= dt * (0.04 + 0.05 * g.latchT); if (S.fuel <= 0) lightOut(); }
   }
   // A blow from inside it (any tap, any key): it bulges where he strikes, and enough of them, it
   // spits him out.
@@ -1646,6 +1857,7 @@ const Climb = (() => {
   }
   function breakGreat(g) {
     g.st = "gone"; S.cast++; S.fuel = 1; S.meter = 1; gain(0.3); S.greatDown.add(g.sec);
+    if (S.haunt === g) S.haunt = null;
     if (NOV) keepHere("great");                       // (cast down, it stays down, whenever he comes back)
     const cx = g.x, cy = g.y - g.ht / 2;
     S.shake = 0.45; S.whiteT = 0.18; Sound.fx.crumble(panX(cx)); Sound.fx.castOut(g.sin);
@@ -1668,6 +1880,86 @@ const Climb = (() => {
     Sound.fx.growl(panX(g.x), 0.6); Sound.fx.throw(1);
     if (!S.hurlSeen) { S.hurlSeen = true; S.say = { text: "IT THREW THE BLOCK BACK", sub: "Take it up again, and throw it true.", t: 0 }; }
   }
+  function freedSay() { S.freedPend = false; S.freedSeen = true; S.say = { text: "IT FOLLOWS NO FURTHER", sub: "\u201cThy word is a lamp to my feet.\u201d", t: 0 }; }
+  // ---- A great demon's dread ----------------------------------------------------------------------------
+  // The first time one comes into his light, the world stops: it shows itself (its flesh, its jaws,
+  // its eyes burning; white as a coal by flashes) while the sting sounds, and then all goes on as
+  // before. Once met, it follows him: left behind out of his sight a while, it bursts after him,
+  // the world stops again, and there it is at the edge of what he can see, on the side he left it
+  // (by his back, if it can be). Then the old rule: stone, unless he faces it in the light. So it
+  // follows until it is cast down, or until he reads a verse: "Thy word is a lamp to my feet"
+  // (Psalm 118:105).
+  const DREAD_T = { meet: 1.15, burst: 0.9 };
+  const hauntWait = (g) => 6 + Math.random() * 4 - 0.6 * (g.tier - 1);
+  const canDread = () => !S.dread && !S.boonShow && !S.latched && !S.dying && !S.verseHold && !S.act;
+  // Any of it within the view (grown by m on every side; m < 0, well inside it).
+  function onView(g, m) {
+    const c = S.cam;
+    return g.x + g.hw > c.x - m && g.x - g.hw < c.x + W + m && g.y > c.y - m && g.y - g.ht < c.y + H + m;
+  }
+  function greatSays() {
+    if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light. Only a block can hurt it: throw it, or swing it.", t: 0 }; }
+  }
+  function startDread(g, kind, from) {
+    S.dread = { g, kind, t: 0, T: DREAD_T[kind], from: from || null };
+    Sound.fx.dread(kind === "meet" ? 1 : 0.85, panX(g.x), kind === "burst"); Sound.muffle(true, 0.05);
+    ev(kind === "meet" ? "a great demon met" : "a great demon burst after him", { tier: g.tier, k: g.sec });
+  }
+  function stepDread(dt) {
+    const D = S.dread; D.t += dt;
+    if (D.t < D.T) return;
+    S.dread = null; Sound.muffle(false, 0.6);
+    const g = D.g; g.lostT = 0;
+    if (D.kind === "meet") greatSays();
+    else if (!S.hauntSeen) { S.hauntSeen = true; S.say = { text: "IT FOLLOWS YOU", sub: "Leave it behind, and it comes after you. Cast it down, or read a verse, and it follows no further.", t: 0 }; }
+  }
+  // Where it comes in, bursting after him: at the edge of the view, the way he left it, by his back
+  // if it can be, in the open (each way round the edge tried, and the best taken).
+  function burstSpot(g) {
+    const cam = S.cam, [mx, my] = middle(), ax = g.x - mx, ay = g.y - g.ht / 2 - my, al = Math.hypot(ax, ay) || 1;
+    const x0 = cam.x + g.hw + 14, x1 = cam.x + W - g.hw - 14, y0 = cam.y + g.ht / 2 + 10, y1 = cam.y + H - g.ht / 2 - 6;
+    let best = null;
+    for (let k = 0; k < 48; k++) {
+      const a = k / 48 * TAU, ux = Math.cos(a), uy = Math.sin(a);
+      const tx = ux > 1e-6 ? (x1 - mx) / ux : ux < -1e-6 ? (x0 - mx) / ux : 1e9, ty = uy > 1e-6 ? (y1 - my) / uy : uy < -1e-6 ? (y0 - my) / uy : 1e9, tt = Math.min(tx, ty);
+      if (!(tt > 0) || tt > 1e8) continue;
+      const ex = mx + ux * tt, ey = my + uy * tt, sp = dFree(ex, ey + g.ht / 2, g.hw, g.ht); if (!sp) continue;
+      const qx = sp[0], qy = sp[1] - g.ht / 2, d = dist(qx, qy, mx, my); if (d < 150) continue;
+      const score = (ux * ax + uy * ay) / al * 2 + (sign(qx - S.x) === -S.dir ? 0.8 : 0) - dist(qx, qy, ex, ey) / 60;
+      if (!best || score > best.score) best = { x: sp[0], y: sp[1], ux, uy, score };
+    }
+    return best;
+  }
+  function burstAfter(g) {
+    const sp = burstSpot(g); if (!sp) return false;
+    const from = [sp.x + sp.ux * 190, sp.y + sp.uy * 190];       // (from just past the edge: its rush is seen coming in)
+    Object.assign(g, { x: sp.x, y: sp.y, kx: 0, ky: 0, vx: 0, vy: 0, st: "stone", t: 0, wake: 0, lostT: 0, wait: hauntWait(g), bursts: (g.bursts || 0) + 1, dir: sign(S.x - sp.x) || 1, ghostT: 0, stuckT: 0 });
+    startDread(g, "burst", from);
+    return true;
+  }
+  // Drawn over everything (the world held still under it): the dark closing in, and it, flashing.
+  function drawDread(cam) {
+    const D = S.dread, g = D.g, t = D.t, fade = clamp(t / 0.05, 0, 1) * clamp((D.T - t) / 0.2, 0, 1);
+    rect(0, 0, W, H, "rgba(3,1,1," + (0.66 * fade) + ")");
+    const keep = [g.x, g.y, g.wake, g.anim, g.hurtT, g.st];
+    const at = (q) => (D.from ? [lerp(D.from[0], keep[0], q), lerp(D.from[1], keep[1], q)] : [keep[0], keep[1]]);
+    g.wake = 1; g.hurtT = 0; g.st = "hunt"; g.anim = keep[3] + t * 4;
+    // Bursting in: the shapes of its rush, fading behind it.
+    if (D.from && t < 0.5) for (let q = 6; q >= 1; q--) {
+      [g.x, g.y] = at(smooth(clamp((t - q * 0.04) / 0.26, 0, 1)));
+      paintMaw(mawParts(g), greatT(g, cam), 1, 0, (1 - q / 7) * 0.6 * clamp(1 - (t - 0.26) / 0.24, 0, 1), 0);
+    }
+    [g.x, g.y] = at(D.from ? smooth(clamp(t / 0.26, 0, 1)) : 1);
+    const T = greatT(g, cam), c = T(0, 42), white = [0, 0.27, 0.54].some((q) => t >= q && t < q + 0.085);
+    glow(c[0], c[1], 95 * g.sc, "#7a1408", 0.45 * fade);
+    ctx.save(); const j = (1 - clamp(t / 0.5, 0, 1)) * 3; ctx.translate((Math.random() - 0.5) * j, (Math.random() - 0.5) * j);
+    paintMaw(mawParts(g), T, 1, 1, fade, white ? 0.9 : 0);
+    for (const [u, v, r] of MAW_EYES) { const [x, y] = T(u, v); glow(x, y, 18 * r * g.sc, "#ff2a12", 0.95 * fade); circle(x, y, 1.3 * r * g.sc, "rgba(255,236,210," + fade + ")"); }
+    ctx.restore();
+    [g.x, g.y, g.wake, g.anim, g.hurtT, g.st] = keep;
+    if (t < 0.05) rect(0, 0, W, H, "rgba(255,244,232,0.45)");
+  }
+
   // Drawing. Its parts in its own frame (u forward, v up from its foot), each with a tone: k the
   // darkest, d dark, m its body, l the light along its edges, x the throat, t the teeth, e the eyes.
   // As stone, grey and cracked; awake, its flesh is near black, with Gluttony's colour along its
@@ -1773,6 +2065,7 @@ const Climb = (() => {
   }
   function drawGreat(g, cam) {
     if (g.st === "latch") return;                  // (drawn over him, with him)
+    if (S.dread && S.dread.g === g) { g.T = null; return; }
     const cx = g.x, cy = g.y - g.ht / 2;
     if (cx < cam.x - 140 || cx > cam.x + W + 140 || cy < cam.y - 160 || cy > cam.y + H + 160) { g.T = null; return; }
     const [lx, ly] = S.torch, R = lightR();
@@ -2059,7 +2352,7 @@ const Climb = (() => {
   }
   function snatchLight(f) {
     const [mx, my] = middle(); if (dist(mx, my, f.x, f.y - f.ht / 2) > f.hw + HW + 30 || S.dying || S.latched) return;
-    if (S.ward) { S.ward = null; ev("ward turned the thief"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
+    if (S.ward) { spendWard(); ev("ward turned the thief"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
     // A block on his rope: that, before his light. It cuts it from his belt and is off with it.
     if (S.tied) { const b = S.tied; S.tied = null; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
     const take = Math.max(0, Math.min(0.09, S.fuel - 0.03));
@@ -2101,7 +2394,7 @@ const Climb = (() => {
     if (S.dying || S.pulled || dist(hx, hy, mx, my) > 330 || !los(hx, hy, mx, my)) { setSt(f, "idle"); f.cd = 1.2; return; }
     if (S.ward) {
       // His ward turns the ribbon back, and is spent.
-      S.ward = null; ev("ward turned the ribbon"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry();
+      spendWard(); ev("ward turned the ribbon"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry();
       setSt(f, "hurt"); f.cd = 2.5; return;
     }
     setSt(f, "tether"); S.pulled = { f, t: 0 }; S.pulls = (S.pulls || 0) + 1; Sound.fx.tether();
@@ -2335,7 +2628,7 @@ const Climb = (() => {
     if (o.by !== "demon" || S.invT > 0) return false;
     if (Math.abs(o.x - S.x) >= HW + r + (S.ward ? 10 : 0) || o.y <= S.y - HT - r || o.y >= S.y + r) return false;
     if (S.ward) {
-      S.ward = null; ev("ward turned a thrown " + o.kind);
+      spendWard(); ev("ward turned a thrown " + o.kind);
       if (o.kind === "stone") { o.by = null; o.vx *= -0.6; o.vy = -200; }
       else { const f = o.from && alive(o.from) ? o.from : null; sendAt(o, o.x, o.y, o.x - o.vx * 2, o.y - o.vy * 2, f); }
       const [cx, cy] = middle(); S.crosses.push({ kind: "turn", x: cx, y: cy - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); S.shake = 0.15;
@@ -2601,7 +2894,7 @@ const Climb = (() => {
   }
   // What a tap or a swipe on a demon or a boulder does.
   function gesture(kind, f, o, dir) {
-    if (S.act || (S.atk && !S.atk.hit)) return;
+    if (S.act || (S.atk && !S.atk.hit) || !upFromCrawl()) return;
     if (S.atk) S.atk = null;          // a blow already landed: straight into the next
     // A demon in the air with a block (or going for one): the hook, and it is pulled down.
     if (f && kind === "tap" && (f.block || f.st === "seize")) { yank(f); return; }
@@ -2655,7 +2948,7 @@ const Climb = (() => {
     if (S.act || S.atk || S.rt - (S.blessT === undefined ? -9 : S.blessT) < 0.5) return;
     S.blessT = S.rt;
     ev("ward on");
-    S.ward = { t: 0 }; const [cx, cy] = middle();
+    S.ward = { t: 0, n: boonOn("double") ? 2 : 1 }; const [cx, cy] = middle();
     S.crosses.push({ kind: "ward", x: cx + S.dir * 18, y: cy - 10, t: 0, size: 20 }); Sound.fx.unlock();
     // And with each blessing, one coin of the gold clinging to him shaken off (one only), to fall away.
     if (S.coins > 0) {
@@ -2665,6 +2958,11 @@ const Climb = (() => {
       Sound.fx.coin(panX(cx), 0.8);
       if (!S.shedSeen) { S.shedSeen = true; S.say = { text: "A COIN SHAKEN OFF", sub: "With each blessing, one of the coins on him falls away.", t: 0 }; }
     }
+  }
+  // A blow turned: the ward spent (doubled, one of the two; under St Benedict's medal, not at all).
+  function spendWard() {
+    if (!S.ward || boonOn("vade")) return;
+    if ((S.ward.n || 1) > 1) S.ward.n--; else S.ward = null;
   }
   const wardFade = () => (S.ward ? clamp((WARD_T - S.ward.t) / 5, 0.25, 1) * (S.ward.t > WARD_T - 3 && Math.floor(S.rt * 9) % 2 ? 0.45 : 1) : 0);
   // Swinging on the rope, fast, into a demon: a kick, as hard as the swing.
@@ -2714,6 +3012,15 @@ const Climb = (() => {
   // Reaching a ledge, he hangs from it by his hand, just below the edge (out of sight of what is
   // above). A fresh push toward it (let go of the pad and press again) and he pulls himself up;
   // away from it, or down, and he drops.
+  // Is the way just before him (side d) too low to stand in, but not to crawl?
+  function lowWay(d) { const x = S.x + d * (HW + 6); return !boxAt(x, S.y - 0.5, HW, CRAWL_H) && boxAt(x, S.y - 0.5, HW, HT); }
+  function startCrawl() {
+    if (S.rope) letGo(true);
+    S.crawl = true; S.climbing = false; Sound.fx.grab(); ev("crawling");
+    if (!S.crawlSeen) { S.crawlSeen = true; S.say = { text: "A LOW WAY", sub: usingKeys() ? "He goes on his hands and knees (or hold \u2193 to crawl)." : "He goes on his hands and knees (or hold \u25bc to crawl).", t: 0 }; }
+  }
+  // Getting up from his knees to do something: only where there is room to stand.
+  function upFromCrawl() { if (!S.crawl) return true; if (boxAt(S.x, S.y - 0.5, HW, HT)) return false; S.crawl = false; return true; }
   function hangAt(L) {
     const hx = L.edge - L.s * 7, hy = L.top - 0.01 + Arena.reach(), ok = !boxHit(hx, hy);
     S.hang = { L, need: true, k: 0, fx: S.x, fy: S.y, x: ok ? hx : S.x, y: ok ? hy : S.y };
@@ -2734,6 +3041,8 @@ const Climb = (() => {
       if (up && !H0.need && H0.k >= 1) { S.hang = null; startAct("ledge", H0.L); }
       return;
     }
+    if (S.crawl && !S.ground && !boxAt(S.x, S.y, HW, HT)) S.crawl = false;
+    S.groundT = S.ground ? (S.groundT || 0) + dt : 0;
     if (S.shot) flyShot(dt);
     const R = S.rope;
     // Up: climb the rope, hand over hand. Down: let it out.
@@ -2826,8 +3135,13 @@ const Climb = (() => {
       S.leapT = d && !I.u ? 0.12 : 0.2; S.liftT = 0.5; S.leapCd = 0.45; Sound.fx.whoosh(0.5);
     }
     if (S.ground && !(taut && S.climbing)) {
+      // Down (off the rope), or a way before him too low to stand in: he gets down on his hands and
+      // knees, and crawls. He gets up again where there is room, unless down is still held.
+      // (On the rope, not at a touch of the ground in a swing: only once he is standing.)
+      if (!S.crawl && !S.held && ((I.dn && !R) || (d && lowWay(d) && (!R || S.groundT > 0.35)))) startCrawl();
+      else if (S.crawl && !I.dn && !(d && lowWay(d)) && !boxAt(S.x, S.y - 0.5, HW, HT)) S.crawl = false;
       // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
-      const want = S.landT > 0 ? 0 : d * WALK * (S.held ? 0.55 : 1) * (1 - 0.35 * heavy()) * (S.dragging && S.tied && sign(S.tied.x - S.x) !== d ? 0.55 : 1);       // slower with a boulder in his arms, or gold on him; slower still dragging a block
+      const want = S.landT > 0 ? 0 : d * (S.crawl ? CRAWL_V : WALK) * (S.held ? 0.55 : 1) * (1 - 0.35 * heavy()) * (S.dragging && S.tied && sign(S.tied.x - S.x) !== d ? 0.55 : 1);       // slower with a boulder in his arms, or gold on him; slower still dragging a block
       // On slime or grease his feet hardly hold: he slides, and down a slab that lies askew. And
       // once he has stepped in it, his feet are greased for a while, and he slides everywhere.
       const onSlick = slickAt(S.x, S.y);
@@ -2839,7 +3153,7 @@ const Climb = (() => {
       if (slick) { const tl = tiltDy(S.x + 4, S.y) - tiltDy(S.x - 4, S.y); if (tl) S.vx += sign(tl) * 150 * dt; }
       if (S.greaseT > 0 && Math.abs(S.vx) > 20 && Math.random() < 0.25) S.parts.push({ kind: "glob", x: S.x + (Math.random() - 0.5) * 10, y: S.y - 1, vx: -S.vx * 0.2 + (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 40, r: 1 + Math.random() * 1.2, life: 0.5, age: 0 });
       if (d) S.dir = d;
-      if (d && S.landT <= 0 && !S.held && near(d, 2)) {
+      if (d && S.landT <= 0 && !S.held && !S.crawl && near(d, 2)) {
         const L = ledge(d, 8, 86);
         if (L) { startAct(L.h <= 20 ? "stepUp" : "climbUp", L); return; }
         // Too high to climb onto: he takes hold of the rock and climbs it.
@@ -2860,7 +3174,8 @@ const Climb = (() => {
     if (S.pulled) pullOf(dt);
     // (Light in a flip from the rope; all but weightless in the hover after it.)
     if (S.hoverT > 0 && !S.rope) { S.vy *= Math.max(0, 1 - 12 * dt); S.vx *= Math.max(0, 1 - 2.5 * dt); }
-    S.vy += GRAV * dt * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1) * (1 + 0.45 * heavy());
+    S.vy += GRAV * dt * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1) * (1 + 0.45 * heavy()) * (boonOn("friar") ? 0.45 : 1);
+    if (boonOn("friar") && !S.rope && S.vy > FRIAR_FALL) S.vy = FRIAR_FALL;
     const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
     // On the ground the rope pays out as he walks, unless he is climbing it.
     if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, Math.max(ROPE_MAX, R.len));
@@ -2909,6 +3224,9 @@ const Climb = (() => {
   function step(dt) {
     // Stopped at a verse, to read it: nothing moves till he goes on.
     if (S.verseHold) { if (S.verse) S.verse.t = Math.min(S.verse.t + dt, 0.6); return; }
+    // A great demon showing itself, or a relic held up: the world stopped, all but that.
+    if (S.dread) { stepDread(dt); return; }
+    if (S.boonShow) { stepBoonShow(dt); return; }
     S.rt += dt;
     if (NOV) { if (NOV.torch && !S.latched) S.fuel = 1; if (NOV.flare) S.meter = 1; }       // (an endless torch, but not in a great demon's mouth)
     { const [pgx, pgy] = grip(); S.prevGx = pgx; S.prevGy = pgy; }
@@ -2936,7 +3254,7 @@ const Climb = (() => {
     const wdt = dt * (F.on ? FLARE_SLOW : S.hangT > 0 ? 0.5 : 1);
     S.t += wdt;
     if (!S.dying) {
-      if (!F.on) S.fuel -= dt * BURN;
+      if (!F.on && !boonOn("unconsumed")) S.fuel -= dt * BURN;
       if (S.fuel <= 0) lightOut();
       else if (S.fuel < 0.15 && Math.floor(S.rt * 0.8) !== Math.floor((S.rt - dt) * 0.8)) Sound.fx.gutter();
     }
@@ -2976,11 +3294,12 @@ const Climb = (() => {
     swingChains(wdt);
     if (S.coins > 0 && !S.dying) { const [mx, my] = middle(); for (const sec of sectionsIn(-S.y / CELL - 12, -S.y / CELL + 12)) for (const b of almsOf(sec)) if (dist(mx, my, b.x, b.y - 8) < 40) giveAlms(b); }
     if (S.ward && (S.ward.t += dt) > WARD_T) { S.ward = null; ev("ward faded"); }
+    if (S.boon) stepBoon(dt);
     S.swingSp = S.rope && !S.ground ? Math.max(Math.hypot(S.vx, S.vy), (S.swingSp || 0) - 150 * wdt) : 0;
     // Against a wall, climbing the rope: he walks up it.
     S.wall = 0;
     if (S.climbing && !S.ground && S.rope) { if (near(S.dir, 7)) S.wall = S.dir; else if (near(-S.dir, 7)) S.wall = -S.dir; }
-    S.anim += wdt * (S.ground ? Math.abs(S.vx) / 62 : 1.2);
+    S.anim += wdt * (S.ground ? Math.abs(S.vx) / (S.crawl ? 26 : 62) : 1.2);
     // Greased, he leaves prints of the fat where he treads (one at each step), fading.
     const stepN = Math.floor(S.anim * 2);
     if (stepN !== S.stepN) { if (S.ground && S.greaseT > 0 && Math.abs(S.vx) > 12 && !S.act) { S.prints.push({ x: S.x + S.dir * (stepN % 2 ? 3 : -2), y: S.y, t: S.rt, a: clamp(S.greaseT / 3, 0.35, 1), dir: S.dir }); if (S.prints.length > 40) S.prints.shift(); } S.stepN = stepN; }
@@ -2996,6 +3315,7 @@ const Climb = (() => {
       const p = wallPos(w);
       if (dist(mx, my, p.x, p.y) < 70 && !S.dying) {
         w.read = true; w.lit = 1; S.fuel = 1; S.read++; ev("verse read", { n: w.n });
+        if (S.haunt) { ev("the Word: the great demon follows no further"); S.haunt = null; if (!S.freedSeen) S.freedPend = true; }
         if (NOV) keepHere("verse");
         const vv = (typeof Verses !== "undefined" ? Verses.list() : CLIMB_VERSES)[w.n % 22];
         S.verse = { v: vv, ps: "PSALM " + (vv[4] || 118), t: 0 };
@@ -3006,6 +3326,7 @@ const Climb = (() => {
       }
     }
     if (S.verse) { S.verse.t += dt; if (S.verse.t > 7) S.verse = null; }
+    if (S.freedPend && !S.verseHold) freedSay();
     // The lamps: passing one, he lights it from his torch, and if he falls it is there he wakes.
     // The reliquaries at the foot of a cavern's deepest chains: the torch and the flare made full.
     if (!S.dying) for (const sec of sectionsIn(hNow - 30, hNow + 30)) {
@@ -3016,10 +3337,10 @@ const Climb = (() => {
         Sound.fx.kindle(1, panX(L.x));
         for (let k = 0; k < 10; k++) S.parts.push({ kind: "spark", x: L.x, y: L.y - 22, vx: (Math.random() - 0.5) * 60, vy: -30 - Math.random() * 60, life: 0.7, age: 0, real: true });
       }
-      if (sec.type === "cave") for (const R of cave(sec).relics) {
-        if (R.got || dist(mx, my, R.x, R.y - 8) > 30) continue;
-        R.got = true; S.relics++; S.fuel = 1; S.meter = 1; S.say = { text: "A RELIC", sub: "The torch and the flare are full", t: 0 };
-        Sound.fx.unlock();
+      for (const R of relicsOf(sec)) {
+        if (R.got || S.latched || S.boonShow || dist(mx, my, R.x, R.y - 8) > 30) continue;
+        R.got = true; S.relics++; S.fuel = 1; S.meter = 1;
+        showBoon(boonOf(S.relics - 1));
         for (let k = 0; k < 24; k++) { const a = Math.random() * TAU, v = 40 + Math.random() * 120; S.parts.push({ kind: "spark", c: C.gold, x: R.x, y: R.y - 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 1, age: 0, real: true }); }
       }
     }
@@ -3030,7 +3351,7 @@ const Climb = (() => {
     const sec = sectionAt(Math.max(1, Math.floor(hNow))), cv = sec.type === "cave", sl = sec.type === "slope", look = sec.type === "trav" ? trav(sec).dir * 90 : cv ? cave(sec).dir * 140 : sl ? slope(sec).dir * 120 : 0;
     const tx = clamp(S.x + look - W / 2, 0, COLS * CELL - W), ty = Math.min(S.y - HT / 2 - H * (sec.type === "trav" || sl ? 0.5 : cv ? 0.42 : 0.58), 70 - H);
     S.cam.x += (tx - S.cam.x) * (1 - Math.exp(-dt * 4)); S.cam.y += (ty - S.cam.y) * (1 - Math.exp(-dt * 4));
-    if (!S.dying && Math.random() < (F.on ? 0.9 : 0.3)) S.parts.push({ kind: "ember", x: S.torch[0] + (Math.random() - 0.5) * 4, y: S.torch[1] - 6, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, life: 0.8, age: 0 });
+    if (!S.dying && Math.random() < (F.on ? 0.9 : boonOn("unconsumed") ? 0.75 : 0.3)) S.parts.push({ kind: "ember", x: S.torch[0] + (Math.random() - 0.5) * 4, y: S.torch[1] - 6, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, life: 0.8, age: 0 });
     for (const p of S.parts) {
       const k = p.real ? dt : wdt; p.age += k; p.x += p.vx * k; p.y += p.vy * k;
       if (p.kind === "chip") p.vy += 500 * k; else if (p.kind === "smoke") { p.vx *= 1 - 2 * k; p.vy *= 1 - 2 * k; }
@@ -3049,6 +3370,7 @@ const Climb = (() => {
     const f = S.dying ? Math.max(0, 1 - S.dying / 1.4) * 0.15 : clamp(S.fuel, 0, 1);
     let R = 50 + 210 * Math.pow(f, 0.75);
     if (S.flare.on) R = Math.max(R, FLARE_R + 30);
+    if (S && S.boon && S.boon.kind === "unconsumed") R *= 1.3;
     if (S.latched) R *= 1 - 0.65 * clamp((S.latched.latchT || 0) / 0.6, 0, 1);       // (shut in a great demon's mouth, the torch shows little)
     return R;
   }
@@ -3229,6 +3551,12 @@ const Climb = (() => {
     return S_({ lean: 0.12, head: -0.35, sF: 2.55 + 0.4 * a, eF: 0.35 + 0.5 * up(b), sB, eB, tq: PI + 0.6 - 0.4 * stab - sB - eB,
       hF: 0.35 + 0.95 * up(a), kF: 0.5 + 1.3 * up(a), hB: 0.35 + 0.95 * up(b), kB: 0.5 + 1.3 * up(b) });
   }
+  // On his hands and knees in a low way: the body flat out over the knees, the free hand and the
+  // fist with the torch in it going down in turn, the knees after them, the torch held up before him.
+  function crawlPose(u) {
+    const c = Math.sin(TAU * u), c2 = Math.sin(TAU * u + PI), hF = 0.15 + 0.25 * c2, hB = 0.15 - 0.25 * c2;
+    return pose({ lean: 1.38, head: -1.05, sF: 0.62 + 0.28 * c, eF: 0.1 - 0.07 * c, sB: 1.15 - 0.25 * c, eB: -1.5, tq: 2.85, hF, kF: hF + 1.5, hB, kB: hB + 1.5, lift: 0.5 * Math.abs(c) });
+  }
   function monkPose() {
     const t = S.t;
     if (S.latched) return MONK_ANIM.fall((S.rt * 2.6) % 1);       // (held up in its jaws, his legs kicking)
@@ -3265,6 +3593,7 @@ const Climb = (() => {
       p = blendPose(TUCK, MONK_ANIM.fall(0), smooth((k - 0.7) / 0.3)); p.spin = S.flip.s * S.dir * TAU * (S.flip.half ? 0.5 : 1) * ease(Math.min(1, k * 1.15));
     } else if (!S.ground && S.jumpT > 0) p = MONK_ANIM.leap(clamp(0.32 + (0.6 - S.jumpT) * 0.5, 0.32, 0.6));
     else if (!S.ground) p = MONK_ANIM.fall((t * 1.3) % 1);
+    else if (S.crawl) p = crawlPose(S.anim % 1);
     else if (S.landT > 0) p = MONK_ANIM.land(1 - S.landT / (S.landMax || 0.35));
     else if (Math.abs(S.vx) > 12) p = MONK_ANIM.walk(S.anim % 1);
     else p = MONK_ANIM.idle((t * 0.4) % 1, t);
@@ -3741,7 +4070,7 @@ const Climb = (() => {
   let DDT = 1 / 60;                            // the time since the last picture was drawn
   function drawWorld() {
     const cam = S.cam, t = S.rt, F = S.flare, hM = metres(-S.y);
-    DDT = clamp(t - (S.lastDraw || t), 0, 0.05) || 1 / 60;
+    DDT = S.dread || S.boonShow ? 0 : clamp(t - (S.lastDraw || t), 0, 0.05) || 1 / 60;
     const fdt = DDT * (F.on ? FLARE_SLOW : 1); S.lastDraw = t;
     tintStep(fdt);
     // The far mist set back, so the near rock stands out; and the domain's colour in it.
@@ -3795,19 +4124,23 @@ const Climb = (() => {
       const hd = monkJoint(S.x, S.y, S.dir, p, "hF"); mx += gx - hd[0]; my += gy - hd[1];
     }
     if (S.ground && !S.act && !(S.atk && S.atk.t < S.atk.dash)) my += tiltDy(S.x, S.y);
+    if (S.crawl && !S.boonShow) mx -= S.dir * 10;        // (on his knees, his body laid out over the length of him)
     S.lastPose = p; S.drawX = mx; S.drawY = my;
     if (S.tied && S.tied.st !== "hand") drawTied(mx, my, p, cam, lights);
-    if (S.ward) {
+    if (S.ward && !S.boonShow) {
       // The ward: a light about him like a second habit, and a light in the dark round him. Near
-      // its end it dims, and in its last moments it flickers.
+      // its end it dims, and in its last moments it flickers. (Doubled: a second habit of light.)
       const b = (0.75 + 0.25 * Math.sin(S.rt * 4)) * wardFade(), k = scale * DPR, wx = mx - cam.x, wy = my - cam.y - HT / 2;
       glow(wx, wy, 64, C.warm, 0.22 * b);
       ctx.save(); ctx.shadowColor = "rgba(255,230,170," + b + ")"; ctx.shadowBlur = 20 * k;
+      if ((S.ward.n || 1) > 1) for (const [ox, oy] of [[-4.5, 0], [4.5, 0], [0, -4.5], [0, 4.5]]) drawMonk(mx - cam.x + ox, my - cam.y + oy, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, tint: "rgba(255,222,140," + (0.45 * b) + ")" });
       for (const [ox, oy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) drawMonk(mx - cam.x + ox, my - cam.y + oy, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, tint: "rgba(255,246,222," + (0.9 * b) + ")" });
       ctx.restore();
       lights.push({ x: wx, y: wy, r: 120, a: 0.75 * wardFade() });
     }
-    const r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
+    let r;
+    if (S.boonShow) { r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, S.boonShow.t); S.boonShow.up = r.up; }
+    else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
     if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
     // The gold clinging to his habit, coin by coin.
     if (S.coins > 0) {
@@ -3869,7 +4202,7 @@ const Climb = (() => {
       if (sec.type === "trav" && MINE[sec.dom]) for (const c of trav(sec).chains || []) drawChain(c, cam, rimP);
       if (sec.type === "trav" && sec.gate) drawGate(sec, cam, rimP, embers);
       for (const L of lampsOf(sec)) drawLamp(L, cam, lights, false);
-      if (sec.type === "cave") for (const R of cave(sec).relics) drawRelic(R, cam, false);
+      for (const R of relicsOf(sec)) drawRelic(R, cam, false);
     }
     for (const w of vis) drawTablet(w, cam, true);
     drawSlime(cam, view);
@@ -3913,6 +4246,7 @@ const Climb = (() => {
     for (const w of vis) drawTablet(w, cam, false);
     blockGlows(cam);
     if (S.bigs.length) greatGlows(cam);
+    if (S.boon) boonGlows(cam);
     // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
     // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
     for (const sec of view) {
@@ -3924,7 +4258,7 @@ const Climb = (() => {
           const x = wm.x - cam.x, y = wm.y - cam.y; if (x < -4 || x > W + 4 || y < -4 || y > H + 4) continue;
           const a = 0.28 + 0.22 * Math.sin(t * 1.3 + wm.ph); glow(x, y, 3.5, "#bfe8d8", a); rect(x - 0.5, y - 0.5, 1, 1, "rgba(220,255,240," + a + ")");
         }
-      }
+      } else if (sec.crawl) for (const Rl of sec.crawl.relics) drawRelic(Rl, cam, true);
       if (sec.type === "trav" && sec.dom === "wrath") {
         // The pits of Wrath's crossings: embers far down in them.
         const T = trav(sec), yb = -(sec.h0 + 1) * CELL - cam.y;
@@ -4006,7 +4340,7 @@ const Climb = (() => {
     }
 
     // (Held up out of a great demon's mouth, the torch gutters as its light goes.)
-    if (!S.dying || S.dying < 1.2) drawFlame(tx, ty, S.latched ? 0.45 + 0.5 * S.fuel : F.on ? 1.3 : 1, t, { flare: F.on ? 1 : 0, gutter: S.dying ? 1 : S.latched ? clamp(1.1 - S.fuel, 0.35, 1) : clamp((0.18 - S.fuel) / 0.18, 0, 1), vx: S.vx });
+    if (!S.dying || S.dying < 1.2) drawFlame(tx, ty, S.latched ? 0.45 + 0.5 * S.fuel : F.on ? 1.3 : boonOn("unconsumed") ? 1.25 : 1, t, { flare: F.on ? 1 : 0, gutter: S.dying ? 1 : S.latched ? clamp(1.1 - S.fuel, 0.35, 1) : clamp((0.18 - S.fuel) / 0.18, 0, 1), vx: S.vx });
     for (const q of S.parts) {
       const a = 1 - q.age / q.life, x = q.x - cam.x, y = q.y - cam.y;
       if (q.kind === "ember") drawEmber(x, y, 1, a);
@@ -4033,6 +4367,8 @@ const Climb = (() => {
     }
     if (S.whiteT > 0) rect(0, 0, W, H, "rgba(255,246,226," + (S.whiteT * 1.4) + ")");
     hud(hM);
+    if (S.dread) drawDread(cam);
+    if (S.boonShow) drawBoonShow(cam);
   }
   // The thumb's cross: where it is, and which ways a thumb on it is pressing. (Left and right have
   // the wider share of it, so that rocking a swing does not climb by mistake.)
@@ -4064,6 +4400,14 @@ const Climb = (() => {
       const a = clamp(S.say.t / 0.3, 0, 1) * clamp((3 - S.say.t) / 0.6, 0, 1);
       text(S.say.text, W / 2, 92, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });
       text(S.say.sub, W / 2, 108, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", alpha: a * 0.85, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 });
+    }
+    if (S.boon) {
+      const B = S.boon, left = clamp(1 - B.t / B.T, 0, 1), x = W / 2, y = 44, blink = B.T - B.t < 3 && Math.floor(S.rt * 6) % 2;
+      ctx.globalAlpha = blink ? 0.4 : 1;
+      drawToken(B.kind, x, y, 7, 1);
+      ctx.beginPath(); ctx.arc(x, y, 10.5, -PI / 2, -PI / 2 + TAU * left); ctx.strokeStyle = C.gold; ctx.lineWidth = 1.6; ctx.stroke();
+      text(BOONS[B.kind].name, x, y + 22, { align: "center", size: 7, weight: 800, spacing: 2, color: C.gold, glow: "rgba(0,0,0,0.9)", blur: 4 });
+      ctx.globalAlpha = 1;
     }
     if (S.kept && S.rt - S.kept.t < 2.6 && !F.on) text("THE PLACE IS KEPT", W / 2, 24, { align: "center", size: 8, weight: 800, spacing: 3, color: C.warm, alpha: clamp((2.6 - (S.rt - S.kept.t)) / 0.6, 0, 1) * clamp((S.rt - S.kept.t) / 0.2, 0, 1) * 0.85 });
     pauseButton();
@@ -4100,7 +4444,7 @@ const Climb = (() => {
     if (S.fightSeen && S.fightHintT < 12 && !F.on && !S.verseHold) {
       const a = clamp(S.fightHintT / 0.5, 0, 1) * clamp((12 - S.fightHintT) / 1.5, 0, 1);
       const L = ["A demon. Tap it: strike.  Swipe up: uppercut.  Down: slam.  Across: hurl.  Swing into it: a kick.", "Tap what is thrown at you: standing, you catch it as it comes. Tap again: fling it.  Swing into it: kick it back.  " + (usingKeys() ? "Hold on a demon (or yourself): the sign of the cross." : "Hold on a demon: the sign of the cross.  Two fingers at once: bless yourself.")];
-      let y = 112; for (const l of L) y += 12 * textLines(l, W / 2, y, W - 120, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, lh: 12 }) + 3;
+      let y = S.say ? 134 : 112; for (const l of L) y += 12 * textLines(l, W / 2, y, W - 120, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, lh: 12 }) + 3;
     }
     if (S.verse && S.verseHold) {
       // Stopped to read it: the verse large over the dimmed climb, its letter over it.
@@ -4170,19 +4514,21 @@ const Climb = (() => {
   }
   // ---- Touch, mouse and keys ------------------------------------------------------------------------
   // Going on after a verse: the climb moves again (its last words fading), with nothing held over.
-  function goOn() { S.verseHold = false; if (S.verse) S.verse.t = Math.max(S.verse.t, 5.6); S.touches.clear(); Sound.muffle(false, 0.3); }
+  function goOn() { if (S.freedPend) freedSay(); S.verseHold = false; if (S.verse) S.verse.t = Math.max(S.verse.t, 5.6); S.touches.clear(); Sound.muffle(false, 0.3); }
   const inDpad = (p) => { const b = dpad(); return !usingKeys() && dist(p.x, p.y, b.x, b.y) < b.r + 18; };
   const pid = (ev) => (ev && ev.pointerId !== undefined ? ev.pointerId : "m");
   const M = {
     action, start, edges, solid, island, sectionAt, trav, cave, slope, thornAt, eyeOf, almsOf, ledge, get S() { return S; }, get nov() { return NOV; }, CELL, COLS, HOOK, TH, DOMAINS, BUILT,
     blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, takeUp, throwBlock, TETHER, SHAPES, THROW_LEN },
-    great: { placeGreat, strikeGreat, latch, punchOut, hurl, bigAt, GREAT_V, GRASP },
+    great: { placeGreat, strikeGreat, latch, punchOut, hurl, bigAt, burstAfter, burstSpot, startDread, onView, GREAT_V, GRASP },
     keptPlace: (dom) => keptAll()[dom] || null, forgetPlace: forget,
+    boons: { BOONS, BOON_ORDER, boonOf, showBoon, grantBoon, VADE_R }, crawl: crawlOf, relicsOf,
     wall: (n) => { const w = wallAt(n); return { w, pos: wallPos(w) }; }, record, pauseShot: null, pauseRec: null,
     step, draw,
     down(p, ev) {
       if (!S || S.dying) return;
       if (S.verseHold) { goOn(); return; }
+      if (S.dread || S.boonShow) return;
       const id = pid(ev);
       if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
       // Held in a great demon's jaws: every tap (but on the thumb's cross) is a blow from inside it.
@@ -4264,6 +4610,7 @@ const Climb = (() => {
       S.keys[code] = down;
       if (S.verseHold) { if (down) goOn(); return; }
       if (!down) return;
+      if ((S.dread || S.boonShow) && code !== "Escape" && code !== "KeyP") return;
       if (code === "Escape" || code === "KeyP") M.pause();
       else if (S.latched) { if (!(e && e.repeat)) punchOut(); }          // (in its jaws: any key, a blow)
       else if (code === "Space") action();
@@ -4307,8 +4654,8 @@ const ClimbPause = {
     if (typeof Notes !== "undefined" && Notes.ready) b("A NOTE FOR CLAUDE", () => Notes.open(Climb.pauseShot, Climb.pauseRec), { sub: "What happened; what should change" });
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     const mv = usingKeys()
-      ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow that reaches him"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
-      : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
+      ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["S OR \u2193", "Let the rope out, climb down; on the ground, crawl (into a way too low to stand in, he crawls by himself)"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; drag up / down / across: uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow that reaches him"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
+      : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down; on the ground, ▼ crawls (into a way too low to stand in, he crawls by himself)"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     // (In the seven mountains: the block, and the great demons.)
     if (Climb.nov) mv.push(usingKeys() ? ["CLICK THE BLOCK ON ITS ROPE, THEN CLICK", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: click one, and he throws it straight at it"] : ["TAP THE BLOCK ON ITS ROPE, THEN TAP", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: tap one, and he throws it straight at it"],
       [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes"]);

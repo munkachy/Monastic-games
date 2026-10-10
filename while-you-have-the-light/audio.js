@@ -1237,6 +1237,42 @@ const Sound = (() => {
     pebbles(t + 0.35, 10, 0.06, pan);
     I.bell(t + 0.5, 50, 3, 0.2, { ratio: 1.41, index: 1.2, sfx: true, pan, rev: 0.8 });
   };
+  // A great demon showing itself (as a Metroid's alarm in the dark of a Game Boy): a blow, a
+  // scream like iron dragged over iron, wavering, and under it a choir on the tritone (the interval
+  // the old masters called the devil in music), swelling and sinking away; a deep bell under all.
+  // Bursting after him, it comes in on a rush of air.
+  fx.dread = function (v, pan, rush) {
+    if (!ok()) return; v = dv(v, 1);
+    let t = T0();
+    if (rush) { hiss(t, "bandpass", 260, 3200, 0.2, 0.3 * v, { q: 1.1, swell: 0.92, pan }); t += 0.16; }
+    I.impact(t, 0.75 * v, { sfx: true });
+    hiss(t, "lowpass", 3600, 240, 0.55, 0.3 * v, { q: 0.8, pan, rev: 0.4 });
+    const a = osc("sawtooth", 640, t), b = osc("square", 905, t), lfo = osc("sine", 21, t), lg = gainAt(t, 70), bp = filt("bandpass", 1500, 2.5, t), g = gainAt(t);
+    lfo.connect(lg); lg.connect(a.frequency); lg.connect(b.frequency);
+    a.frequency.exponentialRampToValueAtTime(1420, t + 0.1); a.frequency.exponentialRampToValueAtTime(820, t + 1.0);
+    b.frequency.exponentialRampToValueAtTime(2010, t + 0.1); b.frequency.exponentialRampToValueAtTime(1160, t + 1.0);
+    bp.frequency.exponentialRampToValueAtTime(2300, t + 0.1); bp.frequency.exponentialRampToValueAtTime(1100, t + 1.0);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.11 * v, t + 0.025); g.gain.setValueAtTime(0.11 * v, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.05);
+    a.connect(bp); b.connect(bp); bp.connect(g); route(g, t, { sfx: true, pan, rev: 0.5 });
+    for (const o of [a, b, lfo]) { o.start(t); o.stop(t + 1.1); }
+    I.choir(t + 0.03, [40, 46, 52], 1.1, 0.34 * v, { vowel: "o", att: 0.06, rel: 1.3, rev: 0.75, vib: 6, sfx: true });
+    I.toll(t + 0.02, 33, 4, 0.55 * v, { sfx: true, rev: 0.7 });
+  };
+  // A relic held up: a little Alleluia (the voice rising step by step to the fifth and resting
+  // there: Al-le-lu-i-a), bells above it, and the choir's open fifth beneath.
+  fx.boon = function () {
+    if (!ok()) return; const t = T0();
+    let at = t;
+    for (const [m, len, vw] of [[74, 0.13, "a"], [76, 0.13, "e"], [77, 0.13, "u"], [79, 0.19, "i"], [81, 0.75, "a"]]) { I.choir(at, [m], len + 0.04, 0.3, { vowel: vw, att: 0.025, rel: 0.45, rev: 0.6, vib: 3, sfx: true }); at += len; }
+    I.choir(t + 0.58, [62, 69, 74], 1.2, 0.26, { vowel: "a", att: 0.12, rel: 1, rev: 0.7, sfx: true });
+    for (const [i, m] of [81, 86, 88, 93].entries()) I.bell(t + 0.58 + i * 0.08, m, 1.3, 0.15, { ratio: 2, index: 0.8, sfx: true, rev: 0.6 });
+    I.swell(t + 0.2, 0.4, 0.35, { sfx: true });
+  };
+  // A boon running out: two soft falling bells.
+  fx.boonEnd = function () {
+    if (!ok()) return; const t = T0();
+    I.bell(t, 81, 0.9, 0.1, { ratio: 2, index: 0.6, sfx: true, rev: 0.5 }); I.bell(t + 0.14, 74, 1.1, 0.1, { ratio: 2, index: 0.6, sfx: true, rev: 0.5 });
+  };
   // How loud each effect sits against the music: the blows must cut through a fight at its
   // height, the small sounds of the body stay small, and the great moments are big without
   // swamping everything. Each effect's voices pass through this gain, reverb and all.
@@ -1248,7 +1284,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
-    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
