@@ -35,18 +35,28 @@ const Verses = (() => {
     STANZAS.forEach(([, name, n], i) => { L.push(name + " [" + n + "]: ", "# Douay: " + CLIMB_VERSES[i][3], ""); });
     return L.join("\n");
   };
-  // Reading a filled-in form (or JSON: twenty-two strings, or { psalm, verses: [{ verse, text }] }).
+  // Reading a filled-in form; or JSON: twenty-two strings, or { psalm, verses: [{ verse, text }] };
+  // or a whole psalter (a "selah pack": every psalm, verse by verse), from which the verse of each
+  // stanza is taken, out of Psalm 118 as the Vulgate numbers it, or 119 as the Hebrew does.
   V.parse = function (text) {
-    text = String(text || "").replace(/^﻿/, "");
+    text = String(text || "").replace(/^\uFEFF/, "");
     const out = STANZAS.map(([g, name, n]) => [g, name, n, ""]);
-    let psalm = 119;
+    let psalm = 119, src = "";
     const t = text.trim();
     if (t[0] === "[" || t[0] === "{") {
-      try {
-        const j = JSON.parse(t), arr = Array.isArray(j) ? j : j.verses || [];
-        if (!Array.isArray(j) && Number.isFinite(+j.psalm)) psalm = +j.psalm;
+      let j;
+      try { j = JSON.parse(t); } catch (e) { return { error: "That file is not a form this can read." }; }
+      if (j && !Array.isArray(j) && j.selahPack && Array.isArray(j.psalms)) {
+        psalm = /hebr|masor/i.test(String(j.numbering || "")) ? 119 : 118;
+        const P = j.psalms.find((p) => p && +p.n === psalm);
+        if (!P || !Array.isArray(P.verses)) return { error: "There is no Psalm " + psalm + " in that psalter." };
+        out.forEach((o) => { const v = P.verses.find((q) => q && +q.v === o[2]); if (v) o[3] = Array.isArray(v.lines) ? v.lines.join(" ") : String(v.text || ""); });
+        src = String(j.displayName || j.name || "").slice(0, 40);
+      } else {
+        const arr = Array.isArray(j) ? j : (j && j.verses) || [];
+        if (!Array.isArray(j) && j && Number.isFinite(+j.psalm)) psalm = +j.psalm;
         arr.slice(0, 22).forEach((v, i) => { if (typeof v === "string") out[i][3] = v.trim(); else if (v) { out[i][3] = String(v.text || "").trim(); if (Number.isFinite(+v.verse)) out[i][2] = +v.verse; } });
-      } catch (e) { return { error: "That file is not a form this can read." }; }
+      }
     } else {
       let cur = -1, heads = 0;
       for (const raw of text.split(/\r?\n/)) {
@@ -72,7 +82,7 @@ const Verses = (() => {
     // (Any left empty keep the Douay.)
     // (Each with its psalm's number as it is to be shown: the Douay's left in, 118.)
     out.forEach((v, i) => { if (!v[3]) { v[1] = CLIMB_VERSES[i][1]; v[2] = CLIMB_VERSES[i][2]; v[3] = CLIMB_VERSES[i][3]; v[4] = 118; } else v[4] = psalm; });
-    return { list: out, psalm, filled };
+    return { list: out, psalm, filled, src };
   };
   V.use = function (p, src) {
     V.custom = { list: p.list, psalm: p.psalm, src: String(src || "pasted").slice(0, 40), filled: p.filled };
@@ -108,7 +118,7 @@ const Verses = (() => {
     box.innerHTML = `<div id="verse-panel" role="dialog" aria-labelledby="verse-title">
       <p id="verse-title">THE VERSES ON THE ROCK</p>
       <p id="verse-now"></p>
-      <p id="verse-help">To use another translation (the Grail, from your breviary): save the blank form, write each verse after its letter, and choose the filled-in file here. Or paste its text in the box and use that. It is kept on this device.</p>
+      <p id="verse-help">To use another translation: choose a psalter file (such as a Grail pack), or the blank form filled in with each verse after its letter; or paste the filled-in form in the box and use that. Only the twenty-two verses are kept, on this device.</p>
       <div class="verse-row"><button type="button" class="verse-btn" id="verse-save">SAVE THE BLANK FORM</button><button type="button" class="verse-btn" id="verse-show">SHOW IT HERE</button><button type="button" class="verse-btn hot" id="verse-choose">CHOOSE THE FILE</button><input type="file" id="verse-file" accept=".txt,.json,text/plain,application/json"></div>
       <textarea id="verse-text" placeholder="…or paste the filled-in form here"></textarea>
       <div class="verse-row"><button type="button" class="verse-btn hot" id="verse-paste">USE THE TEXT IN THE BOX</button><button type="button" class="verse-btn" id="verse-douay">BACK TO THE DOUAY</button><button type="button" class="verse-btn" id="verse-close">CLOSE</button></div>
@@ -139,7 +149,7 @@ const Verses = (() => {
     box.querySelector("#verse-choose").addEventListener("click", () => { file.value = ""; file.click(); });
     file.addEventListener("change", () => {
       const f = file.files && file.files[0]; if (!f) return;
-      if (f.size > 200000) { msg.textContent = "That file is too big to be the form."; return; }
+      if (f.size > 8e6) { msg.textContent = "That file is too big to be a form or a psalter."; return; }
       const r = new FileReader();
       r.onload = () => take(String(r.result || ""), f.name.replace(/\.[^.]*$/, ""));
       r.onerror = () => { msg.textContent = "That file could not be read."; };
@@ -151,7 +161,7 @@ const Verses = (() => {
   function take(text, src) {
     const p = V.parse(text);
     if (p.error) { msg.textContent = p.error; return; }
-    V.use(p, src); show();
+    V.use(p, p.src || src); show();
     msg.textContent = p.filled === 22 ? "All twenty-two verses taken in." : p.filled + " of the twenty-two taken in; the rest are the Douay's.";
   }
   function show() { now.textContent = "Now: " + V.name() + (V.custom && V.custom.filled < 22 ? " (" + V.custom.filled + " of 22 verses yours)" : ""); }
