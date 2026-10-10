@@ -2569,7 +2569,9 @@ const Climb = (() => {
   // moves, much (up to three parts in four more), growing over the run of blows.
   function comboHit(move, f) {
     const C = S.combo && S.rt - S.combo.t < 1.8 ? S.combo : (S.combo = { f: 0, last: [], n: 0, t: S.rt });
-    const nov = !C.last.includes(move) ? 1 : C.last[C.last.length - 1] !== move ? 0.4 : 0;
+    // (The same blow twice running and the fervour is gone: back to x1, the run to begin again.)
+    if (C.last.length && C.last[C.last.length - 1] === move) { C.f = 0; C.last = [move]; C.t = S.rt; C.n++; C.show = null; ev("combo", { move, k: 1 }); return 1; }
+    const nov = !C.last.includes(move) ? 1 : 0.4;
     C.f = C.f * 0.85 + nov; C.last.push(move); if (C.last.length > 2) C.last.shift(); C.t = S.rt; C.n++;
     // (Noted: the first bonus of a run should be high. Once a run of varied blows has begun (its
     // fervour past 1.5, at the second blow unlike the first), x1.8, and growing by the same steps.)
