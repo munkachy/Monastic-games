@@ -55,7 +55,9 @@ const Climb = (() => {
   // faster, and once it bites he reels the rope in quickly to ROPE_MAX, a length he can swing on.
   const HOOK_FAR = 3000, HOOK_V_FAR = 2400, REEL_V = 600;
   const WALL_V = 78, WALL_DOWN = 90;               // climbing the rock with bare hands: up, and down
-  const BURN = 1 / 300;                            // a full torch lasts five minutes, all the way up: time to look about
+  // The torch does not burn down with time (he may look about as long as he likes): blows dim it,
+  // and the higher he is, the more each blow takes; the thief's hand, and a great demon's mouth.
+  const blowCost = (c) => c * Math.min(4, 1 + metres(-S.y) / 350);
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
@@ -616,6 +618,7 @@ const Climb = (() => {
     };
     REC = { snaps: [], events: [], next: 0 };
     if (NOV) {
+      for (const d of Object.keys(keptAll())) if (d !== NOV.domain) forget(d);      // (one mountain at a time: going to another, he leaves the last)
       if (!opts.resume) forget(NOV.domain);
       else try { restore(opts.resume); } catch (e) { forget(NOV.domain); return start({ nov: opts.nov }); }   // (a kept place spoiled: from the foot)
     }
@@ -712,12 +715,12 @@ const Climb = (() => {
   // the world stops a moment, and he turns to us and holds it up to be seen (a little Alleluia
   // sung); then it is his while it lasts. A Double Portion (Elisha's of Elijah's spirit, 2 Kings
   // 2:9): every blessing counts twice; the ward turns two blows, and comes back when spent.
-  // Unconsumed (the bush that burned and was not burnt, Exodus 3:2): the torch does not burn down,
-  // and its light reaches farther. The Flying Friar (St Joseph of Cupertino, who rose in prayer):
+  // Unconsumed (the bush that burned and was not burnt, Exodus 3:2): no blow dims the torch, nor a
+  // great demon's mouth, and its light reaches farther. The Flying Friar (St Joseph of Cupertino, who rose in prayer):
   // he falls slowly, and swings high. Vade Retro (St Benedict's medal): no demon can come near him.
   const BOONS = {
     double: { name: "A DOUBLE PORTION", sub: "Every blessing counts twice: your ward turns two blows, and comes back.", T: 30 },
-    unconsumed: { name: "UNCONSUMED", sub: "The torch burns, yet is not used up; and its light reaches farther.", T: 30 },
+    unconsumed: { name: "UNCONSUMED", sub: "The torch burns, yet nothing can dim it; and its light reaches farther.", T: 30 },
     friar: { name: "THE FLYING FRIAR", sub: "Light as a feather: you fall slowly, and swing high.", T: 25 },
     vade: { name: "VADE RETRO", sub: "St Benedict\u2019s medal: no demon can come near you.", T: 20 },
   };
@@ -2355,7 +2358,7 @@ const Climb = (() => {
     if (S.ward) { spendWard(); ev("ward turned the thief"); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); setSt(f, "hurt"); return; }
     // A block on his rope: that, before his light. It cuts it from his belt and is off with it.
     if (S.tied) { const b = S.tied; S.tied = null; S.dragging = false; carryOff(f, b); Sound.fx.steal(); Sound.fx.tetherBreak(); return; }
-    const take = Math.max(0, Math.min(0.09, S.fuel - 0.03));
+    const take = Math.max(0, Math.min(blowCost(0.09), S.fuel - 0.03));
     S.fuel -= take; f.loot = (f.loot || 0) + Math.max(take, 0.04); Sound.fx.steal(); S.shake = 0.12;
     for (let k = 0; k < 10; k++) S.parts.push({ kind: "spark", c: C.flameHot, x: S.torch[0], y: S.torch[1], vx: (f.x - S.torch[0]) * (2 + Math.random()) , vy: (f.y - f.ht * 0.6 - S.torch[1]) * (2 + Math.random()) - 40, life: 0.4, age: 0 });
   }
@@ -2762,7 +2765,8 @@ const Climb = (() => {
     if (S.dying || S.invT > 0 || S.latched) return;
     ev("he was hit", { cost: r2(cost || 0.06), wardLost: S.ward ? true : undefined, blockLoosed: S.tied && (cost === undefined || cost >= 0.06) ? true : undefined });
     S.freeze = Math.max(S.freeze || 0, 0.06);
-    S.fuel = Math.max(0, S.fuel - (cost || 0.06)); S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
+    if (!boonOn("unconsumed")) S.fuel = Math.max(0, S.fuel - blowCost(cost || 0.06));
+    S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
     S.vx = (sign(kx) || -S.dir) * 200; S.vy = -170; S.ground = false;
     if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.vx * 0.3; S.held.vy = -100; S.held = null; }
     if (S.tied && (cost === undefined || cost >= 0.06)) loosen(kx);        // (a hard blow knocks the block loose)
@@ -3254,7 +3258,6 @@ const Climb = (() => {
     const wdt = dt * (F.on ? FLARE_SLOW : S.hangT > 0 ? 0.5 : 1);
     S.t += wdt;
     if (!S.dying) {
-      if (!F.on && !boonOn("unconsumed")) S.fuel -= dt * BURN;
       if (S.fuel <= 0) lightOut();
       else if (S.fuel < 0.15 && Math.floor(S.rt * 0.8) !== Math.floor((S.rt - dt) * 0.8)) Sound.fx.gutter();
     }
@@ -3371,6 +3374,8 @@ const Climb = (() => {
     let R = 50 + 210 * Math.pow(f, 0.75);
     if (S.flare.on) R = Math.max(R, FLARE_R + 30);
     if (S && S.boon && S.boon.kind === "unconsumed") R *= 1.3;
+    // (Signed with the cross, he has light about him: at the least three parts in four of a full torch's.)
+    if (S.ward && !S.dying) R = Math.max(R, 195 * (0.6 + 0.4 * wardFade()));
     if (S.latched) R *= 1 - 0.65 * clamp((S.latched.latchT || 0) / 0.6, 0, 1);       // (shut in a great demon's mouth, the torch shows little)
     return R;
   }
@@ -4522,7 +4527,7 @@ const Climb = (() => {
     blocks: { newBlock, reveal, tie, loosen, carryOff, brotherOf, yank, hitMonk, hurtDemon, takeUp, throwBlock, TETHER, SHAPES, THROW_LEN },
     great: { placeGreat, strikeGreat, latch, punchOut, hurl, bigAt, burstAfter, burstSpot, startDread, onView, GREAT_V, GRASP },
     keptPlace: (dom) => keptAll()[dom] || null, forgetPlace: forget,
-    boons: { BOONS, BOON_ORDER, boonOf, showBoon, grantBoon, VADE_R }, crawl: crawlOf, relicsOf,
+    boons: { BOONS, BOON_ORDER, boonOf, showBoon, grantBoon, VADE_R }, crawl: crawlOf, relicsOf, lightR: () => lightR(),
     wall: (n) => { const w = wallAt(n); return { w, pos: wallPos(w) }; }, record, pauseShot: null, pauseRec: null,
     step, draw,
     down(p, ev) {
