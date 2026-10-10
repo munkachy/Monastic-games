@@ -1697,11 +1697,26 @@ const Climb = (() => {
     addOval(ink, 0.8, 37.5 + br, 4, 4.4, BT, 12);
     addPoly(ink, [[1.5, 34.5 + br], [5.5, 35 + br], [4.5, 30 + br], [1.8, 31 + br]], BT);
     addPoly(ink, [[-5.5, 31 + br], [-1, 33.5 + br], [-3.5, 27 + br]], BT);
-    const arm = (s) => [[s * 2.5, 30 + br], [s * 5.5, 31 + br], [s * (4 + 7 * k) + 1, 19 + 27 * k], [s * (4 + 7 * k) - 1.5, 18.5 + 27 * k]];
-    addPoly(ink, arm(1), BT); addPoly(ink, arm(-1), BT);
-    ctx.fillStyle = C.ink; ctx.fill(ink); rimP.addPath(ink);
+    // His arms: hanging at his sides; when a block comes to the cart, raised up in thanks.
+    for (const s of [1, -1]) {
+      const sh = [s * 4.6, 30 + br], hd = [s * lerp(5.6, 9.5, k), lerp(16.5, 45, k) + br * (1 - k)];
+      const dx = hd[0] - sh[0], dy = hd[1] - sh[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+      addPoly(ink, [[sh[0] + nx * 1.6, sh[1] + ny * 1.6], [hd[0] + nx * 1.1, hd[1] + ny * 1.1], [hd[0] - nx * 1.1, hd[1] - ny * 1.1], [sh[0] - nx * 1.6, sh[1] - ny * 1.6]], BT);
+      addOval(ink, hd[0], hd[1], 1.5, 1.5, BT, 8);
+    }
+    // (Its rim of torchlight laid on now, not over him: he stands before the cart, not behind it.)
+    ctx.fillStyle = C.ink; ctx.fill(ink); rimNow(ink);
     const [lx, ly] = CT(-11, 46.5); lights.push({ x: lx, y: ly, r: 120, a: 0.8 });
     GLOWS.push([null, lx + cam.x, ly + cam.y, 0, G, k]);
+  }
+  // The torch's rim on a shape drawn behind him (by the light of the last picture: near enough).
+  function rimNow(path) {
+    if (!S.light || !S.torch) return;
+    const tx = S.torch[0] - S.cam.x, ty = S.torch[1] - S.cam.y, R = lightR();
+    ctx.save(); ctx.clip(S.light);
+    const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
+    g.addColorStop(0, "rgba(255,190,110,0.8)"); g.addColorStop(0.5, "rgba(232,128,58,0.4)"); g.addColorStop(1, "rgba(232,128,58,0)");
+    ctx.strokeStyle = g; ctx.lineWidth = 1; ctx.stroke(path); ctx.restore();
   }
   // Over the dark: each block's own light; the lantern's flame; the blocks in the cart, and his blessing.
   function blockGlows(cam) {
@@ -2855,6 +2870,15 @@ const Climb = (() => {
   // Holding something with a demon close by: he strikes it with what he holds (a boulder stays in
   // his hands; fire bursts on it; fat bursts over it).
   const besides = (f) => Math.abs(f.x - S.x) < f.hw + HW + 40 && Math.abs((f.y - f.ht / 2) - (S.y - HT / 2)) < 50;
+  // Near enough to strike with what is in his hands (a great demon, by its middle).
+  const closeBy = (g, m) => Math.abs(g.x - S.x) < g.hw + HW + 40 && Math.abs((g.y - g.ht / 2) - (S.y - HT / 2)) < g.ht / 2 + m;
+  // The block in his hands swung into a demon close by: a heavy blow, and he keeps hold of it.
+  function swingBlock(f, g) {
+    const b = S.tied; if (!b || b.st !== "hand" || S.atk) return;
+    const t = g || f;
+    S.atk = { kind: "brick", f, g, o: b, t: 0, dur: 0.42, from: [S.x, S.y], to: [S.x, S.y], dash: 0, arrived: true, hit: false };
+    S.dir = t.x < S.x ? -1 : 1; S.vx = 0; ev("block swung", { at: g ? "great" : "demon" });
+  }
   function bash(f) {
     if (!S.held || S.atk) return;
     S.atk = { kind: S.held.kind === "fire" || S.held.kind === "thorn" ? "sear" : "bash", f, o: S.held, t: 0, dur: 0.42, from: [S.x, S.y], to: [S.x, S.y], dash: 0, arrived: true, hit: false };
@@ -2870,7 +2894,7 @@ const Climb = (() => {
     return o;
   }
   // Each move: its pose, and the moment it lands. The toss is slow: the wind-up of a heavy thing.
-  const ATK_ANIM = { punch: ["palm", MONK_HIT.palm], kick: ["launch", MONK_HIT.launch], slam: ["slam", MONK_HIT.slam], hurl: ["throw", MONK_HIT.throw], toss: ["throw", 0.62], fling: ["throw", 0.45], bash: ["slam", MONK_HIT.slam], sear: ["palm", MONK_HIT.palm], heave: ["pickup", MONK_HIT.pickup], catch: ["catch", MONK_HIT.catch] };
+  const ATK_ANIM = { punch: ["palm", MONK_HIT.palm], kick: ["launch", MONK_HIT.launch], slam: ["slam", MONK_HIT.slam], hurl: ["throw", MONK_HIT.throw], toss: ["throw", 0.62], fling: ["throw", 0.45], bash: ["slam", MONK_HIT.slam], brick: ["slam", MONK_HIT.slam], sear: ["palm", MONK_HIT.palm], heave: ["pickup", MONK_HIT.pickup], catch: ["catch", MONK_HIT.catch] };
   function stepAtk(dt) {
     const a = S.atk; a.t += dt;
     if (a.t < a.dash) {
@@ -2884,6 +2908,15 @@ const Climb = (() => {
     if (!a.hit && u >= ATK_ANIM[a.kind][1]) {
       a.hit = true;
       if (a.kind === "toss" || a.kind === "fling") release(a.tx, a.ty, f);
+      else if (a.kind === "brick") {
+        const b = a.o, g = a.g;
+        if (S.tied === b && b.st === "hand") {
+          if (g) { if (g.st !== "dying" && g.st !== "latch" && closeBy(g, 50)) strikeGreat(g, { vx: S.dir * 420, vy: -40, x: b.x, y: b.y, ht: b.ht, flung: false }); }
+          else if (f && alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
+            blowTo(f, 4, S.dir * 320, -260, "launch"); Sound.fx.brickHit(1, panX(f.x)); S.shake = 0.25; gain(0.16); impact(f, S.dir, -0.3, 2.4);
+          }
+        }
+      }
       else if (a.kind === "bash" || a.kind === "sear") {
         const o = a.o;
         if (S.held === o && alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
@@ -4564,11 +4597,16 @@ const Climb = (() => {
         return;
       }
       if (S.act) return;
-      // The block: in his hands, a tap throws it there (at a demon, great or not, straight at it). On
+      // The block: in his hands, a tap throws it there (at a demon, great or not, straight at it; but a
+      // demon close by, he swings it into it, still in his hands). On
       // its rope near him, tapped: he takes it up. A great demon tapped: only a block can hurt it;
       // with the block near him on its rope, he takes it up and throws it at once.
       const B = S.tied, gB = bigAt(wx, wy);
-      if (B && !S.atk && B.st === "hand") { const f = gB ? null : demonAt(wx, wy), [ax, ay] = gB ? [gB.x, gB.y - gB.ht / 2] : f ? dMid(f) : [wx, wy]; throwBlock(ax, ay); return; }
+      if (B && !S.atk && B.st === "hand") {
+        const f = gB ? null : demonAt(wx, wy), [ax, ay] = gB ? [gB.x, gB.y - gB.ht / 2] : f ? dMid(f) : [wx, wy];
+        if (S.ground && ((gB && closeBy(gB, 30)) || (f && alive(f) && !f.idol && besides(f)))) { swingBlock(f, gB); return; }
+        throwBlock(ax, ay); return;
+      }
       if (gB) {
         if (B && !S.atk && takeUp()) throwBlock(gB.x, gB.y - gB.ht / 2);
         else { Sound.fx.tick(420, 0.3); if (!S.say) S.say = { text: "ONLY A BLOCK CAN HURT IT", sub: B ? "Go up to the block on your rope, then tap the demon." : "Throw down an idol for its block.", t: 0 }; }
