@@ -27,7 +27,8 @@ What is in the game now:
 - "boon": a relic's power for 20 to 30 seconds, or null: "double" (A Double Portion: every blessing counts twice), "unconsumed" (the torch cannot be dimmed, and its light reaches farther), "friar" (The Flying Friar: he falls slowly and swings high), "vade" (Vade Retro: no demon can come near him).
 - "torch": how much light he has, 0.05 (nearly out) to 1 (full). "endlessTorch": true means no blow can dim it.
 - "flare": the flare (slowed time) meter, 0 to 1. "endlessFlare": true means it never runs out.
-- Not built yet: the angel who carries him home after the summit is won, the home base, the library, other great demons, the hidden side passages, new relics. If he asks for one of these, say plainly that it is not built yet, and make the nearest thing that is.`;
+- When the summit's demon is cast down, an angel comes down and carries him home (and in a scene from this room, nothing of it is kept).
+- Not built yet: the home base itself (its buildings, library and choir), the Easy Yoke (the gift for a summit won), other great demons, the hidden side passages, new relics. If he asks for one of these, say plainly that it is not built yet, and make the nearest thing that is.`;
   const SHAPE = `{"say": "one or two plain sentences to him: what you made (or what is not built yet, and what you made instead); or the answer, if he asked a question", "scene": {"title": "a short name for the scene, at most five words", "mountain": "gluttony", "summit": false, "metres": 0, "place": "any", "demons": 1, "near": [], "great": 0, "block": false, "boon": null, "torch": 1, "endlessTorch": false, "flare": 1, "endlessFlare": false}}`;
   function prompt(ask) {
     const said = R.log.filter((e) => e.who !== "note").slice(-6).map((e) => (e.who === "you" ? "He said: " : "You said: ") + e.text).join("\n");
