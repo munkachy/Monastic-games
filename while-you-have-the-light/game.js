@@ -27,7 +27,7 @@ const Game = {
   },
   // A scene from the white room (it is kept, so BEGIN AGAIN makes the same one).
   scene(sc) { goSideways(); Game.music = true; Game.last = { climb: true, nov: true, room: sc }; G = null; Climb.scene(sc); },
-  toNovitiate() { G = null; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
+  toNovitiate() { Title.updated = false; G = null; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
   again(fresh) { if (Game.last && Game.last.room) Game.scene(Game.last.room); else if (Game.last && Game.last.nov) Game.novitiate(fresh); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
   toTitle() {
     G = null; Title.t = 0; mode = Title;
@@ -83,7 +83,9 @@ const Title = {
       buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
       text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
     }
-    textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
+    // (Just updated: claude.ai loads a new version over the one being played. Said so, and the way back.)
+    if (Title.updated) textLines("The game was just updated, so it started again. Your place on the mountain is kept: THE SEVEN MOUNTAINS, then GO ON.", x, H - 14, Math.max(W * 0.55, 300), { size: 9, weight: 600, color: C.warm, up: true, lh: 12 });
+    else textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
     if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
@@ -286,6 +288,11 @@ function frame(now) {
 resize();
 applySound();
 mode = Title;
+// A new version, since the game was last opened here?
+try {
+  const now = typeof Notes !== "undefined" && Notes.version, was = localStorage.getItem("wyhtl-version");
+  if (now) { if (was && was !== now) Title.updated = true; localStorage.setItem("wyhtl-version", now); }
+} catch (e) { }
 // For trying things directly: ?climb starts the climb, ?novitiate opens the novitiate, ?arena the
 // first arena, ?practice its practice.
 if (/[?&]climb\b/.test(location.search)) setTimeout(() => Game.climb(), 50);

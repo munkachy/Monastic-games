@@ -667,7 +667,8 @@ const Climb = (() => {
   // blocks in the carts, the great demons cast down). The light going out, the place is forgotten.
   const KEEP = "wyhtl-mountains", SEEN = ["legsSeen", "crawlSeen", "fightSeen", "blockSeen", "tiedSeen", "handSeen", "carrySeen", "riseSeen", "greatSeen", "latchSeen", "hurlSeen", "shedSeen", "hauntSeen", "freedSeen", "boonSeen"];
   const keptAll = () => { try { const o = JSON.parse(localStorage.getItem(KEEP) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } };
-  function forget(dom) { const all = keptAll(); if (!all[dom]) return; delete all[dom]; try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { } }
+  function forget(dom) { const all = keptAll(); if (!all[dom]) return; delete all[dom]; try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { } Kept.wrote(KEEP); }
+  Kept.watch(KEEP);
   function keepPlace(x, y, why) {
     if (!NOV || NOV.room || S.dying || !Number.isFinite(x) || !Number.isFinite(y)) return;
     if (S.keptAt && y > S.keptAt[1] + CELL) [x, y] = S.keptAt;
@@ -684,6 +685,7 @@ const Climb = (() => {
     all[NOV.domain] = { v: 1, seed, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
       coins: S.coins || 0, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
     try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
+    Kept.wrote(KEEP);
     S.keptAt = [x, y]; S.kept = { t: S.rt }; ev("place kept", { why, m: metres(-y) });
   }
   // (Where he last stood firm: he may be reading a verse from the rope, or the rock.)
@@ -798,10 +800,10 @@ const Climb = (() => {
   // great demon's mouth, and its light reaches farther. The Flying Friar (St Joseph of Cupertino, who rose in prayer):
   // he falls slowly, and swings high. Vade Retro (St Benedict's medal): no demon can come near him.
   const BOONS = {
-    double: { name: "A DOUBLE PORTION", sub: "Every blessing counts twice: your ward turns two blows, and comes back.", T: 30 },
-    unconsumed: { name: "UNCONSUMED", sub: "The torch burns, yet nothing can dim it; and its light reaches farther.", T: 30 },
-    friar: { name: "THE FLYING FRIAR", sub: "Light as a feather: you fall slowly, and swing high.", T: 25 },
-    vade: { name: "VADE RETRO", sub: "St Benedict\u2019s medal: no demon can come near you.", T: 20 },
+    double: { name: "A DOUBLE PORTION", sub: "Every blessing counts twice: your ward turns two blows, and comes back.", T: 90 },
+    unconsumed: { name: "UNCONSUMED", sub: "The torch burns, yet nothing can dim it; and its light reaches farther.", T: 90 },
+    friar: { name: "THE FLYING FRIAR", sub: "Light as a feather: you fall slowly, and swing high.", T: 75 },
+    vade: { name: "VADE RETRO", sub: "St Benedict\u2019s medal: no demon can come near you.", T: 60 },
   };
   const BOON_ORDER = ["double", "unconsumed", "friar", "vade"], BOON_SHOW = 2.8, VADE_R = 92, FRIAR_FALL = 230;
   const boonOf = (n) => BOON_ORDER[(Math.floor(hash2(7, 77, seed) * 4) + n) % 4];
@@ -1891,6 +1893,21 @@ const Climb = (() => {
   }
   function reach(g) {
     if (S.invT > 0 || S.dying) return;
+    // On the rope it does not take him in: it strikes him off it. Swinging hard enough for a kick,
+    // he comes off it unharmed (and it is driven back a little: only a block can hurt it); slower,
+    // the blow comes home (or the ward turns it). So he must swing round it, and strike with a block.
+    if (S.rope && !S.ground) {
+      const sp = Math.hypot(S.vx, S.vy), s = sign(S.x - g.x) || -S.dir;
+      if (sp >= 170) {
+        ev("swung into a great demon", { sp: Math.round(sp) });
+        letGo(true); S.vx = s * 260; S.vy = -200; S.ground = false; S.invT = 0.9; S.swingKickT = 0.35; S.kickCd = 0.45;
+        g.kx = -s * 170; g.ky = -50; g.stunT = Math.max(g.stunT, 0.7); g.hurtT = 0.2;
+        impactAt(g.x + s * g.hw * 0.6, g.y - g.ht * 0.5, -s, 0, 1.2, null); Sound.fx.kick(1, panX(g.x)); Sound.fx.stone(panX(g.x)); S.shake = 0.18;
+        return;
+      }
+      if (!S.ward) { ev("struck off the rope by a great demon"); letGo(true); hitMonk(s, 0.1); g.kx = -s * 60; g.stunT = Math.max(g.stunT, 0.5); return; }
+      letGo(true);
+    }
     if (S.ward) {
       // The ward turns it: it is thrown back, and stunned a while; and the ward is spent.
       ev("the ward turned a great demon"); spendWard();
@@ -4910,7 +4927,7 @@ const ClimbPause = {
       : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down; on the ground, ▼ crawls (into a way too low to stand in, he crawls by himself)"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
     // (In the seven mountains: the block, and the great demons.)
     if (Climb.nov) mv.push(usingKeys() ? ["CLICK THE BLOCK ON ITS ROPE, THEN CLICK", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: click one, and he throws it straight at it"] : ["TAP THE BLOCK ON ITS ROPE, THEN TAP", "He takes it up, then throws it, its rope paying out. Only a block hurts a great demon: tap one, and he throws it straight at it"],
-      [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes"]);
+      [usingKeys() ? "IN A GREAT DEMON'S JAWS: CLICK, CLICK" : "IN A GREAT DEMON'S JAWS: TAP, TAP", "Strike your way out of it (any key will do). The longer it holds you, the faster the torch goes. On the rope it cannot take you in: it strikes you off (swinging hard, unharmed)"]);
     // Each move over as many lines as it needs; as large as lets them all fit.
     const cw = W - mx - 16;
     let z = 8.5; const lines = (sz) => mv.reduce((n, [, what]) => n + 1 + wrap(what, cw, "500 " + sz + "px " + FONT.ui).length, 0);
