@@ -490,13 +490,14 @@ const Climb = (() => {
   // The face of the rock on side s as he climbs it: where it stands at five heights over his body
   // and a little above his head, averaged (null if it is out of his reach at most of them).
   function faceLine(s) {
-    let sum = 0, n = 0;
+    let sum = 0, n = 0, hands = 0;
     for (const dy of [4, 15, 27, 39, 52]) {
       const y = S.y - dy, x0 = S.x - s * (HW + 4);
       if (solidAt(x0, y)) continue;
-      for (let k = 2; k <= 56; k += 2) if (solidAt(x0 + s * k, y)) { const c = Math.floor((x0 + s * k) / CELL); sum += s > 0 ? c * CELL : (c + 1) * CELL; n++; break; }
+      for (let k = 2; k <= 56; k += 2) if (solidAt(x0 + s * k, y)) { const c = Math.floor((x0 + s * k) / CELL); sum += s > 0 ? c * CELL : (c + 1) * CELL; n++; if (dy > 30) hands++; break; }
     }
-    return n >= 3 ? sum / n : null;
+    // (Rock at his hands is enough, though there be a hollow at his feet: he hangs from his hands.)
+    return n >= 3 || hands === 2 ? sum / n : null;
   }
   // The torch's foot driven into the rock above him: a knock, and grit.
   function plant(s) {
@@ -527,10 +528,20 @@ const Climb = (() => {
       for (let j = Math.floor((S.y - hi) / CELL); j <= Math.floor((S.y - lo) / CELL); j++) {
         if (!solid(ci, j) || solid(ci, j - 1) || solid(ci, j - 2) || solid(ci, j - 3)) continue;
         const top = j * CELL, edge = s > 0 ? ci * CELL : (ci + 1) * CELL, x1 = edge + s * 12;
+        if (off >= 15 && !lipInReach(edge, s, top)) continue;               // (not over a wall between him and it)
         if (!boxHit(x1, top - 0.01) && !boxHit(edge - s * 8, top - 2) && openBelow(edge, s, top)) return { top, edge, x1, s, h: S.y - top };
       }
     }
     return null;
+  }
+  // Can his hands come at a ledge's lip through the air (from his chest or his waist), with no rock
+  // between, so that climbing it does not take him through a wall?
+  function lipInReach(edge, s, top) {
+    const [mx, my] = middle(), tx = edge - s * 6, ty = top + 6;
+    if (solidAt(tx, ty)) return false;
+    // (Straight to it; or out from under an overhang and then up, or up and then across.)
+    for (const y of [my - 8, my + 8]) if (los(mx, y, tx, ty) || (los(mx, y, tx, y) && los(tx, y, tx, ty)) || (los(mx, y, mx, ty) && los(mx, ty, tx, ty))) return true;
+    return false;
   }
   // Is the way up beside a ledge's edge free of the needle's slab, from his head to its top? Other
   // rock he may pass behind, as at the jags; but the eye's slab he must go through the eye.
@@ -554,7 +565,7 @@ const Climb = (() => {
         const edge = sd > 0 ? ce * CELL : (ce + 1) * CELL;
         let x1 = edge + sd * 12;
         if (boxHit(x1, top - 0.01)) { x1 = (ci + 0.5) * CELL; if (boxHit(x1, top - 0.01)) continue; }
-        if (!openBelow(edge, sd, top)) continue;
+        if (!openBelow(edge, sd, top) || !lipInReach(edge, sd, top)) continue;
         const score = Math.abs(dx) + (S.y - top) * 0.3;
         if (!best || score < best.score) best = { top, edge, x1, s: sd, h: S.y - top, score };
       }
@@ -3017,7 +3028,7 @@ const Climb = (() => {
   // above). A fresh push toward it (let go of the pad and press again) and he pulls himself up;
   // away from it, or down, and he drops.
   // Is the way just before him (side d) too low to stand in, but not to crawl?
-  function lowWay(d) { const x = S.x + d * (HW + 6); return !boxAt(x, S.y - 0.5, HW, CRAWL_H) && boxAt(x, S.y - 0.5, HW, HT); }
+  function lowWay(d) { const x = S.x + d * (HW + 6); return !boxAt(x, S.y - 0.5, HW, CRAWL_H) && boxAt(x, S.y - 0.5, HW, HT) && solidAt(x, S.y + 4); }   // (with a floor to crawl on)
   function startCrawl() {
     if (S.rope) letGo(true);
     S.crawl = true; S.climbing = false; Sound.fx.grab(); ev("crawling");
