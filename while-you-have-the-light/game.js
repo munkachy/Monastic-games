@@ -19,13 +19,14 @@ const Game = {
     Game.last = { practice: true }; Arena.start({ practice: true, sins: P.sins, count: P.count, endlessOil: P.endlessOil });
   },
   climb() { goSideways(); Game.music = true; Game.last = { climb: true }; G = null; Climb.start(); },
-  novitiate() {
+  // (On a mountain with a place kept, he goes on from it; unless asked to begin again from its foot.)
+  novitiate(fresh) {
     goSideways(); Game.music = true; Game.last = { climb: true, nov: true }; G = null;
-    const N = novSettings();
-    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare } });
+    const N = novSettings(), K = fresh ? null : Climb.keptPlace(N.domain);
+    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare }, seed: K ? K.seed : undefined, resume: K || undefined });
   },
   toNovitiate() { G = null; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
-  again() { if (Game.last && Game.last.nov) Game.novitiate(); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
+  again(fresh) { if (Game.last && Game.last.nov) Game.novitiate(fresh); else if (Game.last && Game.last.climb) Game.climb(); else if (Game.last && Game.last.practice) Game.practice(); else Game.arena(); },
   toTitle() {
     G = null; Title.t = 0; mode = Title;
     Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });
@@ -156,7 +157,12 @@ const Novitiate = {
     for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 199, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
     button(N.torch ? "TORCH: ENDLESS" : "TORCH: IT BURNS", W / 2 - 154, 234, 150, 32, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "Take all the time you need" : "As on the climb" });
     button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 234, 150, 32, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
-    button("BEGIN", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true });
+    // A place kept on this mountain: going on from it, or (smaller, beside it) from the foot.
+    const K = Climb.keptPlace(N.domain);
+    if (K) {
+      button("GO ON", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true, sub: "From " + (K.m || 0) + " m, where you stopped" });
+      button("FROM THE FOOT", W / 2 + 108, 282, Math.min(120, W / 2 - 124), 26, () => Game.novitiate(true), { size: 8 });
+    } else button("BEGIN", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true });
     button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
   },
   key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.novitiate(); },
