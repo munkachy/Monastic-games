@@ -76,7 +76,7 @@ const Title = {
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
-    if (typeof House !== "undefined" && House.ok()) button("HOME", x, by + 124, 200, 26, () => House.open(), { size: 9 });
+    if (typeof House !== "undefined" && House.ok()) button(save.house && save.house.raid ? "HOME  \u00b7  THE DEMONS WAIT THERE" : "HOME", x, by + 124, 200, 26, () => House.open(), { size: 9, hot: !!(save.house && save.house.raid) });
     // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
     // can be asked, the white room is, in their place.)
     if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
@@ -326,10 +326,15 @@ const Over = {
         text(String(v), W / 2 + 8, 141 + i * 22, { font: FONT.title, size: 15, weight: 700, color: C.flameHot, alpha: a });
       });
     }
+    // (On one of the seven mountains: its demons have followed him down, and will come for the house.)
+    const raid = Game.last && Game.last.nov && !Game.last.room && save.house && save.house.raid && typeof House !== "undefined" && House.ok();
+    if (raid) text("Its demons followed you down. Tonight they come for the house.", W / 2, H - 90, { align: "center", font: FONT.line, italic: true, size: 13, color: mix(SINS[save.house.raid.dom].color, "#ffffff", 0.35), alpha: clamp((t - 0.8) / 0.6, 0, 1), max: W - 40 });
     if (t > 0.6) {
-      button("AGAIN", W / 2 - 104, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
-      if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", W / 2 + 4, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
-      else button("TITLE", W / 2 + 4, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
+      const x0 = raid ? W / 2 - 158 : W / 2 - 104;
+      button("AGAIN", x0, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
+      if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
+      else button("TITLE", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
+      if (raid) button("GO HOME", x0 + 216, H - 76, 100, 36, () => { Sound.muffle(false); House.open(); }, {});
     }
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space") && Over.t > 0.6) { Sound.muffle(false); Game.again(); } if (down && code === "Escape") Game.toTitle(); },

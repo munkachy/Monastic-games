@@ -8,6 +8,10 @@
 // roof comes down on them and the building stands. What he lays is kept, stone by stone.
 // Built, the library can be gone into: Psalm 118 in twenty-two books, filling verse by verse as the
 // verses are read on the mountains; and the choir, where the souls freed at the summits sing them.
+// When the light goes out on a mountain, its demons follow him home: the next time he comes, it is
+// night, and they come in from both ends of the grounds and batter whatever stands first in their
+// way, stone by stone. The walls at the ends are for that: they take the blows meant for the library
+// and the choir. He goes out to them with his torch and strikes them down; at dawn the rest flee.
 
 const House = (() => {
   const pl = typeof planck !== "undefined" ? planck : null;
@@ -73,10 +77,10 @@ const House = (() => {
     for (const S of H_.stones) S.body.setAwake(false);
   }
   function keep() {
-    for (const s of SITES) { const D = siteData(s); if (D.done) continue; D.stones = []; }
+    for (const s of SITES) siteData(s).stones = [];
     for (const S of H_.stones) {
       if (S === H_.active) continue;
-      const s = siteOf(S); if (!s || siteData(s).done) continue;
+      const s = siteOf(S); if (!s) continue;
       const p = S.body.getPosition(); siteData(s).stones.push({ shape: S.shape, dom: S.dom, x: +(p.x * T).toFixed(1), y: +(p.y * T).toFixed(1), a: +S.body.getAngle().toFixed(3) });
     }
     store();
@@ -129,7 +133,8 @@ const House = (() => {
     const k = H_.keys, l = k.ArrowLeft || k.KeyA || H_.pad < 0, r = k.ArrowRight || k.KeyD || H_.pad > 0;
     let vx = 0;
     if (H_.goal !== null && H_.goal !== undefined) { const d = H_.goal - H_.x; if (Math.abs(d) < 3) H_.goal = null; else vx = Math.sign(d) * 70; }
-    if (!H_.active) { if (l) { vx = -70; H_.goal = null; } if (r) { vx = 70; H_.goal = null; } }
+    if (!H_.active) { if (l) { vx = -70; H_.goal = null; H_.foe = null; } if (r) { vx = 70; H_.goal = null; H_.foe = null; } }
+    if (H_.swing) vx = 0;
     if (vx) { H_.dir = Math.sign(vx); H_.x = clamp(H_.x + vx * dt, 40, HW - 40); H_.walkU = (H_.walkU + Math.abs(vx) * dt / 58) % 1; }
     H_.walking = !!vx;
     const S = H_.active;
@@ -146,7 +151,8 @@ const House = (() => {
       const s = siteOf(O), low = O.body.getPosition().y * T > GY - FH + 4;
       if ((!s || low) && O.still > 0.8) {
         H_.world.destroyBody(O.body); H_.stones.splice(H_.stones.indexOf(O), 1); D.store.push({ shape: O.shape, dom: O.dom });
-        H_.say = { text: "THE STONE FELL OFF", sub: "It is back in your store. Lay it again.", t: 0 }; keep();
+        if (!H_.raid) H_.say = { text: "THE STONE FELL OFF", sub: "It is back in your store. Lay it again.", t: 0 };
+        keep();
       } else if (O.still > 0.6 && !O.kept) { O.kept = true; keep(); }
       if (!calm) O.kept = false;
     }
@@ -161,9 +167,140 @@ const House = (() => {
       SD.done = true; keep();
       H_.built = { s, t: 0 }; Sound.fx.kindle && Sound.fx.kindle(1, 0); Sound.fx.unlock && Sound.fx.unlock();
     }
+    if (H_.raid) stepRaid(dt);
+    if (H_.shake) for (const k in H_.shake) H_.shake[k] = Math.max(0, H_.shake[k] - dt);
+    if (H_.dust && H_.dust.length) { for (const d of H_.dust) { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 300 * dt; } H_.dust = H_.dust.filter((d) => d.t < 0.8); }
     // The camera: on him; on the stone, while one is laid.
     const fx = S ? S.body.getPosition().x * T : H_.x;
     H_.cam += (clamp(fx - W / 2, 0, HW - W) - H_.cam) * Math.min(1, dt * 4);
+  }
+
+  // ---- The raid ----
+  const RAID_LEN = 75, DEMON_V = 34, WALL_HP = 28;   // (a built wall is mortared: it takes so many blows, and then it is breached)
+  const hasStones = (s) => H_.stones.some((O) => siteOf(O) === s);
+  function startRaid() {
+    const R = data().raid; if (!R) return;
+    if (!H_.stones.length) { data().raid = null; store(); return; }    // (nothing laid yet: nothing for them to throw down)
+    const sin = SINS[R.dom] ? R.dom : "gluttony", n = clamp(R.n | 0, 1, 8), demons = [];
+    for (let i = 0; i < n; i++) { const side = i % 2 ? 1 : -1, k = Math.floor(i / 2); demons.push({ sin, side, dir: -side, x: side < 0 ? -40 - k * 90 : HW + 40 + k * 90, gap: (k % 3) * 20, hp: 3, st: "walk", t: 0, u: Math.random(), hurtT: 0, blowT: 1 + Math.random(), alpha: 1, lit: 0 }); }
+    H_.raid = { dom: sin, demons, t: 0, cast: 0, over: null, hit: new Set() };
+    H_.say = { text: "THE DEMONS FOLLOWED YOU HOME", sub: "From the mountain of " + SINS[sin].name + ". Your walls take their blows. Tap a demon to strike it.", t: -1.2 };
+    Sound.play(null); Sound.stop(); Sound.ambience({ wind: 0.6 }); Sound.fx.dread && Sound.fx.dread(0.7, 0);
+  }
+  // What a demon makes for: on its side of the gate, the first place with stones in it, from the outside in.
+  function targetOf(f) {
+    const mine = SITES.filter((s) => (f.side < 0 ? s.x < GATE : s.x > GATE) && hasStones(s)).sort((a, b) => (a.x - b.x) * f.side * -1);
+    for (const s of mine) { const face = s.x + f.side * (s.w * T / 2 + 14); if (f.side < 0 ? f.x < face + 1 : f.x > face - 1) return { s, face }; }
+    return null;
+  }
+  function stepRaid(dt) {
+    const R = H_.raid; R.t += dt;
+    for (const f of R.demons) {
+      f.t += dt; f.hurtT = Math.max(0, f.hurtT - dt); if (f.claw && (f.claw.t -= dt) <= 0) f.claw = null; f.lit = Math.max(0.4, clamp(1 - Math.abs(f.x - H_.x) / 170, 0, 1));
+      if (f.st === "gone") { f.alpha = Math.max(0, f.alpha - dt * 1.2); continue; }
+      if (f.st === "flee") { f.x -= f.dir * 80 * dt; f.u = (f.u + dt * 1.6) % 1; f.alpha = Math.max(0, f.alpha - dt * 0.5); continue; }
+      if (f.st === "hurt") { if (f.t > 0.45) { f.st = "walk"; f.t = 0; } continue; }
+      const tg = targetOf(f), stop = (tg ? tg.face : GATE + f.side * 60) + f.side * f.gap;   // (one behind another, not all in one place)
+      if (f.side < 0 ? f.x < stop : f.x > stop) { f.st = "walk"; f.x = f.side < 0 ? Math.min(stop, f.x + DEMON_V * dt) : Math.max(stop, f.x - DEMON_V * dt); f.u = (f.u + dt * 0.9) % 1; f.dir = -f.side; continue; }
+      // At its place: it batters it, a blow at a time.
+      if (f.st !== "batter") { f.st = "batter"; f.t = 0; f.blowT = 0.6; }
+      f.blowT -= dt;
+      if (f.blowT <= 0 && !f.swing) { f.swing = { t: 0, s: tg && tg.s }; f.swing0 = tg && tg.s; }
+      if (f.swing) {
+        f.swing.t += dt;
+        if (f.swing.t >= 0.24 && !f.swing.done) { f.swing.done = true; if (f.swing.s) blow(f, f.swing.s); }
+        if (f.swing.t >= 0.6) { f.swing = null; f.blowT = (f.swing0 && f.swing0.kind === "wall" ? 1.3 : 2.3) + Math.random() * 0.6; }
+      }
+    }
+    // The monk's blow.
+    const W_ = H_.swing;
+    if (W_) {
+      W_.t += dt;
+      if (!W_.done && W_.t >= 0.45 * 0.45) {
+        W_.done = true;
+        const f = R.demons.find((q) => (q.st === "walk" || q.st === "batter") && Math.abs(q.x - (H_.x + H_.dir * 20)) < 30);
+        if (f) strike(f); else Sound.fx.whoosh && Sound.fx.whoosh();
+      }
+      if (W_.t >= 0.45) H_.swing = null;
+    }
+    const foe = H_.foe;
+    if (foe && (foe.st === "gone" || foe.st === "flee")) H_.foe = null;
+    else if (foe && !H_.swing && Math.abs(foe.x - H_.x) < 34) { H_.goal = null; H_.dir = Math.sign(foe.x - H_.x) || H_.dir; H_.swing = { t: 0 }; }
+    else if (foe && !H_.swing) H_.goal = foe.x - Math.sign(foe.x - H_.x) * 26;
+    // Dawn; or all of them cast out.
+    const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee");
+    if (!R.over && (!left.length || R.t > RAID_LEN)) {
+      R.over = { t: 0 };
+      for (const q of left) { q.st = "flee"; q.dir = q.side; }
+      H_.say = left.length ? { text: "DAWN", sub: "The ones still standing have fled back to the mountain.", t: 0 } : { text: "ALL OF THEM CAST OUT", sub: "The night is quiet again.", t: 0 };
+      Sound.fx.lift && Sound.fx.lift();
+    }
+    if (R.over) {
+      R.over.t += dt;
+      // Once the stones are still: each place they struck stands, or (fallen below its line) is to be mended.
+      if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8 || O === H_.active)) {
+        const hurt = [];
+        for (const s of SITES) {
+          if (!R.hit.has(s.id)) continue;
+          const SD = siteData(s), on = H_.stones.filter((O) => siteOf(O) === s), top = on.length ? Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2))) : GY;
+          if (SD.done && on.length >= s.need && top <= GY - FH - s.h * T + T * 0.5) for (const O of on) O.body.setType("static");
+          else if (SD.done) { SD.done = false; hurt.push(s); }
+        }
+        if (hurt.length) H_.say = { text: hurt.map((s) => s.name).filter((v, i, a) => a.indexOf(v) === i).join(" AND ") + (hurt.length > 1 && hurt[0].name !== hurt[1].name ? " ARE" : " IS") + " THROWN DOWN", sub: "Lay stones on it again, to the line, to mend it.", t: 0 };
+        for (const s of SITES) { const SD = siteData(s); delete SD.breached; delete SD.hp; }   // (the lay brothers point the walls that stand, between one night and the next)
+        data().raid = null; H_.raid = null; keep();
+        Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
+      }
+    }
+  }
+  // A demon's blow on a place. A built wall shudders and cracks, until it is breached and falls; else
+  // the stones are loosed, and it reaches up and tears down the highest on its side, harder blow by blow.
+  function blow(f, s) {
+    const on = H_.stones.filter((O) => siteOf(O) === s); if (!on.length) return;
+    const SD = siteData(s);
+    for (const O of on) O.still = 0;
+    if (s.kind === "wall" && SD.done && !SD.breached) {
+      SD.hp = (SD.hp === undefined ? WALL_HP : SD.hp) - 1; (H_.shake = H_.shake || {})[s.id] = 0.18;
+      Sound.fx.thump && Sound.fx.thump(0.6, clamp((f.x - H_.cam - W / 2) / W, -1, 1));
+      H_.dust = (H_.dust || []).concat(Array.from({ length: 4 }, () => ({ x: s.x + f.side * s.w * T / 2, y: GY - 20 - Math.random() * 60, vx: f.side * 40 + (Math.random() - 0.5) * 30, vy: -Math.random() * 40, t: 0 })));
+      if (SD.hp > 0) return;
+      // Breached: the mortar gives, and the wall comes down.
+      SD.breached = true; H_.raid.hit.add(s.id);
+      for (const O of on) { O.body.setType("dynamic"); O.body.setAwake(true); O.still = 0; const p = O.body.getPosition(), hi = clamp((GY - p.y * T) / (s.h * T), 0, 1.4); O.body.applyLinearImpulse(pl.Vec2(f.dir * (8 + 14 * hi + Math.random() * 4), -3 - Math.random() * 4), pl.Vec2(p.x, p.y - 0.8), true); O.body.applyAngularImpulse(f.dir * (3 + Math.random() * 3), true); }
+      H_.say = { text: "THE WALL IS BREACHED", sub: "Nothing stands now between them and what is behind it.", t: 0 };
+      Sound.fx.crumble && Sound.fx.crumble(); return;
+    }
+    if (SD.done) H_.raid.hit.add(s.id);
+    f.blows = (f.blows || 0) + 1;
+    for (const O of on) if (O.body.getType() !== "dynamic") O.body.setType("dynamic");
+    for (const O of on) O.body.setAwake(true);
+    // (The highest square on its half of the place; of those as high, the nearest it.)
+    let best = null, bd = 1e9;
+    for (const O of on) for (const q of squares(O)) { if ((q[0] - s.x) * f.side < -T) continue; const d = q[1] * 4 + Math.abs(q[0] - f.x) * 0.2; if (d < bd) { bd = d; best = { O, q }; } }
+    if (!best) return;
+    const mag = 10 * (1 + 0.08 * Math.min(f.blows, 10)), c = best.O.body.getWorldCenter();
+    best.O.body.applyLinearImpulse(pl.Vec2(-f.dir * mag, -mag * 0.7), c, true);
+    best.O.body.applyAngularImpulse(-f.dir * 2, true);
+    f.claw = { x: best.q[0], y: best.q[1], t: 0.25 };
+    Sound.fx.thump && Sound.fx.thump(0.8, clamp((f.x - H_.cam - W / 2) / W, -1, 1));
+    H_.dust = (H_.dust || []).concat(Array.from({ length: 6 }, () => ({ x: best.q[0], y: best.q[1], vx: (Math.random() - 0.5) * 60 + f.dir * 30, vy: -Math.random() * 50, t: 0 })));
+  }
+  function strike(f) {
+    f.hp--; f.hurtT = 0.3; f.x += H_.dir * 12; Sound.fx.punch && Sound.fx.punch(1, 0); Sound.fx.demonHurt && Sound.fx.demonHurt(f.sin, 0);
+    if (f.hp <= 0) { f.st = "gone"; f.t = 0; H_.raid.cast++; Sound.fx.castOut && Sound.fx.castOut(f.sin); for (let k = 0; k < 14; k++) (H_.dust = H_.dust || []).push({ x: f.x, y: GY - 30, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 120, t: 0, spark: SINS[f.sin].color }); }
+    else { f.st = "hurt"; f.t = 0; f.swing = null; }
+  }
+  function drawRaid(cam) {
+    const R = H_.raid, t = H_.t;
+    for (const f of R.demons) {
+      if (f.alpha <= 0.01) continue;
+      const x = f.x - cam; if (x < -60 || x > W + 60) continue;
+      const A = DEMON_ANIM, p = f.st === "hurt" ? A.hurt(clamp(f.t / 0.45, 0, 1), t, f.sin) : f.swing ? A.strike(clamp(f.swing.t / 0.6, 0, 1), t, f.sin) : f.st === "batter" ? A.windup(clamp(0.4 + 0.2 * Math.sin(t * 3 + f.x), 0, 1), t, f.sin) : f.st === "gone" ? A.down(0, t, f.sin) : A.walk(f.u, t, f.sin);
+      glow(x, GY - 26, 40, SINS[f.sin].color, 0.12 * f.alpha);
+      drawDemon(f.sin, x, GY, f.dir, p, { t, lit: f.lit, hurt: f.hurtT / 0.3, alpha: f.alpha, windup: f.swing && f.swing.t < 0.24 ? f.swing.t / 0.24 : 0 });
+      // (Its reach: a dark claw thrown up to the stone it tears down.)
+      if (f.claw) { const a = clamp(f.claw.t / 0.25, 0, 1), hx = x + f.dir * 12, hy = GY - 40, cx = f.claw.x - cam, cy = f.claw.y; ctx.strokeStyle = "rgba(12,6,10," + (0.85 * a).toFixed(3) + ")"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo((hx + cx) / 2 - f.dir * 14, Math.min(hy, cy) - 24, cx, cy); ctx.stroke(); glow(cx, cy, 14, SINS[f.sin].color, 0.4 * a); }
+    }
   }
 
   // ---- Drawn ----
@@ -176,11 +313,23 @@ const House = (() => {
       ctx.restore();
     }
   }
+  // The cracks in a wall, more of them the more it has taken.
+  function drawCracks(s, cam, k) {
+    const x0 = s.x - s.w * T / 2 - cam, top = GY - FH - s.h * T, n = Math.floor(k * 9);
+    ctx.strokeStyle = "rgba(20,14,12,0.85)"; ctx.lineWidth = 1.2; ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      let x = x0 + ((i * 37 + 11) % (s.w * T)), y = top + ((i * 53 + 7) % (s.h * T)); ctx.moveTo(x, y);
+      for (let j = 0; j < 3; j++) { x += ((i + j) % 2 ? 4 : -3); y += 6; ctx.lineTo(x, y); }
+    }
+    ctx.stroke();
+  }
   function drawBuilt(s, cam) {
     const x0 = s.x - s.w * T / 2 - cam, x1 = s.x + s.w * T / 2 - cam, top = GY - FH - s.h * T, ink = "#0d0b10";
     if (s.kind === "wall") {
-      for (let i = 0; i < s.w; i++) if (i % 2 === 0) rect(x0 + i * T, top - 9, T, 9, ink);
-      rect(x0 - 2, top - 1, x1 - x0 + 4, 3, ink);
+      // (The crenels along the top of its stones, as they stand.)
+      const on = H_.stones.filter((O) => siteOf(O) === s), tp = on.length ? Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2))) : top;
+      for (let i = 0; i < s.w; i++) if (i % 2 === 0) rect(x0 + i * T, tp - 9, T, 9, ink);
+      rect(x0 - 2, tp - 1, x1 - x0 + 4, 3, ink);
       return;
     }
     // The roof, the door, the windows lit within.
@@ -200,6 +349,13 @@ const House = (() => {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, GY + 2);
     glow(W * 0.7 - cam * 0.03, GY - 10, 140, "#ffd9a0", 0.35);
     Climb.DOMAINS.forEach((d, i) => { const cx = ((i * 260 + 120 - cam * 0.25) % (W + 300) + W + 300) % (W + 300) - 150, h = 110 + 40 * Math.sin(i * 1.9 + 1); poly([cx - 150, GY + 2, cx - 30, GY - h * 0.7, cx, GY - h, cx + 40, GY - h * 0.75, cx + 150, GY + 2], i % 2 ? "#3e3a50" : "#463f55"); });
+    // (Night, while the demons are here: the sky gone dark, and the glow of their mountain at both ends.)
+    const R = H_.raid, night = R ? (R.over ? clamp(1 - R.over.t / 2.5, 0, 1) : clamp(R.t / 1.5, 0, 1)) : 0;
+    if (night > 0) {
+      rect(0, 0, W, GY + 2, "rgba(8,5,16," + (0.7 * night).toFixed(3) + ")");
+      const col = SINS[R.dom].color; glow(-cam * 0.5, GY - 20, 220, col, 0.25 * night); glow(W + (HW - W - cam) * 0.5, GY - 20, 220, col, 0.25 * night);
+      for (let k = 0; k < 40; k++) { const sx = (k * 97.3 + 13) % W, sy = (k * 53.7) % (GY * 0.6); rect(sx, sy, 1, 1, "rgba(255,255,255," + (0.5 * night * (0.5 + 0.5 * Math.sin(t * 2 + k))).toFixed(3) + ")"); }
+    }
     rect(0, GY, W, H - GY, "#0d0b10");
     const ink = "#0d0b10", gx = GATE - cam;
     rect(gx - 34, GY - 52, 10, 52, ink); rect(gx + 24, GY - 52, 10, 52, ink); ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(gx, GY - 52, 34, PI, 0); ctx.lineTo(gx + 24, GY - 52); ctx.arc(gx, GY - 52, 24, 0, PI, true); ctx.closePath(); ctx.fill();
@@ -215,14 +371,17 @@ const House = (() => {
         if (s.kind !== "wall") { ctx.save(); ctx.setLineDash([3, 5]); ctx.strokeStyle = "rgba(255,226,170,0.22)"; ctx.beginPath(); ctx.moveTo(x0 - 10, top); ctx.lineTo(x0 + w / 2, top - (s.kind === "choir" ? 40 : 30)); ctx.lineTo(x0 + w + 10, top); ctx.stroke(); ctx.restore(); }
       }
     }
-    for (const S of H_.stones) drawStone(S, cam);
-    for (const s of SITES) if (siteData(s).done) drawBuilt(s, cam);
+    for (const S of H_.stones) { const s = H_.shake && siteOf(S), k = s && H_.shake[s.id] > 0 ? (Math.random() - 0.5) * 3 : 0; drawStone(S, cam - k); }
+    for (const s of SITES) { const SD = siteData(s); if (s.kind === "wall" && SD.done && SD.hp !== undefined && !SD.breached) drawCracks(s, cam, 1 - SD.hp / WALL_HP); }
+    for (const s of SITES) if (siteData(s).done && !siteData(s).breached) drawBuilt(s, cam);
+    if (R) drawRaid(cam);
+    for (const d of H_.dust || []) { const a = clamp(1 - d.t / 0.8, 0, 1); if (d.spark) { glow(d.x - cam, d.y, 6, d.spark, 0.5 * a); rect(d.x - cam - 1, d.y - 1, 2, 2, d.spark); } else rect(d.x - cam - 1.5, d.y - 1.5, 3, 3, "rgba(150,138,124," + (0.8 * a).toFixed(3) + ")"); }
     // He.
-    const p = H_.walking ? MONK_ANIM.walk(H_.walkU) : MONK_ANIM.idle((t * 0.4) % 1, t);
+    const p = H_.swing ? MONK_ANIM.torchSwing(clamp(H_.swing.t / 0.45, 0, 1)) : H_.walking ? MONK_ANIM.walk(H_.walkU) : MONK_ANIM.idle((t * 0.4) % 1, t);
     const r = drawMonk(H_.x - cam, GY - FH * 0 , H_.dir, p, { t });
     if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 0.9, t, {}); glow(r.torch[0], r.torch[1], 40, C.flame, 0.3); }
     // The sign over the place he stands at.
-    if (near && !H_.active) {
+    if (near && !H_.active && !R) {
       const SD = siteData(near), on = H_.stones.filter((O) => siteOf(O) === near).length, sx = near.x - cam, sy = GY - FH - near.h * T - (near.kind === "wall" ? 26 : 52);
       text(near.name, sx, sy, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
       text(SD.done ? "Built" : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
@@ -243,6 +402,14 @@ const House = (() => {
     text("HOME", 18, 30, { font: FONT.title, size: 16, weight: 700, spacing: 4, color: "#fff" });
     text("STONES IN YOUR STORE: " + D.store.length, 18, 46, { size: 8, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.75)" });
     D.store.slice(0, 16).forEach((st, i) => rect(18 + i * 9, 52, 7, 7, stoneFill(st.dom)));
+    if (R && !R.over) {
+      const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee").length, k = clamp(R.t / RAID_LEN, 0, 1);
+      text("NIGHT  \u00b7  " + left + (left === 1 ? " DEMON" : " DEMONS"), W - 60, 26, { align: "right", size: 8, weight: 800, spacing: 2, color: mix(SINS[R.dom].color, "#ffffff", 0.4) });
+      rect(W - 160, 32, 100, 3, "rgba(255,255,255,0.15)"); rect(W - 160, 32, 100 * k, 3, "#ffd9a0");
+      text("UNTIL DAWN", W - 60, 46, { align: "right", size: 7, weight: 700, spacing: 1.5, color: "rgba(255,217,160,0.6)" });
+      // (Where they are, off the screen: a mark at its edge.)
+      for (const q of R.demons) if (q.st !== "gone" && q.st !== "flee" && (q.x < H_.cam - 10 || q.x > H_.cam + W + 10)) { const ex = q.x < H_.cam ? 8 : W - 8; poly(q.x < H_.cam ? [ex, GY - 30, ex + 8, GY - 36, ex + 8, GY - 24] : [ex, GY - 30, ex - 8, GY - 36, ex - 8, GY - 24], SINS[q.sin].color); }
+    }
     if (H_.built) {
       const a = clamp(H_.built.t / 0.3, 0, 1) * clamp((2.6 - H_.built.t) / 0.5, 0, 1);
       text(H_.built.s.name + " IS BUILT", W / 2, 84, { align: "center", font: FONT.title, size: 18, weight: 700, spacing: 4, color: "#fff1c4", alpha: a, glow: "rgba(255,170,70,0.8)", blur: 12, max: W - 30 });
@@ -549,8 +716,9 @@ const House = (() => {
   function down(p) {
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (I.down) I.down(H_.inside, p); return; }
     if (H_.active && H_.steer) { H_.drag = { x: p.x, moved: 0 }; return; }
-    // A tap on the ground: he walks there.
-    if (p.y > GY - 140) { H_.goal = clamp(p.x + H_.cam, 40, HW - 40); }
+    // A tap on a demon: he goes to it and strikes it. On the ground: he walks there.
+    if (H_.raid) { const f = H_.raid.demons.find((q) => (q.st === "walk" || q.st === "batter" || q.st === "hurt") && Math.abs(p.x + H_.cam - q.x) < 26 && p.y > GY - 70 && p.y < GY + 10); if (f) { H_.foe = f; return; } }
+    if (p.y > GY - 140) { H_.goal = clamp(p.x + H_.cam, 40, HW - 40); H_.foe = null; }
   }
   function move(p) {
     if (H_.inside) { const I = H_.inside; if (I.B) { const q = I.B.find((b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h); I.hover = q ? q.i : null; } return; }
@@ -566,6 +734,7 @@ const House = (() => {
       else if (code === "ArrowUp" || code === "KeyW") turn(); else if (code === "ArrowDown" || code === "KeyS" || code === "Space") drop();
       return;
     }
+    if (H_.raid) { if ((code === "Space" || code === "KeyF" || code === "Enter") && !H_.swing) H_.swing = { t: 0 }; if (code === "Escape") leave(); return; }
     if (code === "Space" || code === "Enter") { const s = nearSite(); if (s && !siteData(s).done) lay(s); else if (s && INSIDE[s.kind]) goIn(s.kind); }
     if (code === "Escape") leave();
   }
@@ -573,10 +742,11 @@ const House = (() => {
   // In.
   function open() {
     if (!pl) return;
-    data(); takeBanked(); load();
+    data(); takeBanked(); load(); H_.raid = null; H_.swing = null; H_.foe = null; H_.dust = [];
     H_.inside = null; H_.t = 0; H_.x = GATE; H_.dir = 1; H_.cam = clamp(GATE - W / 2, 0, HW - W); H_.goal = null; H_.keys = {}; H_.say = null; H_.built = null;
     if (data().gift) setTimeout(() => { if (data().gift) { data().gift = false; store(); } }, 6000);
     mode = M; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
+    startRaid();
   }
   const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, lay, turn, nudge, drop };
   return M;
