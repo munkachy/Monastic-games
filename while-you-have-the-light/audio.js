@@ -1206,6 +1206,20 @@ const Sound = (() => {
     a.start(t); b.start(t); lfo.start(t); a.stop(t + 1); b.stop(t + 1); lfo.stop(t + 1);
     hiss(t, "bandpass", 500, 300, 0.8, 0.12 * v, { q: 2, swell: 0.3, pan });
   };
+  // A great demon laughing (struck, as it takes the stone to throw it back): a deep "ha, ha, ha,
+  // ha", each lower than the last.
+  fx.laugh = function (pan, v) {
+    if (!ok()) return; const t = T0(); v = dv(v, 1);
+    for (let i = 0; i < 4; i++) {
+      const s = t + i * 0.16, f0 = 96 - i * 8;
+      const a = osc("sawtooth", f0, s), b = osc("sawtooth", f0 * 1.5, s), g = gainAt(s), f1 = filt("bandpass", 640, 3, s), f2 = filt("bandpass", 1150, 5, s), g2 = gainAt(s, 0.5);
+      a.frequency.linearRampToValueAtTime(f0 * 0.8, s + 0.14); b.frequency.linearRampToValueAtTime(f0 * 1.2, s + 0.14);
+      a.connect(f1); b.connect(f1); a.connect(f2); f1.connect(g); f2.connect(g2); g2.connect(g);
+      g.gain.setValueAtTime(0.0001, s); g.gain.linearRampToValueAtTime(0.34 * v, s + 0.025); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.15);
+      route(g, s, { sfx: true, pan, rev: 0.5 });
+      a.start(s); b.start(s); a.stop(s + 0.17); b.stop(s + 0.17);
+    }
+  };
   // Going still: stone settling, a dry grind.
   fx.stone = function (pan) {
     if (!ok()) return; const t = T0();
@@ -1299,7 +1313,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
-    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5, laugh: 2.6,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
