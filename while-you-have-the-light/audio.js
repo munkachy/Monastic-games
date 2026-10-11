@@ -1220,6 +1220,12 @@ const Sound = (() => {
       a.start(s); b.start(s); a.stop(s + 0.17); b.stop(s + 0.17);
     }
   };
+  // A crowned blow: three bells struck together, high over a low boom.
+  fx.crown = function (pan) {
+    if (!ok()) return; const t = T0();
+    tone(t, "sine", 72, 38, 0.55, 0.32, { pan });
+    for (const [i, m] of [74, 81, 86].entries()) I.bell(t + i * 0.05, m, 2.2 - i * 0.2, 0.2 - i * 0.03, { ratio: 2, index: 0.9, sfx: true, pan, rev: 0.8 });
+  };
   // Going still: stone settling, a dry grind.
   fx.stone = function (pan) {
     if (!ok()) return; const t = T0();
@@ -1313,7 +1319,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
-    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5, laugh: 2.6,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5, laugh: 2.6, crown: 1.8,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
