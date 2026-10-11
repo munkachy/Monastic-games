@@ -3766,7 +3766,7 @@ const Climb = (() => {
       S.won.t += dt;
       const su = summitSec(), up = !!su && -S.y / CELL > su.h0 + SUM_G - 1;
       if (up && S.won.t > 1.8 && S.ground && !S.act && !S.latched && !S.legsIn && !S.crawl) startAngel();
-      else if (!up && !S.won.said && S.won.t > 1) { S.won.said = true; S.say = { text: "THE ANGEL WAITS AT THE TOP", sub: "Go back up onto the summit, and you will be carried home.", t: 0 }; }
+      else if (!up && !S.won.said && S.won.t > 1) { S.won.said = true; S.say = { text: "THE ANGEL WAITS AT THE TOP", sub: "Go back up onto the summit, and you will be carried down to the monastery.", t: 0 }; }
     }
     // The verses: come near one and the torch is full again.
     const [mx, my] = middle(), hNow = -S.y / CELL;
@@ -4991,7 +4991,7 @@ const Climb = (() => {
       text(v.v[0], W / 2, y0 - 22, { align: "center", font: FONT.title, size: 28, weight: 700, color: C.gold, alpha: a, glow: "rgba(255,179,71,0.6)", blur: 14 });
       ls.forEach((l, i) => text(l, W / 2, y0 + 16 + i * lh, { align: "center", font: FONT.line, italic: true, size: 18, weight: 500, color: C.warm, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 }));
       text(v.v[1] + " · " + (v.ps || "PSALM 118") + ":" + v.v[2], W / 2, y0 + 16 + ls.length * lh + 4, { align: "center", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.75)", alpha: a });
-      if (v.book) text((v.book === 8 ? "THE BOOK OF " + v.v[1] + " IS WHOLE" : "KEPT IN THE LIBRARY AT HOME: THE BOOK OF " + v.v[1] + ", " + v.book + " OF 8"), W / 2, y0 + 16 + ls.length * lh + 20, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: v.book === 8 ? C.gold : "rgba(255,226,170,0.6)", alpha: a, max: W - 40 });
+      if (v.book) text((v.book === 8 ? "THE BOOK OF " + v.v[1] + " IS WHOLE" : "KEPT IN THE MONASTERY'S LIBRARY: THE BOOK OF " + v.v[1] + ", " + v.book + " OF 8"), W / 2, y0 + 16 + ls.length * lh + 20, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: v.book === 8 ? C.gold : "rgba(255,226,170,0.6)", alpha: a, max: W - 40 });
       text(usingKeys() ? "CLICK, OR PRESS A KEY, TO GO ON" : "TAP ANYWHERE TO GO ON", W / 2, H - 22, { align: "center", size: 8.5, weight: 800, spacing: 3, color: "rgba(255,241,196," + (0.5 + 0.35 * Math.sin(performance.now() / 380)).toFixed(3) + ")", alpha: a });
     } else if (S.verse) {
       const v = S.verse, a = clamp(v.t / 0.5, 0, 1) * clamp((7 - v.t) / 1, 0, 1), y = 64;

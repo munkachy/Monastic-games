@@ -76,7 +76,7 @@ const Title = {
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
-    if (typeof House !== "undefined" && House.ok()) button(save.house && save.house.raid ? "HOME  \u00b7  THE DEMONS WAIT THERE" : "HOME", x, by + 124, 200, 26, () => House.open(), { size: 9, hot: !!(save.house && save.house.raid) });
+    if (typeof House !== "undefined" && House.ok()) button(save.house && save.house.raid ? "THE MONASTERY  \u00b7  DEMONS WAIT" : "THE MONASTERY", x, by + 124, 200, 26, () => House.open(), { size: 9, hot: !!(save.house && save.house.raid) });
     // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
     // can be asked, the white room is, in their place.)
     if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
@@ -221,18 +221,18 @@ const Home = {
     // The words: dark over the dawn, to the left.
     const a = clamp(t / 1.2, 0, 1), x = 22, cw = Math.min(W * 0.5, 330);
     const sh = ctx.createLinearGradient(0, 0, cw + 80, 0); sh.addColorStop(0, "rgba(10,10,18,0.78)"); sh.addColorStop(1, "rgba(10,10,18,0)"); ctx.fillStyle = sh; ctx.fillRect(0, 0, cw + 80, H);
-    text("HOME", x, 40, { font: FONT.title, size: 24, weight: 700, spacing: 6, color: "#fff", alpha: a, glow: "rgba(255,200,140,0.5)", blur: 14 });
+    text("THE MONASTERY", x, 40, { font: FONT.title, size: 24, weight: 700, spacing: 6, color: "#fff", alpha: a, glow: "rgba(255,200,140,0.5)", blur: 14, max: cw + 40 });
     text("\u201cAnd the angel of the Lord presently set Habacuc again in his own place.\u201d", x, 58, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: cw });
     text("DANIEL 14:38", x, 70, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)", alpha: a });
     let y = 92;
     y += 13 * textLines("Each mountain is a soul: someone you may never meet, their sin grown into rock and dark. The climb was your prayer for them, and every demon you cast down, you cast down for them. Tonight that soul is a little freer.", x, y, cw, { font: FONT.line, size: 13, color: "#efe9dc", alpha: clamp((t - 0.6) / 1.2, 0, 1), lh: 15 }) + 10;
-    const b = clamp((t - 1.4) / 1, 0, 1), rows = [["The mountain of " + SINS[r.dom || "gluttony"].name, r.m + " m to its top"], ["Blocks brought to the carts", String(r.binned || 0) + (r.room ? "" : "  (" + (r.bricks || 0) + " kept at home)")], ["Demons cast out", String(r.cast || 0)], ["Verses read", String(r.read || 0)]];
+    const b = clamp((t - 1.4) / 1, 0, 1), rows = [["The mountain of " + SINS[r.dom || "gluttony"].name, r.m + " m to its top"], ["Blocks brought to the carts", String(r.binned || 0) + (r.room ? "" : "  (" + (r.bricks || 0) + " kept)")], ["Demons cast out", String(r.cast || 0)], ["Verses read", String(r.read || 0)]];
     for (const [k, v] of rows) { text(k.toUpperCase(), x, y, { size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.6)", alpha: b, max: cw * 0.6 }); text(v, x + cw * 0.62, y, { size: 10, weight: 700, color: C.flameHot, alpha: b, max: cw * 0.4 }); y += 15; }
     y += 4;
     text(r.room ? "A scene from the white room: nothing of it is kept." : "Climb it again, and it will be higher, and its demons will strike harder.", x, y, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: b, max: cw });
     if (t > 1.6) {
       const bw = Math.min(150, (cw - 8) / 2);
-      if (!r.room && typeof House !== "undefined" && House.ok()) button("GO IN", x, H - 90, bw * 2 + 8, 30, () => House.open(), { sub: "Lay the stones you brought home" });
+      if (!r.room && typeof House !== "undefined" && House.ok()) button("GO IN", x, H - 90, bw * 2 + 8, 30, () => House.open(), { sub: "Lay the stones you brought down" });
       if (r.room && typeof Room !== "undefined") button("THE WHITE ROOM", x, H - 52, bw, 34, () => Room.open(), { hot: true });
       else button("CLIMB IT AGAIN", x, H - 52, bw, 34, () => Home.again(), { hot: true, sub: "Higher, and harder" });
       button("THE SEVEN MOUNTAINS", x + bw + 8, H - 52, bw, 34, () => Game.toNovitiate(), { size: 9 });
@@ -328,13 +328,13 @@ const Over = {
     }
     // (On one of the seven mountains: its demons have followed him down, and will come for the house.)
     const raid = Game.last && Game.last.nov && !Game.last.room && save.house && save.house.raid && typeof House !== "undefined" && House.ok();
-    if (raid) text("Its demons followed you down. Tonight they come for the house.", W / 2, H - 90, { align: "center", font: FONT.line, italic: true, size: 13, color: mix(SINS[save.house.raid.dom].color, "#ffffff", 0.35), alpha: clamp((t - 0.8) / 0.6, 0, 1), max: W - 40 });
+    if (raid) text("Its demons followed you down. Tonight they come for the monastery.", W / 2, H - 90, { align: "center", font: FONT.line, italic: true, size: 13, color: mix(SINS[save.house.raid.dom].color, "#ffffff", 0.35), alpha: clamp((t - 0.8) / 0.6, 0, 1), max: W - 40 });
     if (t > 0.6) {
       const x0 = raid ? W / 2 - 158 : W / 2 - 104;
       button("AGAIN", x0, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
       if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
       else button("TITLE", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
-      if (raid) button("GO HOME", x0 + 216, H - 76, 100, 36, () => { Sound.muffle(false); House.open(); }, {});
+      if (raid) button("THE MONASTERY", x0 + 216, H - 76, 100, 36, () => { Sound.muffle(false); House.open(); }, {});
     }
   },
   key(code, down) { if (down && (code === "Enter" || code === "Space") && Over.t > 0.6) { Sound.muffle(false); Game.again(); } if (down && code === "Escape") Game.toTitle(); },
