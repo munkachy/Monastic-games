@@ -1987,6 +1987,7 @@ const Climb = (() => {
   function latch(g) {
     ev("taken in by a great demon", { tier: g.tier });
     if (S.legsIn) freeLegs(false);
+    breakCombo();
     S.latched = g; S.crawl = false; g.st = "latch"; g.t = 0; g.latchT = 0; g.blows = 0; g.need = GRASP[g.tier]; g.kx = 0; g.ky = 0; g.wake = 1;
     if (S.rope) letGo(true);
     S.flip = null; S.next = null; S.pend = null; S.hang = null; S.cling = 0; S.climbing = false; S.act = null; S.atk = null; S.hoverT = 0; S.vx = 0; S.vy = 0;
@@ -2559,29 +2560,43 @@ const Climb = (() => {
     const w = 1 - 0.35 * heavy(), k = 0.3 + 0.7 * w, c = move && alive(f) ? comboHit(move, f) : 1;
     return hurtDemon(f, dmg * w * c, kx * k, ky * k, how);
   }
-  // Variety in the fight. Each blow that lands adds to his fervour: a full measure for a move he has
-  // not used in his last two; some for the one before last again (a back and forth); none for the
-  // same again. It ebbs a little with every blow, and is gone if he stops a moment. His blows are
-  // stronger by it: one move mashed stays as it was; two in turn, somewhat (about a third); many
-  // moves, much (up to three parts in four more), growing over the run of blows.
+  // A run of blows (as the fighting games keep them): every blow that lands counts, and the run holds
+  // while the next comes within COMBO_GAP; a blow that reaches him breaks it. His blows are stronger
+  // by it: the second x1.5, the third and after x2. But the same blow over again is worth less each
+  // time (x0.6, then x0.36, down to a quarter), until he uses another. And as a run goes on with
+  // fresh blows, it earns a name, word on word, to the last: "If you will, you can become all
+  // flame" (Abba Joseph, in the Sayings of the Desert Fathers).
+  const COMBO_GAP = 2.5, RANKS = [[3, "WATCHFUL"], [6, "FERVENT"], [10, "ZEALOUS"], [15, "AFLAME"], [21, "ALL FLAME"]];
+  const comboOn = () => !!S.combo && !S.combo.broke && S.rt - S.combo.t < COMBO_GAP;
   function comboHit(move, f) {
-    const C = S.combo && S.rt - S.combo.t < 1.8 ? S.combo : (S.combo = { f: 0, last: [], n: 0, t: S.rt });
-    // (The same blow twice running and the fervour is gone: back to x1, the run to begin again.)
-    if (C.last.length && C.last[C.last.length - 1] === move) { C.f = 0; C.last = [move]; C.t = S.rt; C.n++; C.show = null; ev("combo", { move, k: 1 }); return 1; }
-    const nov = !C.last.includes(move) ? 1 : 0.4;
-    C.f = C.f * 0.85 + nov; C.last.push(move); if (C.last.length > 2) C.last.shift(); C.t = S.rt; C.n++;
-    // (Noted: the first bonus of a run should be high. Once a run of varied blows has begun (its
-    // fervour past 1.5, at the second blow unlike the first), x1.8, and growing by the same steps.)
-    const k = C.f >= 1.5 ? Math.min(2.4, 1.6 + 0.12 * C.f) : 1 + 0.12 * C.f;
-    if (k >= 1.2) { const [cx, cy] = dMid(f); C.show = { k, t: S.rt, x: cx, y: cy - f.ht / 2 - 10 }; }
-    ev("combo", { move, k: r2(k) });
+    if (!comboOn()) S.combo = { n: 0, pts: 0, last: null, rep: 0, t: S.rt, rank: -1, rankT: -9 };
+    const C = S.combo;
+    C.rep = C.last === move ? C.rep + 1 : 0; C.last = move; C.n++; C.t = S.rt;
+    const fresh = Math.max(0.25, Math.pow(0.6, C.rep)), k = (C.n >= 3 ? 2 : C.n === 2 ? 1.5 : 1) * fresh;
+    C.pts += fresh; C.k = k;
+    let r = -1; RANKS.forEach(([p], i) => { if (C.pts >= p) r = i; });
+    if (r > C.rank) { C.rank = r; C.rankT = S.rt; Sound.fx.kindle(0.5 + 0.12 * r, 0); }
+    ev("combo", { move, n: C.n, k: r2(k) });
     return k;
   }
-  // The fervour of a run of blows, shown where it landed: x 1.4, and growing.
-  function drawCombo(cam) {
-    const C = S.combo, D = C && C.show; if (!D || S.rt - D.t > 0.9) return;
-    const u = (S.rt - D.t) / 0.9, a = clamp(1 - u, 0, 1) * clamp((S.rt - D.t) / 0.06, 0, 1);
-    text("\u00d7" + D.k.toFixed(1), D.x - cam.x, D.y - cam.y - 14 * u, { align: "center", font: FONT.title, size: 9 + 5 * (D.k - 1), weight: 700, color: D.k >= 2 ? "#fff1b8" : "#e8c46a", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6 });
+  // Broken by a blow that reached him: "BROKEN", fading where the count was.
+  function breakCombo() { if (comboOn() && S.combo.n >= 2) { S.combo.broke = S.rt; ev("combo broken", { n: S.combo.n }); } else S.combo = null; }
+  // The run, at the right of the screen: how many blows, the bonus now, and its name.
+  function drawCombo() {
+    const C = S.combo; if (!C || C.n < 2) return;
+    const x = W - 18, y = 122, end = C.broke ? C.broke : C.t + COMBO_GAP, a = clamp(1 - (S.rt - end) / 0.7, 0, 1);
+    if (a <= 0) { if (C.broke || S.rt - C.t > COMBO_GAP + 0.7) S.combo = null; return; }
+    if (C.broke) { text("BROKEN", x, y + 4, { align: "right", font: FONT.title, size: 14, weight: 700, spacing: 2, color: "#ff8a7a", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6 }); return; }
+    const pop = clamp(1 - (S.rt - C.t) / 0.18, 0, 1), live = S.rt - C.t < COMBO_GAP, fade = live ? 1 : a;
+    text(String(C.n), x - 40, y, { align: "right", font: FONT.title, size: 22 + 6 * pop, weight: 700, color: "#fff3dc", alpha: fade, glow: "rgba(0,0,0,0.9)", blur: 8 });
+    text("BLOWS", x - 40, y + 10, { align: "right", size: 6.5, weight: 800, spacing: 2, color: "rgba(233,230,223,0.75)", alpha: fade });
+    text("\u00d7" + C.k.toFixed(1), x, y, { align: "right", font: FONT.title, size: 13, weight: 700, color: C.k >= 2 ? "#fff1b8" : C.k < 1 ? "#a9a49a" : "#e8c46a", alpha: fade, glow: "rgba(0,0,0,0.9)", blur: 6 });
+    if (C.rank >= 0) {
+      const up = clamp(1 - (S.rt - C.rankT) / 0.5, 0, 1);
+      text(RANKS[C.rank][1], x, y + 27, { align: "right", font: FONT.title, size: 11 + 4 * up, weight: 700, spacing: 2, color: C.rank >= 3 ? "#ffd27a" : "#e9e6df", alpha: fade, glow: C.rank >= 3 ? "rgba(255,150,60,0.7)" : "rgba(0,0,0,0.9)", blur: 8 + 6 * up });
+    }
+    // (How long the run has left: a thin line that shortens.)
+    if (live) rect(x - 70 * (1 - (S.rt - C.t) / COMBO_GAP), y + 33, 70 * (1 - (S.rt - C.t) / COMBO_GAP), 1.5, "rgba(255,210,140," + (0.5 * fade) + ")");
   }
   function throwCoins(f) {
     // (Thrown to come down on him: in the time the throw takes, the fall the coins make allowed for.)
@@ -2807,6 +2822,7 @@ const Climb = (() => {
       spendWard(); ev("the ward turned a swallow"); setSt(f, "hurt"); f.vx = -f.dir * 160;
       const [mx, my] = middle(); S.crosses.push({ kind: "turn", x: mx, y: my, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); return true;
     }
+    breakCombo();
     S.legsIn = { f, t: 0, kicks: 0 }; setSt(f, "legs"); S.hang = null; S.cling = 0; S.atk = null; S.act = null;
     Sound.fx.swallow(); Sound.fx.chomp(panX(S.x)); S.shake = 0.18; ev("legs swallowed");
     if (!S.legsSeen) { S.legsSeen = true; S.say = { text: "IT HAS HIS LEGS", sub: "Swing him hard into the rock, or tap it and kick: knock it off.", t: 0 }; }
@@ -3117,6 +3133,7 @@ const Climb = (() => {
   }
   function hitMonk(kx, cost) {
     if (S.dying || S.invT > 0 || S.latched) return;
+    breakCombo();
     ev("he was hit", { cost: r2(cost || 0.06), wardLost: S.ward ? true : undefined, blockLoosed: S.tied && (cost === undefined || cost >= 0.06) ? true : undefined });
     S.freeze = Math.max(S.freeze || 0, 0.06);
     if (!boonOn("unconsumed")) S.fuel = Math.max(0, S.fuel - blowCost(cost || 0.06));
@@ -4695,7 +4712,7 @@ const Climb = (() => {
     blockGlows(cam);
     if (S.bigs.length) greatGlows(cam);
     if (S.boon) boonGlows(cam);
-    if (S.combo) drawCombo(cam);
+    if (S.combo) drawCombo();
     // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
     // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
     for (const sec of view) {
