@@ -76,6 +76,7 @@ const Title = {
     button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
     button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
     button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
+    if (typeof House !== "undefined" && House.ok()) button("HOME", x, by + 124, 200, 26, () => House.open(), { size: 9 });
     // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
     // can be asked, the white room is, in their place.)
     if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
@@ -178,8 +179,8 @@ const Novitiate = {
 
 // ---- Home: carried there from a summit won ------------------------------------------------------------------
 // Morning, at the monastery under the mountains, where the angel set him down. What the climb was,
-// what he brought home, and what waits next time. (The house itself, built of the blocks he brings,
-// its library and its choir, is still to come.)
+// what he brought home, and what waits next time; and the way in, to the house (house.js), where the
+// blocks he brings are laid.
 const Home = {
   t: 0, r: null,
   show(r) { Home.r = r; Home.t = 0; G = null; mode = Home; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.2 }); },
@@ -231,6 +232,7 @@ const Home = {
     text(r.room ? "A scene from the white room: nothing of it is kept." : "Climb it again, and it will be higher, and its demons will strike harder.", x, y, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: b, max: cw });
     if (t > 1.6) {
       const bw = Math.min(150, (cw - 8) / 2);
+      if (!r.room && typeof House !== "undefined" && House.ok()) button("GO IN", x, H - 90, bw * 2 + 8, 30, () => House.open(), { sub: "Lay the stones you brought home" });
       if (r.room && typeof Room !== "undefined") button("THE WHITE ROOM", x, H - 52, bw, 34, () => Room.open(), { hot: true });
       else button("CLIMB IT AGAIN", x, H - 52, bw, 34, () => Home.again(), { hot: true, sub: "Higher, and harder" });
       button("THE SEVEN MOUNTAINS", x + bw + 8, H - 52, bw, 34, () => Game.toNovitiate(), { size: 9 });
