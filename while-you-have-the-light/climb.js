@@ -3777,8 +3777,10 @@ const Climb = (() => {
         w.read = true; w.lit = 1; S.fuel = 1; S.read++; ev("verse read", { n: w.n });
         if (S.haunt) { ev("the Word: the great demon follows no further"); S.haunt = null; if (!S.freedSeen) S.freedPend = true; }
         if (NOV) keepHere("verse");
-        const vv = (typeof Verses !== "undefined" ? Verses.list() : CLIMB_VERSES)[w.n % 22];
-        S.verse = { v: vv, ps: "PSALM " + (vv[4] || 118), t: 0 };
+        // (The next verse of its stanza not yet read, kept in the library at home; but not from the white room.)
+        const si = w.n % 22, had = typeof Verses !== "undefined" ? Verses.count(si) : 0;
+        const vv = typeof Verses !== "undefined" ? Verses.next(si, !(NOV && NOV.room)) : CLIMB_VERSES[si];
+        S.verse = { v: vv, ps: "PSALM " + (vv[4] || 118), t: 0, book: typeof Verses !== "undefined" && !(NOV && NOV.room) && Verses.count(si) > had ? Verses.count(si) : 0 };
         // (Playing, the game stops here, so the verse can be read; a tap, and it goes on.)
         if (mode === M) { S.verseHold = true; Sound.muffle(true, 0.4); }
         Sound.fx.unlock();
@@ -4987,6 +4989,7 @@ const Climb = (() => {
       text(v.v[0], W / 2, y0 - 22, { align: "center", font: FONT.title, size: 28, weight: 700, color: C.gold, alpha: a, glow: "rgba(255,179,71,0.6)", blur: 14 });
       ls.forEach((l, i) => text(l, W / 2, y0 + 16 + i * lh, { align: "center", font: FONT.line, italic: true, size: 18, weight: 500, color: C.warm, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 }));
       text(v.v[1] + " · " + (v.ps || "PSALM 118") + ":" + v.v[2], W / 2, y0 + 16 + ls.length * lh + 4, { align: "center", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.75)", alpha: a });
+      if (v.book) text((v.book === 8 ? "THE BOOK OF " + v.v[1] + " IS WHOLE" : "KEPT IN THE LIBRARY AT HOME: THE BOOK OF " + v.v[1] + ", " + v.book + " OF 8"), W / 2, y0 + 16 + ls.length * lh + 20, { align: "center", size: 7.5, weight: 700, spacing: 1.5, color: v.book === 8 ? C.gold : "rgba(255,226,170,0.6)", alpha: a, max: W - 40 });
       text(usingKeys() ? "CLICK, OR PRESS A KEY, TO GO ON" : "TAP ANYWHERE TO GO ON", W / 2, H - 22, { align: "center", size: 8.5, weight: 800, spacing: 3, color: "rgba(255,241,196," + (0.5 + 0.35 * Math.sin(performance.now() / 380)).toFixed(3) + ")", alpha: a });
     } else if (S.verse) {
       const v = S.verse, a = clamp(v.t / 0.5, 0, 1) * clamp((7 - v.t) / 1, 0, 1), y = 64;
