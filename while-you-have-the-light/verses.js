@@ -24,6 +24,41 @@ const Verses = (() => {
   V.label = () => "PSALM " + (V.custom ? V.custom.psalm : 118);
   V.name = () => (V.custom ? "Your own (" + V.custom.src + "), Psalm " + V.custom.psalm : "Douay-Rheims, Psalm 118");
 
+  // ---- The whole psalm, and what of it has been read ----
+  // Verse k (0 to 7) of stanza i: [letter, name, its number, its text, the psalm's number, its halves].
+  // In the player's own translation where they gave the whole psalm (a psalter); the one verse of the
+  // stanza they wrote in, where that is it; else the Douay. The halves are the two half-lines a
+  // verse is sung in, either side of the pause: the psalter's own, or the Douay's split at its colon.
+  V.STANZAS = STANZAS;
+  V.verse = function (i, k) {
+    const num = i * 8 + k + 1, C = V.custom, name = C ? C.list[i][1] : STANZAS[i][1];
+    let halves = null, ps = 118;
+    if (C && C.all && C.all[num - 1] && C.all[num - 1].length) { halves = C.all[num - 1]; ps = C.psalm; }
+    else if (C && +C.list[i][2] === num && C.list[i][3] && C.list[i][3] !== PS118[num - 1]) { halves = split(C.list[i][3]); ps = C.list[i][4]; }
+    else halves = split(PS118[num - 1]);
+    return [STANZAS[i][0], name, num, halves.join(" "), ps, halves];
+  };
+  function split(s) {
+    s = String(s || "");
+    let at = -1, best = 1e9;
+    for (const m of s.matchAll(/[:;]\s/g)) { const d = Math.abs(m.index - s.length / 2); if (d < best) { best = d; at = m.index + 1; } }
+    if (at < 0) for (const m of s.matchAll(/,\s/g)) { const d = Math.abs(m.index - s.length / 2); if (d < best && d < s.length * 0.3) { best = d; at = m.index + 1; } }
+    return at < 0 ? [s] : [s.slice(0, at).trim(), s.slice(at).trim()];
+  }
+  // Which verses of stanza i have been read: eight bits, one to a verse.
+  V.bits = (i) => ((save.lib && save.lib[i]) || 0);
+  V.count = (i) => { let b = V.bits(i), n = 0; while (b) { n += b & 1; b >>= 1; } return n; };
+  V.total = () => { let n = 0; for (let i = 0; i < 22; i++) n += V.count(i); return n; };
+  // The verse of stanza i to be read next on the rock: the first of it not yet read (so each book
+  // is read through in order, one verse a climb); once all are read, any of them. Kept, if asked.
+  V.next = function (i, keep) {
+    const bits = V.bits(i);
+    let k = 0; while (k < 8 && (bits & (1 << k))) k++;
+    if (k === 8) k = (Math.random() * 8) | 0;
+    else if (keep) { if (!Array.isArray(save.lib) || save.lib.length !== 22) save.lib = Array(22).fill(0); save.lib[i] |= 1 << k; store(); }
+    return V.verse(i, k);
+  };
+
   // The blank form, to be filled in.
   V.form = function () {
     const L = ["# While You Have the Light: the verses on the rock, in your own translation.",
@@ -41,7 +76,7 @@ const Verses = (() => {
   V.parse = function (text) {
     text = String(text || "").replace(/^\uFEFF/, "");
     const out = STANZAS.map(([g, name, n]) => [g, name, n, ""]);
-    let psalm = 119, src = "";
+    let psalm = 119, src = "", all = null;
     const t = text.trim();
     if (t[0] === "[" || t[0] === "{") {
       let j;
@@ -52,6 +87,10 @@ const Verses = (() => {
         if (!P || !Array.isArray(P.verses)) return { error: "There is no Psalm " + psalm + " in that psalter." };
         out.forEach((o) => { const v = P.verses.find((q) => q && +q.v === o[2]); if (v) o[3] = Array.isArray(v.lines) ? v.lines.join(" ") : String(v.text || ""); });
         src = String(j.displayName || j.name || "").slice(0, 40);
+        // (And the whole psalm, for the library and the choir: each verse as its half-lines.)
+        all = [];
+        for (let n = 1; n <= 176; n++) { const v = P.verses.find((q) => q && +q.v === n); all.push(!v ? null : (Array.isArray(v.lines) ? v.lines : [String(v.text || "")]).map((l) => String(l).replace(/\s+/g, " ").trim()).filter(Boolean)); }
+        if (!all.some((l) => l && l.length)) all = null;
       } else {
         const arr = Array.isArray(j) ? j : (j && j.verses) || [];
         if (!Array.isArray(j) && j && Number.isFinite(+j.psalm)) psalm = +j.psalm;
@@ -82,10 +121,10 @@ const Verses = (() => {
     // (Any left empty keep the Douay.)
     // (Each with its psalm's number as it is to be shown: the Douay's left in, 118.)
     out.forEach((v, i) => { if (!v[3]) { v[1] = CLIMB_VERSES[i][1]; v[2] = CLIMB_VERSES[i][2]; v[3] = CLIMB_VERSES[i][3]; v[4] = 118; } else v[4] = psalm; });
-    return { list: out, psalm, filled, src };
+    return { list: out, psalm, filled, src, all };
   };
   V.use = function (p, src) {
-    V.custom = { list: p.list, psalm: p.psalm, src: String(src || "pasted").slice(0, 40), filled: p.filled };
+    V.custom = { list: p.list, psalm: p.psalm, src: String(src || "pasted").slice(0, 40), filled: p.filled, all: p.all || null };
     try { localStorage.setItem(KEY, JSON.stringify(V.custom)); } catch (e) { }
     keep();
   };
