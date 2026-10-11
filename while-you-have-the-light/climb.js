@@ -667,7 +667,7 @@ const Climb = (() => {
       cam: { x: clamp(x - W / 2, 0, COLS * CELL - W), y: 70 - H }, torch: [x, -50], light: null,
       touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
       demons: [], things: [], held: null, atk: null, popK: 0, ids: 0, cast: 0, respawnT: 0, hurtT: 0, invT: 0, flashT: 0, floatT: 0, shake: 0, fightSeen: false, fightHintT: 0, meter: 1, kickCd: 0, swingKickT: 0, hang: null, ward: null, crosses: [],
-      crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0,
+      crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0, freedList: [],
       blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false, bigs: [], latched: null, prints: [], greatDown: new Set(), foot: null, kept: null, keptAt: null,
     };
     REC = { snaps: [], events: [], next: 0 };
@@ -695,9 +695,15 @@ const Climb = (() => {
     S.dying = 0.001; S.fuel = 0; endFlare(true);
     Sound.fx.death(); Sound.setLevel(0);
   }
+  // Those freed from the idols on this climb go down to the monastery, whatever became of him.
+  function bankFreed() {
+    if ((NOV && NOV.room) || !S.freedList || !S.freedList.length) return 0;
+    const n = S.freedList.length; save.pilgrims = (save.pilgrims || []).concat(S.freedList).slice(-60); S.freedList = []; return n;
+  }
   function finish() {
     const m = metres(S.top);
     if (!NOV && m > (save.climbBest || 0)) save.climbBest = m;
+    S.freedN = bankFreed();
     store();
     Over.t = 0; mode = Over; Sound.muffle(true, 0.6);
   }
@@ -728,7 +734,7 @@ const Climb = (() => {
     for (const k of SEEN) if (S[k]) seen[k] = true;
     const all = keptAll();
     all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
-      coins: S.coins || 0, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
+      coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
     try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
     Kept.wrote(KEEP);
     S.keptAt = [x, y]; S.kept = { t: S.rt }; ev("place kept", { why, m: metres(-y) });
@@ -743,6 +749,7 @@ const Climb = (() => {
     if (!at) { forget(NOV.domain); return; }
     S.x = at[0]; S.y = at[1]; S.vx = 0; S.vy = 0; S.ground = boxHit(S.x, S.y + 3); S.dir = 1; S.keptAt = [S.x, S.y]; S.foot = S.ground ? [S.x, S.y] : null;
     S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.coins = R.coins || 0;
+    S.freedList = Array.isArray(R.freed) ? R.freed.filter((q) => Array.isArray(q) && SINS[q[0]]).slice(0, 60) : [];
     if (Number.isFinite(R.fuel)) S.fuel = clamp(R.fuel, 0.25, 1);
     if (Number.isFinite(R.meter)) S.meter = clamp(R.meter, 0, 1);
     for (const n of R.walls || []) if (Number.isInteger(n) && n >= 0 && n < 5000) wallAt(n).read = true;
@@ -1426,7 +1433,7 @@ const Climb = (() => {
       who.push({ x, y: best.y, side: -side, kind: kinds[q % kinds.length], look: 0, st: "pray", vx: 0, vy: 0, t: 0, a: 1, ph: Math.random() * TAU });
     }
     S.demons.push({ idol: true, sin: dom, hw: 13, ht: 60, maxHp: IDOL_HP, hp: IDOL_HP, x: best.x, y: best.y, vx: 0, vy: 0, dir: 1, st: "idle", t: 0, cd: 0, x0: best.x, x1: best.x, sec: k,
-      ground: true, juggle: 0, hurtT: 0, showHp: 0, lit: 0, id: ++S.ids, size: 0, who, fled: false });
+      ground: true, juggle: 0, hurtT: 0, showHp: 0, lit: 0, id: ++S.ids, size: 0, who, fled: false, whoKinds: who.map((w) => w.kind) });
   }
   // ---- The blocks ---------------------------------------------------------------------------------
   // In the seven mountains, an idol thrown down gives up a block of its stone, in its domain's
@@ -2150,7 +2157,7 @@ const Climb = (() => {
   // Home: what he brought, kept (not from the white room); the mountain higher and harder the next
   // time; his place on it forgotten (it is climbed). Then the morning at home.
   function finishWon() {
-    const r = { dom: NOV.domain, m: metres(S.top), binned: S.binned || 0, cast: S.cast, read: S.read, relics: S.relics, room: !!NOV.room };
+    const r = { dom: NOV.domain, m: metres(S.top), binned: S.binned || 0, cast: S.cast, read: S.read, relics: S.relics, room: !!NOV.room, freed: bankFreed() };
     if (!NOV.room) {
       save.climbs = save.climbs || {}; save.climbs[NOV.domain] = (save.climbs[NOV.domain] || 0) + 1; r.climbs = save.climbs[NOV.domain];
       save.bricks = save.bricks || {}; save.bricks[NOV.domain] = (save.bricks[NOV.domain] || 0) + r.binned; r.bricks = save.bricks[NOV.domain];
@@ -2407,6 +2414,13 @@ const Climb = (() => {
     scatter(f);
     if (f.hp <= 0) {
       setSt(f, "topple"); f.fall = sign(kx) || (f.x > S.x ? 1 : -1); gain(0.2);
+      // Its worshippers are free of it: they will go down to the monastery (not from the white room).
+      if (f.whoKinds && f.whoKinds.length && !(NOV && NOV.room)) {
+        for (const k of f.whoKinds) S.freedList.push([f.sin, k]);
+        ev("worshippers freed", { n: f.whoKinds.length });
+        if (!save.seen.freedFolk) { save.seen.freedFolk = true; store(); S.say = { text: "THEY ARE FREE", sub: "Those who worshipped it will go down to the monastery, and wait for you at its gate.", t: 0 }; }
+        f.whoKinds = null;
+      }
       // The idol thrown down, his torch is filled again: the light it was keeping comes to him.
       S.fuel = 1; const [mx, my] = middle();
       for (let k = 0; k < 26; k++) S.parts.push({ kind: "coinfly", x: f.x + (Math.random() - 0.5) * 24, y: f.y - Math.random() * f.ht, tx: mx, ty: my, vx: 0, vy: 0, life: 0.3 + k * 0.03, age: 0, real: true, light: true, quiet: true });
@@ -4932,6 +4946,7 @@ const Climb = (() => {
     if (S.coins > 0) { const y = S.relics ? 76 : 62; drawCoin(22, y - 3, 1, true, 1, 4.2); text("× " + S.coins + (S.coins >= 6 ? "  HEAVY" : ""), 30, y, { size: 8, weight: 700, color: S.coins >= 6 ? "#ffb070" : "rgba(232,196,106,0.85)" }); }
     if (S.relics) { glow(22, 60, 8, C.gold, 0.4); rect(18, 58, 8, 5, C.gold); poly([18, 58, 26, 58, 22, 55], C.gold); text("× " + S.relics, 30, 63, { size: 8, weight: 700, color: "rgba(232,196,106,0.85)" }); }
     if (S.binned) { const y = 62 + (S.relics ? 14 : 0) + (S.coins > 0 ? 14 : 0), c = SINS[NOV ? NOV.domain : "wrath"]; glow(22, y - 3, 8, c.color, 0.35); for (const [i, j] of SHAPES.T) rect(16 + i * 4, y - 6 + j * 4, 3.4, 3.4, c.color); text("× " + S.binned + " IN THE CARTS", 30, y, { size: 8, weight: 700, color: "rgba(233,230,223,0.7)" }); }
+    if (S.freedList && S.freedList.length) { const y = 62 + (S.relics ? 14 : 0) + (S.coins > 0 ? 14 : 0) + (S.binned ? 14 : 0); circle(22, y - 6, 2.2, "#cfc6b4"); poly([18.5, y, 25.5, y, 24, y - 4.5, 20, y - 4.5], "#cfc6b4"); text("× " + S.freedList.length + " FREED", 30, y, { size: 8, weight: 700, color: "rgba(233,230,223,0.7)" }); }
     if (S.say) {
       const a = clamp(S.say.t / 0.3, 0, 1) * clamp((3 - S.say.t) / 0.6, 0, 1);
       text(S.say.text, W / 2, 92, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });
@@ -5173,6 +5188,7 @@ const Climb = (() => {
     over() {
       const m = metres(S.top), rows = [["Height reached", m + " m"], ["Verses read", S.read], ["Demons cast out", S.cast]];
       if (S.relics) rows.push(["Relics found", S.relics]);
+      if (S.freedN) rows.push(["Freed from the idols", S.freedN]);
       if (!NOV) rows.push(["Your best", (save.climbBest || m) + " m"]);
       return rows;
     },
