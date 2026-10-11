@@ -233,6 +233,8 @@ const House = (() => {
       SD.done = true; keep();
       H_.built = { s, t: 0 }; Sound.fx.kindle && Sound.fx.kindle(1, 0); Sound.fx.unlock && Sound.fx.unlock();
     }
+    if (!H_.raid) stepClock(dt);
+    H_.hurtT = Math.max(0, (H_.hurtT || 0) - dt);
     stepFolk(dt);
     if (H_.raid) stepRaid(dt);
     if (H_.shake) for (const k in H_.shake) H_.shake[k] = Math.max(0, H_.shake[k] - dt);
@@ -298,10 +300,31 @@ const House = (() => {
   function stepFolk(dt) {
     const D = folkData(), waiting = () => (D.tools.water || 0) + (D.tools.mason || 0);
     for (const f of H_.folk) {
-      const p = f.p; f.t += dt; f.ph += dt; if (f.recv) f.recv = Math.max(0, f.recv - dt * 0.8);
-      if (p.role === "camp") { f.goal = null; continue; }
+      const p = f.p; f.t += dt; f.ph += dt; if (f.recv) f.recv = Math.max(0, f.recv - dt * 0.8); f.throwT = Math.max(0, (f.throwT || 0) - dt);
+      const night = isNight(), near = Math.abs(H_.x - f.x) < 150;
+      f.cheer = near && night && p.role === "water";
+      if (f.flee) { if (Math.abs(f.x - f.goal) < 4) { f.flee = false; f.goal = null; } }
+      else if (p.role === "camp") { f.goal = null; continue; }
+      // At night: those with holy water to their posts, to throw it; the rest in by the gate (a mason
+      // at his mending until a demon comes near him).
+      else if (night && p.role === "water") {
+        const side = p.side || -1, post = postOf(side);
+        if (Math.abs(f.x - post) > 4) f.goal = post;
+        else {
+          f.goal = null; f.dir = side; f.cd = (f.cd === undefined ? Math.random() : f.cd) - dt * (near ? 2 : 1);
+          const foe = f.cd <= 0 && H_.raid.demons.filter((d) => awake(d) && (d.x - f.x) * side > -30 && Math.abs(d.x - f.x) < 190 && d.x > 0 && d.x < HW).sort((a, b) => Math.abs(a.x - f.x) - Math.abs(b.x - f.x))[0];
+          if (foe) {
+            f.cd = 2.4; f.throwT = 0.35;
+            const lead = foe.st === "walk" ? -foe.side * DEMON_V * 0.7 : 0, tx = foe.x + lead, dx = tx - f.x, tt = clamp(Math.abs(dx) / 210, 0.45, 1.15), y0 = GY - 30;
+            (H_.flasks = H_.flasks || []).push({ x: f.x + side * 6, y: y0, vx: dx / tt, vy: ((GY - 22) - y0 - 0.5 * 520 * tt * tt) / tt, rot: 0 });
+            Sound.fx.flaskThrow && Sound.fx.flaskThrow(clamp((f.x - H_.cam - W / 2) / W, -1, 1));
+          }
+        }
+      } else if (night && (p.role === "brother" || (p.role === "mason" && H_.raid.demons.some((d) => awake(d) && Math.abs(d.x - f.x) < 90)))) {
+        if (!f.goal || Math.abs(f.goal - GATE) > 60) f.goal = GATE + (Math.random() - 0.5) * 80;
+      }
       // A brother with no work: to the shed, if something is set out there; else about the gate.
-      if (p.role === "brother") {
+      if (p.role === "brother" && !night && !f.flee) {
         if (waiting() && (!f.goal || f.goal !== SHED)) f.goal = SHED;
         if (f.goal === SHED && Math.abs(f.x - SHED) < 4) {
           const kind = (D.tools.water || 0) > 0 ? "water" : (D.tools.mason || 0) > 0 ? "mason" : null;
@@ -314,21 +337,21 @@ const House = (() => {
         if (!f.goal && f.t > 3) { f.t = Math.random() * 2; f.goal = GATE + (Math.random() - 0.5) * 300; }
       }
       // With holy water: about his post by day.
-      if (p.role === "water") { const post = postOf(p.side || -1); if (!f.goal && f.t > 2.5) { f.t = Math.random() * 2; f.goal = post - (p.side || -1) * Math.random() * 60; } }
+      if (p.role === "water" && !night && !f.flee) { const post = postOf(p.side || -1); if (!f.goal && f.t > 2.5) { f.t = Math.random() * 2; f.goal = post - (p.side || -1) * Math.random() * 60; } }
       // With a trowel: to a wall that is cracked, to mend it; else about the shed.
-      if (p.role === "mason") {
-        const hurt = SITES.find((s) => s.kind === "wall" && siteData(s).done && !siteData(s).breached && siteData(s).hp !== undefined && siteData(s).hp < WALL_HP);
+      if (p.role === "mason" && !f.flee && !(night && f.goal !== null && f.goal !== undefined && Math.abs(f.goal - GATE) <= 60)) {
+        const hurt = SITES.find((s) => s.kind === "wall" && siteData(s).done && !siteData(s).breached && siteData(s).hp !== undefined && siteData(s).hp < wallMax(s));
         if (hurt) {
           const at = hurt.x - Math.sign(hurt.x - GATE) * (hurt.w * T / 2 + 10);
           if (Math.abs(f.x - at) > 4) f.goal = at;
-          else { f.goal = null; f.st = "mend"; const SD = siteData(hurt); SD.hp = Math.min(WALL_HP, SD.hp + dt / 1.5 * (Math.abs(H_.x - f.x) < 150 ? 2 : 1)); if (SD.hp >= WALL_HP) { delete SD.hp; store(); } if (Math.random() < dt * 3) (H_.dust = H_.dust || []).push({ x: f.x + Math.sign(hurt.x - GATE) * 12, y: GY - 20 - Math.random() * 30, vx: (Math.random() - 0.5) * 30, vy: -30, t: 0 }); continue; }
+          else { f.goal = null; f.st = "mend"; const SD = siteData(hurt); SD.hp = Math.min(wallMax(hurt), SD.hp + dt / 1.5 * (Math.abs(H_.x - f.x) < 150 ? 2 : 1)); if (SD.hp >= wallMax(hurt)) { delete SD.hp; store(); } if (Math.random() < dt * 3) (H_.dust = H_.dust || []).push({ x: f.x + Math.sign(hurt.x - GATE) * 12, y: GY - 20 - Math.random() * 30, vx: (Math.random() - 0.5) * 30, vy: -30, t: 0 }); continue; }
         } else if (!f.goal && f.t > 3) { f.t = Math.random() * 2; f.goal = SHED + (Math.random() - 0.5) * 120; }
       }
       f.st = "idle";
       if (f.goal !== null && f.goal !== undefined) {
-        const d = f.goal - f.x;
-        if (Math.abs(d) < 3) { f.x = f.goal; if (f.goal !== SHED) f.goal = null; }
-        else { f.dir = Math.sign(d); f.x += f.dir * Math.min(Math.abs(d), FOLK_V * dt); f.u = (f.u + dt * 1.4) % 1; f.st = "walk"; }
+        const d = f.goal - f.x, v = f.flee ? FOLK_V * 1.6 : FOLK_V;
+        if (Math.abs(d) < 3) { f.x = f.goal; if (f.goal !== SHED && !f.flee) f.goal = null; }
+        else { f.dir = Math.sign(d); f.x += f.dir * Math.min(Math.abs(d), v * dt); f.u = (f.u + dt * (f.flee ? 2.2 : 1.4)) % 1; f.st = "walk"; }
       }
     }
   }
@@ -350,11 +373,13 @@ const House = (() => {
       // what he holds
       const hx = 5.5 + (walk ? 1.5 * s : 0), hy = -13 + bob;
       ctx.fillStyle = robe; ctx.fillRect(1, hy - 4, 4.5, 3);
-      if (p.role === "water") { ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(hx + 1, hy, 2.2, 2.8, 0, 0, TAU); ctx.fill(); ctx.fillRect(hx + 0.3, hy - 4.5, 1.4, 2); }
+      if (p.role === "water" && f.throwT > 0) { ctx.fillStyle = robe; ctx.fillRect(1, hy - 12, 3, 9); ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(3, hy - 14, 2.2, 2.8, 0, 0, TAU); ctx.fill(); }
+      else if (p.role === "water") { ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(hx + 1, hy, 2.2, 2.8, 0, 0, TAU); ctx.fill(); ctx.fillRect(hx + 0.3, hy - 4.5, 1.4, 2); }
       else if (p.role === "mason") { ctx.fillStyle = "#9a958c"; ctx.beginPath(); ctx.moveTo(hx, hy - 1); ctx.lineTo(hx + 6, hy + 1); ctx.lineTo(hx, hy + 2.5); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#5a4630"; ctx.fillRect(hx - 2.5, hy - 0.5, 3, 1.4); }
     }
     ctx.restore();
     if (p.role === "water") glow(x + f.dir * 9, GY - 18, 8, "#cfe9ff", 0.2);
+    if (f.cheer) { glow(x, GY - 16, 24, "#ffe2aa", 0.18 + 0.06 * Math.sin(H_.t * 5)); }
     if (f.recv) glow(x, GY - 20, 26, "#fff1c4", 0.5 * f.recv);
   }
   function drawCampAndShed(cam, t) {
@@ -397,17 +422,52 @@ const House = (() => {
     return false;
   }
 
-  // ---- The raid ----
-  const RAID_LEN = 75, DEMON_V = 34, WALL_HP = 28;   // (a built wall is mortared: it takes so many blows, and then it is breached)
+  // ---- Days and nights ----
+  // As in Kingdom: while he is at the monastery the day goes by, and night falls, and with each night the
+  // demons come down from the mountains at both ends of the grounds, more of them as the nights go on;
+  // at dawn the ones still standing go back. (Indoors, in the library or the choir, the hours stand
+  // still.) Each demon makes for the first place on its side with stones in it, from the outside in, and
+  // batters it; anyone in its way it strikes: a brother drops his tool and runs back to the fire, to be
+  // received again; the monk has a stone snatched from his store, and the demon makes off with it (strike
+  // it down before it is gone, and the stone is his again). The brothers with holy water keep the
+  // outermost wall on each side and throw it in flasks at whatever comes in reach, twice as fast with him
+  // standing by them. When the light has gone out on a mountain, the next night brings its demons too.
+  const DAY_LEN = 100, NIGHT_LEN = 55, DEMON_V = 34, WALL_HP = 28;   // (a built wall is mortared: it takes so many blows, and then it is breached)
   const hasStones = (s) => H_.stones.some((O) => siteOf(O) === s);
-  function startRaid() {
-    const R = data().raid; if (!R) return;
-    if (!H_.stones.length) { data().raid = null; store(); return; }    // (nothing laid yet: nothing for them to throw down)
-    const sin = SINS[R.dom] ? R.dom : "gluttony", n = clamp(R.n | 0, 1, 8), demons = [];
-    for (let i = 0; i < n; i++) { const side = i % 2 ? 1 : -1, k = Math.floor(i / 2); demons.push({ sin, side, dir: -side, x: side < 0 ? -40 - k * 90 : HW + 40 + k * 90, gap: (k % 3) * 20, hp: 3, st: "walk", t: 0, u: Math.random(), hurtT: 0, blowT: 1 + Math.random(), alpha: 1, lit: 0 }); }
-    H_.raid = { dom: sin, demons, t: 0, cast: 0, over: null, hit: new Set() };
-    H_.say = { text: "THE DEMONS FOLLOWED YOU DOWN", sub: "From the mountain of " + SINS[sin].name + ". Your walls take their blows. Tap a demon to strike it.", t: -1.2 };
-    Sound.play(null); Sound.stop(); Sound.ambience({ wind: 0.6 }); Sound.fx.dread && Sound.fx.dread(0.7, 0);
+  // (The more stones in a wall, the more blows it takes: seven to a stone, and never fewer than WALL_HP.)
+  const wallMax = (s) => Math.max(WALL_HP, 7 * H_.stones.filter((O) => siteOf(O) === s).length);
+  const isNight = () => !!(H_.raid && !H_.raid.over);
+  const awake = (q) => q.st !== "gone" && q.st !== "flee" && q.st !== "wait";
+  function stepClock(dt) {
+    const C = H_.clock; C.t += dt;
+    if (C.phase === "day" && C.t >= DAY_LEN) startNight();
+  }
+  function startNight() {
+    const D = data(), P = D.raid, nights = D.nights || 0, demons = [];
+    // (The usual night's: a few, more as the nights go on, of the mountains he has climbed; and the mountain's, if it sent them.)
+    const doms = DOMS.filter((d) => save.climbs && save.climbs[d]), pick = () => (doms.length ? doms : DOMS)[(Math.random() * (doms.length || DOMS.length)) | 0];
+    const n0 = Math.min(14, 3 + Math.floor(nights * 0.8)), list = [], hp = 3 + Math.floor(nights / 4);
+    for (let i = 0; i < n0; i++) list.push(pick());
+    if (P) for (let i = 0; i < clamp(P.n | 0, 1, 8); i++) list.push(SINS[P.dom] ? P.dom : "gluttony");
+    // (They come in a stream through the first part of the night, a side each in turn; the mountain's first.)
+    list.reverse();
+    list.forEach((sin, i) => { const side = i % 2 ? 1 : -1, k = Math.floor(i / 2); demons.push({ sin, side, dir: -side, x: side < 0 ? -40 : HW + 40, wait: 2 + i * (NIGHT_LEN * 0.55 / list.length), gap: (k % 3) * 20, hp, st: "wait", t: 0, u: Math.random(), hurtT: 0, blowT: 1 + Math.random(), alpha: 1, lit: 0 }); });
+    H_.raid = { dom: P && SINS[P.dom] ? P.dom : list[0], demons, t: 0, cast: 0, over: null, hit: new Set(), from: P ? P.dom : null };
+    H_.clock = { phase: "night", t: 0 }; H_.flasks = []; H_.dropped = [];
+    H_.say = P ? { text: "THE DEMONS FOLLOWED YOU DOWN", sub: "From the mountain of " + SINS[P.dom].name + ", and others with them. Keep the walls; tap a demon to strike it.", t: -0.6 }
+      : { text: "NIGHT FALLS", sub: nights ? "The demons come down from the mountains. " + demons.length + " of them tonight." : "The demons come down from the mountains. Your brothers with holy water keep the walls; stand by them and they throw the faster.", t: -0.6 };
+    Sound.stop(); Sound.ambience({ wind: 0.6 }); Sound.fx.dread && Sound.fx.dread(0.7, 0);
+  }
+  function dawn() {
+    const D = data(), R = H_.raid;
+    for (const id of H_.recheck) R.hit.add(id);
+    recheck(R.hit, "THROWN DOWN");
+    for (const s of SITES) { const SD = siteData(s); if (SD.breached) { delete SD.breached; if (SD.done) SD.hp = 6; } }   // (cracked walls stay cracked, till the masons mend them)
+    // The tools dropped in the night are found in the morning, and hung up in the shed again.
+    const T_ = folkData().tools; for (const q of H_.dropped || []) T_[q.kind] = (T_[q.kind] || 0) + 1;
+    D.raid = null; D.nights = (D.nights || 0) + 1; H_.raid = null; H_.flasks = []; H_.dropped = [];
+    H_.clock = { phase: "day", t: 0 }; keep();
+    Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
   }
   // What a demon makes for: on its side of the gate, the first place with stones in it, from the outside in.
   function targetOf(f) {
@@ -415,59 +475,106 @@ const House = (() => {
     for (const s of mine) { const face = s.x + f.side * (s.w * T / 2 + 14); if (f.side < 0 ? f.x < face + 1 : f.x > face - 1) return { s, face }; }
     return null;
   }
+  // Anyone just before it: a brother at his work, or the monk.
+  function preyOf(f) {
+    const ahead = (x) => { const d = (x - f.x) * f.dir; return d > -4 && d < 26; };
+    if (ahead(H_.x) && !H_.hurtT) return "monk";
+    return (H_.folk || []).find((q) => q.p.role !== "camp" && !q.flee && ahead(q.x)) || null;
+  }
   function stepRaid(dt) {
     const R = H_.raid; R.t += dt;
     for (const f of R.demons) {
       f.t += dt; f.hurtT = Math.max(0, f.hurtT - dt); if (f.claw && (f.claw.t -= dt) <= 0) f.claw = null; f.lit = Math.max(0.4, clamp(1 - Math.abs(f.x - H_.x) / 170, 0, 1));
+      if (f.st === "wait") { if (R.t >= f.wait && !R.over) { f.st = "walk"; f.t = 0; } continue; }
       if (f.st === "gone") { f.alpha = Math.max(0, f.alpha - dt * 1.2); continue; }
-      if (f.st === "flee") { f.x -= f.dir * 80 * dt; f.u = (f.u + dt * 1.6) % 1; f.alpha = Math.max(0, f.alpha - dt * 0.5); continue; }
+      if (f.st === "flee") { f.dir = f.side; f.x += f.side * (f.carry ? 46 : 80) * dt; f.u = (f.u + dt * 1.6) % 1; if (f.x < -80 || f.x > HW + 80) f.alpha = 0; else if (!f.carry) f.alpha = Math.max(0, f.alpha - dt * 0.5); continue; }
       if (f.st === "hurt") { if (f.t > 0.45) { f.st = "walk"; f.t = 0; } continue; }
-      const tg = targetOf(f), stop = (tg ? tg.face : GATE + f.side * 60) + f.side * f.gap;   // (one behind another, not all in one place)
-      if (f.side < 0 ? f.x < stop : f.x > stop) { f.st = "walk"; f.x = f.side < 0 ? Math.min(stop, f.x + DEMON_V * dt) : Math.max(stop, f.x - DEMON_V * dt); f.u = (f.u + dt * 0.9) % 1; f.dir = -f.side; continue; }
-      // At its place: it batters it, a blow at a time.
-      if (f.st !== "batter") { f.st = "batter"; f.t = 0; f.blowT = 0.6; }
-      f.blowT -= dt;
-      if (f.blowT <= 0 && !f.swing) { f.swing = { t: 0, s: tg && tg.s }; f.swing0 = tg && tg.s; }
+      // Someone in its way: it strikes at them.
+      const prey = !f.swing && preyOf(f);
+      if (prey) { f.st = "batter"; f.swing = { t: 0, prey }; continue; }
+      if (!f.swing) {
+        const tg = targetOf(f);
+        // Nothing on its side to throw down: it hunts the brothers at their work, and him.
+        if (!tg) {
+          const all = [{ x: H_.x }].concat((H_.folk || []).filter((q) => q.p.role !== "camp" && !q.flee)), near = all.sort((a, b) => Math.abs(a.x - f.x) - Math.abs(b.x - f.x))[0];
+          const d = near.x - f.x; f.dir = Math.sign(d) || f.dir; f.st = "walk";
+          f.x += f.dir * Math.min(Math.abs(d), DEMON_V * 1.15 * dt); f.u = (f.u + dt * 0.9) % 1; continue;
+        }
+        const stop = tg.face + f.side * f.gap;   // (one behind another, not all in one place)
+        if (f.side < 0 ? f.x < stop : f.x > stop) { f.st = "walk"; f.x = f.side < 0 ? Math.min(stop, f.x + DEMON_V * dt) : Math.max(stop, f.x - DEMON_V * dt); f.u = (f.u + dt * 0.9) % 1; f.dir = -f.side; continue; }
+        // At its place: it batters it, a blow at a time.
+        if (f.st !== "batter") { f.st = "batter"; f.t = 0; f.blowT = 0.6; }
+        f.blowT -= dt;
+        if (f.blowT <= 0) { f.swing = { t: 0, s: tg.s }; f.swing0 = tg.s; }
+      }
       if (f.swing) {
         f.swing.t += dt;
-        if (f.swing.t >= 0.24 && !f.swing.done) { f.swing.done = true; if (f.swing.s) blow(f, f.swing.s); }
-        if (f.swing.t >= 0.6) { f.swing = null; f.blowT = (f.swing0 && f.swing0.kind === "wall" ? 1.3 : 2.3) + Math.random() * 0.6; }
+        if (f.swing.t >= 0.24 && !f.swing.done) {
+          f.swing.done = true;
+          if (f.swing.prey) { const q = f.swing.prey; if (q === "monk" ? Math.abs(H_.x - f.x) < 34 : Math.abs(q.x - f.x) < 34 && q.p.role !== "camp") struck(f, q); }
+          else if (f.swing.s) blow(f, f.swing.s);
+        }
+        if (f.swing && f.swing.t >= 0.6) { const was = f.swing; f.swing = null; f.blowT = was.prey ? 0.8 : (f.swing0 && f.swing0.kind === "wall" ? 1.3 : 2.3) + Math.random() * 0.6; }
       }
     }
+    // The flasks of holy water in the air: where one comes down on a demon, or by one, it breaks over it.
+    for (const q of H_.flasks || []) {
+      q.vy += 520 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += dt * 12;
+      const hit = R.demons.find((d) => d.st !== "gone" && d.alpha > 0.3 && Math.abs(d.x - q.x) < 13 && q.y > GY - 48);
+      if (hit || q.y >= GY - 3) {
+        q.done = true;
+        const d = hit || R.demons.filter((e) => e.st !== "gone" && Math.abs(e.x - q.x) < 20).sort((a, b) => Math.abs(a.x - q.x) - Math.abs(b.x - q.x))[0];
+        for (let k = 0; k < 10; k++) (H_.dust = H_.dust || []).push({ x: q.x, y: Math.min(q.y, GY - 6), vx: (Math.random() - 0.5) * 90, vy: -Math.random() * 110, t: 0, spark: "#cfe9ff" });
+        Sound.fx.splash && Sound.fx.splash(clamp((q.x - H_.cam - W / 2) / W, -1, 1));
+        if (d) strike(d, Math.sign(d.x - q.x) || -d.dir, true);
+      }
+    }
+    if (H_.flasks) H_.flasks = H_.flasks.filter((q) => !q.done);
     // The monk's blow.
     const W_ = H_.swing;
     if (W_) {
       W_.t += dt;
       if (!W_.done && W_.t >= 0.45 * 0.45) {
         W_.done = true;
-        const f = R.demons.find((q) => (q.st === "walk" || q.st === "batter") && Math.abs(q.x - (H_.x + H_.dir * 20)) < 30);
-        if (f) strike(f); else Sound.fx.whoosh && Sound.fx.whoosh();
+        const f = R.demons.find((q) => (q.st === "walk" || q.st === "batter" || (q.st === "flee" && q.carry)) && Math.abs(q.x - (H_.x + H_.dir * 20)) < 30);
+        if (f) strike(f, H_.dir); else Sound.fx.whoosh && Sound.fx.whoosh();
       }
       if (W_.t >= 0.45) H_.swing = null;
     }
     const foe = H_.foe;
-    if (foe && (foe.st === "gone" || foe.st === "flee")) H_.foe = null;
+    if (foe && (foe.st === "gone" || (foe.st === "flee" && !foe.carry))) H_.foe = null;
     else if (foe && !H_.swing && Math.abs(foe.x - H_.x) < 34) { H_.goal = null; H_.dir = Math.sign(foe.x - H_.x) || H_.dir; H_.swing = { t: 0 }; }
     else if (foe && !H_.swing) H_.goal = foe.x - Math.sign(foe.x - H_.x) * 26;
     // Dawn; or all of them cast out.
-    const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee");
-    if (!R.over && (!left.length || R.t > RAID_LEN)) {
+    const left = R.demons.filter(awake), coming = R.demons.some((q) => q.st === "wait");
+    if (!R.over && ((!left.length && !coming) || R.t > NIGHT_LEN)) {
       R.over = { t: 0 };
       for (const q of left) { q.st = "flee"; q.dir = q.side; }
-      H_.say = left.length ? { text: "DAWN", sub: "The ones still standing have fled back to the mountain.", t: 0 } : { text: "ALL OF THEM CAST OUT", sub: "The night is quiet again.", t: 0 };
+      for (const q of R.demons) if (q.st === "wait") { q.st = "gone"; q.alpha = 0; }
+      H_.say = left.length ? { text: "DAWN", sub: "The ones still standing have gone back to the mountains.", t: 0 } : { text: "ALL OF THEM CAST OUT", sub: "The night is quiet again, till the next.", t: 0 };
       Sound.fx.lift && Sound.fx.lift();
     }
     if (R.over) {
       R.over.t += dt;
       // Once the stones are still: each place they struck stands, or (fallen below its line) is to be mended.
-      if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8)) {
-        for (const id of H_.recheck) R.hit.add(id);
-        recheck(R.hit, "THROWN DOWN");
-        for (const s of SITES) { const SD = siteData(s); if (SD.breached) { delete SD.breached; if (SD.done) SD.hp = 6; } }   // (cracked walls stay cracked, till the masons mend them)
-        data().raid = null; H_.raid = null; keep();
-        Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
-      }
+      if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8)) dawn();
     }
+  }
+  // A demon's blow on someone in its way.
+  function struck(f, q) {
+    Sound.fx.hit && Sound.fx.hit(1, 0);
+    if (q === "monk") {
+      const D = data(); H_.hurtT = 0.8; H_.x = clamp(H_.x + f.dir * 26, 40, HW - 40); H_.goal = null; H_.swing = null;
+      if (D.store.length && !f.carry) {
+        f.carry = D.store.shift(); f.st = "flee"; f.dir = f.side; f.swing = null; store();
+        H_.say = { text: "A DEMON HAS TAKEN A STONE", sub: "Strike it before it gets away, and the stone is yours again.", t: 0 };
+      }
+      return;
+    }
+    // A brother: he drops what he had, and runs back to the fire.
+    const kind = q.p.role; if (kind === "water" || kind === "mason") (H_.dropped = H_.dropped || []).push({ kind, x: q.x });
+    q.p.role = "camp"; delete q.p.side; q.flee = true; q.goal = CAMP + (Math.random() - 0.5) * 70; q.st = "walk"; store();
+    if (!H_.saidStruck || H_.t - H_.saidStruck > 12) { H_.saidStruck = H_.t; H_.say = { text: "A BROTHER IS STRUCK", sub: kind === "water" || kind === "mason" ? "He has dropped his tool and run to the fire. Receive him again." : "He has run back to the fire. Receive him again.", t: 0 }; }
   }
   // A demon's blow on a place. A built wall shudders and cracks, until it is breached and falls; else
   // the stones are loosed, and it reaches up and tears down the highest on its side, harder blow by blow.
@@ -476,7 +583,7 @@ const House = (() => {
     const SD = siteData(s);
     for (const O of on) O.still = 0;
     if (s.kind === "wall" && SD.done && !SD.breached) {
-      SD.hp = (SD.hp === undefined ? WALL_HP : SD.hp) - 1; (H_.shake = H_.shake || {})[s.id] = 0.18;
+      SD.hp = (SD.hp === undefined ? wallMax(s) : SD.hp) - 1; (H_.shake = H_.shake || {})[s.id] = 0.18;
       Sound.fx.thump && Sound.fx.thump(0.6, clamp((f.x - H_.cam - W / 2) / W, -1, 1));
       H_.dust = (H_.dust || []).concat(Array.from({ length: 4 }, () => ({ x: s.x + f.side * s.w * T / 2, y: GY - 20 - Math.random() * 60, vx: f.side * 40 + (Math.random() - 0.5) * 30, vy: -Math.random() * 40, t: 0 })));
       if (SD.hp > 0) return;
@@ -501,19 +608,24 @@ const House = (() => {
     Sound.fx.thump && Sound.fx.thump(0.8, clamp((f.x - H_.cam - W / 2) / W, -1, 1));
     H_.dust = (H_.dust || []).concat(Array.from({ length: 6 }, () => ({ x: best.q[0], y: best.q[1], vx: (Math.random() - 0.5) * 60 + f.dir * 30, vy: -Math.random() * 50, t: 0 })));
   }
-  function strike(f) {
-    f.hp--; f.hurtT = 0.3; f.x += H_.dir * 12; Sound.fx.punch && Sound.fx.punch(1, 0); Sound.fx.demonHurt && Sound.fx.demonHurt(f.sin, 0);
+  function strike(f, kx, water) {
+    f.hp--; f.hurtT = 0.3; f.x += (kx || H_.dir) * 12; if (!water) Sound.fx.punch && Sound.fx.punch(1, 0); Sound.fx.demonHurt && Sound.fx.demonHurt(f.sin, 0);
+    // (One carrying off a stone drops it, struck: it is his again.)
+    if (f.carry && (f.hp <= 0 || !water)) { data().store.unshift(f.carry); f.carry = null; store(); Sound.fx.pickup && Sound.fx.pickup(); if (f.hp > 0) { f.st = "flee"; return; } }
     if (f.hp <= 0) { f.st = "gone"; f.t = 0; H_.raid.cast++; Sound.fx.castOut && Sound.fx.castOut(f.sin); for (let k = 0; k < 14; k++) (H_.dust = H_.dust || []).push({ x: f.x, y: GY - 30, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 120, t: 0, spark: SINS[f.sin].color }); }
-    else { f.st = "hurt"; f.t = 0; f.swing = null; }
+    else if (f.st !== "flee") { f.st = "hurt"; f.t = 0; f.swing = null; }
   }
   function drawRaid(cam) {
     const R = H_.raid, t = H_.t;
+    for (const q of H_.dropped || []) { const x = q.x - cam; if (q.kind === "water") { ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(x, GY - 3, 3, 2.2, 0.4, 0, TAU); ctx.fill(); } else poly([x - 5, GY - 1, x + 5, GY - 3, x + 4, GY, x - 5, GY], "#9a958c"); }
+    for (const q of H_.flasks || []) { const x = q.x - cam; glow(x, q.y, 10, "#cfe9ff", 0.35); ctx.save(); ctx.translate(x, q.y); ctx.rotate(q.rot); ctx.fillStyle = "#e6f3fb"; ctx.beginPath(); ctx.ellipse(0, 0, 2.6, 3.2, 0, 0, TAU); ctx.fill(); ctx.fillRect(-0.8, -5, 1.6, 2.2); ctx.restore(); }
     for (const f of R.demons) {
-      if (f.alpha <= 0.01) continue;
+      if (f.alpha <= 0.01 || f.st === "wait") continue;
       const x = f.x - cam; if (x < -60 || x > W + 60) continue;
       const A = DEMON_ANIM, p = f.st === "hurt" ? A.hurt(clamp(f.t / 0.45, 0, 1), t, f.sin) : f.swing ? A.strike(clamp(f.swing.t / 0.6, 0, 1), t, f.sin) : f.st === "batter" ? A.windup(clamp(0.4 + 0.2 * Math.sin(t * 3 + f.x), 0, 1), t, f.sin) : f.st === "gone" ? A.down(0, t, f.sin) : A.walk(f.u, t, f.sin);
       glow(x, GY - 26, 40, SINS[f.sin].color, 0.12 * f.alpha);
       drawDemon(f.sin, x, GY, f.dir, p, { t, lit: f.lit, hurt: f.hurtT / 0.3, alpha: f.alpha, windup: f.swing && f.swing.t < 0.24 ? f.swing.t / 0.24 : 0 });
+      if (f.carry) { const c = Math.cos(t * 2), sq = SHAPES[f.carry.shape].map(([cx, cy]) => [f.x + cx * T * 0.6 * c, GY - 58 + cy * T * 0.6, 0]); for (const q of sq) { rect(q[0] - cam - 6, q[1] - 6, 12, 12, "#1b181e"); rect(q[0] - cam - 5, q[1] - 5, 10, 10, stoneFill(f.carry.dom)); } glow(x, GY - 58, 20, "#ffe2aa", 0.3); }
       // (Its reach: a dark claw thrown up to the stone it tears down.)
       if (f.claw) { const a = clamp(f.claw.t / 0.25, 0, 1), hx = x + f.dir * 12, hy = GY - 40, cx = f.claw.x - cam, cy = f.claw.y; ctx.strokeStyle = "rgba(12,6,10," + (0.85 * a).toFixed(3) + ")"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo((hx + cx) / 2 - f.dir * 14, Math.min(hy, cy) - 24, cx, cy); ctx.stroke(); glow(cx, cy, 14, SINS[f.sin].color, 0.4 * a); }
     }
@@ -569,7 +681,10 @@ const House = (() => {
     // Dusk over the mountains; the ground; the gate in the middle, where he was set down.
     const g = ctx.createLinearGradient(0, 0, 0, GY); g.addColorStop(0, "#1b1f3a"); g.addColorStop(0.55, "#5a4a64"); g.addColorStop(0.9, "#c08870"); g.addColorStop(1, "#e8b88a");
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, GY + 2);
-    glow(W * 0.7 - cam * 0.03, GY - 10, 140, "#ffd9a0", 0.35);
+    // (By day the sky clears to a pale morning; toward nightfall it goes to the gold of the evening.)
+    const CK = H_.clock || { phase: "day", t: 0 }, dayK = CK.phase === "day" ? clamp(CK.t / 6, 0, 1) * clamp((DAY_LEN - 12 - CK.t) / 14, 0, 1) : 0;
+    if (dayK > 0) { const gd = ctx.createLinearGradient(0, 0, 0, GY); gd.addColorStop(0, "#4d6a92"); gd.addColorStop(0.6, "#9fb0c2"); gd.addColorStop(1, "#e6dcc4"); ctx.save(); ctx.globalAlpha = dayK; ctx.fillStyle = gd; ctx.fillRect(0, 0, W, GY + 2); ctx.restore(); }
+    glow(W * 0.7 - cam * 0.03, GY - 10 - 90 * dayK, 140, "#ffd9a0", 0.35);
     Climb.DOMAINS.forEach((d, i) => { const cx = ((i * 260 + 120 - cam * 0.25) % (W + 300) + W + 300) % (W + 300) - 150, h = 110 + 40 * Math.sin(i * 1.9 + 1); poly([cx - 150, GY + 2, cx - 30, GY - h * 0.7, cx, GY - h, cx + 40, GY - h * 0.75, cx + 150, GY + 2], i % 2 ? "#3e3a50" : "#463f55"); });
     // (Night, while the demons are here: the sky gone dark, and the glow of their mountain at both ends.)
     const R = H_.raid, night = R ? (R.over ? clamp(1 - R.over.t / 2.5, 0, 1) : clamp(R.t / 1.5, 0, 1)) : 0;
@@ -594,7 +709,7 @@ const House = (() => {
       }
     }
     for (const S of H_.stones) { const s = H_.shake && siteOf(S), k = s && H_.shake[s.id] > 0 ? (Math.random() - 0.5) * 3 : 0; drawStone(S, cam - k); }
-    for (const s of SITES) { const SD = siteData(s); if (s.kind === "wall" && SD.done && SD.hp !== undefined && !SD.breached) drawCracks(s, cam, 1 - SD.hp / WALL_HP); }
+    for (const s of SITES) { const SD = siteData(s); if (s.kind === "wall" && SD.done && SD.hp !== undefined && !SD.breached) drawCracks(s, cam, 1 - SD.hp / wallMax(s)); }
     for (const s of SITES) if (siteData(s).done && !siteData(s).breached) drawBuilt(s, cam);
     drawCampAndShed(cam, t);
     for (const f of H_.folk || []) drawPerson(f, cam);
@@ -616,14 +731,14 @@ const House = (() => {
     for (const d of H_.dust || []) { const a = clamp(1 - d.t / 0.8, 0, 1); if (d.spark) { glow(d.x - cam, d.y, 6, d.spark, 0.5 * a); rect(d.x - cam - 1, d.y - 1, 2, 2, d.spark); } else rect(d.x - cam - 1.5, d.y - 1.5, 3, 3, "rgba(150,138,124," + (0.8 * a).toFixed(3) + ")"); }
     // He.
     const p = H_.swing ? MONK_ANIM.torchSwing(clamp(H_.swing.t / 0.45, 0, 1)) : H_.walking ? MONK_ANIM.walk(H_.walkU) : MONK_ANIM.idle((t * 0.4) % 1, t);
-    const r = drawMonk(H_.x - cam, GY - FH * 0 , H_.dir, p, { t });
+    const r = drawMonk(H_.x - cam, GY, H_.dir, H_.hurtT > 0.5 ? MONK_ANIM.hurt ? MONK_ANIM.hurt(clamp((0.8 - H_.hurtT) / 0.3, 0, 1)) : p : p, { t, alpha: H_.hurtT > 0 && Math.sin(H_.hurtT * 40) > 0 ? 0.55 : 1 });
     if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 0.9, t, {}); glow(r.torch[0], r.torch[1], 40, C.flame, 0.3); }
     // The sign over the place he stands at.
     const signed = !H_.hold && !H_.sel && !R && folkSigns(cam);
     if (near && !signed && !H_.hold && !H_.sel && !R) {
       const SD = siteData(near), on = H_.stones.filter((O) => siteOf(O) === near).length, sx = near.x - cam, sy = GY - FH - near.h * T - (near.kind === "wall" ? 26 : 52);
       text(near.name, sx, sy, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
-      text(SD.done ? "Built" : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
+      text(SD.done ? (near.kind === "wall" ? "Built  \u00b7  " + Math.ceil(SD.hp === undefined ? wallMax(near) : SD.hp) + " of " + wallMax(near) + " blows left in it" : "Built") : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
       if (SD.done && INSIDE[near.kind]) button("GO IN", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, () => goIn(near.kind), { hot: true, sub: INSIDE[near.kind].sub() });
       if (!SD.done) {
         if (data().store.length) button("LAY A STONE", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, () => lay(near), { hot: true, sub: data().store.length + " in your store" });
@@ -648,13 +763,19 @@ const House = (() => {
     D.store.slice(0, 16).forEach((st, i) => rect(18 + i * 9, 52, 7, 7, stoneFill(st.dom)));
     { const P = folkData().people, n = (r) => P.filter((q) => q.role === r).length, nb = P.length - n("camp");
       if (P.length) text("BROTHERS: " + nb + (n("water") ? "  \u00b7  WITH HOLY WATER: " + n("water") : "") + (n("mason") ? "  \u00b7  MASONS: " + n("mason") : "") + (n("camp") ? "  \u00b7  WAITING BY THE FIRE: " + n("camp") : ""), 18, 72, { size: 7.5, weight: 700, spacing: 1.2, color: "rgba(233,230,223,0.6)", max: W * 0.6 }); }
+    if (!R && H_.clock) {
+      const k = clamp(H_.clock.t / DAY_LEN, 0, 1), late = H_.clock.t > DAY_LEN - 15;
+      text("DAY " + ((D.nights || 0) + 1), W - 60, 26, { align: "right", size: 8, weight: 800, spacing: 2, color: late ? "#ffcf8a" : "rgba(255,241,196,0.85)" });
+      rect(W - 160, 32, 100, 3, "rgba(255,255,255,0.15)"); rect(W - 160, 32, 100 * k, 3, late ? "#ff9a5a" : "#ffe9b0");
+      text(late ? "NIGHT IS FALLING" : "UNTIL NIGHTFALL", W - 60, 46, { align: "right", size: 7, weight: 700, spacing: 1.5, color: late ? "#ffb070" : "rgba(255,217,160,0.6)" });
+    }
     if (R && !R.over) {
-      const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee").length, k = clamp(R.t / RAID_LEN, 0, 1);
+      const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee").length, k = clamp(R.t / NIGHT_LEN, 0, 1);   // (those still to come counted too)
       text("NIGHT  \u00b7  " + left + (left === 1 ? " DEMON" : " DEMONS"), W - 60, 26, { align: "right", size: 8, weight: 800, spacing: 2, color: mix(SINS[R.dom].color, "#ffffff", 0.4) });
       rect(W - 160, 32, 100, 3, "rgba(255,255,255,0.15)"); rect(W - 160, 32, 100 * k, 3, "#ffd9a0");
       text("UNTIL DAWN", W - 60, 46, { align: "right", size: 7, weight: 700, spacing: 1.5, color: "rgba(255,217,160,0.6)" });
       // (Where they are, off the screen: a mark at its edge.)
-      for (const q of R.demons) if (q.st !== "gone" && q.st !== "flee" && (q.x < H_.cam - 10 || q.x > H_.cam + W + 10)) { const ex = q.x < H_.cam ? 8 : W - 8; poly(q.x < H_.cam ? [ex, GY - 30, ex + 8, GY - 36, ex + 8, GY - 24] : [ex, GY - 30, ex - 8, GY - 36, ex - 8, GY - 24], SINS[q.sin].color); }
+      for (const q of R.demons) if (q.st !== "gone" && q.st !== "flee" && q.st !== "wait" && (q.x < H_.cam - 10 || q.x > H_.cam + W + 10)) { const ex = q.x < H_.cam ? 8 : W - 8; poly(q.x < H_.cam ? [ex, GY - 30, ex + 8, GY - 36, ex + 8, GY - 24] : [ex, GY - 30, ex - 8, GY - 36, ex - 8, GY - 24], SINS[q.sin].color); }
     }
     if (H_.built) {
       const a = clamp(H_.built.t / 0.3, 0, 1) * clamp((2.6 - H_.built.t) / 0.5, 0, 1);
@@ -1004,8 +1125,10 @@ const House = (() => {
     H_.inside = null; H_.t = 0; H_.x = GATE; H_.dir = 1; H_.cam = clamp(GATE - W / 2, 0, HW - W); H_.goal = null; H_.keys = {}; H_.say = null; H_.built = null;
     if (data().gift) setTimeout(() => { if (data().gift) { data().gift = false; store(); } }, 6000);
     mode = M; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
-    startRaid();
-    if (come && !H_.raid) H_.say = { text: come === 1 ? "ONE FREED FROM THE IDOLS HAS COME DOWN" : come + " FREED FROM THE IDOLS HAVE COME DOWN", sub: "They wait by the fire at the gate, to be received.", t: -0.8 };
+    // (Morning, as he comes; but if a mountain's demons followed him down, night falls soon.)
+    H_.clock = { phase: "day", t: data().raid ? DAY_LEN - 4 : 0 };
+    if (data().raid) H_.say = { text: "THE DEMONS FOLLOWED YOU DOWN", sub: "They wait for the dark. Night falls soon.", t: -0.8 };
+    else if (come) H_.say = { text: come === 1 ? "ONE FREED FROM THE IDOLS HAS COME DOWN" : come + " FREED FROM THE IDOLS HAVE COME DOWN", sub: "They wait by the fire at the gate, to be received.", t: -0.8 };
   }
   const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, CAMP, SHED, receive, setOut, postOf, lay, turn, nudge, place, drop: place, putBack, lift, landing };
   return M;
