@@ -1420,7 +1420,7 @@ const Climb = (() => {
     // Its worshippers about it, as many as there is room for, on both sides, facing it.
     const kinds = dom === "lust" ? [3, 3, 1] : dom === "wrath" ? [2, 1, 2] : dom === "avarice" ? [1, 0, 1] : [0, 1, 0], who = [], n = clamp(Math.floor((best.w - 44) / 30), 1, 4);
     for (let q = 0; q < n; q++) {
-      const side = q % 2 ? 1 : -1, row = Math.floor(q / 2), x = best.x + side * (dom === "gluttony" && side < 0 ? 44 : (dom === "wrath" || dom === "avarice") && side > 0 ? 52 : dom === "avarice" ? 46 : 32) + side * row * 27;
+      const side = q % 2 ? 1 : -1, row = Math.floor(q / 2), x = best.x + side * (dom === "gluttony" ? (side < 0 ? 44 : 60) : (dom === "wrath" || dom === "avarice") && side > 0 ? 52 : dom === "avarice" ? 46 : 32) + side * row * 27;
       who.push({ x, y: best.y, side: -side, kind: kinds[q % kinds.length], look: 0, st: "pray", vx: 0, vy: 0, t: 0, a: 1, ph: Math.random() * TAU });
     }
     S.demons.push({ idol: true, sin: dom, hw: 13, ht: 60, maxHp: IDOL_HP, hp: IDOL_HP, x: best.x, y: best.y, vx: 0, vy: 0, dir: 1, st: "idle", t: 0, cd: 0, x0: best.x, x1: best.x, sec: k,
@@ -4176,16 +4176,23 @@ const Climb = (() => {
     // (Lust's: standing, swaying, an arm lifted to it.)
     { body: [[-5, 0], [5, 0], [4, 8], [4.5, 17], [3, 23], [-2.5, 23], [-4, 16], [-5.5, 7]], arms: [[2.5, 21], [8, 31], [9.5, 30], [4.5, 19.5]], head: [0.8, 26.5], up: [-0.6, 26.5] },
   ];
+  // Bel, seated on his plinth, his head thrown back and his mouth open, reaching to the loaves on his
+  // table: traced from a silhouette made for the game (black on white, the white lines in it cut through),
+  // in the idol's own frame (its middle at u 33, its foot at v 0). The first outline is his; the rest,
+  // the cuts in it, wound the other way so they show through.
+  const BEL = [
+    [22.1,32,22.1,30.4,20.8,30,20.1,29.5,19.9,29.3,20.1,28.9,19.6,28.5,18.8,28.6,18,28.9,16.9,30,17,29.2,17.6,28,18.3,27.3,19.1,26.9,18.8,25.3,19.9,24.5,19.8,23.9,20.2,23.6,18.6,21.8,17.7,20.2,16.9,17.7,16.5,15,16.5,13.1,17.5,12.2,17.5,11.6,17.1,11.2,16.5,7.8,17.3,5.6,18.2,4.5,13,4.4,12.8,0,53.1,0,52.9,4.4,50.6,4.5,50.6,7.9,51.4,7.9,51.5,9.1,52.4,9.2,52.6,10.7,51.4,10.7,51.7,11.2,51.6,11.6,50.8,12.4,49.8,12.5,48.8,12.1,49.4,12.7,50.1,12.9,50,13.7,49.4,14.2,48.6,14.5,47.6,14.5,46.7,14.1,47.1,14.5,47.7,14.8,47.6,15.4,46.9,15.8,45.3,16,44.2,15.6,43.6,15,43.5,14.3,44.9,14.3,45.6,13.8,44.5,14.1,43.5,14,42.2,13.3,42,12.5,43.2,12.3,43.8,11.8,42.8,12.1,41.8,12.1,40.7,11.4,40.5,10.7,38.9,10.7,39,9.2,39.6,9.1,39.7,7.9,40.4,7.9,40.4,4.5,39.3,4.5,39.7,5.7,39.2,7.3,38.1,8.2,37.3,8.6,37.9,10.3,37.9,11.8,37.6,13.2,37.1,14.3,36.3,15.4,35.2,16.5,33.6,17.5,31.8,18.3,32,18.6,33,18.3,34.6,17.5,35.8,16.5,36.6,16.6,36.7,16.4,37.2,16.4,38.3,16.6,38.5,17,39.6,16.9,40.7,15.8,41.7,15.2,42.4,15.3,42.5,15.5,41.6,16.4,41.5,17,42.4,16.9,42.8,16.2,43.4,15.7,43.8,15.8,43.8,16,43.3,17,44.6,16.5,45,16.6,45.1,16.8,44,17.8,42.1,18.7,38.7,19.2,38.4,19.5,37,20,36.8,20,36.5,19.6,32,20.7,28.1,22.7,29.3,24.3,30.8,25,30.2,25.4,30.4,25.7,29.1,26.8,29,26.1,28.3,26.3,28,26.7,27.9,27.7,28.1,28.2,28.6,28.6,28.5,28.9,27.8,29,28,29.8,27.6,29.9,25.1,29.4,24.1,30.1,23.3,30.3,22.8,31.3],
+    [22.7,16.9,21.8,15,22.7,14,23.4,14,24.9,13.2,27.2,13.6,28.2,13,29.6,11.8,29.5,10.8,31.3,10.2,32.8,8.9,33.9,7,33.9,5.8,33.3,7,32.5,8.4,31.5,9.4,30.1,10.1,28.2,10.7,28.2,10.8,28.9,10.9,29.1,11.6,28.1,12.5,27,13.1,24.7,12.5,24.6,12.9,23.4,13.6,22.6,13.5,21.1,15.2],
+    [45.9,12.8,46.9,12.8,47.4,12.6,47.8,12,46.6,12.4,45.8,12.4,44.7,12,45,12.5],
+    [18.3,11.7,19.8,11,21.3,10.7,21.3,10.2,19.2,10.8,18.3,11.4],
+    [42.5,7.9,48.5,7.9,48.9,4.7,48.9,4.5,48.5,4.5,42.2,4.5],
+    [36.7,7.8,36.5,7.2,35.6,6.3,35.5,6.7,36,7],
+  ].map((L) => { const P = []; for (let i = 0; i < L.length; i += 2) P.push([L[i], L[i + 1]]); return P; });
   // The idols, one to a domain, each from the Scriptures: Bel, who was said to eat (Daniel 14); Moloch,
   // the bull with the fire in its belly; and so on (those of the domains not yet made: a figure on a plinth).
   function idolPath(path, dom, T) {
     if (dom === "gluttony") {
-      addPoly(path, [[25, 0], [41, 0], [41, 4], [25, 4]], T);                                              // the plinth
-      addOval(path, 33.5, 13.5, 8, 9.5, T, 14);                                                              // the belly
-      addPoly(path, [[28, 20], [37, 20], [38, 25], [36.5, 30], [32, 31.5], [28.5, 30], [27.5, 27.5], [31, 26.2], [27.6, 25]], T);   // the head, its mouth wide
-      addPoly(path, [[28, 17], [24, 12.5], [25.4, 11.4], [29.6, 14.5]], T);                                 // an arm, reaching
-      addPoly(path, [[15, 7.2], [25, 7.2], [25, 8.6], [15, 8.6]], T); addPoly(path, [[16, 0], [17.2, 0], [17.2, 7.4], [16, 7.4]], T); addPoly(path, [[22.8, 0], [24, 0], [24, 7.4], [22.8, 7.4]], T);   // the table
-      addOval(path, 17.4, 10.2, 2.1, 1.7, T, 8); addOval(path, 20.4, 10.6, 2.3, 2, T, 8); addOval(path, 23.2, 10.1, 1.8, 1.5, T, 8); addOval(path, 19, 12.6, 1.7, 1.4, T, 8);   // the loaves
+      for (const L of BEL) addPoly(path, L, T);                                                             // (drawn by hand: see BEL)
     } else if (dom === "wrath") {
       addPoly(path, [[24, 0], [41, 0], [41, 4], [24, 4]], T);
       addPoly(path, [[28, 4], [39, 4], [38.5, 24], [28.5, 24]], T);                                          // the body
