@@ -7,7 +7,7 @@
 // engine of Benedictine Bricks). When the stones stand as high as the line marked for them, the
 // roof comes down on them and the building stands. What he lays is kept, stone by stone.
 // Built, the library can be gone into: Psalm 118 in twenty-two books, filling verse by verse as the
-// verses are read on the mountains.
+// verses are read on the mountains; and the choir, where the souls freed at the summits sing them.
 
 const House = (() => {
   const pl = typeof planck !== "undefined" ? planck : null;
@@ -31,9 +31,11 @@ const House = (() => {
       // lay brothers, the stones they had put by, to begin with.)
       const st = [], banked = {};
       for (const d of DOMS) { banked[d] = (save.bricks && save.bricks[d]) || 0; for (let i = 0; i < banked[d]; i++) st.push({ shape: KEYS[(Math.random() * 7) | 0], dom: d }); }
-      for (let i = 0; i < 8; i++) st.push({ shape: KEYS[(Math.random() * 7) | 0], dom: DOMS[i % 4] });
-      save.house = { store: st, sites: {}, gift: true, banked }; store();
+      for (let i = 0; i < 14; i++) st.push({ shape: KEYS[(Math.random() * 7) | 0], dom: DOMS[i % 4] });
+      save.house = { store: st, sites: {}, gift: true, banked, more: true }; store();
     }
+    // (A house begun when the gift was eight: the six more the gift is now, enough for the choir.)
+    if (!save.house.more) { save.house.more = true; for (let i = 0; i < 6; i++) save.house.store.push({ shape: KEYS[(Math.random() * 7) | 0], dom: DOMS[i % 4] }); store(); }
     return save.house;
   }
   const siteData = (s) => (data().sites[s.id] || (data().sites[s.id] = { done: false, stones: [] }));
@@ -120,7 +122,7 @@ const House = (() => {
   // ---- Each step ----
   function step(dt) {
     H_.t += dt;
-    if (H_.inside) { H_.inside.t += dt; return; }
+    if (H_.inside) { H_.inside.t += dt; const I = INSIDE[H_.inside.kind]; if (I.step) I.step(H_.inside, dt); return; }
     if (H_.say) { H_.say.t += dt; if (H_.say.t > 3.2) H_.say = null; }
     if (H_.built) { H_.built.t += dt; if (H_.built.t > 2.6) H_.built = null; }
     // He walks (not while a stone is in the air).
@@ -249,7 +251,7 @@ const House = (() => {
       text(H_.say.text, W / 2, 84, { align: "center", font: FONT.title, size: 14, weight: 700, spacing: 3, color: "#fff3dc", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 30 });
       text(H_.say.sub, W / 2, 100, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: W - 30 });
     }
-    if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you: eight, to begin.", W / 2, 118, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
+    if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you, to begin with.", W / 2, 118, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
     button("LEAVE", 12, H - 46, 80, 32, () => leave(), {});
     if (H_.t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - H_.t / 0.8) + ")");
   }
@@ -335,7 +337,178 @@ const House = (() => {
     button("CLOSE", W / 2 - 50, H - 48, 100, 34, () => { I.book = null; }, {});
     button("›", W - 60, H - 48, 44, 34, () => { I.book = (i + 1) % 22; }, { size: 16 });
   }
+  // ---- The choir ----
+  // The souls freed at the summits (one for each summit won) stand in the stalls, in the order they
+  // came, and sing the verses read on the mountains: the sections of the psalm for an Hour, as the
+  // library sets them out, each verse to a plain psalm tone in two halves (the first rising from
+  // its intonation and resting at the middle, the second falling to the close), and after each book
+  // that is whole, the Gloria Patri.
+  const freed = () => { let n = 0; for (const d in (save.climbs || {})) n += save.climbs[d] || 0; return n; };
+  const GLORIA = [["Glory be to the Father, and to the Son,", "and to the Holy Ghost."], ["As it was in the beginning, is now,", "and ever shall be, world without end. Amen."]];
+  const VOW = { a: "a", e: "e", i: "i", o: "o", u: "u", y: "i" };
+  // A word's syllables, as their vowels (near enough: a silent e, and -ed that is not said, left out).
+  function sylls(word) {
+    const w = word.toLowerCase().replace(/[^a-z]/g, "");
+    let g = w.match(/[aeiouy]+/g) || ["a"];
+    if (g.length > 1 && /[^aeiouy]e$/.test(w) && !/[^aeiouy]le$/.test(w)) g = g.slice(0, -1);
+    else if (g.length > 1 && /[^aeiouytd]ed$/.test(w)) g = g.slice(0, -1);
+    return g.map((s) => VOW[s[0]] || "a");
+  }
+  // One verse to the tone: its notes ({ at, m, d, v, w }: when from the verse's start, the note,
+  // how long, the vowel, which word), how long it takes, and its words.
+  function tone(halves, first) {
+    const notes = [], words = []; let at = 0;
+    halves.forEach((half, h) => {
+      const S = [], end = h === halves.length - 1;
+      for (const w of half.split(/\s+/).filter(Boolean)) { for (const v of sylls(w)) S.push({ v, w: words.length }); words.push(w); }
+      if (!end) words.push("*");
+      const n = S.length;
+      S.forEach((s, j) => {
+        let m = 60, d = 0.24;                                   // on the reciting note
+        if (h === 0 && first && j < 2 && n > 5) m = j ? 57 : 55; // the intonation, up to it
+        const k = n - j;
+        if (k <= 2 && n >= 3) { m = end ? (k === 2 ? 57 : 55) : (k === 2 ? 62 : 60); d = k === 1 ? (end ? 0.95 : 0.6) : 0.34; }
+        notes.push({ at, m, d, v: s.v, w: s.w }); at += d;
+      });
+      if (!end) at += 0.35;
+    });
+    return { notes, len: at, words };
+  }
+  // What an Hour has to sing: the verses of its sections read so far, in order, and the Gloria after each book that is whole.
+  function hourVerses(h) {
+    const L = [];
+    for (let i = h.from; i < h.from + h.n; i++) {
+      let first = true;
+      for (let k = 0; k < 8; k++) if (Verses.bits(i) & (1 << k)) { const v = Verses.verse(i, k); L.push({ halves: v[5], first, head: v[0] + "  " + v[1] + " · " + v[4] + ":" + v[2] }); first = false; }
+      if (Verses.count(i) === 8) for (const g of GLORIA) L.push({ halves: g, first: false, head: "GLORIA PATRI" });
+    }
+    return L;
+  }
+  function sing(I) {
+    const h = HOURS[I.hour], L = hourVerses(h); if (!L.length) return;
+    const n = freed(), voices = (m) => (n === 0 ? [m] : n < 4 ? [m, m] : [m, m, m - 12]), vol = 0.22 + 0.035 * Math.min(n, 8);
+    let t0 = Sound.now() + 0.4; const ev = [], vs = [];
+    L.forEach((V, vi) => {
+      const T = tone(V.halves, V.first); vs.push({ head: V.head, words: T.words, t0 });
+      for (const q of T.notes) ev.push({ t: t0 + q.at, m: q.m, d: q.d, v: q.v, w: q.w, vi });
+      t0 += T.len + (L[vi + 1] && L[vi + 1].first ? 1.6 : 0.7);
+    });
+    I.chant = { ev, vs, next: 0, end: t0, voices, vol, vi: 0, w: -1 };
+    Sound.fx.tick && Sound.fx.tick(400, 0.2);
+  }
+  // A monk in his stall, from the waist up (the stall's front hides the rest): his cowl, his hood
+  // over his head, his book held up before him, its page a little lit by the candles.
+  let COWL = null;
+  function chorister(x, y, dir, s, bob, lit) {
+    if (!COWL) {
+      COWL = new Path2D();
+      COWL.moveTo(-11, 4); COWL.lineTo(-10, -22); COWL.quadraticCurveTo(-9, -34, -4, -40); COWL.quadraticCurveTo(2, -44, 6, -38);
+      COWL.lineTo(8, -31); COWL.lineTo(6, -27); COWL.lineTo(10, -22); COWL.lineTo(15, -14); COWL.lineTo(13, -9); COWL.lineTo(10, 4); COWL.closePath();
+    }
+    ctx.save(); ctx.translate(x, y + bob); ctx.scale(dir * s, s);
+    // (The rim of the light from the altar, on the side toward it; then the black of the habit.)
+    ctx.translate(1.4, -0.8); ctx.fillStyle = "rgba(255,210,150," + (0.45 + 0.3 * lit).toFixed(3) + ")"; ctx.fill(COWL);
+    ctx.translate(-1.4, 0.8); ctx.fillStyle = "#0a0808"; ctx.fill(COWL);
+    ctx.fillStyle = "rgba(255,206,140," + (0.35 + 0.4 * lit).toFixed(3) + ")"; ctx.fillRect(12, -20, 5, 6);
+    ctx.restore();
+  }
+  function stallSeats() {
+    // Twelve to a side, in two rows; filled in the order they came, a side each in turn, from the altar outward, front row first.
+    const out = [], sideW = Math.min(W * 0.34, 250), step = sideW / 6.2;
+    for (let row = 0; row < 2; row++) for (let j = 0; j < 6; j++) for (const side of [-1, 1]) {
+      const x = W / 2 + side * (W * 0.16 + (j + 0.5) * step + (row ? step * 0.3 : 0)), y = row ? 236 : 262;
+      out.push({ x, y, dir: -side, row });
+    }
+    return out;
+  }
+  function drawChoir(I) {
+    const t = I.t, singing = !!I.chant, n = freed();
+    rect(0, 0, W, H, "#0d0a09");
+    // The apse: a tall window full of the day, its light falling across the floor; the altar under it.
+    const wx = W / 2, wy0 = 34, wy1 = 168, ww = 34;
+    for (let k = 0; k < 3; k++) { ctx.save(); ctx.globalAlpha = 0.06 + 0.02 * k; ctx.fillStyle = "#ffe6b0"; ctx.beginPath(); ctx.moveTo(wx - ww / 2 + k * 6, wy1); ctx.lineTo(wx + ww / 2 - k * 6, wy1); ctx.lineTo(wx + 120 - k * 30, H); ctx.lineTo(wx - 120 + k * 30, H); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    const wg = ctx.createLinearGradient(0, wy0, 0, wy1); wg.addColorStop(0, "#fff6dc"); wg.addColorStop(1, "#f2c98a");
+    ctx.fillStyle = wg; ctx.beginPath(); ctx.moveTo(wx - ww / 2, wy1); ctx.lineTo(wx - ww / 2, wy0 + ww / 2); ctx.arc(wx, wy0 + ww / 2, ww / 2, PI, 0); ctx.lineTo(wx + ww / 2, wy1); ctx.closePath(); ctx.fill();
+    rect(wx - 1, wy0 + 6, 2, wy1 - wy0 - 6, "#3a2a1a"); rect(wx - ww / 2, wy0 + 70, ww, 2, "#3a2a1a");
+    glow(wx, (wy0 + wy1) / 2, 110, "#ffe0a0", 0.25 + (singing ? 0.08 : 0));
+    // The walls' piers; the floor.
+    for (const px of [W * 0.3, W * 0.7]) rect(px - 7, 20, 14, 230, "#120e0c");
+    rect(0, 250, W, H - 250, "#16110e"); for (let k = 1; k < 6; k++) rect(0, 250 + k * k * 4, W, 1, "rgba(0,0,0,0.35)");
+    rect(wx - 46, 196, 92, 40, "#0a0808"); rect(wx - 50, 192, 100, 6, "#0a0808");
+    rect(wx - 1.5, 158, 3, 34, "#0a0808"); rect(wx - 9, 166, 18, 3, "#0a0808");
+    for (const cx of [wx - 34, wx + 34]) { rect(cx - 1.5, 178, 3, 14, "#d9cdb0"); drawFlame(cx, 176, 0.5, t + cx, {}); glow(cx, 176, 40, C.flame, 0.3); }
+    // The stalls: their canopies against the wall, the monks in them, and their fronts.
+    const seats = stallSeats();
+    for (const side of [-1, 1]) {
+      const x0 = side < 0 ? 0 : W / 2 + W * 0.16, x1 = side < 0 ? W / 2 - W * 0.16 : W;
+      rect(x0, 150, x1 - x0, 100, "#33231a"); for (let x = x0 + 8; x < x1 - 20; x += 26) rect(x + 3, 156, 20, 74, "rgba(0,0,0,0.18)");
+      for (let x = x0 + 8; x < x1; x += 26) { ctx.fillStyle = "#22170f"; ctx.beginPath(); ctx.moveTo(x, 150); ctx.lineTo(x + 13, 132); ctx.lineTo(x + 26, 150); ctx.closePath(); ctx.fill(); }
+    }
+    seats.forEach((s, i) => {
+      if (s.row !== 1) return;
+      if (i < n) chorister(s.x, s.y, s.dir, 0.95, singing ? Math.sin(t * 5 + i) * 0.5 : 0, singing ? 0.6 : 0.2);
+    });
+    for (const side of [-1, 1]) { const x0 = side < 0 ? 0 : W / 2 + W * 0.16, x1 = side < 0 ? W / 2 - W * 0.16 : W; rect(x0, 236, x1 - x0, 30, "#24180f"); rect(x0, 234, x1 - x0, 3, "#3a2818"); }
+    seats.forEach((s, i) => {
+      if (s.row !== 0) return;
+      if (i < n) chorister(s.x, s.y, s.dir, 1, singing ? Math.sin(t * 5 + i) * 0.5 : 0, singing ? 0.7 : 0.25);
+    });
+    for (const side of [-1, 1]) { const x0 = side < 0 ? 0 : W / 2 + W * 0.16, x1 = side < 0 ? W / 2 - W * 0.16 : W; rect(x0, 262, x1 - x0, 40, "#2c1d12"); rect(x0, 260, x1 - x0, 3, "#47301c"); for (let x = x0 + 10; x < x1 - 4; x += 30) rect(x, 268, 20, 26, "rgba(0,0,0,0.25)"); }
+    // He, the cantor, at the lectern in the middle, the great book open on it.
+    const lx = W / 2 + 18, ly = 300;
+    rect(lx - 2, ly - 30, 4, 30, "#0a0808"); rect(lx - 9, ly - 2, 18, 3, "#0a0808");
+    poly([lx - 13, ly - 30, lx + 13, ly - 30, lx + 10, ly - 44, lx - 10, ly - 44], "#0a0808");
+    poly([lx - 12, ly - 32, lx - 0.5, ly - 33, lx - 1, ly - 45, lx - 10, ly - 44], "#e8dcc0"); poly([lx + 0.5, ly - 33, lx + 12, ly - 32, lx + 10, ly - 44, lx + 1, ly - 45], "#ddd0b2");
+    for (let k = 0; k < 4; k++) { rect(lx - 9, ly - 42 + k * 2.6, 7, 0.8, "rgba(40,28,18,0.55)"); rect(lx + 2, ly - 42 + k * 2.6, 7, 0.8, k === 0 ? "rgba(142,36,22,0.8)" : "rgba(40,28,18,0.55)"); }
+    const p = MONK_ANIM.idle((t * 0.4) % 1, t), r = drawMonk(W / 2 - 22, ly, 1, p, { t });
+    if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 0.8, t, {}); glow(r.torch[0], r.torch[1], 40, C.flame, 0.3); }
+    // The words: the title; while they sing, the verse, word by word.
+    if (!singing) {
+      text("THE CHOIR", W / 2, 22, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 5, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 8 });
+      text(n ? (n === 1 ? "One soul freed at a summit sings here." : n + " souls freed at the summits sing here.") + (n > 24 ? " (Twenty-four in the stalls, the rest beyond.)" : "") : "The stalls are empty. Each soul you free at a summit comes here to sing.", W / 2, 40, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, max: W - 40, glow: "rgba(0,0,0,0.9)", blur: 6 });
+    } else {
+      const C2 = I.chant, V = C2.vs[C2.vi];
+      rect(0, 0, W, 92, "rgba(6,4,4,0.72)");
+      text(V.head, W / 2, 18, { align: "center", size: 8, weight: 800, spacing: 2, color: C.gold, max: W - 40 });
+      // (Each word laid out in turn, the one being sung lit.)
+      const font = "italic 500 15px " + FONT.line, maxW = Math.min(W - 60, 560); ctx.font = font;
+      const sp = ctx.measureText(" ").width, lines = [[]]; let lw = 0;
+      V.words.forEach((w, k) => { const ww = ctx.measureText(w).width; if (lw + ww > maxW && lines[lines.length - 1].length) { lines.push([]); lw = 0; } lines[lines.length - 1].push({ w, k, x: lw, ww }); lw += ww + sp; });
+      lines.forEach((L, li) => {
+        const tw = L.length ? L[L.length - 1].x + L[L.length - 1].ww : 0, x0 = W / 2 - tw / 2, y = 40 + li * 19;
+        for (const q of L) text(q.w, x0 + q.x, y, { font: FONT.line, italic: true, size: 15, weight: 500, color: q.w === "*" ? C.gold : q.k === C2.w ? "#fff1c4" : q.k < C2.w ? "rgba(255,226,170,0.85)" : "rgba(233,230,223,0.4)", glow: q.k === C2.w ? "rgba(255,190,90,0.8)" : undefined, blur: 8 });
+      });
+    }
+    // Which Hour, and to sing it.
+    const h = HOURS[I.hour], L = hourVerses(h), bx = W / 2 - 170 + 52;
+    button("‹", bx, H - 46, 34, 32, () => { if (!I.chant) I.hour = (I.hour + HOURS.length - 1) % HOURS.length; }, { size: 14, off: !!I.chant });
+    button(h.day + " · " + h.hour, bx + 38, H - 46, 150, 32, () => { }, { size: 8.5, sub: L.length ? L.filter((q) => q.head !== "GLORIA PATRI").length + " verses read" : "nothing of it read yet", off: !L.length });
+    button("›", bx + 192, H - 46, 34, 32, () => { if (!I.chant) I.hour = (I.hour + 1) % HOURS.length; }, { size: 14, off: !!I.chant });
+    if (I.chant) button("STOP", bx + 232, H - 46, 84, 32, () => { I.chant = null; }, {});
+    else button("SING", bx + 232, H - 46, 84, 32, () => sing(I), { hot: !!L.length, off: !L.length });
+  }
+
   const INSIDE = {
+    choir: {
+      sub: () => { const n = freed(); return n ? n + (n === 1 ? " soul sings" : " souls sing") : "The stalls are empty"; },
+      enter(I) { I.hour = 0; I.chant = null; for (let k = 0; k < HOURS.length; k++) if (hasVerses() && hourVerses(HOURS[k]).length) { I.hour = k; break; } Sound.stop(); Sound.ambience({ wind: 0.06 }); },
+      leave(I) { I.chant = null; Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 }); },
+      step(I) {
+        const C2 = I.chant; if (!C2) return;
+        const now = Sound.now();
+        while (C2.next < C2.ev.length && C2.ev[C2.next].t < now + 0.3) { const e = C2.ev[C2.next++]; Sound.fx.chant && Sound.fx.chant(e.t, C2.voices(e.m), e.d + 0.06, e.v, C2.vol); }
+        for (let k = C2.next - 1; k >= 0; k--) if (C2.ev[k].t <= now) { C2.vi = C2.ev[k].vi; C2.w = C2.ev[k].w; break; }
+        if (now > C2.end + 0.5) I.chant = null;
+      },
+      draw(I) { if (!hasVerses()) { rect(0, 0, W, H, "#0d0a09"); button("GO OUT", 12, H - 46, 90, 32, goOut, {}); return; } drawChoir(I); button("GO OUT", 12, H - 46, 90, 32, goOut, {}); },
+      key(I, code) {
+        if (code === "ArrowLeft" || code === "KeyA") { if (!I.chant) I.hour = (I.hour + HOURS.length - 1) % HOURS.length; return true; }
+        if (code === "ArrowRight" || code === "KeyD") { if (!I.chant) I.hour = (I.hour + 1) % HOURS.length; return true; }
+        if (code === "Space" || code === "Enter") { if (I.chant) I.chant = null; else sing(I); return true; }
+        if (code === "Escape" && I.chant) { I.chant = null; return true; }
+        return false;
+      },
+    },
     library: {
       sub: () => (hasVerses() ? Verses.total() + " of 176 verses" : ""),
       draw(I) {
