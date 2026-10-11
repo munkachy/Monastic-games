@@ -9,6 +9,8 @@
 // the line marked for them, the roof comes down on them and the building stands. All of it is kept.
 // Built, the library can be gone into: Psalm 118 in twenty-two books, filling verse by verse as the
 // verses are read on the mountains; and the choir, where the souls freed at the summits sing them.
+// Those freed from the idols on the mountains come down and wait by a fire at the gate; received,
+// they are lay brothers, and take up the tools he sets out at the shed (as in Kingdom).
 // When the light goes out on a mountain, its demons follow him home: the next time he comes, it is
 // night, and they come in from both ends of the grounds and batter whatever stands first in their
 // way, stone by stone. The walls at the ends are for that: they take the blows meant for the library
@@ -231,12 +233,168 @@ const House = (() => {
       SD.done = true; keep();
       H_.built = { s, t: 0 }; Sound.fx.kindle && Sound.fx.kindle(1, 0); Sound.fx.unlock && Sound.fx.unlock();
     }
+    stepFolk(dt);
     if (H_.raid) stepRaid(dt);
     if (H_.shake) for (const k in H_.shake) H_.shake[k] = Math.max(0, H_.shake[k] - dt);
     if (H_.dust && H_.dust.length) { for (const d of H_.dust) { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 300 * dt; } H_.dust = H_.dust.filter((d) => d.t < 0.8); }
     // The camera: on him; on the stone, while he holds one.
     const fx = H_.hold ? H_.hold.x : H_.x;
     H_.cam += (clamp(fx - W / 2, 0, HW - W) - H_.cam) * Math.min(1, dt * 4);
+  }
+
+  // ---- The people ----
+  // Those freed from the idols on the mountains come down and wait by a fire at the gate, in the dark
+  // robes they worshipped in. He goes to them and receives them ("Let all guests who arrive be received
+  // as Christ": the Rule, chapter 53), and they put on the habit of lay brothers. At the shed by the gate
+  // he sets out tools, a stone apiece; a brother with nothing to do comes and takes up what is set out,
+  // and with it his work (as in Kingdom, where the king pays for a bow at the shop, and the first
+  // villager free picks it up). With holy water, a brother keeps the wall on his side of the gate;
+  // with a trowel, he mends the walls.
+  const CAMP = GATE - 130, SHED = GATE + 110, FOLK_V = 55;
+  const TOOLS = {
+    water: { name: "HOLY WATER", what: "keeps a wall", many: "WITH HOLY WATER" },
+    mason: { name: "A TROWEL", what: "mends the walls", many: "MASONS" },
+  };
+  function folkData() { const D = data(); D.people = D.people || []; D.tools = D.tools || { water: 0, mason: 0 }; D.nextId = D.nextId || 1; return D; }
+  // Those come down since he was last here (and, the first time, three who found their way down before him).
+  function takePilgrims() {
+    const D = folkData(); let n = 0;
+    const add = (dom, kind) => { D.people.push({ id: D.nextId++, dom: SINS[dom] ? dom : "gluttony", kind: (kind | 0) % 4, role: "camp" }); n++; };
+    if (!D.folk0) { D.folk0 = true; for (let i = 0; i < 3; i++) add(DOMS[i], i); }
+    for (const q of save.pilgrims || []) if (Array.isArray(q)) add(q[0], q[1]);
+    save.pilgrims = []; store();
+    return n;
+  }
+  // Where a brother with holy water keeps his side: just within the outermost wall standing there; with
+  // no wall, before the outermost building; with neither, out from the gate.
+  function postOf(side) {
+    const mine = SITES.filter((s) => (side < 0 ? s.x < GATE : s.x > GATE) && hasStones(s)).sort((a, b) => (b.x - a.x) * side);
+    const wall = mine.find((s) => s.kind === "wall");
+    if (wall) return wall.x - side * (wall.w * T / 2 + 18);
+    if (mine.length) return mine[0].x + side * (mine[0].w * T / 2 + 22);
+    return GATE + side * 220;
+  }
+  function makeFolk(p, i) {
+    const f = { p, x: GATE, dir: 1, u: Math.random(), goal: null, t: Math.random() * 3, st: "idle", ph: Math.random() * TAU };
+    if (p.role === "camp") f.x = CAMP + (i % 2 ? 1 : -1) * (18 + (i % 5) * 9);
+    else if (p.role === "water") f.x = postOf(p.side || -1) + (Math.random() - 0.5) * 30;
+    else if (p.role === "mason") f.x = SHED + (Math.random() - 0.5) * 60;
+    else f.x = GATE + (Math.random() - 0.5) * 300;
+    return f;
+  }
+  function loadFolk() { const D = folkData(); H_.folk = D.people.map(makeFolk); }
+  function receive() {
+    const D = folkData(); let n = 0;
+    for (const f of H_.folk) if (f.p.role === "camp") { f.p.role = "brother"; f.goal = GATE + (Math.random() - 0.5) * 260; f.recv = 1; n++; }
+    if (!n) return;
+    store(); Sound.fx.kindle && Sound.fx.kindle(0.6, 0);
+    H_.say = { text: n === 1 ? "ONE RECEIVED" : n + " RECEIVED", sub: "“Let all guests who arrive be received as Christ.”  The Rule, chapter 53", t: 0 };
+  }
+  function setOut(kind) {
+    const D = folkData(); if (!D.store.length) return;
+    D.store.shift(); D.tools[kind] = (D.tools[kind] || 0) + 1; store();
+    Sound.fx.pickup && Sound.fx.pickup(); Sound.fx.tick && Sound.fx.tick(1300, 0.3);
+  }
+  function stepFolk(dt) {
+    const D = folkData(), waiting = () => (D.tools.water || 0) + (D.tools.mason || 0);
+    for (const f of H_.folk) {
+      const p = f.p; f.t += dt; f.ph += dt; if (f.recv) f.recv = Math.max(0, f.recv - dt * 0.8);
+      if (p.role === "camp") { f.goal = null; continue; }
+      // A brother with no work: to the shed, if something is set out there; else about the gate.
+      if (p.role === "brother") {
+        if (waiting() && (!f.goal || f.goal !== SHED)) f.goal = SHED;
+        if (f.goal === SHED && Math.abs(f.x - SHED) < 4) {
+          const kind = (D.tools.water || 0) > 0 ? "water" : (D.tools.mason || 0) > 0 ? "mason" : null;
+          if (kind) {
+            D.tools[kind]--; p.role = kind; f.goal = null; f.t = 0;
+            if (kind === "water") { const L = D.people.filter((q) => q.role === "water" && q.side === -1).length, R = D.people.filter((q) => q.role === "water" && q.side === 1).length; p.side = L <= R ? -1 : 1; }
+            store(); Sound.fx.tick && Sound.fx.tick(1000, 0.3);
+          } else f.goal = null;
+        }
+        if (!f.goal && f.t > 3) { f.t = Math.random() * 2; f.goal = GATE + (Math.random() - 0.5) * 300; }
+      }
+      // With holy water: about his post by day.
+      if (p.role === "water") { const post = postOf(p.side || -1); if (!f.goal && f.t > 2.5) { f.t = Math.random() * 2; f.goal = post - (p.side || -1) * Math.random() * 60; } }
+      // With a trowel: to a wall that is cracked, to mend it; else about the shed.
+      if (p.role === "mason") {
+        const hurt = SITES.find((s) => s.kind === "wall" && siteData(s).done && !siteData(s).breached && siteData(s).hp !== undefined && siteData(s).hp < WALL_HP);
+        if (hurt) {
+          const at = hurt.x - Math.sign(hurt.x - GATE) * (hurt.w * T / 2 + 10);
+          if (Math.abs(f.x - at) > 4) f.goal = at;
+          else { f.goal = null; f.st = "mend"; const SD = siteData(hurt); SD.hp = Math.min(WALL_HP, SD.hp + dt / 1.5 * (Math.abs(H_.x - f.x) < 150 ? 2 : 1)); if (SD.hp >= WALL_HP) { delete SD.hp; store(); } if (Math.random() < dt * 3) (H_.dust = H_.dust || []).push({ x: f.x + Math.sign(hurt.x - GATE) * 12, y: GY - 20 - Math.random() * 30, vx: (Math.random() - 0.5) * 30, vy: -30, t: 0 }); continue; }
+        } else if (!f.goal && f.t > 3) { f.t = Math.random() * 2; f.goal = SHED + (Math.random() - 0.5) * 120; }
+      }
+      f.st = "idle";
+      if (f.goal !== null && f.goal !== undefined) {
+        const d = f.goal - f.x;
+        if (Math.abs(d) < 3) { f.x = f.goal; if (f.goal !== SHED) f.goal = null; }
+        else { f.dir = Math.sign(d); f.x += f.dir * Math.min(Math.abs(d), FOLK_V * dt); f.u = (f.u + dt * 1.4) % 1; f.st = "walk"; }
+      }
+    }
+  }
+  // A lay brother (or one still in the robe he worshipped in): hooded, small beside him; what he carries in his hand.
+  function drawPerson(f, cam) {
+    const x = f.x - cam; if (x < -30 || x > W + 30) return;
+    const p = f.p, k = 1.45, camp = p.role === "camp", robe = camp ? "#141118" : "#3e3024";
+    const walk = f.st === "walk", s = walk ? Math.sin(f.u * TAU) : 0, b = walk ? Math.abs(Math.cos(f.u * TAU)) * 1.2 : 0;
+    ctx.save(); ctx.translate(x, GY); ctx.scale(f.dir * k, k);
+    const bob = camp ? 0 : -b, sit = camp;
+    ctx.fillStyle = robe; ctx.beginPath();
+    if (sit) { ctx.moveTo(-7, 0); ctx.lineTo(8, 0); ctx.lineTo(7, -4); ctx.lineTo(4, -12); ctx.lineTo(1, -15); ctx.lineTo(-3, -15); ctx.lineTo(-6, -9); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.ellipse(2.5 + 0.6 * Math.sin(f.ph * 0.7), -17.5, 3, 3.3, 0, 0, TAU); ctx.fill(); }
+    else {
+      // legs, then the habit to the shins, the hood, an arm
+      ctx.fillRect(-2 + 4 * s, -4, 2, 4); ctx.fillRect(-1 - 4 * s, -4, 2, 4);
+      ctx.moveTo(-5, -3 + bob); ctx.lineTo(5, -3 + bob); ctx.lineTo(4.5, -13 + bob); ctx.lineTo(4, -20 + bob); ctx.lineTo(2, -23 + bob); ctx.lineTo(-3, -23 + bob); ctx.lineTo(-5, -18 + bob); ctx.lineTo(-5.5, -10 + bob); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0.8, -25.5 + bob, 3.1, 3.4, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-2, -28 + bob); ctx.lineTo(-5.5, -22 + bob); ctx.lineTo(-1, -24 + bob); ctx.fill();
+      // what he holds
+      const hx = 5.5 + (walk ? 1.5 * s : 0), hy = -13 + bob;
+      ctx.fillStyle = robe; ctx.fillRect(1, hy - 4, 4.5, 3);
+      if (p.role === "water") { ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(hx + 1, hy, 2.2, 2.8, 0, 0, TAU); ctx.fill(); ctx.fillRect(hx + 0.3, hy - 4.5, 1.4, 2); }
+      else if (p.role === "mason") { ctx.fillStyle = "#9a958c"; ctx.beginPath(); ctx.moveTo(hx, hy - 1); ctx.lineTo(hx + 6, hy + 1); ctx.lineTo(hx, hy + 2.5); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#5a4630"; ctx.fillRect(hx - 2.5, hy - 0.5, 3, 1.4); }
+    }
+    ctx.restore();
+    if (p.role === "water") glow(x + f.dir * 9, GY - 18, 8, "#cfe9ff", 0.2);
+    if (f.recv) glow(x, GY - 20, 26, "#fff1c4", 0.5 * f.recv);
+  }
+  function drawCampAndShed(cam, t) {
+    // The fire by the gate, where those come down wait.
+    const cx = CAMP - cam;
+    if (cx > -60 && cx < W + 60) {
+      rect(cx - 9, GY - 3, 18, 3, "#2a1d14"); poly([cx - 8, GY - 1, cx + 6, GY - 5, cx + 8, GY - 3, cx - 6, GY + 1], "#3a2818");
+      drawFlame(cx, GY - 6, 0.7, t, {}); glow(cx, GY - 10, 60, C.flame, 0.35 + 0.05 * Math.sin(t * 9));
+    }
+    // The shed: a lean-to roof on two posts, and the tools set out under it.
+    const sx = SHED - cam;
+    if (sx > -80 && sx < W + 80) {
+      const ink = "#0d0b10";
+      rect(sx - 30, GY - 40, 3, 40, ink); rect(sx + 27, GY - 34, 3, 34, ink); poly([sx - 36, GY - 42, sx + 36, GY - 34, sx + 36, GY - 30, sx - 36, GY - 38], ink);
+      rect(sx - 26, GY - 26, 52, 2, "#3a2818");
+      const D = folkData(); let k = 0;
+      for (let i = 0; i < Math.min(6, D.tools.water || 0); i++, k++) { const tx = sx - 22 + k * 8; glow(tx, GY - 20, 8, "#cfe9ff", 0.3); ctx.fillStyle = "#cfe4f2"; ctx.beginPath(); ctx.ellipse(tx, GY - 19, 2.4, 3, 0, 0, TAU); ctx.fill(); rect(tx - 0.7, GY - 24, 1.4, 2, "#cfe4f2"); }
+      for (let i = 0; i < Math.min(6, D.tools.mason || 0); i++, k++) { const tx = sx - 22 + k * 8; poly([tx - 2, GY - 24, tx + 2, GY - 24, tx + 1, GY - 16, tx - 1, GY - 16], "#9a958c"); rect(tx - 0.8, GY - 27, 1.6, 3, "#5a4630"); }
+    }
+  }
+  // The signs and the buttons by the fire, and at the shed.
+  function folkSigns(cam) {
+    const D = folkData(), campers = H_.folk.filter((f) => f.p.role === "camp").length, idle = H_.folk.filter((f) => f.p.role === "brother").length;
+    if (Math.abs(H_.x - CAMP) < 70) {
+      const sx = CAMP - cam;
+      text("BY THE FIRE", sx, GY - 74, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
+      text(campers ? campers + (campers === 1 ? " freed from the idols waits" : " freed from the idols wait") + " to be received" : "No one waits here now", sx, GY - 62, { align: "center", size: 8, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
+      if (campers) button("RECEIVE THEM", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, receive, { hot: true, sub: "As lay brothers" });
+      return true;
+    }
+    if (Math.abs(H_.x - SHED) < 60) {
+      const sx = SHED - cam, waiting = (D.tools.water || 0) + (D.tools.mason || 0);
+      text("THE SHED", sx, GY - 74, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
+      text((idle ? idle + (idle === 1 ? " brother without work" : " brothers without work") : "No brother without work") + (waiting ? "  ·  " + waiting + " set out" : ""), sx, GY - 62, { align: "center", size: 8, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 20 });
+      const bx = clamp(sx - 128, 8, W - 264), has = D.store.length > 0;
+      button("HOLY WATER", bx, H - 50, 124, 36, () => setOut("water"), { hot: has, off: !has, sub: "1 stone · he keeps a wall" });
+      button("A TROWEL", bx + 132, H - 50, 124, 36, () => setOut("mason"), { hot: has, off: !has, sub: "1 stone · he mends walls" });
+      return true;
+    }
+    return false;
   }
 
   // ---- The raid ----
@@ -305,7 +463,7 @@ const House = (() => {
       if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8)) {
         for (const id of H_.recheck) R.hit.add(id);
         recheck(R.hit, "THROWN DOWN");
-        for (const s of SITES) { const SD = siteData(s); delete SD.breached; delete SD.hp; }   // (the lay brothers point the walls that stand, between one night and the next)
+        for (const s of SITES) { const SD = siteData(s); if (SD.breached) { delete SD.breached; if (SD.done) SD.hp = 6; } }   // (cracked walls stay cracked, till the masons mend them)
         data().raid = null; H_.raid = null; keep();
         Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
       }
@@ -438,6 +596,8 @@ const House = (() => {
     for (const S of H_.stones) { const s = H_.shake && siteOf(S), k = s && H_.shake[s.id] > 0 ? (Math.random() - 0.5) * 3 : 0; drawStone(S, cam - k); }
     for (const s of SITES) { const SD = siteData(s); if (s.kind === "wall" && SD.done && SD.hp !== undefined && !SD.breached) drawCracks(s, cam, 1 - SD.hp / WALL_HP); }
     for (const s of SITES) if (siteData(s).done && !siteData(s).breached) drawBuilt(s, cam);
+    drawCampAndShed(cam, t);
+    for (const f of H_.folk || []) drawPerson(f, cam);
     // The stone he has chosen, ringed; the stone in his hands, hanging, and its shadow where it will rest.
     if (H_.sel) { const sq = squares(H_.sel); for (const q of sq) glow(q[0] - cam, q[1], 18, "#ffe2aa", 0.25); outline(sq, cam, "rgba(255,240,200," + (0.75 + 0.25 * Math.sin(t * 6)).toFixed(3) + ")"); drawSquares(sq, H_.sel.dom, cam); outline(sq, cam, "rgba(255,240,200," + (0.75 + 0.25 * Math.sin(t * 6)).toFixed(3) + ")"); }
     if (H_.hold) {
@@ -459,7 +619,8 @@ const House = (() => {
     const r = drawMonk(H_.x - cam, GY - FH * 0 , H_.dir, p, { t });
     if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 0.9, t, {}); glow(r.torch[0], r.torch[1], 40, C.flame, 0.3); }
     // The sign over the place he stands at.
-    if (near && !H_.hold && !H_.sel && !R) {
+    const signed = !H_.hold && !H_.sel && !R && folkSigns(cam);
+    if (near && !signed && !H_.hold && !H_.sel && !R) {
       const SD = siteData(near), on = H_.stones.filter((O) => siteOf(O) === near).length, sx = near.x - cam, sy = GY - FH - near.h * T - (near.kind === "wall" ? 26 : 52);
       text(near.name, sx, sy, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
       text(SD.done ? "Built" : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
@@ -476,7 +637,7 @@ const House = (() => {
       button("SET IT DOWN", W - 132, H - 50, 120, 38, () => place(), { hot: ok, off: !ok });
       button("BACK TO THE STORE", W - 262, H - 50, 122, 38, () => putBack(), { size: 8 });
     } else if (H_.sel) {
-      text("This stone: take it up into your store, or move it somewhere else.", W / 2, 120, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
+      text("This stone: take it up into your store, or move it somewhere else.", W / 2, 134, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
       button("TAKE IT UP", W / 2 - 128, H - 50, 120, 38, () => lift(H_.sel, false), { hot: true, sub: "Into your store" });
       button("MOVE IT", W / 2 + 8, H - 50, 120, 38, () => lift(H_.sel, true), { sub: "Lay it again" });
     }
@@ -485,6 +646,8 @@ const House = (() => {
     text("THE MONASTERY", 18, 30, { font: FONT.title, size: 16, weight: 700, spacing: 4, color: "#fff" });
     text("STONES IN YOUR STORE: " + D.store.length, 18, 46, { size: 8, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.75)" });
     D.store.slice(0, 16).forEach((st, i) => rect(18 + i * 9, 52, 7, 7, stoneFill(st.dom)));
+    { const P = folkData().people, n = (r) => P.filter((q) => q.role === r).length, nb = P.length - n("camp");
+      if (P.length) text("BROTHERS: " + nb + (n("water") ? "  \u00b7  WITH HOLY WATER: " + n("water") : "") + (n("mason") ? "  \u00b7  MASONS: " + n("mason") : "") + (n("camp") ? "  \u00b7  WAITING BY THE FIRE: " + n("camp") : ""), 18, 72, { size: 7.5, weight: 700, spacing: 1.2, color: "rgba(233,230,223,0.6)", max: W * 0.6 }); }
     if (R && !R.over) {
       const left = R.demons.filter((q) => q.st !== "gone" && q.st !== "flee").length, k = clamp(R.t / RAID_LEN, 0, 1);
       text("NIGHT  \u00b7  " + left + (left === 1 ? " DEMON" : " DEMONS"), W - 60, 26, { align: "right", size: 8, weight: 800, spacing: 2, color: mix(SINS[R.dom].color, "#ffffff", 0.4) });
@@ -495,13 +658,13 @@ const House = (() => {
     }
     if (H_.built) {
       const a = clamp(H_.built.t / 0.3, 0, 1) * clamp((2.6 - H_.built.t) / 0.5, 0, 1);
-      text(H_.built.s.name + " IS BUILT", W / 2, 84, { align: "center", font: FONT.title, size: 18, weight: 700, spacing: 4, color: "#fff1c4", alpha: a, glow: "rgba(255,170,70,0.8)", blur: 12, max: W - 30 });
+      text(H_.built.s.name + " IS BUILT", W / 2, 98, { align: "center", font: FONT.title, size: 18, weight: 700, spacing: 4, color: "#fff1c4", alpha: a, glow: "rgba(255,170,70,0.8)", blur: 12, max: W - 30 });
     } else if (H_.say) {
       const a = clamp(H_.say.t / 0.3, 0, 1) * clamp((3.2 - H_.say.t) / 0.6, 0, 1);
-      text(H_.say.text, W / 2, 84, { align: "center", font: FONT.title, size: 14, weight: 700, spacing: 3, color: "#fff3dc", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 30 });
-      text(H_.say.sub, W / 2, 100, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: W - 30 });
+      text(H_.say.text, W / 2, 98, { align: "center", font: FONT.title, size: 14, weight: 700, spacing: 3, color: "#fff3dc", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 30 });
+      text(H_.say.sub, W / 2, 114, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: W - 30 });
     }
-    if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you, to begin with.", W / 2, 118, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
+    if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you, to begin with.", W / 2, 132, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
     button("LEAVE", 12, H - 46, 80, 32, () => leave(), {});
     if (H_.t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - H_.t / 0.8) + ")");
   }
@@ -828,6 +991,7 @@ const House = (() => {
       H_.sel = null;
     }
     if (H_.raid) { if ((code === "Space" || code === "KeyF" || code === "Enter") && !H_.swing) H_.swing = { t: 0 }; if (code === "Escape") leave(); return; }
+    if ((code === "Space" || code === "Enter") && Math.abs(H_.x - CAMP) < 70) { receive(); return; }
     if (code === "Space" || code === "Enter") { const s = nearSite(); if (s && !siteData(s).done) lay(s); else if (s && INSIDE[s.kind]) goIn(s.kind); }
     if (code === "Escape") leave();
   }
@@ -836,11 +1000,13 @@ const House = (() => {
   function open() {
     if (!pl) return;
     data(); takeBanked(); load(); H_.raid = null; H_.swing = null; H_.foe = null; H_.dust = [];
+    const come = takePilgrims(); loadFolk();
     H_.inside = null; H_.t = 0; H_.x = GATE; H_.dir = 1; H_.cam = clamp(GATE - W / 2, 0, HW - W); H_.goal = null; H_.keys = {}; H_.say = null; H_.built = null;
     if (data().gift) setTimeout(() => { if (data().gift) { data().gift = false; store(); } }, 6000);
     mode = M; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
     startRaid();
+    if (come && !H_.raid) H_.say = { text: come === 1 ? "ONE FREED FROM THE IDOLS HAS COME DOWN" : come + " FREED FROM THE IDOLS HAVE COME DOWN", sub: "They wait by the fire at the gate, to be received.", t: -0.8 };
   }
-  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, lay, turn, nudge, place, drop: place, putBack, lift, landing };
+  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, CAMP, SHED, receive, setOut, postOf, lay, turn, nudge, place, drop: place, putBack, lift, landing };
   return M;
 })();

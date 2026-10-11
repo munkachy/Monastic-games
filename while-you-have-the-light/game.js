@@ -227,6 +227,7 @@ const Home = {
     let y = 92;
     y += 13 * textLines("Each mountain is a soul: someone you may never meet, their sin grown into rock and dark. The climb was your prayer for them, and every demon you cast down, you cast down for them. Tonight that soul is a little freer.", x, y, cw, { font: FONT.line, size: 13, color: "#efe9dc", alpha: clamp((t - 0.6) / 1.2, 0, 1), lh: 15 }) + 10;
     const b = clamp((t - 1.4) / 1, 0, 1), rows = [["The mountain of " + SINS[r.dom || "gluttony"].name, r.m + " m to its top"], ["Blocks brought to the carts", String(r.binned || 0) + (r.room ? "" : "  (" + (r.bricks || 0) + " kept)")], ["Demons cast out", String(r.cast || 0)], ["Verses read", String(r.read || 0)]];
+    if (r.freed) rows.push(["Freed from the idols", String(r.freed)]);
     for (const [k, v] of rows) { text(k.toUpperCase(), x, y, { size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.6)", alpha: b, max: cw * 0.6 }); text(v, x + cw * 0.62, y, { size: 10, weight: 700, color: C.flameHot, alpha: b, max: cw * 0.4 }); y += 15; }
     y += 4;
     text(r.room ? "A scene from the white room: nothing of it is kept." : "Climb it again, and it will be higher, and its demons will strike harder.", x, y, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: b, max: cw });
