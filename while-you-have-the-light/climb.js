@@ -126,7 +126,9 @@ const Climb = (() => {
       }
       if ((prev.type === "shaft" || prev.type === "map") && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
       if (prev.type === "shaft") {
-        const gate = isGate(k), cave = !gate && !!WIDE[dom], slope = !gate && !!SLOPE[dom];
+        // (Gluttony's crossings, in the seven mountains: a cavern or a long swing under a roof, as the
+        // mountain's seed falls, so no two climbs of it go the same way up.)
+        const mixed = NOV && !NOV.room && WIDE[dom], gate = isGate(k), cave = !gate && !!WIDE[dom] && !(mixed && hash2(k, 41, seed) < 0.4), slope = !gate && !!SLOPE[dom];
         if (slope) {
           // As many terraces as the way across holds, each two rows above the last.
           const c1 = prev.c < MID ? MID + LW : MID - LW, n = Math.max(4, Math.round((Math.abs(c1 - prev.c) - 8) / TER));
@@ -136,7 +138,9 @@ const Climb = (() => {
         // The next shaft: across from the last, as far as the crossing between them wants.
         const w = WIDE[dom] ? 138 : SLOPE[dom] ? LW : MINE[dom] ? AW : 19, c0 = prev.from.c, want = prev.type === "cave" ? 276 : prev.type === "slope" ? 2 * LW : MINE[dom] ? 2 * AW : 38;
         const c = [MID - w, MID + w].filter((q) => Math.abs(q - c0) >= 25).sort((a, b) => Math.abs(Math.abs(a - c0) - want) - Math.abs(Math.abs(b - c0) - want))[0];
-        secs.push({ type: "shaft", h0: prev.h1 + 1, h1: prev.h1 + (SLOPE[dom] ? 16 + Math.floor(hash2(k, 20, seed) * 8) : 34 + Math.floor(hash2(k, 20, seed) * 22)), c, k, dom });
+        // (And in Gluttony's, some shafts twice as long.)
+        const long = NOV && !NOV.room && WIDE[dom] && hash2(k, 42, seed) < 0.35;
+        secs.push({ type: "shaft", h0: prev.h1 + 1, h1: prev.h1 + (SLOPE[dom] ? 16 + Math.floor(hash2(k, 20, seed) * 8) : (34 + Math.floor(hash2(k, 20, seed) * 22)) * (long ? 2 : 1)), c, k, dom });
       }
     }
   }
@@ -444,7 +448,7 @@ const Climb = (() => {
   // makings, the swings either way about), each joined to the last by its doors: the way out at the
   // top of one is the way in at the foot of the next. Then the summit. The order follows from the
   // mountain's seed, so it is the same each time he comes back to the same climb.
-  const MODULAR = { gluttony: true }, MOD_SUMMIT = 22;
+  const MODULAR = {}, MOD_SUMMIT = 22;      // (none for now: Gluttony's maps wait to be remade)
   const MODS = ["shaftA", "shaftB", "longShaftA", "longShaftB", "swingA", "swingB", "longSwingA", "longSwingB"];
   const modular = () => !!(NOV && !NOV.room && MODULAR[NOV.domain] && typeof MAPS !== "undefined");
   const MAP_SOLID = "#WTR~V";
@@ -730,7 +734,7 @@ const Climb = (() => {
     NOV = opts.nov ? Object.assign({}, opts.nov) : null;
     seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0; mapWallK = 0;
     // (A place kept on Gluttony's mountain as it was made before its maps: from the foot, on the new mountain.)
-    if (modular() && opts.resume && opts.resume.v !== 2) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
+    if (opts.resume && (modular() ? opts.resume.v !== 2 : opts.resume.v === 2)) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
     if (modular() && !NOV.room) NOV.summitK = (opts.resume && Number.isInteger(opts.resume.summitK) ? opts.resume.summitK : MOD_SUMMIT + 3 * (NOV.climbs || 0));
     const r = seeded(seed); PH = [r() * TAU, r() * TAU, r() * TAU];
     // Where the summit is: as asked; or as kept with his place; or (a place kept before there were
