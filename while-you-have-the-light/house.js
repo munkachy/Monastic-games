@@ -1,11 +1,12 @@
 "use strict";
-// The house: the monastery at the foot of the seven mountains, where the angel sets him down. A strip
-// of level ground he walks along (as in Kingdom), with places marked out for what is to be built:
-// the library, the choir, and a wall at either end. At each he lays the stones he has brought home
-// (the blocks of the idols, carried to the carts on the mountains, kept when a summit is won): each
-// falls as he steers it and turns it, and lands and settles as stone does (planck.js, the Box2D
-// engine of Benedictine Bricks). When the stones stand as high as the line marked for them, the
-// roof comes down on them and the building stands. What he lays is kept, stone by stone.
+// The monastery at the foot of the seven mountains, where the angel sets him down. A strip of level
+// ground he walks along (as in Kingdom), with places marked out for what is to be built: the
+// library, the choir, and a wall at either end. At each he lays the stones he has brought down (the
+// blocks of the idols, carried to the carts on the mountains, kept when a summit is won): each hangs
+// over the place while he moves it and turns it where he likes, a shadow showing where it will
+// rest; set down, it settles as stone does (planck.js, the Box2D engine of Benedictine Bricks). A
+// stone laid can be taken up again, back to the store, or moved. When the stones stand as high as
+// the line marked for them, the roof comes down on them and the building stands. All of it is kept.
 // Built, the library can be gone into: Psalm 118 in twenty-two books, filling verse by verse as the
 // verses are read on the mountains; and the choir, where the souls freed at the summits sing them.
 // When the light goes out on a mountain, its demons follow him home: the next time he comes, it is
@@ -15,7 +16,7 @@
 
 const House = (() => {
   const pl = typeof planck !== "undefined" ? planck : null;
-  const T = 20, HW = 1900, GY = 304, FH = 6, FALL = 2.5 * T, DROP = 15 * T, SKIN = 0.01;   // a stone's square; the grounds' width; the ground; a foundation's height; how fast a steered stone falls, and a dropped one (as in Benedictine Bricks)
+  const T = 20, HW = 1900, GY = 304, FH = 6, SKIN = 0.01;   // a stone's square; the grounds' width; the ground; a foundation's height
   const SHAPES = { I: [[-1.5, 0], [-0.5, 0], [0.5, 0], [1.5, 0]], J: [[-1, -0.5], [0, -0.5], [1, -0.5], [1, 0.5]], L: [[-1, -0.5], [0, -0.5], [1, -0.5], [-1, 0.5]], O: [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]], S: [[0, -0.5], [1, -0.5], [-1, 0.5], [0, 0.5]], T: [[-1, -0.5], [0, -0.5], [1, -0.5], [0, 0.5]], Z: [[-1, -0.5], [0, -0.5], [0, 0.5], [1, 0.5]] };
   const KEYS = Object.keys(SHAPES), DOMS = ["gluttony", "lust", "avarice", "wrath"];
   // The places to build: where, how wide (in stones), how high the stones must stand, how many it takes.
@@ -26,7 +27,7 @@ const House = (() => {
     { id: "wallE", name: "THE WALL", x: 1710, w: 3, h: 5, need: 4, kind: "wall" },
   ];
   const GATE = 940;
-  const H_ = { inside: null, t: 0, x: GATE, dir: 1, walkU: 0, cam: GATE - 280, world: null, stones: [], active: null, steer: false, angle: 0, drag: null, say: null, keys: {}, built: null };
+  const H_ = { inside: null, t: 0, x: GATE, dir: 1, walkU: 0, cam: GATE - 280, world: null, stones: [], hold: null, sel: null, recheck: new Set(), drag: null, say: null, keys: {}, built: null };
 
   // ---- What is kept ----
   function data() {
@@ -55,10 +56,6 @@ const House = (() => {
     const w = new pl.World({ gravity: pl.Vec2(0, 20) });
     const g = w.createBody({ type: "static", position: pl.Vec2(P(HW / 2), P(GY + 60)) }); g.createFixture({ shape: pl.Box(P(HW / 2 + 200), P(60)), friction: 0.9 });
     for (const s of SITES) { const f = w.createBody({ type: "static", position: pl.Vec2(P(s.x), P(GY - FH / 2)) }); f.createFixture({ shape: pl.Box(s.w / 2 + 0.25, P(FH / 2)), friction: 0.95 }); }
-    w.on("begin-contact", (c) => {
-      const a = c.getFixtureA().getBody(), b = c.getFixtureB().getBody();
-      if (H_.active && (a === H_.active.body || b === H_.active.body)) H_.hit = true;
-    });
     return w;
   }
   function addStone(st, x, y, a, dyn) {
@@ -72,14 +69,13 @@ const House = (() => {
   const siteOf = (S) => { const p = S.body.getPosition(); return SITES.find((s) => Math.abs(p.x * T - s.x) < (s.w / 2 + 0.6) * T) || null; };
 
   function load() {
-    H_.world = makeWorld(); H_.stones = []; H_.active = null; H_.steer = false;
+    H_.world = makeWorld(); H_.stones = []; H_.hold = null; H_.sel = null; H_.recheck = new Set();
     for (const s of SITES) for (const q of siteData(s).stones) addStone(q, q.x, q.y, q.a, !siteData(s).done);
     for (const S of H_.stones) S.body.setAwake(false);
   }
   function keep() {
     for (const s of SITES) siteData(s).stones = [];
     for (const S of H_.stones) {
-      if (S === H_.active) continue;
       const s = siteOf(S); if (!s) continue;
       const p = S.body.getPosition(); siteData(s).stones.push({ shape: S.shape, dom: S.dom, x: +(p.x * T).toFixed(1), y: +(p.y * T).toFixed(1), a: +S.body.getAngle().toFixed(3) });
     }
@@ -88,39 +84,107 @@ const House = (() => {
 
   // ---- Laying a stone ----
   const nearSite = () => SITES.find((s) => Math.abs(H_.x - s.x) < s.w * T / 2 + 46) || null;
+  // The stone in his hands, hanging over a place: { shape, dom, x, y, a, s }; its squares, as a stone's are.
+  const holdSquares = (h, y) => { const c = Math.cos(h.a), sn = Math.sin(h.a), yy = y === undefined ? h.y : y; return SHAPES[h.shape].map(([cx, cy]) => [h.x + (cx * c - cy * sn) * T, yy + (cx * sn + cy * c) * T, h.a]); };
+  // Do two squares (each [x, y, angle], a little smaller than a stone's square) overlap? (Separating axes.)
+  function sqHit(a, b, shrink) {
+    const h = T / 2 - shrink;
+    for (const ang of [a[2], b[2]]) for (const [ax, ay] of [[Math.cos(ang), Math.sin(ang)], [-Math.sin(ang), Math.cos(ang)]]) {
+      const ext = (q) => h * (Math.abs(Math.cos(q[2]) * ax + Math.sin(q[2]) * ay) + Math.abs(-Math.sin(q[2]) * ax + Math.cos(q[2]) * ay));
+      if (Math.abs((a[0] - b[0]) * ax + (a[1] - b[1]) * ay) > ext(a) + ext(b)) return false;
+    }
+    return true;
+  }
+  // The ground under a point: a foundation's top, or the ground itself.
+  const floorAt = (x) => (SITES.some((s) => Math.abs(x - s.x) < (s.w / 2 + 0.25) * T) ? GY - FH : GY);
+  function blocked(h, y) {
+    const mine = holdSquares(h, y);
+    for (const m of mine) if (m[1] + T / 2 > floorAt(m[0]) + 0.5) return true;
+    for (const O of H_.stones) { if (Math.abs(O.body.getPosition().x * T - h.x) > 4 * T) continue; for (const q of squares(O)) for (const m of mine) if (sqHit(q, m, 0.6)) return true; }
+    return false;
+  }
+  // Where it would come to rest, let straight down from where it hangs.
+  function landing(h) {
+    if (h.land !== undefined && h.landKey === h.x + "," + h.a + "," + H_.stones.length + "," + H_.stillN) return h.land;
+    let y = h.y; if (blocked(h, y)) return (h.land = null);
+    let step = 8;
+    while (step >= 0.5) { while (y < GY && !blocked(h, y + step)) y += step; step /= 2; }
+    h.landKey = h.x + "," + h.a + "," + H_.stones.length + "," + H_.stillN; return (h.land = y);
+  }
+  // It hangs two squares over the highest of the line and what stands on the place.
+  function hangY(h) {
+    const s = h.s, on = H_.stones.filter((O) => siteOf(O) === s), top = Math.min(GY - FH - s.h * T, ...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2)));
+    const low = Math.max(...holdSquares(h, 0).map((q) => q[1] + T / 2));
+    return top - 2 * T - low;
+  }
   function lay(s) {
-    const D = data(); if (H_.active || !D.store.length || siteData(s).done) return;
-    const st = D.store.shift();
-    const top = Math.min(GY - FH, ...H_.stones.filter((S) => siteOf(S) === s).map((S) => Math.min(...squares(S).map((q) => q[1] - T / 2))));
-    const S = addStone(st, s.x, Math.min(top - 120, GY - FH - s.h * T - 70), 0);
-    H_.active = S; H_.site = s; H_.steer = true; H_.angle = 0; H_.hit = false; S.laidT = H_.t;
-    H_.goal = s.x + (H_.x < s.x ? -1 : 1) * (s.w * T / 2 + 30);          // (he steps aside, to watch it go up)
+    const D = data(); if (H_.hold || !D.store.length || siteData(s).done) return;
+    takeUp(D.store[0], s);
+    H_.goal = s.x + (H_.x < s.x ? -1 : 1) * (s.w * T / 2 + 30);          // (he steps aside, to see it go up)
+  }
+  // (The stone stays in the store, as kept, until it is set down: so nothing is lost if the game is left with it in his hands.)
+  function takeUp(st, s, x, a) {
+    const h = { st, shape: st.shape, dom: st.dom, x: x === undefined ? s.x : x, y: 0, a: a || 0, s };
+    // (On the half-square, measured from the place's left edge, so that stones line up.)
+    const x0 = s.x - s.w * T / 2; h.x = x0 + Math.round((h.x - x0) / (T / 2)) * (T / 2);
+    h.y = hangY(h); H_.hold = h; H_.sel = null;
     Sound.fx.pickup && Sound.fx.pickup();
   }
-  // Would the steered stone, put here, run into another?
-  function clear(S, x, a) {
-    const b = S.body, p0 = b.getPosition(), a0 = b.getAngle();
-    b.setTransform(pl.Vec2(P(x), p0.y), a);
-    const mine = squares(S); let ok = true;
-    for (const O of H_.stones) { if (O === S) continue; for (const q of squares(O)) for (const m of mine) if (Math.abs(q[0] - m[0]) < T - 2 && Math.abs(q[1] - m[1]) < T - 2) ok = false; }
-    if (!ok) b.setTransform(p0, a0);
-    return ok;
+  function moveTo(x) {
+    const h = H_.hold; if (!h) return false;
+    const s = h.s, x0 = s.x - s.w * T / 2;
+    x = clamp(x0 + Math.round((x - x0) / (T / 2)) * (T / 2), s.x - (s.w / 2 + 2) * T, s.x + (s.w / 2 + 2) * T);
+    if (x === h.x) return false;
+    const was = h.x; h.x = x; h.y = Math.min(h.y, hangY(h));
+    if (blocked(h, h.y)) { h.x = was; return false; }
+    return true;
   }
-  function nudge(d) {
-    const S = H_.active; if (!S || !H_.steer) return;
-    const s = H_.site, x = S.body.getPosition().x * T + d * T / 2;
-    if (Math.abs(x - s.x) > (s.w / 2 + 2.5) * T) return;
-    if (clear(S, x, H_.angle)) Sound.fx.tick && Sound.fx.tick(900, 0.2);
-  }
+  function nudge(d) { const h = H_.hold; if (h && moveTo(h.x + d * T / 2)) Sound.fx.tick && Sound.fx.tick(900, 0.2); }
   function turn() {
-    const S = H_.active; if (!S || !H_.steer) return;
-    if (clear(S, S.body.getPosition().x * T, H_.angle + PI / 2)) { H_.angle += PI / 2; Sound.fx.tick && Sound.fx.tick(1200, 0.25); }
+    const h = H_.hold; if (!h) return;
+    const was = h.a, wy = h.y; h.a = (h.a + PI / 2) % TAU; h.y = Math.min(h.y, hangY(h));
+    if (blocked(h, h.y)) { h.a = was; h.y = wy; return; }
+    Sound.fx.tick && Sound.fx.tick(1200, 0.25);
   }
-  function drop() { if (H_.active && H_.steer) { H_.steer = false; H_.active.body.setLinearVelocity(pl.Vec2(0, P(DROP))); } }
-  function landed() {
-    const S = H_.active; H_.active = null; H_.steer = false;
-    const v = S.body.getLinearVelocity(); S.body.setLinearVelocity(pl.Vec2(v.x * 0.12, v.y * 0.12)); S.body.setAngularVelocity(S.body.getAngularVelocity() * 0.12);
-    Sound.fx.brickDrop && Sound.fx.brickDrop(0, 0.8);
+  // Set down: straight down to where its shadow is, and there it settles.
+  function place() {
+    const h = H_.hold; if (!h) return;
+    const y = landing(h); if (y === null || y === undefined) return;
+    const S = addStone({ shape: h.shape, dom: h.dom }, h.x, y - 0.3, h.a, true);
+    S.body.setLinearVelocity(pl.Vec2(0, 0.5));
+    const D = data(), i = D.store.indexOf(h.st); if (i >= 0) D.store.splice(i, 1); else D.store.shift();
+    H_.hold = null; keep(); Sound.fx.brickDrop && Sound.fx.brickDrop(0, 0.6);
+  }
+  function putBack() { if (!H_.hold) return; H_.hold = null; Sound.fx.tick && Sound.fx.tick(600, 0.3); }
+  // A stone laid, taken up again: into the store, or into his hands to be laid somewhere else. If it
+  // was part of a building, the rest of it is loosed, and settles; if it no longer reaches the line,
+  // the roof is off it.
+  const inSquare = (q, x, y, pad) => { const dx = x - q[0], dy = y - q[1], c = Math.cos(q[2]), s = Math.sin(q[2]); return Math.abs(dx * c + dy * s) <= T / 2 + pad && Math.abs(-dx * s + dy * c) <= T / 2 + pad; };
+  const stoneAt = (p) => { const x = p.x + H_.cam, y = p.y; for (let i = H_.stones.length - 1; i >= 0; i--) for (const q of squares(H_.stones[i])) if (inSquare(q, x, y, 2)) return H_.stones[i]; return null; };
+  function lift(S, move) {
+    const s = S && H_.stones.includes(S) && siteOf(S); if (!s) return;
+    const px = S.body.getPosition().x * T, pa = Math.round(S.body.getAngle() / (PI / 2)) * (PI / 2);
+    H_.world.destroyBody(S.body); H_.stones.splice(H_.stones.indexOf(S), 1); H_.sel = null;
+    loosen(s);
+    const st = { shape: S.shape, dom: S.dom }; data().store.unshift(st);
+    if (move) takeUp(st, s, px, ((pa % TAU) + TAU) % TAU); else Sound.fx.pickup && Sound.fx.pickup();
+    keep();
+  }
+  function loosen(s) {
+    for (const O of H_.stones) if (siteOf(O) === s) { if (O.body.getType() !== "dynamic") O.body.setType("dynamic"); O.body.setAwake(true); O.still = 0; }
+    if (siteData(s).done) H_.recheck.add(s.id);
+  }
+  // A built place, its stones loosed: once they are still, does it still stand to its line?
+  function recheck(ids, said) {
+    const hurt = [];
+    for (const s of SITES) {
+      if (!ids.has(s.id)) continue;
+      const SD = siteData(s), on = H_.stones.filter((O) => siteOf(O) === s), top = on.length ? Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2))) : GY;
+      if (SD.done && on.length >= s.need && top <= GY - FH - s.h * T + T * 0.5) for (const O of on) O.body.setType("static");
+      else if (SD.done) { SD.done = false; hurt.push(s); }
+    }
+    if (hurt.length) H_.say = { text: hurt.map((s) => s.name).filter((v, i, a) => a.indexOf(v) === i).join(" AND ") + (hurt.length > 1 && hurt[0].name !== hurt[1].name ? " ARE" : " IS") + " " + said, sub: "Lay stones on it again, to the line, to mend it.", t: 0 };
+    ids.clear(); keep();
   }
 
   // ---- Each step ----
@@ -129,23 +193,19 @@ const House = (() => {
     if (H_.inside) { H_.inside.t += dt; const I = INSIDE[H_.inside.kind]; if (I.step) I.step(H_.inside, dt); return; }
     if (H_.say) { H_.say.t += dt; if (H_.say.t > 3.2) H_.say = null; }
     if (H_.built) { H_.built.t += dt; if (H_.built.t > 2.6) H_.built = null; }
-    // He walks (not while a stone is in the air).
+    // He walks (not while a stone is in his hands: then the arrows move it).
     const k = H_.keys, l = k.ArrowLeft || k.KeyA || H_.pad < 0, r = k.ArrowRight || k.KeyD || H_.pad > 0;
     let vx = 0;
     if (H_.goal !== null && H_.goal !== undefined) { const d = H_.goal - H_.x; if (Math.abs(d) < 3) H_.goal = null; else vx = Math.sign(d) * 70; }
-    if (!H_.active) { if (l) { vx = -70; H_.goal = null; H_.foe = null; } if (r) { vx = 70; H_.goal = null; H_.foe = null; } }
+    if (!H_.hold) { if (l) { vx = -70; H_.goal = null; H_.foe = null; } if (r) { vx = 70; H_.goal = null; H_.foe = null; } }
     if (H_.swing) vx = 0;
     if (vx) { H_.dir = Math.sign(vx); H_.x = clamp(H_.x + vx * dt, 40, HW - 40); H_.walkU = (H_.walkU + Math.abs(vx) * dt / 58) % 1; }
     H_.walking = !!vx;
-    const S = H_.active;
-    if (S && H_.steer) { S.body.setTransform(S.body.getPosition(), H_.angle); S.body.setAngularVelocity(0); S.body.setLinearVelocity(pl.Vec2(0, P(FALL))); }
-    else if (S) { const v = S.body.getLinearVelocity(); if (v.y > P(DROP)) S.body.setLinearVelocity(pl.Vec2(v.x, P(DROP))); }   // (dropped: fast, but not so fast it bounces off)
     H_.world.step(Math.min(dt, 1 / 30), 10, 8);
-    if (S && H_.hit) { H_.hit = false; landed(); }
     // Stones come to rest; one off its place (fallen to the ground) goes back into the store.
     const D = data();
+    let stillN = 0;
     for (const O of H_.stones.slice()) {
-      if (O === H_.active) continue;
       const v = O.body.getLinearVelocity(), calm = Math.hypot(v.x, v.y) < 0.05 && Math.abs(O.body.getAngularVelocity()) < 0.05;
       O.still = calm || !O.body.isAwake() ? O.still + dt : 0;
       const s = siteOf(O), low = O.body.getPosition().y * T > GY - FH + 4;
@@ -155,11 +215,15 @@ const House = (() => {
         keep();
       } else if (O.still > 0.6 && !O.kept) { O.kept = true; keep(); }
       if (!calm) O.kept = false;
+      if (O.still > 0.3) stillN++;
     }
+    H_.stillN = stillN;     // (the shadow of the stone in his hands is found again when something has moved)
+    if (H_.sel && !H_.stones.includes(H_.sel)) H_.sel = null;
+    if (H_.recheck.size && !H_.raid && [...H_.recheck].every((id) => H_.stones.every((O) => O.still > 0.8 || (siteOf(O) || {}).id !== id))) recheck(H_.recheck, "NO LONGER WHOLE");
     // A place built: its stones as many as it takes, and standing as high as the line, and all still.
     for (const s of SITES) {
       const SD = siteData(s); if (SD.done) continue;
-      const on = H_.stones.filter((O) => O !== H_.active && siteOf(O) === s);
+      const on = H_.stones.filter((O) => siteOf(O) === s);
       if (on.length < s.need || on.some((O) => O.still < 0.8)) continue;
       const top = Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2)));
       if (top > GY - FH - s.h * T + T * 0.5) continue;
@@ -170,8 +234,8 @@ const House = (() => {
     if (H_.raid) stepRaid(dt);
     if (H_.shake) for (const k in H_.shake) H_.shake[k] = Math.max(0, H_.shake[k] - dt);
     if (H_.dust && H_.dust.length) { for (const d of H_.dust) { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 300 * dt; } H_.dust = H_.dust.filter((d) => d.t < 0.8); }
-    // The camera: on him; on the stone, while one is laid.
-    const fx = S ? S.body.getPosition().x * T : H_.x;
+    // The camera: on him; on the stone, while he holds one.
+    const fx = H_.hold ? H_.hold.x : H_.x;
     H_.cam += (clamp(fx - W / 2, 0, HW - W) - H_.cam) * Math.min(1, dt * 4);
   }
 
@@ -184,7 +248,7 @@ const House = (() => {
     const sin = SINS[R.dom] ? R.dom : "gluttony", n = clamp(R.n | 0, 1, 8), demons = [];
     for (let i = 0; i < n; i++) { const side = i % 2 ? 1 : -1, k = Math.floor(i / 2); demons.push({ sin, side, dir: -side, x: side < 0 ? -40 - k * 90 : HW + 40 + k * 90, gap: (k % 3) * 20, hp: 3, st: "walk", t: 0, u: Math.random(), hurtT: 0, blowT: 1 + Math.random(), alpha: 1, lit: 0 }); }
     H_.raid = { dom: sin, demons, t: 0, cast: 0, over: null, hit: new Set() };
-    H_.say = { text: "THE DEMONS FOLLOWED YOU HOME", sub: "From the mountain of " + SINS[sin].name + ". Your walls take their blows. Tap a demon to strike it.", t: -1.2 };
+    H_.say = { text: "THE DEMONS FOLLOWED YOU DOWN", sub: "From the mountain of " + SINS[sin].name + ". Your walls take their blows. Tap a demon to strike it.", t: -1.2 };
     Sound.play(null); Sound.stop(); Sound.ambience({ wind: 0.6 }); Sound.fx.dread && Sound.fx.dread(0.7, 0);
   }
   // What a demon makes for: on its side of the gate, the first place with stones in it, from the outside in.
@@ -238,15 +302,9 @@ const House = (() => {
     if (R.over) {
       R.over.t += dt;
       // Once the stones are still: each place they struck stands, or (fallen below its line) is to be mended.
-      if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8 || O === H_.active)) {
-        const hurt = [];
-        for (const s of SITES) {
-          if (!R.hit.has(s.id)) continue;
-          const SD = siteData(s), on = H_.stones.filter((O) => siteOf(O) === s), top = on.length ? Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2))) : GY;
-          if (SD.done && on.length >= s.need && top <= GY - FH - s.h * T + T * 0.5) for (const O of on) O.body.setType("static");
-          else if (SD.done) { SD.done = false; hurt.push(s); }
-        }
-        if (hurt.length) H_.say = { text: hurt.map((s) => s.name).filter((v, i, a) => a.indexOf(v) === i).join(" AND ") + (hurt.length > 1 && hurt[0].name !== hurt[1].name ? " ARE" : " IS") + " THROWN DOWN", sub: "Lay stones on it again, to the line, to mend it.", t: 0 };
+      if (R.over.t > 2.5 && H_.stones.every((O) => O.still > 0.8)) {
+        for (const id of H_.recheck) R.hit.add(id);
+        recheck(R.hit, "THROWN DOWN");
         for (const s of SITES) { const SD = siteData(s); delete SD.breached; delete SD.hp; }   // (the lay brothers point the walls that stand, between one night and the next)
         data().raid = null; H_.raid = null; keep();
         Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
@@ -305,13 +363,19 @@ const House = (() => {
 
   // ---- Drawn ----
   const stoneFill = (dom) => mix(SINS[dom] ? SINS[dom].color : "#888888", "#6e665c", 0.55);
-  function drawStone(S, cam, lit) {
-    for (const [x, y, a] of squares(S)) {
+  function drawSquares(sq, dom, cam) {
+    for (const [x, y, a] of sq) {
       ctx.save(); ctx.translate(x - cam, y); ctx.rotate(a);
-      rect(-T / 2, -T / 2, T, T, "#1b181e"); rect(-T / 2 + 1, -T / 2 + 1, T - 2, T - 2, stoneFill(S.dom));
+      rect(-T / 2, -T / 2, T, T, "#1b181e"); rect(-T / 2 + 1, -T / 2 + 1, T - 2, T - 2, stoneFill(dom));
       rect(-T / 2 + 1, -T / 2 + 1, T - 2, 2, "rgba(255,240,215,0.28)"); rect(-T / 2 + 1, T / 2 - 3, T - 2, 2, "rgba(0,0,0,0.22)");
       ctx.restore();
     }
+  }
+  const drawStone = (S, cam) => drawSquares(squares(S), S.dom, cam);
+  function outline(sq, cam, color, dash) {
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.5; if (dash) ctx.setLineDash(dash);
+    for (const [x, y, a] of sq) { ctx.save(); ctx.translate(x - cam, y); ctx.rotate(a); ctx.strokeRect(-T / 2 + 0.75, -T / 2 + 0.75, T - 1.5, T - 1.5); ctx.restore(); }
+    ctx.restore();
   }
   // The cracks in a wall, more of them the more it has taken.
   function drawCracks(s, cam, k) {
@@ -374,6 +438,20 @@ const House = (() => {
     for (const S of H_.stones) { const s = H_.shake && siteOf(S), k = s && H_.shake[s.id] > 0 ? (Math.random() - 0.5) * 3 : 0; drawStone(S, cam - k); }
     for (const s of SITES) { const SD = siteData(s); if (s.kind === "wall" && SD.done && SD.hp !== undefined && !SD.breached) drawCracks(s, cam, 1 - SD.hp / WALL_HP); }
     for (const s of SITES) if (siteData(s).done && !siteData(s).breached) drawBuilt(s, cam);
+    // The stone he has chosen, ringed; the stone in his hands, hanging, and its shadow where it will rest.
+    if (H_.sel) { const sq = squares(H_.sel); for (const q of sq) glow(q[0] - cam, q[1], 18, "#ffe2aa", 0.25); outline(sq, cam, "rgba(255,240,200," + (0.75 + 0.25 * Math.sin(t * 6)).toFixed(3) + ")"); drawSquares(sq, H_.sel.dom, cam); outline(sq, cam, "rgba(255,240,200," + (0.75 + 0.25 * Math.sin(t * 6)).toFixed(3) + ")"); }
+    if (H_.hold) {
+      const h = H_.hold, ly = landing(h);
+      if (ly !== null && ly !== undefined) {
+        const sh = holdSquares(h, ly);
+        ctx.save(); ctx.globalAlpha = 0.28; drawSquares(sh, h.dom, cam); ctx.restore();
+        outline(sh, cam, "rgba(255,226,170,0.8)", [3, 3]);
+        const xs = holdSquares(h).map((q) => q[0]), xa = Math.min(...xs) - T / 2 - cam, xb = Math.max(...xs) + T / 2 - cam;
+        ctx.save(); ctx.strokeStyle = "rgba(255,226,170,0.25)"; ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(xa, h.y); ctx.lineTo(xa, ly); ctx.moveTo(xb, h.y); ctx.lineTo(xb, ly); ctx.stroke(); ctx.restore();
+      }
+      glow(h.x - cam, h.y, 40, "#ffe2aa", 0.15);
+      drawSquares(holdSquares(h), h.dom, cam);
+    }
     if (R) drawRaid(cam);
     for (const d of H_.dust || []) { const a = clamp(1 - d.t / 0.8, 0, 1); if (d.spark) { glow(d.x - cam, d.y, 6, d.spark, 0.5 * a); rect(d.x - cam - 1, d.y - 1, 2, 2, d.spark); } else rect(d.x - cam - 1.5, d.y - 1.5, 3, 3, "rgba(150,138,124," + (0.8 * a).toFixed(3) + ")"); }
     // He.
@@ -381,7 +459,7 @@ const House = (() => {
     const r = drawMonk(H_.x - cam, GY - FH * 0 , H_.dir, p, { t });
     if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 0.9, t, {}); glow(r.torch[0], r.torch[1], 40, C.flame, 0.3); }
     // The sign over the place he stands at.
-    if (near && !H_.active && !R) {
+    if (near && !H_.hold && !H_.sel && !R) {
       const SD = siteData(near), on = H_.stones.filter((O) => siteOf(O) === near).length, sx = near.x - cam, sy = GY - FH - near.h * T - (near.kind === "wall" ? 26 : 52);
       text(near.name, sx, sy, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
       text(SD.done ? "Built" : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
@@ -391,15 +469,20 @@ const House = (() => {
         else text("No stones in your store: bring blocks to the carts on the mountains, and win its summit.", W / 2, H - 30, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, max: W - 40 });
       }
     }
-    // A stone in the air: how to steer it.
-    if (H_.active && H_.steer) {
-      const keys = usingKeys();
-      text(keys ? "← → move it  ·  ↑ or click: turn it  ·  ↓ or space: drop it" : "Drag to move it  ·  tap to turn it", W / 2, H - 22, { align: "center", size: 9, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 140 });
-      if (!keys) button("DROP", W - 96, H - 52, 80, 38, () => drop(), { hot: true });
+    // A stone in his hands: how to lay it. A stone chosen: what to do with it.
+    if (H_.hold) {
+      const keys = usingKeys(), ok = landing(H_.hold) !== null;
+      text(keys ? "\u2190 \u2192 move it  \u00b7  \u2191 or click: turn it  \u00b7  \u2193 or space: set it down" : "Drag to move it  \u00b7  tap to turn it", W / 2 - 40, H - 14, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 330 });
+      button("SET IT DOWN", W - 132, H - 50, 120, 38, () => place(), { hot: ok, off: !ok });
+      button("BACK TO THE STORE", W - 262, H - 50, 122, 38, () => putBack(), { size: 8 });
+    } else if (H_.sel) {
+      text("This stone: take it up into your store, or move it somewhere else.", W / 2, 120, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
+      button("TAKE IT UP", W / 2 - 128, H - 50, 120, 38, () => lift(H_.sel, false), { hot: true, sub: "Into your store" });
+      button("MOVE IT", W / 2 + 8, H - 50, 120, 38, () => lift(H_.sel, true), { sub: "Lay it again" });
     }
     // What he has: the stones in his store, in their colours.
     const D = data();
-    text("HOME", 18, 30, { font: FONT.title, size: 16, weight: 700, spacing: 4, color: "#fff" });
+    text("THE MONASTERY", 18, 30, { font: FONT.title, size: 16, weight: 700, spacing: 4, color: "#fff" });
     text("STONES IN YOUR STORE: " + D.store.length, 18, 46, { size: 8, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.75)" });
     D.store.slice(0, 16).forEach((st, i) => rect(18 + i * 9, 52, 7, 7, stoneFill(st.dom)));
     if (R && !R.over) {
@@ -715,30 +798,40 @@ const House = (() => {
   // ---- Hands on it ----
   function down(p) {
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (I.down) I.down(H_.inside, p); return; }
-    if (H_.active && H_.steer) { H_.drag = { x: p.x, moved: 0 }; return; }
-    // A tap on a demon: he goes to it and strikes it. On the ground: he walks there.
+    if (H_.hold) { H_.drag = { x: p.x, hx: H_.hold.x, moved: false }; return; }
+    // A tap on a demon: he goes to it and strikes it. On a stone laid: it is chosen. On the ground: he walks there.
     if (H_.raid) { const f = H_.raid.demons.find((q) => (q.st === "walk" || q.st === "batter" || q.st === "hurt") && Math.abs(p.x + H_.cam - q.x) < 26 && p.y > GY - 70 && p.y < GY + 10); if (f) { H_.foe = f; return; } }
+    const S = stoneAt(p);
+    if (S && siteOf(S)) { H_.sel = H_.sel === S ? null : S; Sound.fx.tick && Sound.fx.tick(800, 0.2); return; }
+    H_.sel = null;
     if (p.y > GY - 140) { H_.goal = clamp(p.x + H_.cam, 40, HW - 40); H_.foe = null; }
   }
   function move(p) {
     if (H_.inside) { const I = H_.inside; if (I.B) { const q = I.B.find((b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h); I.hover = q ? q.i : null; } return; }
-    const d = H_.drag; if (!d || !H_.active) return;
-    const dx = p.x - d.x; if (Math.abs(dx) >= 12) { nudge(Math.sign(dx)); d.x = p.x; d.moved += 1; }
+    const d = H_.drag; if (!d || !H_.hold) return;
+    if (Math.abs(p.x - d.x) > 6) d.moved = true;
+    if (d.moved && moveTo(d.hx + (p.x - d.x))) Sound.fx.tick && Sound.fx.tick(900, 0.12);
   }
-  function up() { const d = H_.drag; H_.drag = null; if (d && !d.moved && H_.active) turn(); }
+  function up() { const d = H_.drag; H_.drag = null; if (d && !d.moved && H_.hold) turn(); }
   function key(code, isDown) {
     H_.keys[code] = isDown; if (!isDown) return;
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (!(I.key && I.key(H_.inside, code)) && (code === "Escape" || code === "Enter" || code === "Space")) goOut(); return; }
-    if (H_.active && H_.steer) {
+    if (H_.hold) {
       if (code === "ArrowLeft" || code === "KeyA") nudge(-1); else if (code === "ArrowRight" || code === "KeyD") nudge(1);
-      else if (code === "ArrowUp" || code === "KeyW") turn(); else if (code === "ArrowDown" || code === "KeyS" || code === "Space") drop();
+      else if (code === "ArrowUp" || code === "KeyW") turn(); else if (code === "ArrowDown" || code === "KeyS" || code === "Space" || code === "Enter") place();
+      else if (code === "Escape" || code === "Backspace") putBack();
       return;
+    }
+    if (H_.sel) {
+      if (code === "Backspace" || code === "Delete" || code === "KeyX") lift(H_.sel, false); else if (code === "KeyM") lift(H_.sel, true); else if (code === "Escape") H_.sel = null;
+      if (code !== "ArrowLeft" && code !== "ArrowRight" && code !== "KeyA" && code !== "KeyD") return;
+      H_.sel = null;
     }
     if (H_.raid) { if ((code === "Space" || code === "KeyF" || code === "Enter") && !H_.swing) H_.swing = { t: 0 }; if (code === "Escape") leave(); return; }
     if (code === "Space" || code === "Enter") { const s = nearSite(); if (s && !siteData(s).done) lay(s); else if (s && INSIDE[s.kind]) goIn(s.kind); }
     if (code === "Escape") leave();
   }
-  function leave() { keep(); Game.toTitle(); }
+  function leave() { if (H_.hold) putBack(); keep(); Game.toTitle(); }
   // In.
   function open() {
     if (!pl) return;
@@ -748,6 +841,6 @@ const House = (() => {
     mode = M; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.25 });
     startRaid();
   }
-  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, lay, turn, nudge, drop };
+  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, lay, turn, nudge, place, drop: place, putBack, lift, landing };
   return M;
 })();
