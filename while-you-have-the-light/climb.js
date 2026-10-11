@@ -1988,7 +1988,16 @@ const Climb = (() => {
   // it, here and there by chance (more often the higher he goes), never two within three sections.
   // (Where one would wait in section k, given where the last one waited: nothing is changed.)
   function planGreat(k) {
-    if (!NOV || !GREAT[NOV.domain] || k < 7 || k >= summitK()) return null;
+    if (!NOV || !GREAT[NOV.domain] || k >= summitK()) return null;
+    // (On a mapped mountain: four of them, a fifth of the way up, two fifths, three, four; each a tier
+    // stronger than the last, the fourth only less than the summit's.)
+    if (modular()) {
+      const K = summitK(), at4 = [1, 2, 3, 4].map((q) => Math.max(1, Math.round(K * q / 5))), q = at4.indexOf(k); if (q < 0) return null;
+      const G = GREAT[NOV.domain], tier = q + 1, sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc, sp = spotsFor(k, NOV.domain), sec = secs[k];
+      const s = sp.length ? sp[Math.floor(hash2(k, 991, seed) * sp.length) % sp.length] : [sec.c * CELL, -(sec.h0 + 2) * CELL];
+      const at = dFree(s[0], s[1] - 30, hw, ht); return at ? { at, dir: hash2(k, 992, seed) < 0.5 ? -1 : 1, tier, sc, hw, ht } : null;
+    }
+    if (k < 7) return null;
     const sec = secs[k], G = GREAT[NOV.domain], tier = clamp(1 + Math.floor((k - 7) / 8), 1, 4), sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc;
     if (sec.gate) return null;
     let at = null, dir = 1;
