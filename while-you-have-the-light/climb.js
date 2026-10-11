@@ -1371,7 +1371,17 @@ const Climb = (() => {
   function placeFor(k, demonsOnly) {
     // (A cavern or a corridor of briars is long: twice as many demons in it, met along the way over.)
     ensureSecs(k); const sec = secs[k], sin = sec.dom || "wrath", n = demonsFor(k) * (sec.type === "cave" || sec.type === "slope" ? 2 : 1);
-    if (sec.type === "summit") { if (!demonsOnly && !sec.filler) placeSummit(k); return; }
+    if (sec.type === "summit") {
+      if (sec.filler) return;
+      if (!demonsOnly) placeSummit(k);
+      // Three of the mountain's own demons about its top as well (Gluttony's pulling him about and
+      // throwing their fat while he fights the great one), and three more when they are gone, until
+      // the summit is won. (None, if the mountain was asked to have no demons.)
+      if (S.won || !NOV || !NOV.demons || !DEM[sin]) return;
+      const spots = spotsFor(k, sin);
+      for (const s of spots.slice(0, 3)) spawnDemon(sin, s[0], s[1], s[2], s[3], k);
+      return;
+    }
     if (!DEM[sin]) return;
     const spots = spotsFor(k, sin), taken = [];
     // The best place first; then each further one as far as it can be from those already taken.
@@ -1641,6 +1651,7 @@ const Climb = (() => {
       else if (b.st === "hand") { if (S.tied !== b || S.cling || S.hang || S.act || S.rope) b.st = S.tied === b ? "tied" : "loose"; else { const [hx, hy] = S.handW || grip(); b.x = hx; b.y = hy - 2; b.vx = S.vx; b.vy = S.vy; b.rot = 0; b.rope = TETHER; } }
       else if (b.st === "carried") { const f = b.by; if (!f || !alive(f) || f.block !== b) { if (f && f.block === b) f.block = null; b.st = "loose"; b.by = null; } }
       else if (b.st === "tobin") { b.t += dt; if (b.t >= 0.55) b.st = "bin"; }
+      else if (b.st === "grasped") { const g = b.by; if (!g || !S.bigs.includes(g) || !g.laugh || g.laugh.b !== b) { b.st = "loose"; b.by = null; } }
     }
     // A block lying loose within his reach: he ties it on.
     if (!S.tied && !S.dying) {
@@ -1764,6 +1775,7 @@ const Climb = (() => {
       else if (b.st === "carried") {
         const f = b.by, q = f.p ? demonJoint(f.sin, f.x, f.y, f.dir, f.p, "hF") : [f.x, f.y - f.ht];
         x = q[0]; y = q[1] - b.ht / 2 - 2; b.x = x; b.y = y + b.ht / 2; rot = 0;
+      } else if (b.st === "grasped") { x = b.x; y = b.y - b.ht / 2; rot = 0.12 * Math.sin(S.rt * 24);
       } else if (b.st === "tobin") {
         const [ex, ey] = binSlot(b.by, b.slot), u = ease(Math.min(1, b.t / 0.55));
         x = lerp(b.fx, ex, u); y = lerp(b.fy - b.ht / 2, ey, u) - Math.sin(u * PI) * 46; rot = (1 - u) * rot;
@@ -1925,10 +1937,20 @@ const Climb = (() => {
     if (g.bulge) { g.bulge.t += dt; if (g.bulge.t > 0.3) g.bulge = null; }
     if (g.st === "dying") { g.wake = Math.max(0, g.wake - dt * 4); if (g.t > 1.1) breakGreat(g); return; }
     if (g.st === "latch") { holdHim(g, dt); return; }
-    // Struck, it laughs (flashing as it does), and then throws the stone back at him.
-    if (g.laugh) { g.laugh.t += dt; if (g.laugh.t > 0.6) { const b = g.laugh.b; g.laugh = null; if (S.blocks.includes(b) && b.st !== "bin" && !S.dying && !S.latched) hurl(g, b); } }
     // Knocked back by a blow: it drifts, slowing.
     if (g.kx || g.ky) { g.x += g.kx * dt; g.y += g.ky * dt; const q = Math.exp(-3 * dt); g.kx *= q; g.ky *= q; if (Math.abs(g.kx) + Math.abs(g.ky) < 4) { g.kx = 0; g.ky = 0; } }
+    // Struck with a block, it laughs: it holds the block up in its claw, throws its head back with its
+    // jaws wide, and shakes with it, flashing; and then it flings the block back at him.
+    if (g.laugh) {
+      const L = g.laugh, b = L.b; L.t += dt; g.wake = Math.min(1, g.wake + dt * 8); g.anim += dt * 3;
+      if (b.st === "grasped") { const q = greatT(g, { x: 0, y: 0 })(LAUGH_HAND[0], LAUGH_HAND[1]); b.x = q[0]; b.y = q[1] + b.ht / 2; }
+      if (!L.again && L.t > 0.55) { L.again = true; Sound.fx.laugh(panX(g.x)); }
+      if (L.t >= LAUGH_T) {
+        g.laugh = null;
+        if (b.st === "grasped") { if (S.blocks.includes(b) && !S.dying && !S.latched) hurl(g, b); else { b.st = "loose"; b.by = null; } }
+      }
+      return;
+    }
     // Seen: some part of it in the torch's light (or, gone into the rock, near enough to be in it),
     // and he turned toward it; or, near the top of the mountain, turned toward it or not.
     const cx = g.x, cy = g.y - g.ht / 2, [mx, my] = middle(), [lx, ly] = S.torch, R = lightR() * 0.95;
@@ -2037,15 +2059,20 @@ const Climb = (() => {
     if (g.st === "dying" || g.st === "latch" || (g.hitCd || 0) > S.rt) return;
     g.hitCd = S.rt + 0.6;
     const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
-    g.hp -= 1; g.showHp = 3; g.hurtT = 0.3; g.stunT = 2.5; g.st = "stone"; g.t = 0; g.kx = ux * 170; g.ky = uy * 110 - 30;
+    g.hp -= 1; g.showHp = 3; g.hurtT = 0.3; g.kx = ux * 120; g.ky = uy * 80 - 25;
     ev("a great demon struck", { hp: g.hp, by: b.flung ? "thrown" : "swung" });
     b.vx = -b.vx * 0.25; b.vy = -Math.abs(b.vy) * 0.25 - 140;
     impactAt(b.x, b.y - b.ht / 2, ux, uy, 2.6, null);
     Sound.fx.brickHit(1, panX(g.x)); Sound.fx.stone(panX(g.x)); gain(0.15); S.shake = Math.max(S.shake, 0.3);
     for (let q = 0; q < 10; q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: b.x, y: b.y - b.ht / 2, vx: (Math.random() - 0.5) * 240 - ux * 60, vy: -60 - Math.random() * 180, life: 0.7, age: 0 });
-    if (g.hp <= 0) { g.st = "dying"; g.t = 0; g.stunT = 9; Sound.fx.greatFall(panX(g.x)); ev("a great demon cast down", { tier: g.tier }); return; }
+    if (g.hp <= 0) { g.st = "dying"; g.t = 0; g.stunT = 9; g.laugh = null; Sound.fx.greatFall(panX(g.x)); ev("a great demon cast down", { tier: g.tier }); return; }
     const blk = real || b;
-    if (blk && blk.shape && S.blocks.includes(blk)) { g.laugh = { t: 0, b: blk }; Sound.fx.laugh(panX(g.x)); ev("a great demon laughed"); }
+    if (blk && blk.shape && S.blocks.includes(blk) && blk.st !== "bin" && blk.st !== "tobin") {
+      // It takes the block (wrenching it off his rope), and laughs.
+      if (S.tied === blk) { S.tied = null; S.lost = blk; S.dragging = false; Sound.fx.tetherBreak(); }
+      Object.assign(blk, { st: "grasped", by: g, vx: 0, vy: 0, claim: null, flung: false });
+      g.laugh = { t: 0, b: blk }; g.stunT = 0; Sound.fx.laugh(panX(g.x)); ev("a great demon laughed");
+    } else { g.stunT = 2.5; g.st = "stone"; g.t = 0; }       // (no block to take: knocked back, and stunned a while)
   }
   function breakGreat(g) {
     g.st = "gone"; S.cast++; S.fuel = 1; S.meter = 1; gain(0.3); S.greatDown.add(g.sec);
@@ -2067,7 +2094,7 @@ const Climb = (() => {
   function hurl(g, b) {
     ev("a great demon threw the block back", { shape: b.shape });
     if (S.tied === b) { S.tied = null; S.lost = b; S.dragging = false; Sound.fx.tetherBreak(); }
-    const [mx, my] = middle(), hx = g.x + g.dir * g.hw * 0.5, hy = g.y - g.ht * 0.62, T = clamp(dist(hx, hy, mx, my) / 560, 0.15, 0.6);
+    const grasped = b.st === "grasped", [mx, my] = middle(), hx = grasped ? b.x : g.x + g.dir * g.hw * 0.5, hy = grasped ? b.y - b.ht / 2 : g.y - g.ht * 0.62, T = clamp(dist(hx, hy, mx, my) / 560, 0.15, 0.6);
     Object.assign(b, { st: "loose", by: null, claim: null, flung: false, rope: TETHER, x: hx, y: hy + b.ht / 2, vx: (mx - hx) / T, vy: (my - hy) / T - 0.5 * 640 * T, rot: 0, ground: false, hurled: S.rt, nopick: S.rt + 0.5, unseen: S.rt + 3 });
     g.flingT = 0.35; g.chew = 0.3;
     Sound.fx.growl(panX(g.x), 0.6); Sound.fx.throw(1);
@@ -2281,8 +2308,11 @@ const Climb = (() => {
       return P;
     }
     const fk = g.flingT > 0 ? Math.sin((1 - g.flingT / 0.35) * PI) : 0;      // (flinging a block back)
+    const lk = laughK(g), shk = g.laugh ? Math.sin(g.laugh.t * 30) : 0;         // (laughing: the near claw holding the block up, the far one on its belly)
     const arm = (tone, sh, back) => {
-      const wv = Math.sin(A * 5 + (back ? 2 : 0)), el = [lerp(6, 18, w) - (back ? 6 : 0) + 4 * fk, lerp(40, 52, w) + wv * 1.5 * w + 8 * fk], hd = [lerp(8, 34, w) - (back ? 7 : 0) + 12 * fk, lerp(26, 58, w) + wv * 2.5 * w + 16 * fk];
+      const wv = Math.sin(A * 5 + (back ? 2 : 0));
+      let el = [lerp(6, 18, w) - (back ? 6 : 0) + 4 * fk, lerp(40, 52, w) + wv * 1.5 * w + 8 * fk], hd = [lerp(8, 34, w) - (back ? 7 : 0) + 12 * fk, lerp(26, 58, w) + wv * 2.5 * w + 16 * fk];
+      if (lk) { const E = back ? [4, 40] : [12, 76], Hd = back ? [14, 43 + shk] : [LAUGH_HAND[0] - 2, LAUGH_HAND[1] - 8 + shk]; el = [lerp(el[0], E[0], lk), lerp(el[1], E[1], lk)]; hd = [lerp(hd[0], Hd[0], lk), lerp(hd[1], Hd[1], lk)]; }
       add(tone, limb(sh, el, 3.4, 2.8)); add(tone, limb(el, hd, 2.8, 2.2)); claws(tone, el, hd, 4, lerp(7, 10, w), lerp(0.16, 0.38, w), lerp(0.25, -0.5, w));
     };
     arm("k", [-8, 57], true);
@@ -2297,8 +2327,10 @@ const Climb = (() => {
     add("m", B); add("d", B.filter((p) => p[1] < 31).concat([[-15, 30]]));
     add("l", rim(-1, 38, 18, 18, 0.3, 1.9, 2.4));
     add("m", [[-14, 46], [-13, 60], [10, 62], [15, 47]]);
-    // The jaw, hinged at the back of the head: shut, as stone; wide, awake (and working, as it chews).
-    const ga = w * (0.6 + 0.1 * Math.sin(A * 6.5)) + (g.chew > 0 ? 0.35 * Math.abs(Math.sin(g.chew * 16)) : 0), Hu = -8, Hv = 60, ca = Math.cos(ga), sa = Math.sin(ga);
+    // The jaw, hinged at the back of the head: shut, as stone; wide, awake (and working, as it chews;
+    // and wider, laughing, in bursts).
+    const h0 = P.length;
+    const ga = lerp(w * (0.6 + 0.1 * Math.sin(A * 6.5)) + (g.chew > 0 ? 0.35 * Math.abs(Math.sin(g.chew * 16)) : 0), 0.95 + 0.3 * Math.abs(Math.sin((g.laugh ? g.laugh.t : 0) * 15)), lk), Hu = -8, Hv = 60, ca = Math.cos(ga), sa = Math.sin(ga);
     const J = (u, v) => { const du = u - Hu, dv = v - Hv; return [Hu + du * ca + dv * sa, Hv - du * sa + dv * ca]; };
     if (ga > 0.03) { add("x", [[-8, 61], [2, 62], [14, 63], [25, 64], J(24, 63), J(12, 62.5), J(0, 62), J(-8, 61)]); add("k", [[-7, 61], [5, 62.2], J(5, 62), J(-7, 61)]); }
     add("m", [J(-9, 61), J(24, 63), J(22, 58), J(12, 53), J(-4, 54), J(-11, 57)]);
@@ -2314,15 +2346,25 @@ const Climb = (() => {
     const b0 = [6, lerp(80.2, 83, w)], b1 = [20, lerp(79.6, 75.6, w)];
     add("k", [[b0[0], b0[1] - 1.4], [b1[0] + 1, b1[1] - 1.2], [b1[0], b1[1] + 1.4], [b0[0], b0[1] + 1.8]]);
     add("k", oval(14, 76.6, 3.2, lerp(1.8, 2.8, w), 10)); add("k", oval(7.4, 77.8, 2.6, lerp(1.5, 2.3, w), 10));
-    add("e", oval(14.4, 76.6, lerp(2.2, 2.4, w), lerp(0.7, 2.1, w), 10)); add("e", oval(7.8, 77.8, lerp(1.7, 1.9, w), lerp(0.55, 1.7, w), 10));
+    add("e", oval(14.4, 76.6, lerp(2.2, 2.4, w), lerp(0.7, 2.1, w) * (1 - 0.7 * lk), 10)); add("e", oval(7.8, 77.8, lerp(1.7, 1.9, w), lerp(0.55, 1.7, w) * (1 - 0.7 * lk), 10));
+    // (Laughing, the whole head thrown back about its neck.)
+    const tilt = headTilt(g); if (tilt) for (let i = h0 + 1; i < P.length; i += 2) P[i] = P[i].map(tilt);
     arm("m", [-2, 56], false);
     return P;
   }
   // Its frame on the screen: leaning into its way as it wakes, bobbing as it floats (still, as stone).
   function greatT(g, cam) {
-    const sc = g.sc, d = g.dir, th = 0.2 * smooth(g.wake), c = Math.cos(th), s = Math.sin(th), j = g.st === "dying" ? 3.5 * clamp(g.t / 0.7, 0, 1) : g.hurtT > 0 ? 2 * g.hurtT / 0.3 : 0;
-    const ox = g.x - cam.x + (Math.random() - 0.5) * j, oy = g.y - cam.y - Math.sin(g.anim * 3.2) * 2.5 * sc + (Math.random() - 0.5) * j;
+    const lk = laughK(g), sc = g.sc, d = g.dir, th = 0.2 * smooth(g.wake) - 0.28 * lk, c = Math.cos(th), s = Math.sin(th), j = g.st === "dying" ? 3.5 * clamp(g.t / 0.7, 0, 1) : g.hurtT > 0 ? 2 * g.hurtT / 0.3 : 0;
+    const ox = g.x - cam.x + (Math.random() - 0.5) * j, oy = g.y - cam.y - Math.sin(g.anim * 3.2) * 2.5 * sc + (Math.random() - 0.5) * j - (g.laugh ? Math.abs(Math.sin(g.laugh.t * 15)) * 2.5 * sc * lk : 0);
     return (u, v) => { const dv = v - 40, ru = u * c + dv * s, rv = -u * s + dv * c + 40; return [ox + d * ru * sc, oy - rv * sc]; };
+  }
+  // Laughing: how far into it (in and out again); its head's turn back about the neck; where its claw holds the block up.
+  const LAUGH_T = 1.15, LAUGH_HAND = [20, 104];
+  const laughK = (g) => (g.laugh ? smooth(clamp(g.laugh.t / 0.18, 0, 1)) * clamp((LAUGH_T - g.laugh.t) / 0.15, 0, 1) : 0);
+  function headTilt(g) {
+    const k = laughK(g); if (!k) return null;
+    const a = 0.55 * k, c = Math.cos(a), s = Math.sin(a), pu = -6, pv = 56;
+    return (q) => { const du = q[0] - pu, dv = q[1] - pv; return [pu + du * c - dv * s, pv + du * s + dv * c]; };
   }
   const latchFrame = (g, mx, my, cam) => { const d = S.dir || 1, k = 1 + 0.06 * (g.tier - 1); return (u, v) => [mx - cam.x + d * u * k, my - cam.y - v * k]; };
   function paintMaw(P, T, w, lit, al, flash) {
@@ -2348,7 +2390,7 @@ const Climb = (() => {
     const [lx, ly] = S.torch, R = lightR();
     g.lit += ((dist(lx, ly, cx, cy) < R * 0.95 + g.ht * 0.3 && [0.15, 0.5, 0.85].some((q) => los(lx, ly, cx, g.y - g.ht * q))) - g.lit) * 0.15;
     const T = (g.T = greatT(g, cam)), w = smooth(g.wake), al = g.st === "dying" ? clamp(1 - (g.t - 0.75) / 0.35, 0, 1) : 1;
-    paintMaw(mawParts(g), T, w, g.lit, al, g.laugh ? 0.75 * (0.5 + 0.5 * Math.sin(g.laugh.t * 38)) : g.hurtT > 0 ? 0.8 * g.hurtT / 0.3 : 0);
+    paintMaw(mawParts(g), T, w, g.lit, al, g.laugh ? 0.6 * laughK(g) * (0.5 + 0.5 * Math.sin(g.laugh.t * 30)) : g.hurtT > 0 ? 0.8 * g.hurtT / 0.3 : 0);
     // As stone: its cracks (more of them, the more it has been struck).
     if (g.lit > 0.05 && w < 0.95) {
       const n = Math.min(MAW_CRACKS.length, 3 + 2 * (g.maxHp - g.hp));
@@ -2375,8 +2417,9 @@ const Climb = (() => {
         for (const [u, v, r] of [[13.9, 45.5, 1], [7.4, 46.8, 0.8]]) { const [ex, ey] = T(u, v); glow(ex, ey, 15 * r, "#ff2a12", 0.85); circle(ex, ey, 1.1 * r, "rgba(255,236,210,0.95)"); }
         continue;
       }
-      for (const [u, v, r] of MAW_EYES) {
-        const [x, y] = T(u, v);
+      const tilt = headTilt(g);
+      for (const [u0, v0, r] of MAW_EYES) {
+        const [u, v] = tilt ? tilt([u0, v0]) : [u0, v0], [x, y] = T(u, v);
         glow(x, y, (6 + 11 * w) * r * g.sc, "#ff2a12", (0.28 + 0.6 * w) * al);
         circle(x, y, (0.7 + 0.5 * w) * r * g.sc, w > 0.4 ? "rgba(255,236,210," + (w * al) + ")" : "rgba(255,80,50," + (0.55 * al) + ")");
       }
