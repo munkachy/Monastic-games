@@ -2572,12 +2572,30 @@ const Climb = (() => {
     if (!comboOn()) S.combo = { n: 0, pts: 0, last: null, rep: 0, t: S.rt, rank: -1, rankT: -9 };
     const C = S.combo;
     C.rep = C.last === move ? C.rep + 1 : 0; C.last = move; C.n++; C.t = S.rt;
+    // (Three blows unlike each other in a row, the third one that has a crowned form: crowned. Then
+    // three more for the next.)
+    C.set = (C.set || []).concat(move).slice(-3);
+    if (C.set.length === 3 && new Set(C.set).size === 3 && CROWNED[move]) C.set = [];
     const fresh = Math.max(0.25, Math.pow(0.6, C.rep)), k = (C.n >= 3 ? 2 : C.n === 2 ? 1.5 : 1) * fresh;
     C.pts += fresh; C.k = k;
     let r = -1; RANKS.forEach(([p], i) => { if (C.pts >= p) r = i; });
     if (r > C.rank) { C.rank = r; C.rankT = S.rt; Sound.fx.kindle(0.5 + 0.12 * r, 0); }
     ev("combo", { move, n: C.n, k: r2(k) });
     return k;
+  }
+  // The crowned blows: the name each is given (from the Scriptures and the liturgy), and its English.
+  const CROWNED = { uppercut: ["SURSUM CORDA", "Lift up your hearts"], slam: ["DEPOSUIT", "He hath put down the mighty from their seat"] }, CROWN_SPIN = 0.55;
+  function wouldCrown(move) { if (!CROWNED[move]) return false; const set = (comboOn() && S.combo.set ? S.combo.set : []).concat(move).slice(-3); return set.length === 3 && new Set(set).size === 3; }
+  function crownFX(move, f) {
+    S.crownShow = { name: CROWNED[move][0], sub: CROWNED[move][1], t: S.rt };
+    S.slowT = 0.32; S.whiteT = Math.max(S.whiteT || 0, 0.06); Sound.fx.crown(panX(f.x)); ev("a crowned blow", { move });
+  }
+  // Its name, high in the middle, for a moment.
+  function drawCrown() {
+    const D = S.crownShow, u = (S.rt - D.t) / 1.6; if (u >= 1) { S.crownShow = null; return; }
+    const a = clamp(u / 0.06, 0, 1) * clamp((1 - u) / 0.35, 0, 1), z = 1 + 0.25 * Math.max(0, 1 - u / 0.12);
+    text(D.name, W / 2, 48, { align: "center", font: FONT.title, size: 20 * z, weight: 700, spacing: 4, color: "#fff1c4", alpha: a, glow: "rgba(255,170,70,0.85)", blur: 14, max: W - 40 });
+    text(D.sub, W / 2, 63, { align: "center", font: FONT.line, italic: true, size: 12, color: "#ffd9a0", alpha: a * 0.9, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 });
   }
   // Broken by a blow that reached him: "BROKEN", fading where the count was.
   function breakCombo() { if (comboOn() && S.combo.n >= 2) { S.combo.broke = S.rt; ev("combo broken", { n: S.combo.n }); } else S.combo = null; }
@@ -3184,7 +3202,8 @@ const Climb = (() => {
   function attack(kind, f, dir) {
     if (!alive(f)) return;
     const sp = strikeSpot(f);
-    moveTo(kind, sp, { f, dir, dur: kind === "hurl" || kind === "slam" ? 0.4 : 0.34 });
+    const move = kind === "kick" ? "uppercut" : kind === "slam" ? "slam" : null;
+    moveTo(kind, sp, { f, dir, dur: kind === "hurl" || kind === "slam" ? 0.4 : 0.34, crown: !!move && wouldCrown(move) });
     S.dir = f.x < sp[0] ? -1 : 1;
   }
   // A boulder lying near him on the same floor: he steps to it and heaves it up (it is heavy).
@@ -3278,12 +3297,27 @@ const Climb = (() => {
         if (a.o.st === "rest" || a.o.st === "fly") { a.o.st = "held"; a.o.by = null; S.held = a.o; if (a.kind === "catch") { Sound.fx.catchIt(); gain(0.08); } else Sound.fx.pickup(); }
       } else if (alive(f) && dist(S.x, S.y - 22, f.x, f.y - f.ht / 2) < 70 + f.hw) {
         if (a.kind === "punch") { impact(f, S.dir, -0.2, 1); blowTo(f, 1, S.dir * 150, -60, undefined, "strike"); Sound.fx.punch(0.8, panX(f.x)); gain(0.06); }
+        else if (a.kind === "kick" && a.crown) {
+          // SURSUM CORDA: flung up twice as high in a column of light, and he goes up after it, turning.
+          crownFX("uppercut", f); impact(f, S.dir * 0.2, -1, 2.4); blowTo(f, 1.5, S.dir * 40, -820, "launch", "uppercut"); Sound.fx.kick(1, panX(f.x)); gain(0.12); a.leap = true;
+          const [cx, cy] = dMid(f); for (let q = 0; q < 22; q++) S.parts.push({ kind: "spark", c: q % 3 ? "#fff1c4" : C.flame, x: cx + (Math.random() - 0.5) * 14, y: cy - q * 6, vx: (Math.random() - 0.5) * 30, vy: -260 - Math.random() * 260, life: 0.8, age: 0, real: true });
+        }
+        else if (a.kind === "slam" && a.crown) {
+          // DEPOSUIT: driven down into the rock; the ground shakes in a ring, and every demon near is thrown down.
+          crownFX("slam", f); impact(f, a.dir[0] * 0.3, 1, 2.6); blowTo(f, 1.5, a.dir[0] * 140, 900, "hurl", "slam"); Sound.fx.punch(1, panX(f.x)); Sound.fx.wallSlam(panX(f.x)); S.shake = 0.4; gain(0.12);
+          S.parts.push({ kind: "wave", x: f.x, y: f.y, vx: 0, vy: 0, life: 0.6, age: 0, real: true });
+          for (let q = 0; q < 14; q++) S.parts.push({ kind: "smoke", warm: true, x: f.x + (Math.random() - 0.5) * 60, y: f.y - 4, vx: (Math.random() - 0.5) * 160, vy: -20 - Math.random() * 40, r: 3 + Math.random() * 4, life: 0.9, age: 0 });
+          for (const g of S.demons) if (g !== f && alive(g) && !g.idol && g.st !== "legs" && Math.abs(g.x - f.x) < 150 && Math.abs(g.y - f.y) < 70) hurtDemon(g, 1, (sign(g.x - f.x) || 1) * 220, -260, "launch");
+        }
         else if (a.kind === "kick") { impact(f, S.dir * 0.2, -1, 1.4); blowTo(f, 1, S.dir * 30, -430, "launch", "uppercut"); Sound.fx.kick(0.9, panX(f.x)); gain(0.06); }
         else if (a.kind === "slam") { impact(f, a.dir[0] * 0.3, 1, 1.6); blowTo(f, 1, a.dir[0] * 140, 680, "hurl", "slam"); Sound.fx.punch(1, panX(f.x)); gain(0.06); }
         else { impact(f, a.dir[0], a.dir[1], 1.8); blowTo(f, 1, a.dir[0] * 580, a.dir[1] * 580 - 90, "hurl", "hurl"); Sound.fx.kick(1, panX(f.x)); gain(0.08); }
       }
     }
-    if (u >= 1) { S.atk = null; S.ground = boxHit(S.x, S.y + 1); if (!S.ground) { S.vy = 0; S.floatT = 0.3; } }
+    if (u >= 1) {
+      S.atk = null; S.ground = boxHit(S.x, S.y + 1); if (!S.ground) { S.vy = 0; S.floatT = 0.3; }
+      if (a.leap) { S.ground = false; S.vy = -380; S.vx = S.dir * 30; S.floatT = 0; S.crownSpin = CROWN_SPIN; }      // (up after it)
+    }
   }
   // What a tap or a swipe on a demon or a boulder does.
   function gesture(kind, f, o, dir) {
@@ -3633,6 +3667,7 @@ const Climb = (() => {
     if (S.dread) { stepDread(dt); return; }
     if (S.boonShow) { stepBoonShow(dt); return; }
     if (S.angel) { stepAngel(dt); return; }
+    if (S.slowT > 0) { S.slowT -= dt; dt *= 0.5; }            // (a crowned blow: a moment at half speed)
     S.rt += dt;
     if (!Number.isFinite(S.x + S.y + S.vx + S.vy)) unlose();
     if (NOV) { if (NOV.torch && !S.latched) S.fuel = 1; if (NOV.flare) S.meter = 1; }       // (an endless torch, but not in a great demon's mouth)
@@ -3686,6 +3721,7 @@ const Climb = (() => {
     if (S.rt >= REC.next) { REC.next = S.rt + 0.25; REC.snaps.push(snapNow()); if (REC.snaps.length > REC_N) REC.snaps.shift(); }
     if (S.yank) stepYank(wdt);
     S.hurtT = Math.max(0, S.hurtT - wdt); S.invT = Math.max(0, S.invT - dt); S.flashT = Math.max(0, S.flashT - dt); S.floatT = Math.max(0, S.floatT - wdt); S.shake = Math.max(0, S.shake - dt);
+    if (S.crownSpin > 0) { S.crownSpin = Math.max(0, S.crownSpin - wdt); if (Math.random() < 0.5) S.ghosts.push({ x: S.drawX || S.x, y: S.drawY || S.y, dir: S.dir, p: S.lastPose || STAND, age: 0.35 }); if (S.ground) S.crownSpin = 0; }
     S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.leapT = Math.max(0, (S.leapT || 0) - wdt); S.leapCd = Math.max(0, (S.leapCd || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
 
     if (!S.fightSeen && S.demons.some((f) => alive(f) && !f.idol && dist(f.x, f.y, S.x, S.y) < 420)) { S.fightSeen = true; S.fightHintT = 0; }
@@ -4012,6 +4048,7 @@ const Climb = (() => {
   function monkPose() {
     const t = S.t;
     if (S.latched) return MONK_ANIM.fall((S.rt * 2.6) % 1);       // (held up in its jaws, his legs kicking)
+    if (S.crownSpin > 0 && !S.atk) { const k = 1 - S.crownSpin / CROWN_SPIN, p = blendPose(TUCK, MONK_ANIM.fall(0), smooth(k)); p.spin = S.dir * TAU * ease(k); return p; }
     if (S.atk) { const a = S.atk; return a.t < a.dash ? MONK_ANIM.dash(clamp(a.t / a.dash, 0, 1)) : MONK_ANIM[ATK_ANIM[a.kind][0]](clamp((a.t - a.dash) / a.dur, 0, 1)); }
     if (S.hurtT > 0 && !S.act) return MONK_ANIM.hurt(1 - S.hurtT / 0.45);
     if (S.dying) return MONK_ANIM.fall(0.3);
@@ -4720,6 +4757,7 @@ const Climb = (() => {
     if (S.bigs.length) greatGlows(cam);
     if (S.boon) boonGlows(cam);
     if (S.combo) drawCombo();
+    if (S.crownShow) drawCrown();
     // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
     // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
     for (const sec of view) {
@@ -4819,6 +4857,7 @@ const Climb = (() => {
       if (q.kind === "ember") drawEmber(x, y, 1, a);
       else if (q.kind === "glob") { ctx.globalAlpha = a; circle(x, y, q.r, dist(S.torch[0], S.torch[1], q.x, q.y) < lightR() * 0.85 ? "#cdb47c" : "#1a1610"); ctx.globalAlpha = 1; }
       else if (q.kind === "spark") { glow(x, y, 6, q.c || C.gold, a * 0.8); circle(x, y, 1, q.c ? mix(q.c, "#ffffff", 0.5) : C.flameHot); }
+      else if (q.kind === "wave") { const w = q.age / q.life; ctx.save(); ctx.translate(x, y); ctx.scale(1, 0.18); ctx.beginPath(); ctx.arc(0, 0, 18 + 150 * w, 0, TAU); ctx.restore(); ctx.strokeStyle = "rgba(255,226,170," + (0.85 * (1 - w)).toFixed(3) + ")"; ctx.lineWidth = 1 + 3 * (1 - w); ctx.stroke(); }
       else if (q.kind === "smoke") { ctx.globalAlpha = a * 0.5; circle(x, y, q.r * (1 + q.age * 2), q.warm ? "#6a5a48" : "#2c2c30"); ctx.globalAlpha = 1; }
       else if (q.kind === "ring") ring(x, y, 8 + q.age * 90, "rgba(255,241,196," + a + ")", 2);
       else if (q.kind === "impact") {
