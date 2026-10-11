@@ -1303,6 +1303,12 @@ const Sound = (() => {
     I.choir(t + 0.7, [74, 78, 81], 2.4, 0.22, { vowel: "i", att: 0.5, rel: 1.8, rev: 0.8, vib: 4, sfx: true });
     for (const [i, m] of [81, 86, 90, 93, 98].entries()) I.bell(t + 0.2 + i * 0.12, m, 2.2, 0.13, { ratio: 2, index: 0.8, sfx: true, rev: 0.8 });
   };
+  // The choir in its stalls: one syllable of a psalm, sung at a time given by the audio clock
+  // (Sound.now), on its note (or notes, for more voices), for so long, on its vowel.
+  fx.chant = function (at, notes, dur, vowel, v) {
+    if (!ok()) return;
+    I.choir(Math.max(T0(), at), notes, dur, dv(v, 0.3), { vowel: VOWELS[vowel] ? vowel : "a", att: 0.05, rel: 0.25, rev: 0.8, vib: 2.5, sfx: true });
+  };
   // A boon running out: two soft falling bells.
   fx.boonEnd = function () {
     if (!ok()) return; const t = T0();
@@ -1319,7 +1325,7 @@ const Sound = (() => {
     kindle: 2.4, fireball: 2.2, fireBurst: 2.2, crack: 3, crumble: 1.8, inhale: 2.2, abyss: 2, wake: 1.6,
     splat: 2.6, gurgle: 2.4, ribbon: 2.4, thorn: 2.6, briar: 2.6, scatter: 2.6, coin: 3, alms: 2.6, chain: 2.6,
     tie: 3, brickHit: 3.2, brickDrop: 2.6, deliver: 2, rise: 2,
-    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5, laugh: 2.6, crown: 1.8,
+    growl: 2.4, stone: 2.2, chomp: 3, thump: 3, greatFall: 1.8, dread: 1.7, boon: 1.6, boonEnd: 2.2, angel: 1.5, lift: 1.5, laugh: 2.6, crown: 1.8, chant: 1.7,
   };
   for (const [name, k] of Object.entries(LOUD)) {
     const f = fx[name];
