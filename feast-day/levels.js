@@ -29,6 +29,7 @@ export function buildLevel(scene, lv) {
     layer(scene, 'abbey', h - 2 * T - C.abbeyH + C.abbeySink, C.abbeyH, C.abbeyScroll, 0, -2.5),
     layer(scene, 'arcade', h - 2 * T - C.archH + C.archSink, C.archH, C.archScroll, 0, -2),
   ];
+  scene.under = scene.add.rectangle(0, 0, W, H * 2, C.underColor).setOrigin(0).setScrollFactor(0).setDepth(-2);
   const solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
   const out = { w, h, solid, plats, spawns: [], solidAt: (x, y) => '#='.includes(at(Math.floor(y / T), Math.floor(x / T))) };
   rows.forEach((row, r) => {
@@ -73,8 +74,10 @@ export function moveBackdrop(scene, dt) {
   for (const L of scene.layers) {
     L.off += L.drift * dt;
     L.ts.tilePositionX = cam.scrollX * L.f + L.off;
-    L.ts.y = L.y ? L.y - cam.scrollY * L.f : 0; // the sky stays put vertically
+    L.ts.y = L.y ? L.y - cam.scrollY : 0; // layers stay on the ground line vertically; the sky stays put
   }
+  const arc = scene.layers[2].ts; // fill under the arcade so no sky shows in pits or below the ground
+  scene.under.setPosition(0, arc.y + arc.height - 1);
 }
 function body(scene, group, x, y, w, h) {
   const r = scene.add.rectangle(x + w / 2, y + h / 2, w, h).setVisible(false);
