@@ -3012,7 +3012,7 @@ const Climb = (() => {
     if (f.st !== "legs") { S.legsIn = null; offHim(f); return; }          // (struck off him by some blow)
     L.t += dt; f.x = S.x; f.y = S.y + 4; f.vx = 0; f.vy = 0; f.dir = S.dir;
     if (!boonOn("unconsumed")) { S.fuel -= dt * 0.012; if (S.fuel <= 0) lightOut(); }
-    if (L.t > 9) freeLegs(false);
+    // (It does not let go of itself: he must knock it off, or his light goes.)
   }
   // Off him: set down beside him, out of the rock.
   function offHim(f) {
@@ -4850,6 +4850,8 @@ const Climb = (() => {
     }
     let r;
     if (S.boonShow) { r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, S.boonShow.t); S.boonShow.up = r.up; }
+    // Swallowed to the waist: turned to us, flailing his free arm.
+    else if (S.legsIn) r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, 0.35 * (0.5 + 0.5 * Math.sin(S.rt * 11)));
     else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
     if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
     // The gold clinging to his habit, coin by coin.
