@@ -1,13 +1,13 @@
 import { C } from './config.js';
 // Hold act: stop, open mouth, pull things in the vortex box toward the mouth, catch up to C.inhaleMax.
-// Let go with something inside: full (cheeks). Each tap of act (or Down) is one chew; after count * C.chewsPer chews he swallows -> fed. (Fed gives hearts in chunk 5.)
-export function makeInhale(scene, monk, things) {
+// Let go with something inside: full (cheeks). Each tap of act (or Down) is one chew; after count * C.chewsPer chews he swallows -> fed. Fed + tap: a heart (heart.js).
+export function makeInhale(scene, monk, things, hearts) {
   const g = scene.add.graphics().setDepth(5);
   const s = { count: 0, t: 0 };
   s.update = (i, dt) => {
     const b = monk.box.body, face = monk.face || 1;
     if (monk.mode === 'full' && (i.actPressed || i.downPressed)) chew(s, monk);
-    else if (s.fed && i.actPressed) s.fed = 0; // placeholder until the heart (chunk 5)
+    else if (s.fed && i.actPressed) { hearts.give(s.fed); s.fed = 0; }
     const inhaling = i.act && !s.fed && s.count < C.inhaleMax && (monk.mode === 'inhale' || !s.count);
     monk.mode = inhaling ? 'inhale' : s.count ? 'full' : s.fed ? 'fed' : null;
     const mx = b.center.x + face * C.vortexNear, my = b.bottom - C.boxH;
@@ -16,19 +16,19 @@ export function makeInhale(scene, monk, things) {
     if (inhaling) swirl(g, s, mx, my, face, dt);
     for (const t of things.getChildren()) {
       if (t.caught) continue;
-      if (inhaling && (t.pulled || box.contains(t.x, t.y))) pull(t, mx, my, dt, s, things, monk);
+      if (inhaling && (t.pulled || box.contains(t.x, t.y))) pull(t, mx, my, dt, s, things, monk, scene);
       else if (t.pulled) release(t);
     }
   };
   return s;
 }
-function pull(t, mx, my, dt, s, things, monk) {
+function pull(t, mx, my, dt, s, things, monk, scene) {
   if (!t.pulled) { t.pulled = true; t.speed = 0; t.d0 = Math.hypot(mx - t.x, my - t.y); t.body.setAllowGravity(false); }
   t.speed = Math.min(C.pullMax, t.speed + C.pullAccel * dt);
   const dx = mx - t.x, dy = my - t.y, d = Math.hypot(dx, dy);
   t.body.setVelocity(dx / d * t.speed, dy / d * t.speed);
   t.setScale(Phaser.Math.Linear(C.shrinkTo, 1, Math.min(1, d / t.d0)));
-  if (d < C.catchDist) { t.caught = true; s.count++; s.chews = s.count * C.chewsPer; things.remove(t, true, true); }
+  if (d < C.catchDist) { t.caught = true; s.count++; s.chews = s.count * C.chewsPer; things.remove(t, true, true); scene.freeze(C.catchFreeze); }
 }
 function chew(s, monk) {
   monk.chew = C.chewTime;
