@@ -20,3 +20,4 @@
 - gluttony-demon-1.png — Gluttony's common demon, facing right, 3x3: idle, waddle x2, windup, spit (erase the glob; game draws its own fat), swallow-gape (leg swallow), hit, burst (erase splash drops), gnawing. Keep the white eye, teeth and belly seam as cut-outs; the hand outlines get filled.
 - gluttony-demon-swallow-1.png — the common demon swallowing from below, facing right: closing in, gripping (hands at jaw), shaken. The monk sits in the open jaws; draw the lower jaw in front of him. Erase the shake marks.
 - monk-ref-1.png — monk style reference (stand, walk, stride): peaked cowl, short cape, wide sleeves, cord with knotted tails, sandals, torch. For restyling the jointed monk, not tracing.
+- gluttony-dressing-1.jpg — Gluttony wall/ceiling/floor dressing, 4x3. Top row hangs from ceilings, middle grows from walls (attached at left), bottom stands on floors. The flat bars mark the attaching side; trim them off and attach there. JPEG: threshold before tracing.
