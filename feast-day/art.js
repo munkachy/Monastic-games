@@ -1,5 +1,5 @@
 // Monk parts come from sprites/ (PNG); everything else is drawn from shapes once at start.
-export const SPRITES = ['head', 'robe', 'arm', 'face_inhale', 'face_full', 'face_love', 'face_love2', 'sky'];
+export const SPRITES = ['head', 'robe', 'arm', 'face_inhale', 'face_full', 'face_love', 'face_love2', 'sky', 'abbey'];
 export const loadSprites = scene => SPRITES.forEach(k => scene.load.image(k, 'sprites/' + k + '.png'));
 export const tex = (scene, key, w, h, draw) => {
   const g = scene.make.graphics({ add: false });
