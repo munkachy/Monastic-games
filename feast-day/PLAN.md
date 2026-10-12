@@ -92,4 +92,4 @@ Each round of fixes after playing: about 20–60k.
 
 - Chunk 1 done: a box walks and jumps (touch zones + keys, late/early jump, lower jump on early release). `window.game` exposed for tests.
 - Chunk 2 done: `art.js` (robe, tonsured head), `monk.js` (physics box + drawn look; states idle/walk/jump/crouch; head bobs a beat late, waddle, air lean, landing squash, crouch on Down key — no touch crouch yet). Movement moved from `play.js` to `monk.js`; input now has `down`.
-- After chunk 2 feedback: hood up (no tonsure showing), black habit, dangling arms that swing a beat late and lift in the air. Scapular: front and back panels to the ankles on a spring (trail when moving, flare when falling); numbers `scap*` in config. Dev artifact: https://claude.ai/artifact/5rN6gHcaYhzg638CKKR57s
+- After chunk 2 feedback: pointed hood up (no tonsure showing), black habit, dangling arms that swing a beat late and lift in the air. Scapular: front and back panels to the ankles on a spring (trail when moving, flare when falling); numbers `scap*` in config. Dev artifact: https://claude.ai/artifact/5rN6gHcaYhzg638CKKR57s
