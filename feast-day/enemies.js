@@ -22,11 +22,12 @@ export const ENEMIES = {
     g.fillStyle(0xffffff).fillCircle(5, 6, 1.8).fillCircle(9, 6, 1.8); eyes(g, 5, 6, happy);
     if (happy) smile(g, 7, 10.5); else g.lineStyle(1.2, 0x222222).lineBetween(3, 3, 6, 4.5).lineBetween(11, 3, 8, 4.5);
   } },
+  lust: { w: 20, h: 20, speed: () => C.lustSpeed, behavior: fly, swallowable: false, demon: true, fly: true, draw: g => g.fillStyle(0x9b7fd1).fillCircle(10, 10, 10) },
   gluttony: { w: 20, h: 20, speed: () => C.gluttonySpeed, behavior: walk, swallowable: false, demon: true, draw: g => g.fillStyle(0x8a8a2a).fillCircle(10, 10, 10) },
 };
 // Action sheets (sprites/<kind>_sheet.png, one strip of 12 frames from a 4x3 sheet):
 // 0-3 move loop, 4-5 being sucked in, 6 hit, 7 attack, 8-11 won over (sweets) or fleeing (demons).
-export const SHEETS = { pizza: [59, 44, 1], gluttony: [52, 44, 1] }; // frame w, h, px below the feet
+export const SHEETS = { pizza: [59, 44, 1], gluttony: [52, 44, 1], lust: [55, 47, 1] }; // frame w, h, px below the feet
 export const loadSheets = scene => Object.entries(SHEETS).forEach(([k, [w, h]]) =>
   scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h, spacing: 2 }));
 // A sprite in sprites/ with the enemy's name wins over the drawing; with no `_happy` sprite, won-over enemies blush pink.

@@ -1,7 +1,7 @@
 import { C, W, H } from './config.js';
 import { spawn } from './enemies.js';
 // Levels are data. # ground, = platform (jump up through it), @ start, D refectory door (the end),
-// s sweet, g gummy, p pizza, j jawbreaker, G gluttony demon.
+// s sweet, g gummy, p pizza, j jawbreaker, G gluttony demon, L lust demon.
 export const LEVELS = [{
   name: 'The Cloister Garden',
   rows: [
@@ -10,7 +10,7 @@ export const LEVELS = [{
     '',
     '                                                                                     sss',
     '                                                                          p         =====',
-    '                                                    p             s                                         p',
+    '                                                    p             s                                 L       p',
     '                                     s s                        ######                                           ss',
     '                                    =====                     ########        =====       =====                 ====',
     '                                                            ##########',
@@ -19,7 +19,7 @@ export const LEVELS = [{
     '######################################     #############################################      ########################################################',
   ],
 }];
-const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony' };
+const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust' };
 // Draw terrain and make its bodies (one body per run of tiles); returns the level's size, start and door.
 export function buildLevel(scene, lv) {
   const T = C.tile, rows = lv.rows, w = Math.max(...rows.map(r => r.length)) * T, h = rows.length * T;
