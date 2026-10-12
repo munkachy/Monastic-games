@@ -6,7 +6,7 @@ import { makeTune } from './tune.js';
 import { makeInhale } from './inhale.js';
 import { makeHearts } from './heart.js';
 import { makeEnemyArt, loadSheets, updateEnemies, winOver } from './enemies.js';
-import { LEVELS, buildLevel, populate } from './levels.js';
+import { LEVELS, buildLevel, populate, moveBackdrop } from './levels.js';
 export class Play extends Phaser.Scene {
   constructor() { super('play'); }
   preload() { loadSprites(this); loadSheets(this); }
@@ -48,7 +48,7 @@ export class Play extends Phaser.Scene {
     this.in.update();
     if (this.frozen > 0 && (this.frozen -= ms / 1000) > 0) return; // hit-stop
     this.physics.world.resume();
-    this.sky.tilePositionX = this.cameras.main.scrollX * C.skyScroll;
+    moveBackdrop(this, ms / 1000);
     if (this.ended) return;
     if (this.monk.box.y > this.level.h + C.fallOut) this.restart(); // fell in a pit (health comes in chunk 9)
     if (Math.abs(this.monk.box.x - this.level.door.x) < C.tile && this.monk.box.body.blocked.down) this.finish();

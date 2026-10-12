@@ -11,8 +11,8 @@ export function makeArt(scene) {
   tex(scene, 'brow', 5, 2, g => g.fillStyle(0x3a2418).fillRoundedRect(0, 0, 5, 1.6, 0.8)); // straight brow, 3/4 of the sprite's
   tex(scene, 'glow', 12, 12, g => g.fillStyle(0xfff2a8, 0.4).fillCircle(6, 6, 6).fillStyle(0xfffbe0, 0.9).fillCircle(6, 6, 3));
   tex(scene, 'arch', 48, 96, g => {                        // cloister arcade, repeats behind the level
-    g.fillStyle(0xd9c7a0).fillRect(0, 26, 48, 70).fillStyle(0xe8d9b5).fillCircle(24, 40, 18).fillRect(6, 40, 36, 56); // open sky above
-    g.fillStyle(0xc4ae84).fillRect(0, 30, 6, 66).fillRect(42, 30, 6, 66).fillRect(0, 26, 48, 4);
+    g.fillStyle(0xd9c7a0).fillRect(0, 26, 48, 66).fillStyle(0xe8d9b5).fillCircle(24, 40, 18).fillRect(6, 40, 36, 52); // open sky above, clear bottom rows so the wrap leaves no line
+    g.fillStyle(0xc4ae84).fillRect(0, 30, 6, 62).fillRect(42, 30, 6, 62).fillRect(0, 26, 48, 4);
   });
   tex(scene, 'door', 24, 40, g => {                        // refectory door
     g.fillStyle(0x5b3a1e).fillRect(0, 12, 24, 28).fillCircle(12, 12, 12).fillStyle(0x7a4f29).fillRect(3, 14, 18, 26).fillCircle(12, 14, 9);
