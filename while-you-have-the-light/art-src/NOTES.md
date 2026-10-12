@@ -11,3 +11,4 @@
 - monastery-folk-1.png: hooded monks (walking, reading, bell) and tonsured lay brothers (sack, hoe, mason with bricks, leading a cow, basket). Hood = choir monk, tonsure = lay brother.
 - bowels-1.png: coiled tube, knotted turn, ceiling folds, ribbed tunnel mouth, crawl opening. Tunnel mouths are drawn front-on (3D); use as decor at crawlway ends, not as walkable shapes.
 - bowels-2-sections.png: side cross-sections: straight crawl tunnel, tunnel ending in flared opening, L-bend up, floor drop-hole, wall exit onto ledge. White inside = crawl space. These are the playable shapes.
+- laybrother-cart-1.png: lay brother at cart, blessing, lifting a block; donkey standing and braying; empty cart; full cart. Use the EMPTY cart only and draw the game's own coloured tetromino blocks in it (drop the generated blocks and the block in his hands). Crop the 'Made with AI' badge.
