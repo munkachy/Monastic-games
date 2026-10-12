@@ -43,11 +43,11 @@ function draw(m, robe, head, arms, scap, dt) {
   robe.y = -bob * 0.5;
   head.y = -robe.height + 3 - late * C.headBob;
   head.angle = Math.sin(m.t) * C.headTilt;
-  const air = m.state === 'jump' ? Math.min(C.armAir, Math.abs(b.velocity.y) * C.armAirRate) : 0;
+  m.air = Phaser.Math.Linear(m.air || 0, m.state === 'jump' ? C.armAir : 0, Math.min(1, dt * C.armAirRate));
   arms.forEach((arm, k) => {
     const side = k ? 1 : -1;
     arm.setPosition(side, robe.y - robe.height + C.shoulder);
-    arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - air;
+    arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - side * m.air;
   });
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
