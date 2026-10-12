@@ -9,3 +9,4 @@
 - idols-1.png: Ashtoreth (lust), golden calf (avarice), Moloch with furnace belly (wrath; furnace can glow).
 - worshippers-1.png: 8 robed hooded figures (kneel arms up, bowed, stand arm up, swaying, prostrate, kneel praying, arms out, crouching). They wear monk-like cord belts: trim the cord so they don't read as monks.
 - monastery-folk-1.png: hooded monks (walking, reading, bell) and tonsured lay brothers (sack, hoe, mason with bricks, leading a cow, basket). Hood = choir monk, tonsure = lay brother.
+- bowels-1.png: coiled tube, knotted turn, ceiling folds, ribbed tunnel mouth, crawl opening. Tunnel mouths are drawn front-on (3D); use as decor at crawlway ends, not as walkable shapes.
