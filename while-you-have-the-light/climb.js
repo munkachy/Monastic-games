@@ -3033,24 +3033,24 @@ const Climb = (() => {
     L.kicks++; L.f.hurtT = 0.2; S.shake = Math.max(S.shake, 0.12); Sound.fx.thump(0.7, panX(S.x));
     if (L.kicks >= 2) freeLegs(true);
   }
-  // It, drawn over him: a fat sack from his hips to below his feet, its jaws shut about his waist,
-  // chewing; its eyes; its stubby arms waving.
+  // It, drawn over him: its jaws, thrown back, shut about his waist, its body hanging below him
+  // (along him, however he hangs); cramming him in with its hands, and shaken by his blows.
+  const GS_AT = { gs0: [12, 63], gs1: [13, 64] };
   function drawLegsSac(mx, my, p, cam) {
     const L = S.legsIn, f = L.f, hip = monkJoint(mx, my, S.dir, p, "hip"), fa = monkJoint(mx, my, S.dir, p, "fF"), fb = monkJoint(mx, my, S.dir, p, "fB");
-    const ft = [(fa[0] + fb[0]) / 2, (fa[1] + fb[1]) / 2], ax = ft[0] - hip[0], ay = ft[1] - hip[1], al = Math.hypot(ax, ay) || 1, ang = Math.atan2(ay, ax);
-    const chew = Math.sin(S.rt * 9) * 0.06, len = al + 20, wid = (16 + 2.5 * (f.size || 0)) * (1 + chew);
-    const cx = hip[0] + ax / al * (len / 2 - 6) - cam.x, cy = hip[1] + ay / al * (len / 2 - 6) - cam.y;
-    ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
-    const c = SINS.gluttony, hurt = f.hurtT > 0;
-    ctx.beginPath(); ctx.ellipse(0, 0, len / 2, wid, 0, 0, TAU);
-    ctx.fillStyle = hurt ? "#5a2a14" : "#160a06"; ctx.fill(); ctx.strokeStyle = hexA(c.color, 0.55); ctx.lineWidth = 1.2; ctx.stroke();
-    // the jaws shut about his waist: a row of teeth
-    for (let i = -3; i <= 3; i++) { const v = i / 3.4 * wid; ctx.beginPath(); ctx.moveTo(-len / 2 + 1, v - 2.2); ctx.lineTo(-len / 2 + 5.5, v); ctx.lineTo(-len / 2 + 1, v + 2.2); ctx.fillStyle = "#f3e9d2"; ctx.fill(); }
-    // its stubby arms, waving
-    for (const sd of [-1, 1]) { const w = Math.sin(S.rt * 7 + sd) * 0.5; ctx.save(); ctx.translate(-2, sd * wid * 0.9); ctx.rotate(sd * (0.9 + w)); ctx.fillStyle = "#160a06"; ctx.fillRect(0, -1.6, 8, 3.2); ctx.restore(); }
+    const ft = [(fa[0] + fb[0]) / 2, (fa[1] + fb[1]) / 2], rot = Math.atan2(ft[1] - hip[1], ft[0] - hip[0]) - PI / 2, sc = 0.62 * (1 + 0.1 * (f.size || 0));
+    const k = L.t < 0.35 ? "gs0" : "gs1", [au, av] = GS_AT[k], d = S.dir;
+    const sh = f.hurtT > 0 ? 2.6 : 0.5, jx = sh * (Math.random() * 2 - 1), jy = sh * 0.5 * (Math.random() * 2 - 1);
+    const hx = hip[0] - cam.x, hy = hip[1] - cam.y;
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(rot); ctx.scale(sc, sc);
+    const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [d * (u - au) + jx, -(v - av) + jy]);
+    ctx.fillStyle = C.ink; ctx.fill(P, "evenodd");
+    if (S.torch) {
+      const dx = S.torch[0] - cam.x - hx, dy = S.torch[1] - cam.y - hy, cs = Math.cos(-rot), sn = Math.sin(-rot);
+      shadeGlut(P, (dx * cs - dy * sn) / sc, (dx * sn + dy * cs) / sc, lightR() / sc, 1);
+    }
+    const e = glutEye(k); if (e) eyeGlut(k, d, jx - d * au, jy + av);
     ctx.restore();
-    // its eyes, on the side away from him
-    for (const q of [0.28, 0.44]) { const ex = hip[0] + ax / al * len * q - cam.x - S.dir * wid * 0.55, ey = hip[1] + ay / al * len * q - cam.y; glow(ex, ey, 5, c.color, 0.6); circle(ex, ey, 1.1, "#fff2c8"); }
   }
   // What it swallows makes it bigger: harder to bring down, its breath stronger, its fat heavier.
   function eat(f, o) {
@@ -4378,22 +4378,26 @@ const Climb = (() => {
     const sh = st === "heave" ? clamp(f.t / 0.75, 0, 1) * 2.4 : 0, jx = sh * (Math.random() * 2 - 1), jy = sh * 0.6 * (Math.random() * 2 - 1);
     const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [f.dir * u + jx, -v + jy]);
     ctx.globalAlpha *= al; ctx.fillStyle = C.ink; ctx.fill(P, "evenodd");
-    // Rounded by the torch: a rim of its light round the edge (as the monk's).
-    const L = clamp(f.lit, 0, 1);
-    if (S.torch && L > 0.02) {
-      const sc = 1 + 0.1 * (f.size || 0), tx = (S.torch[0] - f.x) / sc, ty = (S.torch[1] - f.y - (f.dy || 0)) / sc, R = lightR() / sc;
-      ctx.save(); ctx.clip(P, "evenodd");
-      // its sickly yellow, strongest on the side the torch is, falling off into black: round, not flat
-      const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.42);
-      g.addColorStop(0, "rgba(176,150,52," + 0.75 * L + ")"); g.addColorStop(0.45, "rgba(120,96,30," + 0.45 * L + ")"); g.addColorStop(1, "rgba(60,44,12,0)");
-      ctx.fillStyle = g; ctx.fill(P, "evenodd");
-      const rim = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
-      rim.addColorStop(0, "rgba(255,190,110," + 0.9 * L + ")"); rim.addColorStop(0.5, "rgba(232,128,58," + 0.45 * L + ")"); rim.addColorStop(1, "rgba(232,128,58,0)");
-      ctx.strokeStyle = rim; ctx.lineWidth = 2.6; ctx.stroke(P); ctx.restore();
-    }
-    // Its eye, glinting in the dark.
-    const e = glutEye(k);
-    if (e && st !== "dying") { const x = f.dir * e[0], y = -e[1]; glow(x, y, 11, SINS.gluttony.eye, 0.75); ctx.beginPath(); ctx.arc(x, y, 1.9, 0, TAU); ctx.fillStyle = SINS.gluttony.eye; ctx.fill(); }
+    const sc = 1 + 0.1 * (f.size || 0);
+    if (S.torch) shadeGlut(P, (S.torch[0] - f.x) / sc, (S.torch[1] - f.y - (f.dy || 0)) / sc, lightR() / sc, clamp(f.lit, 0, 1));
+    if (st !== "dying") eyeGlut(k, f.dir, jx, jy);
+  }
+  // Rounded by the torch (at tx, ty, in the shape's own frame): its sickly yellow strongest on the
+  // side the torch is, falling off into black; and a rim of the torch's light round the edge, as the monk's.
+  function shadeGlut(P, tx, ty, R, L) {
+    if (L <= 0.02) return;
+    ctx.save(); ctx.clip(P, "evenodd");
+    const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.42);
+    g.addColorStop(0, "rgba(176,150,52," + 0.75 * L + ")"); g.addColorStop(0.45, "rgba(120,96,30," + 0.45 * L + ")"); g.addColorStop(1, "rgba(60,44,12,0)");
+    ctx.fillStyle = g; ctx.fill(P, "evenodd");
+    const rim = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
+    rim.addColorStop(0, "rgba(255,190,110," + 0.9 * L + ")"); rim.addColorStop(0.5, "rgba(232,128,58," + 0.45 * L + ")"); rim.addColorStop(1, "rgba(232,128,58,0)");
+    ctx.strokeStyle = rim; ctx.lineWidth = 2.6; ctx.stroke(P); ctx.restore();
+  }
+  // Its eye, glinting in the dark.
+  function eyeGlut(k, dir, jx, jy) {
+    const e = glutEye(k); if (!e) return;
+    const x = dir * e[0] + jx, y = -e[1] + jy; glow(x, y, 11, SINS.gluttony.eye, 0.75); ctx.beginPath(); ctx.arc(x, y, 1.9, 0, TAU); ctx.fillStyle = SINS.gluttony.eye; ctx.fill();
   }
   // Where the eye is in each traced pose: the small hole highest up in it.
   const GLUT_EYE = {};
