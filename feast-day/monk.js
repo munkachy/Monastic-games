@@ -10,10 +10,11 @@ export function makeMonk(scene, x, y) {
   const scap = [0, 1].map(() => scene.add.image(0, 0, 'scap').setOrigin(0.5, 0));
   const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
   const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, cheeks, mouth, arms[1]]);
+  const belly = scene.add.image(0, 0, 'belly').setVisible(false);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, belly, scap[1], head, cheeks, mouth, arms[1]]);
   scap.forEach(p => { p.a = p.v = 0; });
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, belly, robe, dt); };
   return m;
 }
 function move(m, i, dt) {
@@ -70,10 +71,13 @@ function flap(m, scap, robe, dt) {
     p.angle = p.a;
   });
 }
-// Open mouth while inhaling; puffed cheeks and a wider head while full.
-function face(m, head, mouth, cheeks) {
-  const full = m.mode === 'full';
-  head.scaleX = full ? C.fullPuff : 1;
-  mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
-  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
+// Open mouth while inhaling; cheeks puff briefly after each catch; the belly grows with each thing inside.
+function face(m, head, mouth, cheeks, belly, robe, dt) {
+  m.gulp = Math.max(0, (m.gulp || 0) - dt);
+  const puff = m.gulp > 0;
+  head.scaleX = puff ? C.fullPuff : 1;
+  mouth.setVisible(m.mode === 'inhale' && !puff).setPosition(head.x + C.mouthX, head.y + C.mouthY);
+  cheeks.setVisible(puff).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
+  const n = m.food || 0;
+  belly.setVisible(n > 0).setScale(1 + n * C.bellyGrow).setPosition(C.bellyX + n * C.bellyOut, robe.y - robe.height * C.bellyY);
 }

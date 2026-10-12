@@ -25,5 +25,6 @@ export function makeArt(scene) {
   tex(scene, 'mouth', 8, 7, g => g.fillStyle(0x5a1e24).fillEllipse(4, 3.5, 8, 7));
   tex(scene, 'cheeks', 22, 10, g => g.fillStyle(0xf0c9a0).fillCircle(5, 5, 5).fillCircle(17, 5, 5)
     .fillStyle(0xe89a8a, 0.7).fillCircle(5, 5, 2.5).fillCircle(17, 5, 2.5));
+  tex(scene, 'belly', 16, 14, g => g.fillStyle(0x16131a).fillEllipse(8, 7, 16, 14).fillStyle(0x3a3540).fillRect(1, 6, 14, 1));
   tex(scene, 'sweet', 12, 12, g => g.fillStyle(0xe5578a).fillCircle(6, 6, 6).fillStyle(0xffffff, 0.6).fillCircle(4, 4, 2));
 }

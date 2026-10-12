@@ -11,6 +11,6 @@ export const C = {
   scapGap: 5, scapTrail: 0.227, scapLift: 0.247, scapPress: 0.04, scapMax: 100, scapSpring: 185, scapDamp: 9, scapOffbeat: 0.7,
   mouthX: 5, mouthY: -6,
   vortexNear: 6, vortexRange: 100, vortexH: 56, pullAccel: 900, pullMax: 420, catchDist: 8, shrinkTo: 0.3,
-  inhaleMax: 4, fullSlow: 0.65, fullJump: 0.8, fullPuff: 1.2,
+  inhaleMax: 4, fullSlow: 0.65, fullJump: 0.8, fullPuff: 1.2, cheekTime: 0.5, bellyGrow: 0.35, bellyX: 3, bellyOut: 1.5, bellyY: 0.6,
   squash: 0.35, squashTime: 0.15, crouch: 0.3,
 };

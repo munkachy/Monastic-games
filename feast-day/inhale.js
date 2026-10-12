@@ -8,6 +8,7 @@ export function makeInhale(scene, monk, things) {
     const b = monk.box.body, face = monk.face || 1;
     if (monk.mode === 'full' && i.actPressed) s.count = 0; // placeholder until the heart (chunk 5)
     const inhaling = i.act && !(monk.mode === 'full' && s.count) && s.count < C.inhaleMax;
+    monk.food = s.count;
     monk.mode = inhaling ? 'inhale' : s.count ? 'full' : null;
     const mx = b.center.x + face * C.vortexNear, my = b.bottom - C.boxH;
     const box = new Phaser.Geom.Rectangle(face > 0 ? mx : mx - C.vortexRange, b.bottom - C.vortexH, C.vortexRange, C.vortexH);
@@ -15,19 +16,19 @@ export function makeInhale(scene, monk, things) {
     if (inhaling) swirl(g, s, mx, my, face, dt);
     for (const t of things.getChildren()) {
       if (t.caught) continue;
-      if (inhaling && (t.pulled || box.contains(t.x, t.y))) pull(t, mx, my, dt, s, things);
+      if (inhaling && (t.pulled || box.contains(t.x, t.y))) pull(t, mx, my, dt, s, things, monk);
       else if (t.pulled) release(t);
     }
   };
   return s;
 }
-function pull(t, mx, my, dt, s, things) {
+function pull(t, mx, my, dt, s, things, monk) {
   if (!t.pulled) { t.pulled = true; t.speed = 0; t.d0 = Math.hypot(mx - t.x, my - t.y); t.body.setAllowGravity(false); }
   t.speed = Math.min(C.pullMax, t.speed + C.pullAccel * dt);
   const dx = mx - t.x, dy = my - t.y, d = Math.hypot(dx, dy);
   t.body.setVelocity(dx / d * t.speed, dy / d * t.speed);
   t.setScale(Phaser.Math.Linear(C.shrinkTo, 1, Math.min(1, d / t.d0)));
-  if (d < C.catchDist) { t.caught = true; s.count++; things.remove(t, true, true); }
+  if (d < C.catchDist) { t.caught = true; s.count++; monk.gulp = C.cheekTime; things.remove(t, true, true); }
 }
 function release(t) {
   t.pulled = false; t.setScale(1);
