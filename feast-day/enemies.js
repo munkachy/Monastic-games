@@ -75,6 +75,6 @@ export function winOver(scene, e, group) {
 }
 function flee(scene, e) {
   e.play(e.kind + '_won');
-  scene.tweens.add({ targets: e, x: e.x + C.fleeAway * Math.sign(e.x - scene.monk.box.x || 1), // away from the monk duration: C.wonTime, ease: 'Quad.easeIn' });
+  scene.tweens.add({ targets: e, x: e.x + C.fleeAway * Math.sign(e.x - scene.monk.box.x || 1), duration: C.wonTime, ease: 'Quad.easeIn' }); // away from the monk
   e.once('animationcomplete', () => scene.tweens.add({ targets: e, alpha: 0, duration: 200, onComplete: () => e.destroy() }));
 }
