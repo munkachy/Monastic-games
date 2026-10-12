@@ -20,7 +20,8 @@ export const LEVELS = [{
     '######################################     #############################################      ########################################################',
   ],
 }];
-export const PROPS = { W: 'well', F: 'fountain', R: 'roses', V: 'lavender', U: 'sundial', H: 'beehive', B: 'bench', M: 'statue' };
+// Props as [sprite, height in px]; the monk is about 70 px tall.
+export const PROPS = { W: ['well', 64], F: ['fountain', 50], R: ['roses', 30], V: ['lavender', 24], U: ['sundial', 34], H: ['beehive', 38], B: ['bench', 28], M: ['statue', 58] };
 const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust', A: 'avarice' };
 // Draw terrain and make its bodies (one body per run of tiles); returns the level's size, start and door.
 export function buildLevel(scene, lv) {
@@ -48,7 +49,10 @@ export function buildLevel(scene, lv) {
         tile(scene, x, y, edge(at, r, c, '=', 8, 10, 9, 11));
         body(scene, plats, x, y, T, 6).body.checkCollision.down = false;
       } else if (ch === '@') out.start = { x: x + T / 2, y: y };
-      else if (PROPS[ch]) scene.add.image(x + T / 2, y + T, PROPS[ch]).setOrigin(0.5, 1).setDepth(-1.5);
+      else if (PROPS[ch]) {
+        const [key, ht] = PROPS[ch], img = scene.add.image(x + T / 2, y + T, key).setOrigin(0.5, 1).setDepth(-1.5);
+        img.setScale(ht / img.height);
+      }
       else if (ch === 'D') out.door = scene.add.image(x + T / 2, y + T, 'door').setOrigin(0.5, 1).setDepth(-1);
       else if (ch !== ' ') out.spawns.push({ ch, x: x + T / 2, y: y + T / 2 });
     }

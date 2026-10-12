@@ -128,3 +128,4 @@ Each round of fixes after playing: about 20–60k.
 - Sky is now plain blue (8×270 solid, 143,197,225 = top colour of the user's sunset); the gradient was too distracting.
 - Refectory door: `sprites/door.png` (user's art, 62 px tall) replaces the drawn door.
 - Avarice demon (`avarice_sheet.png`, letter `A`): walking demon, faces left in the art, flees from hearts. One placed after the second pit in level 1.
+- Sizes: PROPS entries are [sprite, height px] (well 64, statue 58, fountain 50, beehive 38, sundial 34, roses 30, bench 28, lavender 24; monk ≈ 70). Demons are scaled by `demonScale` (1.7) so they stand as tall as the monk; spawn scales the feet offset to match.
