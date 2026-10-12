@@ -1,15 +1,15 @@
 import { C } from './config.js';
 // Hold act: stop, open mouth, pull things in the vortex box toward the mouth, catch up to C.inhaleMax.
-// Let go with something inside: full. (Giving the heart comes in chunk 5.)
+// Let go with something inside: full (cheeks). Tap act or Down: swallow -> fed. (Fed gives hearts in chunk 5.)
 export function makeInhale(scene, monk, things) {
   const g = scene.add.graphics().setDepth(5);
   const s = { count: 0, t: 0 };
   s.update = (i, dt) => {
     const b = monk.box.body, face = monk.face || 1;
-    if (monk.mode === 'full' && i.actPressed) s.count = 0; // placeholder until the heart (chunk 5)
-    const inhaling = i.act && !(monk.mode === 'full' && s.count) && s.count < C.inhaleMax;
-    monk.food = s.count;
-    monk.mode = inhaling ? 'inhale' : s.count ? 'full' : null;
+    if (monk.mode === 'full' && (i.actPressed || i.downPressed)) { s.fed = s.count; s.count = 0; monk.gulp = C.gulpTime; }
+    else if (s.fed && i.actPressed) s.fed = 0; // placeholder until the heart (chunk 5)
+    const inhaling = i.act && !s.fed && s.count < C.inhaleMax && (monk.mode === 'inhale' || !s.count);
+    monk.mode = inhaling ? 'inhale' : s.count ? 'full' : s.fed ? 'fed' : null;
     const mx = b.center.x + face * C.vortexNear, my = b.bottom - C.boxH;
     const box = new Phaser.Geom.Rectangle(face > 0 ? mx : mx - C.vortexRange, b.bottom - C.vortexH, C.vortexRange, C.vortexH);
     g.clear();
@@ -28,7 +28,7 @@ function pull(t, mx, my, dt, s, things, monk) {
   const dx = mx - t.x, dy = my - t.y, d = Math.hypot(dx, dy);
   t.body.setVelocity(dx / d * t.speed, dy / d * t.speed);
   t.setScale(Phaser.Math.Linear(C.shrinkTo, 1, Math.min(1, d / t.d0)));
-  if (d < C.catchDist) { t.caught = true; s.count++; monk.gulp = C.cheekTime; things.remove(t, true, true); }
+  if (d < C.catchDist) { t.caught = true; s.count++; things.remove(t, true, true); }
 }
 function release(t) {
   t.pulled = false; t.setScale(1);

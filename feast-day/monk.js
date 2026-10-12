@@ -1,11 +1,11 @@
-import { C, belly } from './config.js';
+import { C } from './config.js';
 import { makeScapular, flap } from './scapular.js';
 // Monk: invisible physics box + drawn robe and head. States: idle, walk, jump, crouch, inhale, full (m.mode set by inhale.js).
 export function makeMonk(scene, x, y) {
   const box = scene.add.rectangle(x, y, C.boxW, C.boxH, 0, 0);
   scene.physics.add.existing(box);
   box.body.setMaxVelocityY(C.maxFall).setCollideWorldBounds(true);
-  const robe = scene.add.image(0, 0, 'robe0').setOrigin(0.5, 1);
+  const robe = scene.add.image(0, 0, 'robe').setOrigin(0.5, 1);
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
   const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
   const scap = makeScapular(scene);
@@ -56,15 +56,12 @@ function draw(m, robe, head, arms, scap, dt) {
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
-// Open mouth while inhaling; cheeks puff briefly after each catch; the body frame rounds out with each thing inside.
+// Open mouth while inhaling; cheeks stay puffed while full; a quick gulp when he swallows.
 function face(m, head, mouth, cheeks, robe, dt) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
-  const puff = m.gulp > 0;
-  head.scaleX = puff ? C.fullPuff : 1;
-  mouth.setVisible(m.mode === 'inhale' && !puff).setPosition(head.x + C.mouthX, head.y + C.mouthY);
-  cheeks.setVisible(puff).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
-  const n = m.food || 0;
-  robe.setTexture('robe' + n);
-  const b = belly(n);
-  m.bellyCircle = b && { x: b.x, y: robe.y + b.y, r: Math.max(b.rx, b.ry) + C.scapW / 2 };
+  const full = m.mode === 'full';
+  head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
+  head.scaleY = 1 - m.gulp / C.gulpTime * C.squash;
+  mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
+  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
 }
