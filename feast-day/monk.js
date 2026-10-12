@@ -69,7 +69,9 @@ function face(m, head, mouth, cheeks, robe, dt, eyes) {
   head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
   head.scaleY = 1 - m.gulp / C.gulpTime * C.squash - chew;
   mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
-  eyes.setVisible(m.mode === 'fed' || m.windup > 0).setPosition(head.x + C.eyesX, head.y + C.eyesY).setAngle(head.angle);
+  const eye = new Phaser.Math.Vector2(C.eyesX * head.scaleX, C.eyesY * head.scaleY).rotate(head.rotation); // stays glued to the eyes
+  eyes.setVisible(m.mode === 'fed' || m.windup > 0).setPosition(head.x + eye.x, head.y + eye.y)
+    .setRotation(head.rotation).setScale(head.scaleX, head.scaleY);
   m.flash = ((m.flash || 0) + dt * C.eyeFlash) % 2;
   eyes.setTexture('heyes' + (m.flash | 0));
   cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);

@@ -29,7 +29,7 @@ export function makeArt(scene) {
     .fillStyle(0xffffff, 0.5).fillCircle(4, 3, 1.5));
   [0x8e1028, 0xff6b81].forEach((c, k) => tex(scene, 'heyes' + k, 12, 6, g => { // eyes become little hearts, dark and light
     g.fillStyle(0xf0c9a0).fillRect(0, 0, 12, 6);
-    for (const x of [0, 6]) g.fillStyle(c).fillCircle(x + 1.6, 1.8, 1.5).fillCircle(x + 4.4, 1.8, 1.5).fillTriangle(x, 2.3, x + 6, 2.3, x + 3, 5.5);
+    for (const x of [0.5, 5.5]) g.fillStyle(c).fillCircle(x + 1.6, 1.8, 1.5).fillCircle(x + 4.4, 1.8, 1.5).fillTriangle(x, 2.3, x + 6, 2.3, x + 3, 5.5);
   }));
   tex(scene, 'glow', 12, 12, g => g.fillStyle(0xfff2a8, 0.4).fillCircle(6, 6, 6).fillStyle(0xfffbe0, 0.9).fillCircle(6, 6, 3));
   tex(scene, 'sweet', 12, 12, g => g.fillStyle(0xe5578a).fillCircle(6, 6, 6).fillStyle(0xffffff, 0.6).fillCircle(4, 4, 2));
