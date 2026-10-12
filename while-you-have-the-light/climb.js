@@ -1731,7 +1731,9 @@ const Climb = (() => {
     const base = T.dir > 0 ? (D.i1 + 1) * CELL : D.i0 * CELL, y = -(sec.h0 + 7) * CELL - 0.01;
     return (T.bro = { sec: sec.k, dir: T.dir, y, x: base + T.dir * 4.5 * CELL, cart: base + T.dir * 8.5 * CELL, donkey: base + T.dir * 12.5 * CELL, bin: [], cheer: -9 });
   }
-  const binSlot = (G, s) => [G.cart + G.dir * (-9 + (s % 3) * 9) * BK, G.y - (33 + Math.floor(s / 3) * 5) * BK];
+  // The traced figures' scale; and how far the cart is shifted so its box, not the whole of it, stands at G.cart.
+  const ART_K = 1.35, CART_DU = 10;
+  const binSlot = (G, s) => [G.cart + G.dir * (-9 + (s % 3) * 9) * BK, G.y - (21.5 * ART_K + Math.floor(s / 3) * 5 * BK)];
   // Brought to the cart: the rope untied, the block up and into it, and the brother lifts his
   // hands over it. His blessing fills the torch.
   function deliver(G) {
@@ -1911,42 +1913,31 @@ const Climb = (() => {
     line(hx - cam.x, hy - cam.y, x - cam.x, y - cam.y, "#0b0b0d", 1.4);
     drawHook(x - cam.x, y - cam.y, Math.atan2(cy - hy, cx - hx));
   }
-  // The lay brother, bearded, his hood back (when a block is brought, his hands lifted over it); his
-  // cart, a deep bin of boards on one great wheel, with a lantern on a pole; and its donkey.
+  // The lay brother (when a block is brought, he reaches for it, then lifts his hands over it); his
+  // cart, a box of boards on one spoked wheel, with a lantern on a pole; and its donkey. Traced shapes.
   function drawBrother(G, cam, rimP, lights) {
     const sx = G.cart - cam.x, sy = G.y - cam.y;
     if (sx < -220 || sx > W + 220 || sy < -140 || sy > H + 90) return;
-    const t = S.rt, ink = new Path2D();
-    const C0 = put(G.cart, G.y, G.dir, cam), CT = (u, v) => C0(u * BK, v * BK);
-    // What is in the cart first, so the side of the bin hides all but the tops.
+    const t = S.rt;
+    const A = ART_K, C0 = put(G.cart, G.y, G.dir, cam), CT = (u, v) => C0(u * A, v * A);
+    // What is in the cart first, so the side of the box hides all but the tops.
     G.bin.forEach((b, s) => { if (b.st !== "bin") return; const [x, y] = binSlot(G, s); drawBlock(b, x - cam.x, y - cam.y, 1, 0); });
-    addPoly(ink, [[-17, 12], [17, 12], [18, 34], [-18, 34]], CT);
-    addOval(ink, 0, 9, 9, 9, CT, 16);
-    addPoly(ink, [[16, 15], [33, 18], [33, 19.6], [16, 17]], CT);
-    addPoly(ink, [[-17, 34], [-15.6, 34], [-15.6, 48], [-17, 48]], CT); addPoly(ink, [[-17, 48], [-11, 48], [-11, 49.2], [-17, 49.2]], CT);
-    const D0 = put(G.donkey, G.y, G.dir, cam), DT = (u, v) => D0(u * BK, v * BK), sw = Math.sin(t * 1.7 + G.sec) * 2, ear = Math.sin(t * 0.9 + G.sec * 3) > 0.96 ? 3 : 0;
-    addOval(ink, 0, 21, 14, 7.5, DT, 16);
-    for (const [u, lift] of [[-10, 0], [-6, 0.5], [7, 0], [11, 0.5]]) addPoly(ink, [[u - 1.4, 15], [u + 1.4, 15], [u + 1.1, lift], [u - 1.1, lift]], DT);
-    addPoly(ink, [[9, 23], [14, 22], [21, 31], [17, 34]], DT);
-    addPoly(ink, [[16, 30.5], [22, 34], [28.5, 28.5], [27, 26.5], [19, 28]], DT);
-    addPoly(ink, [[18, 33], [20, 33.5], [17 - ear, 44], [16 - ear, 43.5]], DT); addPoly(ink, [[20, 33], [21.5, 33], [21 - ear * 0.5, 43.5], [19.5 - ear * 0.5, 43]], DT);
-    addPoly(ink, [[-13, 24], [-11.5, 23], [-15 + sw, 11], [-16.5 + sw, 11.5]], DT);
-    const k = clamp((t - G.cheer) / 0.3, 0, 1) * clamp((1.9 - (t - G.cheer)) / 0.4, 0, 1);
-    const B0 = put(G.x, G.y, -G.dir, cam), BT = (u, v) => B0(u * BK, v * BK), br = Math.sin(t * 1.4 + G.sec) * 0.4;
-    addPoly(ink, [[-7, 0], [7, 0], [5.5, 14], [5.8, 29 + br], [3, 33 + br], [-3, 33 + br], [-5.8, 29 + br], [-6.5, 14]], BT);
-    addOval(ink, 0.8, 37.5 + br, 4, 4.4, BT, 12);
-    addPoly(ink, [[1.5, 34.5 + br], [5.5, 35 + br], [4.5, 30 + br], [1.8, 31 + br]], BT);
-    addPoly(ink, [[-5.5, 31 + br], [-1, 33.5 + br], [-3.5, 27 + br]], BT);
-    // His arms: hanging at his sides; when a block comes to the cart, raised up in thanks.
-    for (const s of [1, -1]) {
-      const sh = [s * 4.6, 30 + br], hd = [s * lerp(5.6, 9.5, k), lerp(16.5, 45, k) + br * (1 - k)];
-      const dx = hd[0] - sh[0], dy = hd[1] - sh[1], l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
-      addPoly(ink, [[sh[0] + nx * 1.6, sh[1] + ny * 1.6], [hd[0] + nx * 1.1, hd[1] + ny * 1.1], [hd[0] - nx * 1.1, hd[1] - ny * 1.1], [sh[0] - nx * 1.6, sh[1] - ny * 1.6]], BT);
-      addOval(ink, hd[0], hd[1], 1.5, 1.5, BT, 8);
-    }
+    const cart = new Path2D(), donk = new Path2D(), bro = new Path2D();
+    addShape(cart, TRACED.cart, CT, CART_DU);
+    addPoly(cart, [[-18, 23], [-16.8, 23], [-16.8, 34], [-18, 34]], CT); addPoly(cart, [[-18, 34], [-12, 34], [-12, 35], [-18, 35]], CT);   // the lantern's post
+    const k = clamp((t - G.cheer) / 0.3, 0, 1) * clamp((1.9 - (t - G.cheer)) / 0.4, 0, 1), since = t - G.cheer;
+    // The donkey, now and then lifting its head to bray (and always when a block comes).
+    const bray = (since > 0.2 && since < 1.4) || Math.sin(t * 0.7 + G.sec * 3) > 0.985;
+    const D0 = put(G.donkey, G.y, G.dir, cam);
+    addShape(donk, bray ? TRACED.donkeyBray : TRACED.donkey, (u, v) => D0(u * A, v * A));
+    // The lay brother: standing with a hand on the cart; reaching to it as a block comes; then his hands raised, blessing.
+    const B0 = put(G.x + G.dir * 20, G.y, -G.dir, cam), br = Math.sin(t * 1.4 + G.sec) * 0.3;
+    addShape(bro, since >= 0 && since < 0.45 ? TRACED.broLift : k > 0.05 ? TRACED.broBless : TRACED.broStand, (u, v) => B0(u * A, v * A + (v > 20 ? br : 0)));
+    ctx.fillStyle = C.ink; ctx.fill(cart, "evenodd"); ctx.fill(donk, "evenodd"); ctx.fill(bro, "evenodd");
+    const ink = new Path2D(); ink.addPath(cart); ink.addPath(donk); ink.addPath(bro);
     // (Its rim of torchlight laid on now, not over him: he stands before the cart, not behind it.)
-    ctx.fillStyle = C.ink; ctx.fill(ink); rimNow(ink);
-    const [lx, ly] = CT(-11, 46.5); lights.push({ x: lx, y: ly, r: 120, a: 0.8 });
+    rimNow(ink);
+    const [lx, ly] = CT(-13, 32.5); lights.push({ x: lx, y: ly, r: 120, a: 0.8 });
     GLOWS.push([null, lx + cam.x, ly + cam.y, 0, G, k]);
   }
   // The torch's rim on a shape drawn behind him (by the light of the last picture: near enough).
@@ -1966,7 +1957,7 @@ const Climb = (() => {
         const sx = x - cam.x, sy = y - cam.y;
         glow(sx, sy, 34, C.flame, 0.35); drawFlame(sx, sy + 3, 0.42, t + G.sec, {});
         G.bin.forEach((q, s) => { if (q.st !== "bin") return; const [bx, by] = binSlot(G, s); glow(bx - cam.x, by - cam.y - 2, 9, SINS[q.dom].color, 0.35); });
-        if (k > 0.05) { const [hx, hy] = put(G.x, G.y, -G.dir, cam)(0, 52 * BK); glow(hx, hy, 40, C.warm, 0.4 * k); lightCross(hx, hy, 9, 0.8 * k, 2); }
+        if (k > 0.05) { const [hx, hy] = put(G.x + G.dir * 20, G.y, -G.dir, cam)(0, 46 * ART_K); glow(hx, hy, 40, C.warm, 0.4 * k); lightCross(hx, hy, 9, 0.8 * k, 2); }
         continue;
       }
       const sx = x - cam.x, sy = y - cam.y, c = SINS[b.dom] || SINS.wrath, inRock = solidAt(x, y);
@@ -4377,10 +4368,16 @@ const Climb = (() => {
   }
   // Points in a frame of its own (u, v) put on the screen at (x, y): flipped by side, v going up.
   const put = (x, y, side, cam) => (u, v) => [x + side * u - cam.x, y - v - cam.y];
+  // A traced shape (TRACED): its outlines, moved along by du and leaned by lean (u + lean * v).
+  function addShape(path, loops, T, du = 0, lean = 0) {
+    for (const L of loops) { let a = T(L[0] + du + lean * L[1], L[1]); path.moveTo(a[0], a[1]); for (let i = 2; i < L.length; i += 2) { a = T(L[i] + du + lean * L[i + 1], L[i + 1]); path.lineTo(a[0], a[1]); } path.closePath(); }
+  }
   function addPoly(path, pts, T) { const a = T(pts[0][0], pts[0][1]); path.moveTo(a[0], a[1]); for (let i = 1; i < pts.length; i++) { const b = T(pts[i][0], pts[i][1]); path.lineTo(b[0], b[1]); } path.closePath(); }
   function addOval(path, u, v, ru, rv, T, n) { n = n || 12; const pts = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([u + Math.cos(a) * ru, v + Math.sin(a) * rv]); } addPoly(path, pts, T); }
   // Those who worship there, facing the idol (toward +u): kneeling upright with hands lifted, kneeling
   // bowed low, or lying on their faces. head: where the head is, bowed to it; up: turned back to the light.
+  // The traced worshippers (TRACED) for each kind: kneeling with hands lifted; bowed; prostrate; standing (Lust's, swaying).
+  const WORSHIP_ART = [["w0", "w5"], ["w1", "w7"], ["w2"], ["w4", "w3", "w6"]];
   const WORSHIP = [
     { body: [[-7, 0], [8, 0], [8, 3], [3, 6], [4, 13], [7, 19], [4, 20], [1, 21], [-3, 21], [-6, 13], [-8, 5]], head: [0.5, 24.5], up: [-0.8, 24.8] },
     { body: [[-7, 0], [9, 0], [12, 3], [12, 7], [7, 12], [1, 14], [-5, 11], [-8, 5]], head: [13.5, 6.5], up: [7.5, 16.5] },
@@ -4468,26 +4465,19 @@ const Climb = (() => {
   function drawWorshipper(w, cam, rimP, near) {
     const x = w.x - cam.x, y = w.y - cam.y; if (x < -30 || x > W + 30 || y < -40 || y > H + 30) return;
     const P = new Path2D(), run = w.st === "run", T0 = put(w.x, w.y, run ? w.dir : w.side, cam), T = (u, v) => T0(u * WK, v * WK);
-    let face = null;
     if (run) {
       const s1 = Math.sin(w.ph), b = Math.abs(Math.cos(w.ph)) * 1.5;
       addPoly(P, [[-6, 4 + b], [4, 4 + b], [8, 12 + b], [7, 19 + b], [3, 23 + b], [-2, 22 + b], [-4, 14 + b], [-10, 9 + b]], T);
       addOval(P, 7.5, 24.5 + b, 3.2, 3.4, T, 10);
       addPoly(P, [[-1.5, 5 + b], [1.5, 5 + b], [1.2 + 5 * s1, 0], [-1.2 + 5 * s1, 0]], T); addPoly(P, [[-1.5, 5 + b], [1.5, 5 + b], [1.2 - 5 * s1, 0], [-1.2 - 5 * s1, 0]], T);
     } else {
-      w.look = clamp(w.look + (near ? 1.1 : -0.4) * DDT, 0, 1);
-      const W2 = WORSHIP[w.kind], k = smooth(w.look), sw = w.kind === 3 ? Math.sin(S.rt * 1.6 + w.ph) * 1.4 : 0;
-      const hd = [lerp(W2.head[0], W2.up[0], k) + sw, lerp(W2.head[1], W2.up[1], k)];
-      addPoly(P, W2.body.map(([u, v]) => [u + sw * v / 26, v]), T);
-      if (W2.arms) addPoly(P, W2.arms.map(([u, v]) => [u + sw, v]), T);
-      addOval(P, hd[0], hd[1], 3.3, 3.5, T, 10);
-      addPoly(P, [[hd[0] + 1.5 - k * 2.5, hd[1] + 2.2], [hd[0] + 3.6 - k * 5, hd[1] + 4.6 - k * 1.2], [hd[0] + 2.8 - k * 3, hd[1] + 0.4]], T);   // the hood's point
-      if (k > 0.2) face = [T(hd[0] - 1.9, hd[1] - 0.3), (k - 0.2) / 0.8];
+      // At prayer: one of the traced figures for its kind, the Lust kind swaying.
+      const set = WORSHIP_ART[w.kind] || WORSHIP_ART[0], sh = TRACED[set[Math.floor(w.ph * 7) % set.length]];
+      const lean = w.kind === 3 ? Math.sin(S.rt * 1.6 + w.ph) * 0.06 : 0, T1 = put(w.x, w.y, w.side, cam);
+      addShape(P, sh, (u, v) => T1(u * ART_K, v * ART_K), 0, lean);
     }
-    ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P); ctx.globalAlpha = 1;
+    ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P, "evenodd"); ctx.globalAlpha = 1;
     if (w.a > 0.5) rimP.addPath(P);
-    // The face, turned back over the shoulder: pale, and no more than a face.
-    if (face) { ctx.globalAlpha = face[1] * w.a; ctx.beginPath(); ctx.ellipse(face[0][0], face[0][1], 2.2, 3.3, 0, 0, TAU); ctx.fillStyle = "#5b544b"; ctx.fill(); ctx.globalAlpha = 1; }
   }
   // A piece of a broken idol: a rough lump of it, its colour showing in the light.
   function drawShard(x, y, rot, lit, dom, sid) {
