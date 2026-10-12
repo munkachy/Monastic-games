@@ -2,6 +2,7 @@ import { C, W, H } from './config.js';
 import { spawn } from './enemies.js';
 // Levels are data. # ground, = platform (jump up through it), @ start, D refectory door (the end),
 // s sweet, g gummy, p pizza, j jawbreaker, G gluttony demon, L lust demon.
+// Props (decoration only, stand on the tile's floor): W well, F fountain, R roses, V lavender, U sundial, H beehive, B bench, M monk statue.
 export const LEVELS = [{
   name: 'The Cloister Garden',
   rows: [
@@ -14,11 +15,12 @@ export const LEVELS = [{
     '                                     s s                        ######                                           ss',
     '                                    =====                     ########        =====       =====                 ====',
     '                                                            ##########',
-    '   @      s s s       g       s s              g          ############  j                         g     g               j   s s   G             D',
+    '   @  W   s s s   R   g    V  s s U            g    B     ############  j    H      F             g     g       M       j   s s   G  R      V   D',
     '######################################     #############################################      ########################################################',
     '######################################     #############################################      ########################################################',
   ],
 }];
+export const PROPS = { W: 'well', F: 'fountain', R: 'roses', V: 'lavender', U: 'sundial', H: 'beehive', B: 'bench', M: 'statue' };
 const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust' };
 // Draw terrain and make its bodies (one body per run of tiles); returns the level's size, start and door.
 export function buildLevel(scene, lv) {
@@ -46,6 +48,7 @@ export function buildLevel(scene, lv) {
         tile(scene, x, y, edge(at, r, c, '=', 8, 10, 9, 11));
         body(scene, plats, x, y, T, 6).body.checkCollision.down = false;
       } else if (ch === '@') out.start = { x: x + T / 2, y: y };
+      else if (PROPS[ch]) scene.add.image(x + T / 2, y + T, PROPS[ch]).setOrigin(0.5, 1).setDepth(-1.5);
       else if (ch === 'D') out.door = scene.add.image(x + T / 2, y + T, 'door').setOrigin(0.5, 1).setDepth(-1);
       else if (ch !== ' ') out.spawns.push({ ch, x: x + T / 2, y: y + T / 2 });
     }
