@@ -2928,6 +2928,7 @@ const Climb = (() => {
   // Where its mouth is: in its head, low and forward.
   function mouth(f) {
     const sc = 1 + 0.1 * (f.size || 0);
+    if (f.sin === "gluttony" && !f.great) return [f.x + f.dir * (f.st === "lob" ? 7 : 3) * sc, f.y - 46 * sc];   // (the traced shape's mouth)
     if (f.p) { const q = demonJoint(f.sin, 0, 0, f.dir, f.p, "head"); return [f.x + (q[0] + f.dir * 5) * sc, f.y + (q[1] + 4) * sc]; }
     return [f.x + f.dir * 12 * sc, f.y - f.ht + 12];
   }
