@@ -2928,7 +2928,7 @@ const Climb = (() => {
   // Where its mouth is: in its head, low and forward.
   function mouth(f) {
     const sc = 1 + 0.1 * (f.size || 0);
-    if (f.sin === "gluttony" && !f.great) return [f.x + f.dir * (f.st === "lob" ? 7 : 3) * sc, f.y - 46 * sc];   // (the traced shape's mouth)
+    if (f.sin === "gluttony" && !f.great) return [f.x + f.dir * (f.st === "lob" ? 9 : 5) * sc, f.y - 53 * sc];   // (the traced shape's mouth)
     if (f.p) { const q = demonJoint(f.sin, 0, 0, f.dir, f.p, "head"); return [f.x + (q[0] + f.dir * 5) * sc, f.y + (q[1] + 4) * sc]; }
     return [f.x + f.dir * 12 * sc, f.y - f.ht + 12];
   }
@@ -4376,7 +4376,30 @@ const Climb = (() => {
       : st === "swallow" || st === "bite" ? "gd5" : Math.abs(f.vx || 0) > 8 ? (Math.floor(S.rt * 5 + f.x * 0.01) % 2 ? "gd1" : "gd2") : "gd0";
     const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [f.dir * u, -v]);
     ctx.globalAlpha *= al; ctx.fillStyle = C.ink; ctx.fill(P, "evenodd");
-    if (f.lit > 0.02) { ctx.globalAlpha *= f.lit * 0.4; ctx.fillStyle = SINS.gluttony.dark; ctx.fill(P, "evenodd"); }
+    // Rounded by the torch: a rim of its light round the edge (as the monk's).
+    const L = clamp(f.lit, 0, 1);
+    if (S.torch && L > 0.02) {
+      const sc = 1 + 0.1 * (f.size || 0), tx = (S.torch[0] - f.x) / sc, ty = (S.torch[1] - f.y - (f.dy || 0)) / sc, R = lightR() / sc;
+      ctx.save(); ctx.clip(P, "evenodd");
+      const rim = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
+      rim.addColorStop(0, "rgba(255,190,110," + 0.9 * L + ")"); rim.addColorStop(0.5, "rgba(232,128,58," + 0.45 * L + ")"); rim.addColorStop(1, "rgba(232,128,58,0)");
+      ctx.strokeStyle = rim; ctx.lineWidth = 2.6; ctx.stroke(P); ctx.restore();
+    }
+    // Its eye, glinting in the dark.
+    const e = glutEye(k);
+    if (e && st !== "dying") { const x = f.dir * e[0], y = -e[1]; glow(x, y, 11, SINS.gluttony.eye, 0.75); ctx.beginPath(); ctx.arc(x, y, 1.9, 0, TAU); ctx.fillStyle = SINS.gluttony.eye; ctx.fill(); }
+  }
+  // Where the eye is in each traced pose: the small hole highest up in it.
+  const GLUT_EYE = {};
+  function glutEye(k) {
+    if (k in GLUT_EYE) return GLUT_EYE[k];
+    let best = null;
+    for (const L of TRACED[k].slice(1)) {
+      let mu = 0, mv = 0, u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9; const n = L.length / 2;
+      for (let i = 0; i < L.length; i += 2) { mu += L[i] / n; mv += L[i + 1] / n; u0 = Math.min(u0, L[i]); u1 = Math.max(u1, L[i]); v0 = Math.min(v0, L[i + 1]); v1 = Math.max(v1, L[i + 1]); }
+      if (u1 - u0 < 4 && v1 - v0 < 4 && (!best || mv > best[1])) best = [mu, mv];
+    }
+    return (GLUT_EYE[k] = best);
   }
   // A traced shape (TRACED): its outlines, moved along by du and leaned by lean (u + lean * v).
   function addShape(path, loops, T, du = 0, lean = 0) {
