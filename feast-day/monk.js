@@ -6,9 +6,10 @@ export function makeMonk(scene, x, y) {
   box.body.setMaxVelocityY(C.maxFall).setCollideWorldBounds(true);
   const robe = scene.add.image(0, 0, 'robe').setOrigin(0.5, 1);
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
-  const look = scene.add.container(x, y, [robe, head]);
+  const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
+  const look = scene.add.container(x, y, [arms[0], robe, head, arms[1]]);
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, dt); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, dt); };
   return m;
 }
 function move(m, i, dt) {
@@ -27,7 +28,7 @@ function move(m, i, dt) {
   if (dir) m.face = dir;
   m.state = !ground ? 'jump' : crouch ? 'crouch' : Math.abs(b.velocity.x) > 10 ? 'walk' : 'idle';
 }
-function draw(m, robe, head, dt) {
+function draw(m, robe, head, arms, dt) {
   const b = m.box.body;
   m.t += dt * (m.state === 'walk' ? C.bobRate : 0);
   if (m.state !== 'walk') m.t = Phaser.Math.Linear(m.t, Math.round(m.t / Math.PI) * Math.PI, 0.2);
@@ -40,5 +41,11 @@ function draw(m, robe, head, dt) {
   robe.y = -bob * 0.5;
   head.y = -robe.height + 3 - late * C.headBob;
   head.angle = Math.sin(m.t) * C.headTilt;
+  const air = m.state === 'jump' ? Math.min(C.armAir, Math.abs(b.velocity.y) * C.armAirRate) : 0;
+  arms.forEach((arm, k) => {
+    const side = k ? 1 : -1;
+    arm.setPosition(side, robe.y - robe.height + C.shoulder);
+    arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - air;
+  });
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }

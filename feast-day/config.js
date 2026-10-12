@@ -7,5 +7,6 @@ export const C = {
   coyote: 0.07, buffer: 0.07, // late jump / early jump
   boxW: 16, boxH: 30,
   bobRate: 14, bob: 2, headBob: 1.5, headLag: 0.9, headTilt: 4, waddle: 3, leanAir: 0.012,
+  armSwing: 25, armLag: 0.5, armAir: 60, armAirRate: 0.15, shoulder: 3,
   squash: 0.35, squashTime: 0.15, crouch: 0.3,
 };
