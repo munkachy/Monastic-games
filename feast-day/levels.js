@@ -27,7 +27,7 @@ export function buildLevel(scene, lv) {
   scene.layers = [ // far to near: each scrolls slower the farther it is; the sky also drifts on its own
     layer(scene, 'sky', 0, H, C.skyScroll, C.skyDrift, -3),
     layer(scene, 'abbey', h - 2 * T - C.abbeyH + C.abbeySink, C.abbeyH, C.abbeyScroll, 0, -2.5),
-    layer(scene, 'arch', h - C.archH, C.archH, C.archScroll, 0, -2),
+    layer(scene, 'arcade', h - 2 * T - C.archH + C.archSink, C.archH, C.archScroll, 0, -2),
   ];
   const g = scene.add.graphics().setDepth(-1), solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
   const out = { w, h, solid, plats, spawns: [], solidAt: (x, y) => '#='.includes(at(Math.floor(y / T), Math.floor(x / T))) };
