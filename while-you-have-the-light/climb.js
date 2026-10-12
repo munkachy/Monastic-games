@@ -4374,13 +4374,19 @@ const Climb = (() => {
   function drawGlutton(f, al) {
     const st = f.st, k = st === "dying" ? "gd7" : f.hurtT > 0 || st === "hurt" || st === "down" ? "gd6" : st === "heave" || st === "inhale" ? "gd3" : st === "lob" ? "gd4"
       : st === "swallow" || st === "bite" ? "gd5" : Math.abs(f.vx || 0) > 8 ? (Math.floor(S.rt * 5 + f.x * 0.01) % 2 ? "gd1" : "gd2") : "gd0";
-    const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [f.dir * u, -v]);
+    // Winding up, it shakes, harder and harder, before the fat comes up.
+    const sh = st === "heave" ? clamp(f.t / 0.75, 0, 1) * 2.4 : 0, jx = sh * (Math.random() * 2 - 1), jy = sh * 0.6 * (Math.random() * 2 - 1);
+    const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [f.dir * u + jx, -v + jy]);
     ctx.globalAlpha *= al; ctx.fillStyle = C.ink; ctx.fill(P, "evenodd");
     // Rounded by the torch: a rim of its light round the edge (as the monk's).
     const L = clamp(f.lit, 0, 1);
     if (S.torch && L > 0.02) {
       const sc = 1 + 0.1 * (f.size || 0), tx = (S.torch[0] - f.x) / sc, ty = (S.torch[1] - f.y - (f.dy || 0)) / sc, R = lightR() / sc;
       ctx.save(); ctx.clip(P, "evenodd");
+      // its sickly yellow, strongest on the side the torch is, falling off into black: round, not flat
+      const g = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.42);
+      g.addColorStop(0, "rgba(176,150,52," + 0.75 * L + ")"); g.addColorStop(0.45, "rgba(120,96,30," + 0.45 * L + ")"); g.addColorStop(1, "rgba(60,44,12,0)");
+      ctx.fillStyle = g; ctx.fill(P, "evenodd");
       const rim = ctx.createRadialGradient(tx, ty, 0, tx, ty, R * 0.95);
       rim.addColorStop(0, "rgba(255,190,110," + 0.9 * L + ")"); rim.addColorStop(0.5, "rgba(232,128,58," + 0.45 * L + ")"); rim.addColorStop(1, "rgba(232,128,58,0)");
       ctx.strokeStyle = rim; ctx.lineWidth = 2.6; ctx.stroke(P); ctx.restore();
@@ -4797,7 +4803,7 @@ const Climb = (() => {
       if (f.sin === "gluttony" && !f.great) drawGlutton(f, al); else drawDemon(f.sin, 0, 0, f.dir, f.p, { t: S.rt, lit: Math.max(f.lit, f.brokenT > 0 ? 1 : 0), hurt: f.hurtT / 0.25, windup: f.st === "windup" || f.st === "heave" ? Math.min(1, f.t / 0.55) : 0, alpha: al, broken: f.brokenT > 0, belly: f.size || 0, carry: f.sin === "avarice" ? clamp(1 + (f.loot || 0) * 14, 0, 3) : 0 });
       ctx.restore();
       // Gluttony heaving up its fat: the blob swelling in its mouth.
-      if (f.st === "heave" || (f.st === "lob" && !f.thrown)) { const [ox, oy] = mouth(f), k = f.st === "heave" ? clamp(f.t / 0.75, 0, 1) : 1; f.fatAt = [ox - cam.x, oy - cam.y - 2, { r: (3 + 5 * k) * (1 + 0.18 * f.size), w: 0.2 * Math.sin(S.rt * 18), st: "held" }]; } else f.fatAt = null;
+      if ((f.st === "heave" || (f.st === "lob" && !f.thrown)) && !(f.sin === "gluttony" && !f.great)) { const [ox, oy] = mouth(f), k = f.st === "heave" ? clamp(f.t / 0.75, 0, 1) : 1; f.fatAt = [ox - cam.x, oy - cam.y - 2, { r: (3 + 5 * k) * (1 + 0.18 * f.size), w: 0.2 * Math.sin(S.rt * 18), st: "held" }]; } else f.fatAt = null;
       if (kindled) { const k = f.st === "pickup" ? f.t / 0.7 : 1, q = demonJoint(f.sin, f.x, f.y, f.dir, f.p, "hF"); f.fireAt = [q[0] - cam.x, q[1] - cam.y - 4, 0.3 + 0.7 * k]; lights.push({ x: q[0] - cam.x, y: q[1] - cam.y, r: 60 + 50 * k, a: 0.8 }); } else f.fireAt = null;
     }
     for (const g of S.bigs) drawGreat(g, cam);
