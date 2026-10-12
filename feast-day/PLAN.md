@@ -61,6 +61,8 @@ Each chunk is one session, ends playable, and ends with a commit and a Status up
 
 After 13: the Cellarer, more levels, chant-note flight, copy abilities, the six Sundays of Lent.
 
+Idea for later — fast-day levels: sweets are hazards to jump around; touching one makes him eat it and get hurt. Only healthy food (broccoli and the like) is safe to eat there.
+
 ## Rough token cost per chunk (guesses, one session each, no big fixes)
 
 | Chunk | Cost |
