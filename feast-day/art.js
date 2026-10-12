@@ -1,5 +1,5 @@
 // All textures, drawn from shapes once at start.
-const tex = (scene, key, w, h, draw) => {
+export const tex = (scene, key, w, h, draw) => {
   const g = scene.make.graphics({ add: false });
   draw(g); g.generateTexture(key, w, h); g.destroy();
 };

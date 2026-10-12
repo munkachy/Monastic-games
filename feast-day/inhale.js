@@ -17,7 +17,7 @@ export function makeInhale(scene, monk, things, hearts) {
     g.clear();
     if (inhaling) swirl(g, s, mx, my, face, dt);
     for (const t of things.getChildren()) {
-      if (t.caught) continue;
+      if (t.caught || t.noSwallow) continue;
       if (inhaling && (t.pulled || box.contains(t.x, t.y))) pull(t, mx, my, dt, s, things, monk, scene);
       else if (t.pulled) release(t);
     }
