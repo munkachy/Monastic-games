@@ -40,18 +40,21 @@ function draw(m, robe, head, arms, scap, dt) {
   if (!m.walking) m.t = Phaser.Math.Linear(m.t, Math.round(m.t / Math.PI) * Math.PI, 0.2);
   m.squash = Math.max(0, m.squash - dt / C.squashTime);
   const crouch = m.state === 'crouch' ? C.crouch : 0;
-  const sq = m.squash * C.squash + crouch;
-  m.look.setPosition(b.center.x, b.bottom);
+  m.pop = Math.max(0, (m.pop || 0) - dt / C.popTime);
+  const w = m.windup || 0, pop = m.pop;
+  const sq = m.squash * C.squash + crouch - w * C.windStretch + pop * C.popSquash;
+  const shiver = w ? Math.sin(m.t2 = (m.t2 || 0) + dt * C.shiverRate) * w * C.shiver : 0;
+  m.look.setPosition(b.center.x + shiver, b.bottom);
   m.look.setScale((m.face || 1) * (1 + sq), 1 - sq);
   const bob = Math.abs(Math.sin(m.t)) * C.bob, late = Math.abs(Math.sin(m.t - C.headLag)) * C.bob;
   robe.y = -bob * 0.5;
   head.y = -robe.height + 3 - late * C.headBob;
-  head.angle = Math.sin(m.t) * C.headTilt;
+  head.angle = Math.sin(m.t) * C.headTilt - pop * C.popHead;
   m.air = Phaser.Math.Linear(m.air || 0, m.state === 'jump' ? C.armAir : 0, Math.min(1, dt * C.armAirRate));
   arms.forEach((arm, k) => {
     const side = k ? 1 : -1;
     arm.setPosition(side, robe.y - robe.height + C.shoulder);
-    arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - side * m.air;
+    arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - side * m.air - w * C.clutch - pop * C.popArms * (k ? 1 : 0.8);
   });
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
