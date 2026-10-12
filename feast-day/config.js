@@ -8,5 +8,6 @@ export const C = {
   boxW: 16, boxH: 30,
   bobRate: 14, bob: 2, headBob: 1.5, headLag: 0.9, headTilt: 4, waddle: 3, leanAir: 0.012,
   armSwing: 25, armLag: 0.5, armAir: 60, armAirRate: 0.15, shoulder: 3,
+  scapGap: 3, scapTrail: 0.12, scapLift: 0.25, scapPress: 0.04, scapMax: 100, scapSpring: 180, scapDamp: 9,
   squash: 0.35, squashTime: 0.15, crouch: 0.3,
 };

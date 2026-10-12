@@ -7,9 +7,11 @@ export function makeMonk(scene, x, y) {
   const robe = scene.add.image(0, 0, 'robe').setOrigin(0.5, 1);
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
   const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
-  const look = scene.add.container(x, y, [arms[0], robe, head, arms[1]]);
+  const scap = [0, 1].map(() => scene.add.image(0, 0, 'scap').setOrigin(0.5, 0));
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, arms[1]]);
+  scap.forEach(p => { p.a = p.v = 0; });
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, dt); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); };
   return m;
 }
 function move(m, i, dt) {
@@ -28,7 +30,7 @@ function move(m, i, dt) {
   if (dir) m.face = dir;
   m.state = !ground ? 'jump' : crouch ? 'crouch' : Math.abs(b.velocity.x) > 10 ? 'walk' : 'idle';
 }
-function draw(m, robe, head, arms, dt) {
+function draw(m, robe, head, arms, scap, dt) {
   const b = m.box.body;
   m.t += dt * (m.state === 'walk' ? C.bobRate : 0);
   if (m.state !== 'walk') m.t = Phaser.Math.Linear(m.t, Math.round(m.t / Math.PI) * Math.PI, 0.2);
@@ -47,5 +49,19 @@ function draw(m, robe, head, arms, dt) {
     arm.setPosition(side, robe.y - robe.height + C.shoulder);
     arm.angle = side * Math.sin(m.t - C.armLag) * C.armSwing - air;
   });
+  flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
+}
+// Front and back panels hang from the shoulders and swing on a spring, like two capes.
+function flap(m, scap, robe, dt) {
+  const b = m.box.body, vx = b.velocity.x * (m.face || 1), vy = b.velocity.y;
+  const trail = vx * C.scapTrail, lift = Math.max(0, vy) * C.scapLift + Math.max(0, -vy) * C.scapPress;
+  scap.forEach((p, k) => {
+    const side = k ? 1 : -1;
+    p.setPosition(side * C.scapGap, robe.y - robe.height + C.shoulder);
+    const target = Phaser.Math.Clamp(trail - side * lift, -C.scapMax, C.scapMax);
+    p.v += ((target - p.a) * C.scapSpring - p.v * C.scapDamp) * dt;
+    p.a += p.v * dt;
+    p.angle = p.a;
+  });
 }
