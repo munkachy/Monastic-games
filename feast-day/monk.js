@@ -11,9 +11,10 @@ export function makeMonk(scene, x, y) {
   const scap = makeScapular(scene);
   const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
   const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, cheeks, mouth, arms[1]]);
+  const eyes = scene.add.image(0, 0, 'heyes').setVisible(false);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, eyes, cheeks, mouth, arms[1]]);
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt, eyes); };
   return m;
 }
 function move(m, i, dt) {
@@ -60,7 +61,7 @@ function draw(m, robe, head, arms, scap, dt) {
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
 // Open mouth while inhaling; cheeks stay puffed while full and squish on each chew; a quick gulp when he swallows.
-function face(m, head, mouth, cheeks, robe, dt) {
+function face(m, head, mouth, cheeks, robe, dt, eyes) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
   m.chew = Math.max(0, (m.chew || 0) - dt);
   const chew = Math.sin(m.chew / C.chewTime * Math.PI) * C.chewSquash;
@@ -68,5 +69,6 @@ function face(m, head, mouth, cheeks, robe, dt) {
   head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
   head.scaleY = 1 - m.gulp / C.gulpTime * C.squash - chew;
   mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
+  eyes.setVisible(m.mode === 'fed' || m.windup > 0).setPosition(head.x + C.eyesX, head.y + C.eyesY).setAngle(head.angle);
   cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);
 }
