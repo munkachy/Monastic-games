@@ -4369,6 +4369,14 @@ const Climb = (() => {
   }
   // Points in a frame of its own (u, v) put on the screen at (x, y): flipped by side, v going up.
   const put = (x, y, side, cam) => (u, v) => [x + side * u - cam.x, y - v - cam.y];
+  // Gluttony's common demon, from its traced poses: its feet at (0, 0), facing f.dir; lit, the torch shows its colour.
+  function drawGlutton(f, al) {
+    const st = f.st, k = st === "dying" ? "gd7" : f.hurtT > 0 || st === "hurt" || st === "down" ? "gd6" : st === "heave" || st === "inhale" ? "gd3" : st === "lob" ? "gd4"
+      : st === "swallow" || st === "bite" ? "gd5" : Math.abs(f.vx || 0) > 8 ? (Math.floor(S.rt * 5 + f.x * 0.01) % 2 ? "gd1" : "gd2") : "gd0";
+    const P = new Path2D(); addShape(P, TRACED[k], (u, v) => [f.dir * u, -v]);
+    ctx.globalAlpha *= al; ctx.fillStyle = C.ink; ctx.fill(P, "evenodd");
+    if (f.lit > 0.02) { ctx.globalAlpha *= f.lit * 0.4; ctx.fillStyle = SINS.gluttony.dark; ctx.fill(P, "evenodd"); }
+  }
   // A traced shape (TRACED): its outlines, moved along by du and leaned by lean (u + lean * v).
   function addShape(path, loops, T, du = 0, lean = 0) {
     for (const L of loops) { let a = T(L[0] + du + lean * L[1], L[1]); path.moveTo(a[0], a[1]); for (let i = 2; i < L.length; i += 2) { a = T(L[i] + du + lean * L[i + 1], L[i + 1]); path.lineTo(a[0], a[1]); } path.closePath(); }
@@ -4467,10 +4475,10 @@ const Climb = (() => {
     const x = w.x - cam.x, y = w.y - cam.y; if (x < -30 || x > W + 30 || y < -40 || y > H + 30) return;
     const P = new Path2D(), run = w.st === "run", T0 = put(w.x, w.y, run ? w.dir : w.side, cam), T = (u, v) => T0(u * WK, v * WK);
     if (run) {
-      const s1 = Math.sin(w.ph), b = Math.abs(Math.cos(w.ph)) * 1.5;
-      addPoly(P, [[-6, 4 + b], [4, 4 + b], [8, 12 + b], [7, 19 + b], [3, 23 + b], [-2, 22 + b], [-4, 14 + b], [-10, 9 + b]], T);
-      addOval(P, 7.5, 24.5 + b, 3.2, 3.4, T, 10);
-      addPoly(P, [[-1.5, 5 + b], [1.5, 5 + b], [1.2 + 5 * s1, 0], [-1.2 + 5 * s1, 0]], T); addPoly(P, [[-1.5, 5 + b], [1.5, 5 + b], [1.2 - 5 * s1, 0], [-1.2 - 5 * s1, 0]], T);
+      // Fleeing: a moment of panic as the idol falls, then running (a cycle of four).
+      const R = (u, v) => T0(u * ART_K, v * ART_K);
+      const sh = w.t < 0.4 ? TRACED[["fp0", "fp1", "fp2"][Math.abs(Math.floor(w.x)) % 3]] : TRACED["fr" + (((Math.floor(w.ph / (PI / 2)) % 4) + 4) % 4)];
+      addShape(P, sh, R);
     } else {
       // At prayer: one of the traced figures for its kind, the Lust kind swaying.
       const set = WORSHIP_ART[w.kind] || WORSHIP_ART[0], sh = TRACED[set[Math.floor(w.ph * 7) % set.length]];
@@ -4762,7 +4770,7 @@ const Climb = (() => {
       f.dy = f.ground ? tiltDy(f.x, f.y) : 0;
       const sc = 1 + 0.1 * (f.size || 0), q = f.squash > 0 ? Math.sin(f.squash * PI) * 0.9 : 0, sx = Math.abs(Math.cos(f.squashA || 0)); ctx.save(); ctx.translate(f.x - cam.x, f.y - cam.y + f.dy);
       ctx.scale(sc * (1 + 0.24 * q * (1 - sx) - 0.16 * q * sx), sc * (1 + 0.24 * q * sx - 0.18 * q * (1 - sx)));
-      drawDemon(f.sin, 0, 0, f.dir, f.p, { t: S.rt, lit: Math.max(f.lit, f.brokenT > 0 ? 1 : 0), hurt: f.hurtT / 0.25, windup: f.st === "windup" || f.st === "heave" ? Math.min(1, f.t / 0.55) : 0, alpha: al, broken: f.brokenT > 0, belly: f.size || 0, carry: f.sin === "avarice" ? clamp(1 + (f.loot || 0) * 14, 0, 3) : 0 });
+      if (f.sin === "gluttony" && !f.great) drawGlutton(f, al); else drawDemon(f.sin, 0, 0, f.dir, f.p, { t: S.rt, lit: Math.max(f.lit, f.brokenT > 0 ? 1 : 0), hurt: f.hurtT / 0.25, windup: f.st === "windup" || f.st === "heave" ? Math.min(1, f.t / 0.55) : 0, alpha: al, broken: f.brokenT > 0, belly: f.size || 0, carry: f.sin === "avarice" ? clamp(1 + (f.loot || 0) * 14, 0, 3) : 0 });
       ctx.restore();
       // Gluttony heaving up its fat: the blob swelling in its mouth.
       if (f.st === "heave" || (f.st === "lob" && !f.thrown)) { const [ox, oy] = mouth(f), k = f.st === "heave" ? clamp(f.t / 0.75, 0, 1) : 1; f.fatAt = [ox - cam.x, oy - cam.y - 2, { r: (3 + 5 * k) * (1 + 0.18 * f.size), w: 0.2 * Math.sin(S.rt * 18), st: "held" }]; } else f.fatAt = null;
