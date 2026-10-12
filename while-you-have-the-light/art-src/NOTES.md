@@ -7,3 +7,4 @@
 - banquet-1.png: 2 chandeliers on chains, roast pig platter, 4 goblets, jug, long table with fleur-de-lis runner, high chair, candelabra.
 - stomach-1.png: round stomach chamber, 4 ledges (2 each side), drips from ceiling. Top and bottom tubes drawn solid: cut openings through them in code.
 - idols-1.png: Ashtoreth (lust), golden calf (avarice), Moloch with furnace belly (wrath; furnace can glow).
+- worshippers-1.png: 8 robed hooded figures (kneel arms up, bowed, stand arm up, swaying, prostrate, kneel praying, arms out, crouching). They wear monk-like cord belts: trim the cord so they don't read as monks.
