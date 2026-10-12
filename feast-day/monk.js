@@ -10,14 +10,12 @@ export function makeMonk(scene, x, y) {
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
   const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
   const scap = makeScapular(scene);
-  const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
-  const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
-  const eyes = scene.add.image(0, 0, 'heyes0').setVisible(false);
-  const smile = scene.add.image(0, 0, 'smile').setVisible(false);
+  const faces = { inhale: 'face_inhale', full: 'face_full', love: 'face_love' };
+  for (const k in faces) faces[k] = scene.add.image(0, 0, faces[k]).setVisible(false); // whole-face overlays
   const brows = makeBrows(scene);
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, eyes, smile, cheeks, mouth, ...brows, arms[1]]);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, ...Object.values(faces), ...brows, arms[1]]);
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt, eyes, smile); moveBrows(m, brows, head, dt); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, faces, dt); moveBrows(m, brows, head, dt); };
   return m;
 }
 function move(m, i, dt) {
@@ -64,24 +62,23 @@ function draw(m, robe, head, arms, scap, dt) {
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
-// Open mouth while inhaling; cheeks stay puffed while full and squish on each chew; a quick gulp when he swallows.
-function face(m, head, mouth, cheeks, robe, dt, eyes, smile) {
+// Swap in a whole face: open mouth while inhaling, puffed cheeks while full (squish per chew), heart eyes when fed.
+function face(m, head, faces, dt) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
   m.chew = Math.max(0, (m.chew || 0) - dt);
   const chew = Math.sin(m.chew / C.chewTime * Math.PI) * C.chewSquash;
-  const full = m.mode === 'full';
+  const full = m.mode === 'full', love = m.mode === 'fed' || m.windup > 0;
   head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
   head.scaleY = 1 - m.gulp / C.gulpTime * C.squash - chew;
-  mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
-  const love = m.mode === 'fed' || m.windup > 0;
-  glue(eyes, head, C.eyesX, C.eyesY, love);
-  glue(smile, head, C.mouthX + C.smileX, C.mouthY + C.smileY, love);
+  glue(faces.inhale, head, m.mode === 'inhale');
+  glue(faces.full, head, full, 1 + chew * 2, 1 - chew);
+  glue(faces.love, head, love);
   m.flash = ((m.flash || 0) + dt * C.eyeFlash) % 2;
-  eyes.setTexture('heyes' + (m.flash | 0));
-  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);
+  faces.love.setTexture(m.flash < 1 ? 'face_love' : 'face_love2');
 }
-// Keep a face overlay stuck to its spot on the head through bob, tilt and squash.
-function glue(img, head, x, y, on) {
-  const v = new Phaser.Math.Vector2(x * head.scaleX, y * head.scaleY).rotate(head.rotation);
-  img.setVisible(on).setPosition(head.x + v.x, head.y + v.y).setRotation(head.rotation).setScale(head.scaleX, head.scaleY);
+// Keep a face overlay stuck on the face through bob, tilt and squash.
+function glue(img, head, on, sx = 1, sy = 1) {
+  const v = new Phaser.Math.Vector2(C.faceX * head.scaleX, C.faceY * head.scaleY).rotate(head.rotation);
+  img.setVisible(on).setPosition(head.x + v.x, head.y + v.y).setRotation(head.rotation)
+    .setScale(head.scaleX * C.faceScale * sx, head.scaleY * C.faceScale * sy);
 }

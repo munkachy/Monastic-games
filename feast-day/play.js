@@ -1,6 +1,6 @@
 import { W, H, C } from './config.js';
 import { makeInput, ACT } from './input.js';
-import { makeArt } from './art.js';
+import { makeArt, loadSprites } from './art.js';
 import { makeMonk } from './monk.js';
 import { makeTune } from './tune.js';
 import { makeInhale } from './inhale.js';
@@ -8,6 +8,7 @@ import { makeHearts } from './heart.js';
 import { makeEnemyArt, spawn, updateEnemies, winOver } from './enemies.js';
 export class Play extends Phaser.Scene {
   constructor() { super('play'); }
+  preload() { loadSprites(this); }
   create() {
     makeArt(this); makeEnemyArt(this);
     this.physics.world.gravity.y = C.gravity;
