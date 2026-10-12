@@ -20,7 +20,7 @@ export class Play extends Phaser.Scene {
     this.things = this.physics.add.group();
     this.test = () => { // test row until level 1 exists
       [180, 210].forEach(x => this.things.create(x, H - 40, 'sweet'));
-      spawn(this.things, 'gummy', 270, H - 40); spawn(this.things, 'pizza', 360, H - 75); spawn(this.things, 'jawbreaker', 430, H - 40);
+      spawn(this.things, 'gummy', 270, H - 40); spawn(this.things, 'pizza', 360, H - 75); spawn(this.things, 'jawbreaker', 430, H - 40); spawn(this.things, 'gluttony', 400, H - 60);
     };
     this.test();
     this.physics.add.collider(this.things, ground);
