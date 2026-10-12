@@ -61,6 +61,27 @@ Each chunk is one session, ends playable, and ends with a commit and a Status up
 
 After 13: the Cellarer, more levels, chant-note flight, copy abilities, the six Sundays of Lent.
 
+## Rough token cost per chunk (guesses, one session each, no big fixes)
+
+| Chunk | Cost |
+|---|---|
+| 1 Skeleton | 60–100k |
+| 2 Monk | 80–150k |
+| 3 Tuning panel | 40–70k |
+| 4 Inhale | 100–200k |
+| 5 Heart | 60–120k |
+| 6 Enemies 1 | 70–130k |
+| 7 Level 1 | 60–110k |
+| 8 Incense float | 60–110k |
+| 9 Health, items | 50–90k |
+| 10 Enemies 2 | 50–90k |
+| 11 Boss | 100–180k |
+| 12 Opening scene | 80–150k |
+| 13 Sound | 50–90k |
+| **Total** | **~0.85–1.6M** |
+
+Each round of fixes after playing: about 20–60k.
+
 ## How to ask (cheap)
 
 - "Do chunk N." One chunk per session.
