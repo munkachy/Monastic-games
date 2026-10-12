@@ -52,16 +52,17 @@ function draw(m, robe, head, arms, scap, dt) {
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
-// Front and back panels hang from the shoulders and swing on a spring, like two capes.
+// Front and back panels hang on each side of the body; each stays on its own side and swings on its own spring.
 function flap(m, scap, robe, dt) {
   const b = m.box.body, vx = b.velocity.x * (m.face || 1), vy = b.velocity.y;
   const trail = vx * C.scapTrail, lift = Math.max(0, vy) * C.scapLift + Math.max(0, -vy) * C.scapPress;
   scap.forEach((p, k) => {
     const side = k ? 1 : -1;
     p.setPosition(side * C.scapGap, robe.y - robe.height + C.shoulder);
-    const target = Phaser.Math.Clamp(trail - side * lift, -C.scapMax, C.scapMax);
-    p.v += ((target - p.a) * C.scapSpring - p.v * C.scapDamp) * dt;
-    p.a += p.v * dt;
+    const lo = k ? -C.scapMax : 0, hi = k ? 0 : C.scapMax; // back swings back, front swings forward
+    const target = Phaser.Math.Clamp(trail - side * lift, lo, hi);
+    p.v += ((target - p.a) * C.scapSpring * (k ? C.scapOffbeat : 1) - p.v * C.scapDamp) * dt;
+    p.a = Phaser.Math.Clamp(p.a + p.v * dt, lo, hi);
     p.angle = p.a;
   });
 }
