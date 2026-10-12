@@ -1,4 +1,5 @@
 # Cut a 4x3 AI sheet: per cell drop scraps touching the cell edge (bleed from neighbours),
+# args: image out scale rowCenters [cellHeight] [crisp]
 # align every frame on the main body's bottom-center, pad frames apart, save one strip.
 from PIL import Image
 import numpy as np, sys
@@ -8,7 +9,8 @@ rows = [int(v) for v in sys.argv[4].split(',')]
 im = np.array(Image.open(src).convert('RGB')).astype(int)
 r, g, b = im[..., 0], im[..., 1], im[..., 2]
 fg = ~((r > 150) & (b > 140) & (g < 120))
-Wd = im.shape[1]; cw = Wd // 4; ch = 350
+Wd = im.shape[1]; cw = Wd // 4; ch = int(sys.argv[5]) if len(sys.argv) > 5 else 350
+RS = Image.NEAREST if len(sys.argv) > 6 and sys.argv[6] == 'crisp' else Image.LANCZOS  # crisp keeps hard pixel edges
 def comps(m):
     lab = np.zeros(m.shape, int); n = 0; out = []
     for y0, x0 in zip(*np.nonzero(m)):
@@ -44,5 +46,5 @@ for i, (rgb, keep, ax, ay) in enumerate(cells):
     ys, xs = np.nonzero(keep)
     ty, tx = ys + oy, xs + ox; ok = (ty >= 0) & (ty < CH) & (tx >= 0) & (tx < CW)
     canvas[ty[ok], tx[ok], :3] = rgb[ys[ok], xs[ok]]; canvas[ty[ok], tx[ok], 3] = 255
-    strip.paste(Image.fromarray(canvas, 'RGBA').resize((fw, fh), Image.LANCZOS), (i * (fw + pad), 0))
+    strip.paste(Image.fromarray(canvas, 'RGBA').resize((fw, fh), RS), (i * (fw + pad), 0))
 strip.save(out); print(fw, fh, 'feet at', round(up / F), 'pad', pad)

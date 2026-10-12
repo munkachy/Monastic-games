@@ -24,11 +24,12 @@ export const ENEMIES = {
   } },
   lust: { w: 20, h: 20, speed: () => C.lustSpeed, behavior: fly, swallowable: false, demon: true, fly: true, draw: g => g.fillStyle(0x9b7fd1).fillCircle(10, 10, 10) },
   avarice: { w: 20, h: 20, speed: () => C.avariceSpeed, behavior: walk, swallowable: false, demon: true, draw: g => g.fillStyle(0x8a8470).fillCircle(10, 10, 10) },
-  gluttony: { w: 20, h: 20, speed: () => C.gluttonySpeed, behavior: walk, swallowable: false, demon: true, draw: g => g.fillStyle(0x8a8a2a).fillCircle(10, 10, 10) },
+  gluttony: { w: 20, h: 20, speed: () => C.gluttonySpeed, behavior: hover, hover: true, fly: true, swallowable: false, demon: true, draw: g => g.fillStyle(0x8a8a2a).fillCircle(10, 10, 10) },
 };
 // Action sheets (sprites/<kind>_sheet.png, one strip of 12 frames from a 4x3 sheet):
 // 0-3 move loop, 4-5 being sucked in, 6 hit, 7 attack, 8-11 won over (sweets) or fleeing (demons).
-export const SHEETS = { pizza: [59, 44, 1, 1], gluttony: [52, 44, 1, -1], lust: [55, 47, 1, -1], avarice: [55, 44, 1, -1] }; // frame w, h, px below the feet, way the art faces (1 right, -1 left)
+// frame w, h, px below the feet, way the art faces (1 right, -1 left), scale (whole numbers stay crisp; 1.7 for the old small cuts)
+export const SHEETS = { pizza: [59, 44, 1, 1, 1], gluttony: [117, 87, 3, 1, 1], lust: [55, 47, 1, -1, 1.7], avarice: [55, 44, 1, -1, 1.7] };
 export const loadSheets = scene => Object.entries(SHEETS).forEach(([k, [w, h]]) =>
   scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h, spacing: 2 }));
 // A sprite in sprites/ with the enemy's name wins over the drawing; with no `_happy` sprite, won-over enemies blush pink.
@@ -39,7 +40,7 @@ export function makeEnemyArt(scene) {
 }
 export function spawn(group, kind, x, y) {
   const e = group.create(x, y, kind), d = ENEMIES[kind];
-  if (d.demon) e.setScale(C.demonScale); // demons stand at least as tall as the monk
+  if (SHEETS[kind]) e.setScale(SHEETS[kind][4]); // demons stand at least as tall as the monk
   Object.assign(e, { kind, dir: -1, y0: y, t: Math.random() * 6, noSwallow: !d.swallowable });
   e.body.setAllowGravity(!d.fly).setCollideWorldBounds(true);
   if (SHEETS[kind]) { // body sits at the feet of the frame
@@ -47,7 +48,8 @@ export function spawn(group, kind, x, y) {
     e.play(kind + '_move'); e.body.setSize(bw, bh).setOffset((e.width - bw) / 2, e.height - bh - SHEETS[kind][2]);
   }
   const feet = (e.height / 2 - (SHEETS[kind] ? SHEETS[kind][2] : 0)) * e.scaleY; // stand on the tile's floor, not inside it
-  if (!d.fly) e.body.reset(x, y + C.tile / 2 - feet - 1);
+  if (!d.fly || d.hover) e.body.reset(x, y + C.tile / 2 - feet - 1 - (d.hover ? C.hoverGap : 0));
+  e.y0 = e.y;
   return e;
 }
 export function updateEnemies(group, dt, solidAt) {
@@ -60,7 +62,7 @@ export function updateEnemies(group, dt, solidAt) {
     if (e.pulled) continue;
     const d = ENEMIES[e.kind];
     if (e.body.blocked.left) e.dir = 1; else if (e.body.blocked.right) e.dir = -1;
-    else if (!d.fly && e.body.blocked.down && !solidAt(e.body.center.x + e.dir * (e.body.halfWidth + 2), e.body.bottom + 2)) e.dir = -e.dir; // turn at ledges
+    else if ((d.hover || !d.fly && e.body.blocked.down) && !solidAt(e.body.center.x + e.dir * (e.body.halfWidth + 2), e.body.bottom + (d.hover ? C.hoverGap + 4 : 2))) e.dir = -e.dir; // turn at ledges
     e.t += dt;
     d.behavior(e, d.speed(), dt);
     e.setFlipX(e.dir !== (SHEETS[e.kind] ? SHEETS[e.kind][3] : -1)); // drawings face left
@@ -68,6 +70,7 @@ export function updateEnemies(group, dt, solidAt) {
 }
 function walk(e, speed) { e.body.velocity.x = e.dir * speed; }
 function fly(e, speed) { walk(e, speed); e.y = e.y0 + Math.sin(e.t * C.pizzaBobRate) * C.pizzaBob; e.body.velocity.y = 0; }
+function hover(e, speed) { walk(e, speed); e.y = e.y0 + Math.sin(e.t * C.hoverRate) * C.hoverBob; e.body.velocity.y = 0; } // legless: floats just above the ground
 function roll(e, speed, dt) { walk(e, speed); e.angle += e.dir * speed * dt * 4; }
 // A heart wins it over: it smiles, gives a little heart, and hops off to the feast. A demon flees into smoke instead.
 export function winOver(scene, e, group) {
