@@ -21,3 +21,4 @@
 - gluttony-demon-swallow-1.png — the common demon swallowing from below, facing right: closing in, gripping (hands at jaw), shaken. The monk sits in the open jaws; draw the lower jaw in front of him. Erase the shake marks.
 - monk-ref-1.png — monk style reference (stand, walk, stride): peaked cowl, short cape, wide sleeves, cord with knotted tails, sandals, torch. For restyling the jointed monk, not tracing.
 - gluttony-dressing-1.jpg — Gluttony wall/ceiling/floor dressing, 4x3. Top row hangs from ceilings, middle grows from walls (attached at left), bottom stands on floors. The flat bars mark the attaching side; trim them off and attach there. JPEG: threshold before tracing.
+- icecream-demon-1.png — flying ice-cream cone demon, 3x3: fly x2, hover (erase drip marks), wind-up tilt, dive (scoop first, cone trailing), spit (erase glob), hit (erase splash), melted defeat, stuck head-down with cone up (erase wobble marks). It dives mouth-first and sticks scoop-down.
