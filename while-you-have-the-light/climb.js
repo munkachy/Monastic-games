@@ -1931,10 +1931,11 @@ const Climb = (() => {
     const D0 = put(G.donkey, G.y, G.dir, cam);
     addShape(donk, bray ? TRACED.donkeyBray : TRACED.donkey, (u, v) => D0(u * A, v * A));
     // The lay brother: standing with a hand on the cart; reaching to it as a block comes; then his hands raised, blessing.
-    const B0 = put(G.x + G.dir * 20, G.y, -G.dir, cam), br = Math.sin(t * 1.4 + G.sec) * 0.3;
+    const B0 = put(G.x + G.dir * 30, G.y, -G.dir, cam), br = Math.sin(t * 1.4 + G.sec) * 0.3;
     addShape(bro, since >= 0 && since < 0.45 ? TRACED.broLift : k > 0.05 ? TRACED.broBless : TRACED.broStand, (u, v) => B0(u * A, v * A + (v > 20 ? br : 0)));
-    ctx.fillStyle = C.ink; ctx.fill(cart, "evenodd"); ctx.fill(donk, "evenodd"); ctx.fill(bro, "evenodd");
-    const ink = new Path2D(); ink.addPath(cart); ink.addPath(donk); ink.addPath(bro);
+    ctx.fillStyle = C.ink; ctx.fill(bro, "evenodd"); rimNow(bro);   // (he stands just behind the cart's end, his hand on it hidden by it)
+    ctx.fill(cart, "evenodd"); ctx.fill(donk, "evenodd");
+    const ink = new Path2D(); ink.addPath(cart); ink.addPath(donk);
     // (Its rim of torchlight laid on now, not over him: he stands before the cart, not behind it.)
     rimNow(ink);
     const [lx, ly] = CT(-13, 32.5); lights.push({ x: lx, y: ly, r: 120, a: 0.8 });
@@ -1957,7 +1958,7 @@ const Climb = (() => {
         const sx = x - cam.x, sy = y - cam.y;
         glow(sx, sy, 34, C.flame, 0.35); drawFlame(sx, sy + 3, 0.42, t + G.sec, {});
         G.bin.forEach((q, s) => { if (q.st !== "bin") return; const [bx, by] = binSlot(G, s); glow(bx - cam.x, by - cam.y - 2, 9, SINS[q.dom].color, 0.35); });
-        if (k > 0.05) { const [hx, hy] = put(G.x + G.dir * 20, G.y, -G.dir, cam)(0, 46 * ART_K); glow(hx, hy, 40, C.warm, 0.4 * k); lightCross(hx, hy, 9, 0.8 * k, 2); }
+        if (k > 0.05) { const [hx, hy] = put(G.x + G.dir * 30, G.y, -G.dir, cam)(0, 46 * ART_K); glow(hx, hy, 40, C.warm, 0.4 * k); lightCross(hx, hy, 9, 0.8 * k, 2); }
         continue;
       }
       const sx = x - cam.x, sy = y - cam.y, c = SINS[b.dom] || SINS.wrath, inRock = solidAt(x, y);
@@ -4477,7 +4478,7 @@ const Climb = (() => {
       addShape(P, sh, (u, v) => T1(u * ART_K, v * ART_K), 0, lean);
     }
     ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P, "evenodd"); ctx.globalAlpha = 1;
-    if (w.a > 0.5) rimP.addPath(P);
+    if (w.a > 0.5) rimNow(P);   // (rimmed now, not with the rest after him: he stands before them)
   }
   // A piece of a broken idol: a rough lump of it, its colour showing in the light.
   function drawShard(x, y, rot, lit, dom, sid) {
