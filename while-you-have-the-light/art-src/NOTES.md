@@ -5,3 +5,4 @@
 - demons-gluttony-1.png: ice-cream cone (bat wings), three-tier cake, wine-skin, wind-up teeth, sweets-imp.
 - larder-1.png: 3 hams on hooks, 2 sausage strings, netted cheese, chain hook, 3 barrels (middle one has eyes: demon hides), 4 sacks, shelf of jars.
 - banquet-1.png: 2 chandeliers on chains, roast pig platter, 4 goblets, jug, long table with fleur-de-lis runner, high chair, candelabra.
+- stomach-1.png: round stomach chamber, 4 ledges (2 each side), drips from ceiling. Top and bottom tubes drawn solid: cut openings through them in code.
