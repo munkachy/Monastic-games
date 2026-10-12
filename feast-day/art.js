@@ -31,9 +31,9 @@ export function makeArt(scene) {
     g.fillStyle(0xf0c9a0).fillCircle(3.5, 3, 2.4).fillCircle(8.5, 3, 2.4); // hide the round eyes
     for (const x of [0.5, 5.5]) g.fillStyle(c).fillCircle(x + 1.6, 1.8, 1.5).fillCircle(x + 4.4, 1.8, 1.5).fillTriangle(x, 2.3, x + 6, 2.3, x + 3, 5.5);
   }));
-  tex(scene, 'smile', 9, 6, g => {                          // happy open grin
-    g.fillStyle(0x5a1e24).slice(4.5, 1, 4, 0, Math.PI, false).fillPath();
-    g.fillStyle(0xe8364f).fillEllipse(4.5, 3.6, 4, 1.6);
+  tex(scene, 'smile', 9, 6, g => {                          // closed-mouth smile
+    g.fillStyle(0xf0c9a0).fillCircle(4.5, 3, 2);             // hide the little round mouth
+    g.lineStyle(1.2, 0x5a1e24).beginPath().arc(4.5, 0.5, 3.5, 0.35, Math.PI - 0.35, false).strokePath();
   });
   tex(scene, 'glow', 12, 12, g => g.fillStyle(0xfff2a8, 0.4).fillCircle(6, 6, 6).fillStyle(0xfffbe0, 0.9).fillCircle(6, 6, 3));
   tex(scene, 'sweet', 12, 12, g => g.fillStyle(0xe5578a).fillCircle(6, 6, 6).fillStyle(0xffffff, 0.6).fillCircle(4, 4, 2));
