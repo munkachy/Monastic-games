@@ -22,4 +22,8 @@ export function makeArt(scene) {
     g.fillStyle(0x222222).fillCircle(19, 29, 1.7).fillCircle(24, 29, 1.7);
     g.fillStyle(0xe89a8a).fillCircle(22, 34, 1.5);          // small mouth
   });
+  tex(scene, 'mouth', 8, 7, g => g.fillStyle(0x5a1e24).fillEllipse(4, 3.5, 8, 7));
+  tex(scene, 'cheeks', 22, 10, g => g.fillStyle(0xf0c9a0).fillCircle(5, 5, 5).fillCircle(17, 5, 5)
+    .fillStyle(0xe89a8a, 0.7).fillCircle(5, 5, 2.5).fillCircle(17, 5, 2.5));
+  tex(scene, 'sweet', 12, 12, g => g.fillStyle(0xe5578a).fillCircle(6, 6, 6).fillStyle(0xffffff, 0.6).fillCircle(4, 4, 2));
 }

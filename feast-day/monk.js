@@ -1,5 +1,5 @@
 import { C } from './config.js';
-// Monk: invisible physics box + drawn robe and head. States: idle, walk, jump, crouch.
+// Monk: invisible physics box + drawn robe and head. States: idle, walk, jump, crouch, inhale, full (m.mode set by inhale.js).
 export function makeMonk(scene, x, y) {
   const box = scene.add.rectangle(x, y, C.boxW, C.boxH, 0, 0);
   scene.physics.add.existing(box);
@@ -8,32 +8,36 @@ export function makeMonk(scene, x, y) {
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
   const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
   const scap = [0, 1].map(() => scene.add.image(0, 0, 'scap').setOrigin(0.5, 0));
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, arms[1]]);
+  const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
+  const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, cheeks, mouth, arms[1]]);
   scap.forEach(p => { p.a = p.v = 0; });
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks); };
   return m;
 }
 function move(m, i, dt) {
   const b = m.box.body, ground = b.blocked.down;
-  const crouch = ground && i.down;
-  const dir = crouch ? 0 : i.right - i.left;
+  const crouch = ground && i.down && !m.mode, stop = m.mode === 'inhale';
+  const full = m.mode === 'full', walk = C.walk * (full ? C.fullSlow : 1);
+  const dir = crouch || stop ? 0 : i.right - i.left;
   const a = dir ? (ground ? C.accel : C.airAccel) : C.decel;
-  b.velocity.x = Phaser.Math.Linear(b.velocity.x, dir * C.walk, Math.min(1, a * dt / C.walk));
+  b.velocity.x = Phaser.Math.Linear(b.velocity.x, dir * walk, Math.min(1, a * dt / walk));
   m.coyote = ground ? C.coyote : m.coyote - dt;
-  m.buffer = i.jumpPressed ? C.buffer : m.buffer - dt;
-  if (m.buffer > 0 && m.coyote > 0) { b.velocity.y = -C.jump; m.buffer = m.coyote = 0; }
+  m.buffer = i.jumpPressed && !stop ? C.buffer : m.buffer - dt;
+  if (m.buffer > 0 && m.coyote > 0) { b.velocity.y = -C.jump * (full ? C.fullJump : 1); m.buffer = m.coyote = 0; }
   const cut = -C.jump * C.jumpCut;
   if (!i.jump && b.velocity.y < cut) b.velocity.y = cut;
   if (ground && !m.wasGround) m.squash = Math.min(1, m.fallSpeed / C.maxFall);
   m.wasGround = ground; m.fallSpeed = b.velocity.y;
   if (dir) m.face = dir;
-  m.state = !ground ? 'jump' : crouch ? 'crouch' : Math.abs(b.velocity.x) > 10 ? 'walk' : 'idle';
+  m.walking = ground && !crouch && Math.abs(b.velocity.x) > 10;
+  m.state = m.mode || (!ground ? 'jump' : crouch ? 'crouch' : Math.abs(b.velocity.x) > 10 ? 'walk' : 'idle');
 }
 function draw(m, robe, head, arms, scap, dt) {
   const b = m.box.body;
-  m.t += dt * (m.state === 'walk' ? C.bobRate : 0);
-  if (m.state !== 'walk') m.t = Phaser.Math.Linear(m.t, Math.round(m.t / Math.PI) * Math.PI, 0.2);
+  m.t += dt * (m.walking ? C.bobRate : 0);
+  if (!m.walking) m.t = Phaser.Math.Linear(m.t, Math.round(m.t / Math.PI) * Math.PI, 0.2);
   m.squash = Math.max(0, m.squash - dt / C.squashTime);
   const crouch = m.state === 'crouch' ? C.crouch : 0;
   const sq = m.squash * C.squash + crouch;
@@ -65,4 +69,11 @@ function flap(m, scap, robe, dt) {
     p.a = Phaser.Math.Clamp(p.a + p.v * dt, lo, hi);
     p.angle = p.a;
   });
+}
+// Open mouth while inhaling; puffed cheeks and a wider head while full.
+function face(m, head, mouth, cheeks) {
+  const full = m.mode === 'full';
+  head.scaleX = full ? C.fullPuff : 1;
+  mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
+  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
 }
