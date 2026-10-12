@@ -36,6 +36,7 @@ feast-day/
   inhale.js    vortex box, pulling, catching, chewing, swallowing
   heart.js     glow, hearts flying out, heart hits
   scapular.js  bendy scapular panels
+  brows.js     eyebrow expressions (table of raise + tilt per situation)
   enemies.js   enemy table + behaviors
   levels.js    level strings + builder
   play.js      the play scene: wires everything
@@ -105,3 +106,4 @@ Each round of fixes after playing: about 20–60k.
 - Camera (early part of chunk 7): follows the monk and keeps him mid-screen vertically, so the lower half is free for thumbs (`camLerp`, `camLerpY`). Ground is a deep block; the act button is fixed to the screen.
 - Heart eyes: while fed (and during the wind-up) he smiles, mouth closed (`smile`, `smileY`) and his eyes are little hearts flashing dark/light red (`heyes0/1`, `eyeFlash`, `eyesX/eyesY`).
 - Heart "hiccup": during the glow he stretches tall, shivers and clutches his chest (`m.windup`); when the heart pops out he squashes, head snaps back, arms fling up and he is thrown backward, even mid-run: velocity set to `-recoil` and walking input ignored for `knockTime` (`m.knock`, `knockDecel`, `popHop`). Numbers `windStretch…popHop` in config.
+- Eyebrows: `brows.js`. A table `FACES` gives each situation (idle, walk, crouch, jump, fall, inhale, full, fed, windup, pop, knock) a raise and a tilt; brows ease toward it (`browSpeed`), bob on the walk, dip on each chew, wiggle while straining. Adding an expression = one table row.

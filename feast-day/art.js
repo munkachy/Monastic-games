@@ -35,6 +35,7 @@ export function makeArt(scene) {
     g.fillStyle(0xf0c9a0).fillCircle(4.5, 3, 2);             // hide the little round mouth
     g.lineStyle(1.2, 0x5a1e24).beginPath().arc(4.5, 0.5, 3.5, 0.35, Math.PI - 0.35, false).strokePath();
   });
+  tex(scene, 'brow', 4, 2, g => g.fillStyle(0x2a1a10).fillRoundedRect(0, 0, 4, 1.6, 0.8));
   tex(scene, 'glow', 12, 12, g => g.fillStyle(0xfff2a8, 0.4).fillCircle(6, 6, 6).fillStyle(0xfffbe0, 0.9).fillCircle(6, 6, 3));
   tex(scene, 'sweet', 12, 12, g => g.fillStyle(0xe5578a).fillCircle(6, 6, 6).fillStyle(0xffffff, 0.6).fillCircle(4, 4, 2));
 }

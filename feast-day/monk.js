@@ -1,5 +1,6 @@
 import { C } from './config.js';
 import { makeScapular, flap } from './scapular.js';
+import { makeBrows, moveBrows } from './brows.js';
 // Monk: invisible physics box + drawn robe and head. States: idle, walk, jump, crouch, inhale, full (m.mode set by inhale.js).
 export function makeMonk(scene, x, y) {
   const box = scene.add.rectangle(x, y, C.boxW, C.boxH, 0, 0);
@@ -13,9 +14,10 @@ export function makeMonk(scene, x, y) {
   const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
   const eyes = scene.add.image(0, 0, 'heyes0').setVisible(false);
   const smile = scene.add.image(0, 0, 'smile').setVisible(false);
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, eyes, smile, cheeks, mouth, arms[1]]);
+  const brows = makeBrows(scene);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, eyes, smile, cheeks, mouth, ...brows, arms[1]]);
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
-  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt, eyes, smile); };
+  m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt, eyes, smile); moveBrows(m, brows, head, dt); };
   return m;
 }
 function move(m, i, dt) {
