@@ -10,11 +10,11 @@ export class Play extends Phaser.Scene {
   create() {
     makeArt(this);
     this.physics.world.gravity.y = C.gravity;
-    const ground = this.add.rectangle(W / 2, H - 12, W, 24, 0x6b8f4e);
+    const ground = this.add.rectangle(W / 2, H - 24 + H / 2, W, H, 0x6b8f4e); // top at H - 24, deep enough to fill below
     this.physics.add.existing(ground, true);
     this.monk = makeMonk(this, 80, H - 60);
     this.physics.add.collider(this.monk.box, ground);
-    this.add.circle(ACT.x, ACT.y, ACT.r, 0xffffff, 0.15).setStrokeStyle(2, 0xffffff, 0.4);
+    this.add.circle(ACT.x, ACT.y, ACT.r, 0xffffff, 0.15).setStrokeStyle(2, 0xffffff, 0.4).setScrollFactor(0).setDepth(10);
     this.things = this.physics.add.group();
     this.sweets = () => [200, 240, 300, 360, 420].forEach(x => this.things.create(x, H - 40, 'sweet')); // test sweets until enemies exist
     this.sweets();
@@ -23,6 +23,7 @@ export class Play extends Phaser.Scene {
     this.inhale = makeInhale(this, this.monk, this.things, this.hearts);
     this.frozen = 0;
     this.freeze = t => { this.frozen = t; this.physics.world.pause(); };
+    this.cameras.main.setBounds(0, -C.camUp, W, C.camUp + H * 1.5).startFollow(this.monk.box, true, C.camLerp, C.camLerpY); // monk mid-screen, room below for thumbs
     this.in = makeInput(this);
     makeTune(this, this.monk);
   }
