@@ -52,7 +52,7 @@ export class Play extends Phaser.Scene {
     if (this.ended) return;
     if (this.monk.box.y > this.level.h + C.fallOut) this.restart(); // fell in a pit (health comes in chunk 9)
     if (Math.abs(this.monk.box.x - this.level.door.x) < C.tile && this.monk.box.body.blocked.down) this.finish();
-    updateEnemies(this.things, ms / 1000);
+    updateEnemies(this.things, ms / 1000, this.level.solidAt);
     this.inhale.update(this.in, ms / 1000);
     this.monk.update(this.in, ms / 1000);
     this.hearts.update(ms / 1000);

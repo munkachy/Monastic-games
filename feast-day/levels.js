@@ -27,7 +27,7 @@ export function buildLevel(scene, lv) {
   scene.sky = scene.add.tileSprite(0, 0, W, H, 'sky').setOrigin(0).setScrollFactor(0).setDepth(-3); // play.js drifts it
   scene.add.tileSprite(0, h - C.archH, w / C.archScroll + W, C.archH, 'arch').setOrigin(0).setScrollFactor(C.archScroll).setDepth(-2);
   const g = scene.add.graphics().setDepth(-1), solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
-  const out = { w, h, solid, plats, spawns: [] };
+  const out = { w, h, solid, plats, spawns: [], solidAt: (x, y) => '#='.includes(at(Math.floor(y / T), Math.floor(x / T))) };
   rows.forEach((row, r) => {
     let run = -1;
     for (let c = 0; c <= row.length; c++) {

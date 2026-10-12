@@ -48,7 +48,7 @@ export function spawn(group, kind, x, y) {
   if (!d.fly) e.body.reset(x, y + C.tile / 2 - feet - 1);
   return e;
 }
-export function updateEnemies(group, dt) {
+export function updateEnemies(group, dt, solidAt) {
   for (const e of group.getChildren()) {
     if (!e.kind || e.won) continue;
     if (SHEETS[e.kind]) {
@@ -58,6 +58,7 @@ export function updateEnemies(group, dt) {
     if (e.pulled) continue;
     const d = ENEMIES[e.kind];
     if (e.body.blocked.left) e.dir = 1; else if (e.body.blocked.right) e.dir = -1;
+    else if (!d.fly && e.body.blocked.down && !solidAt(e.body.center.x + e.dir * (e.body.halfWidth + 2), e.body.bottom + 2)) e.dir = -e.dir; // turn at ledges
     e.t += dt;
     d.behavior(e, d.speed(), dt);
     e.setFlipX(e.dir !== (SHEETS[e.kind] ? SHEETS[e.kind][3] : -1)); // drawings face left
