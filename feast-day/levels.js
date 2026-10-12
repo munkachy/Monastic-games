@@ -29,7 +29,7 @@ export function buildLevel(scene, lv) {
     layer(scene, 'abbey', h - 2 * T - C.abbeyH + C.abbeySink, C.abbeyH, C.abbeyScroll, 0, -2.5),
     layer(scene, 'arcade', h - 2 * T - C.archH + C.archSink, C.archH, C.archScroll, 0, -2),
   ];
-  const g = scene.add.graphics().setDepth(-1), solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
+  const solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
   const out = { w, h, solid, plats, spawns: [], solidAt: (x, y) => '#='.includes(at(Math.floor(y / T), Math.floor(x / T))) };
   rows.forEach((row, r) => {
     let run = -1;
@@ -38,10 +38,11 @@ export function buildLevel(scene, lv) {
       if (ch === '#' && run < 0) run = c;
       if (ch !== '#' && run >= 0) { body(scene, solid, run * T, y, (c - run) * T, r === rows.length - 1 ? T + H : T); run = -1; }
       if (ch === '#') {
-        g.fillStyle(0x7a5a3a).fillRect(x, y, T, r === rows.length - 1 ? T + H : T); // earth, deep under the last row
-        if (at(r - 1, c) !== '#') g.fillStyle(0x6b8f4e).fillRect(x, y, T, 5).fillStyle(0x86ab5f).fillRect(x, y, T, 2);
+        tile(scene, x, y, groundFrame(at, r, c, rows.length));
+        if (r === rows.length - 1) scene.add.tileSprite(x, y + T, T, H, 'tiles', edge(at, r, c, '#', 4, 6, 5))
+          .setOrigin(0).setTileScale(T / C.tileArt).setDepth(-1); // deep earth below the last row
       } else if (ch === '=') {
-        g.fillStyle(0xb9a27c).fillRect(x, y, T, 6).fillStyle(0x8c7656).fillRect(x, y + 6, T, 2);
+        tile(scene, x, y, edge(at, r, c, '=', 8, 10, 9, 11));
         body(scene, plats, x, y, T, 6).body.checkCollision.down = false;
       } else if (ch === '@') out.start = { x: x + T / 2, y: y };
       else if (ch === 'D') out.door = scene.add.image(x + T / 2, y + T, 'door').setOrigin(0.5, 1).setDepth(-1);
@@ -50,6 +51,18 @@ export function buildLevel(scene, lv) {
   });
   plats.getChildren().forEach(p => { p.body.checkCollision.left = p.body.checkCollision.right = false; });
   return out;
+}
+// Tileset frames: 0-3 grass top (left, middle, right, single), 4-7 soil (left, middle, right, hanging bottom),
+// 8-11 stone ledge (left, middle, right, single).
+const tile = (scene, x, y, f) => scene.add.image(x, y, 'tiles', f).setOrigin(0).setScale(C.tile / C.tileArt).setDepth(-1);
+function edge(at, r, c, ch, left, right, mid, single = mid) {
+  const l = at(r, c - 1) !== ch, rt = at(r, c + 1) !== ch;
+  return l && rt ? single : l ? left : rt ? right : mid;
+}
+function groundFrame(at, r, c, n) {
+  if (at(r - 1, c) !== '#') return edge(at, r, c, '#', 0, 2, 1, 3);
+  if (r < n - 1 && at(r + 1, c) !== '#') return 7;
+  return edge(at, r, c, '#', 4, 6, 5);
 }
 function layer(scene, key, y, hgt, f, drift, depth) {
   return { ts: scene.add.tileSprite(0, 0, W, hgt, key).setOrigin(0).setScrollFactor(0).setDepth(depth), y, f, drift, off: 0 };
