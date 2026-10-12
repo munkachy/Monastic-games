@@ -16,11 +16,10 @@ export function makeArt(scene) {
     g.fillStyle(0x2c2733).fillRect(0, 0, 5, 10);            // sleeve, a shade lighter so it reads
     g.fillStyle(0xf0c9a0).fillCircle(2.5, 11, 2);           // hand
   });
-  tex(scene, 'head', 28, 34, g => {
-    g.fillStyle(0x16131a).fillTriangle(3, 16, 21, 12, 8, 0); // pointed hood tip
-    g.fillCircle(13, 20, 13);                                // hood
-    g.fillStyle(0xf0c9a0).fillCircle(16, 21, 9);            // face
-    g.fillStyle(0x222222).fillCircle(17, 20, 1.6).fillCircle(22, 20, 1.6);
-    g.fillStyle(0xe89a8a).fillCircle(20, 25, 1.5);          // small mouth
+  tex(scene, 'head', 34, 40, g => {
+    g.fillStyle(0x16131a).fillTriangle(0, 39, 34, 39, 13, 0); // triangle hood, tip leaning back
+    g.fillStyle(0xf0c9a0).fillCircle(18, 30, 8.5);            // face
+    g.fillStyle(0x222222).fillCircle(19, 29, 1.7).fillCircle(24, 29, 1.7);
+    g.fillStyle(0xe89a8a).fillCircle(22, 34, 1.5);          // small mouth
   });
 }
