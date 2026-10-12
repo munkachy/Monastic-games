@@ -75,7 +75,7 @@ function face(m, head, mouth, cheeks, robe, dt, eyes, smile) {
   mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
   const love = m.mode === 'fed' || m.windup > 0;
   glue(eyes, head, C.eyesX, C.eyesY, love);
-  glue(smile, head, C.mouthX, C.mouthY + C.smileY, love);
+  glue(smile, head, C.mouthX + C.smileX, C.mouthY + C.smileY, love);
   m.flash = ((m.flash || 0) + dt * C.eyeFlash) % 2;
   eyes.setTexture('heyes' + (m.flash | 0));
   cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);
