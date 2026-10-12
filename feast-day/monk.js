@@ -19,8 +19,8 @@ export function makeMonk(scene, x, y) {
 function move(m, i, dt) {
   const b = m.box.body, ground = b.blocked.down;
   const crouch = ground && i.down && !m.mode, stop = m.mode === 'inhale';
-  const full = m.mode === 'full', walk = C.walk * (full ? C.fullSlow : 1);
-  const dir = crouch || stop ? 0 : i.right - i.left;
+  const full = m.mode === 'full', walk = C.walk * (full ? C.fullSlow : stop ? C.inhaleSlow : 1);
+  const dir = crouch ? 0 : i.right - i.left;
   const a = dir ? (ground ? C.accel : C.airAccel) : C.decel;
   b.velocity.x = Phaser.Math.Linear(b.velocity.x, dir * walk, Math.min(1, a * dt / walk));
   m.coyote = ground ? C.coyote : m.coyote - dt;
@@ -30,7 +30,7 @@ function move(m, i, dt) {
   if (!i.jump && b.velocity.y < cut) b.velocity.y = cut;
   if (ground && !m.wasGround) m.squash = Math.min(1, m.fallSpeed / C.maxFall);
   m.wasGround = ground; m.fallSpeed = b.velocity.y;
-  if (dir) m.face = dir;
+  if (dir && !stop) m.face = dir; // facing stays locked while inhaling
   m.walking = ground && !crouch && Math.abs(b.velocity.x) > 10;
   m.state = m.mode || (!ground ? 'jump' : crouch ? 'crouch' : Math.abs(b.velocity.x) > 10 ? 'walk' : 'idle');
 }
