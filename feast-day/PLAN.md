@@ -91,3 +91,4 @@ Each round of fixes after playing: about 20–60k.
 ## Status
 
 - Chunk 1 done: a box walks and jumps (touch zones + keys, late/early jump, lower jump on early release). `window.game` exposed for tests.
+- Chunk 2 done: `art.js` (robe, tonsured head), `monk.js` (physics box + drawn look; states idle/walk/jump/crouch; head bobs a beat late, waddle, air lean, landing squash, crouch on Down key — no touch crouch yet). Movement moved from `play.js` to `monk.js`; input now has `down`.
