@@ -16,6 +16,7 @@ export const C = {
   heartPierce: 2, heartCool: 0.5,
   windStretch: 0.25, shiver: 1.2, shiverRate: 70, clutch: 70, popTime: 0.35, popSquash: 0.4, popHead: 25, popArms: 160, recoil: 220, knockTime: 0.3, knockDecel: 250, popHop: 180, heartWobble: 2, heartWobbleRate: 18, catchFreeze: 0.05, hitFreeze: 0.08,
   camLerp: 0.12, camLerpY: 0.06, camUp: 2000,
-  gummySpeed: 30, pizzaSpeed: 45, pizzaBob: 8, pizzaBobRate: 3, jawSpeed: 55, wonTime: 1200, wonHop: 14, wonAway: 90, wonTint: 0xffc4d8, animFps: 8, gluttonySpeed: 22, fleeAway: 60, sheetBody: 0.6, pulledFrame2: 0.7,
+  gummySpeed: 30, pizzaSpeed: 45, pizzaBob: 8, pizzaBobRate: 3, jawSpeed: 55, wonTime: 1200, wonHop: 14, wonAway: 90, wonTint: 0xffc4d8, animFps: 8, gluttonySpeed: 22, fleeAway: 60, sheetBody: 0.6, sheetFeet: 7, pulledFrame2: 0.7,
+  tile: 16, archH: 96, archScroll: 0.5, fallOut: 120, endTime: 2500,
   squash: 0.35, squashTime: 0.15, crouch: 0.3,
 };

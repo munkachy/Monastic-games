@@ -39,7 +39,12 @@ export function spawn(group, kind, x, y) {
   const e = group.create(x, y, kind), d = ENEMIES[kind];
   Object.assign(e, { kind, dir: -1, y0: y, t: Math.random() * 6, noSwallow: !d.swallowable });
   e.body.setAllowGravity(!d.fly).setCollideWorldBounds(true);
-  if (SHEETS[kind]) { e.play(kind + '_move'); e.body.setSize(e.width * C.sheetBody, e.height * C.sheetBody); }
+  if (SHEETS[kind]) { // body sits at the feet of the frame
+    const bw = e.width * C.sheetBody, bh = e.height * C.sheetBody;
+    e.play(kind + '_move'); e.body.setSize(bw, bh).setOffset((e.width - bw) / 2, e.height - bh - C.sheetFeet);
+  }
+  const feet = e.height / 2 - (SHEETS[kind] ? C.sheetFeet : 0); // stand on the tile's floor, not inside it
+  if (!d.fly) e.body.reset(x, y + C.tile / 2 - feet - 1);
   return e;
 }
 export function updateEnemies(group, dt) {
