@@ -26,9 +26,9 @@ export const ENEMIES = {
 };
 // Action sheets (sprites/<kind>_sheet.png, one strip of 12 frames from a 4x3 sheet):
 // 0-3 move loop, 4-5 being sucked in, 6 hit, 7 attack, 8-11 won over (sweets) or fleeing (demons).
-export const SHEETS = { pizza: [45, 50], gluttony: [45, 50] };
+export const SHEETS = { pizza: [59, 44, 1], gluttony: [52, 44, 1] }; // frame w, h, px below the feet
 export const loadSheets = scene => Object.entries(SHEETS).forEach(([k, [w, h]]) =>
-  scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h }));
+  scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h, spacing: 2 }));
 // A sprite in sprites/ with the enemy's name wins over the drawing; with no `_happy` sprite, won-over enemies blush pink.
 export function makeEnemyArt(scene) {
   for (const k in SHEETS) for (const [name, a, z] of [['move', 0, 3], ['won', 8, 11]])
@@ -41,9 +41,9 @@ export function spawn(group, kind, x, y) {
   e.body.setAllowGravity(!d.fly).setCollideWorldBounds(true);
   if (SHEETS[kind]) { // body sits at the feet of the frame
     const bw = e.width * C.sheetBody, bh = e.height * C.sheetBody;
-    e.play(kind + '_move'); e.body.setSize(bw, bh).setOffset((e.width - bw) / 2, e.height - bh - C.sheetFeet);
+    e.play(kind + '_move'); e.body.setSize(bw, bh).setOffset((e.width - bw) / 2, e.height - bh - SHEETS[kind][2]);
   }
-  const feet = e.height / 2 - (SHEETS[kind] ? C.sheetFeet : 0); // stand on the tile's floor, not inside it
+  const feet = e.height / 2 - (SHEETS[kind] ? SHEETS[kind][2] : 0); // stand on the tile's floor, not inside it
   if (!d.fly) e.body.reset(x, y + C.tile / 2 - feet - 1);
   return e;
 }
@@ -59,7 +59,7 @@ export function updateEnemies(group, dt) {
     if (e.body.blocked.left) e.dir = 1; else if (e.body.blocked.right) e.dir = -1;
     e.t += dt;
     d.behavior(e, d.speed(), dt);
-    e.setFlipX(e.dir > 0);
+    e.setFlipX(SHEETS[e.kind] ? e.dir < 0 : e.dir > 0); // sheets are drawn facing right, drawings facing left
   }
 }
 function walk(e, speed) { e.body.velocity.x = e.dir * speed; }
