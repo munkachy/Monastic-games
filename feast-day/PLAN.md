@@ -127,3 +127,4 @@ Each round of fixes after playing: about 20–60k.
 - Props: `sprites/{well,fountain,roses,lavender,sundial,beehive,bench,statue}.png` (user's art, 10 sheet px = 1 game px). Level letters W F R V U H B M (`PROPS` in levels.js); decoration only, stand on the tile floor behind the monk. Ten placed along level 1's ground.
 - Sky is now plain blue (8×270 solid, 143,197,225 = top colour of the user's sunset); the gradient was too distracting.
 - Refectory door: `sprites/door.png` (user's art, 62 px tall) replaces the drawn door.
+- Avarice demon (`avarice_sheet.png`, letter `A`): walking demon, faces left in the art, flees from hearts. One placed after the second pit in level 1.

@@ -1,7 +1,7 @@
 import { C, W, H } from './config.js';
 import { spawn } from './enemies.js';
 // Levels are data. # ground, = platform (jump up through it), @ start, D refectory door (the end),
-// s sweet, g gummy, p pizza, j jawbreaker, G gluttony demon, L lust demon.
+// s sweet, g gummy, p pizza, j jawbreaker, G gluttony demon, L lust demon, A avarice demon.
 // Props (decoration only, stand on the tile's floor): W well, F fountain, R roses, V lavender, U sundial, H beehive, B bench, M monk statue.
 export const LEVELS = [{
   name: 'The Cloister Garden',
@@ -15,13 +15,13 @@ export const LEVELS = [{
     '                                     s s                        ######                                           ss',
     '                                    =====                     ########        =====       =====                 ====',
     '                                                            ##########',
-    '   @  W   s s s   R   g    V  s s U            g    B     ############  j    H      F             g     g       M       j   s s   G  R      V   D',
+    '   @  W   s s s   R   g    V  s s U            g    B     ############  j    H      F             g A   g       M       j   s s   G  R      V   D',
     '######################################     #############################################      ########################################################',
     '######################################     #############################################      ########################################################',
   ],
 }];
 export const PROPS = { W: 'well', F: 'fountain', R: 'roses', V: 'lavender', U: 'sundial', H: 'beehive', B: 'bench', M: 'statue' };
-const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust' };
+const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust', A: 'avarice' };
 // Draw terrain and make its bodies (one body per run of tiles); returns the level's size, start and door.
 export function buildLevel(scene, lv) {
   const T = C.tile, rows = lv.rows, w = Math.max(...rows.map(r => r.length)) * T, h = rows.length * T;
