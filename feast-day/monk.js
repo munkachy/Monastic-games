@@ -21,8 +21,9 @@ function move(m, i, dt) {
   const b = m.box.body, ground = b.blocked.down;
   const crouch = ground && i.down && !m.mode, stop = m.mode === 'inhale';
   const full = m.mode === 'full', walk = C.walk * (full ? C.fullSlow : stop ? C.inhaleSlow : 1);
-  const dir = crouch ? 0 : i.right - i.left;
-  const a = dir ? (ground ? C.accel : C.airAccel) : C.decel;
+  m.knock = Math.max(0, (m.knock || 0) - dt);
+  const dir = crouch || m.knock ? 0 : i.right - i.left;
+  const a = dir ? (ground ? C.accel : C.airAccel) : m.knock ? C.knockDecel : C.decel;
   b.velocity.x = Phaser.Math.Linear(b.velocity.x, dir * walk, Math.min(1, a * dt / walk));
   m.coyote = ground ? C.coyote : m.coyote - dt;
   m.buffer = i.jumpPressed && !stop ? C.buffer : m.buffer - dt;

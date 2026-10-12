@@ -34,6 +34,6 @@ function shoot(group, b, face, fed) {
 }
 function hiccup(monk, b, face) {
   monk.windup = 0; monk.pop = 1;
-  b.velocity.x -= face * C.recoil;
+  b.velocity.x = -face * C.recoil; monk.knock = C.knockTime; // thrown back even mid-run
   if (b.blocked.down) b.velocity.y = -C.popHop;
 }

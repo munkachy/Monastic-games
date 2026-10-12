@@ -14,7 +14,7 @@ export const C = {
   inhaleMax: 4, inhaleSlow: 0.5, fullSlow: 0.65, fullJump: 0.8, fullPuff: 1.2, gulpTime: 0.35, chewsPer: 2, chewTime: 0.18, chewSquash: 0.18,
   glowTime: 0.4, glowFrom: 8, glowTo: 22, heartOut: 10, heartSpeed: 260, heartLife: 0.9, heartBase: 0.7, heartGrow: 0.12,
   heartPierce: 2, heartCool: 0.5,
-  windStretch: 0.25, shiver: 1.2, shiverRate: 70, clutch: 70, popTime: 0.35, popSquash: 0.4, popHead: 25, popArms: 160, recoil: 120, popHop: 180, heartWobble: 2, heartWobbleRate: 18, catchFreeze: 0.05, hitFreeze: 0.08,
+  windStretch: 0.25, shiver: 1.2, shiverRate: 70, clutch: 70, popTime: 0.35, popSquash: 0.4, popHead: 25, popArms: 160, recoil: 220, knockTime: 0.3, knockDecel: 250, popHop: 180, heartWobble: 2, heartWobbleRate: 18, catchFreeze: 0.05, hitFreeze: 0.08,
   camLerp: 0.12, camLerpY: 0.06, camUp: 2000,
   squash: 0.35, squashTime: 0.15, crouch: 0.3,
 };
