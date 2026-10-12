@@ -56,12 +56,14 @@ function draw(m, robe, head, arms, scap, dt) {
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
-// Open mouth while inhaling; cheeks stay puffed while full; a quick gulp when he swallows.
+// Open mouth while inhaling; cheeks stay puffed while full and squish on each chew; a quick gulp when he swallows.
 function face(m, head, mouth, cheeks, robe, dt) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
+  m.chew = Math.max(0, (m.chew || 0) - dt);
+  const chew = Math.sin(m.chew / C.chewTime * Math.PI) * C.chewSquash;
   const full = m.mode === 'full';
   head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
-  head.scaleY = 1 - m.gulp / C.gulpTime * C.squash;
+  head.scaleY = 1 - m.gulp / C.gulpTime * C.squash - chew;
   mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
-  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
+  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);
 }

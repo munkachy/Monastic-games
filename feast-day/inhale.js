@@ -1,12 +1,12 @@
 import { C } from './config.js';
 // Hold act: stop, open mouth, pull things in the vortex box toward the mouth, catch up to C.inhaleMax.
-// Let go with something inside: full (cheeks). Tap act or Down: swallow -> fed. (Fed gives hearts in chunk 5.)
+// Let go with something inside: full (cheeks). Each tap of act (or Down) is one chew; after count * C.chewsPer chews he swallows -> fed. (Fed gives hearts in chunk 5.)
 export function makeInhale(scene, monk, things) {
   const g = scene.add.graphics().setDepth(5);
   const s = { count: 0, t: 0 };
   s.update = (i, dt) => {
     const b = monk.box.body, face = monk.face || 1;
-    if (monk.mode === 'full' && (i.actPressed || i.downPressed)) { s.fed = s.count; s.count = 0; monk.gulp = C.gulpTime; }
+    if (monk.mode === 'full' && (i.actPressed || i.downPressed)) chew(s, monk);
     else if (s.fed && i.actPressed) s.fed = 0; // placeholder until the heart (chunk 5)
     const inhaling = i.act && !s.fed && s.count < C.inhaleMax && (monk.mode === 'inhale' || !s.count);
     monk.mode = inhaling ? 'inhale' : s.count ? 'full' : s.fed ? 'fed' : null;
@@ -28,7 +28,12 @@ function pull(t, mx, my, dt, s, things, monk) {
   const dx = mx - t.x, dy = my - t.y, d = Math.hypot(dx, dy);
   t.body.setVelocity(dx / d * t.speed, dy / d * t.speed);
   t.setScale(Phaser.Math.Linear(C.shrinkTo, 1, Math.min(1, d / t.d0)));
-  if (d < C.catchDist) { t.caught = true; s.count++; things.remove(t, true, true); }
+  if (d < C.catchDist) { t.caught = true; s.count++; s.chews = s.count * C.chewsPer; things.remove(t, true, true); }
+}
+function chew(s, monk) {
+  monk.chew = C.chewTime;
+  if (--s.chews > 0) return;
+  s.fed = s.count; s.count = 0; monk.gulp = C.gulpTime;
 }
 function release(t) {
   t.pulled = false; t.setScale(1);
