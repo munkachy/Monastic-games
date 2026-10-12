@@ -2,6 +2,7 @@ import { W, H, C } from './config.js';
 import { makeInput, ACT } from './input.js';
 import { makeArt } from './art.js';
 import { makeMonk } from './monk.js';
+import { makeTune } from './tune.js';
 export class Play extends Phaser.Scene {
   constructor() { super('play'); }
   create() {
@@ -13,6 +14,7 @@ export class Play extends Phaser.Scene {
     this.physics.add.collider(this.monk.box, ground);
     this.add.circle(ACT.x, ACT.y, ACT.r, 0xffffff, 0.15).setStrokeStyle(2, 0xffffff, 0.4);
     this.in = makeInput(this);
+    makeTune(this, this.monk);
   }
   update(_, ms) {
     this.in.update();
