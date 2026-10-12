@@ -15,3 +15,4 @@
 - gluttony-mouth-1.png — the Gluttony entrance: a stone face in profile, facing left, mouth open as a doorway; the tongue is the floor. Square, not 2:1. No figures.
 - gluttony-backdrop-1.png — 3x3 background props for Gluttony: barrels, spilled goblet, plate stack / ham on bones, hanging meats on chains, cracked cauldron / fat drips (hang from ceiling), candle spire, pie with knife. Trim the flat base slabs.
 - worshippers-flee-1.png — fleeing worshippers, facing right. Row 1: 4-frame run cycle (frames 1-3 near identical; frame 4 differs). Rows 2-3: panic poses (arms out, hands on head, glance back, crawling). Faces show as white lines; fill them in.
+- avarice-imp-1.png — Avarice coin imp, facing right, 3x3: idle, run x2, windup, throw (erase the loose coin), scoop, knocked back, fall (erase spilled coins; game draws its own), counting. Draw game coins in hands.
