@@ -90,4 +90,4 @@ Each round of fixes after playing: about 20–60k.
 
 ## Status
 
-- Chunk 0: plan written. Nothing built.
+- Chunk 1 done: a box walks and jumps (touch zones + keys, late/early jump, lower jump on early release). `window.game` exposed for tests.
