@@ -19,3 +19,4 @@
 - avarice-mine-1.png — Avarice mine props 3x3: coin cart on rail, timber frame, pick+shovel in heap / open chest, scale, chained strongbox / hanging weights (ceiling), winch+bucket, coin stacks and bags.
 - gluttony-demon-1.png — Gluttony's common demon, facing right, 3x3: idle, waddle x2, windup, spit (erase the glob; game draws its own fat), swallow-gape (leg swallow), hit, burst (erase splash drops), gnawing. Keep the white eye, teeth and belly seam as cut-outs; the hand outlines get filled.
 - gluttony-demon-swallow-1.png — the common demon swallowing from below, facing right: closing in, gripping (hands at jaw), shaken. The monk sits in the open jaws; draw the lower jaw in front of him. Erase the shake marks.
+- monk-ref-1.png — monk style reference (stand, walk, stride): peaked cowl, short cape, wide sleeves, cord with knotted tails, sandals, torch. For restyling the jointed monk, not tracing.
