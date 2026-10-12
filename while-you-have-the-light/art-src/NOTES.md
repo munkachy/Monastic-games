@@ -14,3 +14,4 @@
 - laybrother-cart-1.png: lay brother at cart, blessing, lifting a block; donkey standing and braying; empty cart; full cart. Use the EMPTY cart only and draw the game's own coloured tetromino blocks in it (drop the generated blocks and the block in his hands). Crop the 'Made with AI' badge.
 - gluttony-mouth-1.png — the Gluttony entrance: a stone face in profile, facing left, mouth open as a doorway; the tongue is the floor. Square, not 2:1. No figures.
 - gluttony-backdrop-1.png — 3x3 background props for Gluttony: barrels, spilled goblet, plate stack / ham on bones, hanging meats on chains, cracked cauldron / fat drips (hang from ceiling), candle spire, pie with knife. Trim the flat base slabs.
+- worshippers-flee-1.png — fleeing worshippers, facing right. Row 1: 4-frame run cycle (frames 1-3 near identical; frame 4 differs). Rows 2-3: panic poses (arms out, hands on head, glance back, crawling). Faces show as white lines; fill them in.
