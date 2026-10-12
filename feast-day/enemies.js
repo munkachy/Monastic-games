@@ -23,19 +23,32 @@ export const ENEMIES = {
     if (happy) smile(g, 7, 10.5); else g.lineStyle(1.2, 0x222222).lineBetween(3, 3, 6, 4.5).lineBetween(11, 3, 8, 4.5);
   } },
 };
+// Action sheets (sprites/<kind>_sheet.png, one strip of 12 frames from a 4x3 sheet):
+// 0-3 move loop, 4-5 being sucked in, 6 hit, 7 attack, 8-11 won over (sweets) or fleeing (demons).
+export const SHEETS = { pizza: [45, 50] };
+export const loadSheets = scene => Object.entries(SHEETS).forEach(([k, [w, h]]) =>
+  scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h }));
 // A sprite in sprites/ with the enemy's name wins over the drawing; with no `_happy` sprite, won-over enemies blush pink.
 export function makeEnemyArt(scene) {
+  for (const k in SHEETS) for (const [name, a, z] of [['move', 0, 3], ['won', 8, 11]])
+    scene.anims.create({ key: k + '_' + name, frames: scene.anims.generateFrameNumbers(k, { start: a, end: z }), frameRate: C.animFps, repeat: -1 });
   for (const [k, e] of Object.entries(ENEMIES)) for (const happy of [0, 1]) if (!scene.textures.exists(k + (happy ? '_happy' : ''))) tex(scene, k + (happy ? '_happy' : ''), e.w, e.h, g => e.draw(g, happy));
 }
 export function spawn(group, kind, x, y) {
   const e = group.create(x, y, kind), d = ENEMIES[kind];
   Object.assign(e, { kind, dir: -1, y0: y, t: Math.random() * 6, noSwallow: !d.swallowable });
   e.body.setAllowGravity(!d.fly).setCollideWorldBounds(true);
+  if (SHEETS[kind]) { e.play(kind + '_move'); e.body.setSize(e.width * C.sheetBody, e.height * C.sheetBody); }
   return e;
 }
 export function updateEnemies(group, dt) {
   for (const e of group.getChildren()) {
-    if (!e.kind || e.pulled || e.won) continue;
+    if (!e.kind || e.won) continue;
+    if (SHEETS[e.kind]) {
+      if (e.pulled) { e.anims.stop(); e.setFrame(e.scale < C.pulledFrame2 ? 5 : 4); continue; }
+      if (!e.anims.isPlaying) e.play(e.kind + '_move');
+    }
+    if (e.pulled) continue;
     const d = ENEMIES[e.kind];
     if (e.body.blocked.left) e.dir = 1; else if (e.body.blocked.right) e.dir = -1;
     e.t += dt;
@@ -50,7 +63,8 @@ function roll(e, speed, dt) { walk(e, speed); e.angle += e.dir * speed * dt * 4;
 export function winOver(scene, e, group) {
   e.won = true; group.remove(e); e.body.enable = false;
   const happy = e.kind + '_happy';
-  if (scene.textures.exists(happy) && !scene.textures.exists(e.kind + '_fast')) e.setTexture(happy); else e.setTint(C.wonTint);
+  if (SHEETS[e.kind]) e.play(e.kind + '_won');
+  else if (scene.textures.exists(happy)) e.setTexture(happy); else e.setTint(C.wonTint);
   e.setAngle(0);
   const love = scene.add.image(e.x, e.y - 12, 'heart').setScale(0.5);
   scene.tweens.add({ targets: love, y: love.y - 20, alpha: 0, duration: C.wonTime, onComplete: () => love.destroy() });

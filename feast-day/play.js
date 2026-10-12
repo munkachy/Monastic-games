@@ -5,10 +5,10 @@ import { makeMonk } from './monk.js';
 import { makeTune } from './tune.js';
 import { makeInhale } from './inhale.js';
 import { makeHearts } from './heart.js';
-import { makeEnemyArt, spawn, updateEnemies, winOver } from './enemies.js';
+import { makeEnemyArt, loadSheets, spawn, updateEnemies, winOver } from './enemies.js';
 export class Play extends Phaser.Scene {
   constructor() { super('play'); }
-  preload() { loadSprites(this); }
+  preload() { loadSprites(this); loadSheets(this); }
   create() {
     makeArt(this); makeEnemyArt(this);
     this.physics.world.gravity.y = C.gravity;
