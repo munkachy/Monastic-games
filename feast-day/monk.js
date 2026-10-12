@@ -12,7 +12,7 @@ export function makeMonk(scene, x, y) {
   const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
   const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
   const eyes = scene.add.image(0, 0, 'heyes0').setVisible(false);
-  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, eyes, cheeks, mouth, arms[1]]);
+  const look = scene.add.container(x, y, [scap[0], arms[0], robe, scap[1], head, cheeks, eyes, mouth, arms[1]]);
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
   m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, robe, dt, eyes); };
   return m;
@@ -66,8 +66,8 @@ function face(m, head, mouth, cheeks, robe, dt, eyes) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
   m.chew = Math.max(0, (m.chew || 0) - dt);
   const chew = Math.sin(m.chew / C.chewTime * Math.PI) * C.chewSquash;
-  const full = m.mode === 'full';
-  head.scaleX = full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
+  const full = m.mode === 'full', fed = m.mode === 'fed' || m.windup > 0;
+  head.scaleX = fed ? C.fedPuff : full ? C.fullPuff : 1 + m.gulp / C.gulpTime * (C.fullPuff - 1);
   head.scaleY = 1 - m.gulp / C.gulpTime * C.squash - chew;
   mouth.setVisible(m.mode === 'inhale').setPosition(head.x + C.mouthX, head.y + C.mouthY);
   const eye = new Phaser.Math.Vector2(C.eyesX * head.scaleX, C.eyesY * head.scaleY).rotate(head.rotation); // stays glued to the eyes
@@ -75,5 +75,6 @@ function face(m, head, mouth, cheeks, robe, dt, eyes) {
     .setRotation(head.rotation).setScale(head.scaleX, head.scaleY);
   m.flash = ((m.flash || 0) + dt * C.eyeFlash) % 2;
   eyes.setTexture('heyes' + (m.flash | 0));
-  cheeks.setVisible(full).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1).setScale(1 + chew * 2, 1 - chew);
+  cheeks.setVisible(full || fed).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + (fed ? 2 : 1))
+    .setScale((fed ? C.fedCheeks : 1) * (1 + chew * 2), (fed ? C.fedCheeks : 1) * (1 - chew));
 }
