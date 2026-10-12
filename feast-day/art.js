@@ -9,9 +9,6 @@ export function makeArt(scene) {
     g.fillStyle(0x3a3540).fillRect(4, 10, 8, 1);            // belt
     g.fillStyle(0x0a080c).fillRect(3, 20, 4, 2).fillRect(9, 20, 4, 2); // sandals
   });
-  tex(scene, 'scap', 5, 19, g => {
-    g.fillStyle(0x221e27).fillRect(0, 0, 5, 19);            // scapular panel
-  });
   tex(scene, 'arm', 5, 13, g => {
     g.fillStyle(0x2c2733).fillRect(0, 0, 5, 10);            // sleeve, a shade lighter so it reads
     g.fillStyle(0xf0c9a0).fillCircle(2.5, 11, 2);           // hand

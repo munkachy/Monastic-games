@@ -1,4 +1,5 @@
 import { C } from './config.js';
+import { makeScapular, flap } from './scapular.js';
 // Monk: invisible physics box + drawn robe and head. States: idle, walk, jump, crouch, inhale, full (m.mode set by inhale.js).
 export function makeMonk(scene, x, y) {
   const box = scene.add.rectangle(x, y, C.boxW, C.boxH, 0, 0);
@@ -7,12 +8,11 @@ export function makeMonk(scene, x, y) {
   const robe = scene.add.image(0, 0, 'robe').setOrigin(0.5, 1);
   const head = scene.add.image(0, 0, 'head').setOrigin(0.5, 1);
   const arms = [0, 1].map(() => scene.add.image(0, 0, 'arm').setOrigin(0.5, 0));
-  const scap = [0, 1].map(() => scene.add.image(0, 0, 'scap').setOrigin(0.5, 0));
+  const scap = makeScapular(scene);
   const mouth = scene.add.image(0, 0, 'mouth').setVisible(false);
   const cheeks = scene.add.image(0, 0, 'cheeks').setVisible(false);
   const belly = scene.add.image(0, 0, 'belly').setVisible(false);
   const look = scene.add.container(x, y, [scap[0], arms[0], robe, belly, scap[1], head, cheeks, mouth, arms[1]]);
-  scap.forEach(p => { p.a = p.v = 0; });
   const m = { box, look, state: 'idle', coyote: 0, buffer: 0, t: 0, squash: 0, wasGround: true };
   m.update = (i, dt) => { move(m, i, dt); draw(m, robe, head, arms, scap, dt); face(m, head, mouth, cheeks, belly, robe, dt); };
   return m;
@@ -57,20 +57,6 @@ function draw(m, robe, head, arms, scap, dt) {
   flap(m, scap, robe, dt);
   robe.angle = m.state === 'jump' ? -b.velocity.y * C.leanAir : Math.sin(m.t * 2) * C.waddle;
 }
-// Front and back panels hang on each side of the body; each stays on its own side and swings on its own spring.
-function flap(m, scap, robe, dt) {
-  const b = m.box.body, vx = b.velocity.x * (m.face || 1), vy = b.velocity.y;
-  const trail = vx * C.scapTrail, lift = Math.max(0, vy) * C.scapLift + Math.max(0, -vy) * C.scapPress;
-  scap.forEach((p, k) => {
-    const side = k ? 1 : -1;
-    p.setPosition(side * C.scapGap, robe.y - robe.height + C.shoulder);
-    const lo = k ? -C.scapMax : 0, hi = k ? 0 : C.scapMax; // back swings back, front swings forward
-    const target = Phaser.Math.Clamp(trail - side * lift, lo, hi);
-    p.v += ((target - p.a) * C.scapSpring * (k ? C.scapOffbeat : 1) - p.v * C.scapDamp) * dt;
-    p.a = Phaser.Math.Clamp(p.a + p.v * dt, lo, hi);
-    p.angle = p.a;
-  });
-}
 // Open mouth while inhaling; cheeks puff briefly after each catch; the belly grows with each thing inside.
 function face(m, head, mouth, cheeks, belly, robe, dt) {
   m.gulp = Math.max(0, (m.gulp || 0) - dt);
@@ -80,4 +66,5 @@ function face(m, head, mouth, cheeks, belly, robe, dt) {
   cheeks.setVisible(puff).setPosition(head.x + C.mouthX - 2, head.y + C.mouthY + 1);
   const n = m.food || 0;
   belly.setVisible(n > 0).setScale(1 + n * C.bellyGrow).setPosition(C.bellyX + n * C.bellyOut, robe.y - robe.height * C.bellyY);
+  m.bellyCircle = n ? { x: belly.x, y: belly.y, r: belly.displayWidth / 2 + C.scapW / 2 } : null;
 }
