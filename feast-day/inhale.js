@@ -7,8 +7,10 @@ export function makeInhale(scene, monk, things, hearts) {
   s.update = (i, dt) => {
     const b = monk.box.body, face = monk.face || 1;
     if (monk.mode === 'full' && (i.actPressed || i.downPressed)) chew(s, monk);
-    else if (s.fed && i.actPressed) { hearts.give(s.fed); s.fed = 0; }
-    const inhaling = i.act && !s.fed && s.count < C.inhaleMax && (monk.mode === 'inhale' || !s.count);
+    else if (s.fed && i.actPressed) { hearts.give(s.fed); s.fed = 0; s.cool = C.heartCool; s.held = true; }
+    s.cool = Math.max(0, (s.cool || 0) - dt);
+    if (!i.act) s.held = false; // the press that shot the heart never starts an inhale
+    const inhaling = i.act && !s.held && !s.cool && !s.fed && s.count < C.inhaleMax && (monk.mode === 'inhale' || !s.count);
     monk.mode = inhaling ? 'inhale' : s.count ? 'full' : s.fed ? 'fed' : null;
     const mx = b.center.x + face * C.vortexNear, my = b.bottom - C.boxH;
     const box = new Phaser.Geom.Rectangle(face > 0 ? mx : mx - C.vortexRange, b.bottom - C.vortexH, C.vortexRange, C.vortexH);
