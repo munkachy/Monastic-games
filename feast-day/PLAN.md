@@ -37,7 +37,7 @@ feast-day/
   enemies.js   enemy table + behaviors
   levels.js    level strings + builder
   play.js      the play scene: wires everything
-  tune.js      on-screen tuning panel (edits C live, saved in localStorage)
+  tune.js      pause screen; in the artifact only: tuning sliders + feedback to the artifact database
   PLAN.md      this file; update "Status" at the end of every chunk
 ```
 
@@ -47,7 +47,7 @@ Each chunk is one session, ends playable, and ends with a commit and a Status up
 
 1. **Skeleton.** `index.html`, `main.js`, `config.js`, `input.js`, `play.js`. A box walks and jumps on flat ground with both kinds of control. Late jump and early jump (4 frames each).
 2. **The monk.** `art.js`, `monk.js`. Big head, skinny body, goofy walk (head bobs a beat late), squash on landing, crouch.
-3. **Tuning panel.** `tune.js`. Sliders for every number in `C`; this is where you tune feel on the phone, for free.
+3. **Pause, tuning and feedback.** `tune.js`. Pause button. In the pause screen: sliders for every number in `C`, and a feedback box (with the level, position and current numbers attached automatically). Feedback is saved to the artifact's database, which Claude reads with ArtifactData: no copying and pasting. Shown **only when running as the claude.ai artifact** (the dev build); on GitHub Pages pause just pauses. Load the `artifact-capabilities` skill before this chunk.
 4. **Inhale.** `inhale.js`. Hold the button: he stops, the mouth opens, there's a vortex box in front, things speed up toward him and shrink, he catches up to 4. Full: cheeks, slower, can't flap.
 5. **The heart.** In `inhale.js`. Tap while full: a glow from belly to chest, a heart flies out; with 2+ things inside it's a big heart that goes through a line of enemies. Short freeze on catch and hit.
 6. **Enemies, round 1.** `enemies.js`. Gummy bear (walks), pizza (flies), jawbreaker (can't be swallowed). Won-over animation.
@@ -67,7 +67,7 @@ After 13: the Cellarer, more levels, chant-note flight, copy abilities, the six 
 |---|---|
 | 1 Skeleton | 60–100k |
 | 2 Monk | 80–150k |
-| 3 Tuning panel | 40–70k |
+| 3 Pause, tuning, feedback | 60–110k |
 | 4 Inhale | 100–200k |
 | 5 Heart | 60–120k |
 | 6 Enemies 1 | 70–130k |
@@ -85,7 +85,7 @@ Each round of fixes after playing: about 20–60k.
 ## How to ask (cheap)
 
 - "Do chunk N." One chunk per session.
-- Feedback as one list after playing.
+- Feedback: write it in the pause screen while playing, then say "read the feedback and fix it".
 - Feel problems: use the tuning panel first, then tell me the numbers to keep.
 
 ## Status
