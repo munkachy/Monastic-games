@@ -24,6 +24,7 @@ const ENEMY = { g: 'gummy', p: 'pizza', j: 'jawbreaker', G: 'gluttony', L: 'lust
 export function buildLevel(scene, lv) {
   const T = C.tile, rows = lv.rows, w = Math.max(...rows.map(r => r.length)) * T, h = rows.length * T;
   const at = (r, c) => (rows[r] || '')[c] || ' ';
+  scene.sky = scene.add.tileSprite(0, 0, W, H, 'sky').setOrigin(0).setScrollFactor(0).setDepth(-3); // play.js drifts it
   scene.add.tileSprite(0, h - C.archH, w / C.archScroll + W, C.archH, 'arch').setOrigin(0).setScrollFactor(C.archScroll).setDepth(-2);
   const g = scene.add.graphics().setDepth(-1), solid = scene.physics.add.staticGroup(), plats = scene.physics.add.staticGroup();
   const out = { w, h, solid, plats, spawns: [] };

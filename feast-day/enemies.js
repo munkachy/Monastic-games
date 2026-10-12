@@ -27,7 +27,7 @@ export const ENEMIES = {
 };
 // Action sheets (sprites/<kind>_sheet.png, one strip of 12 frames from a 4x3 sheet):
 // 0-3 move loop, 4-5 being sucked in, 6 hit, 7 attack, 8-11 won over (sweets) or fleeing (demons).
-export const SHEETS = { pizza: [59, 44, 1], gluttony: [52, 44, 1], lust: [55, 47, 1] }; // frame w, h, px below the feet
+export const SHEETS = { pizza: [59, 44, 1, 1], gluttony: [52, 44, 1, -1], lust: [55, 47, 1, -1] }; // frame w, h, px below the feet, way the art faces (1 right, -1 left)
 export const loadSheets = scene => Object.entries(SHEETS).forEach(([k, [w, h]]) =>
   scene.load.spritesheet(k, 'sprites/' + k + '_sheet.png', { frameWidth: w, frameHeight: h, spacing: 2 }));
 // A sprite in sprites/ with the enemy's name wins over the drawing; with no `_happy` sprite, won-over enemies blush pink.
@@ -60,7 +60,7 @@ export function updateEnemies(group, dt) {
     if (e.body.blocked.left) e.dir = 1; else if (e.body.blocked.right) e.dir = -1;
     e.t += dt;
     d.behavior(e, d.speed(), dt);
-    e.setFlipX(SHEETS[e.kind] ? e.dir < 0 : e.dir > 0); // sheets are drawn facing right, drawings facing left
+    e.setFlipX(e.dir !== (SHEETS[e.kind] ? SHEETS[e.kind][3] : -1)); // drawings face left
   }
 }
 function walk(e, speed) { e.body.velocity.x = e.dir * speed; }
