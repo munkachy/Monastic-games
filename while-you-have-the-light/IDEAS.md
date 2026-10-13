@@ -31,3 +31,8 @@ Frogs (added):
 - Rare giant frog: burps little frogs (max 3), swallows him whole, punch out; only thrown little frogs hurt it.
 - St Ulphia's relic: she silenced the croaking frogs that spoiled her prayer, so with it little frogs stop leaping at you.
 New art: frogs-1 (little frog, giant frog), giant-frog-swallow-1.
+
+From Spelunky 2 (second round):
+- On hold: St Joseph of Cupertino's relic, a few seconds of levitation to where you point (must not undo the grappling hook).
+- Maybe: the tares (Matt 13), an evil plant that looks exactly like a herb and grabs you when you pick it.
+- Planned now in PLAN.md: necrology, herbs and potions, bramble, red demon, ceiling-walking possessed, carrying people, stun-and-throw rule, cuculla glide, hermit's requests, Wrath set pieces and boss, floating spirit, shortcuts.
