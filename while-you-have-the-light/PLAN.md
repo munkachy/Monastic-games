@@ -10,12 +10,12 @@
 3. Art already filed (~55,000): Gluttony background pieces; Avarice mine props; Avarice coin imp
 4. Hearts and merit (~65,000): 3 hearts, torch dims per hit; shrine candle heals 1, lay brother heals all; merit (not money) from freeing, idols, rescues, lost on death unless banked with the lay brother
 5. Piece system + Gluttony's first climb (~130,000): stacking by standard openings, rules for rhythm (shafts and pit gaps may stack 3), per-mountain settings, demon counting, check-and-repair, random chunks; the mouth; zigzag shaft, pit gap (2-3 versions), corridor, elbow, low crawl, shrine room; wall dressing; white-room piece picker
-6. Common things for every mountain (~90,000; needs art): clay jars to break; cobwebs that slow, spiders; skeletons rising, throwable skull; hidden spike and dart traps set off by thrown things; cracked walls dug with a pick to secret side rooms
-7. More Gluttony (~110,000): ledge stack, chimney, drop room, gauntlet, rest room; stomach; ice-cream cone demon (and others as art comes)
+6. Common things for every mountain (~90,000; needs art): clay jars to break; cobwebs that slow, spiders; skeletons rising, throwable skull; hidden spike and dart traps set off by thrown things; cracked walls dug with a pick to secret side rooms; little frogs (hop, leap at you for damage, can be caught and thrown like fireballs)
+7. More Gluttony (~110,000): ledge stack, chimney, drop room, gauntlet, rest room; stomach; ice-cream cone demon (and others as art comes); rare giant frog (burps little frogs, max 3 out; tongue with a set reach and a warning; swallows you whole, costs a heart, punch out; hurt only by thrown little frogs)
 8. Avarice (~160,000; two sessions): shared layouts dressed as the mine; Coin Flood, Miser's Bed, Chain Bridge, Vault; treasure-chest boulder trap (move the chest, the screen shakes, a boulder breaks through walls, leap aside)
 9. Great Scales and the stolen torch (~80,000)
 10. The Maw (~70,000)
-11. Relics and blows (~75,000): Easy Yoke, crowned blows, new relics
+11. Relics and blows (~75,000): Easy Yoke, crowned blows, new relics; St Ulphia's relic (little frogs fall silent and stop leaping at you)
 12. Companions and the hermit (~190,000; two sessions; needs art):
     - saint companions from relics (soft light, float after him; St Benedict only accompanies)
     - the Dominican dog: carries a second torch for more light; sent at a demon, comes back
@@ -27,4 +27,6 @@
 14. Monastery alive (~110,000): freed folk with roles; farm
 15. Monastery deeper (~210,000): library for other psalms; building for fun
 Later: tower defense with the choir; side branches to hidden rooms (path-first method).
-Dropped: water putting out the torch; piranha; feast table; counting house; winch lifts; treasure room; melting furnace. On hold: cellar, honey-well.
+Rule for every grab (frog, demon, octopus): while held or swallowed he cannot move left or right, only punch free.
+Later: water. Wading or swimming puts out the torch; he goes dark but the blessing still gives a faint light, and with hearts the dark no longer kills. Relight at shrine candles. Short underwater tunnel pieces; swimming poses for the jointed monk in code; sea creatures (an octopus that wraps around him, others) need art.
+Dropped: piranha; feast table; counting house; winch lifts; treasure room; melting furnace. On hold: cellar, honey-well.

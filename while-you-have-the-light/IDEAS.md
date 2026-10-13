@@ -20,8 +20,14 @@ Strong, bigger:
 
 Later / maybe:
 - Digging: only cracked walls can be dug (shovel or pick), opening secret side rooms. Not free digging everywhere.
-- Water puts out the torch; relight at shrine candles.
+- Water puts out the torch; relight at shrine candles. (Back in: see PLAN.md, 'Later: water'.)
 - Throwing the torch into dark places (an unlocked ability).
 - Skip: piranha.
 
 New art needed: cobwebs and spider; clay jars; skeleton (rise, walk, crumble) and skull; spike and dart traps; the hermit in his cell; the dog; saint companions; possessed people (worshippers with glowing eyes); golden calf and boulder.
+
+Frogs (added):
+- Little frogs in every mountain: punch them, or catch and throw them; a leap at you hurts.
+- Rare giant frog: burps little frogs (max 3), swallows him whole, punch out; only thrown little frogs hurt it.
+- St Ulphia's relic: she silenced the croaking frogs that spoiled her prayer, so with it little frogs stop leaping at you.
+New art: frogs-1 (little frog, giant frog), giant-frog-swallow-1.
