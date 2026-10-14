@@ -62,6 +62,14 @@ const Climb = (() => {
   const FLARE_R = 280, FLARE_SLOW = 0.25, METER_DRAIN = 0.25, BLINK_COST = 0.12;   // the flare: its reach, how slow the world goes, the meter it burns
   const METER_REGEN = 1 / 55;                      // and how it fills again by itself while it is not burning (blows landed fill it faster)
   const HW = 7, HT = 44;                           // half the monk's width; his height
+  // How far below his hands his feet hang, from the art's own hanging pose.
+  let reachK = 0;
+  function hangReach() {
+    if (reachK) return reachK;
+    let r = 54;
+    try { const p = MONK_ANIM.hang(0.5, 0), hf = monkJoint(0, 0, 1, p, "hF"), hb = monkJoint(0, 0, 1, p, "hB"); r = -Math.min(hf[1], hb[1]); } catch (e) { }
+    return (reachK = clamp(r || 54, 36, 80));
+  }
   const CRAWL_H = 24, CRAWL_V = 34, CW_H = 2, CW_C = 5;      // crawling: his height, and his pace; a crawlway's height (rows: room to crawl, not to stand), and its chamber's (room to hold a relic up)
   const SLOT = 10, TH = 30, CH = 52;               // rows to each place a platform may stand; a crossing's height; a cavern's
   const TR = 28;                                   // a crossing's roof (rows up from its foot): high, for long swings under it
@@ -622,7 +630,7 @@ const Climb = (() => {
   function actRoot(a, u) {
     const { x0, y0, x1, y1, edge, s } = a;
     if (a.kind === "stepUp") { const k = smooth(u); return [lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(u * PI) * 6]; }
-    const reach = Arena.reach(), hangX = edge - s * 7, hangY = a.kind === "ledge" ? y1 + reach : Math.min(y0, y1 + reach);
+    const reach = hangReach(), hangX = edge - s * 7, hangY = a.kind === "ledge" ? y1 + reach : Math.min(y0, y1 + reach);
     if (a.kind === "ledge") {
       // From wherever he hung: in to the edge, then the climb from its hang onward.
       if (u < 0.15) { const k = ease(u / 0.15); return [lerp(x0, hangX, k), lerp(y0, hangY, k)]; }
@@ -3510,7 +3518,7 @@ const Climb = (() => {
   // Getting up from his knees to do something: only where there is room to stand.
   function upFromCrawl() { if (!S.crawl) return true; if (boxAt(S.x, S.y - 0.5, HW, HT)) return false; S.crawl = false; return true; }
   function hangAt(L) {
-    const hx = L.edge - L.s * 7, hy = L.top - 0.01 + Arena.reach(), ok = !boxHit(hx, hy);
+    const hx = L.edge - L.s * 7, hy = L.top - 0.01 + hangReach(), ok = !boxHit(hx, hy);
     S.hang = { L, need: true, k: 0, fx: S.x, fy: S.y, x: ok ? hx : S.x, y: ok ? hy : S.y };
     S.rope = null; S.cling = 0; S.climbing = false; S.vx = 0; S.vy = 0; S.dir = L.s;
     S.hangs = (S.hangs || 0) + 1; Sound.fx.grab();
@@ -5265,7 +5273,7 @@ const Climb = (() => {
     pause() {
       if (mode !== M || S.dying) return;
       M.pauseShot = grabScreen(); try { M.pauseRec = record(); } catch (e) { fault(e); M.pauseRec = { faults: FAULTS.slice() }; }
-      Pause.t = 0; mode = ClimbPause; Sound.muffle(true, 0.2);
+      ClimbPause.t = 0; mode = ClimbPause; Sound.muffle(true, 0.2);
     },
     resume() {
       mode = M; Sound.muffle(false, 0.2);
@@ -5284,7 +5292,8 @@ const Climb = (() => {
 
 // The pause for the climb.
 const ClimbPause = {
-  step(dt) { Pause.t += dt; },
+  t: 0,
+  step(dt) { ClimbPause.t += dt; },
   draw() {
     try { Climb.draw(); } catch (e) { fault(e); }     // (the pause must come up even if the mountain cannot be drawn)
     rect(0, 0, W, H, "rgba(3,3,5,0.82)");

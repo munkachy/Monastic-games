@@ -6,7 +6,7 @@ const { Linter } = require('eslint'), need = (m) => require(require.resolve(m, {
 const espree = need('espree');
 const G = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(G, 'index.html'), 'utf8');
-const files = [...html.matchAll(/<script src="([^"?]+)/g)].map(m => m[1]).filter(f => !f.startsWith('lib/'));
+const files = [...html.matchAll(/<script src="([^"?]+)/g)].map(m => m[1]).filter(f => !f.startsWith('lib/') && !(process.env.WITHOUT || '').split(',').includes(f));
 const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(G, f), 'utf8')]));
 const opts = { ecmaVersion: 2022, sourceType: 'script' };
 // Top-level names of each file.
