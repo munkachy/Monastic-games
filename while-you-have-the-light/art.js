@@ -104,7 +104,6 @@ function clothWind(p, dir, vx, vy, t, gust) {
 // wide sleeves, the deep hood up with its point falling behind, the face lost in the hood. He is
 // 48 pixels tall to the top of the hood, so the shape has to say "monk" by its outline alone: the
 // hood's point, the hanging sleeves, the hem. The proportions are Fear Not's monk, scaled down.
-const MONK_H = 48;
 const MONK_BODY = { thigh: 11.6, shin: 11.6, torso: 15.2, shd: 1.8, upper: 9.4, fore: 9.2, neck: 1.4, head: 3.6, min: 3 };
 const MONK_INK = "#060607", MONK_RIM = "#ffb347", MONK_RIM2 = "#e8803a";
 const TORCH_UP = 16, TORCH_DOWN = 3;                       // the shaft above and below his fist
@@ -594,7 +593,6 @@ function paintAvarice(J, p, o) {
 // Lust: slender and sinuous, long ribbons streaming from it; a lure, elegant and inhuman.
 function paintLust(J, p, o, t) {
   const n = J.n, up = J.up;
-  const back = PA(J.head, n, -1);
   ribbon("d", HL(J, -3.5, -1.5), -n[0] * 0.8 + 0.25, -n[1] * 0.8 + 0.6, 30, 1.5, t, 0, 3.5);
   ribbon("d", J.hB, -0.5, 1, 20, 1.1, t, 2, 3);
   dp("d", seg(J.hip, J.kB, 2.0, 1.3)); dp("d", seg(J.kB, J.fB, 1.3, 0.25));
@@ -777,7 +775,7 @@ function demonEyes(sin, x, y, dir, p, o) {
   for (let i = 0; i < 2; i++) {
     const q = figToWorld(J, p, x, y, dir, HL(J, E[0] - i * E[2], E[1] - i * 0.35)), r = E[3] * (i ? 0.8 : 1) * (1 + w * 0.5);
     glow(q[0], q[1], r * 4.5 * (1 + w * 1.4), w > 0 ? S.color : "#e8e8f0", a * (0.55 + 0.45 * w));
-    const c = Math.cos(ha) * dir, s = Math.sin(ha) + E[4] * dir * 0.0, sl = E[4];
+    const c = Math.cos(ha) * dir, sl = E[4];
     const pa = ctx.globalAlpha; ctx.globalAlpha = pa * a;
     poly([q[0] - c * r, q[1] - Math.sin(ha) * r + sl * r * 0.6, q[0] + c * r * 0.2, q[1] - r * 0.55, q[0] + c * r, q[1] + Math.sin(ha) * r - sl * r * 0.6, q[0] - c * r * 0.2, q[1] + r * 0.45], w > 0.4 ? "#ffffff" : "#e8e8f0");
     ctx.globalAlpha = pa;

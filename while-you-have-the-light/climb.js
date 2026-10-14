@@ -558,12 +558,6 @@ const Climb = (() => {
     for (let k = 0; k < 28 && boxHit(S.x, S.y); k++) S.x -= s;
     if (boxHit(S.x, S.y)) { const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; } }
   }
-  // How far he must lean out from the wall on side s to get past rock just above him (0 if none in the way, -1 if too far).
-  function stepOut(s, up) {
-    if (!boxHit(S.x, S.y - up)) return 0;
-    for (let k = 4; k <= 52; k += 4) if (!boxHit(S.x - s * k, S.y - up) && !boxHit(S.x - s * k, S.y)) return k;
-    return -1;
-  }
   const grip = () => [S.x, S.y - GRIP];
   const middle = () => [S.x, S.y - bodyH() / 2];
 
@@ -2163,7 +2157,7 @@ const Climb = (() => {
     glow(x, y - 46, 110, "#fff1c4", 0.45); glow(x, y - 46, 44, "#ffffff", 0.5);
     // The wings: long, swept up and back, feather on feather, each a little apart.
     for (const sd of [-1, 1]) for (let f = 0; f < 4; f++) {
-      const r0 = 0.55 + f * 0.17 + flap * sd * 0, ang = -PI / 2 + sd * (0.55 + f * 0.24 + flap);
+      const ang = -PI / 2 + sd * (0.55 + f * 0.24 + flap);
       const bx = x + sd * 6, by = y - 62, len = 64 - f * 9;
       ctx.beginPath(); ctx.moveTo(bx, by);
       ctx.quadraticCurveTo(bx + Math.cos(ang - sd * 0.5) * len * 0.6, by + Math.sin(ang - sd * 0.5) * len * 0.6, bx + Math.cos(ang) * len, by + Math.sin(ang) * len);
@@ -4074,7 +4068,6 @@ const Climb = (() => {
     }
     return P;
   }
-  function platAt(V, sec, i, j) { const r = -j - sec.h0; if (r < 0 || r >= CH) return false; return V.g[r * COLS + i] === 1 && V.base[r * COLS + i] === 0; }
   function drawTablet(w, cam, unlit) {
     const p = wallPos(w), x = p.x - cam.x, y = p.y - cam.y, s = w.side;
     if (y < -60 || y > H + 60) return;
@@ -4319,17 +4312,8 @@ const Climb = (() => {
   }
   function addPoly(path, pts, T) { const a = T(pts[0][0], pts[0][1]); path.moveTo(a[0], a[1]); for (let i = 1; i < pts.length; i++) { const b = T(pts[i][0], pts[i][1]); path.lineTo(b[0], b[1]); } path.closePath(); }
   function addOval(path, u, v, ru, rv, T, n) { n = n || 12; const pts = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([u + Math.cos(a) * ru, v + Math.sin(a) * rv]); } addPoly(path, pts, T); }
-  // Those who worship there, facing the idol (toward +u): kneeling upright with hands lifted, kneeling
-  // bowed low, or lying on their faces. head: where the head is, bowed to it; up: turned back to the light.
   // The traced worshippers (TRACED) for each kind: kneeling with hands lifted; bowed; prostrate; standing (Lust's, swaying).
   const WORSHIP_ART = [["w0", "w5"], ["w1", "w7"], ["w2"], ["w4", "w3", "w6"]];
-  const WORSHIP = [
-    { body: [[-7, 0], [8, 0], [8, 3], [3, 6], [4, 13], [7, 19], [4, 20], [1, 21], [-3, 21], [-6, 13], [-8, 5]], head: [0.5, 24.5], up: [-0.8, 24.8] },
-    { body: [[-7, 0], [9, 0], [12, 3], [12, 7], [7, 12], [1, 14], [-5, 11], [-8, 5]], head: [13.5, 6.5], up: [7.5, 16.5] },
-    { body: [[-6, 0], [12, 0], [14, 2], [10, 6], [3, 7.5], [-3, 6.5], [-6, 3]], head: [15.5, 3.2], up: [11.5, 9.5] },
-    // (Lust's: standing, swaying, an arm lifted to it.)
-    { body: [[-5, 0], [5, 0], [4, 8], [4.5, 17], [3, 23], [-2.5, 23], [-4, 16], [-5.5, 7]], arms: [[2.5, 21], [8, 31], [9.5, 30], [4.5, 19.5]], head: [0.8, 26.5], up: [-0.6, 26.5] },
-  ];
   // Bel, seated on his plinth, his head thrown back and his mouth open, reaching to the loaves on his
   // table: traced from a silhouette made for the game (black on white, the white lines in it cut through),
   // in the idol's own frame (its middle at u 33, its foot at v 0). The first outline is his; the rest,
@@ -4380,7 +4364,7 @@ const Climb = (() => {
   // A shrine on its level ground: about the idol (or what is left of it), the things of its domain's
   // worship; and its worshippers, kneeling, or fled. Each domain's differs: Bel at his table, jars
   // of wine set by; Ashtoreth between two bowls of incense; Moloch with a fire pit before him.
-  const ROBE = "#17141b", IK = 1.35, WK = 1.45;   // the robes' dark; the idol's size and its people's, out on open ground
+  const ROBE = "#17141b", IK = 1.35;   // the robes' dark; the idol's size, out on open ground
   function drawShrine(f, cam, rimP, idols, lights) {
     const sx = f.x - cam.x, sy = f.y - cam.y, dom = f.sin;
     const [lx, ly] = S.torch, near = dist(lx, ly, f.x, f.y - 20) < lightR() * 0.85 && los(lx, ly, f.x, f.y - 20);
@@ -4409,7 +4393,7 @@ const Climb = (() => {
   // its robe flying, and fading into the dark.
   function drawWorshipper(w, cam, rimP, near) {
     const x = w.x - cam.x, y = w.y - cam.y; if (x < -30 || x > W + 30 || y < -40 || y > H + 30) return;
-    const P = new Path2D(), run = w.st === "run", T0 = put(w.x, w.y, run ? w.dir : w.side, cam), T = (u, v) => T0(u * WK, v * WK);
+    const P = new Path2D(), run = w.st === "run", T0 = put(w.x, w.y, run ? w.dir : w.side, cam);
     if (run) {
       // Fleeing: a moment of panic as the idol falls, then running (a cycle of four).
       const R = (u, v) => T0(u * ART_K, v * ART_K);
@@ -5219,7 +5203,7 @@ const Climb = (() => {
       if (f && o) { if (dist(wx, wy, o.x, o.y) < 22) f = null; else o = null; }
       if (f || o) { t.g = { f, o, path: [[p.x, p.y]], t0: S.rt }; return; }
       // From himself: perhaps the sign of the cross over himself.
-      const [mcx, mcy] = middle();
+      const [mcx] = middle();
       if (!S.held && Math.abs(wx - mcx) < 30 && wy > S.y - HT - 30 && wy < S.y + 10) { t.g = { self: true, path: [[p.x, p.y]], t0: S.rt }; return; }
       if (S.atk && !S.atk.hit) return;
       if (S.held) { S.atk = null; throwHeld(wx, wy, null); return; }

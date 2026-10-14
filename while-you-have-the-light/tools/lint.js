@@ -31,7 +31,7 @@ for (const f of files) {
   for (const m of msgs) { console.log(`${f}:${m.line}: ${m.message}`); n++; }
 }
 // Top-level names that appear nowhere but their own definition.
-const all = files.map(f => src[f]).join('\n') + fs.readFileSync(path.join(G, 'tools', 'smoke.js'), 'utf8');
+const all = files.map(f => src[f]).join('\n') + ['tools/smoke.js', 'tools/smoke2.js', 'art.html'].map(f => fs.readFileSync(path.join(G, f), 'utf8')).join('\n');
 for (const f of files) for (const name of tops[f]) {
   const uses = (all.match(new RegExp(`(?<![\\w$.])${name.replace(/\$/g, '\\$')}(?![\\w$])`, 'g')) || []).length;
   if (uses <= 1) { console.log(`${f}: top-level ${name} is never used`); n++; }
