@@ -1,12 +1,13 @@
 # Master plan (in order; token estimates are rough)
 
-1. Clear-out, movement, code split and map (~130,000)
-   - remove unused code (script-found, small checked batches), incl. maps.js
+1a. Clear-out and code map (~65,000; no change to play). Safe to stop after any step:
+   - remove unused code (script-found, small checked batches; smoke test after each), incl. maps.js (~35,000)
+   - split climb.js (5,400 lines) into ~5 files along its seams; write CODEMAP.md (each file, its main functions, line numbers); smoke test and screenshots; deploy (~30,000)
+1b. Movement and tips (~65,000):
    - step up low ledges; faster crawling
    - take a block back out of a cart; first great demon only after the first idol and gate
    - tips: pause to read, on/off switch, each shown once
    - look around: hold a direction to see about one screen that way (~5,000)
-   - split climb.js (5,400 lines) into ~5 files along its seams; write CODEMAP.md (each file, its main functions, line numbers); smoke test and screenshots
 2. Monastery, peaceful (~55,000): drop raids and towers; free building anywhere; relics halved, each monk adds back time, capped at today's length
 3. Hearts, herbs and the necrology (~95,000): 3 hearts, torch dims per hit; shrine candle heals 1, lay brother heals all. Herbs replace merit: gathered in every mountain (one or two plant shapes, recoloured per kind); mortar and pestle grinds TWO herbs into a potion, every pair makes something; drink a potion or give it as alms (it is the currency); carried herbs and potions lost on death unless banked with the lay brother. Necrology on death: 'Brother N., swallowed by a toad on the third ledge of Gluttony. Pray for him.'
 4. Room grid + Gluttony's first climb (~170,000), Spelunky-style: the mountain is a grid of rooms (about 3 wide, 6-10 tall); a guaranteed path wanders UP from the entrance to the top, each path room marked by the openings it needs; rooms off the path are side rooms. Each room is a hand-made template (small grid maps) with 'maybe' tiles and random obstacle patches, so the same template comes out different each time. A second pass places creatures, jars, cobwebs and herbs by simple rules per spot. Special rooms (hermit's cell, lost pilgrim, shrine, herb cache) replace side rooms by chance, often sealed behind cracked walls. Hard climbing stays off the path; check-and-repair proves the path climbable. Fixed set pieces (the mouth at the bottom, boss rooms at the top) stay hand-made. Per-mountain settings; demon counting. Templates: zigzag shaft, pit gap (2-3 versions), corridor, elbow, low crawl, shrine room; wall dressing; trace the Gluttony backdrop pieces (art already filed); white-room piece picker.
