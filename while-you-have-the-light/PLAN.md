@@ -29,11 +29,12 @@
 14. Monastery alive (~110,000): freed folk with roles; farm; shortcuts from higher up each mountain back to the monastery, to bank what you carry
 15. Monastery deeper (~210,000): library for other psalms; building for fun
 Later: tower defense with the choir; side branches to hidden rooms (path-first method).
+Rule: a thrown-down idol rebuilds itself only when demons carry its block back to it, or when its block is destroyed (in lava); then it can be broken again for a fresh block.
 Rule: one-handed vs two-handed. Light things (fireball, fat glob, frog, skull, herb) are held in ONE hand: the torch arm stays out, torch and flare still work (new one-handed hold pose; today the torch arm folds in and the torch is hidden). Heavy things (blocks) take both hands: he sets the torch down (its light stays there), no flare until he takes it up again or reaches a shrine candle.
 Rule: many creatures can be stunned, picked up and thrown (little frogs, the red demon, the skull).
 Rule for every grab (frog, demon, octopus): while held or swallowed he cannot move left or right, only punch free.
 Later: water. Wading or swimming puts out the torch; he goes dark but the blessing still gives a faint light, and with hearts the dark no longer kills. Relight at shrine candles. Short underwater tunnel pieces; swimming poses for the jointed monk in code; sea creatures (an octopus that wraps around him, others) need art.
 Later: the cuculla, the flowing choir garment worn over the habit (drawn in code), as an item: hold the button while falling to glide down slowly.
-Later: Wrath. A block that falls into lava is gone; a fresh one is had by breaking its idol again. Magma held over doors that open a second after you take the treasure beneath, then pours out; fire spouting from a pot, knocked over to aim it sideways at demons; boss: a demon with huge fists that leaps, hovers over him and slams down, invincible, but each slam breaks the floor until he smashes through into the lava below.
+Later: Wrath. A block that falls into lava is gone, and its idol rebuilds itself, to be broken again. Magma held over doors that open a second after you take the treasure beneath, then pours out; fire spouting from a pot, knocked over to aim it sideways at demons; boss: a demon with huge fists that leaps, hovers over him and slams down, invincible, but each slam breaks the floor until he smashes through into the lava below.
 Later: a demon that turns into a floating spirit to follow him through walls.
 Dropped: piranha; keys and locked chests; the Rapture-cloud flight; feast table; counting house; winch lifts; treasure room; melting furnace. On hold: cellar, honey-well.
