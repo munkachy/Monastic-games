@@ -22,14 +22,15 @@
     - saint companions from relics (soft light, float after him; St Benedict only accompanies)
     - the Dominican dog: carries a second torch for more light; sent at a demon, comes back
     - rescue a lost pilgrim to the lay brother for an extra heart
-    - possessed people (glowing eyes); a saint companion frees one and returns to heaven; some run up walls and leap about on the ceiling, gravity reversed; or knock one out and carry him home
-    - carrying a person: picking one up drops the torch where it is (its light stays there); carry with one hand, hook with the other, in the blessing's faint light; a shrine candle gives the torch back
+    - possessed people (glowing eyes); a saint companion frees one and returns to heaven; some run up walls and leap about on the ceiling, gravity reversed. Fought only with the blessing (hold a finger on them to trace the sign of the cross); freed, they can become companions
+    - rescued people are roped to him like two climbers on one rope (the brick-on-a-rope code, but they land on their feet and walk after him); they hang below his swings and add weight; a rope partner can catch a missed jump; they fight on their own (punch what touches them, a heart or two; beaten = knocked down until he helps them up). Never picked up, never thrown. He keeps his torch and flare
     - or bring a companion home for monastery perks
     - the hermit's hidden cell: alms (potions) for the poor, a blessing chosen from 2-3; he asks for things (two skulls and a pot, three herbs) or for a person (an arrow points to a possessed man to bring back)
 14. Monastery alive (~110,000): freed folk with roles; farm; shortcuts from higher up each mountain back to the monastery, to bank what you carry
 15. Monastery deeper (~210,000): library for other psalms; building for fun
 Later: tower defense with the choir; side branches to hidden rooms (path-first method).
-Rule: many creatures can be stunned, picked up and thrown (little frogs, the red demon, the skull, a knocked-out possessed person).
+Rule: one-handed vs two-handed. Light things (fireball, fat glob, frog, skull, herb) are held in ONE hand: the torch arm stays out, torch and flare still work (new one-handed hold pose; today the torch arm folds in and the torch is hidden). Heavy things (blocks) take both hands: he sets the torch down (its light stays there), no flare until he takes it up again or reaches a shrine candle.
+Rule: many creatures can be stunned, picked up and thrown (little frogs, the red demon, the skull).
 Rule for every grab (frog, demon, octopus): while held or swallowed he cannot move left or right, only punch free.
 Later: water. Wading or swimming puts out the torch; he goes dark but the blessing still gives a faint light, and with hearts the dark no longer kills. Relight at shrine candles. Short underwater tunnel pieces; swimming poses for the jointed monk in code; sea creatures (an octopus that wraps around him, others) need art.
 Later: the cuculla, the flowing choir garment worn over the habit (drawn in code), as an item: hold the button while falling to glide down slowly.
