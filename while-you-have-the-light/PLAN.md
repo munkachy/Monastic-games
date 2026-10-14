@@ -1,8 +1,6 @@
 # Master plan (in order; token estimates are rough)
 
-1a. Clear-out and code map (~65,000; no change to play). Safe to stop after any step:
-   - remove unused code (script-found, small checked batches; smoke test after each), incl. maps.js (~35,000)
-   - split climb.js (5,400 lines) into ~5 files along its seams; write CODEMAP.md (each file, its main functions, line numbers); smoke test and screenshots; deploy (~30,000)
+1a. Done (14 Oct 2026): maps.js, the first arena (fight, foes, world, scene) and unused names removed; climb.js split into seven files; CODEMAP.md, with tools/lint.js, smoke2.js, replay.js and codemap.js.
 1b. Movement and tips (~65,000):
    - step up low ledges; faster crawling
    - take a block back out of a cart; first great demon only after the first idol and gate

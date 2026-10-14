@@ -1,7 +1,7 @@
 "use strict";
 // While You Have the Light: the game. The title, the endless climb, the seven mountains (one domain
-// to a mountain, once the novitiate), the pause (with every move listed), and the end, when the light
-// goes out. Played sideways; where the phone allows, it locks to sideways when play starts.
+// to a mountain, once the novitiate), and the end, when the light goes out (the climb's own pause
+// is in climb.js). Played sideways; where the phone allows, it locks to sideways when play starts.
 
 const Game = {
   music: false,
