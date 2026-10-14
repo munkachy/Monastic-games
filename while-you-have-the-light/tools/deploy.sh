@@ -10,12 +10,12 @@ cd $G/tools && NODE_PATH=/opt/node22/lib/node_modules timeout 60 node smoke.js |
 cd $REPO
 for f in "$@" index.html notes.js; do git add while-you-have-the-light/$f; done
 git commit -q -m "$TITLE" -m "$BODY" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01EvvhEHwbMCZCDTLbrLNi3Q"
-for i in 1 2 3 4; do git push -q -u origin claude/browser-game-reskin-explore-hdpkw2 2>&1 | tail -1 && break || sleep $((2**i)); done
+Claude-Session: https://claude.ai/code/session_01VTaQuLSbL6E5pATg1j2jQq"
+for i in 1 2 3 4; do git push -q -u origin HEAD:claude/browser-game-reskin-explore-hdpkw2 2>&1 | tail -1 && break || sleep $((2**i)); done
 cd $GP && git fetch -q origin gh-pages && git reset -q --hard origin/gh-pages
 for f in "$@" index.html notes.js; do mkdir -p $(dirname while-you-have-the-light/$f); cp $G/$f while-you-have-the-light/$f; done
 for f in $(ls $G); do [ -f while-you-have-the-light/$f ] && ! cmp -s $G/$f while-you-have-the-light/$f && echo "DIFFERS: $f"; done
 git add while-you-have-the-light && git commit -q -m "Deploy While You Have the Light v$NEW" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01EvvhEHwbMCZCDTLbrLNi3Q"
+Claude-Session: https://claude.ai/code/session_01VTaQuLSbL6E5pATg1j2jQq"
 for i in 1 2 3 4; do git push -q origin HEAD:gh-pages 2>&1 | tail -1 && break || sleep $((2**i)); done
 echo "deployed v$NEW: $(cd $REPO && git log --oneline -1)"

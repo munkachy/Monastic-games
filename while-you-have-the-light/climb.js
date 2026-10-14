@@ -113,18 +113,11 @@ const Climb = (() => {
   function ensureSecs(n) {
     while (secs.length <= n) {
       const k = secs.length, prev = secs[k - 1];
-      if (!prev && modular()) { secs.push(mapSec("mouth", 0, 1, undefined, NOV.domain)); continue; }
       if (!prev) { secs.push({ type: "shaft", h0: 1, h1: 44, c: MID - 19, k, dom: NOV ? NOV.domain : null }); continue; }
       const dom = domOf(k);
       // (The summit: its sky goes up for ever. Anything asked for above it is more of the same sky.)
       if (prev.type === "summit") { secs.push({ type: "summit", filler: true, h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev.from, c: prev.c }); continue; }
-      if (modular() && prev.type === "map" && k < summitK()) {
-        // (Drawn at random; again, if it would not fit on the mountain from where the last one comes out.)
-        let sec = null;
-        for (let t = 0; t < 12 && !sec; t++) { const q = mapSec(MODS[Math.floor(hash2(k, 31 + t, seed) * MODS.length) % MODS.length], k, prev.h1 + 1, prev.door, dom); if (q.x0 >= 3 && q.x0 + q.w <= COLS - 3) sec = q; }
-        secs.push(sec || mapSec("shaftA", k, prev.h1 + 1, prev.door, dom)); continue;
-      }
-      if ((prev.type === "shaft" || prev.type === "map") && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
+      if (prev.type === "shaft" && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
       if (prev.type === "shaft") {
         // (Gluttony's crossings, in the seven mountains: a cavern or a long swing under a roof, as the
         // mountain's seed falls, so no two climbs of it go the same way up.)
@@ -172,7 +165,7 @@ const Climb = (() => {
   function edges(j) {
     let r = rows.get(j); if (r) return r;
     const h = -j, sec = sectionAt(h);
-    r = sec.type === "map" ? mapEdges(sec, h) : sec.type === "shaft" ? shaftRow(h, sec.c, sec, true) : shaftRow(h, sec.from.c, sec, false);
+    r = sec.type === "shaft" ? shaftRow(h, sec.c, sec, true) : shaftRow(h, sec.from.c, sec, false);
     rows.set(j, r); return r;
   }
   // The platforms standing in the shafts, some a little askew (but none in Gluttony's: its slime is
@@ -408,7 +401,6 @@ const Climb = (() => {
     // (A crawlway, and the chamber at its end.)
     const cw = sec.crawl === undefined ? crawlOf(sec) : sec.crawl;
     if (cw && i >= cw.lo && i <= cw.hi) { const r = h - sec.h0 - cw.r0, u = (i - cw.i0) * cw.dir; if (r >= 0 && (u < cw.L ? r < CW_H : r < CW_C)) return false; }
-    if (sec.type === "map") return mapSolid(i, h, sec);
     if (sec.type === "trav") return travSolid(i, h, sec);
     if (sec.type === "slope") return slopeSolid(i, h, sec);
     if (sec.type === "cave") return cave(sec).g[(h - sec.h0) * COLS + i] === 1;
@@ -442,67 +434,6 @@ const Climb = (() => {
     return false;
   }
   const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type === "summit" ? secs[summitK()] : null);
-  // ---- A mountain made of mapped pieces -----------------------------------------------------------------
-  // Gluttony's (in the seven mountains): at its foot its mouth, always the same (maps.js); then pieces
-  // drawn from the modules at random (short and long shafts, short and long swings, each in two
-  // makings, the swings either way about), each joined to the last by its doors: the way out at the
-  // top of one is the way in at the foot of the next. Then the summit. The order follows from the
-  // mountain's seed, so it is the same each time he comes back to the same climb.
-  const MODULAR = {}, MOD_SUMMIT = 22;      // (none for now: Gluttony's maps wait to be remade)
-  const MODS = ["shaftA", "shaftB", "longShaftA", "longShaftB", "swingA", "swingB", "longSwingA", "longSwingB"];
-  const modular = () => !!(NOV && !NOV.room && MODULAR[NOV.domain] && typeof MAPS !== "undefined");
-  const MAP_SOLID = "#WTR~V";
-  function mapSec(name, k, h0, doorX, prevDom) {
-    const g = MAPS[name], w = g[0].length, hm = g.length, swing = /wing/.test(name);
-    // (Its doors: the open cells of its foot row, and of its top row.)
-    // (The way out is the last opening in its top row: in the mouth, the shaft by its exit, not the sky over the mountain's shoulder.)
-    const foot = [], top = []; for (let c = 0; c < w; c++) { if (g[hm - 1][c] !== "#") foot.push(c); if (g[0][c] !== "#") { if (top.length && top[top.length - 1] !== c - 1) top.length = 0; top.push(c); } }
-    let flip = false;
-    if (swing && doorX !== undefined) {
-      const fits = (f) => { const fc = f ? w - 1 - foot[foot.length - 1] : foot[0], x0 = doorX - fc; return x0 >= 3 && x0 + w <= COLS - 3; };
-      const a = fits(false), b = fits(true); flip = a && b ? hash2(k, 77, seed) < 0.5 : a ? false : b ? true : doorX > MID;
-    }
-    const fc = flip ? w - 1 - foot[foot.length - 1] : foot[0], x0 = doorX === undefined ? 12 : doorX - fc;
-    const tc = flip ? w - 1 - top[top.length - 1] : top[0];
-    return { type: "map", name, g, w, hm, flip, x0, h0, h1: h0 + hm - 1, k, dom: prevDom, door: x0 + tc, c: x0 + tc + (top.length - 1) / 2 };
-  }
-  const mapCh = (sec, i, h) => { const col = i - sec.x0; if (col < 0 || col >= sec.w) return "#"; return sec.g[sec.h1 - h][sec.flip ? sec.w - 1 - col : col] || "#"; };
-  const mapSolid = (i, h, sec) => MAP_SOLID.includes(mapCh(sec, i, h));
-  const chAt = (i, h) => { const sec = h >= 1 ? sectionAt(h) : null; return sec && sec.type === "map" ? mapCh(sec, i, h) : null; };
-  // Its marks: where demons, lamps, verses, idols, and his start are, in the world.
-  function mapMarks(sec) {
-    if (sec.marks) return sec.marks;
-    const M = { D: [], L: [], V: [], I: [], S: [] };
-    for (let r = 0; r < sec.hm; r++) for (let col = 0; col < sec.w; col++) {
-      const ch = sec.g[r][sec.flip ? sec.w - 1 - col : col]; if (!M[ch]) continue;
-      const i = sec.x0 + col, h = sec.h1 - r;
-      if (ch === "V") { const side = !mapSolid(i + 1, h, sec) ? -1 : 1; M.V.push({ h, side, x: side < 0 ? (i + 1) * CELL + 1 : i * CELL - 1, y: -h * CELL + CELL / 2 }); continue; }
-      // (The floor about it: as far as it runs either way, up to eight cells.)
-      let a = i, b = i; const fl = (q) => !mapSolid(q, h, sec) && mapSolid(q, h - 1, sec);
-      while (a > i - 8 && fl(a - 1)) a--; while (b < i + 8 && fl(b + 1)) b++;
-      M[ch].push({ i, h, x: (i + 0.5) * CELL, y: -(h - 1) * CELL - 0.01, a, b });
-    }
-    M.V.sort((p, q) => p.h - q.h);
-    return (sec.marks = M);
-  }
-  // The open run of a row through it nearest its middle (as the shafts' edges, for what asks for them).
-  function mapEdges(sec, h) {
-    const c = Math.round(sec.c); let best = null;
-    for (let i = sec.x0; i < sec.x0 + sec.w; i++) {
-      if (mapSolid(i, h, sec)) continue; let j = i; while (j + 1 < sec.x0 + sec.w && !mapSolid(j + 1, h, sec)) j++;
-      const d = c < i ? i - c : c > j ? c - j : 0; if (!best || d < best.d) best = { L: i, R: j, d }; i = j;
-    }
-    return best ? { L: best.L, R: best.R } : { L: c - 2, R: c + 2 };
-  }
-  // A lay brother with his cart: on the first floor in a piece long enough for him, his cart and his donkey.
-  function mapBrother(sec) {
-    if (sec.bro !== undefined) return sec.bro;
-    sec.bro = null;
-    if (!/long/.test(sec.name) && sec.k % 3 !== 1) return null;
-    const M = mapMarks(sec);
-    for (const p of M.L.concat(M.I, M.D)) if (p.b - p.a >= 12) { const dir = 1, base = p.a * CELL; return (sec.bro = { sec: sec.k, dir, y: p.y, x: base + 1.5 * CELL, cart: base + 5.5 * CELL, donkey: base + 9.5 * CELL, bin: [], cheer: -9 }); }
-    return null;
-  }
   // ---- The low ways ----------------------------------------------------------------------------------
   // Here and there, at the foot of a wall, a way too low to stand in: a crawlway, cut into the rock
   // some paces, and at its end a little chamber where a reliquary lies hidden (its glow shows
@@ -535,17 +466,7 @@ const Climb = (() => {
   const NO_RELICS = [];
   const relicsOf = (sec) => { const cw = crawlOf(sec); return sec.type === "cave" ? cave(sec).relics : cw ? cw.relics : NO_RELICS; };
   // The verses on the walls: one in each shaft, about halfway up.
-  let mapWallK = 0;
   function wallAt(n) {
-    // (On a mapped mountain: where its maps have them, in order up the mountain; past the summit, none.)
-    if (modular()) {
-      while (walls.length <= n) {
-        ensureSecs(mapWallK); const sec = secs[mapWallK++];
-        if (sec.type !== "map") { walls.push({ h: 1e9, side: 1, n: walls.length, read: true, lit: 0, px: 0, py: -1e9 }); continue; }
-        for (const v of mapMarks(sec).V) walls.push({ h: v.h, side: v.side, n: walls.length, read: false, lit: 0, px: v.x, py: v.y });
-      }
-      return walls[n];
-    }
     while (walls.length <= n) {
       const m = walls.length; ensureSecs(m * 2);
       const sec = secs[m * 2], h = m === 0 ? 24 : sec.h0 + Math.floor((sec.h1 - sec.h0) * 0.5);
@@ -732,10 +653,9 @@ const Climb = (() => {
   function start(opts) {
     opts = opts || {};
     NOV = opts.nov ? Object.assign({}, opts.nov) : null;
-    seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0; mapWallK = 0;
+    seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0;
     // (A place kept on Gluttony's mountain as it was made before its maps: from the foot, on the new mountain.)
-    if (opts.resume && (modular() ? opts.resume.v !== 2 : opts.resume.v === 2)) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
-    if (modular() && !NOV.room) NOV.summitK = (opts.resume && Number.isInteger(opts.resume.summitK) ? opts.resume.summitK : MOD_SUMMIT + 3 * (NOV.climbs || 0));
+    if (opts.resume && opts.resume.v === 2) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
     const r = seeded(seed); PH = [r() * TAU, r() * TAU, r() * TAU];
     // Where the summit is: as asked; or as kept with his place; or (a place kept before there were
     // summits) above the place kept.
@@ -745,9 +665,9 @@ const Climb = (() => {
       else if (Number.isFinite(R.y) && R.y < 0) { NOV.summitK = Infinity; NOV.summitK = summitAbove(sectionAt(Math.max(1, Math.floor(-R.y / CELL))).k); }
     }
     if (NOV && !NOV.summitK) NOV.summitK = SUMMIT_K + 8 * (NOV.climbs || 0);       // (higher each time it has been climbed)
-    const e = edges(-2), st = modular() ? mapMarks(sectionAt(1)).S[0] : null, x = st ? st.x : (e.L + e.R + 1) / 2 * CELL;
+    const e = edges(-2), x = (e.L + e.R + 1) / 2 * CELL;
     S = {
-      x, y: st ? st.y : -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
+      x, y: -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
       rope: null, shot: null, climbing: false, climbPh: 0, throwT: 0, throwA: 0, ropeVis: [], shotVis: [],
       fuel: 1, t: 0, rt: 0, top: 0, read: 0, dying: 0, level: 0,
       flare: { on: false, t: 0, n: 0 }, parts: [], ghosts: [], verse: null,
@@ -773,7 +693,7 @@ const Climb = (() => {
     while (s.h0 <= h1) { out.push(s); ensureSecs(s.k + 1); s = secs[s.k + 1]; }
     return out;
   }
-  const lampsOf = (sec) => (sec.type === "map" ? (sec.lamps || (sec.lamps = mapMarks(sec).L.map((p) => ({ x: p.x, y: p.y, lit: false })))) : sec.type === "cave" ? cave(sec).lamps : sec.type === "trav" && sec.gate ? trav(sec).lamps : []);
+  const lampsOf = (sec) => (sec.type === "cave" ? cave(sec).lamps : sec.type === "trav" && sec.gate ? trav(sec).lamps : []);
   function lightOut() {
     ev("the light went out");
     if (NOV && !NOV.room) forget(NOV.domain);         // (the light gone out, the place he kept is gone with it)
@@ -820,7 +740,7 @@ const Climb = (() => {
     }
     for (const k of SEEN) if (S[k]) seen[k] = true;
     const all = keptAll();
-    all[NOV.domain] = { v: modular() ? 2 : 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
+    all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
       coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
     try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
     Kept.wrote(KEEP);
@@ -1416,10 +1336,6 @@ const Climb = (() => {
   // and how far it may walk).
   function spotsFor(k, sin) {
     const sec = secs[k], D = DEM[sin], out = [], room = (w) => w * CELL >= D.hw * 2 + 10;
-    if (sec.type === "map") {
-      for (const p of mapMarks(sec).D) out.push([p.x, p.y, (p.a + 0.5) * CELL, (p.b + 0.5) * CELL]);
-      return out;
-    }
     if (sec.type === "shaft") {
       if (k === 0) { const e = edges(-1), mid = (e.L + e.R + 1) / 2 * CELL; out.push([(e.R - 1) * CELL, -0.01, mid + 40, e.R * CELL]); }
       const isls = [], mid = (sec.h0 + sec.h1) / 2;
@@ -1474,13 +1390,6 @@ const Climb = (() => {
       return;
     }
     if (!DEM[sin]) return;
-    if (sec.type === "map") {
-      // (Its demons where the map has them; an idol where it has one.)
-      if (NOV && NOV.demons) for (const s of spotsFor(k, sin)) spawnDemon(sin, s[0], s[1], s[2], s[3], k);
-      if (!demonsOnly && sec.dom) { const I = mapMarks(sec).I.map((p) => [p.x, p.y, p.a * CELL, (p.b + 1) * CELL]); if (I.length) placeShrine(k, sec.dom, I, []); }
-      if (!demonsOnly) placeGreat(k);
-      return;
-    }
     const spots = spotsFor(k, sin), taken = [];
     // The best place first; then each further one as far as it can be from those already taken.
     for (let q = 0; q < n && spots.length; q++) {
@@ -1724,7 +1633,6 @@ const Climb = (() => {
   // The lay brother's place at a gate (in the seven mountains): just past its lamp, he, then the
   // cart, then its donkey, facing on.
   function brotherOf(sec) {
-    if (NOV && sec && sec.type === "map") return mapBrother(sec);
     if (!NOV || !sec || sec.type !== "trav" || !sec.gate) return null;
     const T = trav(sec); if (T.bro) return T.bro;
     const D = T.door; if (!D) return null;
@@ -1985,14 +1893,6 @@ const Climb = (() => {
   // (Where one would wait in section k, given where the last one waited: nothing is changed.)
   function planGreat(k) {
     if (!NOV || !GREAT[NOV.domain] || k >= summitK()) return null;
-    // (On a mapped mountain: four of them, a fifth of the way up, two fifths, three, four; each a tier
-    // stronger than the last, the fourth only less than the summit's.)
-    if (modular()) {
-      const K = summitK(), at4 = [1, 2, 3, 4].map((q) => Math.max(1, Math.round(K * q / 5))), q = at4.indexOf(k); if (q < 0) return null;
-      const G = GREAT[NOV.domain], tier = q + 1, sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc, sp = spotsFor(k, NOV.domain), sec = secs[k];
-      const s = sp.length ? sp[Math.floor(hash2(k, 991, seed) * sp.length) % sp.length] : [sec.c * CELL, -(sec.h0 + 2) * CELL];
-      const at = dFree(s[0], s[1] - 30, hw, ht); return at ? { at, dir: hash2(k, 992, seed) < 0.5 ? -1 : 1, tier, sc, hw, ht } : null;
-    }
     if (k < 7) return null;
     const sec = secs[k], G = GREAT[NOV.domain], tier = clamp(1 + Math.floor((k - 7) / 8), 1, 4), sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc;
     if (sec.gate) return null;
@@ -3142,7 +3042,6 @@ const Climb = (() => {
   function slickAt(x, y) {
     const i = Math.floor(x / CELL), j = Math.floor((y + 2) / CELL);
     for (const g of S.grease) if (g.j === j && i >= g.i0 && i <= g.i1 && g.until > S.t) return true;
-    if (chAt(i, -j) === "~") return true;
     const p = slabAt(i, -j); return !!p && !!p.slick;
   }
   // How far the drawn top of a platform askew lies above or below its level top, at x.
@@ -3856,11 +3755,6 @@ const Climb = (() => {
     if (S.hangT > 0) S.hangT -= dt;
     const wdt = dt * (F.on ? FLARE_SLOW : S.hangT > 0 ? 0.5 : 1);
     S.t += wdt;
-    // Teeth (in Gluttony's mouth, and at the foot of its pits): standing on them, he is bitten and thrown up off them.
-    if (!S.dying && !S.latched && modular() && !(S.invT > 0)) {
-      const fh = -Math.floor((S.y + 2) / CELL);
-      if ([S.x - HW, S.x, S.x + HW].some((x) => chAt(Math.floor(x / CELL), fh) === "W")) { hitMonk(0, 0.08); S.vy = -420; S.ground = false; S.invT = Math.max(S.invT || 0, 0.6); Sound.fx.chomp && Sound.fx.chomp(0); }
-    }
     if (!S.dying) {
       if (S.fuel <= 0) lightOut();
       else if (S.fuel < 0.15 && Math.floor(S.rt * 0.8) !== Math.floor((S.rt - dt) * 0.8)) Sound.fx.gutter();
