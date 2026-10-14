@@ -253,10 +253,6 @@ const House = (() => {
   // villager free picks it up). With holy water, a brother keeps the wall on his side of the gate;
   // with a trowel, he mends the walls.
   const CAMP = GATE - 130, SHED = GATE + 110, FOLK_V = 55;
-  const TOOLS = {
-    water: { name: "HOLY WATER", what: "keeps a wall", many: "WITH HOLY WATER" },
-    mason: { name: "A TROWEL", what: "mends the walls", many: "MASONS" },
-  };
   function folkData() { const D = data(); D.people = D.people || []; D.tools = D.tools || { water: 0, mason: 0 }; D.nextId = D.nextId || 1; return D; }
   // Those come down since he was last here (and, the first time, three who found their way down before him).
   function takePilgrims() {
@@ -286,7 +282,7 @@ const House = (() => {
   }
   function loadFolk() { const D = folkData(); H_.folk = D.people.map(makeFolk); }
   function receive() {
-    const D = folkData(); let n = 0;
+    folkData(); let n = 0;
     for (const f of H_.folk) if (f.p.role === "camp") { f.p.role = "brother"; f.goal = GATE + (Math.random() - 0.5) * 260; f.recv = 1; n++; }
     if (!n) return;
     store(); Sound.fx.kindle && Sound.fx.kindle(0.6, 0);
@@ -839,7 +835,7 @@ const House = (() => {
     if (whole || hot) { ctx.strokeStyle = whole ? C.gold : "rgba(255,226,170,0.6)"; ctx.lineWidth = 1; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1); }
   }
   function drawBook(I) {
-    const i = I.book, t = I.t, h = hourOf(i), x0 = 20, y0 = 14, w = W - 40, hh = H - 70, mid = x0 + w / 2;
+    const i = I.book, h = hourOf(i), x0 = 20, y0 = 14, w = W - 40, hh = H - 70, mid = x0 + w / 2;
     rect(0, 0, W, H, "rgba(4,3,3,0.72)");
     // The two pages, the gutter between.
     rect(x0 - 3, y0 - 3, w + 6, hh + 6, "#3a2414");

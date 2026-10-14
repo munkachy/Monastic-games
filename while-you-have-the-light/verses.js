@@ -1,6 +1,6 @@
 "use strict";
 // The verses on the rock. They are the Douay-Rheims by default (Psalm 118 in the Vulgate's
-// numbering; climb.js holds them). Or they are the player's own, in another translation (the
+// numbering; climb-world.js holds them). Or they are the player's own, in another translation (the
 // Grail from the breviary, say): put in from a text file or pasted in, and kept on this device.
 // The blank form names the twenty-two stanzas, Aleph to Tau, with the verse used from each. The
 // Douay of each is there as a note, to find the place by. The verse used from a stanza can be

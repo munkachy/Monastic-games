@@ -221,8 +221,8 @@ const Kept = (() => {
 })();
 
 // ---- The save -----------------------------------------------------------------------------------
-// The arena's best, the finishers opened, how many of each sin cast out, the hints seen.
-let save = { muted: false, best: 0, bestFlow: 0, unlocked: {}, cast: {}, seen: {}, practice: null };
+// The sound, the hints seen; and all the rest the climb and the monastery keep in it.
+let save = { muted: false, seen: {} };
 try { save = Object.assign(save, JSON.parse(localStorage.getItem("while-you-have-the-light") || "{}")); } catch (e) { }
 const store = () => { try { localStorage.setItem("while-you-have-the-light", JSON.stringify(save)); } catch (e) { } Kept.wrote("while-you-have-the-light"); };
 Kept.watch("while-you-have-the-light", (json) => { try { Object.assign(save, JSON.parse(json || "{}")); if (typeof applySound === "function") applySound(); } catch (e) { } });
