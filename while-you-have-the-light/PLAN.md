@@ -28,7 +28,6 @@
     - the hermit's hidden cell: alms (potions) for the poor, a blessing chosen from 2-3; he asks for things (two skulls and a pot, three herbs) or for a person (an arrow points to a possessed man to bring back)
 14. Monastery alive (~110,000): freed folk with roles; farm; shortcuts from higher up each mountain back to the monastery, to bank what you carry
 15. Monastery deeper (~210,000): library for other psalms; building for fun
-Later: keyboard blows. Clicking a demon reads the arrow held at that moment: up the uppercut, down the slam, toward it or away the hurl, none a punch (today only a mouse drag gives them). Check it does not fight with climbing or walking on the same arrows; update the keys list on the pause screen.
 Later: tower defense with the choir; side branches to hidden rooms (path-first method).
 Rule: one-handed vs two-handed. Light things (fireball, fat glob, frog, skull, herb) are held in ONE hand: the torch arm stays out, torch and flare still work (new one-handed hold pose; today the torch arm folds in and the torch is hidden). Heavy things (blocks) take both hands: he sets the torch down (its light stays there), no flare until he takes it up again or reaches a shrine candle.
 Rule: many creatures can be stunned, picked up and thrown (little frogs, the red demon, the skull).

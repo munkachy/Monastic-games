@@ -148,10 +148,10 @@ the build and test scripts (see tools/README.md).
 - **Drawing** (4): lightR 5, visPoly 17, drawSky 41, darkness 64, slab 88, rockPath 98, drawTablet 183, torchBack 202, wallWalk 203, wallClimb 211, crawlPose 219, monkPose 223, demonPose 273, lightCross 304, drawSign 312, drawBoulder 342, drawRope 343, drawHook 349, draw 358
 - **The domains, drawn** (366): rgb 369, rgbs 370, tintStep 371, put 379, drawGlutton 381, shadeGlut 394, eyeGlut 405, GLUT_EYE 410, glutEye 411, addShape 422, addPoly 425, addOval 426, WORSHIP_ART 428, BEL 433, idolPath 443, drawShrine 480, drawWorshipper 506, drawShardOf 524, carved 531, drawGate 532, briarStrip 584, drawBriars 597, drawChain 621, drawCoin 632, drawAlms 640, drawThorn 650, drawRibbon 656, drawLamp 666, drawRelic 680, crackLines 690, drawFat 708, sheen 719, drawPrints 739, drawSlime 749, drawFire 767, drawWorld 773, lostMarker 1097, dpad 1115, dpadDir 1116, actBtn 1121, flareBtn 1122, climbWay 1125, sideArrow 1126, hud 1132
 
-### climb.js (227 lines)
+### climb.js (235 lines)
 
 - **The record, for notes to Claude** (28): ev 35, r2 36, doing 37, snapNow 40, record 48, grabScreen 55
-- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 188
+- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 196
 
 ### notes.js (106 lines)
 
