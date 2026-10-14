@@ -3,9 +3,9 @@
 1a. Done (14 Oct 2026): maps.js, the first arena (fight, foes, world, scene) and unused names removed; climb.js split into seven files; CODEMAP.md, with tools/lint.js, smoke2.js, replay.js and codemap.js.
 1b. Movement and tips (~65,000):
    - step up low ledges; faster crawling
-   - take a block back out of a cart; first great demon only after the first idol and gate
+   - take a block back out of a cart; the first great demon comes once he has thrown down an idol and has its block in hand (no gate needed); after that great demons grow more likely the higher he goes, and he meets several (2-3) before the summit's boss
    - tips: pause to read, on/off switch, each shown once
-   - look around: hold a direction to see about one screen that way (~5,000)
+   - look around: a LOOK button on screen; hold it and the thumb's cross moves the view about one screen that way instead of walking (he stands still); let go and the view comes back. A key for it too (~5,000)
    - testing (~20,000): a coverage report from replay.js and smoke2.js (Chromium's coverage: which functions no test ever runs); then replay scenes for what it shows untested (great demons, the swallow, Avarice's gold, the angel, the boons, likely), set up through Climb.scene the way the white room does (no Claude needed), so each starts right where the system is
 2. Monastery, peaceful (~55,000): drop raids and towers; free building anywhere; relics halved, each monk adds back time, capped at today's length
 3. Hearts, herbs and the necrology (~95,000): 3 hearts, torch dims per hit; shrine candle heals 1, lay brother heals all. Herbs replace merit: gathered in every mountain (one or two plant shapes, recoloured per kind); mortar and pestle grinds TWO herbs into a potion, every pair makes something; drink a potion or give it as alms (it is the currency); carried herbs and potions lost on death unless banked with the lay brother. Necrology on death: 'Brother N., swallowed by a toad on the third ledge of Gluttony. Pray for him.'
