@@ -27,7 +27,7 @@ function start(opts) {
     fuel: 1, t: 0, rt: 0, top: 0, read: 0, dying: 0, level: 0,
     flare: { on: false, t: 0, n: 0 }, parts: [], ghosts: [], verse: null,
     cam: { x: clamp(x - W / 2, 0, COLS * CELL - W), y: 70 - H }, torch: [x, -50], light: null,
-    hearts: HEARTS, healed: new Set(), dark: false, touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
+    hearts: HEARTS, healed: new Set(), dark: false, herbs: [], pouch: {}, flasks: [], soup: null, mix: null, touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
     demons: [], things: [], held: null, atk: null, popK: 0, ids: 0, cast: 0, respawnT: 0, hurtT: 0, invT: 0, flashT: 0, floatT: 0, shake: 0, fightSeen: false, fightHintT: 0, meter: 1, kickCd: 0, swingKickT: 0, hang: null, ward: null, crosses: [],
     crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0, freedList: [],
     blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false, bigs: [], latched: null, prints: [], greatDown: new Set(), foot: null, kept: null, keptAt: null,
@@ -115,7 +115,7 @@ function keepPlace(x, y, why) {
   }
   for (const k of SEEN) if (S[k]) seen[k] = true;
   const all = keptAll();
-  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, healed: S.healed ? [...S.healed] : [],
+  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, pouch: S.pouch, flasks: S.flasks, healed: S.healed ? [...S.healed] : [],
     coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
   try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
   Kept.wrote(KEEP);
@@ -130,7 +130,7 @@ function restore(R) {
   const at = Number.isFinite(R.x) && Number.isFinite(R.y) && R.y < 0 ? freeSpot(R.x, R.y) : null;
   if (!at) { forget(NOV.domain); return; }
   S.x = at[0]; S.y = at[1]; S.vx = 0; S.vy = 0; S.ground = boxHit(S.x, S.y + 3); S.dir = 1; S.keptAt = [S.x, S.y]; S.foot = S.ground ? [S.x, S.y] : null;
-  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.hearts = clamp(Number.isInteger(R.hearts) ? R.hearts : HEARTS, 1, HEARTS); S.healed = new Set(Array.isArray(R.healed) ? R.healed : []); S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
+  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.hearts = clamp(Number.isInteger(R.hearts) ? R.hearts : HEARTS, 1, HEARTS); S.pouch = Object.assign({}, R.pouch || {}); S.flasks = Array.isArray(R.flasks) ? R.flasks.filter((q) => SOUPS[q]).slice(0, FLASKS) : []; S.healed = new Set(Array.isArray(R.healed) ? R.healed : []); S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
   S.freedList = Array.isArray(R.freed) ? R.freed.filter((q) => Array.isArray(q) && SINS[q[0]]).slice(0, 60) : [];
   if (Number.isFinite(R.fuel)) S.fuel = clamp(R.fuel, 0.25, 1);
   if (Number.isFinite(R.meter)) S.meter = clamp(R.meter, 0, 1);
@@ -557,6 +557,83 @@ function hookAngle(gx, gy, side) {
   }
   return best === null ? Math.atan2(-1, side) : best;
 }
+// ---- The herbs, and the soups ------------------------------------------------------------------------
+// Herbs grow on every mountain (each mountain's own commonest): rue, hyssop, sage, wormwood. Seen
+// only in light. Walked into, picked, into his pouch. Two of them ground in the mortar make a soup
+// with a power (which pair makes which is fixed for each new game, and learned as they are made, in
+// the herbal); one grinding in three (one in five, with the little mortar won from a summit) is only
+// soup: no power, but a little warmth, and worth something to the hermit. Three flasks at most;
+// drunk, a power lasts about ten seconds. All of it is lost if he dies.
+const HERBS = { rue: { name: "RUE", c: "#9fc46a" }, hyssop: { name: "HYSSOP", c: "#9a8fe0" }, sage: { name: "SAGE", c: "#b9cdb2" }, wormwood: { name: "WORMWOOD", c: "#d9d27a" } };
+const HERB_KEYS = Object.keys(HERBS), HERB_OF = { gluttony: "wormwood", lust: "rue", avarice: "sage", wrath: "hyssop" };
+const SOUPS = {
+  rising: { name: "RISING SOUP", sub: "He rises, slowly. Hold down to sink." },
+  unseen: { name: "UNSEEN SOUP", sub: "The demons do not see him." },
+  feather: { name: "FEATHER SOUP", sub: "He falls slowly." },
+  bright: { name: "BRIGHT SOUP", sub: "The torch burns brighter." },
+  soup: { name: "SOUP", sub: "Only soup. It warms him: a little light." },
+};
+const SOUP_T = 10, FLASKS = 3, POUCH_MAX = 9, GRIND_T = 1;
+const soupOn = (k) => !!(S && S.soup && S.soup.kind === k && !S.dying);
+const pairKey = (a, b) => [a, b].sort().join("+");
+// (Which pair makes which power: drawn once for a new game, each power from two or three pairs.)
+function recipes() {
+  if (!save.recipes) {
+    const pairs = []; for (let i = 0; i < 4; i++) for (let j = i; j < 4; j++) pairs.push(pairKey(HERB_KEYS[i], HERB_KEYS[j]));
+    for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pairs[i], pairs[j]] = [pairs[j], pairs[i]]; }
+    const fx = ["rising", "unseen", "feather", "bright"]; save.recipes = {}; pairs.forEach((p, i) => (save.recipes[p] = fx[i % 4])); store();
+  }
+  return save.recipes;
+}
+// A section's herbs: one or two on its floors, likelier its own mountain's.
+function placeHerbs(k, sin) {
+  const sec = secs[k]; if (!sec || sec.type === "summit" || !DEM[sin]) return;
+  const sp = spotsFor(k, sin); if (!sp.length) return;
+  for (let q = 0; q < 2; q++) {
+    if (hash2(k, 700 + q, seed) > (q ? 0.35 : 0.75)) continue;
+    const s = sp[Math.floor(hash2(k, 710 + q, seed) * sp.length) % sp.length], u = hash2(k, 720 + q, seed);
+    const kind = u < 0.55 && HERB_OF[sec.dom] ? HERB_OF[sec.dom] : HERB_KEYS[Math.floor(hash2(k, 730 + q, seed) * 4) % 4];
+    const x = lerp(s[2], s[3], hash2(k, 740 + q, seed));
+    if (!S.herbs.some((h) => Math.abs(h.x - x) < 30 && Math.abs(h.y - s[1]) < 20)) S.herbs.push({ x, y: s[1], kind, k, got: false });
+  }
+}
+function stepHerbs(dt) {
+  if (S.soup && (S.soup.t += dt) >= SOUP_T) { S.soup = null; ev("a soup wore off"); }
+  if (soupOn("bright")) S.fuel = Math.max(S.fuel, 0.15);
+  for (const h of S.herbs) {
+    if (h.got || Math.abs(h.x - S.x) > 14 || Math.abs(h.y - S.y) > 18) continue;
+    if ((S.pouch[h.kind] || 0) >= POUCH_MAX) continue;
+    h.got = true; S.pouch[h.kind] = (S.pouch[h.kind] || 0) + 1; Sound.fx.pickup(); ev("an herb picked", { kind: h.kind });
+    if (!S.herbSeen) { S.herbSeen = true; tip("herbSeen", { text: "AN HERB", sub: "Picked, into his pouch. Two of them ground together make a soup: the pouch, by the flare (B on keys).", t: 0 }); }
+  }
+}
+// The pouch opened: the world holds still while he chooses two herbs, and while they are ground.
+const canMix = () => S.ground && !S.dying && !S.act && !S.rope && !S.latched && !S.held && !S.tipHold && !S.verseHold;
+function openPouch() { if (!canMix()) { Sound.fx.tick(420, 0.3); return; } S.mix = { pick: [], grind: -1 }; recipes(); Sound.fx.tick(900, 0.3); }
+function pickHerb(kind) {
+  const M_ = S.mix; if (!M_ || M_.grind >= 0) return;
+  const have = (S.pouch[kind] || 0) - M_.pick.filter((q) => q === kind).length; if (have <= 0) return;
+  if (S.flasks.length >= FLASKS) { M_.full = 1; return; }
+  M_.pick.push(kind); Sound.fx.tick(1100, 0.25);
+  if (M_.pick.length === 2) { M_.grind = 0; Sound.fx.grab(); }
+}
+function stepMix(dt) {
+  const M_ = S.mix; if (!M_ || M_.grind < 0) return;
+  M_.grind += dt; if (M_.grind < GRIND_T) return;
+  const [a, b] = M_.pick; S.pouch[a]--; S.pouch[b]--;
+  const key = pairKey(a, b), dud = Math.random() < (save.mortar ? 1 / 5 : 1 / 3), kind = dud ? "soup" : recipes()[key];
+  S.flasks.push(kind); (save.herbal = save.herbal || {})[key] = recipes()[key]; store();
+  S.mix = null; S.say = { text: SOUPS[kind].name, sub: dud ? "Only soup, this time." : "Made: " + HERBS[a].name.toLowerCase() + " and " + HERBS[b].name.toLowerCase() + ".", t: 0 };
+  ev("a soup made", { kind, from: key });
+}
+function drink(i) {
+  if (S.dying || S.mix || i >= S.flasks.length) return;
+  const kind = S.flasks.splice(i, 1)[0];
+  if (kind === "soup") { S.fuel = Math.min(1, S.fuel + 0.15); S.say = { text: SOUPS.soup.name, sub: SOUPS.soup.sub, t: 0 }; }
+  else { S.soup = { kind, t: 0 }; S.say = { text: SOUPS[kind].name, sub: SOUPS[kind].sub, t: 0 }; }
+  Sound.fx.kindle && Sound.fx.kindle(0.5, 0); ev("a soup drunk", { kind });
+}
+
 // ---- The tips -----------------------------------------------------------------------------------
 // A tip, the first time something is met: the world holds still while it is read, and a tap (or
 // any key) goes on. Each is shown once on this device; all of them can be turned off (the pause

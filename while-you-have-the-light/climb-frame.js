@@ -178,8 +178,12 @@ function physics(dt) {
   if (S.pulled) pullOf(dt);
   // (Light in a flip from the rope; all but weightless in the hover after it.)
   if (S.hoverT > 0 && !S.rope) { S.vy *= Math.max(0, 1 - 12 * dt); S.vx *= Math.max(0, 1 - 2.5 * dt); }
-  S.vy += GRAV * dt * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1) * (1 + 0.45 * heavy()) * (boonOn("friar") ? 0.45 : 1);
+  // (Rising soup: up, slowly, of himself; down sinks him. Feather soup: a third of his falling.)
+  const rising = soupOn("rising") && !S.rope && !S.cling && !S.act && !S.latched;
+  if (rising) { S.ground = false; S.vy += ((I.dn ? 70 : -38) - S.vy) * Math.min(1, dt * 3); }
+  else S.vy += GRAV * dt * (soupOn("feather") && S.vy > 0 ? 1 / 3 : 1) * (S.hoverT > 0 && !S.rope ? 0.05 : S.flip && S.flip.swap ? 0.35 : S.floatT > 0 ? 0.2 : 1) * (1 + 0.45 * heavy()) * (boonOn("friar") ? 0.45 : 1);
   if (boonOn("friar") && !S.rope && S.vy > FRIAR_FALL) S.vy = FRIAR_FALL;
+  if (soupOn("feather") && !S.rope && S.vy > VMAX / 3) S.vy = VMAX / 3;
   const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
   // On the ground the rope pays out as he walks, unless he is climbing it.
   if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, Math.max(ROPE_MAX, R.len));
@@ -240,6 +244,7 @@ function step(dt) {
   // Stopped at a verse, to read it: nothing moves till he goes on.
   if (S.verseHold) { if (S.verse) S.verse.t = Math.min(S.verse.t + dt, 0.6); return; }
   // A tip being read: nothing moves till he goes on.
+  if (S.mix) { stepMix(dt); return; }                // (the pouch open: the world holds still)
   if (S.tipHold) { if (S.say) S.say.t = Math.min(S.say.t + dt, 0.6); else if (S.tipHold === "fightSeen") S.fightHintT = Math.min(S.fightHintT + dt, 0.6); return; }
   // A great demon showing itself, or a relic held up: the world stopped, all but that.
   if (S.dread) { stepDread(dt); return; }
@@ -295,7 +300,8 @@ function step(dt) {
   for (const o of S.things) updThing(o, wdt);
   S.things = S.things.filter((o) => o.st !== "gone" && o.y < S.y + 1400);
   if (S.blocks.length) stepBlocks(wdt);
-  if (!S.dying && S.blockSeen) { const G = cartAt(S.x, S.y); if (G) heal(G); }      // (a lay brother tends him, once)
+  if (!S.dying && S.blockSeen) { const G = cartAt(S.x, S.y); if (G) heal(G); }
+  stepHerbs(wdt);      // (a lay brother tends him, once)
   if (S.bigs.length) stepGreat(wdt);
   if (S.rt >= REC.next) { REC.next = S.rt + 0.25; REC.snaps.push(snapNow()); if (REC.snaps.length > REC_N) REC.snaps.shift(); }
   if (S.yank) stepYank(wdt);

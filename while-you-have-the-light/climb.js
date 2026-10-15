@@ -72,6 +72,7 @@ const M = {
     if (!S || S.dying) return;
     if (S.verseHold) { goOn(); return; }
     if (S.tipHold) { tipGone(); return; }
+    if (S.mix) return;                               // (the pouch open: only its own buttons)
     if (S.dread || S.boonShow || S.angel) return;
     const id = pid(ev);
     if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
@@ -175,6 +176,9 @@ const M = {
     S.keys[code] = down;
     if (S.verseHold) { if (down) goOn(); return; }
     if (S.tipHold) { if (down && code !== "Escape" && code !== "KeyP") { tipGone(); return; } }
+    if (S.mix) { if (down) { if (code === "Escape" || code === "KeyB") { if (S.mix.grind < 0) S.mix = null; } else { const i = ["Digit1", "Digit2", "Digit3", "Digit4"].indexOf(code); if (i >= 0) pickHerb(HERB_KEYS[i]); } } return; }
+    if (down && code === "KeyB") { openPouch(); return; }
+    if (down && ["Digit1", "Digit2", "Digit3"].includes(code)) { drink(+code.slice(5) - 1); return; }
     if (!down) return;
     if ((S.dread || S.boonShow || S.angel) && code !== "Escape" && code !== "KeyP") return;
     if (code === "Escape" || code === "KeyP") M.pause();

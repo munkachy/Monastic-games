@@ -112,6 +112,7 @@ function placeFor(k, demonsOnly) {
   if (!demonsOnly && sec.dom) placeShrine(k, sec.dom, spots, taken);
   if (!demonsOnly && sin === "wrath") placeRocks(k, taken);
   if (!demonsOnly) placeGreat(k);
+  if (!demonsOnly) placeHerbs(k, sin);
 }
 // Boulders lying where he will want them: on the platform below a demon in a shaft, at the foot
 // of the shaft, or by the way into a crossing.
@@ -721,6 +722,7 @@ function updGreat(g, dt) {
   }
 }
 function greatReach(g) {
+  if (soupOn("unseen")) return;
   if (S.invT > 0 || S.dying) return;
   // On the rope, swinging hard enough for a kick: he is struck off it unharmed (and it is driven back
   // a little: only a block can hurt it). Slower, it takes him in, as anywhere (or the ward turns it).
@@ -816,6 +818,7 @@ function strikeGreat(g, b, real) {
 }
 // A great demon throws its mountain's missile at him (the summit's does not: its demons do).
 function greatThrows(g, cx, cy, dt) {
+  if (soupOn("unseen")) return;
   if (g.summit || g.stunT > 0 || S.dying || S.latched || g.st === "stone" && g.wake < 0.5) return;
   const [mx, my] = middle(), near = dist(cx, cy, mx, my) < 480 && los(cx, cy - g.ht * 0.25, mx, my);
   if (g.throwT === undefined) { if (near) g.throwT = 2; return; }
@@ -936,6 +939,7 @@ function drawAngelOver() {
 // Home: what he brought, kept (not from the white room); the mountain higher and harder the next
 // time; his place on it forgotten (it is climbed). Then the morning at home.
 function finishWon() {
+  if (!save.mortar && NOV && !NOV.room) { save.mortar = true; store(); S.mortarNew = true; }
   const r = { dom: NOV.domain, m: metres(S.top), binned: S.binned || 0, cast: S.cast, read: S.read, relics: S.relics, room: !!NOV.room, freed: bankFreed() };
   if (!NOV.room) {
     save.climbs = save.climbs || {}; save.climbs[NOV.domain] = (save.climbs[NOV.domain] || 0) + 1; r.climbs = save.climbs[NOV.domain];

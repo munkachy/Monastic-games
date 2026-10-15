@@ -110,7 +110,7 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (700 lines)
+### climb-run.js (777 lines)
 
 - **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 55, drained 62, die 65, heal 73, bankFreed 81, finish 85
 - **His place on a mountain, kept** (93): keptAll 102, forget 103, keepPlace 105, keepHere 125, restore 127, settle 155
@@ -118,18 +118,19 @@ the build and test scripts (see tools/README.md).
 - **The relics' boons** (235): BOONS 243, BOON_ORDER 249, boonOf 250, boonOn 251, showBoon 252, stepBoonShow 257, boonShare 263, grantBoon 267, stepBoon 276, vadeRetro 299, vadeGreat 317, drawToken 326, drawMonkFront 354, drawBoonShow 380, boonGlows 397
 - **The hook** (405): rayRock 407, nearLine 413
 - **Avarice's chains** (420): chainsNear 423, chainTip 428, onSeg 429, chainHit 432, swingChains 444, throwHook 455, flyShot 470, flipDur 504, dropRope 505, sideOf 528, tapSide 532, swapHook 533, nextHook 538, hookAngle 549
-- **The tips** (560): tipsOn 564, tipSeen 565, tip 566, tipGone 571, lessonDone 579, setTips 580, action 581, hangRope 597
-- **The rope round the rock** (617): bendsOf 622, pivotOf 623, freeOf 624, setFixed 625, sweepCorner 628, wrapRope 650
-- **The flare** (668): startFlare 669, endFlare 675, puff 679, blink 686
+- **The herbs, and the soups** (560): HERBS 567, SOUPS 569, soupOn 577, pairKey 578, recipes 580, placeHerbs 589, stepHerbs 600, canMix 611, openPouch 612, pickHerb 613, stepMix 620, drink 629
+- **The tips** (637): tipsOn 641, tipSeen 642, tip 643, tipGone 648, lessonDone 656, setTips 657, action 658, hangRope 674
+- **The rope round the rock** (694): bendsOf 699, pivotOf 700, freeOf 701, setFixed 702, sweepCorner 705, wrapRope 727
+- **The flare** (745): startFlare 746, endFlare 752, puff 756, blink 763
 
-### climb-foes.js (1190 lines)
+### climb-foes.js (1194 lines)
 
-- **The demons, and what they throw** (5): DEM 13, boxAt 15, moveBox 21, dFree 27, los 33, dMid 34, alive 35, panX 36, gain 37, setSt 38, spawnDemon 39, spotsFor 48, placeFor 89, placeRocks 118
-- **The shrines** (133): placeShrine 142
-- **The blocks** (166): SHAPES 183, newBlock 186, makeBlock 190, reveal 195, tie 204, takeUp 212, throwBlock 221, loosen 230, carryOff 238, shrineFor 244, dropBlock 251, seekBlock 257, floatTo 272, alight 292, floatDemon 293, rebuild 309, raiseIdol 315, yank 329, stepYank 334, brotherOf 347, binSlot 356, deliver 359, cartAt 368, unbin 375, stepBlocks 384, stepLoose 406, stepTied 432, flail 478, drawBlock 495, GLOWS 507, drawBlocks 508, drawTied 529, drawHeld 540, drawYank 549, drawBrother 556, rimNow 583, blockGlows 592
-- **The great demons** (607): GREAT 619, GREAT_V 620, planGreat 624, placeGreat 641, placeSummit 652, bigAt 662, stepGreat 663, updGreat 667, greatReach 723, latch 751, holdHim 764, punchOut 771, spitOut 777, strikeGreat 791, greatThrows 818, breakGreat 829, hurl 846, freedSay 855
-- **A great demon's dread** (856): DREAD_T 864
-- **The angel** (865): ANG 870, startAngel 871, stepAngel 880, angelAt 890, drawBeam 894, drawAngel 902, drawAngelOver 927, finishWon 938, hauntWait 949, canDread 950, onView 952, greatSays 956, startDread 959, stepDread 964, burstSpot 975, burstAfter 990, drawDread 998, MAW_STONE 1024, MAW_FLESH 1025, MAW_EYES 1026, MAW_CRACKS 1027, mawParts 1028, greatT 1109, laughK 1116, headTilt 1117, latchFrame 1122, paintMaw 1123, drawGreat 1138, drawLatch 1156, greatGlows 1163
+- **The demons, and what they throw** (5): DEM 13, boxAt 15, moveBox 21, dFree 27, los 33, dMid 34, alive 35, panX 36, gain 37, setSt 38, spawnDemon 39, spotsFor 48, placeFor 89, placeRocks 119
+- **The shrines** (134): placeShrine 143
+- **The blocks** (167): SHAPES 184, newBlock 187, makeBlock 191, reveal 196, tie 205, takeUp 213, throwBlock 222, loosen 231, carryOff 239, shrineFor 245, dropBlock 252, seekBlock 258, floatTo 273, alight 293, floatDemon 294, rebuild 310, raiseIdol 316, yank 330, stepYank 335, brotherOf 348, binSlot 357, deliver 360, cartAt 369, unbin 376, stepBlocks 385, stepLoose 407, stepTied 433, flail 479, drawBlock 496, GLOWS 508, drawBlocks 509, drawTied 530, drawHeld 541, drawYank 550, drawBrother 557, rimNow 584, blockGlows 593
+- **The great demons** (608): GREAT 620, GREAT_V 621, planGreat 625, placeGreat 642, placeSummit 653, bigAt 663, stepGreat 664, updGreat 668, greatReach 724, latch 753, holdHim 766, punchOut 773, spitOut 779, strikeGreat 793, greatThrows 820, breakGreat 832, hurl 849, freedSay 858
+- **A great demon's dread** (859): DREAD_T 867
+- **The angel** (868): ANG 873, startAngel 874, stepAngel 883, angelAt 893, drawBeam 897, drawAngel 905, drawAngelOver 930, finishWon 941, hauntWait 953, canDread 954, onView 956, greatSays 960, startDread 963, stepDread 968, burstSpot 979, burstAfter 994, drawDread 1002, MAW_STONE 1028, MAW_FLESH 1029, MAW_EYES 1030, MAW_CRACKS 1031, mawParts 1032, greatT 1113, laughK 1120, headTilt 1121, latchFrame 1126, paintMaw 1127, drawGreat 1142, drawLatch 1160, greatGlows 1167
 
 ### climb-fight.js (1059 lines)
 
@@ -140,19 +141,19 @@ the build and test scripts (see tools/README.md).
 - **The rock that gives way (Wrath's)** (742): crumblerAt 747, cellsOf 754, weigh 755, strikeRock 756, crack 757, stepCrumbling 772, hitMonk 780, demonAt 795, thingAt 796
 - **His blows, and the boulders in his hands** (798): inLight 805, reachable 806, jumpTo 807, startMove 814, strikeSpot 825, attack 833, heave 841, catchThing 848, throwHeld 858, besides 867, closeBy 869, swingBlock 871, bash 877, release 883, ATK_ANIM 892, stepAtk 893, gesture 954, stroke 974, blessDemon 989, ward 1005, spendWard 1022, wardFade 1026, stomp 1030, swingKick 1048
 
-### climb-frame.js (412 lines)
+### climb-frame.js (418 lines)
 
-- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 231, step 239
+- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 235, step 243
 
-### climb-draw.js (1247 lines)
+### climb-draw.js (1301 lines)
 
-- **Drawing** (4): lightR 5, visPoly 18, drawSky 42, darkness 65, slab 89, rockPath 99, drawTablet 184, torchBack 209, wallWalk 210, wallClimb 218, crawlPose 226, monkPose 230, demonPose 281, lightCross 312, drawSign 320, drawBoulder 350, drawRope 351, drawHook 357, goOnLine 367, drawHeart 369, draw 373
-- **The domains, drawn** (381): rgb 384, rgbs 385, tintStep 386, put 394, drawGlutton 396, shadeGlut 409, eyeGlut 420, GLUT_EYE 425, glutEye 426, addShape 437, addPoly 440, addOval 441, WORSHIP_ART 443, BEL 448, idolPath 458, drawShrine 495, drawWorshipper 521, drawShardOf 539, carved 546, drawGate 547, briarStrip 599, drawBriars 612, drawChain 636, drawCoin 647, drawAlms 655, drawThorn 665, drawRibbon 671, drawLamp 681, drawRelic 695, crackLines 705, drawFat 723, sheen 734, drawPrints 754, drawSlime 764, drawFire 782, drawWorld 788, lostMarker 1113, dpad 1131, dpadDir 1132, actBtn 1137, flareBtn 1138, climbWay 1141, sideArrow 1142, hud 1148
+- **Drawing** (4): lightR 5, visPoly 19, drawSky 43, darkness 66, slab 90, rockPath 100, drawTablet 185, torchBack 210, wallWalk 211, wallClimb 219, crawlPose 227, monkPose 231, demonPose 282, lightCross 313, drawSign 321, drawBoulder 351, drawRope 352, drawHook 358, goOnLine 368, drawHerb 372, pouchBtn 385, drawSoups 386, drawHeart 421, draw 425
+- **The domains, drawn** (433): rgb 436, rgbs 437, tintStep 438, put 446, drawGlutton 448, shadeGlut 461, eyeGlut 472, GLUT_EYE 477, glutEye 478, addShape 489, addPoly 492, addOval 493, WORSHIP_ART 495, BEL 500, idolPath 510, drawShrine 547, drawWorshipper 573, drawShardOf 591, carved 598, drawGate 599, briarStrip 651, drawBriars 664, drawChain 688, drawCoin 699, drawAlms 707, drawThorn 717, drawRibbon 723, drawLamp 733, drawRelic 747, crackLines 757, drawFat 775, sheen 786, drawPrints 806, drawSlime 816, drawFire 834, drawWorld 840, lostMarker 1166, dpad 1184, dpadDir 1185, actBtn 1190, flareBtn 1191, climbWay 1194, sideArrow 1195, hud 1201
 
-### climb.js (245 lines)
+### climb.js (249 lines)
 
 - **The record, for notes to Claude** (28): ev 35, r2 36, doing 37, snapNow 40, record 48, grabScreen 55
-- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 205
+- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 209
 
 ### notes.js (106 lines)
 
