@@ -1180,7 +1180,7 @@ function hud(hM) {
   if (S.meterFlash > 0 && Math.floor(S.rt * 10) % 2) ring(fb.x, fb.y, fb.r + 6, "rgba(220,80,60,0.9)", 2);
   text(usingKeys() ? "SHIFT" : "FLARE", fb.x, fb.y + 3, { align: "center", size: usingKeys() ? 6.5 : 7.5, weight: 800, spacing: 1, color: ready || F.on ? "#fff3dc" : "#77736c" });
   if (!usingKeys()) {
-    const f = actBtn(), lab = S.latched ? "STRIKE" : S.rope || S.hang ? "LET GO" : S.cling ? "LEAP" : S.held || (S.tied && S.tied.st === "hand") ? "DROP" : !S.tied && S.ground && cartAt(S.x, S.y, true) ? "TAKE" : S.look || lookable() ? "LOOK" : "";
+    const f = actBtn(), lab = S.latched ? "STRIKE" : S.rope || S.hang ? "LET GO" : S.cling ? "LEAP" : S.held || (S.tied && S.tied.st === "hand") ? "DROP" : !S.tied && S.ground && cartAt(S.x, S.y, true) ? "TAKE" : "";
     const on = [...S.touches.values()].some((t) => t.act);
     circle(f.x, f.y, f.r, on ? "rgba(255,179,71,0.22)" : "rgba(8,8,10,0.45)");
     ring(f.x, f.y, f.r, lab ? "rgba(255,179,71,0.55)" : "rgba(233,230,223,0.15)", 1.2);

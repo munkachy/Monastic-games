@@ -552,28 +552,6 @@ function tipGone() {
 // The climbing lesson at the start (not held: it waits for him to hook twice), once on the device.
 function lessonDone() { if (S.hooked >= 2 && !tipSeen("climbLesson")) { save.seen.tips = save.seen.tips || {}; save.seen.tips.climbLesson = true; store(); } }
 function setTips(on) { save.tipsOff = !on; if (on) save.seen.tips = {}; store(); }
-// ---- Looking about ----------------------------------------------------------------------------------
-// Still on the ground or on his knees, with nothing else for the button to do (nothing in his
-// hands, no rope hooked, no cart to take from), it reads LOOK: held, the thumb's cross moves the
-// view instead of him, about a screen each way, gliding out at twice his walk and back three
-// times as fast. He stays as he is, crouched or standing, while he looks.
-const LOOK_V = 2 * WALK, LOOK_BACK = 6 * WALK;
-function lookable() {
-  return S.ground && !S.rope && !S.held && !(S.tied && S.tied.st === "hand") && !S.act && !S.cling && !S.hang && !S.latched && !S.dying && !S.verseHold && !S.tipHold && !cartAt(S.x, S.y, true);
-}
-function stepLook(dt) {
-  const o = S.lookO || (S.lookO = { x: 0, y: 0, vx: 0, vy: 0 });
-  if (S.look && !lookable()) S.look = null;
-  if (S.look) {
-    const I = pads(), hx = I.d, vy = I.u && !I.both ? -1 : I.dn ? 1 : 0, L = Math.hypot(hx, vy) || 1;
-    const k = 1 - Math.exp(-dt * 6);                  // (eased into the glide: never a jump)
-    o.vx += (hx / L * LOOK_V - o.vx) * k; o.vy += (vy / L * LOOK_V - o.vy) * k;
-    o.x = clamp(o.x + o.vx * dt, -W * 0.85, W * 0.85); o.y = clamp(o.y + o.vy * dt, -H * 0.85, H * 0.85);
-  } else {
-    o.vx = 0; o.vy = 0; const d = Math.hypot(o.x, o.y); if (!d) return;
-    const step = Math.min(d, Math.min(LOOK_BACK, 40 + d * 5) * dt); o.x -= o.x / d * step; o.y -= o.y / d * step;
-  }
-}
 function action() {
   if (!S || S.dying || S.act) return;
   if (S.crawl) { upFromCrawl(); return; }
