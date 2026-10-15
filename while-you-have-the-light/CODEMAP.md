@@ -153,7 +153,7 @@ the build and test scripts (see tools/README.md).
 
 - **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 235, step 243
 
-### climb-draw.js (1301 lines)
+### climb-draw.js (1304 lines)
 
 - **Drawing** (4): lightR 5, visPoly 19, drawSky 43, darkness 66, slab 90, rockPath 100, drawTablet 185, torchBack 210, wallWalk 211, wallClimb 219, crawlPose 227, monkPose 231, demonPose 282, lightCross 313, drawSign 321, drawBoulder 351, drawRope 352, drawHook 358, goOnLine 368, drawHerb 372, pouchBtn 385, drawSoups 386, drawHeart 421, draw 425
 - **The domains, drawn** (433): rgb 436, rgbs 437, tintStep 438, put 446, drawGlutton 448, shadeGlut 461, eyeGlut 472, GLUT_EYE 477, glutEye 478, addShape 489, addPoly 492, addOval 493, WORSHIP_ART 495, BEL 500, idolPath 510, drawShrine 547, drawWorshipper 573, drawShardOf 591, carved 598, drawGate 599, briarStrip 651, drawBriars 664, drawChain 688, drawCoin 699, drawAlms 707, drawThorn 717, drawRibbon 723, drawLamp 733, drawRelic 747, crackLines 757, drawFat 775, sheen 786, drawPrints 806, drawSlime 816, drawFire 834, drawWorld 840, lostMarker 1166, dpad 1184, dpadDir 1185, actBtn 1190, flareBtn 1191, climbWay 1194, sideArrow 1195, hud 1201
@@ -185,20 +185,20 @@ the build and test scripts (see tools/README.md).
 - **The whole psalm, and what of it has been read** (27): split 41, keep 137
 - **The box for it, over the pause screen** (158): build 160, take 226, show 232, close 234
 
-### house.js (901 lines)
+### house.js (939 lines)
 
 - (top): SHAPES 18, SITES 21, placed 28, H_ 30
 - **What is kept** (32): data 33, siteData 55, takeBanked 57
 - **The stones, as bodies** (62): P 63, makeWorld 64, addStone 70, squares 77, siteOf 78, load 80, keep 86
-- **Laying a stone** (95): nearSite 96, holdSquares 98, sqHit 100, floorAt 109, blocked 110, landing 117, hangY 125, lay 130, takeUp 136, moveTo 143, nudge 152, turn 153, place 160, otherStone 170, putBack 180, inSquare 184, stoneAt 185, lift 186, loosen 195, recheck 200
-- **Each step** (212): step 213
-- **The people** (264): folkData 270, takePilgrims 272, makeFolk 279, loadFolk 285, receive 287, stepFolk 293, drawPerson 308, drawCamp 329, folkSigns 338
-- **Days and nights** (350): stepClock 354, nightK 360
-- **Drawn** (362): stoneFill 363, drawSquares 364, drawStone 372, outline 373, drawBuilt 378, draw 389
-- **Inside** (507): goIn 508, goOut 509, HOURS 515, hourOf 521, hasVerses 522, shelves 523, drawRoom 532, drawSpine 541, drawBook 555
-- **The choir** (588): freed 594, GLORIA 595, VOW 596, sylls 598, tone 607, hourVerses 626, sing 635, chorister 650, stallSeats 663, drawChoir 672, INSIDE 739
-- **Choosing where to build** (798): span 803, fits 804, emptyAt 811, openMenu 812, setPlace 818, unplace 823, drawMenu 824, drawNecrology 836
-- **Hands on it** (845): down 846, move 858, up 865, key 866, leave 885, open 887, M 898
+- **Laying a stone** (95): nearSite 96, holdSquares 98, sqHit 100, floorAt 109, blocked 110, landing 117, hangY 125, lay 130, takeUp 136, moveTo 143, nudge 152, turn 153, place 160, otherStone 170, putBack 180, inSquare 184, stoneAt 185, lift 186, loosen 195, ready 203, finish 204, addTo 210, recheck 216
+- **Each step** (228): step 229
+- **The people** (269): folkData 275, takePilgrims 277, makeFolk 284, loadFolk 290, receive 292, stepFolk 298, drawPerson 313, drawCamp 334, folkSigns 343
+- **Days and nights** (355): stepClock 359, nightK 365
+- **Drawn** (367): stoneFill 368, drawSquares 369, drawStone 377, outline 378, drawBuilt 383, draw 420
+- **Inside** (543): goIn 544, goOut 545, HOURS 551, hourOf 557, hasVerses 558, shelves 559, drawRoom 568, drawSpine 577, drawBook 591
+- **The choir** (624): freed 630, GLORIA 631, VOW 632, sylls 634, tone 643, hourVerses 662, sing 671, chorister 686, stallSeats 699, drawChoir 708, INSIDE 775
+- **Choosing where to build** (834): span 839, fits 840, emptyAt 847, openMenu 848, setPlace 854, unplace 859, drawMenu 860, drawNecrology 872
+- **Hands on it** (881): down 882, move 894, up 901, key 902, leave 923, open 925, M 936
 
 ### brothers.js (63 lines)
 
