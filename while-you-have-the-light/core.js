@@ -52,7 +52,6 @@ const easeIn = (k) => { k = clamp(k, 0, 1); return k * k * k; };
 const dist = (ax, ay, bx, by) => Math.hypot(bx - ax, by - ay);
 const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > PI) d -= TAU; if (d < -PI) d += TAU; return d; };
 const sign = (v) => (v < 0 ? -1 : 1);
-const pick = (arr, r) => arr[Math.floor((r === undefined ? Math.random() : r) * arr.length) % arr.length];
 // A seeded random stream (mulberry32): the same crags every time.
 function seeded(seed) {
   let a = seed >>> 0;
