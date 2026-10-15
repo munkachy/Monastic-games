@@ -145,7 +145,19 @@ function makeRoom(name, rnd) {
       if (marks[ch]) marks[ch].push([c * ROOM_K + 1, r * ROOM_K + 1]);
     }
   });
-  return { name, w: W, h: Hh, g, marks };
+  return seal({ name, w: W, h: Hh, g, marks });
+}
+// No hollows sealed in the rock: any air that cannot be reached from where he starts or from the
+// room's open edges becomes rock. (Until there is a way to break through to such places.)
+function seal(R) {
+  const { w, h, g } = R, seen = g.map((r) => r.map(() => false)), q = [];
+  const go = (x, y) => { if (x >= 0 && y >= 0 && x < w && y < h && !g[y][x] && !seen[y][x]) { seen[y][x] = true; q.push([x, y]); } };
+  for (let x = 0; x < w; x++) { go(x, 0); go(x, h - 1); }
+  for (let y = 0; y < h; y++) { go(0, y); go(w - 1, y); }
+  for (const [x, y] of R.marks.S) go(x, y);
+  while (q.length) { const [x, y] = q.pop(); go(x + 1, y); go(x - 1, y); go(x, y + 1); go(x, y - 1); }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!g[y][x] && !seen[y][x]) g[y][x] = true;
+  return R;
 }
 // Rooms linked: each laid against the last on the side its way leads (up, right or left) where the
 // next has a way in, or else above it or beside it; what they do not fill is rock. He starts in the
