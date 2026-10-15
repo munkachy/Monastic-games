@@ -197,6 +197,22 @@ const House = (() => {
     if (siteData(s).done) H_.recheck.add(s.id);
   }
   // A built place, its stones loosed: once they are still, does it still stand to its line?
+  // He says when it is done (once it has the stones it needs, all at rest): its stones made one
+  // building, in the shape he laid them, of one colour. Then it can be added to, three times, each
+  // time for the stones it cost to build.
+  const ready = (s) => { const on = H_.stones.filter((O) => siteOf(O) === s); return on.length >= s.need && on.every((O) => O.still > 0.8); };
+  function finish(s) {
+    const SD = siteData(s); if (SD.done || !ready(s)) return;
+    for (const O of H_.stones) if (siteOf(O) === s) O.body.setType("static");
+    SD.done = true; SD.level = 0; keep();
+    H_.built = { s, t: 0 }; Sound.fx.kindle && Sound.fx.kindle(1, 0); Sound.fx.unlock && Sound.fx.unlock();
+  }
+  function addTo(s) {
+    const SD = siteData(s), D = data(); if (!SD.done || (SD.level || 0) >= 3 || D.store.length < s.need) return;
+    D.store.splice(0, s.need); SD.level = (SD.level || 0) + 1; store();
+    H_.say = { text: s.name + " ADDED TO", sub: ["", "A door, and its windows lit.", "Bands of stone, buttresses, and the cross.", "A bell tower, and its lamp."][SD.level], t: 0 };
+    Sound.fx.kindle && Sound.fx.kindle(1, 0);
+  }
   function recheck(ids, said) {
     const hurt = [];
     for (const s of SITES) {
@@ -241,17 +257,6 @@ const House = (() => {
     H_.stillN = stillN;     // (the shadow of the stone in his hands is found again when something has moved)
     if (H_.sel && !H_.stones.includes(H_.sel)) H_.sel = null;
     if (H_.recheck.size && [...H_.recheck].every((id) => H_.stones.every((O) => O.still > 0.8 || (siteOf(O) || {}).id !== id))) recheck(H_.recheck, "NO LONGER WHOLE");
-    // A place built: its stones as many as it takes, and standing as high as the line, and all still.
-    for (const s of SITES) {
-      const SD = siteData(s); if (SD.done) continue;
-      const on = H_.stones.filter((O) => siteOf(O) === s);
-      if (on.length < s.need || on.some((O) => O.still < 0.8)) continue;
-      const top = Math.min(...on.flatMap((O) => squares(O).map((q) => q[1] - T / 2)));
-      if (top > GY - FH - s.h * T + T * 0.5) continue;
-      for (const O of on) O.body.setType("static");
-      SD.done = true; keep();
-      H_.built = { s, t: 0 }; Sound.fx.kindle && Sound.fx.kindle(1, 0); Sound.fx.unlock && Sound.fx.unlock();
-    }
     stepClock(dt);
     stepFolk(dt);
     if (H_.press && (H_.press.t += dt) >= HOLD_T) openMenu(H_.press);
@@ -376,15 +381,41 @@ const House = (() => {
     ctx.restore();
   }
   function drawBuilt(s, cam) {
-    const x0 = s.x - s.w * T / 2 - cam, x1 = s.x + s.w * T / 2 - cam, top = GY - FH - s.h * T, ink = "#0d0b10";
-    // The roof, the door, the windows lit within.
-    poly([x0 - 10, top + 2, (x0 + x1) / 2, top - (s.kind === "choir" ? 40 : 30), x1 + 10, top + 2], ink);
-    const mx = (x0 + x1) / 2, dw = 10, dh = 22;
-    ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(mx - dw, GY - FH); ctx.lineTo(mx - dw, GY - FH - dh + dw); ctx.arc(mx, GY - FH - dh + dw, dw, PI, 0); ctx.lineTo(mx + dw, GY - FH); ctx.closePath(); ctx.fill();
-    const lamp = 0.65 + 0.35 * Math.sin(H_.t * 1.7 + s.x);
-    for (const wx of s.kind === "choir" ? [x0 + 16, x1 - 16] : [x0 + 13, x1 - 13]) { rect(wx - 3, top + 12, 6, 12, "rgba(255,196,120," + (0.8 * lamp).toFixed(3) + ")"); glow(wx, top + 18, 16, C.flame, 0.25 * lamp); }
-    if (s.kind === "choir") { rect(mx - 6, top - 64, 12, 26, ink); poly([mx - 9, top - 64, mx, top - 78, mx + 9, top - 64], ink); rect(mx - 1, top - 92, 2, 14, ink); rect(mx - 5, top - 88, 10, 2, ink); }
-    if (s.kind === "library") { rect(mx - 4, top - 44, 8, 16, ink); }
+    const sq = H_.stones.filter((O) => siteOf(O) === s).flatMap(squares); if (!sq.length) return;
+    const SD = siteData(s), lv = SD.level || 0, ink = "#0d0b10", col = s.kind === "choir" ? "#6e6676" : "#76695a", t = H_.t;
+    // One shape: each square drawn a little larger in the edge's dark, then in the stone's colour.
+    const each = (pad, fill) => { for (const [x, y, a] of sq) { ctx.save(); ctx.translate(x - cam, y); ctx.rotate(a); rect(-T / 2 - pad, -T / 2 - pad, T + 2 * pad, T + 2 * pad, fill); ctx.restore(); } };
+    each(1.6, "#141016"); each(0.4, col);
+    const xs = sq.map((q) => q[0] - cam), ys = sq.map((q) => q[1]), x0 = Math.min(...xs) - T / 2, x1 = Math.max(...xs) + T / 2, top = Math.min(...ys) - T / 2, base = GY - FH, mx = (x0 + x1) / 2, hgt = base - top;
+    const peak = sq.reduce((p, q) => (q[1] < p[1] ? q : p)), px = peak[0] - cam;
+    // (What is added is drawn only within the shape.)
+    const clip = () => { ctx.save(); ctx.beginPath(); for (const [x, y, a] of sq) { const c = Math.cos(a), sn = Math.sin(a), h = T / 2 + 0.4; const P = [[-h, -h], [h, -h], [h, h], [-h, h]].map(([u, v]) => [x - cam + u * c - v * sn, y + u * sn + v * c]); ctx.moveTo(P[0][0], P[0][1]); for (const p of P.slice(1)) ctx.lineTo(p[0], p[1]); ctx.closePath(); } ctx.clip(); };
+    if (lv >= 2) {
+      // Bands of stone across it, and buttresses at its foot either side.
+      clip(); for (let y = base - T * 1.5; y > top + 4; y -= T * 2) rect(x0, y, x1 - x0, 3, "rgba(30,24,20,0.45)"); for (let x = x0 + T; x < x1; x += T) rect(x, top, 1, hgt, "rgba(255,240,215,0.06)"); ctx.restore();
+      poly([x0 - 10, base, x0, base, x0, base - Math.min(hgt * 0.6, 3 * T), x0 - 4, base - Math.min(hgt * 0.6, 3 * T) + 6], "#141016");
+      poly([x1 + 10, base, x1, base, x1, base - Math.min(hgt * 0.6, 3 * T), x1 + 4, base - Math.min(hgt * 0.6, 3 * T) + 6], "#141016");
+    }
+    if (lv >= 3) {
+      // A bell tower on its highest point, and its lamp.
+      const tw = T * 1.6, th = T * 3.2, ty = top - th;
+      rect(px - tw / 2 - 1.5, ty - 1.5, tw + 3, th + 3, "#141016"); rect(px - tw / 2, ty, tw, th + 2, col);
+      poly([px - tw / 2 - 4, ty, px, ty - T * 1.6, px + tw / 2 + 4, ty], ink);
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(px - 5, ty + T * 1.6); ctx.lineTo(px - 5, ty + 9); ctx.arc(px, ty + 9, 5, PI, 0); ctx.lineTo(px + 5, ty + T * 1.6); ctx.closePath(); ctx.fill();
+      const bl = 0.7 + 0.3 * Math.sin(t * 2.3); glow(px, ty + 14, 22, C.flame, 0.4 * bl); circle(px, ty + 15, 2.4, "rgba(255,210,140," + bl.toFixed(3) + ")");
+    }
+    if (lv >= 2) { const cy = (lv >= 3 ? top - T * 3.2 - T * 1.6 : top) - 2; rect(px - 1, cy - 14, 2, 14, ink); rect(px - 5, cy - 10, 10, 2, ink); }
+    if (lv >= 1) {
+      // A door at its foot, and windows lit within.
+      clip();
+      const dw = Math.min(10, (x1 - x0) / 5), dh = Math.min(26, hgt * 0.7);
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(mx - dw, base); ctx.lineTo(mx - dw, base - dh + dw); ctx.arc(mx, base - dh + dw, dw, PI, 0); ctx.lineTo(mx + dw, base); ctx.closePath(); ctx.fill();
+      const lamp = 0.65 + 0.35 * Math.sin(t * 1.7 + s.x);
+      for (const [wx, wy] of [[x0 + (x1 - x0) * 0.22, top + hgt * 0.35], [x1 - (x1 - x0) * 0.22, top + hgt * 0.35]]) if (hgt > 50) { ctx.beginPath(); ctx.moveTo(wx - 3, wy + 12); ctx.lineTo(wx - 3, wy + 3); ctx.arc(wx, wy + 3, 3, PI, 0); ctx.lineTo(wx + 3, wy + 12); ctx.closePath(); ctx.fillStyle = "rgba(255,196,120," + (0.8 * lamp).toFixed(3) + ")"; ctx.fill(); }
+      if (lv >= 3 && hgt > 70) { ctx.beginPath(); ctx.arc(mx, top + hgt * 0.32, 7, 0, TAU); ctx.fillStyle = "rgba(255,196,120," + (0.7 * lamp).toFixed(3) + ")"; ctx.fill(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; line(mx, top + hgt * 0.32, mx + Math.cos(a) * 7, top + hgt * 0.32 + Math.sin(a) * 7, ink, 1); } }
+      ctx.restore();
+      for (const wx of [x0 + (x1 - x0) * 0.22, x1 - (x1 - x0) * 0.22]) if (hgt > 50) glow(wx, top + hgt * 0.35 + 7, 16, C.flame, 0.22 * lamp);
+    }
   }
   function draw() {
     if (H_.inside) { INSIDE[H_.inside.kind].draw(H_.inside); if (H_.inside.t < 0.5) rect(0, 0, W, H, "rgba(0,0,0," + (1 - H_.inside.t / 0.5) + ")"); return; }
@@ -418,7 +449,7 @@ const House = (() => {
         { ctx.save(); ctx.setLineDash([3, 5]); ctx.strokeStyle = "rgba(255,226,170,0.22)"; ctx.beginPath(); ctx.moveTo(x0 - 10, top); ctx.lineTo(x0 + w / 2, top - (s.kind === "choir" ? 40 : 30)); ctx.lineTo(x0 + w + 10, top); ctx.stroke(); ctx.restore(); }
       }
     }
-    for (const S of H_.stones) drawStone(S, cam);
+    for (const S of H_.stones) { const s = siteOf(S); if (!(s && siteData(s).done)) drawStone(S, cam); }
     for (const s of SITES) if (siteData(s).done) drawBuilt(s, cam);
     drawCamp(cam, t);
     for (const f of H_.folk || []) drawPerson(f, cam);
@@ -444,11 +475,16 @@ const House = (() => {
     // The sign over the place he stands at.
     const signed = !H_.hold && !H_.sel && folkSigns(cam);
     if (near && !signed && !H_.hold && !H_.sel) {
-      const SD = siteData(near), on = H_.stones.filter((O) => siteOf(O) === near).length, sx = near.x - cam, sy = GY - FH - near.h * T - 52;
+      const SD = siteData(near), mine = H_.stones.filter((O) => siteOf(O) === near), on = mine.length, sx = near.x - cam;
+      // (Over whatever stands there: the line marked, or what he has built, and its tower.)
+      const built = mine.length ? Math.min(...mine.flatMap(squares).map((q) => q[1])) - T / 2 - ((SD.level || 0) >= 3 ? T * 4.8 : (SD.level || 0) >= 2 ? 16 : 0) : GY;
+      const sy = Math.max(30, Math.min(GY - FH - near.h * T, built) - 30);
       text(near.name, sx, sy, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
-      text(SD.done ? "Built" : on + " of " + near.need + " stones, up to the line", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
+      text(SD.done ? ((SD.level || 0) >= 3 ? "Built, and finished" : "Built  \u00b7  added to " + (SD.level || 0) + " of 3 times") : on + " of at least " + near.need + " stones", sx, sy + 12, { align: "center", size: 8, weight: 600, color: SD.done ? "#ffd9a0" : "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
       if (SD.done && INSIDE[near.kind]) button("GO IN", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, () => goIn(near.kind), { hot: true, sub: INSIDE[near.kind].sub() });
+      if (SD.done && (SD.level || 0) < 3) { const has = data().store.length >= near.need; button("ADD TO IT", clamp(sx + 68, 8, W - 128), H - 50, 120, 36, () => addTo(near), { hot: has, off: !has, sub: near.need + " stones  \u00b7  " + data().store.length + " in store" }); }
       if (!SD.done) {
+        if (ready(near)) button("FINISH IT", clamp(sx + 68, 8, W - 128), H - 50, 120, 36, () => finish(near), { hot: true, sub: "Or lay more first" });
         if (data().store.length) button("LAY A STONE", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, () => lay(near), { hot: true, sub: data().store.length + " in your store" });
         else text("No stones in your store: bring blocks to the carts on the mountains, and win its summit.", W / 2, H - 30, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, max: W - 40 });
       }
@@ -499,7 +535,7 @@ const House = (() => {
     if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you, to begin with.", W / 2, 132, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
     drawMenu(cam);
     if (H_.moving) text("Tap where " + H_.moving.name + " should stand.", W / 2, 150, { align: "center", font: FONT.line, italic: true, size: 13, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
-    else if (!H_.menu && !H_.hold && !H_.sel && !H_.inside && SITES.some((s) => s.x === null)) text("Hold on the ground to choose where to build.", W / 2, H - 14, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: 0.85, glow: "rgba(0,0,0,0.9)", blur: 4 });
+    else if (!H_.menu && !H_.hold && !H_.sel && !H_.inside && !nearSite() && Math.abs(H_.x - CAMP) > 70 && SITES.some((s) => s.x === null)) text("Hold on the ground to choose where to build.", W / 2, H - 14, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: 0.85, glow: "rgba(0,0,0,0.9)", blur: 4 });
     button("LEAVE", 12, H - 46, 80, 32, () => leave(), {});
     if (H_.t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - H_.t / 0.8) + ")");
   }
@@ -880,6 +916,8 @@ const House = (() => {
     }
     if ((code === "Space" || code === "Enter") && Math.abs(H_.x - CAMP) < 70) { receive(); return; }
     if (code === "Space" || code === "Enter") { const s = nearSite(); if (s && !siteData(s).done) lay(s); else if (s && INSIDE[s.kind]) goIn(s.kind); }
+    if (code === "KeyF") { const s = nearSite(); if (s) finish(s); }
+    if (code === "KeyU") { const s = nearSite(); if (s) addTo(s); }
     if (code === "Escape") { if (H_.menu || H_.moving) { H_.menu = null; H_.moving = null; } else leave(); }
   }
   function leave() { if (H_.hold) putBack(); keep(); Game.toTitle(); }
@@ -895,6 +933,6 @@ const House = (() => {
     H_.clock = { phase: "day", t: 0 };
     if (come) H_.say = { text: come === 1 ? "ONE FREED FROM THE IDOLS HAS COME DOWN" : come + " FREED FROM THE IDOLS HAVE COME DOWN", sub: "They wait by the fire at the gate, to be received.", t: -0.8 };
   }
-  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, data, get state() { return H_; }, SITES, CAMP, receive, lay, turn, nudge, place, drop: place, putBack, lift, landing };
+  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, data, get state() { return H_; }, SITES, CAMP, receive, lay, finish, addTo, turn, nudge, place, drop: place, putBack, lift, landing };
   return M;
 })();
