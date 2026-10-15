@@ -1301,3 +1301,41 @@ function hud(hM) {
   if (S.pulled && S.pulls <= 3) text(usingKeys() ? "ITS RIBBON DRAWS HIM IN: CLICK IT TO STRIKE, OR SWING INTO IT" : "ITS RIBBON DRAWS HIM IN: TAP IT TO STRIKE, OR SWING INTO IT", W / 2, H - 40, { align: "center", size: 8, weight: 800, spacing: 2, color: SINS.lust.light, alpha: 0.9, max: W - 260 });
   if (S.fuel < 0.25 && !S.dying) text(S.dark ? "IN THE DARK: FIND A CANDLE BY A VERSE, OR A LAY BROTHER" : "THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
 }
+
+// ---- The map ---------------------------------------------------------------------------------------
+// What he has seen of the mountain, kept as he goes in squares of MAP_T cells (all about him, as far
+// as the torch reaches); and on the pause, the whole mountain drawn small, dark but for those squares.
+const MAP_T = 8, MAP_P = 4;                      // cells to a square seen; cells to a pixel of the map
+function markSeen() {
+  if (!S.seen) S.seen = new Set();
+  const [mx, my] = middle(), r = Math.ceil(lightR() / CELL / MAP_T), ti = Math.floor(mx / CELL / MAP_T), tj = Math.floor(-my / CELL / MAP_T);
+  for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++) if (a * a + b * b <= r * r + 1) S.seen.add((ti + a) * 4096 + (tj + b));
+}
+// (Built once each pause: a pixel to MAP_P cells, from the foot to the summit, the width of the world.)
+let MAP = null;
+function buildMap() {
+  if (NOV && Number.isFinite(summitK())) ensureSecs(summitK());
+  const su = summitSec(), top = su ? su.h0 + 8 : Math.ceil(S.top / CELL) + 60, w = Math.ceil(COLS / MAP_P), h = Math.ceil(top / MAP_P);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d"), img = g.createImageData(w, h), d = img.data;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = x * MAP_P, hh = (h - y) * MAP_P, p = (y * w + x) * 4;
+    if (!(S.seen && S.seen.has(Math.floor(i / MAP_T) * 4096 + Math.floor(hh / MAP_T)))) { d[p + 3] = 0; continue; }
+    const rock = solid(i + 1, -hh);
+    d[p] = rock ? 58 : 196; d[p + 1] = rock ? 50 : 182; d[p + 2] = rock ? 42 : 156; d[p + 3] = 255;
+  }
+  g.putImageData(img, 0, 0); MAP = { c, w, h, top };
+}
+// (Near: the part of it about him, larger, filling the space given.)
+function drawMap(x, y, w, h, near) {
+  if (!MAP) buildMap();
+  const fit = Math.min(w / MAP.w, h / MAP.h), k = near ? Math.max(fit * 4, Math.min(w / MAP.w, 3)) : fit;
+  const mx = S.x / CELL / MAP_P, my = MAP.h - -S.y / CELL / MAP_P;       // (where he is, in the map's pixels)
+  const vw = Math.min(w, MAP.w * k), vh = Math.min(h, MAP.h * k), ox = x + (w - vw) / 2;
+  const sx = clamp(mx - vw / k / 2, 0, Math.max(0, MAP.w - vw / k)), sy = clamp(my - vh / k / 2, 0, Math.max(0, MAP.h - vh / k));
+  rect(ox - 2, y - 2, vw + 4, vh + 4, "#050506"); ctx.strokeStyle = "rgba(255,179,71,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(ox - 2.5, y - 2.5, vw + 5, vh + 5);
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(MAP.c, sx, sy, vw / k, vh / k, ox, y, vw, vh); ctx.imageSmoothingEnabled = true;
+  // (Where he is: a flame.)
+  const px = ox + (mx - sx) * k, py = y + (my - sy) * k;
+  glow(px, py, 9, C.flame, 0.6); circle(px, py, 2.2, C.flameHot);
+  return [ox, y, vw, vh];
+}

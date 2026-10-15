@@ -272,6 +272,7 @@ function step(dt) {
     if (S.rt - g.t0 >= HOLD_SIGN) { g.done = true; if (g.f) blessDemon(g.f); else ward(); }
   }
   if (S.dying) { S.dying += dt; if (S.dying > 1.7) { finish(); return; } }
+  markSeen();
   // (A room alone, from the piece picker: walked out by a way at its side, it is done.)
   if (NOV && NOV.piece && secs[0] && secs[0].type === "room" && !secs[0].R.whole && !S.dying) { const r = secs[0]; if (S.x < (r.x0 + 1) * CELL || S.x > (r.x0 + r.R.w - 1) * CELL) { pieceOut = true; finish(); return; } }
   const F = S.flare;

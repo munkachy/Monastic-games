@@ -189,7 +189,7 @@ const M = {
   pause() {
     if (mode !== M || S.dying) return;
     M.pauseShot = grabScreen(); try { M.pauseRec = record(); } catch (e) { fault(e); M.pauseRec = { faults: FAULTS.slice() }; }
-    ClimbPause.t = 0; mode = ClimbPause; Sound.muffle(true, 0.2);
+    ClimbPause.t = 0; MAP = null; mode = ClimbPause; Sound.muffle(true, 0.2);
   },
   resume() {
     mode = M; Sound.muffle(false, 0.2);
@@ -229,7 +229,15 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     if (typeof Verses !== "undefined") b("THE VERSES", () => Verses.open(), { sub: Verses.custom ? "Your own, from a file" : "Douay-Rheims, or your own" });
     if (typeof Notes !== "undefined" && Notes.ready) b("A NOTE FOR CLAUDE", () => Notes.open(Climb.pauseShot, Climb.pauseRec), { sub: "What happened; what should change" });
+    b(ClimbPause.moves ? "THE MAP" : "THE MOVES", () => { ClimbPause.moves = !ClimbPause.moves; }, { sub: ClimbPause.moves ? "What you have seen of the mountain" : "How he climbs, and fights" });
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
+    if (!ClimbPause.moves) {
+      text("THE MAP", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });
+      text(metres(-S.y) + " m up", W - 16, 40, { align: "right", size: 9, weight: 700, color: "#b9b3a6" });
+      try { const [bx, by, bw2, bh] = drawMap(mx, 54, W - mx - 16, H - 74, ClimbPause.near); buttons.push({ x: bx, y: by, w: bw2, h: bh, act: () => { ClimbPause.near = !ClimbPause.near; } }); } catch (e) { fault(e); }
+      text(ClimbPause.near ? "Tap the map for the whole mountain" : "Tap the map to see near you", mx + (W - mx - 16) / 2, H - 8, { align: "center", size: 7, weight: 600, color: "#8a857b" });
+      return;
+    }
     const mv = usingKeys()
       ? [["CLICK THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["W, OR BOTH ARROWS", "Climb the rope or the rock; at a ledge, again to pull up"], ["S OR \u2193", "Let the rope out, climb down; on the ground, crawl (into a way too low to stand in, he crawls by himself)"], ["← →  OR  A D", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["SPACE", "Let go, leap off a wall, drop what he holds"], ["CLICK A DEMON IN THE LIGHT", "Zip and strike; hold ▲ / ▼ / ◀▶ as you click (or drag that way): uppercut, slam, hurl; land on it: stomp"], ["CLICK WHAT IS THROWN, THEN CLICK", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD THE CLICK ON A DEMON / ON HIM", "The sign of the cross: drives it back (costs flare) / a ward, free, for 45 s: it turns one blow that reaches him"], ["SHIFT", "The flare: time slows; click anywhere: appear there. Fills slowly, faster as you fight"]]
       : [["TAP THE ROCK", "He throws the hook there, however far (a long throw reels him up); swinging, to one side of him: he flips, then hooks up that way"], ["▲  ▼", "Climb the rope or the rock (at a ledge, again to pull up); let out the rope, climb down; on the ground, ▼ crawls (into a way too low to stand in, he crawls by himself)"], ["◀  ▶", "Rock the swing to build it (swing into what is thrown: kick it back); walk; toward a wall: climb it (not mid-flip)"], ["THE CORNER BUTTON", "Let go, leap off a wall, drop what he holds"], ["TAP A DEMON IN THE LIGHT", "Zip and strike; swipe up / down / across: uppercut, slam, hurl; land on it: stomp"], ["TAP WHAT IS THROWN, THEN TAP", "Standing, he catches it as it comes; then he flings it (near a demon: strikes with it)"], ["HOLD STILL ON A DEMON / TWO FINGERS", "The sign of the cross: drives it back (costs flare) / over himself, a ward, free, for 45 s: it turns one blow that reaches him"], ["FLARE", "Time slows; tap anywhere: appear there; tap what is thrown: take it. Fills slowly, faster as you fight"]];
