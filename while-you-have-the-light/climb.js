@@ -71,6 +71,7 @@ const M = {
   down(p, ev) {
     if (!S || S.dying) return;
     if (S.verseHold) { goOn(); return; }
+    if (S.tipHold) { tipGone(); return; }
     if (S.dread || S.boonShow || S.angel) return;
     const id = pid(ev);
     if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
@@ -167,6 +168,7 @@ const M = {
     if (!S) return;
     S.keys[code] = down;
     if (S.verseHold) { if (down) goOn(); return; }
+    if (S.tipHold) { if (down && code !== "Escape" && code !== "KeyP") { tipGone(); return; } }
     if (!down) return;
     if ((S.dread || S.boonShow || S.angel) && code !== "Escape" && code !== "KeyP") return;
     if (code === "Escape" || code === "KeyP") M.pause();
@@ -209,7 +211,8 @@ const ClimbPause = {
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(true); }, room ? { sub: "The same scene, from its start" } : Climb.nov ? { sub: "From the foot of the mountain" } : {});
     if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Say another scene" });
     else b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
-    b(soundLabel(), cycleSound);
+    { const hw = bw / 2 - 3; button(soundLabel(), cx - bw / 2, y, hw, 30, cycleSound, {});
+      button(tipsOn() ? "TIPS: ON" : "TIPS: OFF", cx + 3, y, hw, 30, () => setTips(!tipsOn()), { sub: tipsOn() ? "" : "On again: all shown again" }); y += 38; }
     b("BACK TO THE TITLE", () => Game.toTitle());
     if (typeof Verses !== "undefined") b("THE VERSES", () => Verses.open(), { sub: Verses.custom ? "Your own, from a file" : "Douay-Rheims, or your own" });
     if (typeof Notes !== "undefined" && Notes.ready) b("A NOTE FOR CLAUDE", () => Notes.open(Climb.pauseShot, Climb.pauseRec), { sub: "What happened; what should change" });

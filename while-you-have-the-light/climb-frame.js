@@ -20,7 +20,7 @@ function lowWay(d) { const x = S.x + d * (HW + 6); return !boxAt(x, S.y - 0.5, H
 function startCrawl() {
   if (S.rope) dropRope(true);
   S.crawl = true; S.climbing = false; Sound.fx.grab(); ev("crawling");
-  if (!S.crawlSeen) { S.crawlSeen = true; S.say = { text: "A LOW WAY", sub: usingKeys() ? "He goes on his hands and knees (or hold \u2193 to crawl)." : "He goes on his hands and knees (or hold \u25bc to crawl).", t: 0 }; }
+  if (!S.crawlSeen) { S.crawlSeen = true; tip("crawlSeen", { text: "A LOW WAY", sub: usingKeys() ? "He goes on his hands and knees (or hold \u2193 to crawl)." : "He goes on his hands and knees (or hold \u25bc to crawl).", t: 0 }); }
 }
 // Getting up from his knees to do something: only where there is room to stand.
 function upFromCrawl() { if (!S.crawl) return true; if (boxAt(S.x, S.y - 0.5, HW, HT)) return false; S.crawl = false; return true; }
@@ -239,6 +239,8 @@ function unlose() {
 function step(dt) {
   // Stopped at a verse, to read it: nothing moves till he goes on.
   if (S.verseHold) { if (S.verse) S.verse.t = Math.min(S.verse.t + dt, 0.6); return; }
+  // A tip being read: nothing moves till he goes on.
+  if (S.tipHold) { if (S.say) S.say.t = Math.min(S.say.t + dt, 0.6); else if (S.tipHold === "fightSeen") S.fightHintT = Math.min(S.fightHintT + dt, 0.6); return; }
   // A great demon showing itself, or a relic held up: the world stopped, all but that.
   if (S.dread) { stepDread(dt); return; }
   if (S.boonShow) { stepBoonShow(dt); return; }
@@ -300,7 +302,11 @@ function step(dt) {
   if (S.crownSpin > 0) { S.crownSpin = Math.max(0, S.crownSpin - wdt); if (Math.random() < 0.5) S.ghosts.push({ x: S.drawX || S.x, y: S.drawY || S.y, dir: S.dir, p: S.lastPose || STAND, age: 0.35 }); if (S.ground) S.crownSpin = 0; }
   S.leanT = Math.max(0, (S.leanT || 0) - wdt); S.greaseT = Math.max(0, (S.greaseT || 0) - dt); S.liftT = Math.max(0, (S.liftT || 0) - wdt); S.leapT = Math.max(0, (S.leapT || 0) - wdt); S.leapCd = Math.max(0, (S.leapCd || 0) - wdt); S.kickCd = Math.max(0, S.kickCd - wdt); S.swingKickT = Math.max(0, S.swingKickT - wdt);
 
-  if (!S.fightSeen && S.demons.some((f) => alive(f) && !f.idol && dist(f.x, f.y, S.x, S.y) < 420)) { S.fightSeen = true; S.fightHintT = 0; }
+  if (!S.fightSeen && S.demons.some((f) => alive(f) && !f.idol && dist(f.x, f.y, S.x, S.y) < 420)) {
+    // (The moves against the demons: a tip, held while it is read; off or seen before, not shown.)
+    S.fightSeen = true; S.fightHintT = 0;
+    if (!tipsOn() || tipSeen("fightSeen")) S.fightHintT = 99; else { S.tipHold = "fightSeen"; Sound.muffle(true, 0.3); }
+  }
   if (S.fightSeen) S.fightHintT += dt;
   S.landT = Math.max(0, S.landT - wdt); S.throwT = Math.max(0, S.throwT - wdt); S.stompT = Math.max(0, (S.stompT || 0) - wdt); S.jumpT = Math.max(0, (S.jumpT || 0) - wdt);
   S.hoverT = Math.max(0, (S.hoverT || 0) - wdt);

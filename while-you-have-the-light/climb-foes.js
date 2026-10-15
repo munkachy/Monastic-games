@@ -199,13 +199,13 @@ function reveal(b, I) {
   const K = I.big || 1, s = sign(S.x - I.x) || 1;
   Object.assign(b, { st: "loose", by: null, claim: null, x: I.x + s * 6, y: I.y - 24 * K, vx: s * (40 + Math.random() * 40), vy: -300, nopick: S.rt + 0.35, unseen: S.rt + 1.25, age: 0, rot: 0 });
   for (let k = 0; k < 14; k++) { const a = Math.random() * TAU, v = 40 + Math.random() * 120; S.parts.push({ kind: "spark", c: SINS[b.dom].light, x: b.x, y: b.y - 8, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.8, age: 0, real: true }); }
-  if (!S.blockSeen) { S.blockSeen = true; S.say = { text: "A BLOCK FROM THE IDOL", sub: "Go to it and it is tied to your belt. A lay brother waits at the gate above.", t: 0 }; }
+  if (!S.blockSeen) { S.blockSeen = true; tip("blockSeen", { text: "A BLOCK FROM THE IDOL", sub: "Go to it and it is tied to your belt. A lay brother waits at the gate above.", t: 0 }); }
 }
 function tie(b) {
   ev("block tied on", { shape: b.shape });
   b.st = "tied"; b.by = null; b.claim = null; b.rope = TETHER; b.flung = false; S.tied = b; S.lost = null; Sound.fx.tie(panX(b.x));
   if (S.blockK === undefined) S.blockK = S.popK;        // (from here on up, the great demons may come)
-  if (!S.tiedSeen) { S.tiedSeen = true; S.say = { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons, or tap it and throw it. Bring it to the gate.", t: 0 }; }
+  if (!S.tiedSeen) { S.tiedSeen = true; tip("tiedSeen", { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons, or tap it and throw it. Bring it to the gate.", t: 0 }); }
 }
 // Tapped, the block on his rope (near him): he takes it up in his hands, to throw. While he
 // holds it his hands are full: on the rock, a ledge or the rope, it hangs from the rope again.
@@ -213,7 +213,7 @@ function takeUp() {
   const b = S.tied; if (!b || b.st !== "tied" || b.flung || S.held || S.rope || S.cling || S.hang || S.act || S.latched || S.dying) return false;
   const [mx, my] = middle(); if (dist(mx, my, b.x, b.y - b.ht / 2) > TETHER + 34) return false;
   b.st = "hand"; Sound.fx.pickup(); ev("block taken up");
-  if (!S.handSeen) { S.handSeen = true; S.say = { text: "IN HIS HANDS", sub: "Tap where to throw it. Its rope pays out after it.", t: 0 }; }
+  if (!S.handSeen) { S.handSeen = true; tip("handSeen", { text: "IN HIS HANDS", sub: "Tap where to throw it. Its rope pays out after it.", t: 0 }); }
   return true;
 }
 // Thrown at a point: hard, with arc enough to reach it, its rope paying out behind it (as far as
@@ -239,7 +239,7 @@ function carryOff(f, b) {
   ev("a demon took the block", { sin: f.sin });
   b.st = "carried"; b.by = f; b.claim = null; f.block = b; f.want = null;
   f.dest = shrineFor(f, b); setSt(f, "carry"); f.ground = false; f.stuckT = 0; f.ghostT = 0;
-  if (!S.carrySeen && dist(f.x, f.y, S.x, S.y) < 700) { S.carrySeen = true; S.say = { text: "A DEMON HAS THE BLOCK", sub: "Tap it: the hook pulls it down. Stop it before it reaches a shrine.", t: 0 }; }
+  if (!S.carrySeen && dist(f.x, f.y, S.x, S.y) < 700) { S.carrySeen = true; tip("carrySeen", { text: "A DEMON HAS THE BLOCK", sub: "Tap it: the hook pulls it down. Stop it before it reaches a shrine.", t: 0 }); }
 }
 function shrineFor(f, b) {
   const cands = S.demons.filter((g) => g.idol && g.st !== "gone");
@@ -322,7 +322,7 @@ function raiseIdol(I, b) {
   if (I.st !== "idle") setSt(I, "rise");
   Sound.fx.rise(panX(I.x)); S.shake = Math.max(S.shake, 0.1);
   for (let k = 0; k < 18; k++) S.parts.push({ kind: "smoke", x: I.x + (Math.random() - 0.5) * 40 * I.big, y: I.y - Math.random() * 50 * I.big, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 30, r: 4 + Math.random() * 6, life: 1.2, age: 0 });
-  if (!S.riseSeen && dist(I.x, I.y, S.x, S.y) < 760) { S.riseSeen = true; S.say = { text: "THE IDOL RISES AGAIN", sub: "Bigger now, and harder to throw down. The block is in it.", t: 0 }; }
+  if (!S.riseSeen && dist(I.x, I.y, S.x, S.y) < 760) { S.riseSeen = true; tip("riseSeen", { text: "THE IDOL RISES AGAIN", sub: "Bigger now, and harder to throw down. The block is in it.", t: 0 }); }
 }
 // The hook thrown at a demon in the air with a block (or going for one): it bites, and the demon
 // is pulled down out of the air toward him, and lets go of what it holds.
@@ -759,7 +759,7 @@ function latch(g) {
   if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.dir * 60; S.held.vy = -80; S.held = null; }
   if (S.tied && S.tied.st === "hand") S.tied.st = "tied";
   S.shake = 0.3; Sound.fx.chomp(panX(S.x));
-  if (!S.latchSeen) { S.latchSeen = true; S.say = { text: "IT HAS HIM", sub: usingKeys() ? "Click, click, click (or any key): fight your way out. While it holds him, his light goes." : "Tap, tap, tap: fight your way out. While it holds him, his light goes.", t: 0 }; }
+  if (!S.latchSeen) { S.latchSeen = true; tip("latchSeen", { text: "IT HAS HIM", sub: usingKeys() ? "Click, click, click (or any key): fight your way out. While it holds him, his light goes." : "Tap, tap, tap: fight your way out. While it holds him, his light goes.", t: 0 }); }
 }
 function holdHim(g, dt) {
   g.latchT += dt; g.anim += dt * 1.5; g.x = S.x; g.y = S.y - 4;
@@ -850,9 +850,9 @@ function hurl(g, b) {
   Object.assign(b, { st: "loose", by: null, claim: null, flung: false, rope: TETHER, x: hx, y: hy + b.ht / 2, vx: (mx - hx) / T, vy: (my - hy) / T - 0.5 * 640 * T, rot: 0, ground: false, hurled: S.rt, nopick: S.rt + 0.5, unseen: S.rt + 3 });
   g.flingT = 0.35; g.chew = 0.3;
   Sound.fx.growl(panX(g.x), 0.6); Sound.fx.throw(1);
-  if (!S.hurlSeen) { S.hurlSeen = true; S.say = { text: "IT THREW THE BLOCK BACK", sub: "Take it up again, and throw it true.", t: 0 }; }
+  if (!S.hurlSeen) { S.hurlSeen = true; tip("hurlSeen", { text: "IT THREW THE BLOCK BACK", sub: "Take it up again, and throw it true.", t: 0 }); }
 }
-function freedSay() { S.freedPend = false; S.freedSeen = true; S.say = { text: "IT FOLLOWS NO FURTHER", sub: "\u201cThy word is a lamp to my feet.\u201d", t: 0 }; }
+function freedSay() { S.freedPend = false; S.freedSeen = true; tip("freedSeen", { text: "IT FOLLOWS NO FURTHER", sub: "\u201cThy word is a lamp to my feet.\u201d", t: 0 }); }
 // ---- A great demon's dread ----------------------------------------------------------------------------
 // The first time one comes into his light, the world stops: it shows itself (its flesh, its jaws,
 // its eyes burning; white as a coal by flashes) while the sting sounds, and then all goes on as
@@ -954,7 +954,7 @@ function onView(g, m) {
   return g.x + g.hw > c.x - m && g.x - g.hw < c.x + W + m && g.y > c.y - m && g.y - g.ht < c.y + H + m;
 }
 function greatSays() {
-  if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light, and it throws. Only a block can hurt it; strike it, and the block is torn from your rope.", t: 0 }; }
+  if (!S.greatSeen) { S.greatSeen = true; tip("greatSeen", { text: "A GREAT DEMON", sub: "It moves only while you face it in the light, and it throws. Only a block can hurt it; strike it, and the block is torn from your rope.", t: 0 }); }
 }
 function startDread(g, kind, from) {
   S.dread = { g, kind, t: 0, T: DREAD_T[kind], from: from || null };
@@ -968,7 +968,7 @@ function stepDread(dt) {
   const g = D.g; g.lostT = 0;
   if (D.kind !== "meet" && !g.summit) g.throwT = 0;          // (come round behind him: it throws at once)
   if (D.kind === "meet") greatSays();
-  else if (!S.hauntSeen) { S.hauntSeen = true; S.say = { text: "IT FOLLOWS YOU", sub: "Leave it behind, and it comes after you. Cast it down, or read a verse, and it follows no further.", t: 0 }; }
+  else if (!S.hauntSeen) { S.hauntSeen = true; tip("hauntSeen", { text: "IT FOLLOWS YOU", sub: "Leave it behind, and it comes after you. Cast it down, or read a verse, and it follows no further.", t: 0 }); }
 }
 // Where it comes in, bursting after him: at the edge of the view, the way he left it, by his back
 // if it can be, in the open (each way round the edge tried, and the best taken).

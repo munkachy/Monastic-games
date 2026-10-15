@@ -29,7 +29,7 @@ function hitIdol(f, dmg, kx) {
     if (f.whoKinds && f.whoKinds.length && !(NOV && NOV.room)) {
       for (const k of f.whoKinds) S.freedList.push([f.sin, k]);
       ev("worshippers freed", { n: f.whoKinds.length });
-      if (!save.seen.freedFolk) { save.seen.freedFolk = true; store(); S.say = { text: "THEY ARE FREE", sub: "Those who worshipped it will go down to the monastery, and wait for you at its gate.", t: 0 }; }
+      if (!save.seen.freedFolk) { save.seen.freedFolk = true; store(); tip("freedFolk", { text: "THEY ARE FREE", sub: "Those who worshipped it will go down to the monastery, and wait for you at its gate.", t: 0 }); }
       f.whoKinds = null;
     }
     // The idol thrown down, his torch is filled again: the light it was keeping comes to him.
@@ -471,7 +471,7 @@ function swallowLegs(f) {
   breakCombo();
   S.legsIn = { f, t: 0, kicks: 0 }; setSt(f, "legs"); S.hang = null; S.cling = 0; S.atk = null; S.act = null;
   Sound.fx.swallow(); Sound.fx.chomp(panX(S.x)); S.shake = 0.18; ev("legs swallowed");
-  if (!S.legsSeen) { S.legsSeen = true; S.say = { text: "IT HAS HIS LEGS", sub: "Swing him hard into the rock, or tap it and kick: knock it off.", t: 0 }; }
+  if (!S.legsSeen) { S.legsSeen = true; tip("legsSeen", { text: "IT HAS HIS LEGS", sub: "Swing him hard into the rock, or tap it and kick: knock it off.", t: 0 }); }
   return true;
 }
 function stepLegs(dt) {
@@ -1012,7 +1012,7 @@ function ward() {
     S.things.push({ kind: "coin", x: cx - S.dir * 5, y: cy + 4, vx: -S.dir * (50 + Math.random() * 40), vy: -150, rot: 0, vr: 0, st: "fly", by: null, g: 330, age: 0, life: 4, r: 4 });
     for (let k = 0; k < 6; k++) S.parts.push({ kind: "spark", c: SINS.avarice.color, x: cx - S.dir * 5, y: cy + 4, vx: (Math.random() - 0.5) * 90, vy: -20 - Math.random() * 70, life: 0.45, age: 0, real: true });
     Sound.fx.coin(panX(cx), 0.8);
-    if (!S.shedSeen) { S.shedSeen = true; S.say = { text: "A COIN SHAKEN OFF", sub: "With each blessing, one of the coins on him falls away.", t: 0 }; }
+    if (!S.shedSeen) { S.shedSeen = true; tip("shedSeen", { text: "A COIN SHAKEN OFF", sub: "With each blessing, one of the coins on him falls away.", t: 0 }); }
   }
 }
 // A blow turned: the ward spent (doubled, one of the two; under St Benedict's medal, not at all).

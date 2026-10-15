@@ -32,6 +32,7 @@ function start(opts) {
     crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0, freedList: [],
     blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false, bigs: [], latched: null, prints: [], greatDown: new Set(), foot: null, kept: null, keptAt: null,
   };
+  if (!tipsOn() || tipSeen("climbLesson")) { S.hintT = 99; S.hooked = 9; }   // (the climbing lesson: once on the device)
   REC = { snaps: [], events: [], next: 0 };
   if (NOV && !NOV.room) {                           // (a scene from the white room keeps nothing, and leaves every kept place alone)
     for (const d of Object.keys(keptAll())) if (d !== NOV.domain) forget(d);      // (one mountain at a time: going to another, he leaves the last)
@@ -450,7 +451,7 @@ function flyShot(dt) {
       // Into a chain: he swings from its beam, the chain and the rope one line.
       const c = sh.chain, [gx, gy] = grip();
       S.rope = { x: c.x, y: c.y, len: clamp(dist(gx, gy, c.x, c.y), ROPE_MIN, 9999), bends: [], fixed: 0, hx: sh.tx, hy: sh.ty, chain: c, along: Math.max(12, dist(c.x, c.y, sh.tx, sh.ty)) };
-      S.ropeVis = S.shotVis; S.shot = null; S.hooked++; Sound.fx.tether(); Sound.fx.chain(panX(c.x));
+      S.ropeVis = S.shotVis; S.shot = null; S.hooked++; lessonDone(); Sound.fx.tether(); Sound.fx.chain(panX(c.x));
       return;
     }
     if (sh.hit) {
@@ -458,7 +459,7 @@ function flyShot(dt) {
       // The hook bites at the rock's face: the rope runs from just outside it, never through it.
       let hx = sh.tx, hy = sh.ty; for (let k = 0; k < 8 && solidAt(hx, hy); k++) { hx -= sh.ux * 1; hy -= sh.uy * 1; }
       S.rope = { x: hx, y: hy, len: Math.max(ROPE_MIN, dist(gx, gy, hx, hy)), bends: [], fixed: 0, hx: sh.tx, hy: sh.ty };
-      S.ropeVis = S.shotVis; S.shot = null; S.hooked++;
+      S.ropeVis = S.shotVis; S.shot = null; S.hooked++; lessonDone();
       wrapRope(S.rope, gx, gy); if (freeOf(S.rope) < ROPE_MIN * 0.5) S.rope.len = (S.rope.fixed || 0) + Math.max(ROPE_MIN * 0.5, dist(gx, gy, pivotOf(S.rope).x, pivotOf(S.rope).y));
       Sound.fx.tether(); if (S.rope.len > ROPE_MAX + 60) Sound.fx.whoosh(0.5);
       for (let q = 0; q < 5; q++) S.parts.push({ kind: "chip", x: sh.tx, y: sh.ty, vx: (Math.random() - 0.5) * 120 - sh.ux * 60, vy: (Math.random() - 0.5) * 120 - sh.uy * 60, life: 0.4, age: 0 });
@@ -530,6 +531,27 @@ function hookAngle(gx, gy, side) {
   }
   return best === null ? Math.atan2(-1, side) : best;
 }
+// ---- The tips -----------------------------------------------------------------------------------
+// A tip, the first time something is met: the world holds still while it is read, and a tap (or
+// any key) goes on. Each is shown once on this device; all of them can be turned off (the pause
+// screen), and turned on again, which shows them all again.
+const tipsOn = () => !save.tipsOff;
+const tipSeen = (key) => !!(save.seen.tips && save.seen.tips[key]);
+function tip(key, say) {
+  if (!tipsOn() || tipSeen(key)) return false;
+  S.say = Object.assign(say, { tip: key }); S.tipHold = key; Sound.muffle(true, 0.3);
+  return true;
+}
+function tipGone() {
+  const key = S.tipHold; if (!key) return;
+  save.seen.tips = save.seen.tips || {}; save.seen.tips[key] = true; store();
+  S.tipHold = null; if (S.say && S.say.tip) S.say.t = Math.max(S.say.t, 2.4);
+  if (key === "fightSeen") S.fightHintT = 99;
+  S.touches.clear(); Sound.muffle(false, 0.3);
+}
+// The climbing lesson at the start (not held: it waits for him to hook twice), once on the device.
+function lessonDone() { if (S.hooked >= 2 && !tipSeen("climbLesson")) { save.seen.tips = save.seen.tips || {}; save.seen.tips.climbLesson = true; store(); } }
+function setTips(on) { save.tipsOff = !on; if (on) save.seen.tips = {}; store(); }
 function action() {
   if (!S || S.dying || S.act) return;
   if (S.crawl) { upFromCrawl(); return; }
