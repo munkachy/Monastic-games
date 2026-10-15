@@ -8,6 +8,7 @@ function lightR() {
   if (S.ward && !S.dying) R = Math.max(R, 52);
   if (S.flare.on) R = Math.max(R, FLARE_R + 30);
   if (S && S.boon && S.boon.kind === "unconsumed") R *= 1.3;
+  if (soupOn("bright")) R *= 1.35;
   if (S.latched) R *= 1 - 0.65 * clamp((S.latched.latchT || 0) / 0.6, 0, 1);       // (shut in a great demon's mouth, the torch shows little)
   return R;
 }
@@ -366,6 +367,57 @@ function drawHook(x, y, a) {
 // Under a tip being read: how to go on.
 function goOnLine(y, a) { text(usingKeys() ? "PRESS ANY KEY TO GO ON" : "TAP TO GO ON", W / 2, y, { align: "center", size: 7.5, weight: 800, spacing: 2, color: C.flame, alpha: a * (0.6 + 0.4 * Math.sin(S.rt * 4)), glow: "rgba(0,0,0,0.9)", blur: 6 }); }
 // A heart: full, or only its outline.
+// An herb where it grows: only where the light is on it, a little lit, so it is seen. Rue and sage
+// a low tuft of leaves; hyssop and wormwood a taller sprig.
+function drawHerb(h, cam) {
+  const x = h.x - cam.x, y = h.y - cam.y; if (x < -20 || x > W + 20 || y < -20 || y > H + 30) return;
+  if (!inLight(h.x, h.y - 5)) return;
+  const c = HERBS[h.kind].c, sway = Math.sin(S.rt * 1.6 + h.x) * 0.12;
+  glow(x, y - 6, 16, c, 0.28);
+  ctx.save(); ctx.translate(x, y); ctx.fillStyle = c; ctx.strokeStyle = "#1a2214"; ctx.lineWidth = 1;
+  const leaf = (lx, ly, a, l, w) => { ctx.save(); ctx.translate(lx, ly); ctx.rotate(a + sway); ctx.beginPath(); ctx.ellipse(0, -l / 2, w, l / 2, 0, 0, TAU); ctx.fill(); ctx.restore(); };
+  if (h.kind === "rue" || h.kind === "sage") { for (let i = -2; i <= 2; i++) leaf(i * 1.5, 0, i * 0.42, h.kind === "sage" ? 7 : 6, h.kind === "sage" ? 2.2 : 1.6); }
+  else { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(sway * 8, -7, sway * 10, -14); ctx.strokeStyle = c; ctx.lineWidth = 1.2; ctx.stroke(); for (let i = 0; i < 4; i++) { const ly = -3 - i * 3; leaf(sway * i * 2, ly, (i % 2 ? 1 : -1) * 0.9, h.kind === "hyssop" ? 3.5 : 4.5, 1.1); } }
+  ctx.restore();
+}
+// The pouch's button (by the flare), what is in it, the flasks (tapped, drunk), the soup on him,
+// and the pouch opened: the herbs to choose from, the grinding, the herbal of what pairs make.
+const pouchBtn = () => ({ x: W - 58, y: H - 228, r: 22 });
+function drawSoups() {
+  // The flasks, under the hearts: tapped (1, 2, 3 on keys), drunk.
+  S.flasks.forEach((k, i) => {
+    const x = 20 + i * 18, y = 84, c = k === "soup" ? "#c9a46a" : { rising: "#cfe4ff", unseen: "#b9b3d9", feather: "#e9e6df", bright: "#ffd27a" }[k];
+    rect(x - 3, y - 8, 6, 3, "#3a3026"); ctx.beginPath(); ctx.ellipse(x, y, 5.5, 6, 0, 0, TAU); ctx.fillStyle = "rgba(20,18,16,0.85)"; ctx.fill(); ctx.strokeStyle = "rgba(233,230,223,0.6)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x, y + 1.5, 4, 4, 0, 0, TAU); ctx.fillStyle = c; ctx.fill();
+    buttons.push({ x: x - 8, y: y - 11, w: 16, h: 20, act: () => drink(i) });
+  });
+  if (S.flasks.length) text("SOUP", 20 + S.flasks.length * 18, 87, { size: 6.5, weight: 800, spacing: 1, color: "rgba(233,230,223,0.5)" });
+  if (S.soup) { const left = 1 - S.soup.t / SOUP_T; text(SOUPS[S.soup.kind].name, W / 2, 30, { align: "center", size: 7.5, weight: 800, spacing: 2, color: "#e9e6df", alpha: 0.8 }); rect(W / 2 - 40, 36, 80 * left, 2, "#e9e6df"); }
+  // The pouch: what is in it, at its button.
+  const n = HERB_KEYS.reduce((a, k) => a + (S.pouch[k] || 0), 0), pb = pouchBtn();
+  if (n || S.flasks.length) {
+    ctx.beginPath(); ctx.arc(pb.x, pb.y, pb.r, 0, TAU); ctx.fillStyle = "rgba(10,9,8,0.55)"; ctx.fill(); ctx.strokeStyle = "rgba(201,180,120,0.7)"; ctx.lineWidth = 1.5; ctx.stroke();
+    text("HERBS", pb.x, pb.y - 2, { align: "center", size: 6.5, weight: 800, spacing: 1, color: "#e9e6df" });
+    text(String(n), pb.x, pb.y + 9, { align: "center", size: 7, weight: 800, color: "rgba(233,230,223,0.7)" });
+    buttons.push({ x: pb.x - pb.r, y: pb.y - pb.r, w: pb.r * 2, h: pb.r * 2, act: () => openPouch() });
+  }
+  if (!S.mix) return;
+  // The pouch opened.
+  const M_ = S.mix, w = 360, h = 200, x0 = W / 2 - w / 2, y0 = H / 2 - h / 2 - 10;
+  rect(0, 0, W, H, "rgba(3,3,5,0.6)"); rect(x0, y0, w, h, "rgba(14,12,10,0.94)");
+  text("THE POUCH", W / 2, y0 + 20, { align: "center", font: FONT.title, size: 13, weight: 700, spacing: 3, color: C.gold });
+  text(M_.grind >= 0 ? "Grinding..." : M_.full ? "His three flasks are full: drink one first." : M_.pick.length ? "And one more." : "Choose two herbs to grind together.", W / 2, y0 + 36, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm });
+  HERB_KEYS.forEach((k, i) => {
+    const bx = x0 + 14 + i * 84, by = y0 + 48, have = (S.pouch[k] || 0) - M_.pick.filter((q) => q === k).length;
+    button(HERBS[k].name, bx, by, 78, 40, () => pickHerb(k), { off: have <= 0 || M_.grind >= 0, hot: M_.pick.includes(k), sub: (have > 0 ? have : 0) + "  \u00b7  key " + (i + 1), size: 8 });
+  });
+  if (M_.grind >= 0) { const k = M_.grind / GRIND_T; rect(W / 2 - 60, y0 + 98, 120, 3, "rgba(255,255,255,0.15)"); rect(W / 2 - 60, y0 + 98, 120 * k, 3, C.gold); }
+  // The herbal: each pair once made.
+  const known = Object.entries(save.herbal || {});
+  text(known.length ? "THE HERBAL" : "The herbal is empty: what a pair makes is learned by making it.", W / 2, y0 + 118, { align: "center", size: known.length ? 7.5 : 8, weight: 800, spacing: known.length ? 2 : 0, color: "rgba(233,230,223,0.6)", max: w - 20 });
+  known.slice(0, 10).forEach(([p, fx], i) => text(p.split("+").map((q) => HERBS[q].name.toLowerCase()).join(" + ") + ":  " + SOUPS[fx].name.toLowerCase(), x0 + 20 + (i % 2) * 170, y0 + 134 + Math.floor(i / 2) * 12, { size: 8, weight: 600, color: "#e9e6df" }));
+  if (M_.grind < 0) button("CLOSE", W / 2 - 40, y0 + h - 2, 80, 26, () => { S.mix = null; }, { size: 8 });
+}
 function drawHeart(x, y, full) {
   ctx.beginPath(); ctx.moveTo(x, y + 4.5); ctx.bezierCurveTo(x - 7, y - 0.5, x - 4.5, y - 6, x, y - 2.5); ctx.bezierCurveTo(x + 4.5, y - 6, x + 7, y - 0.5, x, y + 4.5); ctx.closePath();
   if (full) { ctx.fillStyle = "#e0573f"; ctx.fill(); } ctx.strokeStyle = full ? "rgba(255,210,190,0.7)" : "rgba(233,230,223,0.45)"; ctx.lineWidth = 1; ctx.stroke();
@@ -806,6 +858,7 @@ function drawWorld() {
   // can see them (or their own fire).
   const rimP = new Path2D(), idols = [], embers = []; carved.length = 0;
   const [lx0, ly0] = S.torch, R0 = lightR();
+  for (const h of S.herbs) if (!h.got) drawHerb(h, cam);
   for (const f of S.demons) if (f.idol) drawShrine(f, cam, rimP, idols, lights);
   for (const f of S.demons) {
     if (f.idol || f.st === "legs") continue;
@@ -865,7 +918,7 @@ function drawWorld() {
   if (S.boonShow) { r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, S.boonShow.t); S.boonShow.up = r.up; }
   // Swallowed to the waist: turned to us, flailing his free arm.
   else if (S.legsIn) r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, 0.35 * (0.5 + 0.5 * Math.sin(S.rt * 11)));
-  else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
+  else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (soupOn("unseen") ? 0.38 : 1) * (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
   if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
   // The gold clinging to his habit, coin by coin.
   if (S.coins > 0) {
@@ -1149,6 +1202,7 @@ function hud(hM) {
   const F = S.flare, I = pads(), way = climbWay();
   text(hM + " m", 16, 30, { font: FONT.title, size: 20, weight: 700, color: "#fff", glow: "rgba(255,179,71,0.5)", blur: 10 });
   for (let i = 0; i < HEARTS; i++) drawHeart(20 + i * 15, 62, i < (S.hearts === undefined ? HEARTS : S.hearts));
+  drawSoups();
   text(NOV ? "THE MOUNTAIN OF " + SINS[NOV.domain].name.toUpperCase() : "BEST " + Math.max(save.climbBest || 0, metres(S.top)) + " m", 16, 46, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)", max: 190 });
   if (S.coins > 0) { const y = S.relics ? 76 : 62; drawCoin(22, y - 3, 1, true, 1, 4.2); text("× " + S.coins + (S.coins >= 6 ? "  HEAVY" : ""), 30, y, { size: 8, weight: 700, color: S.coins >= 6 ? "#ffb070" : "rgba(232,196,106,0.85)" }); }
   if (S.relics) { glow(22, 60, 8, C.gold, 0.4); rect(18, 58, 8, 5, C.gold); poly([18, 58, 26, 58, 22, 55], C.gold); text("× " + S.relics, 30, 63, { size: 8, weight: 700, color: "rgba(232,196,106,0.85)" }); }

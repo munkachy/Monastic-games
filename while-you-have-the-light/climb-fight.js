@@ -150,7 +150,7 @@ function updDemon(f, dt) {
   // Standing in briars (thrown there, say): they hurt it, and it springs out of them.
   if (thornAt(f.x, f.y + 2) && !(f.thornCd > S.rt)) { f.thornCd = S.rt + 0.6; f.y -= 2; hurtDemon(f, 1, (sign(f.vx) || f.dir) * 120, -300, "launch"); briarHit(f.x, f.y); return; }
   if ((f.st === "idle" || f.st === "walk" || f.st === "creep") && seekBlock(f)) return;
-  const [mx, my] = middle(), [cx, cy] = dMid(f), sees = !S.dying && dist(mx, my, cx, cy) < (f.sin === "lust" ? 430 : 380) && los(cx, cy - 10, mx, my - 6);
+  const [mx, my] = middle(), [cx, cy] = dMid(f), sees = !S.dying && !soupOn("unseen") && dist(mx, my, cx, cy) < (f.sin === "lust" ? 430 : 380) && los(cx, cy - 10, mx, my - 6);
   if (f.sin === "gluttony") stepGluttony(f, dt, mx, my, sees); else if (f.sin === "lust") stepLust(f, dt, mx, my, sees); else if (f.sin === "avarice") stepAvarice(f, dt, mx, my, sees); else stepWrath(f, dt, mx, my, sees);
 }
 // Pacing its platform while it waits.
@@ -778,7 +778,7 @@ function stepCrumbling(dt) {
   S.crumbling = S.crumbling.filter((c) => c.st === "crack");
 }
 function hitMonk(kx, cost) {
-  if (S.dying || S.invT > 0 || S.latched) return;
+  if (S.dying || S.invT > 0 || S.latched || soupOn("unseen")) return;
   breakCombo();
   ev("he was hit", { cost: r2(cost || 0.06), wardLost: S.ward ? true : undefined, blockLoosed: S.tied && (cost === undefined || cost >= 0.06) ? true : undefined });
   S.freeze = Math.max(S.freeze || 0, 0.06);
