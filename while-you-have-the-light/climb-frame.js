@@ -158,7 +158,8 @@ function physics(dt) {
     if (d) S.dir = d;
     if (d && S.landT <= 0 && !S.held && !S.crawl && near(d, 2)) {
       const L = ledge(d, 8, 86);
-      if (L) { startAct(L.h <= 20 ? "stepUp" : "climbUp", L); return; }
+      // (Up to his knee he steps up; to his head, a little flip up onto it; higher, he climbs.)
+      if (L) { startAct(L.h <= 20 ? "stepUp" : L.h <= HT ? "flipUp" : "climbUp", L); return; }
       // Too high to climb onto: he takes hold of the rock and climbs it.
       S.pushT = (S.pushT || 0) + dt;
       if (S.pushT > 0.15 && !boxHit(S.x, S.y - 3)) { S.cling = d; S.rope = null; S.climbing = false; S.ground = false; S.vx = 0; S.vy = 0; S.pushT = 0; moveY(-3); Sound.fx.grab(); return; }

@@ -54,7 +54,7 @@ function hangReach() {
   try { const p = MONK_ANIM.hang(0.5, 0), hf = monkJoint(0, 0, 1, p, "hF"), hb = monkJoint(0, 0, 1, p, "hB"); r = -Math.min(hf[1], hb[1]); } catch (e) { }
   return (reachK = clamp(r || 54, 36, 80));
 }
-const CRAWL_H = 24, CRAWL_V = 34, CW_H = 2, CW_C = 5;      // crawling: his height, and his pace; a crawlway's height (rows: room to crawl, not to stand), and its chamber's (room to hold a relic up)
+const CRAWL_H = 24, CRAWL_V = 52, CW_H = 2, CW_C = 5;      // crawling: his height, and his pace; a crawlway's height (rows: room to crawl, not to stand), and its chamber's (room to hold a relic up)
 const SLOT = 10, TH = 30, CH = 52;               // rows to each place a platform may stand; a crossing's height; a cavern's
 const TR = 28;                                   // a crossing's roof (rows up from its foot): high, for long swings under it
 
@@ -599,15 +599,17 @@ function ledgeAround() {
   return best;
 }
 function startAct(kind, L) {
-  const dur = kind === "stepUp" ? 0.36 : kind === "climbUp" ? 1.3 + 0.05 * Math.round(L.h / CELL) : 0.95;
+  const dur = kind === "stepUp" ? 0.36 : kind === "flipUp" ? 0.5 : kind === "climbUp" ? 1.3 + 0.05 * Math.round(L.h / CELL) : 0.95;
   S.act = { kind, u: 0, dur, x0: S.x, y0: S.y, x1: L.x1, y1: L.top - 0.01, edge: L.edge, s: L.s };
   S.dir = L.s; S.vx = 0; S.vy = 0; S.cling = 0; S.rope = null; S.shot = null; S.climbing = false;
-  if (kind !== "stepUp") Sound.fx.grab();
+  if (kind === "flipUp") Sound.fx.kick(0.4); else if (kind !== "stepUp") Sound.fx.grab();
 }
 // Where his feet are at u through a move (the arena's climb, from the ground or from a hang).
 function actRoot(a, u) {
   const { x0, y0, x1, y1, edge, s } = a;
   if (a.kind === "stepUp") { const k = smooth(u); return [lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(u * PI) * 6]; }
+  // (The flip: up off both feet, over in the air, down on the ledge.)
+  if (a.kind === "flipUp") return [lerp(x0, x1, smooth(u)), lerp(y0, y1, Math.min(1, u * 1.6)) - Math.sin(u * PI) * 16];
   const reach = hangReach(), hangX = edge - s * 7, hangY = a.kind === "ledge" ? y1 + reach : Math.min(y0, y1 + reach);
   if (a.kind === "ledge") {
     // From wherever he hung: in to the edge, then the climb from its hang onward.
@@ -625,7 +627,7 @@ const actPoseU = (a) => (a.kind === "ledge" ? (a.u < 0.15 ? 0.38 : 0.38 + 0.62 *
 function stepAct(dt) {
   const a = S.act; a.u = Math.min(1, a.u + dt / a.dur);
   const pu = actPoseU(a);
-  if (a.kind !== "stepUp" && !a.pulled && pu > 0.6) { a.pulled = true; Sound.fx.climb(); }
+  if (a.kind !== "stepUp" && a.kind !== "flipUp" && !a.pulled && pu > 0.6) { a.pulled = true; Sound.fx.climb(); }
   if (a.u >= 1) {
     S.x = a.x1; S.y = a.y1; S.act = null; S.ground = true; S.vx = 0; S.vy = 0;
     if (boxHit(S.x, S.y)) { const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; } }
