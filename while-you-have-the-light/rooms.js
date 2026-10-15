@@ -188,11 +188,12 @@ function linkRooms(names, rnd) {
 // ---- The piece picker -----------------------------------------------------------------------------
 // For trying the rooms (on the title, with ?pieces in the address): each room alone, or several
 // linked (chosen, or at random), with a demon or two, made afresh each time (or begun again).
+let pieceOut = false;                            // (he walked out of the room by one of its ways)
 const Pieces = {
   t: 0, linking: false, chain: [],
   open() { Pieces.t = 0; mode = Pieces; Sound.flare(false); Sound.muffle(false); },
   go(names) {
-    names = [].concat(names);
+    names = [].concat(names); pieceOut = false;
     Game.scene({ title: names.length > 1 ? names.length + " ROOMS LINKED" : ROOMS[names[0]].name, mountain: "gluttony", summit: false, metres: 0, place: "any", demons: names.length, near: [], great: 0, block: false, boon: null, torch: 1, endlessTorch: true, flare: 1, endlessFlare: false, seed: (Math.random() * 1e9) | 0, piece: names });
   },
   // A random chain: three to five rooms, each one that can be come into from the last where there is one.

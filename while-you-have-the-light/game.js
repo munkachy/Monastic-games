@@ -65,7 +65,7 @@ const Title = {
     if (typeof House !== "undefined" && House.ok()) button("THE MONASTERY", x, by + 124, 200, 26, () => House.open(), { size: 9 });
     // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
     // can be asked, the white room is, in their place.)
-    if (/[?&]pieces\b/.test(location.search)) button("THE PIECES", x, by + 154, 200, 24, () => Pieces.open(), { size: 8, sub: "Each room of the mountain, alone" });
+    if (/[?&]pieces\b/.test(location.search) || window.claude) button("THE PIECES", x, by + 154, 200, 24, () => Pieces.open(), { size: 8, sub: "Each room of the mountain, alone" });
     if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
     else if (!window.claude) {
       buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
@@ -211,10 +211,14 @@ const Over = {
     rect(0, 0, W, H, "rgba(3,3,5," + Math.min(0.82, 0.5 + t * 0.3) + ")");
     const a = clamp(t / 0.8, 0, 1);
     const fell = Game.last && Game.last.climb && Climb.fell();
+    if (pieceOut) {
+      text("OUT OF THE ROOM", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
+      text("He found the way through.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a });
+    } else
     text(fell ? "BROTHER " + fell.name.toUpperCase() : "HE HAS FALLEN", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
-    if (fell) text(fell.left ? fell.line : "He was the last of the brothers. The monastery is no more; all of it begins again.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
+    if (pieceOut) { /* (nothing more) */ } else if (fell) text(fell.left ? fell.line : "He was the last of the brothers. The monastery is no more; all of it begins again.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
     else text("Walk whilst you have the light, that the darkness overtake you not.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
-    if (!fell) text("JOHN 12:35", W / 2, 108, { align: "center", size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)", alpha: a });
+    if (!fell && !pieceOut) text("JOHN 12:35", W / 2, 108, { align: "center", size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)", alpha: a });
     if (Game.last && Game.last.climb) {
       Climb.over().forEach(([k, v], i) => {
         text(k.toUpperCase(), W / 2 - 8, 140 + i * 22, { align: "right", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.65)", alpha: a });
