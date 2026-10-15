@@ -37,7 +37,7 @@ const out = process.argv[2];
     await run('nov-' + d, `(() => { const N = novSettings(); N.domain = '${d}'; store(); Game.novitiate(true); })()`, play);
   await run('house', 'House.open()', async () => { await pg.mouse.click(200, 200); await pg.mouse.click(500, 150); await pg.waitForTimeout(500); });
   await run('room', 'Room.open()');
-  await run('over', 'Game.climb()', async () => { await pg.evaluate(() => { Climb.S.fuel = 0; }); await pg.waitForTimeout(4000); const m = await pg.evaluate(() => mode === Over); if (!m) errs.push('over: the end screen never came'); });
+  await run('over', 'Game.climb()', async () => { await pg.evaluate(() => { for (let i = 0; i < 3; i++) { Climb.S.invT = 0; hitMonk(1, 0.06); } }); await pg.waitForTimeout(4000); const m = await pg.evaluate(() => mode === Over); if (!m) errs.push('over: the end screen never came'); });
   await run('title-end', 'Game.toTitle()');
   for (const p of ['art.html', 'design.html']) {
     const n0 = errs.length;
