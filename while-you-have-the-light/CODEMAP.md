@@ -110,25 +110,25 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (648 lines)
+### climb-run.js (651 lines)
 
 - **Starting, and the end** (6): start 8, metres 44, sectionsIn 46, lampsOf 51, lightOut 52, bankFreed 61, finish 65
 - **His place on a mountain, kept** (73): keptAll 82, forget 83, keepPlace 85, keepHere 105, restore 107, settle 135
-- **A scene from the white room** (144): SCENE_PLACE 148, scene 149
-- **The relics' boons** (212): BOONS 220, BOON_ORDER 226, boonOf 227, boonOn 228, showBoon 229, stepBoonShow 234, grantBoon 238, stepBoon 246, vadeRetro 269, vadeGreat 287, drawToken 296, drawMonkFront 324, drawBoonShow 350, boonGlows 367
-- **The hook** (375): rayRock 377, nearLine 383
-- **Avarice's chains** (390): chainsNear 393, chainTip 398, onSeg 399, chainHit 402, swingChains 414, throwHook 425, flyShot 440, flipDur 474, dropRope 475, sideOf 498, tapSide 502, swapHook 503, nextHook 508, hookAngle 519, action 530, hangRope 545
-- **The rope round the rock** (565): bendsOf 570, pivotOf 571, freeOf 572, setFixed 573, sweepCorner 576, wrapRope 598
-- **The flare** (616): startFlare 617, endFlare 623, puff 627, blink 634
+- **A scene from the white room** (147): SCENE_PLACE 151, scene 152
+- **The relics' boons** (215): BOONS 223, BOON_ORDER 229, boonOf 230, boonOn 231, showBoon 232, stepBoonShow 237, grantBoon 241, stepBoon 249, vadeRetro 272, vadeGreat 290, drawToken 299, drawMonkFront 327, drawBoonShow 353, boonGlows 370
+- **The hook** (378): rayRock 380, nearLine 386
+- **Avarice's chains** (393): chainsNear 396, chainTip 401, onSeg 402, chainHit 405, swingChains 417, throwHook 428, flyShot 443, flipDur 477, dropRope 478, sideOf 501, tapSide 505, swapHook 506, nextHook 511, hookAngle 522, action 533, hangRope 548
+- **The rope round the rock** (568): bendsOf 573, pivotOf 574, freeOf 575, setFixed 576, sweepCorner 579, wrapRope 601
+- **The flare** (619): startFlare 620, endFlare 626, puff 630, blink 637
 
-### climb-foes.js (1148 lines)
+### climb-foes.js (1172 lines)
 
 - **The demons, and what they throw** (5): DEM 13, boxAt 15, moveBox 21, dFree 27, los 33, dMid 34, alive 35, panX 36, gain 37, setSt 38, spawnDemon 39, spotsFor 48, placeFor 89, placeRocks 118
 - **The shrines** (133): placeShrine 142
-- **The blocks** (166): SHAPES 183, newBlock 186, makeBlock 190, reveal 195, tie 204, takeUp 211, throwBlock 220, loosen 229, carryOff 237, shrineFor 243, dropBlock 250, seekBlock 256, floatTo 271, alight 291, floatDemon 292, rebuild 308, raiseIdol 314, yank 328, stepYank 333, brotherOf 346, binSlot 355, deliver 358, stepBlocks 366, stepLoose 387, stepTied 413, flail 459, drawBlock 476, GLOWS 488, drawBlocks 489, drawTied 510, drawHeld 521, drawYank 530, drawBrother 537, rimNow 564, blockGlows 573
-- **The great demons** (588): GREAT 600, GREAT_V 601, planGreat 605, placeGreat 620, placeSummit 631, bigAt 641, stepGreat 642, updGreat 646, greatReach 701, latch 729, holdHim 742, punchOut 749, spitOut 755, strikeGreat 769, breakGreat 788, hurl 805, freedSay 814
-- **A great demon's dread** (815): DREAD_T 823
-- **The angel** (824): ANG 829, startAngel 830, stepAngel 839, angelAt 849, drawBeam 853, drawAngel 861, drawAngelOver 886, finishWon 897, hauntWait 908, canDread 909, onView 911, greatSays 915, startDread 918, stepDread 923, burstSpot 933, burstAfter 948, drawDread 956, MAW_STONE 982, MAW_FLESH 983, MAW_EYES 984, MAW_CRACKS 985, mawParts 986, greatT 1067, laughK 1074, headTilt 1075, latchFrame 1080, paintMaw 1081, drawGreat 1096, drawLatch 1114, greatGlows 1121
+- **The blocks** (166): SHAPES 183, newBlock 186, makeBlock 190, reveal 195, tie 204, takeUp 212, throwBlock 221, loosen 230, carryOff 238, shrineFor 244, dropBlock 251, seekBlock 257, floatTo 272, alight 292, floatDemon 293, rebuild 309, raiseIdol 315, yank 329, stepYank 334, brotherOf 347, binSlot 356, deliver 359, stepBlocks 367, stepLoose 388, stepTied 414, flail 460, drawBlock 477, GLOWS 489, drawBlocks 490, drawTied 511, drawHeld 522, drawYank 531, drawBrother 538, rimNow 565, blockGlows 574
+- **The great demons** (589): GREAT 601, GREAT_V 602, planGreat 606, placeGreat 623, placeSummit 634, bigAt 644, stepGreat 645, updGreat 649, greatReach 705, latch 733, holdHim 746, punchOut 753, spitOut 759, strikeGreat 773, greatThrows 800, breakGreat 811, hurl 828, freedSay 837
+- **A great demon's dread** (838): DREAD_T 846
+- **The angel** (847): ANG 852, startAngel 853, stepAngel 862, angelAt 872, drawBeam 876, drawAngel 884, drawAngelOver 909, finishWon 920, hauntWait 931, canDread 932, onView 934, greatSays 938, startDread 941, stepDread 946, burstSpot 957, burstAfter 972, drawDread 980, MAW_STONE 1006, MAW_FLESH 1007, MAW_EYES 1008, MAW_CRACKS 1009, mawParts 1010, greatT 1091, laughK 1098, headTilt 1099, latchFrame 1104, paintMaw 1105, drawGreat 1120, drawLatch 1138, greatGlows 1145
 
 ### climb-fight.js (1056 lines)
 
