@@ -147,15 +147,48 @@ function makeRoom(name, rnd) {
   });
   return { name, w: W, h: Hh, g, marks };
 }
+// Rooms linked: each laid against the last on the side its way leads (up, right or left) where the
+// next has a way in, or else above it or beside it; what they do not fill is rock. He starts in the
+// first. (For seeing how the pieces join: where their openings do not meet, it shows.)
+const WAYS = (n) => ROOMS[n].ways.split(", ");
+function linkRooms(names, rnd) {
+  const at = [[0, 0]], used = new Set(["0,0"]);
+  for (let i = 1; i < names.length; i++) {
+    const [x, y] = at[i - 1], out = WAYS(names[i - 1]), inn = WAYS(names[i]);
+    const tries = [["up", "down", 0, -1], ["right", "left", 1, 0], ["left", "right", -1, 0]].filter((t) => out.includes(t[0]) && inn.includes(t[1]));
+    tries.push(["", "", 0, -1], ["", "", 1, 0], ["", "", -1, 0]);
+    let p = null; for (const t of tries) { const q = [x + t[2], y + t[3]]; if (!used.has(q + "")) { p = q; break; } }
+    if (!p) { let q = [x, y - 1]; while (used.has(q + "")) q = [q[0], q[1] - 1]; p = q; }
+    at.push(p); used.add(p + "");
+  }
+  const xs = at.map((p) => p[0]), ys = at.map((p) => p[1]), mx = Math.min(...xs), my = Math.min(...ys);
+  const RW = ROOM_W * ROOM_K, RH = ROOM_H * ROOM_K, W = (Math.max(...xs) - mx + 1) * RW, Hh = (Math.max(...ys) - my + 1) * RH;
+  const g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
+  const marks = { S: [], V: [], D: [], H: [], I: [] };
+  names.forEach((n, i) => {
+    const R = makeRoom(n, rnd), ox = (at[i][0] - mx) * RW, oy = (at[i][1] - my) * RH;
+    for (let r = 0; r < RH; r++) for (let c = 0; c < RW; c++) g[oy + r][ox + c] = R.g[r][c];
+    for (const m in R.marks) if (m !== "S" || i === 0) for (const [c, r] of R.marks[m]) marks[m].push([c + ox, r + oy]);
+  });
+  return { name: names.join(" + "), w: W, h: Hh, g, marks };
+}
 
 // ---- The piece picker -----------------------------------------------------------------------------
-// For trying the rooms one at a time (on the title, with ?pieces in the address): each room alone,
-// with a demon or two in it, made afresh each time it is chosen (or begun again).
+// For trying the rooms (on the title, with ?pieces in the address): each room alone, or several
+// linked (chosen, or at random), with a demon or two, made afresh each time (or begun again).
 const Pieces = {
-  t: 0,
+  t: 0, linking: false, chain: [],
   open() { Pieces.t = 0; mode = Pieces; Sound.flare(false); Sound.muffle(false); },
-  go(name) {
-    Game.scene({ title: ROOMS[name].name, mountain: "gluttony", summit: false, metres: 0, place: "any", demons: 1, near: [], great: 0, block: false, boon: null, torch: 1, endlessTorch: true, flare: 1, endlessFlare: false, seed: (Math.random() * 1e9) | 0, piece: name });
+  go(names) {
+    names = [].concat(names);
+    Game.scene({ title: names.length > 1 ? names.length + " ROOMS LINKED" : ROOMS[names[0]].name, mountain: "gluttony", summit: false, metres: 0, place: "any", demons: names.length, near: [], great: 0, block: false, boon: null, torch: 1, endlessTorch: true, flare: 1, endlessFlare: false, seed: (Math.random() * 1e9) | 0, piece: names });
+  },
+  // A random chain: three to five rooms, each one that can be come into from the last where there is one.
+  random() {
+    const all = Object.keys(ROOMS), pick = (a) => a[Math.floor(Math.random() * a.length)], out = [pick(all.filter((n) => WAYS(n).length > 1))], len = 3 + Math.floor(Math.random() * 3);
+    const fits = (a, b) => (WAYS(a).includes("up") && WAYS(b).includes("down")) || (WAYS(a).includes("right") && WAYS(b).includes("left")) || (WAYS(a).includes("left") && WAYS(b).includes("right"));
+    while (out.length < len) { const last = out[out.length - 1], ok = all.filter((n) => fits(last, n)); if (!ok.length) break; out.push(pick(ok)); if (WAYS(out[out.length - 1]).length < 2) break; }
+    Pieces.go(out);
   },
   step(dt) { Pieces.t += dt; },
   draw() {
@@ -163,8 +196,15 @@ const Pieces = {
     text("THE PIECES", W / 2, 34, { align: "center", font: FONT.title, size: 18, weight: 700, spacing: 5, color: "#2a2620" });
     text("Each room of the mountain, alone. Made afresh each time: try one again and its maybe-rock falls otherwise.", W / 2, 52, { align: "center", font: FONT.line, italic: true, size: 12, color: "#6a6255", max: W - 40 });
     const names = Object.keys(ROOMS), cols = 3, bw = Math.min(200, (W - 60) / cols - 10);
-    names.forEach((n, i) => { const x = W / 2 - (cols * (bw + 10)) / 2 + 5 + (i % cols) * (bw + 10), y = 80 + Math.floor(i / cols) * 54; button(ROOMS[n].name, x, y, bw, 44, () => Pieces.go(n), { sub: "Ways: " + ROOMS[n].ways }); });
-    button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
+    names.forEach((n, i) => { const x = W / 2 - (cols * (bw + 10)) / 2 + 5 + (i % cols) * (bw + 10), y = 80 + Math.floor(i / cols) * 54; button(ROOMS[n].name, x, y, bw, 44, () => (Pieces.linking ? Pieces.chain.length < 5 && Pieces.chain.push(n) : Pieces.go(n)), { sub: "Ways: " + ROOMS[n].ways }); });
+    const y = 80 + Math.ceil(names.length / cols) * 54 + 8, P = Pieces;
+    button("A RANDOM CHAIN", W / 2 - 215, y, 140, 36, () => P.random(), { sub: "3 to 5 rooms, linked" });
+    button(P.linking ? "LINKING: ON" : "LINK ROOMS", W / 2 - 70, y, 140, 36, () => { P.linking = !P.linking; P.chain = []; }, { sub: P.linking ? "Choose up to 5, in order" : "Choose several, and see them joined" });
+    if (P.linking) {
+      button("PLAY THE CHAIN", W / 2 + 75, y, 140, 36, () => P.go(P.chain), { off: P.chain.length < 2, sub: "Or press BACK to clear" });
+      text(P.chain.length ? P.chain.map((n) => ROOMS[n].name.replace(/^THE /, "")).join("  \u2192  ") : "(none chosen yet)", W / 2, y + 56, { align: "center", font: FONT.line, size: 12, color: "#2a2620", max: W - 40 });
+    }
+    button("BACK", 16, H - 44, 80, 30, () => (P.linking ? (P.linking = false, P.chain = []) : Game.toTitle()), {});
   },
   key(code, down) { if (down && code === "Escape") Game.toTitle(); },
 };

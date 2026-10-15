@@ -105,7 +105,7 @@ const secs = [], walls = [];
 function ensureSecs(n) {
   while (secs.length <= n) {
     const k = secs.length, prev = secs[k - 1];
-    if (!prev && NOV && NOV.piece && ROOMS[NOV.piece]) { secs.push(roomSec(NOV.piece, 0, 1)); continue; }
+    if (!prev && NOV && NOV.piece) { secs.push(roomSec(NOV.piece, 0, 1)); continue; }
     if (!prev) { secs.push({ type: "shaft", h0: 1, h1: 44, c: MID - 19, k, dom: NOV ? NOV.domain : null }); continue; }
     const dom = domOf(k);
     // (The summit: its sky goes up for ever. Anything asked for above it is more of the same sky.)
@@ -432,7 +432,7 @@ const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type 
 // A room as a section of the mountain: set in the middle of it, its rock from its made grid, the
 // mountain's rock about it. c, its way out at the top (for what comes above it).
 function roomSec(name, k, h0) {
-  const R = makeRoom(name, seeded(seed + 101 * k + 7)), x0 = Math.round(MID - R.w / 2), top = [];
+  const rnd = seeded(seed + 101 * k + 7), R = Array.isArray(name) ? (name.length > 1 ? linkRooms(name, rnd) : makeRoom(name[0], rnd)) : makeRoom(name, rnd), x0 = Math.round(MID - R.w / 2), top = [];
   for (let c = 0; c < R.w; c++) if (!R.g[0][c]) top.push(c);
   return { type: "room", name, R, x0, h0, h1: h0 + R.h - 1, k, dom: NOV ? NOV.domain : null, c: top.length ? x0 + (top[0] + top[top.length - 1]) / 2 : MID };
 }
