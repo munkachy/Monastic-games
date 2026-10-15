@@ -110,17 +110,17 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (672 lines)
+### climb-run.js (679 lines)
 
 - **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 53, bankFreed 60, finish 64
 - **His place on a mountain, kept** (72): keptAll 81, forget 82, keepPlace 84, keepHere 104, restore 106, settle 134
 - **A scene from the white room** (146): SCENE_PLACE 150, scene 151
-- **The relics' boons** (214): BOONS 222, BOON_ORDER 228, boonOf 229, boonOn 230, showBoon 231, stepBoonShow 236, grantBoon 240, stepBoon 248, vadeRetro 271, vadeGreat 289, drawToken 298, drawMonkFront 326, drawBoonShow 352, boonGlows 369
-- **The hook** (377): rayRock 379, nearLine 385
-- **Avarice's chains** (392): chainsNear 395, chainTip 400, onSeg 401, chainHit 404, swingChains 416, throwHook 427, flyShot 442, flipDur 476, dropRope 477, sideOf 500, tapSide 504, swapHook 505, nextHook 510, hookAngle 521
-- **The tips** (532): tipsOn 536, tipSeen 537, tip 538, tipGone 543, lessonDone 551, setTips 552, action 553, hangRope 569
-- **The rope round the rock** (589): bendsOf 594, pivotOf 595, freeOf 596, setFixed 597, sweepCorner 600, wrapRope 622
-- **The flare** (640): startFlare 641, endFlare 647, puff 651, blink 658
+- **The relics' boons** (214): BOONS 222, BOON_ORDER 228, boonOf 229, boonOn 230, showBoon 231, stepBoonShow 236, boonShare 242, grantBoon 246, stepBoon 255, vadeRetro 278, vadeGreat 296, drawToken 305, drawMonkFront 333, drawBoonShow 359, boonGlows 376
+- **The hook** (384): rayRock 386, nearLine 392
+- **Avarice's chains** (399): chainsNear 402, chainTip 407, onSeg 408, chainHit 411, swingChains 423, throwHook 434, flyShot 449, flipDur 483, dropRope 484, sideOf 507, tapSide 511, swapHook 512, nextHook 517, hookAngle 528
+- **The tips** (539): tipsOn 543, tipSeen 544, tip 545, tipGone 550, lessonDone 558, setTips 559, action 560, hangRope 576
+- **The rope round the rock** (596): bendsOf 601, pivotOf 602, freeOf 603, setFixed 604, sweepCorner 607, wrapRope 629
+- **The flare** (647): startFlare 648, endFlare 654, puff 658, blink 665
 
 ### climb-foes.js (1190 lines)
 

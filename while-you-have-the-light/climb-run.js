@@ -237,10 +237,17 @@ function stepBoonShow(dt) {
   const B = S.boonShow; B.t += dt;
   if (B.t >= B.T) { S.boonShow = null; grantBoon(B.kind); }
 }
+// How much of a relic's full time its power lasts: half, and for each lay brother received at the
+// monastery after the first three (who were there from the start) a twentieth more, up to the whole.
+function boonShare() {
+  const P = (save.house && save.house.people) || [], brothers = P.filter((p) => p.role !== "camp").length;
+  return Math.min(1, 0.5 + 0.05 * Math.max(0, brothers - 3));
+}
 function grantBoon(kind) {
   const D = BOONS[kind]; if (!D) return;
-  S.boon = { kind, t: 0, T: D.T, regrow: 0 };
-  S.say = { text: D.name, sub: D.sub, t: 0.6 };
+  const k = boonShare();
+  S.boon = { kind, t: 0, T: D.T * k, regrow: 0 };
+  S.say = { text: D.name, sub: D.sub + (k < 1 ? "  (" + Math.round(k * 100) + "% of its time: each brother received at the monastery lengthens it.)" : ""), t: 0.6 };
   if (kind === "double") S.ward = { t: 0, n: 2 };
   if (kind === "vade") S.ward = { t: 0, n: Math.max(1, S.ward ? S.ward.n || 1 : 1) };
   S.boonSeen = true; ev("a boon", { kind });
