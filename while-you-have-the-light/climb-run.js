@@ -19,10 +19,11 @@ function start(opts) {
     if (Number.isInteger(R.summitK) && R.summitK % 8 === 7) NOV.summitK = R.summitK;
     else if (Number.isFinite(R.y) && R.y < 0) { NOV.summitK = Infinity; NOV.summitK = summitAbove(sectionAt(Math.max(1, Math.floor(-R.y / CELL))).k); }
   }
+  if (NOV && NOV.piece) NOV.summitK = 1;           // (a room alone, from the piece picker: the sky over it)
   if (NOV && !NOV.summitK) NOV.summitK = SUMMIT_K + 8 * (NOV.climbs || 0);       // (higher each time it has been climbed)
-  const e = edges(-2), x = (e.L + e.R + 1) / 2 * CELL;
+  const e = edges(-2), st = NOV && NOV.piece ? (ensureSecs(0), roomMarks(secs[0], "S")[0]) : null, x = st ? st[0] : (e.L + e.R + 1) / 2 * CELL;
   S = {
-    x, y: -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
+    x, y: st ? st[1] : -0.01, vx: 0, vy: 0, dir: 1, ground: true, cling: 0, clingT: 0, landT: 0, anim: 0, act: null,
     rope: null, shot: null, climbing: false, climbPh: 0, throwT: 0, throwA: 0, ropeVis: [], shotVis: [],
     fuel: 1, t: 0, rt: 0, top: 0, read: 0, dying: 0, level: 0,
     flare: { on: false, t: 0, n: 0 }, parts: [], ghosts: [], verse: null,
@@ -178,7 +179,7 @@ const SCENE_PLACE = { shaft: ["shaft"], crossing: ["trav", "cave", "slope"] };
 function scene(sc) {
   sc = sc || {};
   const dom = BUILT.includes(sc.mountain) ? sc.mountain : "gluttony";
-  start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true }, seed: sc.seed });
+  start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true, piece: ROOMS[sc.piece] ? sc.piece : null }, seed: sc.seed });
   for (const k of SEEN) S[k] = true;                // (he knows the mountain: no lessons on the way)
   S.fightHintT = 99; S.hintT = 99; S.hooked = 9;
   // The place: the first of the kind asked for at that height or above it, with ground to stand on.
@@ -594,7 +595,8 @@ function recipes() {
 // A section's herbs: one or two on its floors, likelier its own mountain's.
 function placeHerbs(k, sin) {
   const sec = secs[k]; if (!sec || sec.type === "summit" || !DEM[sin]) return;
-  const sp = spotsFor(k, sin); if (!sp.length) return;
+  const sp = sec.type === "room" ? roomMarks(sec, "H") : spotsFor(k, sin); if (!sp.length) return;
+  if (sec.type === "room") { for (const s of sp) S.herbs.push({ x: s[0], y: s[1], kind: HERB_OF[sec.dom] || HERB_KEYS[Math.floor(hash2(k, 731, seed) * 4) % 4], k, got: false }); return; }
   for (let q = 0; q < 2; q++) {
     if (hash2(k, 700 + q, seed) > (q ? 0.35 : 0.75)) continue;
     const s = sp[Math.floor(hash2(k, 710 + q, seed) * sp.length) % sp.length], u = hash2(k, 720 + q, seed);
