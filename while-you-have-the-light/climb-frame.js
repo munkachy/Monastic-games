@@ -274,7 +274,7 @@ function step(dt) {
   const wdt = dt * (F.on ? FLARE_SLOW : S.hangT > 0 ? 0.5 : 1);
   S.t += wdt;
   if (!S.dying) {
-    if (S.fuel <= 0) lightOut();
+    if (S.fuel <= 0) lightOut(); else if (S.dark) { S.dark = false; ev("the light came back"); }
     else if (S.fuel < 0.15 && Math.floor(S.rt * 0.8) !== Math.floor((S.rt - dt) * 0.8)) Sound.fx.gutter();
   }
   if (!S.dying) {
@@ -295,6 +295,7 @@ function step(dt) {
   for (const o of S.things) updThing(o, wdt);
   S.things = S.things.filter((o) => o.st !== "gone" && o.y < S.y + 1400);
   if (S.blocks.length) stepBlocks(wdt);
+  if (!S.dying && S.blockSeen) { const G = cartAt(S.x, S.y); if (G) heal(G); }      // (a lay brother tends him, once)
   if (S.bigs.length) stepGreat(wdt);
   if (S.rt >= REC.next) { REC.next = S.rt + 0.25; REC.snaps.push(snapNow()); if (REC.snaps.length > REC_N) REC.snaps.shift(); }
   if (S.yank) stepYank(wdt);

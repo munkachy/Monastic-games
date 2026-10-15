@@ -27,7 +27,7 @@ function start(opts) {
     fuel: 1, t: 0, rt: 0, top: 0, read: 0, dying: 0, level: 0,
     flare: { on: false, t: 0, n: 0 }, parts: [], ghosts: [], verse: null,
     cam: { x: clamp(x - W / 2, 0, COLS * CELL - W), y: 70 - H }, torch: [x, -50], light: null,
-    touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
+    hearts: HEARTS, healed: new Set(), dark: false, touches: new Map(), keys: {}, hooked: 0, hintT: 0, lastDraw: 0, flip: null, next: null, hangT: 0, jumpT: 0, wall: 0,
     demons: [], things: [], held: null, atk: null, popK: 0, ids: 0, cast: 0, respawnT: 0, hurtT: 0, invT: 0, flashT: 0, floatT: 0, shake: 0, fightSeen: false, fightHintT: 0, meter: 1, kickCd: 0, swingKickT: 0, hang: null, ward: null, crosses: [],
     crumbling: [], relics: 0, mark: null, grease: [], say: null, tint: null, pulled: null, coins: 0, freedList: [],
     blocks: [], tied: null, yank: null, blockSeen: false, binned: 0, dragging: false, bigs: [], latched: null, prints: [], greatDown: new Set(), foot: null, kept: null, keptAt: null,
@@ -50,11 +50,32 @@ function sectionsIn(h0, h1) {
   return out;
 }
 const lampsOf = (sec) => (sec.type === "cave" ? cave(sec).lamps : sec.type === "trav" && sec.gate ? trav(sec).lamps : []);
+// The torch gone out: he is in the dark, but alive (as in grave sin: there is still time to repent).
+// A candle by a verse, a lay brother, a demon cast out: any light brings it back.
 function lightOut() {
-  ev("the light went out");
-  if (NOV && !NOV.room) forget(NOV.domain);         // (the light gone out, the place he kept is gone with it)
-  S.dying = 0.001; S.fuel = 0; endFlare(true);
+  S.fuel = 0; if (S.dark) return;
+  S.dark = true; ev("the light went out");
+  S.say = { text: "THE LIGHT IS GONE OUT", sub: "Find light: the candle by a verse, or a lay brother.", t: 0 };
+  Sound.fx.gutter();
+}
+// Held till his light is gone (in a great demon's mouth, his legs swallowed): a heart, and he is let go.
+function drained() { lightOut(); S.hearts = Math.max(0, S.hearts - 1); if (S.hearts <= 0) die(); else { S.invT = 1.2; Sound.fx.hurt(); } }
+// The hearts: three, and a blow takes one (and a third of the torch). The last gone, he dies.
+const HEARTS = 3;
+function die() {
+  if (S.dying) return;
+  ev("he died");
+  if (NOV && !NOV.room) forget(NOV.domain);         // (dead, the place he kept is gone with him)
+  S.dying = 0.001; S.hearts = 0; endFlare(true);
   Sound.fx.death(); Sound.setLevel(0);
+}
+// A lay brother at his cart: all the hearts back, and the torch, once from each brother.
+function heal(G) {
+  if (S.dying || (S.healed && S.healed.has(G.sec)) || (S.hearts >= HEARTS && S.fuel >= 0.99)) return;
+  (S.healed = S.healed || new Set()).add(G.sec);
+  S.hearts = HEARTS; S.fuel = 1; G.cheer = S.rt;
+  S.say = { text: "THE LAY BROTHER TENDS HIM", sub: "His strength back, and his torch.", t: 0 }; Sound.fx.kindle && Sound.fx.kindle(0.7, 0);
+  ev("healed by a lay brother", { gate: G.sec });
 }
 // Those freed from the idols on this climb go down to the monastery, whatever became of him.
 function bankFreed() {
@@ -94,7 +115,7 @@ function keepPlace(x, y, why) {
   }
   for (const k of SEEN) if (S[k]) seen[k] = true;
   const all = keptAll();
-  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK,
+  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, healed: S.healed ? [...S.healed] : [],
     coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
   try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
   Kept.wrote(KEEP);
@@ -109,7 +130,7 @@ function restore(R) {
   const at = Number.isFinite(R.x) && Number.isFinite(R.y) && R.y < 0 ? freeSpot(R.x, R.y) : null;
   if (!at) { forget(NOV.domain); return; }
   S.x = at[0]; S.y = at[1]; S.vx = 0; S.vy = 0; S.ground = boxHit(S.x, S.y + 3); S.dir = 1; S.keptAt = [S.x, S.y]; S.foot = S.ground ? [S.x, S.y] : null;
-  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
+  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.hearts = clamp(Number.isInteger(R.hearts) ? R.hearts : HEARTS, 1, HEARTS); S.healed = new Set(Array.isArray(R.healed) ? R.healed : []); S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
   S.freedList = Array.isArray(R.freed) ? R.freed.filter((q) => Array.isArray(q) && SINS[q[0]]).slice(0, 60) : [];
   if (Number.isFinite(R.fuel)) S.fuel = clamp(R.fuel, 0.25, 1);
   if (Number.isFinite(R.meter)) S.meter = clamp(R.meter, 0, 1);

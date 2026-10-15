@@ -133,6 +133,12 @@ const M = {
   move(p, ev) {
     if (!S) return;
     const t = S.touches.get(pid(ev));
+    // (Both mouse buttons down at once: he signs himself, as with two fingers; the first click is let go.)
+    if (ev && ev.pointerType === "mouse" && ev.buttons === 3 && t && !t.two && !t.dpad && !t.act && !S.dying) {
+      t.two = true; if (t.g) t.g.done = true;
+      if (S.shot && S.shot.ph === "fly" && S.shot.t < 0.3) S.shot = null;
+      S.pend = null; ward(); return;
+    }
     if (t && t.dpad) { t.x = p.x; t.y = p.y; }
     if (t && t.g && t.g.path.length < 80) t.g.path.push([p.x, p.y]);
   },

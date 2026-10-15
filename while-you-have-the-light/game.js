@@ -209,7 +209,7 @@ const Over = {
     drawBackdrop(500, 300, 1, t, {});
     rect(0, 0, W, H, "rgba(3,3,5," + Math.min(0.82, 0.5 + t * 0.3) + ")");
     const a = clamp(t / 0.8, 0, 1);
-    text("THE LIGHT WENT OUT", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
+    text("HE HAS FALLEN", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
     text("Walk whilst you have the light, that the darkness overtake you not.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
     text("JOHN 12:35", W / 2, 108, { align: "center", size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)", alpha: a });
     if (Game.last && Game.last.climb) {

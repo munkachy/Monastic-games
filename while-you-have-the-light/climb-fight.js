@@ -479,8 +479,8 @@ function stepLegs(dt) {
   if (S.dying || S.latched || !f || f.st === "gone" || f.st === "dying") { S.legsIn = null; if (f && f.st === "legs") setSt(f, "idle"); return; }
   if (f.st !== "legs") { S.legsIn = null; offHim(f); return; }          // (struck off him by some blow)
   L.t += dt; f.x = S.x; f.y = S.y + 4; f.vx = 0; f.vy = 0; f.dir = S.dir;
-  if (!boonOn("unconsumed")) { S.fuel -= dt * 0.012; if (S.fuel <= 0) lightOut(); }
-  // (It does not let go of itself: he must knock it off, or his light goes.)
+  if (!boonOn("unconsumed")) { S.fuel -= dt * 0.012; if (S.fuel <= 0) { drained(); freeLegs(); } }
+  // (It does not let go of itself: he must knock it off, or his light goes, and a heart with it.)
 }
 // Off him: set down beside him, out of the rock.
 function offHim(f) {
@@ -782,7 +782,10 @@ function hitMonk(kx, cost) {
   breakCombo();
   ev("he was hit", { cost: r2(cost || 0.06), wardLost: S.ward ? true : undefined, blockLoosed: S.tied && (cost === undefined || cost >= 0.06) ? true : undefined });
   S.freeze = Math.max(S.freeze || 0, 0.06);
-  if (!boonOn("unconsumed")) S.fuel = Math.max(0, S.fuel - blowCost(cost || 0.06));
+  // (A blow: a heart, and a third of the torch. The last heart gone, he dies.)
+  S.hearts = Math.max(0, (S.hearts === undefined ? HEARTS : S.hearts) - 1);
+  if (!boonOn("unconsumed")) S.fuel = Math.max(0, S.fuel - 1 / HEARTS);
+  if (S.hearts <= 0) { die(); return; }
   S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;
   S.vx = (sign(kx) || -S.dir) * 200; S.vy = -170; S.ground = false;
   if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.vx * 0.3; S.held.vy = -100; S.held = null; }
