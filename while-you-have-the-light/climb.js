@@ -195,10 +195,12 @@ const M = {
     mode = M; Sound.muffle(false, 0.2);
     S.touches.clear(); S.keys = {};
   },
+  fell: () => (S && S.fell) || null,
   over() {
     const m = metres(S.top), rows = [["Height reached", m + " m"], ["Verses read", S.read], ["Demons cast out", S.cast]];
     if (S.relics) rows.push(["Relics found", S.relics]);
-    if (S.freedN) rows.push(["Freed from the idols", S.freedN]);
+    if (S.freedN) rows.push(["Freed from the idols", S.freedN + (S.comeN ? "  (" + S.comeN + " to the monastery)" : "")]);
+    if (S.fell) rows.push(["Brothers left", S.fell.left]);
     if (!NOV) rows.push(["Your best", (save.climbBest || m) + " m"]);
     return rows;
   },

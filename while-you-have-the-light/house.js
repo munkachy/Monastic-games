@@ -272,7 +272,6 @@ const House = (() => {
   function takePilgrims() {
     const D = folkData(); let n = 0;
     const add = (dom, kind) => { D.people.push({ id: D.nextId++, dom: SINS[dom] ? dom : "gluttony", kind: (kind | 0) % 4, role: "camp" }); n++; };
-    if (!D.folk0) { D.folk0 = true; for (let i = 0; i < 3; i++) add(DOMS[i], i); }
     for (const q of save.pilgrims || []) if (Array.isArray(q)) add(q[0], q[1]);
     save.pilgrims = []; store();
     return n;
@@ -284,12 +283,12 @@ const House = (() => {
     return f;
   }
   function loadFolk() { const D = folkData(); H_.folk = D.people.map(makeFolk); }
+  // (One at a time, and a stone from the store for each: what it costs to keep a brother.)
   function receive() {
-    folkData(); let n = 0;
-    for (const f of H_.folk) if (f.p.role === "camp") { f.p.role = "brother"; f.goal = GATE + (Math.random() - 0.5) * 260; f.recv = 1; n++; }
-    if (!n) return;
+    const D = folkData(), f = H_.folk.find((q) => q.p.role === "camp"); if (!f || !D.store.length) return;
+    D.store.shift(); f.p.role = "brother"; f.p.name = newName(D); f.goal = GATE + (Math.random() - 0.5) * 260; f.recv = 1;
     store(); Sound.fx.kindle && Sound.fx.kindle(0.6, 0);
-    H_.say = { text: n === 1 ? "ONE RECEIVED" : n + " RECEIVED", sub: "“Let all guests who arrive be received as Christ.”  The Rule, chapter 53", t: 0 };
+    H_.say = { text: "BROTHER " + f.p.name.toUpperCase() + " RECEIVED", sub: "“Let all guests who arrive be received as Christ.”  The Rule, chapter 53", t: 0 };
   }
   function stepFolk(dt) {
     for (const f of H_.folk) {
@@ -342,7 +341,7 @@ const House = (() => {
       const sx = CAMP - cam;
       text("BY THE FIRE", sx, GY - 74, { align: "center", font: FONT.title, size: 11, weight: 700, spacing: 3, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 6 });
       text(campers ? campers + (campers === 1 ? " freed from the idols waits" : " freed from the idols wait") + " to be received" : "No one waits here now", sx, GY - 62, { align: "center", size: 8, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4 });
-      if (campers) button("RECEIVE THEM", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, receive, { hot: true, sub: "As lay brothers" });
+      if (campers) { const has = data().store.length > 0; button("RECEIVE ONE", clamp(sx - 60, 8, W - 128), H - 50, 120, 36, receive, { hot: has, off: !has, sub: has ? "A stone from your store" : "No stone in your store" }); }
       return true;
     }
     return false;
@@ -763,6 +762,8 @@ const House = (() => {
       draw(I) {
         const t = I.t;
         drawRoom(t, 1);
+        if (I.necro) { drawNecrology(); button("BACK", 12, H - 46, 90, 32, () => { I.necro = false; }, {}); return; }
+        if ((save.necrology || []).length) button("THE NECROLOGY", W - 142, H - 46, 130, 32, () => { I.necro = true; I.book = null; }, { sub: save.necrology.length + (save.necrology.length === 1 ? " name" : " names") });
         if (!hasVerses()) { button("GO OUT", 12, H - 46, 90, 32, goOut, {}); return; }
         text("THE LIBRARY", W / 2, 30, { align: "center", font: FONT.title, size: 17, weight: 700, spacing: 5, color: "#fff3dc", glow: "rgba(255,170,70,0.5)", blur: 10 });
         text("Psalm 118, a book to each of its stanzas, kept as the Rule sets them out for the Hours", W / 2, 47, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, max: W - 40 });
@@ -831,6 +832,16 @@ const House = (() => {
     items.forEach(([label, act, o], i) => button(label, x, y0 + i * (bh + 6), bw, bh, act, o));
   }
 
+  // The book of the dead: the brothers who fell on the mountains, the latest first.
+  function drawNecrology() {
+    rect(0, 0, W, H, "rgba(4,3,3,0.78)");
+    const x0 = 30, w = W - 60; rect(x0 - 3, 14, w + 6, H - 70, "#3a2414"); rect(x0, 17, w, H - 76, "#e9dfc6");
+    text("THE NECROLOGY", W / 2, 38, { align: "center", font: FONT.title, size: 15, weight: 700, spacing: 4, color: "#5a2a1a" });
+    text("Eternal rest grant unto them, O Lord, and let perpetual light shine upon them.", W / 2, 54, { align: "center", font: FONT.line, italic: true, size: 12, color: "#6b4a30", max: w - 20 });
+    (save.necrology || []).slice(0, 14).forEach((e, i) => text(e.line, x0 + 16, 76 + i * 15, { font: FONT.line, size: 12, color: "#2a1a10", max: w - 32 }));
+    if ((save.necrology || []).length > 14) text("and " + (save.necrology.length - 14) + " more before them.", W / 2, H - 66, { align: "center", font: FONT.line, italic: true, size: 11, color: "#6b4a30" });
+  }
+
   // ---- Hands on it ----
   function down(p) {
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (I.down) I.down(H_.inside, p); return; }
@@ -875,7 +886,7 @@ const House = (() => {
   // In.
   function open() {
     if (!pl) return;
-    data(); takeBanked(); load(); H_.dust = []; H_.menu = null; H_.moving = null; H_.press = null;
+    data(); brotherData(); takeBanked(); load(); H_.dust = []; H_.menu = null; H_.moving = null; H_.press = null;
     const come = takePilgrims(); loadFolk();
     H_.inside = null; H_.t = 0; H_.x = GATE; H_.dir = 1; H_.cam = clamp(GATE - W / 2, 0, HW - W); H_.goal = null; H_.keys = {}; H_.say = null; H_.built = null;
     if (data().gift) setTimeout(() => { if (data().gift) { data().gift = false; store(); } }, 6000);
@@ -884,6 +895,6 @@ const House = (() => {
     H_.clock = { phase: "day", t: 0 };
     if (come) H_.say = { text: come === 1 ? "ONE FREED FROM THE IDOLS HAS COME DOWN" : come + " FREED FROM THE IDOLS HAVE COME DOWN", sub: "They wait by the fire at the gate, to be received.", t: -0.8 };
   }
-  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, get state() { return H_; }, SITES, CAMP, receive, lay, turn, nudge, place, drop: place, putBack, lift, landing };
+  const M = { step, draw, down, move, up, key, open, ok: () => !!pl, data, get state() { return H_; }, SITES, CAMP, receive, lay, turn, nudge, place, drop: place, putBack, lift, landing };
   return M;
 })();
