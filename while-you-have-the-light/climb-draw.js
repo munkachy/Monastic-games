@@ -4,7 +4,8 @@
 // ---- Drawing -----------------------------------------------------------------------------------------
 function lightR() {
   const f = S.dying ? Math.max(0, 1 - S.dying / 1.4) * 0.15 : clamp(S.fuel, 0, 1);
-  let R = 50 + 210 * Math.pow(f, 0.75);
+  let R = f <= 0 && !S.dying ? 18 : 50 + 210 * Math.pow(f, 0.75);
+  if (S.ward && !S.dying) R = Math.max(R, 52);
   if (S.flare.on) R = Math.max(R, FLARE_R + 30);
   if (S && S.boon && S.boon.kind === "unconsumed") R *= 1.3;
   if (S.latched) R *= 1 - 0.65 * clamp((S.latched.latchT || 0) / 0.6, 0, 1);       // (shut in a great demon's mouth, the torch shows little)
@@ -184,6 +185,12 @@ function drawTablet(w, cam, unlit) {
   const p = wallPos(w), x = p.x - cam.x, y = p.y - cam.y, s = w.side;
   if (y < -60 || y > H + 60) return;
   const x0 = s < 0 ? x - 2 : x - 20;
+  // The candle under it, on its iron: burning till the verse is read (a light to make for in the
+  // dark, and the torch lit again from it), then a stub.
+  { const cx = x0 + 11, cy = y + 24;
+    rect(cx - 6, cy + 1, 12, 2, "#16140f"); rect(cx - 1, cy + 3, 2, 4, "#16140f");
+    if (!w.read) { rect(cx - 1.5, cy - 7, 3, 8, "#d9cfb8"); glow(cx, cy - 10, 26, C.flame, 0.35 + 0.05 * Math.sin(S.rt * 9 + w.n)); drawFlame(cx, cy - 8, 0.32, S.rt + w.n, {}); }
+    else rect(cx - 1.5, cy - 2, 3, 3, "#8c8270"); }
   if (unlit) {
     rect(x0, y - 17, 22, 34, "#1c1b19");
     ctx.globalAlpha = 0.5; for (let k = 0; k < 6; k++) rect(x0 + 4, y - 12 + k * 4.6, 14 - (k % 3) * 2, 1.2, "#5a554a"); ctx.globalAlpha = 1;
@@ -358,6 +365,11 @@ function drawHook(x, y, a) {
 }
 // Under a tip being read: how to go on.
 function goOnLine(y, a) { text(usingKeys() ? "PRESS ANY KEY TO GO ON" : "TAP TO GO ON", W / 2, y, { align: "center", size: 7.5, weight: 800, spacing: 2, color: C.flame, alpha: a * (0.6 + 0.4 * Math.sin(S.rt * 4)), glow: "rgba(0,0,0,0.9)", blur: 6 }); }
+// A heart: full, or only its outline.
+function drawHeart(x, y, full) {
+  ctx.beginPath(); ctx.moveTo(x, y + 4.5); ctx.bezierCurveTo(x - 7, y - 0.5, x - 4.5, y - 6, x, y - 2.5); ctx.bezierCurveTo(x + 4.5, y - 6, x + 7, y - 0.5, x, y + 4.5); ctx.closePath();
+  if (full) { ctx.fillStyle = "#e0573f"; ctx.fill(); } ctx.strokeStyle = full ? "rgba(255,210,190,0.7)" : "rgba(233,230,223,0.45)"; ctx.lineWidth = 1; ctx.stroke();
+}
 function draw() {
   // (The shaking, and the knock of a blow: the view thrown the blow's way and coming back.)
   const K = S.kick, kk = K ? Math.max(0, 1 - K.t / 0.16) : 0;
@@ -1062,7 +1074,8 @@ function drawWorld() {
   }
 
   // (Held up out of a great demon's mouth, the torch gutters as its light goes.)
-  if (!S.dying || S.dying < 1.2) drawFlame(tx, ty, S.latched ? 0.45 + 0.5 * S.fuel : F.on ? 1.3 : boonOn("unconsumed") ? 1.25 : 1, t, { flare: F.on ? 1 : 0, gutter: S.dying ? 1 : S.latched ? clamp(1.1 - S.fuel, 0.35, 1) : clamp((0.18 - S.fuel) / 0.18, 0, 1), vx: S.vx });
+  if (S.dark && !S.dying) { glow(tx, ty, 8, C.ember, 0.5 + 0.2 * Math.sin(t * 3)); rect(tx - 1, ty - 1, 2, 2, C.ember); }   // (out: only an ember left on it)
+  else if (!S.dying || S.dying < 1.2) drawFlame(tx, ty, S.latched ? 0.45 + 0.5 * S.fuel : F.on ? 1.3 : boonOn("unconsumed") ? 1.25 : 1, t, { flare: F.on ? 1 : 0, gutter: S.dying ? 1 : S.latched ? clamp(1.1 - S.fuel, 0.35, 1) : clamp((0.18 - S.fuel) / 0.18, 0, 1), vx: S.vx });
   for (const q of S.parts) {
     const a = 1 - q.age / q.life, x = q.x - cam.x, y = q.y - cam.y;
     if (q.kind === "ember") drawEmber(x, y, 1, a);
@@ -1135,6 +1148,7 @@ function sideArrow(x, y, s) {
 function hud(hM) {
   const F = S.flare, I = pads(), way = climbWay();
   text(hM + " m", 16, 30, { font: FONT.title, size: 20, weight: 700, color: "#fff", glow: "rgba(255,179,71,0.5)", blur: 10 });
+  for (let i = 0; i < HEARTS; i++) drawHeart(20 + i * 15, 62, i < (S.hearts === undefined ? HEARTS : S.hearts));
   text(NOV ? "THE MOUNTAIN OF " + SINS[NOV.domain].name.toUpperCase() : "BEST " + Math.max(save.climbBest || 0, metres(S.top)) + " m", 16, 46, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)", max: 190 });
   if (S.coins > 0) { const y = S.relics ? 76 : 62; drawCoin(22, y - 3, 1, true, 1, 4.2); text("× " + S.coins + (S.coins >= 6 ? "  HEAVY" : ""), 30, y, { size: 8, weight: 700, color: S.coins >= 6 ? "#ffb070" : "rgba(232,196,106,0.85)" }); }
   if (S.relics) { glow(22, 60, 8, C.gold, 0.4); rect(18, 58, 8, 5, C.gold); poly([18, 58, 26, 58, 22, 55], C.gold); text("× " + S.relics, 30, 63, { size: 8, weight: 700, color: "rgba(232,196,106,0.85)" }); }
@@ -1228,5 +1242,5 @@ function hud(hM) {
     }
   } else if (way && I.d !== way) sideArrow(S.x - way * 6 - S.cam.x, S.y - HT - 30 - S.cam.y, way);
   if (S.pulled && S.pulls <= 3) text(usingKeys() ? "ITS RIBBON DRAWS HIM IN: CLICK IT TO STRIKE, OR SWING INTO IT" : "ITS RIBBON DRAWS HIM IN: TAP IT TO STRIKE, OR SWING INTO IT", W / 2, H - 40, { align: "center", size: 8, weight: 800, spacing: 2, color: SINS.lust.light, alpha: 0.9, max: W - 260 });
-  if (S.fuel < 0.25 && !S.dying) text("THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
+  if (S.fuel < 0.25 && !S.dying) text(S.dark ? "IN THE DARK: FIND A CANDLE BY A VERSE, OR A LAY BROTHER" : "THE TORCH IS GUTTERING: FIND A VERSE", W / 2, H - 24, { align: "center", size: 8, weight: 800, spacing: 2, color: C.ember, alpha: 0.6 + 0.4 * Math.sin(S.rt * 6) });
 }

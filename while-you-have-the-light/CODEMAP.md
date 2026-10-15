@@ -110,17 +110,17 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (679 lines)
+### climb-run.js (700 lines)
 
-- **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 53, bankFreed 60, finish 64
-- **His place on a mountain, kept** (72): keptAll 81, forget 82, keepPlace 84, keepHere 104, restore 106, settle 134
-- **A scene from the white room** (146): SCENE_PLACE 150, scene 151
-- **The relics' boons** (214): BOONS 222, BOON_ORDER 228, boonOf 229, boonOn 230, showBoon 231, stepBoonShow 236, boonShare 242, grantBoon 246, stepBoon 255, vadeRetro 278, vadeGreat 296, drawToken 305, drawMonkFront 333, drawBoonShow 359, boonGlows 376
-- **The hook** (384): rayRock 386, nearLine 392
-- **Avarice's chains** (399): chainsNear 402, chainTip 407, onSeg 408, chainHit 411, swingChains 423, throwHook 434, flyShot 449, flipDur 483, dropRope 484, sideOf 507, tapSide 511, swapHook 512, nextHook 517, hookAngle 528
-- **The tips** (539): tipsOn 543, tipSeen 544, tip 545, tipGone 550, lessonDone 558, setTips 559, action 560, hangRope 576
-- **The rope round the rock** (596): bendsOf 601, pivotOf 602, freeOf 603, setFixed 604, sweepCorner 607, wrapRope 629
-- **The flare** (647): startFlare 648, endFlare 654, puff 658, blink 665
+- **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 55, drained 62, die 65, heal 73, bankFreed 81, finish 85
+- **His place on a mountain, kept** (93): keptAll 102, forget 103, keepPlace 105, keepHere 125, restore 127, settle 155
+- **A scene from the white room** (167): SCENE_PLACE 171, scene 172
+- **The relics' boons** (235): BOONS 243, BOON_ORDER 249, boonOf 250, boonOn 251, showBoon 252, stepBoonShow 257, boonShare 263, grantBoon 267, stepBoon 276, vadeRetro 299, vadeGreat 317, drawToken 326, drawMonkFront 354, drawBoonShow 380, boonGlows 397
+- **The hook** (405): rayRock 407, nearLine 413
+- **Avarice's chains** (420): chainsNear 423, chainTip 428, onSeg 429, chainHit 432, swingChains 444, throwHook 455, flyShot 470, flipDur 504, dropRope 505, sideOf 528, tapSide 532, swapHook 533, nextHook 538, hookAngle 549
+- **The tips** (560): tipsOn 564, tipSeen 565, tip 566, tipGone 571, lessonDone 579, setTips 580, action 581, hangRope 597
+- **The rope round the rock** (617): bendsOf 622, pivotOf 623, freeOf 624, setFixed 625, sweepCorner 628, wrapRope 650
+- **The flare** (668): startFlare 669, endFlare 675, puff 679, blink 686
 
 ### climb-foes.js (1190 lines)
 
@@ -131,28 +131,28 @@ the build and test scripts (see tools/README.md).
 - **A great demon's dread** (856): DREAD_T 864
 - **The angel** (865): ANG 870, startAngel 871, stepAngel 880, angelAt 890, drawBeam 894, drawAngel 902, drawAngelOver 927, finishWon 938, hauntWait 949, canDread 950, onView 952, greatSays 956, startDread 959, stepDread 964, burstSpot 975, burstAfter 990, drawDread 998, MAW_STONE 1024, MAW_FLESH 1025, MAW_EYES 1026, MAW_CRACKS 1027, mawParts 1028, greatT 1109, laughK 1116, headTilt 1117, latchFrame 1122, paintMaw 1123, drawGreat 1138, drawLatch 1156, greatGlows 1163
 
-### climb-fight.js (1056 lines)
+### climb-fight.js (1059 lines)
 
 - **The weight of a blow** (5): impact 9, impactAt 12, hitIdol 20, scatter 41, updIdol 48, populate 70, hurtDemon 79, castOut 103, flyDemon 111, updDemon 137, wander 157, stepWrath 164
 - **Avarice's gold** (178): heavy 184, blowTo 186, comboOn 197, comboHit 198, CROWNED 214, wouldCrown 215, crownFX 216, drawCrown 221, breakCombo 228, drawCombo 230, throwCoins 246, coinSticks 254, giveAlms 260, stepAvarice 270, snatchLight 305, stepLust 319, ribbonHand 343, castRibbon 344, holdRibbon 355, pullOf 366, throwThorn 374, briars 382, briarHit 392, mouth 397, stepGluttony 403, inhale 443
 - **Gluttony's swallow** (458): swallowLegs 465, stepLegs 477, offHim 486, freeLegs 491, kickLegs 499, GS_AT 506, drawLegsSac 507, eat 524, lob 534, lobFat 544, throwFire 552, thornStuck 559, sendAt 566, rockAt 574, burst 580, splat 585
 - **Slime, grease, and rock that lies askew** (590): grease 595, slabAt 603, slickAt 610, tiltDy 616, slickWall 621, tryCatch 626, kickBack 636, strikeMonk 646, strikeDemon 663, updThing 677
-- **The rock that gives way (Wrath's)** (742): crumblerAt 747, cellsOf 754, weigh 755, strikeRock 756, crack 757, stepCrumbling 772, hitMonk 780, demonAt 792, thingAt 793
-- **His blows, and the boulders in his hands** (795): inLight 802, reachable 803, jumpTo 804, startMove 811, strikeSpot 822, attack 830, heave 838, catchThing 845, throwHeld 855, besides 864, closeBy 866, swingBlock 868, bash 874, release 880, ATK_ANIM 889, stepAtk 890, gesture 951, stroke 971, blessDemon 986, ward 1002, spendWard 1019, wardFade 1023, stomp 1027, swingKick 1045
+- **The rock that gives way (Wrath's)** (742): crumblerAt 747, cellsOf 754, weigh 755, strikeRock 756, crack 757, stepCrumbling 772, hitMonk 780, demonAt 795, thingAt 796
+- **His blows, and the boulders in his hands** (798): inLight 805, reachable 806, jumpTo 807, startMove 814, strikeSpot 825, attack 833, heave 841, catchThing 848, throwHeld 858, besides 867, closeBy 869, swingBlock 871, bash 877, release 883, ATK_ANIM 892, stepAtk 893, gesture 954, stroke 974, blessDemon 989, ward 1005, spendWard 1022, wardFade 1026, stomp 1030, swingKick 1048
 
-### climb-frame.js (411 lines)
+### climb-frame.js (412 lines)
 
 - **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 231, step 239
 
-### climb-draw.js (1233 lines)
+### climb-draw.js (1247 lines)
 
-- **Drawing** (4): lightR 5, visPoly 17, drawSky 41, darkness 64, slab 88, rockPath 98, drawTablet 183, torchBack 202, wallWalk 203, wallClimb 211, crawlPose 219, monkPose 223, demonPose 274, lightCross 305, drawSign 313, drawBoulder 343, drawRope 344, drawHook 350, goOnLine 360, draw 361
-- **The domains, drawn** (369): rgb 372, rgbs 373, tintStep 374, put 382, drawGlutton 384, shadeGlut 397, eyeGlut 408, GLUT_EYE 413, glutEye 414, addShape 425, addPoly 428, addOval 429, WORSHIP_ART 431, BEL 436, idolPath 446, drawShrine 483, drawWorshipper 509, drawShardOf 527, carved 534, drawGate 535, briarStrip 587, drawBriars 600, drawChain 624, drawCoin 635, drawAlms 643, drawThorn 653, drawRibbon 659, drawLamp 669, drawRelic 683, crackLines 693, drawFat 711, sheen 722, drawPrints 742, drawSlime 752, drawFire 770, drawWorld 776, lostMarker 1100, dpad 1118, dpadDir 1119, actBtn 1124, flareBtn 1125, climbWay 1128, sideArrow 1129, hud 1135
+- **Drawing** (4): lightR 5, visPoly 18, drawSky 42, darkness 65, slab 89, rockPath 99, drawTablet 184, torchBack 209, wallWalk 210, wallClimb 218, crawlPose 226, monkPose 230, demonPose 281, lightCross 312, drawSign 320, drawBoulder 350, drawRope 351, drawHook 357, goOnLine 367, drawHeart 369, draw 373
+- **The domains, drawn** (381): rgb 384, rgbs 385, tintStep 386, put 394, drawGlutton 396, shadeGlut 409, eyeGlut 420, GLUT_EYE 425, glutEye 426, addShape 437, addPoly 440, addOval 441, WORSHIP_ART 443, BEL 448, idolPath 458, drawShrine 495, drawWorshipper 521, drawShardOf 539, carved 546, drawGate 547, briarStrip 599, drawBriars 612, drawChain 636, drawCoin 647, drawAlms 655, drawThorn 665, drawRibbon 671, drawLamp 681, drawRelic 695, crackLines 705, drawFat 723, sheen 734, drawPrints 754, drawSlime 764, drawFire 782, drawWorld 788, lostMarker 1113, dpad 1131, dpadDir 1132, actBtn 1137, flareBtn 1138, climbWay 1141, sideArrow 1142, hud 1148
 
-### climb.js (239 lines)
+### climb.js (245 lines)
 
 - **The record, for notes to Claude** (28): ev 35, r2 36, doing 37, snapNow 40, record 48, grabScreen 55
-- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 199
+- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 205
 
 ### notes.js (106 lines)
 

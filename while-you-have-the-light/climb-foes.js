@@ -764,7 +764,7 @@ function latch(g) {
 function holdHim(g, dt) {
   g.latchT += dt; g.anim += dt * 1.5; g.x = S.x; g.y = S.y - 4;
   // (The longer it holds him, the faster his light goes.)
-  if (!S.dying && !boonOn("unconsumed")) { S.fuel -= dt * (0.04 + 0.05 * g.latchT); if (S.fuel <= 0) lightOut(); }
+  if (!S.dying && !boonOn("unconsumed")) { S.fuel -= dt * (0.04 + 0.05 * g.latchT); if (S.fuel <= 0) { drained(); if (!S.dying) spitOut(g); } }
 }
 // A blow from inside it (any tap, any key): it bulges where he strikes, and enough of them, it
 // spits him out.
