@@ -227,6 +227,7 @@ function monkPose() {
   if (S.atk) { const a = S.atk; return a.t < a.dash ? MONK_ANIM.dash(clamp(a.t / a.dash, 0, 1)) : MONK_ANIM[ATK_ANIM[a.kind][0]](clamp((a.t - a.dash) / a.dur, 0, 1)); }
   if (S.hurtT > 0 && !S.act) return MONK_ANIM.hurt(1 - S.hurtT / 0.45);
   if (S.dying) return MONK_ANIM.fall(0.3);
+  if (S.act && S.act.kind === "flipUp") { const u = S.act.u, p = blendPose(TUCK, STAND, smooth((u - 0.75) / 0.25)); p.spin = S.act.s * S.dir * TAU * ease(Math.min(1, u * 1.25)); return p; }
   if (S.act) return S.act.kind === "stepUp" ? MONK_ANIM.stepUp(S.act.u) : MONK_ANIM.climbUp(actPoseU(S.act));
   let p;
   if (S.hang) p = MONK_ANIM.climbUp(0.44 + 0.05 * Math.sin(t * 1.7));

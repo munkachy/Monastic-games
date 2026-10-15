@@ -98,7 +98,7 @@ the build and test scripts (see tools/README.md).
 
 - (top): TRACED 5
 
-### climb-world.js (636 lines)
+### climb-world.js (638 lines)
 
 - (top): CLIMB_VERSES 8, blowCost 45, hangReach 51
 - **The domains** (61): DOMAINS 67, BUILT 68, WIDE 70, SLOPE 73, MINE 77, summitAbove 85, summitK 86, domIdx 87, domOf 88, isGate 89, demonsFor 91
@@ -108,7 +108,7 @@ the build and test scripts (see tools/README.md).
 - **Avarice's needle's eye** (367): eyeOf 371, eyeShut 380, almsOf 382, solid 390, solidAt 406, summitG 412, summitInfo 413, summitSolid 418, summitSec 428
 - **The low ways** (429): crawlOf 435, NO_RELICS 458, relicsOf 459, wallAt 461, wallPos 469
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
-- **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 624, stepAct 625
+- **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
 ### climb-run.js (648 lines)
 
@@ -139,14 +139,14 @@ the build and test scripts (see tools/README.md).
 - **The rock that gives way (Wrath's)** (742): crumblerAt 747, cellsOf 754, weigh 755, strikeRock 756, crack 757, stepCrumbling 772, hitMonk 780, demonAt 792, thingAt 793
 - **His blows, and the boulders in his hands** (795): inLight 802, reachable 803, jumpTo 804, startMove 811, strikeSpot 822, attack 830, heave 838, catchThing 845, throwHeld 855, besides 864, closeBy 866, swingBlock 868, bash 874, release 880, ATK_ANIM 889, stepAtk 890, gesture 951, stroke 971, blessDemon 986, ward 1002, spendWard 1019, wardFade 1023, stomp 1027, swingKick 1045
 
-### climb-frame.js (404 lines)
+### climb-frame.js (405 lines)
 
-- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 230, step 238
+- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 231, step 239
 
-### climb-draw.js (1228 lines)
+### climb-draw.js (1229 lines)
 
-- **Drawing** (4): lightR 5, visPoly 17, drawSky 41, darkness 64, slab 88, rockPath 98, drawTablet 183, torchBack 202, wallWalk 203, wallClimb 211, crawlPose 219, monkPose 223, demonPose 273, lightCross 304, drawSign 312, drawBoulder 342, drawRope 343, drawHook 349, draw 358
-- **The domains, drawn** (366): rgb 369, rgbs 370, tintStep 371, put 379, drawGlutton 381, shadeGlut 394, eyeGlut 405, GLUT_EYE 410, glutEye 411, addShape 422, addPoly 425, addOval 426, WORSHIP_ART 428, BEL 433, idolPath 443, drawShrine 480, drawWorshipper 506, drawShardOf 524, carved 531, drawGate 532, briarStrip 584, drawBriars 597, drawChain 621, drawCoin 632, drawAlms 640, drawThorn 650, drawRibbon 656, drawLamp 666, drawRelic 680, crackLines 690, drawFat 708, sheen 719, drawPrints 739, drawSlime 749, drawFire 767, drawWorld 773, lostMarker 1097, dpad 1115, dpadDir 1116, actBtn 1121, flareBtn 1122, climbWay 1125, sideArrow 1126, hud 1132
+- **Drawing** (4): lightR 5, visPoly 17, drawSky 41, darkness 64, slab 88, rockPath 98, drawTablet 183, torchBack 202, wallWalk 203, wallClimb 211, crawlPose 219, monkPose 223, demonPose 274, lightCross 305, drawSign 313, drawBoulder 343, drawRope 344, drawHook 350, draw 359
+- **The domains, drawn** (367): rgb 370, rgbs 371, tintStep 372, put 380, drawGlutton 382, shadeGlut 395, eyeGlut 406, GLUT_EYE 411, glutEye 412, addShape 423, addPoly 426, addOval 427, WORSHIP_ART 429, BEL 434, idolPath 444, drawShrine 481, drawWorshipper 507, drawShardOf 525, carved 532, drawGate 533, briarStrip 585, drawBriars 598, drawChain 622, drawCoin 633, drawAlms 641, drawThorn 651, drawRibbon 657, drawLamp 667, drawRelic 681, crackLines 691, drawFat 709, sheen 720, drawPrints 740, drawSlime 750, drawFire 768, drawWorld 774, lostMarker 1098, dpad 1116, dpadDir 1117, actBtn 1122, flareBtn 1123, climbWay 1126, sideArrow 1127, hud 1133
 
 ### climb.js (235 lines)
 
