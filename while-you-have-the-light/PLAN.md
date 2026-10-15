@@ -21,7 +21,7 @@
     - rescued people are roped to him like two climbers on one rope (the brick-on-a-rope code, but they land on their feet and walk after him); they hang below his swings and add weight; a rope partner can catch a missed jump; they fight on their own (punch what touches them, a heart or two; beaten = knocked down until he helps them up). Never picked up, never thrown. He keeps his torch and flare
     - or bring a companion home for monastery perks
     - the hermit's hidden cell: alms (potions) for the poor, a blessing chosen from 2-3; he asks for things (two skulls and a pot, three herbs) or for a person (an arrow points to a possessed man to bring back)
-14. Monastery alive (~110,000): freed folk with roles; farm; shortcuts from higher up each mountain back to the monastery, to bank what you carry
+14. Monastery alive (~110,000): freed folk with roles (jobs for the lay brothers, who for now only walk about); farm; shortcuts from higher up each mountain back to the monastery, to bank what you carry
 15. Monastery deeper (~210,000): library for other psalms; building for fun
 Later: tower defense with the choir; side branches to hidden rooms (path-first method).
 Rule: a thrown-down idol rebuilds itself only when demons carry its block back to it, or when its block is destroyed (in lava); then it can be broken again for a fresh block.

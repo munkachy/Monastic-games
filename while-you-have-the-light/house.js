@@ -165,6 +165,18 @@ const House = (() => {
     const D = data(), i = D.store.indexOf(h.st); if (i >= 0) D.store.splice(i, 1); else D.store.shift();
     H_.hold = null; keep(); Sound.fx.brickDrop && Sound.fx.brickDrop(0, 0.6);
   }
+  // Another stone from the store in his hands instead: the next shape there is in it, each shape
+  // once, either way round (with only one shape, the next colour of it).
+  function otherStone(d) {
+    const h = H_.hold, D = data(); if (!h || D.store.length < 2) return;
+    const kinds = [...new Set(D.store.map((q) => q.shape))];
+    let pick = null;
+    if (kinds.length > 1) { const next = kinds[(kinds.indexOf(h.shape) + d + kinds.length) % kinds.length]; pick = D.store.find((q) => q.shape === next); }
+    else { const cols = [...new Set(D.store.map((q) => q.dom))], next = cols[(cols.indexOf(h.dom) + d + cols.length) % cols.length]; if (next !== h.dom) pick = D.store.find((q) => q.dom === next); }
+    if (!pick) return;
+    Object.assign(h, { st: pick, shape: pick.shape, dom: pick.dom, a: 0 }); h.y = hangY(h);
+    Sound.fx.tick && Sound.fx.tick(1200, 0.25);
+  }
   function putBack() { if (!H_.hold) return; H_.hold = null; Sound.fx.tick && Sound.fx.tick(600, 0.3); }
   // A stone laid, taken up again: into the store, or into his hands to be laid somewhere else. If it
   // was part of a building, the rest of it is loosed, and settles; if it no longer reaches the line,
@@ -445,9 +457,15 @@ const House = (() => {
     // A stone in his hands: how to lay it. A stone chosen: what to do with it.
     if (H_.hold) {
       const keys = usingKeys(), ok = landing(H_.hold) !== null;
-      text(keys ? "\u2190 \u2192 move it  \u00b7  \u2191 or click: turn it  \u00b7  \u2193 or space: set it down" : "Drag to move it  \u00b7  tap to turn it", W / 2 - 40, H - 14, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 330 });
+      text(keys ? "\u2190 \u2192 move it  \u00b7  \u2191 or click: turn it  \u00b7  \u2193 or space: set it down  \u00b7  Q E: another stone" : "Drag to move it  \u00b7  tap to turn it  \u00b7  \u25c0 \u25b6: another stone", W / 2, H - 62, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 330 });
       button("SET IT DOWN", W - 132, H - 50, 120, 38, () => place(), { hot: ok, off: !ok });
       button("BACK TO THE STORE", W - 262, H - 50, 122, 38, () => putBack(), { size: 8 });
+      if (data().store.length > 1) {
+        // (Another stone instead: the arrows either side of it.)
+        button("\u25c0", 104, H - 50, 34, 38, () => otherStone(-1), {}); button("\u25b6", 196, H - 50, 34, 38, () => otherStone(1), {});
+        text("STONE", 167, H - 40, { align: "center", size: 7, weight: 800, spacing: 1.5, color: "rgba(233,230,223,0.7)" });
+        for (const [cx, cy] of SHAPES[H_.hold.shape]) { const qx = 167 + cx * 6 - 3, qy = H - 28 + cy * 6 - 3; rect(qx, qy, 6, 6, "#1b181e"); rect(qx + 0.5, qy + 0.5, 5, 5, stoneFill(H_.hold.dom)); }
+      }
     } else if (H_.sel) {
       text("This stone: take it up into your store, or move it somewhere else.", W / 2, 134, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
       button("TAKE IT UP", W / 2 - 128, H - 50, 120, 38, () => lift(H_.sel, false), { hot: true, sub: "Into your store" });
@@ -841,6 +859,7 @@ const House = (() => {
       if (code === "ArrowLeft" || code === "KeyA") nudge(-1); else if (code === "ArrowRight" || code === "KeyD") nudge(1);
       else if (code === "ArrowUp" || code === "KeyW") turn(); else if (code === "ArrowDown" || code === "KeyS" || code === "Space" || code === "Enter") place();
       else if (code === "Escape" || code === "Backspace") putBack();
+      else if (code === "KeyQ") otherStone(-1); else if (code === "KeyE") otherStone(1);
       return;
     }
     if (H_.sel) {
