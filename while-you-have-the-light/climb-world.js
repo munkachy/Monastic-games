@@ -493,6 +493,12 @@ const NO_RELICS = [];
 const relicsOf = (sec) => { const cw = crawlOf(sec); return sec.type === "cave" ? cave(sec).relics : cw ? cw.relics : NO_RELICS; };
 // The verses on the walls: one in each shaft, about halfway up.
 function wallAt(n) {
+  // (In rooms, the verses stand where the rooms' drawings put them, and no others.)
+  ensureSecs(0);
+  if (secs[0].type === "room") {
+    if (!walls.length) roomMarks(secs[0], "V").sort((a, b) => b[1] - a[1]).forEach(([x, y], m) => walls.push({ h: Math.floor(-y / CELL) + 2, px: x, py: y - 30, side: hash2(m, 12, seed) < 0.5 ? -1 : 1, n: m, read: false, lit: 0 }));
+    return walls[n] || { h: 1e9, n, read: true, lit: 0, side: 1, px: 0, py: 0 };
+  }
   while (walls.length <= n) {
     const m = walls.length; ensureSecs(m * 2);
     const sec = secs[m * 2], h = m === 0 ? 24 : sec.h0 + Math.floor((sec.h1 - sec.h0) * 0.5);
