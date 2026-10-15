@@ -22,6 +22,10 @@ const House = (() => {
     { id: "library", name: "THE LIBRARY", x: 620, w: 7, h: 4, need: 6, kind: "library" },
     { id: "choir", name: "THE CHOIR", x: 1260, w: 9, h: 4, need: 8, kind: "choir" },
   ];
+  // Where each stands is the player's to choose (held on the ground, a menu). x is null while it has
+  // no place yet; these are where they stood before, for a building begun in an older save.
+  const FIRST_X = Object.fromEntries(SITES.map((s) => [s.id, s.x]));
+  const placed = () => SITES.filter((s) => s.x !== null);
   const GATE = 940;
   const H_ = { inside: null, t: 0, x: GATE, dir: 1, walkU: 0, cam: GATE - 280, world: null, stones: [], hold: null, sel: null, recheck: new Set(), drag: null, say: null, keys: {}, built: null };
 
@@ -60,7 +64,7 @@ const House = (() => {
   function makeWorld() {
     const w = new pl.World({ gravity: pl.Vec2(0, 20) });
     const g = w.createBody({ type: "static", position: pl.Vec2(P(HW / 2), P(GY + 60)) }); g.createFixture({ shape: pl.Box(P(HW / 2 + 200), P(60)), friction: 0.9 });
-    for (const s of SITES) { const f = w.createBody({ type: "static", position: pl.Vec2(P(s.x), P(GY - FH / 2)) }); f.createFixture({ shape: pl.Box(s.w / 2 + 0.25, P(FH / 2)), friction: 0.95 }); }
+    for (const s of placed()) { const f = w.createBody({ type: "static", position: pl.Vec2(P(s.x), P(GY - FH / 2)) }); f.createFixture({ shape: pl.Box(s.w / 2 + 0.25, P(FH / 2)), friction: 0.95 }); }
     return w;
   }
   function addStone(st, x, y, a, dyn) {
@@ -71,9 +75,10 @@ const House = (() => {
   }
   // Where each square of a stone is, in pixels: [x, y, angle].
   const squares = (S) => { const b = S.body, a = b.getAngle(); return SHAPES[S.shape].map(([cx, cy]) => { const p = b.getWorldPoint(pl.Vec2(cx, cy)); return [p.x * T, p.y * T, a]; }); };
-  const siteOf = (S) => { const p = S.body.getPosition(); return SITES.find((s) => Math.abs(p.x * T - s.x) < (s.w / 2 + 0.6) * T) || null; };
+  const siteOf = (S) => { const p = S.body.getPosition(); return placed().find((s) => Math.abs(p.x * T - s.x) < (s.w / 2 + 0.6) * T) || null; };
 
   function load() {
+    for (const s of SITES) { const SD = siteData(s); if (typeof SD.x !== "number" && (SD.done || SD.stones.length)) SD.x = FIRST_X[s.id]; s.x = typeof SD.x === "number" ? SD.x : null; }
     H_.world = makeWorld(); H_.stones = []; H_.hold = null; H_.sel = null; H_.recheck = new Set();
     for (const s of SITES) for (const q of siteData(s).stones) addStone(q, q.x, q.y, q.a, !siteData(s).done);
     for (const S of H_.stones) S.body.setAwake(false);
@@ -88,7 +93,7 @@ const House = (() => {
   }
 
   // ---- Laying a stone ----
-  const nearSite = () => SITES.find((s) => Math.abs(H_.x - s.x) < s.w * T / 2 + 46) || null;
+  const nearSite = () => placed().find((s) => Math.abs(H_.x - s.x) < s.w * T / 2 + 46) || null;
   // The stone in his hands, hanging over a place: { shape, dom, x, y, a, s }; its squares, as a stone's are.
   const holdSquares = (h, y) => { const c = Math.cos(h.a), sn = Math.sin(h.a), yy = y === undefined ? h.y : y; return SHAPES[h.shape].map(([cx, cy]) => [h.x + (cx * c - cy * sn) * T, yy + (cx * sn + cy * c) * T, h.a]); };
   // Do two squares (each [x, y, angle], a little smaller than a stone's square) overlap? (Separating axes.)
@@ -101,7 +106,7 @@ const House = (() => {
     return true;
   }
   // The ground under a point: a foundation's top, or the ground itself.
-  const floorAt = (x) => (SITES.some((s) => Math.abs(x - s.x) < (s.w / 2 + 0.25) * T) ? GY - FH : GY);
+  const floorAt = (x) => (placed().some((s) => Math.abs(x - s.x) < (s.w / 2 + 0.25) * T) ? GY - FH : GY);
   function blocked(h, y) {
     const mine = holdSquares(h, y);
     for (const m of mine) if (m[1] + T / 2 > floorAt(m[0]) + 0.5) return true;
@@ -237,6 +242,7 @@ const House = (() => {
     }
     stepClock(dt);
     stepFolk(dt);
+    if (H_.press && (H_.press.t += dt) >= HOLD_T) openMenu(H_.press);
     if (H_.dust && H_.dust.length) { for (const d of H_.dust) { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 300 * dt; } H_.dust = H_.dust.filter((d) => d.t < 0.8); }
     // The camera: on him; on the stone, while he holds one.
     const fx = H_.hold ? H_.hold.x : H_.x;
@@ -392,7 +398,7 @@ const House = (() => {
     rect(gx - 1, GY - 98, 2, 14, ink); rect(gx - 5, GY - 94, 10, 2, ink);
     // The places: the foundation, the line the stones must reach, and (built) the building.
     const near = nearSite();
-    for (const s of SITES) {
+    for (const s of placed()) {
       const SD = siteData(s), x0 = s.x - s.w * T / 2 - cam, w = s.w * T, top = GY - FH - s.h * T;
       if (x0 > W + 60 || x0 + w < -60) continue;
       rect(x0 - 4, GY - FH, w + 8, FH, "#3a3540");
@@ -474,6 +480,9 @@ const House = (() => {
       text(H_.say.sub, W / 2, 114, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: W - 30 });
     }
     if (D.gift && H_.t < 6) text("The lay brothers had put stones by for you, to begin with.", W / 2, 132, { align: "center", font: FONT.line, italic: true, size: 12, color: "#efe9dc", alpha: clamp((6 - H_.t) / 1, 0, 1), max: W - 30 });
+    drawMenu(cam);
+    if (H_.moving) text("Tap where " + H_.moving.name + " should stand.", W / 2, 150, { align: "center", font: FONT.line, italic: true, size: 13, color: "#fff3dc", glow: "rgba(0,0,0,0.9)", blur: 4, max: W - 40 });
+    else if (!H_.menu && !H_.hold && !H_.sel && !H_.inside && SITES.some((s) => s.x === null)) text("Hold on the ground to choose where to build.", W / 2, H - 14, { align: "center", font: FONT.line, italic: true, size: 12, color: C.warm, alpha: 0.85, glow: "rgba(0,0,0,0.9)", blur: 4 });
     button("LEAVE", 12, H - 46, 80, 32, () => leave(), {});
     if (H_.t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - H_.t / 0.8) + ")");
   }
@@ -767,23 +776,64 @@ const House = (() => {
     },
   };
 
+  // ---- Choosing where to build ----
+  // Held still on the ground: a little menu over the spot. On open ground, the buildings not yet
+  // placed, each with the stones it needs (greyed where it would not fit); on an outline with no
+  // stone laid in it yet, to move it or take it away.
+  const HOLD_T = 0.5;
+  const span = (s, x) => [x - s.w * T / 2, x + s.w * T / 2];
+  function fits(s, x) {
+    const [a, b] = span(s, x);
+    if (a < 40 || b > HW - 40) return false;
+    if (a < GATE + 50 && b > GATE - 50) return false;                // (the gate)
+    if (a < CAMP + 34 && b > CAMP - 34) return false;                // (the fire)
+    return !placed().some((o) => o !== s && a < o.x + o.w * T / 2 + 20 && b > o.x - o.w * T / 2 - 20);
+  }
+  const emptyAt = (wx) => placed().find((s) => !siteData(s).done && !H_.stones.some((O) => siteOf(O) === s) && Math.abs(wx - s.x) < s.w * T / 2) || null;
+  function openMenu(P) {
+    H_.press = null; H_.goal = null;
+    const s = emptyAt(P.wx);
+    H_.menu = s ? { site: s, x: P.x, y: P.y } : { wx: P.wx, x: P.x, y: P.y };
+    Sound.fx.tick && Sound.fx.tick(1100, 0.3);
+  }
+  function setPlace(s, x) {
+    keep(); siteData(s).x = Math.round(x); store(); load();
+    H_.say = { text: s.name, sub: "Its place is marked out. Lay " + s.need + " stones in it, up to the line.", t: 0 };
+    Sound.fx.pickup && Sound.fx.pickup();
+  }
+  function unplace(s) { keep(); delete siteData(s).x; store(); load(); }
+  function drawMenu(cam) {
+    const m = H_.menu; if (!m) return;
+    const items = m.site
+      ? [["MOVE IT", () => { H_.moving = m.site; H_.menu = null; }, { sub: "Then tap where" }], ["TAKE IT AWAY", () => { unplace(m.site); H_.menu = null; }, { sub: "Not built here" }]]
+      : SITES.filter((s) => s.x === null).map((s) => { const ok = fits(s, m.wx); return [s.name, () => { if (fits(s, m.wx)) { setPlace(s, m.wx); H_.menu = null; } }, { hot: ok, off: !ok, sub: ok ? s.need + " stones" : "No room here" }]; });
+    if (!items.length) { H_.menu = null; H_.say = { text: "ALL ARE PLACED", sub: "The library and the choir have their places. Hold on an empty one to move it.", t: 0 }; return; }
+    const bw = 132, bh = 36, x = clamp(m.x - bw / 2, 8, W - bw - 8), y0 = clamp(m.y - 30 - items.length * (bh + 6), 8, H - 8 - items.length * (bh + 6));
+    rect(x - 6, y0 - 6, bw + 12, items.length * (bh + 6) + 6, "rgba(6,5,8,0.82)");
+    items.forEach(([label, act, o], i) => button(label, x, y0 + i * (bh + 6), bw, bh, act, o));
+  }
+
   // ---- Hands on it ----
   function down(p) {
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (I.down) I.down(H_.inside, p); return; }
     if (H_.hold) { H_.drag = { x: p.x, hx: H_.hold.x, moved: false }; return; }
-    // A tap on a stone laid: it is chosen. On the ground: he walks there.
+    // The menu up: a tap anywhere but on it closes it. A place being moved: a tap sets it there.
+    if (H_.menu) { H_.menu = null; return; }
+    if (H_.moving) { const s = H_.moving, x = p.x + H_.cam; if (fits(s, x)) { setPlace(s, x); H_.moving = null; } else Sound.fx.tick && Sound.fx.tick(420, 0.3); return; }
+    // A tap on a stone laid: it is chosen. On the ground: he walks there (and held there, still, the menu).
     const S = stoneAt(p);
     if (S && siteOf(S)) { H_.sel = H_.sel === S ? null : S; Sound.fx.tick && Sound.fx.tick(800, 0.2); return; }
     H_.sel = null;
-    if (p.y > GY - 140) H_.goal = clamp(p.x + H_.cam, 40, HW - 40);
+    if (p.y > GY - 140) { H_.goal = clamp(p.x + H_.cam, 40, HW - 40); H_.press = { x: p.x, y: p.y, wx: p.x + H_.cam, t: 0 }; }
   }
   function move(p) {
     if (H_.inside) { const I = H_.inside; if (I.B) { const q = I.B.find((b) => p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h); I.hover = q ? q.i : null; } return; }
+    if (H_.press && Math.hypot(p.x - H_.press.x, p.y - H_.press.y) > 10) H_.press = null;
     const d = H_.drag; if (!d || !H_.hold) return;
     if (Math.abs(p.x - d.x) > 6) d.moved = true;
     if (d.moved && moveTo(d.hx + (p.x - d.x))) Sound.fx.tick && Sound.fx.tick(900, 0.12);
   }
-  function up() { const d = H_.drag; H_.drag = null; if (d && !d.moved && H_.hold) turn(); }
+  function up() { H_.press = null; const d = H_.drag; H_.drag = null; if (d && !d.moved && H_.hold) turn(); }
   function key(code, isDown) {
     H_.keys[code] = isDown; if (!isDown) return;
     if (H_.inside) { const I = INSIDE[H_.inside.kind]; if (!(I.key && I.key(H_.inside, code)) && (code === "Escape" || code === "Enter" || code === "Space")) goOut(); return; }
@@ -800,13 +850,13 @@ const House = (() => {
     }
     if ((code === "Space" || code === "Enter") && Math.abs(H_.x - CAMP) < 70) { receive(); return; }
     if (code === "Space" || code === "Enter") { const s = nearSite(); if (s && !siteData(s).done) lay(s); else if (s && INSIDE[s.kind]) goIn(s.kind); }
-    if (code === "Escape") leave();
+    if (code === "Escape") { if (H_.menu || H_.moving) { H_.menu = null; H_.moving = null; } else leave(); }
   }
   function leave() { if (H_.hold) putBack(); keep(); Game.toTitle(); }
   // In.
   function open() {
     if (!pl) return;
-    data(); takeBanked(); load(); H_.dust = [];
+    data(); takeBanked(); load(); H_.dust = []; H_.menu = null; H_.moving = null; H_.press = null;
     const come = takePilgrims(); loadFolk();
     H_.inside = null; H_.t = 0; H_.x = GATE; H_.dir = 1; H_.cam = clamp(GATE - W / 2, 0, HW - W); H_.goal = null; H_.keys = {}; H_.say = null; H_.built = null;
     if (data().gift) setTimeout(() => { if (data().gift) { data().gift = false; store(); } }, 6000);
