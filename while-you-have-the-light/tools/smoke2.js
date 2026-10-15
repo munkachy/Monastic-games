@@ -9,6 +9,7 @@ const out = process.argv[2];
   const errs = [];
   pg.on('pageerror', e => errs.push('page: ' + String(e)));
   pg.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text().slice(0, 300)); });
+  if (process.env.COVER) await pg.coverage.startJSCoverage({ resetOnNavigation: false });
   await pg.goto('http://localhost:8100/while-you-have-the-light/index.html');
   await pg.waitForTimeout(800);
   await pg.mouse.click(370, 200); await pg.waitForTimeout(300);
@@ -44,5 +45,6 @@ const out = process.argv[2];
     console.log(p.padEnd(14), errs.length - n0 ? 'ERRORS' : 'ok');
   }
   for (const e of errs) console.log('  ' + e);
+  if (process.env.COVER) require('fs').writeFileSync(process.env.COVER, JSON.stringify(await pg.coverage.stopJSCoverage()));
   await b.close();
 })();
