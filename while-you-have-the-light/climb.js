@@ -80,6 +80,7 @@ const M = {
     const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); action(); return; }
     const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (S.flare.on) endFlare(); else startFlare(); return; }
     const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0, born: performance.now() };
+    { const G = cartAt(S.x, S.y); if (G && Math.abs(wx - G.cart) < 30 && wy > G.y - 40 && wy < G.y + 6) { if (S.tied && S.tied.out === G) { S.tied.out = null; deliver(G); } else if (!S.tied) unbin(G); return; } }
     S.touches.set(id, t);
     // Two fingers down on the play together: he signs himself (the ward). The first finger's
     // throw, if it is still in the air, is called back; neither finger's tap or swipe counts.

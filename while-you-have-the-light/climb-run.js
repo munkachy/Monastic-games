@@ -535,6 +535,7 @@ function action() {
   if (S.crawl) { upFromCrawl(); return; }
   if (S.hang) { S.hang = null; S.ground = false; return; }
   if (S.next) { S.next = null; return; }           // mid-flip: he lets the next throw go
+  if (!S.tied && S.ground) { const G = cartAt(S.x, S.y, true); if (G && unbin(G)) return; }
   if (S.tied && S.tied.st === "hand") { const b = S.tied; b.st = "tied"; b.vx = S.dir * 40; b.vy = -30; Sound.fx.brickDrop(panX(b.x), 0.4); return; }   // the block in his hands: he sets it down
   if (S.rope && !S.ground) dropRope();
   else if (S.cling) {
