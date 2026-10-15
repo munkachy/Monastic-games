@@ -645,7 +645,7 @@ function placeGreat(k) {
   S.greatK = k; S.greatN = (S.greatN || 0) + 1;
   if (S.greatDown.has(k)) return;                 // (cast down already, before he left the mountain)
   const { at, dir, tier, sc, hw, ht } = P;
-  S.bigs.push({ sin: NOV.domain, tier, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir, hp: tier, maxHp: tier, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
+  S.bigs.push({ sin: NOV.domain, tier, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir, hp: tier + 2, maxHp: tier + 2, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
     stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: k, id: ++S.ids, growlT: -9, stoneT: -9 });
   ev("a great demon waits", { k, tier });
 }
@@ -657,7 +657,7 @@ function placeSummit(k) {
   if (S.bigs.some((g) => g.summit)) return;
   const G = GREAT.gluttony, sc = 1.9, hw = G.hw * sc, ht = G.ht * sc, side = hash2(k, 995, seed) < 0.5 ? -1 : 1, i = sec.c + side * 17;
   const at = dFree((i + 0.5) * CELL, -(sec.h0 + summitG(i, sec)) * CELL - 1, hw, ht) || [(i + 0.5) * CELL, -(sec.h0 + SUM_G) * CELL - 1];
-  S.bigs.push({ sin: "gluttony", tier: 5, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: -side, hp: 5, maxHp: 5, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
+  S.bigs.push({ sin: "gluttony", tier: 5, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: -side, hp: 7, maxHp: 7, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
     stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: k, id: ++S.ids, growlT: -9, stoneT: -9, summit: true });
   ev("the summit's demon waits", { k });
 }

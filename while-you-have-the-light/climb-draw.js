@@ -1204,10 +1204,13 @@ function hud(hM) {
   for (let i = 0; i < HEARTS; i++) drawHeart(20 + i * 15, 62, i < (S.hearts === undefined ? HEARTS : S.hearts));
   drawSoups();
   text(NOV ? "THE MOUNTAIN OF " + SINS[NOV.domain].name.toUpperCase() : "BEST " + Math.max(save.climbBest || 0, metres(S.top)) + " m", 16, 46, { size: 8, weight: 700, spacing: 2, color: "rgba(233,230,223,0.6)", max: 190 });
+  // (What he carries, counted: under the hearts and the flasks.)
+  ctx.save(); ctx.translate(0, 42);
   if (S.coins > 0) { const y = S.relics ? 76 : 62; drawCoin(22, y - 3, 1, true, 1, 4.2); text("× " + S.coins + (S.coins >= 6 ? "  HEAVY" : ""), 30, y, { size: 8, weight: 700, color: S.coins >= 6 ? "#ffb070" : "rgba(232,196,106,0.85)" }); }
   if (S.relics) { glow(22, 60, 8, C.gold, 0.4); rect(18, 58, 8, 5, C.gold); poly([18, 58, 26, 58, 22, 55], C.gold); text("× " + S.relics, 30, 63, { size: 8, weight: 700, color: "rgba(232,196,106,0.85)" }); }
   if (S.binned) { const y = 62 + (S.relics ? 14 : 0) + (S.coins > 0 ? 14 : 0), c = SINS[NOV ? NOV.domain : "wrath"]; glow(22, y - 3, 8, c.color, 0.35); for (const [i, j] of SHAPES.T) rect(16 + i * 4, y - 6 + j * 4, 3.4, 3.4, c.color); text("× " + S.binned + " IN THE CARTS", 30, y, { size: 8, weight: 700, color: "rgba(233,230,223,0.7)" }); }
   if (S.freedList && S.freedList.length) { const y = 62 + (S.relics ? 14 : 0) + (S.coins > 0 ? 14 : 0) + (S.binned ? 14 : 0); circle(22, y - 6, 2.2, "#cfc6b4"); poly([18.5, y, 25.5, y, 24, y - 4.5, 20, y - 4.5], "#cfc6b4"); text("× " + S.freedList.length + " FREED", 30, y, { size: 8, weight: 700, color: "rgba(233,230,223,0.7)" }); }
+  ctx.restore();
   if (S.say) {
     const a = clamp(S.say.t / 0.3, 0, 1) * clamp((3 - S.say.t) / 0.6, 0, 1);
     text(S.say.text, W / 2, 92, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });

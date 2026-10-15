@@ -225,7 +225,7 @@ function scene(sc) {
     let at = null;
     for (const d of [190, 150, 240, 120, 300, 90]) for (const sd of [S.dir, -S.dir]) if (!at) at = dFree(S.x + sd * d, S.y - 20, hw, ht);
     if (!at) at = dFree(S.x, S.y - HT - ht, hw, ht);
-    if (at) S.bigs.push({ sin: "gluttony", tier, sc: gs, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: sign(S.x - at[0]) || 1, hp: tier, maxHp: tier, st: "stone", t: 0, wake: 0, lit: 0,
+    if (at) S.bigs.push({ sin: "gluttony", tier, sc: gs, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: sign(S.x - at[0]) || 1, hp: tier + 2, maxHp: tier + 2, st: "stone", t: 0, wake: 0, lit: 0,
       anim: Math.random() * 9, stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: kHere, id: ++S.ids, growlT: -9, stoneT: -9 });
   }
   // A block tied to his belt (always, with a great demon: only a block can hurt it).
