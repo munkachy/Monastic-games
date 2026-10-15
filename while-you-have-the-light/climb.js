@@ -229,7 +229,11 @@ const ClimbPause = {
     b("BACK TO THE TITLE", () => Game.toTitle());
     if (typeof Verses !== "undefined") b("THE VERSES", () => Verses.open(), { sub: Verses.custom ? "Your own, from a file" : "Douay-Rheims, or your own" });
     if (typeof Notes !== "undefined" && Notes.ready) b("A NOTE FOR CLAUDE", () => Notes.open(Climb.pauseShot, Climb.pauseRec), { sub: "What happened; what should change" });
-    b(ClimbPause.moves ? "THE MAP" : "THE MOVES", () => { ClimbPause.moves = !ClimbPause.moves; }, { sub: ClimbPause.moves ? "What you have seen of the mountain" : "How he climbs, and fights" });
+    // (On claude.ai, for trying the mountains: the whole map, seen or not, beside it.)
+    if (window.claude) { const hw = bw / 2 - 3;
+      button(ClimbPause.moves ? "THE MAP" : "THE MOVES", cx - bw / 2, y, hw, 30, () => { ClimbPause.moves = !ClimbPause.moves; }, {});
+      button(ClimbPause.all ? "MAP: SEEN" : "MAP: ALL", cx + 3, y, hw, 30, () => { ClimbPause.all = !ClimbPause.all; MAP = null; ClimbPause.moves = false; }, { sub: ClimbPause.all ? "Only what you have seen" : "Show the whole of it" }); y += 38; }
+    else b(ClimbPause.moves ? "THE MAP" : "THE MOVES", () => { ClimbPause.moves = !ClimbPause.moves; }, { sub: ClimbPause.moves ? "What you have seen of the mountain" : "How he climbs, and fights" });
     const mx = Math.max(cx + bw / 2 + 24, W * 0.42);
     if (!ClimbPause.moves) {
       text("THE MAP", mx, 40, { size: 9, weight: 800, spacing: 3, color: C.flame });

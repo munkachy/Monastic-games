@@ -1319,7 +1319,7 @@ function buildMap() {
   const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d"), img = g.createImageData(w, h), d = img.data;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = x * MAP_P, hh = (h - y) * MAP_P, p = (y * w + x) * 4;
-    if (!(S.seen && S.seen.has(Math.floor(i / MAP_T) * 4096 + Math.floor(hh / MAP_T)))) { d[p + 3] = 0; continue; }
+    if (!ClimbPause.all && !(S.seen && S.seen.has(Math.floor(i / MAP_T) * 4096 + Math.floor(hh / MAP_T)))) { d[p + 3] = 0; continue; }
     const rock = solid(i + 1, -hh);
     d[p] = rock ? 58 : 196; d[p + 1] = rock ? 50 : 182; d[p + 2] = rock ? 42 : 156; d[p + 3] = 255;
   }
