@@ -8,7 +8,7 @@
 function start(opts) {
   opts = opts || {};
   NOV = opts.nov ? Object.assign({}, opts.nov) : null;
-  seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0;
+  seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0; COLS = 330;
   // (A place kept on Gluttony's mountain as it was made before its maps: from the foot, on the new mountain.)
   if (opts.resume && opts.resume.v === 2) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
   const r = seeded(seed); wallPh = [r() * TAU, r() * TAU, r() * TAU];
@@ -179,7 +179,7 @@ const SCENE_PLACE = { shaft: ["shaft"], crossing: ["trav", "cave", "slope"] };
 function scene(sc) {
   sc = sc || {};
   const dom = BUILT.includes(sc.mountain) ? sc.mountain : "gluttony";
-  pieceOut = false; start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true, piece: [].concat(sc.piece || []).filter((n) => ROOMS[n]).length ? [].concat(sc.piece).filter((n) => ROOMS[n]) : null }, seed: sc.seed });
+  pieceOut = false; start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true, piece: [].concat(sc.piece || [])[0] === "mountain" ? ["mountain"] : [].concat(sc.piece || []).filter((n) => ROOMS[n]).length ? [].concat(sc.piece).filter((n) => ROOMS[n]) : null }, seed: sc.seed });
   for (const k of SEEN) S[k] = true;                // (he knows the mountain: no lessons on the way)
   S.fightHintT = 99; S.hintT = 99; S.hooked = 9;
   // The place: the first of the kind asked for at that height or above it, with ground to stand on.

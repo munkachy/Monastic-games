@@ -999,7 +999,7 @@ function drawWorld() {
   const vp = visPoly(lx, ly, R);
   S.light.moveTo(vp[0] - cam.x, vp[1] - cam.y); for (let k = 2; k < vp.length; k += 2) S.light.lineTo(vp[k] - cam.x, vp[k + 1] - cam.y); S.light.closePath();
   const tx = S.torch[0] - cam.x, ty = S.torch[1] - cam.y;
-  darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 0.95 - 0.22 * sky));      // (under the open sky, the moon's light)
+  darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 1 - 0.27 * sky));      // (black where no light reaches; under the open sky, the moon's light)
   // (The sky's own lights are not darkened: over the dark, where no rock stands in front of them.)
   if (skyB > -40) {
     const yr = Math.min(H, skyB - SUM_G * CELL + 4), Q = new Path2D(); Q.rect(-10, -10, W + 20, H + 20); Q.addPath(P);
