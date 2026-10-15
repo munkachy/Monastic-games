@@ -70,17 +70,17 @@ the build and test scripts (see tools/README.md).
 - **The fight: "Christe, qui lux es"** (86)
 - **The title: the hymn alone** (154)
 
-### core.js (325 lines)
+### core.js (324 lines)
 
 - **The screen** (7)
 - **Little helpers** (35)
-- **The palette** (68)
-- **Type** (79)
-- **Light** (121)
-- **Buttons** (164)
-- **What is kept, kept twice** (187): K 193, T 195, push 196, pull 201
-- **The save** (223)
-- **Input** (237)
+- **The palette** (67)
+- **Type** (78)
+- **Light** (120)
+- **Buttons** (163)
+- **What is kept, kept twice** (186): K 192, T 194, push 195, pull 200
+- **The save** (222)
+- **Input** (236)
 
 ### art.js (1065 lines)
 
@@ -110,17 +110,17 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (674 lines)
+### climb-run.js (672 lines)
 
-- **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 53, bankFreed 62, finish 66
-- **His place on a mountain, kept** (74): keptAll 83, forget 84, keepPlace 86, keepHere 106, restore 108, settle 136
-- **A scene from the white room** (148): SCENE_PLACE 152, scene 153
-- **The relics' boons** (216): BOONS 224, BOON_ORDER 230, boonOf 231, boonOn 232, showBoon 233, stepBoonShow 238, grantBoon 242, stepBoon 250, vadeRetro 273, vadeGreat 291, drawToken 300, drawMonkFront 328, drawBoonShow 354, boonGlows 371
-- **The hook** (379): rayRock 381, nearLine 387
-- **Avarice's chains** (394): chainsNear 397, chainTip 402, onSeg 403, chainHit 406, swingChains 418, throwHook 429, flyShot 444, flipDur 478, dropRope 479, sideOf 502, tapSide 506, swapHook 507, nextHook 512, hookAngle 523
-- **The tips** (534): tipsOn 538, tipSeen 539, tip 540, tipGone 545, lessonDone 553, setTips 554, action 555, hangRope 571
-- **The rope round the rock** (591): bendsOf 596, pivotOf 597, freeOf 598, setFixed 599, sweepCorner 602, wrapRope 624
-- **The flare** (642): startFlare 643, endFlare 649, puff 653, blink 660
+- **Starting, and the end** (6): start 8, metres 45, sectionsIn 47, lampsOf 52, lightOut 53, bankFreed 60, finish 64
+- **His place on a mountain, kept** (72): keptAll 81, forget 82, keepPlace 84, keepHere 104, restore 106, settle 134
+- **A scene from the white room** (146): SCENE_PLACE 150, scene 151
+- **The relics' boons** (214): BOONS 222, BOON_ORDER 228, boonOf 229, boonOn 230, showBoon 231, stepBoonShow 236, grantBoon 240, stepBoon 248, vadeRetro 271, vadeGreat 289, drawToken 298, drawMonkFront 326, drawBoonShow 352, boonGlows 369
+- **The hook** (377): rayRock 379, nearLine 385
+- **Avarice's chains** (392): chainsNear 395, chainTip 400, onSeg 401, chainHit 404, swingChains 416, throwHook 427, flyShot 442, flipDur 476, dropRope 477, sideOf 500, tapSide 504, swapHook 505, nextHook 510, hookAngle 521
+- **The tips** (532): tipsOn 536, tipSeen 537, tip 538, tipGone 543, lessonDone 551, setTips 552, action 553, hangRope 569
+- **The rope round the rock** (589): bendsOf 594, pivotOf 595, freeOf 596, setFixed 597, sweepCorner 600, wrapRope 622
+- **The flare** (640): startFlare 641, endFlare 647, puff 651, blink 658
 
 ### climb-foes.js (1190 lines)
 
@@ -176,27 +176,27 @@ the build and test scripts (see tools/README.md).
 - **The whole psalm, and what of it has been read** (27): split 41, keep 137
 - **The box for it, over the pause screen** (158): build 160, take 226, show 232, close 234
 
-### house.js (1132 lines)
+### house.js (821 lines)
 
-- (top): SHAPES 22, SITES 25, H_ 32
-- **What is kept** (34): data 35, siteData 48, takeBanked 50
-- **The stones, as bodies** (55): P 56, makeWorld 57, addStone 63, squares 70, siteOf 71, load 73, keep 78
-- **Laying a stone** (87): nearSite 88, holdSquares 90, sqHit 92, floorAt 101, blocked 102, landing 109, hangY 117, lay 122, takeUp 128, moveTo 135, nudge 144, turn 145, place 152, putBack 160, inSquare 164, stoneAt 165, lift 166, loosen 175, recheck 180
-- **Each step** (192): step 193
-- **The people** (247): folkData 256, takePilgrims 258, postOf 268, makeFolk 275, loadFolk 283, receive 284, setOut 291, stepFolk 296, drawPerson 355, drawCampAndShed 381, folkSigns 400
-- **Days and nights** (421): hasStones 432, wallMax 434, isNight 435, awake 436, stepClock 437, startNight 441, dawn 457, targetOf 469, preyOf 475, stepRaid 480, struck 560, blow 577, strike 607, drawRaid 614
-- **Drawn** (630): stoneFill 631, drawSquares 632, drawStone 640, outline 641, drawCracks 647, drawBuilt 656, draw 674
-- **Inside** (789): goIn 790, goOut 791, HOURS 797, hourOf 803, hasVerses 804, shelves 805, drawRoom 814, drawSpine 823, drawBook 837
-- **The choir** (870): freed 876, GLORIA 877, VOW 878, sylls 880, tone 889, hourVerses 908, sing 917, chorister 932, stallSeats 945, drawChoir 954, INSIDE 1021
-- **Hands on it** (1078): down 1079, move 1089, up 1095, key 1096, leave 1115, open 1117, M 1129
+- (top): SHAPES 18, SITES 21, H_ 26
+- **What is kept** (28): data 29, siteData 51, takeBanked 53
+- **The stones, as bodies** (58): P 59, makeWorld 60, addStone 66, squares 73, siteOf 74, load 76, keep 81
+- **Laying a stone** (90): nearSite 91, holdSquares 93, sqHit 95, floorAt 104, blocked 105, landing 112, hangY 120, lay 125, takeUp 131, moveTo 138, nudge 147, turn 148, place 155, putBack 163, inSquare 167, stoneAt 168, lift 169, loosen 178, recheck 183
+- **Each step** (195): step 196
+- **The people** (246): folkData 252, takePilgrims 254, makeFolk 262, loadFolk 268, receive 269, stepFolk 276, drawPerson 291, drawCamp 312, folkSigns 321
+- **Days and nights** (333): stepClock 337, nightK 343
+- **Drawn** (345): stoneFill 346, drawSquares 347, drawStone 355, outline 356, drawBuilt 361, draw 372
+- **Inside** (481): goIn 482, goOut 483, HOURS 489, hourOf 495, hasVerses 496, shelves 497, drawRoom 506, drawSpine 515, drawBook 529
+- **The choir** (562): freed 568, GLORIA 569, VOW 570, sylls 572, tone 581, hourVerses 600, sing 609, chorister 624, stallSeats 637, drawChoir 646, INSIDE 713
+- **Hands on it** (770): down 771, move 780, up 786, key 787, leave 805, open 807, M 818
 
-### game.js (265 lines)
+### game.js (261 lines)
 
 - (top): Game 6, vignetteMonk 32
 - **The title** (42): Title 43
 - **The seven mountains: one domain to a mountain** (81): NOV_SUB 85, novSettings 91, Novitiate 96
 - **Home: carried there from a summit won** (136): Home 140
 - **The end: the light goes out** (202): Over 203
-- **The loop** (235): onResize 236, frame 240
+- **The loop** (231): onResize 232, frame 236
 
 <!-- end of index -->

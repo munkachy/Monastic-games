@@ -53,8 +53,6 @@ const lampsOf = (sec) => (sec.type === "cave" ? cave(sec).lamps : sec.type === "
 function lightOut() {
   ev("the light went out");
   if (NOV && !NOV.room) forget(NOV.domain);         // (the light gone out, the place he kept is gone with it)
-  // (And the mountain's demons follow him down: the next time he goes home, they come for the house.)
-  if (NOV && !NOV.room && save.house) { const was = save.house.raid, n = Math.min(7, 3 + ((save.climbs && save.climbs[NOV.domain]) || 0)); save.house.raid = { dom: NOV.domain, n: was ? Math.min(8, Math.max(was.n, n) + 1) : n }; store(); }
   S.dying = 0.001; S.fuel = 0; endFlare(true);
   Sound.fx.death(); Sound.setLevel(0);
 }
