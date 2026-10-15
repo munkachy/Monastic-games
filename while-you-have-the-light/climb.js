@@ -78,7 +78,7 @@ const M = {
     // Held in a great demon's jaws: every tap (but on the thumb's cross) is a blow from inside it.
     if (S.latched) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); punchOut(); return; }
     if (S.legsIn && dist(p.x + S.cam.x, p.y + S.cam.y, S.x, S.y - 8) < 46) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); kickLegs(); return; }
-    const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); action(); return; }
+    const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (lookable()) S.look = { id }; else action(); return; }
     const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (S.flare.on) endFlare(); else startFlare(); return; }
     const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0, born: performance.now() };
     { const G = cartAt(S.x, S.y); if (G && Math.abs(wx - G.cart) < 30 && wy > G.y - 40 && wy < G.y + 6) { if (S.tied && S.tied.out === G) { S.tied.out = null; deliver(G); } else if (!S.tied) unbin(G); return; } }
@@ -139,6 +139,7 @@ const M = {
   up(p, ev) {
     if (!S) return;
     const id = pid(ev), t = S.touches.get(id); S.touches.delete(id);
+    if (S.look && S.look.id === id) S.look = null;
     if (t && t.g && !t.g.done && !S.act) {
       t.g.path.push([p.x, p.y]);
       const k = stroke(t.g.path);
@@ -167,13 +168,14 @@ const M = {
   key(code, down, e) {
     if (!S) return;
     S.keys[code] = down;
+    if (!down && code === "Space" && S.look) S.look = null;
     if (S.verseHold) { if (down) goOn(); return; }
     if (S.tipHold) { if (down && code !== "Escape" && code !== "KeyP") { tipGone(); return; } }
     if (!down) return;
     if ((S.dread || S.boonShow || S.angel) && code !== "Escape" && code !== "KeyP") return;
     if (code === "Escape" || code === "KeyP") M.pause();
     else if (S.latched) { if (!(e && e.repeat)) punchOut(); }          // (in its jaws: any key, a blow)
-    else if (code === "Space") action();
+    else if (code === "Space") { if (S.look) return; if (lookable()) S.look = { id: "key" }; else action(); }
     else if (code === "ShiftLeft" || code === "ShiftRight") { if (S.flare.on) endFlare(); else startFlare(); }
   },
   pause() {
