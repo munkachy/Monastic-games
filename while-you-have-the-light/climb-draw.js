@@ -356,6 +356,8 @@ function drawHook(x, y, a) {
   ctx.stroke(); ctx.lineCap = "butt";
   ctx.restore();
 }
+// Under a tip being read: how to go on.
+function goOnLine(y, a) { text(usingKeys() ? "PRESS ANY KEY TO GO ON" : "TAP TO GO ON", W / 2, y, { align: "center", size: 7.5, weight: 800, spacing: 2, color: C.flame, alpha: a * (0.6 + 0.4 * Math.sin(S.rt * 4)), glow: "rgba(0,0,0,0.9)", blur: 6 }); }
 function draw() {
   // (The shaking, and the knock of a blow: the view thrown the blow's way and coming back.)
   const K = S.kick, kk = K ? Math.max(0, 1 - K.t / 0.16) : 0;
@@ -1142,6 +1144,7 @@ function hud(hM) {
     const a = clamp(S.say.t / 0.3, 0, 1) * clamp((3 - S.say.t) / 0.6, 0, 1);
     text(S.say.text, W / 2, 92, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 4, color: C.gold, alpha: a, glow: "rgba(0,0,0,0.9)", blur: 8 });
     text(S.say.sub, W / 2, 108, { align: "center", size: 8.5, weight: 600, color: "#e9e6df", alpha: a * 0.85, glow: "rgba(0,0,0,0.9)", blur: 6, max: W - 40 });
+    if (S.tipHold && S.say.tip) goOnLine(126, a);
   }
   if (S.boon) {
     const B = S.boon, left = clamp(1 - B.t / B.T, 0, 1), x = W / 2, y = 44, blink = B.T - B.t < 3 && Math.floor(S.rt * 6) % 2;
@@ -1184,9 +1187,10 @@ function hud(hM) {
     text(lab || "·", f.x, f.y + 3, { align: "center", size: 7.5, weight: 800, spacing: 1, color: lab ? "#fff3dc" : "#77736c" });
   }
   if (F.on) text("THE FLARE · TAP A DEMON, A BOULDER, OR ANYWHERE", W / 2, 24, { align: "center", size: 9, weight: 800, spacing: 2, color: C.flameHot, max: W - 140 });
+  if (S.tipHold === "fightSeen") goOnLine(S.say ? 178 : 156, 1);
   if (S.fightSeen && S.fightHintT < 12 && !F.on && !S.verseHold) {
     const a = clamp(S.fightHintT / 0.5, 0, 1) * clamp((12 - S.fightHintT) / 1.5, 0, 1);
-    const L = ["A demon. Tap it: strike.  Swipe up: uppercut.  Down: slam.  Across: hurl.  Swing into it: a kick.", "Tap what is thrown at you: standing, you catch it as it comes. Tap again: fling it.  Swing into it: kick it back.  " + (usingKeys() ? "Hold on a demon (or yourself): the sign of the cross." : "Hold on a demon: the sign of the cross.  Two fingers at once: bless yourself.")];
+    const L = [usingKeys() ? "A demon. Click it: strike.  Hold \u25b2 / \u25bc / \u25c0\u25b6 as you click: uppercut, slam, hurl.  Swing into it: a kick." : "A demon. Tap it: strike.  Swipe up: uppercut.  Down: slam.  Across: hurl.  Swing into it: a kick.", "Tap what is thrown at you: standing, you catch it as it comes. Tap again: fling it.  Swing into it: kick it back.  " + (usingKeys() ? "Hold on a demon (or yourself): the sign of the cross." : "Hold on a demon: the sign of the cross.  Two fingers at once: bless yourself.")];
     let y = S.say ? 134 : 112; for (const l of L) y += 12 * textLines(l, W / 2, y, W - 120, { align: "center", size: 9, weight: 600, color: "#e9e6df", alpha: a, glow: "rgba(0,0,0,0.9)", blur: 6, lh: 12 }) + 3;
   }
   if (S.verse && S.verseHold) {
