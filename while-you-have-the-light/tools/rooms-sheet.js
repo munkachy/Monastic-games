@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: 1400, height: 1000 } });
   await pg.goto('http://localhost:8100/while-you-have-the-light/index.html'); await pg.waitForTimeout(400);
   const n = await pg.evaluate(() => {
-    const names = Object.keys(ROOMS), k = 3, cw = 64 * k, ch = 34 * k, pad = 14, top = 22;
+    const names = Object.keys(ROOMS), k = 3, cw = ROOM_W * ROOM_K * k, ch = ROOM_H * ROOM_K * k, pad = 14, top = 22;
     const c = document.createElement('canvas'); c.width = 3 * (cw + pad) + pad; c.height = names.length * (ch + pad + top) + pad; const x = c.getContext('2d');
     x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.font = '13px sans-serif';
     names.forEach((nm, r) => {

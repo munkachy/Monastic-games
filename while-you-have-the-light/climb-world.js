@@ -31,7 +31,8 @@ const CLIMB_VERSES = [
 ];
 
 
-const CELL = 16, COLS = 330, MID = 165, MPX = 27;   // a cell; the world's width in cells, and its middle; pixels to a metre
+const CELL = 16, MID = 165, MPX = 27;
+let COLS = 330;                                  // (wider for a whole mountain of rooms)   // a cell; the world's width in cells, and its middle; pixels to a metre
 const GRAV = 760, VMAX = 900, WALK = 70, AIR = 110;
 const PUMP_WITH = 230, PUMP_START = 130, PUMP_AGAINST = 70;   // pumping a swing: with its motion, from stillness, against it
 const HOOK = 280, HOOK_V = 820, CLIMB_V = 72, PAYOUT = 110, ROPE_MIN = 40, ROPE_MAX = 340, GRIP = 42;
@@ -432,7 +433,9 @@ const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type 
 // A room as a section of the mountain: set in the middle of it, its rock from its made grid, the
 // mountain's rock about it. c, its way out at the top (for what comes above it).
 function roomSec(name, k, h0) {
-  const rnd = seeded(seed + 101 * k + 7), R = Array.isArray(name) ? (name.length > 1 ? linkRooms(name, rnd) : makeRoom(name[0], rnd)) : makeRoom(name, rnd), x0 = Math.round(MID - R.w / 2), top = [];
+  const rnd = seeded(seed + 101 * k + 7), R = name[0] === "mountain" ? makeMountain(rnd) : Array.isArray(name) ? (name.length > 1 ? linkRooms(name, rnd) : makeRoom(name[0], rnd)) : makeRoom(name, rnd);
+  if (R.w + 40 > COLS) COLS = R.w + 40;
+  const x0 = Math.round(R.w + 40 > 330 ? 20 : MID - R.w / 2), top = [];
   for (let c = 0; c < R.w; c++) if (!R.g[0][c]) top.push(c);
   return { type: "room", name, R, x0, h0, h1: h0 + R.h - 1, k, dom: NOV ? NOV.domain : null, c: top.length ? x0 + (top[0] + top[top.length - 1]) / 2 : MID };
 }

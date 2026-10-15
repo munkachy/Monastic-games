@@ -11,5 +11,6 @@
 - The piece picker: the game with ?pieces in the address has THE PIECES on the title: each room alone, to play.
 - codemap.js: regenerates the index in ../CODEMAP.md (sections and functions with line numbers). Run it after changing code.
 - trace2.js jobs.json > traced.json : traces black shapes from art-src images (crop, erase rects, fill, scale) into outline loops; boxes.js finds figure boxes on a sheet; prev2.js renders traced.json to a PNG; crop.js crops a region with a grid.
+- mtn-sheet.js out.png [n]: draws n whole mountains (makeMountain) side by side, to see their shapes and ways.
 - claude-page.html: the page published as the claude.ai artifact (with the game's .js files as supporting files). Its script list must match index.html's.
 Run node scripts with NODE_PATH=/opt/node22/lib/node_modules.
