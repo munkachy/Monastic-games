@@ -210,7 +210,7 @@ const House = (() => {
   function addTo(s) {
     const SD = siteData(s), D = data(); if (!SD.done || (SD.level || 0) >= 3 || D.store.length < s.need) return;
     D.store.splice(0, s.need); SD.level = (SD.level || 0) + 1; store();
-    H_.say = { text: s.name + " ADDED TO", sub: ["", "A door, and its windows lit.", "Bands of stone, buttresses, and the cross.", "A bell tower, and its lamp."][SD.level], t: 0 };
+    H_.say = { text: s.name + " ADDED TO", sub: ["", "Bands of stone, buttresses, more windows.", "The cross, and a rose window.", "A bell tower, and its lamp."][SD.level], t: 0 };
     Sound.fx.kindle && Sound.fx.kindle(1, 0);
   }
   function recheck(ids, said) {
@@ -386,11 +386,12 @@ const House = (() => {
     // One shape: each square drawn a little larger in the edge's dark, then in the stone's colour.
     const each = (pad, fill) => { for (const [x, y, a] of sq) { ctx.save(); ctx.translate(x - cam, y); ctx.rotate(a); rect(-T / 2 - pad, -T / 2 - pad, T + 2 * pad, T + 2 * pad, fill); ctx.restore(); } };
     each(1.6, "#141016"); each(0.4, col);
+    for (const [x, y, a] of sq) if (Math.abs(Math.sin(a)) < 0.2 && !sq.some((q) => Math.abs(q[0] - x) < T * 0.5 && q[1] < y - T * 0.5 && q[1] > y - T * 1.5)) rect(x - cam - T / 2 - 1.5, y - T / 2 - 3, T + 3, 3.5, "#3a3238");
     const xs = sq.map((q) => q[0] - cam), ys = sq.map((q) => q[1]), x0 = Math.min(...xs) - T / 2, x1 = Math.max(...xs) + T / 2, top = Math.min(...ys) - T / 2, base = GY - FH, mx = (x0 + x1) / 2, hgt = base - top;
     const peak = sq.reduce((p, q) => (q[1] < p[1] ? q : p)), px = peak[0] - cam;
     // (What is added is drawn only within the shape.)
     const clip = () => { ctx.save(); ctx.beginPath(); for (const [x, y, a] of sq) { const c = Math.cos(a), sn = Math.sin(a), h = T / 2 + 0.4; const P = [[-h, -h], [h, -h], [h, h], [-h, h]].map(([u, v]) => [x - cam + u * c - v * sn, y + u * sn + v * c]); ctx.moveTo(P[0][0], P[0][1]); for (const p of P.slice(1)) ctx.lineTo(p[0], p[1]); ctx.closePath(); } ctx.clip(); };
-    if (lv >= 2) {
+    if (lv >= 1) {
       // Bands of stone across it, and buttresses at its foot either side.
       clip(); for (let y = base - T * 1.5; y > top + 4; y -= T * 2) rect(x0, y, x1 - x0, 3, "rgba(30,24,20,0.45)"); for (let x = x0 + T; x < x1; x += T) rect(x, top, 1, hgt, "rgba(255,240,215,0.06)"); ctx.restore();
       poly([x0 - 10, base, x0, base, x0, base - Math.min(hgt * 0.6, 3 * T), x0 - 4, base - Math.min(hgt * 0.6, 3 * T) + 6], "#141016");
@@ -405,14 +406,15 @@ const House = (() => {
       const bl = 0.7 + 0.3 * Math.sin(t * 2.3); glow(px, ty + 14, 22, C.flame, 0.4 * bl); circle(px, ty + 15, 2.4, "rgba(255,210,140," + bl.toFixed(3) + ")");
     }
     if (lv >= 2) { const cy = (lv >= 3 ? top - T * 3.2 - T * 1.6 : top) - 2; rect(px - 1, cy - 14, 2, 14, ink); rect(px - 5, cy - 10, 10, 2, ink); }
-    if (lv >= 1) {
-      // A door at its foot, and windows lit within.
+    {
+      // A door at its foot, and windows lit within (and, added to, a second row of them).
       clip();
       const dw = Math.min(10, (x1 - x0) / 5), dh = Math.min(26, hgt * 0.7);
       ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(mx - dw, base); ctx.lineTo(mx - dw, base - dh + dw); ctx.arc(mx, base - dh + dw, dw, PI, 0); ctx.lineTo(mx + dw, base); ctx.closePath(); ctx.fill();
       const lamp = 0.65 + 0.35 * Math.sin(t * 1.7 + s.x);
       for (const [wx, wy] of [[x0 + (x1 - x0) * 0.22, top + hgt * 0.35], [x1 - (x1 - x0) * 0.22, top + hgt * 0.35]]) if (hgt > 50) { ctx.beginPath(); ctx.moveTo(wx - 3, wy + 12); ctx.lineTo(wx - 3, wy + 3); ctx.arc(wx, wy + 3, 3, PI, 0); ctx.lineTo(wx + 3, wy + 12); ctx.closePath(); ctx.fillStyle = "rgba(255,196,120," + (0.8 * lamp).toFixed(3) + ")"; ctx.fill(); }
-      if (lv >= 3 && hgt > 70) { ctx.beginPath(); ctx.arc(mx, top + hgt * 0.32, 7, 0, TAU); ctx.fillStyle = "rgba(255,196,120," + (0.7 * lamp).toFixed(3) + ")"; ctx.fill(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; line(mx, top + hgt * 0.32, mx + Math.cos(a) * 7, top + hgt * 0.32 + Math.sin(a) * 7, ink, 1); } }
+      if (lv >= 1 && hgt > 110) for (const [wx, wy] of [[x0 + (x1 - x0) * 0.22, top + hgt * 0.12], [x1 - (x1 - x0) * 0.22, top + hgt * 0.12]]) { ctx.beginPath(); ctx.moveTo(wx - 2.5, wy + 10); ctx.lineTo(wx - 2.5, wy + 2.5); ctx.arc(wx, wy + 2.5, 2.5, PI, 0); ctx.lineTo(wx + 2.5, wy + 10); ctx.closePath(); ctx.fillStyle = "rgba(255,196,120," + (0.7 * lamp).toFixed(3) + ")"; ctx.fill(); }
+      if (lv >= 2 && hgt > 70) { ctx.beginPath(); ctx.arc(mx, top + hgt * 0.32, 7, 0, TAU); ctx.fillStyle = "rgba(255,196,120," + (0.7 * lamp).toFixed(3) + ")"; ctx.fill(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; line(mx, top + hgt * 0.32, mx + Math.cos(a) * 7, top + hgt * 0.32 + Math.sin(a) * 7, ink, 1); } }
       ctx.restore();
       for (const wx of [x0 + (x1 - x0) * 0.22, x1 - (x1 - x0) * 0.22]) if (hgt > 50) glow(wx, top + hgt * 0.35 + 7, 16, C.flame, 0.22 * lamp);
     }
