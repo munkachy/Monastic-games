@@ -110,25 +110,25 @@ the build and test scripts (see tools/README.md).
 - **The monk's body against the rock** (475): bodyH 477, boxHit 478, moveX 484, moveY 492, freeSpot 500, near 509, wallBeside 517, faceLine 524, plant 535, unclip 541, grip 545, middle 546
 - **Ledges: stepping up, climbing up** (548): ledge 551, lipInReach 565, openBelow 574, ledgeAround 583, startAct 601, actRoot 608, actPoseU 626, stepAct 627
 
-### climb-run.js (651 lines)
+### climb-run.js (652 lines)
 
 - **Starting, and the end** (6): start 8, metres 44, sectionsIn 46, lampsOf 51, lightOut 52, bankFreed 61, finish 65
 - **His place on a mountain, kept** (73): keptAll 82, forget 83, keepPlace 85, keepHere 105, restore 107, settle 135
 - **A scene from the white room** (147): SCENE_PLACE 151, scene 152
 - **The relics' boons** (215): BOONS 223, BOON_ORDER 229, boonOf 230, boonOn 231, showBoon 232, stepBoonShow 237, grantBoon 241, stepBoon 249, vadeRetro 272, vadeGreat 290, drawToken 299, drawMonkFront 327, drawBoonShow 353, boonGlows 370
 - **The hook** (378): rayRock 380, nearLine 386
-- **Avarice's chains** (393): chainsNear 396, chainTip 401, onSeg 402, chainHit 405, swingChains 417, throwHook 428, flyShot 443, flipDur 477, dropRope 478, sideOf 501, tapSide 505, swapHook 506, nextHook 511, hookAngle 522, action 533, hangRope 548
-- **The rope round the rock** (568): bendsOf 573, pivotOf 574, freeOf 575, setFixed 576, sweepCorner 579, wrapRope 601
-- **The flare** (619): startFlare 620, endFlare 626, puff 630, blink 637
+- **Avarice's chains** (393): chainsNear 396, chainTip 401, onSeg 402, chainHit 405, swingChains 417, throwHook 428, flyShot 443, flipDur 477, dropRope 478, sideOf 501, tapSide 505, swapHook 506, nextHook 511, hookAngle 522, action 533, hangRope 549
+- **The rope round the rock** (569): bendsOf 574, pivotOf 575, freeOf 576, setFixed 577, sweepCorner 580, wrapRope 602
+- **The flare** (620): startFlare 621, endFlare 627, puff 631, blink 638
 
-### climb-foes.js (1172 lines)
+### climb-foes.js (1190 lines)
 
 - **The demons, and what they throw** (5): DEM 13, boxAt 15, moveBox 21, dFree 27, los 33, dMid 34, alive 35, panX 36, gain 37, setSt 38, spawnDemon 39, spotsFor 48, placeFor 89, placeRocks 118
 - **The shrines** (133): placeShrine 142
-- **The blocks** (166): SHAPES 183, newBlock 186, makeBlock 190, reveal 195, tie 204, takeUp 212, throwBlock 221, loosen 230, carryOff 238, shrineFor 244, dropBlock 251, seekBlock 257, floatTo 272, alight 292, floatDemon 293, rebuild 309, raiseIdol 315, yank 329, stepYank 334, brotherOf 347, binSlot 356, deliver 359, stepBlocks 367, stepLoose 388, stepTied 414, flail 460, drawBlock 477, GLOWS 489, drawBlocks 490, drawTied 511, drawHeld 522, drawYank 531, drawBrother 538, rimNow 565, blockGlows 574
-- **The great demons** (589): GREAT 601, GREAT_V 602, planGreat 606, placeGreat 623, placeSummit 634, bigAt 644, stepGreat 645, updGreat 649, greatReach 705, latch 733, holdHim 746, punchOut 753, spitOut 759, strikeGreat 773, greatThrows 800, breakGreat 811, hurl 828, freedSay 837
-- **A great demon's dread** (838): DREAD_T 846
-- **The angel** (847): ANG 852, startAngel 853, stepAngel 862, angelAt 872, drawBeam 876, drawAngel 884, drawAngelOver 909, finishWon 920, hauntWait 931, canDread 932, onView 934, greatSays 938, startDread 941, stepDread 946, burstSpot 957, burstAfter 972, drawDread 980, MAW_STONE 1006, MAW_FLESH 1007, MAW_EYES 1008, MAW_CRACKS 1009, mawParts 1010, greatT 1091, laughK 1098, headTilt 1099, latchFrame 1104, paintMaw 1105, drawGreat 1120, drawLatch 1138, greatGlows 1145
+- **The blocks** (166): SHAPES 183, newBlock 186, makeBlock 190, reveal 195, tie 204, takeUp 212, throwBlock 221, loosen 230, carryOff 238, shrineFor 244, dropBlock 251, seekBlock 257, floatTo 272, alight 292, floatDemon 293, rebuild 309, raiseIdol 315, yank 329, stepYank 334, brotherOf 347, binSlot 356, deliver 359, cartAt 368, unbin 375, stepBlocks 384, stepLoose 406, stepTied 432, flail 478, drawBlock 495, GLOWS 507, drawBlocks 508, drawTied 529, drawHeld 540, drawYank 549, drawBrother 556, rimNow 583, blockGlows 592
+- **The great demons** (607): GREAT 619, GREAT_V 620, planGreat 624, placeGreat 641, placeSummit 652, bigAt 662, stepGreat 663, updGreat 667, greatReach 723, latch 751, holdHim 764, punchOut 771, spitOut 777, strikeGreat 791, greatThrows 818, breakGreat 829, hurl 846, freedSay 855
+- **A great demon's dread** (856): DREAD_T 864
+- **The angel** (865): ANG 870, startAngel 871, stepAngel 880, angelAt 890, drawBeam 894, drawAngel 902, drawAngelOver 927, finishWon 938, hauntWait 949, canDread 950, onView 952, greatSays 956, startDread 959, stepDread 964, burstSpot 975, burstAfter 990, drawDread 998, MAW_STONE 1024, MAW_FLESH 1025, MAW_EYES 1026, MAW_CRACKS 1027, mawParts 1028, greatT 1109, laughK 1116, headTilt 1117, latchFrame 1122, paintMaw 1123, drawGreat 1138, drawLatch 1156, greatGlows 1163
 
 ### climb-fight.js (1056 lines)
 
@@ -148,10 +148,10 @@ the build and test scripts (see tools/README.md).
 - **Drawing** (4): lightR 5, visPoly 17, drawSky 41, darkness 64, slab 88, rockPath 98, drawTablet 183, torchBack 202, wallWalk 203, wallClimb 211, crawlPose 219, monkPose 223, demonPose 274, lightCross 305, drawSign 313, drawBoulder 343, drawRope 344, drawHook 350, draw 359
 - **The domains, drawn** (367): rgb 370, rgbs 371, tintStep 372, put 380, drawGlutton 382, shadeGlut 395, eyeGlut 406, GLUT_EYE 411, glutEye 412, addShape 423, addPoly 426, addOval 427, WORSHIP_ART 429, BEL 434, idolPath 444, drawShrine 481, drawWorshipper 507, drawShardOf 525, carved 532, drawGate 533, briarStrip 585, drawBriars 598, drawChain 622, drawCoin 633, drawAlms 641, drawThorn 651, drawRibbon 657, drawLamp 667, drawRelic 681, crackLines 691, drawFat 709, sheen 720, drawPrints 740, drawSlime 750, drawFire 768, drawWorld 774, lostMarker 1098, dpad 1116, dpadDir 1117, actBtn 1122, flareBtn 1123, climbWay 1126, sideArrow 1127, hud 1133
 
-### climb.js (235 lines)
+### climb.js (236 lines)
 
 - **The record, for notes to Claude** (28): ev 35, r2 36, doing 37, snapNow 40, record 48, grabScreen 55
-- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 196
+- **Touch, mouse and keys** (58): goOn 60, inDpad 61, pid 62, M 63, ClimbPause 197
 
 ### notes.js (106 lines)
 

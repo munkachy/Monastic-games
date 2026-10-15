@@ -364,6 +364,23 @@ function deliver(G) {
   Sound.fx.deliver(panX(G.cart));
   keepHere("cart");
 }
+// The cart he stands at, if any (and has blocks in it, if asked).
+function cartAt(x, y, full) {
+  const h = -y / CELL;
+  for (const sec of sectionsIn(h - 10, h + 10)) { const G = brotherOf(sec); if (G && Math.abs(x - G.cart) < 48 && Math.abs(y - G.y) < 56 && (!full || G.bin.some((b) => b.st === "bin"))) return G; }
+  return null;
+}
+// Out of the cart again: the top block, into his hands. It counts as brought down no longer; it
+// does not go back in by itself until he has gone off and come back, or taps the cart.
+function unbin(G) {
+  if (S.tied || S.held || S.act || S.rope || S.cling || S.dying || S.latched) return false;
+  const b = G.bin.length && G.bin[G.bin.length - 1]; if (!b || b.st !== "bin") return false;
+  G.bin.pop(); S.binned = Math.max(0, S.binned - 1);
+  Object.assign(b, { st: "hand", by: null, slot: undefined, rope: TETHER, flung: false, claim: null, out: G });
+  S.tied = b; S.lost = null; Sound.fx.pickup(); ev("block taken out of the cart", { gate: G.sec });
+  keepHere("cart");
+  return true;
+}
 function stepBlocks(dt) {
   for (const b of S.blocks) {
     b.age = (b.age || 0) + dt;
@@ -381,8 +398,9 @@ function stepBlocks(dt) {
   }
   // At a gate's cart: into it.
   if (S.tied && !S.dying) {
-    const hNow = -S.y / CELL;
-    for (const sec of sectionsIn(hNow - 10, hNow + 10)) { const G = brotherOf(sec); if (G && Math.abs(S.x - G.cart) < 48 && Math.abs(S.y - G.y) < 56) { deliver(G); break; } }
+    const G = cartAt(S.x, S.y), out = S.tied.out;
+    if (out && (G !== out)) S.tied.out = null;         // (gone off from the cart it came out of)
+    else if (G && !out) deliver(G);
   }
 }
 function stepLoose(b, dt) {
