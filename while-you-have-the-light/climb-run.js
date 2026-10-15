@@ -95,7 +95,7 @@ function keepPlace(x, y, why) {
   }
   for (const k of SEEN) if (S[k]) seen[k] = true;
   const all = keptAll();
-  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned,
+  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK,
     coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
   try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
   Kept.wrote(KEEP);
@@ -110,7 +110,7 @@ function restore(R) {
   const at = Number.isFinite(R.x) && Number.isFinite(R.y) && R.y < 0 ? freeSpot(R.x, R.y) : null;
   if (!at) { forget(NOV.domain); return; }
   S.x = at[0]; S.y = at[1]; S.vx = 0; S.vy = 0; S.ground = boxHit(S.x, S.y + 3); S.dir = 1; S.keptAt = [S.x, S.y]; S.foot = S.ground ? [S.x, S.y] : null;
-  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.coins = R.coins || 0;
+  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
   S.freedList = Array.isArray(R.freed) ? R.freed.filter((q) => Array.isArray(q) && SINS[q[0]]).slice(0, 60) : [];
   if (Number.isFinite(R.fuel)) S.fuel = clamp(R.fuel, 0.25, 1);
   if (Number.isFinite(R.meter)) S.meter = clamp(R.meter, 0, 1);
@@ -135,7 +135,10 @@ function restore(R) {
 function settle() {
   const k0 = sectionAt(Math.max(1, Math.floor(-S.y / CELL))).k;
   S.popK = Math.max(0, k0 - 1);
-  for (let k = 7; k < S.popK; k++) { ensureSecs(k); if (planGreat(k)) S.greatK = k; }
+  // (Older kept places did not keep blockK: with a block found already, from here.)
+  if (S.blockK === undefined && S.blockSeen) S.blockK = S.popK;
+  S.greatN = 0;
+  for (let k = 0; k < S.popK; k++) { ensureSecs(k); if (planGreat(k)) { S.greatK = k; S.greatN++; } }
   S.cam.x = clamp(S.x - W / 2, 0, COLS * CELL - W); S.cam.y = S.y - H * 0.62; S.torch = [S.x, S.y - 40];
   S.hintT = 99; S.hooked = 9; S.invT = 1.5;
   if (S.fightSeen) S.fightHintT = 99;              // (the moves told him once already)

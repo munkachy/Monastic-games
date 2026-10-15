@@ -204,6 +204,7 @@ function reveal(b, I) {
 function tie(b) {
   ev("block tied on", { shape: b.shape });
   b.st = "tied"; b.by = null; b.claim = null; b.rope = TETHER; b.flung = false; S.tied = b; S.lost = null; Sound.fx.tie(panX(b.x));
+  if (S.blockK === undefined) S.blockK = S.popK;        // (from here on up, the great demons may come)
   if (!S.tiedSeen) { S.tiedSeen = true; S.say = { text: "TIED TO HIS BELT", sub: "It drags, and it weighs. Swing it into the demons, or tap it and throw it. Bring it to the gate.", t: 0 }; }
 }
 // Tapped, the block on his rope (near him): he takes it up in his hands, to throw. While he
@@ -604,22 +605,24 @@ const GREAT_V = [0, 52, 62, 72, 84, 92], GRASP = [0, 5, 8, 11, 14, 18];   // by 
 // (Where one would wait in section k, given where the last one waited: nothing is changed.)
 function planGreat(k) {
   if (!NOV || !GREAT[NOV.domain] || k >= summitK()) return null;
-  if (k < 7) return null;
-  const sec = secs[k], G = GREAT[NOV.domain], tier = clamp(1 + Math.floor((k - 7) / 8), 1, 4), sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc;
+  // None until he has a block from an idol (blockK: the first place set out after that); then
+  // three before the summit, each a tier stronger: the first in the first place it can stand, the
+  // rest at least three places apart, likelier the higher he goes, and sure to come in time.
+  if (S.blockK === undefined || k < S.blockK || (S.greatN || 0) >= 3) return null;
+  const sec = secs[k], n = S.greatN || 0, G = GREAT[NOV.domain], tier = n + 1, sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc;
   if (sec.gate) return null;
-  let at = null, dir = 1;
-  if (k === 7 && sec.type === "cave") { const V = cave(sec); at = dFree(lerp(V.vA, V.vB, 0.62) * CELL, -(sec.h0 + LH + 2) * CELL, hw, ht); dir = -V.dir; }
-  else {
-    if (k < 11 || k - (S.greatK === undefined ? -9 : S.greatK) < 3 || hash2(k, 990, seed) >= clamp(0.08 + 0.02 * (k - 11), 0, 0.4)) return null;
-    const sp = spotsFor(k, NOV.domain); if (!sp.length) return null;
-    const s = sp[Math.floor(hash2(k, 991, seed) * sp.length) % sp.length];
-    at = dFree(s[0], s[1] - 30, hw, ht); dir = hash2(k, 992, seed) < 0.5 ? -1 : 1;
+  if (n > 0) {
+    const since = k - S.greatK, left = summitK() - k, must = left <= (3 - n) * 3;
+    if (since < 3 || (!must && hash2(k, 990, seed) >= clamp(0.03 + 0.012 * (k - S.blockK), 0, 0.5))) return null;
   }
+  const sp = spotsFor(k, NOV.domain); if (!sp.length) return null;
+  const s = sp[Math.floor(hash2(k, 991, seed) * sp.length) % sp.length];
+  const at = dFree(s[0], s[1] - 30, hw, ht), dir = hash2(k, 992, seed) < 0.5 ? -1 : 1;
   return at ? { at, dir, tier, sc, hw, ht } : null;
 }
 function placeGreat(k) {
   const P = planGreat(k); if (!P) return;
-  S.greatK = k;
+  S.greatK = k; S.greatN = (S.greatN || 0) + 1;
   if (S.greatDown.has(k)) return;                 // (cast down already, before he left the mountain)
   const { at, dir, tier, sc, hw, ht } = P;
   S.bigs.push({ sin: NOV.domain, tier, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir, hp: tier, maxHp: tier, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
@@ -665,6 +668,7 @@ function updGreat(g, dt) {
   // Seen: some part of it in the torch's light (or, gone into the rock, near enough to be in it),
   // and he turned toward it; or, near the top of the mountain, turned toward it or not.
   const cx = g.x, cy = g.y - g.ht / 2, [mx, my] = middle(), [lx, ly] = S.torch, R = lightR() * 0.95;
+  greatThrows(g, cx, cy, dt);
   const lit = dist(lx, ly, cx, cy) < R + g.ht * 0.3 && (solidAt(cx, cy) || [0.15, 0.5, 0.85].some((q) => { const y = g.y - g.ht * q; return dist(lx, ly, cx, y) < R && los(lx, ly, cx, y); }));
   const facing = g.tier >= 4 || (cx - S.x) * S.dir > -14;
   // Seen for the first time (in his light, out in the open): the dread. From then on it follows him.
@@ -778,12 +782,31 @@ function strikeGreat(g, b, real) {
   for (let q = 0; q < 10; q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: b.x, y: b.y - b.ht / 2, vx: (Math.random() - 0.5) * 240 - ux * 60, vy: -60 - Math.random() * 180, life: 0.7, age: 0 });
   if (g.hp <= 0) { g.st = "dying"; g.t = 0; g.stunT = 9; g.laugh = null; Sound.fx.greatFall(panX(g.x)); ev("a great demon cast down", { tier: g.tier }); return; }
   const blk = real || b;
+  // (Any but the summit's: the block is torn from his rope and falls where it will; a demon may take it.)
+  if (!g.summit && blk && blk.shape && S.blocks.includes(blk) && blk.st !== "bin" && blk.st !== "tobin") {
+    if (S.tied === blk) { S.tied = null; S.lost = blk; S.dragging = false; Sound.fx.tetherBreak(); }
+    Object.assign(blk, { st: "loose", by: null, claim: null, flung: false, vx: -ux * 160, vy: -120 });
+    g.stunT = 1.5; g.st = "stone"; g.t = 0; ev("a block cut free by a great demon");
+    return;
+  }
   if (blk && blk.shape && S.blocks.includes(blk) && blk.st !== "bin" && blk.st !== "tobin") {
     // It takes the block (wrenching it off his rope), and laughs.
     if (S.tied === blk) { S.tied = null; S.lost = blk; S.dragging = false; Sound.fx.tetherBreak(); }
     Object.assign(blk, { st: "grasped", by: g, vx: 0, vy: 0, claim: null, flung: false });
     g.laugh = { t: 0, b: blk }; g.stunT = 0; Sound.fx.laugh(panX(g.x)); ev("a great demon laughed");
   } else { g.stunT = 2.5; g.st = "stone"; g.t = 0; }       // (no block to take: knocked back, and stunned a while)
+}
+// A great demon throws its mountain's missile at him (the summit's does not: its demons do).
+function greatThrows(g, cx, cy, dt) {
+  if (g.summit || g.stunT > 0 || S.dying || S.latched || g.st === "stone" && g.wake < 0.5) return;
+  const [mx, my] = middle(), near = dist(cx, cy, mx, my) < 480 && los(cx, cy - g.ht * 0.25, mx, my);
+  if (g.throwT === undefined) { if (near) g.throwT = 2; return; }
+  g.throwT -= dt; if (g.throwT > 0) return;
+  g.throwT = 2.4 + Math.random() * 1.4; if (!near) return;
+  const hx = g.x + g.dir * g.hw * 0.7, hy = g.y - g.ht * 0.78;
+  if (g.sin === "wrath") { const d = dist(hx, hy, mx, my) || 1; S.things.push({ kind: "fire", x: hx, y: hy, vx: (mx - hx) / d * FIRE_V, vy: (my - hy) / d * FIRE_V, rot: 0, vr: 0, st: "fly", by: "demon", g: 0, age: 0, life: 8, from: null }); Sound.fx.fireball(panX(g.x)); }
+  else { const o = lob(hx, hy, mx, my, 260, 330, "demon", "fat"); Object.assign(o, { r: 9 * g.sc, w: 0, wv: 6, bounces: 0, from: null, life: 12 }); Sound.fx.spit(); }
+  ev("a great demon threw");
 }
 function breakGreat(g) {
   g.st = "gone"; S.cast++; S.fuel = 1; S.meter = 1; gain(0.3); S.greatDown.add(g.sec);
@@ -913,7 +936,7 @@ function onView(g, m) {
   return g.x + g.hw > c.x - m && g.x - g.hw < c.x + W + m && g.y > c.y - m && g.y - g.ht < c.y + H + m;
 }
 function greatSays() {
-  if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light. Only a block can hurt it, and it throws the block back.", t: 0 }; }
+  if (!S.greatSeen) { S.greatSeen = true; S.say = { text: "A GREAT DEMON", sub: "It moves only while you face it in the light, and it throws. Only a block can hurt it; strike it, and the block is torn from your rope.", t: 0 }; }
 }
 function startDread(g, kind, from) {
   S.dread = { g, kind, t: 0, T: DREAD_T[kind], from: from || null };
@@ -925,6 +948,7 @@ function stepDread(dt) {
   if (D.t < D.T) return;
   S.dread = null; Sound.muffle(false, 0.6);
   const g = D.g; g.lostT = 0;
+  if (D.kind !== "meet" && !g.summit) g.throwT = 0;          // (come round behind him: it throws at once)
   if (D.kind === "meet") greatSays();
   else if (!S.hauntSeen) { S.hauntSeen = true; S.say = { text: "IT FOLLOWS YOU", sub: "Leave it behind, and it comes after you. Cast it down, or read a verse, and it follows no further.", t: 0 }; }
 }
