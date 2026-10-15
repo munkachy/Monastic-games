@@ -47,6 +47,7 @@ function spawnDemon(sin, x, y, x0, x1, sec) {
 // and how far it may walk).
 function spotsFor(k, sin) {
   const sec = secs[k], D = DEM[sin], out = [], room = (w) => w * CELL >= D.hw * 2 + 10;
+  if (sec.type === "room") return roomMarks(sec, "D");
   if (sec.type === "shaft") {
     if (k === 0) { const e = edges(-1), mid = (e.L + e.R + 1) / 2 * CELL; out.push([(e.R - 1) * CELL, -0.01, mid + 40, e.R * CELL]); }
     const isls = [], mid = (sec.h0 + sec.h1) / 2;

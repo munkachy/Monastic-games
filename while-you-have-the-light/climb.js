@@ -221,7 +221,8 @@ const ClimbPause = {
     b("GO ON", () => Climb.resume(), { hot: true });
     const room = Climb.nov && Climb.nov.room && typeof Room !== "undefined";
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(true); }, room ? { sub: "The same scene, from its start" } : Climb.nov ? { sub: "From the foot of the mountain" } : {});
-    if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Say another scene" });
+    if (room && Climb.nov.piece) b("THE PIECES", () => Pieces.open(), { sub: "Another room" });
+    else if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Say another scene" });
     else b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
     { const hw = bw / 2 - 3; button(soundLabel(), cx - bw / 2, y, hw, 30, cycleSound, {});
       button(tipsOn() ? "TIPS: ON" : "TIPS: OFF", cx + 3, y, hw, 30, () => setTips(!tipsOn()), { sub: tipsOn() ? "" : "On again: all shown again" }); y += 38; }

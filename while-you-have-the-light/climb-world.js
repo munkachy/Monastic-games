@@ -105,11 +105,12 @@ const secs = [], walls = [];
 function ensureSecs(n) {
   while (secs.length <= n) {
     const k = secs.length, prev = secs[k - 1];
+    if (!prev && NOV && NOV.piece && ROOMS[NOV.piece]) { secs.push(roomSec(NOV.piece, 0, 1)); continue; }
     if (!prev) { secs.push({ type: "shaft", h0: 1, h1: 44, c: MID - 19, k, dom: NOV ? NOV.domain : null }); continue; }
     const dom = domOf(k);
     // (The summit: its sky goes up for ever. Anything asked for above it is more of the same sky.)
     if (prev.type === "summit") { secs.push({ type: "summit", filler: true, h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev.from, c: prev.c }); continue; }
-    if (prev.type === "shaft" && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
+    if ((prev.type === "shaft" || prev.type === "room") && k >= summitK()) { const s = prev.c < MID ? 1 : -1; secs.push({ type: "summit", h0: prev.h1 + 1, h1: prev.h1 + 1e6, k, dom, from: prev, c: clamp(prev.c + 30 * s, SUM_AW + 4, COLS - SUM_AW - 5) }); continue; }
     if (prev.type === "shaft") {
       // (Gluttony's crossings, in the seven mountains: a cavern or a long swing under a roof, as the
       // mountain's seed falls, so no two climbs of it go the same way up.)
@@ -157,7 +158,7 @@ function shaftRow(h, c, sec, shelves) {
 function edges(j) {
   let r = rows.get(j); if (r) return r;
   const h = -j, sec = sectionAt(h);
-  r = sec.type === "shaft" ? shaftRow(h, sec.c, sec, true) : shaftRow(h, sec.from.c, sec, false);
+  r = sec.type === "room" ? roomEdges(sec, h) : sec.type === "shaft" ? shaftRow(h, sec.c, sec, true) : shaftRow(h, sec.from.c, sec, false);
   rows.set(j, r); return r;
 }
 // The platforms standing in the shafts, some a little askew (but none in Gluttony's: its slime is
@@ -393,6 +394,7 @@ function solid(i, j) {
   // (A crawlway, and the chamber at its end.)
   const cw = sec.crawl === undefined ? crawlOf(sec) : sec.crawl;
   if (cw && i >= cw.lo && i <= cw.hi) { const r = h - sec.h0 - cw.r0, u = (i - cw.i0) * cw.dir; if (r >= 0 && (u < cw.L ? r < CW_H : r < CW_C)) return false; }
+  if (sec.type === "room") return roomSolid(i, h, sec);
   if (sec.type === "trav") return travSolid(i, h, sec);
   if (sec.type === "slope") return slopeSolid(i, h, sec);
   if (sec.type === "cave") return cave(sec).g[(h - sec.h0) * COLS + i] === 1;
@@ -426,6 +428,35 @@ function summitSolid(i, h, sec) {
   return false;
 }
 const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type === "summit" ? secs[summitK()] : null);
+// ---- Rooms (rooms.js) ----------------------------------------------------------------------------------
+// A room as a section of the mountain: set in the middle of it, its rock from its made grid, the
+// mountain's rock about it. c, its way out at the top (for what comes above it).
+function roomSec(name, k, h0) {
+  const R = makeRoom(name, seeded(seed + 101 * k + 7)), x0 = Math.round(MID - R.w / 2), top = [];
+  for (let c = 0; c < R.w; c++) if (!R.g[0][c]) top.push(c);
+  return { type: "room", name, R, x0, h0, h1: h0 + R.h - 1, k, dom: NOV ? NOV.domain : null, c: top.length ? x0 + (top[0] + top[top.length - 1]) / 2 : MID };
+}
+const roomSolid = (i, h, sec) => { const col = i - sec.x0, row = sec.h1 - h; return col < 0 || col >= sec.R.w || row < 0 || row >= sec.R.h || sec.R.g[row][col]; };
+// The open run of a row through it nearest its way out (as the shafts' edges, for what asks for them).
+function roomEdges(sec, h) {
+  const c = Math.round(sec.c); let best = null;
+  for (let i = sec.x0; i < sec.x0 + sec.R.w; i++) {
+    if (roomSolid(i, h, sec)) continue; let j = i; while (j + 1 < sec.x0 + sec.R.w && !roomSolid(j + 1, h, sec)) j++;
+    const d = c < i ? i - c : c > j ? c - j : 0; if (!best || d < best.d) best = { L: i, R: j, d }; i = j;
+  }
+  return best ? { L: best.L, R: best.R } : { L: c - 2, R: c + 2 };
+}
+// Its marks in the world: [x, y of the floor under it, and the floor's ends], as spotsFor gives them.
+function roomMarks(sec, ch) {
+  const out = [];
+  for (const [col, row] of sec.R.marks[ch] || []) {
+    const i = sec.x0 + col; let h = sec.h1 - row; while (h > sec.h0 && !roomSolid(i, h - 1, sec)) h--;
+    let a = i, b = i; while (a > i - 10 && !roomSolid(a - 1, h, sec) && roomSolid(a - 1, h - 1, sec)) a--; while (b < i + 10 && !roomSolid(b + 1, h, sec) && roomSolid(b + 1, h - 1, sec)) b++;
+    out.push([(i + 0.5) * CELL, -(h - 1) * CELL - 0.01, (a + 0.5) * CELL, (b + 0.5) * CELL]);
+  }
+  return out;
+}
+
 // ---- The low ways ----------------------------------------------------------------------------------
 // Here and there, at the foot of a wall, a way too low to stand in: a crawlway, cut into the rock
 // some paces, and at its end a little chamber where a reliquary lies hidden (its glow shows
