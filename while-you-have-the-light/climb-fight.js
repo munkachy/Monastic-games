@@ -784,6 +784,8 @@ function hitMonk(kx, cost) {
   S.freeze = Math.max(S.freeze || 0, 0.06);
   // (A blow: a heart, and a third of the torch. The last heart gone, he dies.)
   S.hearts = Math.max(0, (S.hearts === undefined ? HEARTS : S.hearts) - 1);
+  { const g = S.bigs.find((q) => dist(q.x, q.y, S.x, S.y) < 220), f = S.demons.filter((q) => q.st !== "gone" && q.st !== "dying" && !q.idol).sort((a, b) => dist(a.x, a.y, S.x, S.y) - dist(b.x, b.y, S.x, S.y))[0];
+    S.cause = g ? "struck down by a great demon" : f && dist(f.x, f.y, S.x, S.y) < 260 ? "struck down by a demon of " + SINS[f.sin].name : "struck down on the rock"; }
   if (!boonOn("unconsumed")) S.fuel = Math.max(0, S.fuel - 1 / HEARTS);
   if (S.hearts <= 0) { die(); return; }
   S.hurtT = 0.5; S.invT = 0.9; S.flashT = 0.3; S.hoverT = 0; S.cling = 0; S.climbing = false; S.atk = null; S.act = null; S.hang = null; S.ward = null;

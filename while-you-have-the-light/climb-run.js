@@ -59,7 +59,7 @@ function lightOut() {
   Sound.fx.gutter();
 }
 // Held till his light is gone (in a great demon's mouth, his legs swallowed): a heart, and he is let go.
-function drained() { lightOut(); S.hearts = Math.max(0, S.hearts - 1); if (S.hearts <= 0) die(); else { S.invT = 1.2; Sound.fx.hurt(); } }
+function drained() { S.cause = S.latched ? "swallowed by a great demon" : "swallowed by a demon of Gluttony"; lightOut(); S.hearts = Math.max(0, S.hearts - 1); if (S.hearts <= 0) die(); else { S.invT = 1.2; Sound.fx.hurt(); } }
 // The hearts: three, and a blow takes one (and a third of the torch). The last gone, he dies.
 const HEARTS = 3;
 function die() {
@@ -80,12 +80,18 @@ function heal(G) {
 // Those freed from the idols on this climb go down to the monastery, whatever became of him.
 function bankFreed() {
   if ((NOV && NOV.room) || !S.freedList || !S.freedList.length) return 0;
-  const n = S.freedList.length; save.pilgrims = (save.pilgrims || []).concat(S.freedList).slice(-60); S.freedList = []; return n;
+  const n = S.freedList.length, come = S.freedList.filter(() => Math.random() < 0.3);
+  save.pilgrims = (save.pilgrims || []).concat(come).slice(-60); S.freedList = []; S.comeN = come.length; return n;
 }
 function finish() {
   const m = metres(S.top);
   if (!NOV && m > (save.climbBest || 0)) save.climbBest = m;
   S.freedN = bankFreed();
+  S.fell = null;
+  if (NOV && !NOV.room && S.hearts <= 0) {
+    if (S.binned) { save.bricks = save.bricks || {}; save.bricks[NOV.domain] = (save.bricks[NOV.domain] || 0) + S.binned; }
+    S.fell = brotherFell(S.cause || "struck down", metres(S.top) + " m up the mountain of " + SINS[NOV.domain].name);
+  }
   store();
   Over.t = 0; mode = Over; Sound.muffle(true, 0.6);
 }
