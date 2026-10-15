@@ -176,19 +176,20 @@ the build and test scripts (see tools/README.md).
 - **The whole psalm, and what of it has been read** (27): split 41, keep 137
 - **The box for it, over the pause screen** (158): build 160, take 226, show 232, close 234
 
-### house.js (821 lines)
+### house.js (871 lines)
 
-- (top): SHAPES 18, SITES 21, H_ 26
-- **What is kept** (28): data 29, siteData 51, takeBanked 53
-- **The stones, as bodies** (58): P 59, makeWorld 60, addStone 66, squares 73, siteOf 74, load 76, keep 81
-- **Laying a stone** (90): nearSite 91, holdSquares 93, sqHit 95, floorAt 104, blocked 105, landing 112, hangY 120, lay 125, takeUp 131, moveTo 138, nudge 147, turn 148, place 155, putBack 163, inSquare 167, stoneAt 168, lift 169, loosen 178, recheck 183
-- **Each step** (195): step 196
-- **The people** (246): folkData 252, takePilgrims 254, makeFolk 262, loadFolk 268, receive 269, stepFolk 276, drawPerson 291, drawCamp 312, folkSigns 321
-- **Days and nights** (333): stepClock 337, nightK 343
-- **Drawn** (345): stoneFill 346, drawSquares 347, drawStone 355, outline 356, drawBuilt 361, draw 372
-- **Inside** (481): goIn 482, goOut 483, HOURS 489, hourOf 495, hasVerses 496, shelves 497, drawRoom 506, drawSpine 515, drawBook 529
-- **The choir** (562): freed 568, GLORIA 569, VOW 570, sylls 572, tone 581, hourVerses 600, sing 609, chorister 624, stallSeats 637, drawChoir 646, INSIDE 713
-- **Hands on it** (770): down 771, move 780, up 786, key 787, leave 805, open 807, M 818
+- (top): SHAPES 18, SITES 21, placed 28, H_ 30
+- **What is kept** (32): data 33, siteData 55, takeBanked 57
+- **The stones, as bodies** (62): P 63, makeWorld 64, addStone 70, squares 77, siteOf 78, load 80, keep 86
+- **Laying a stone** (95): nearSite 96, holdSquares 98, sqHit 100, floorAt 109, blocked 110, landing 117, hangY 125, lay 130, takeUp 136, moveTo 143, nudge 152, turn 153, place 160, putBack 168, inSquare 172, stoneAt 173, lift 174, loosen 183, recheck 188
+- **Each step** (200): step 201
+- **The people** (252): folkData 258, takePilgrims 260, makeFolk 268, loadFolk 274, receive 275, stepFolk 282, drawPerson 297, drawCamp 318, folkSigns 327
+- **Days and nights** (339): stepClock 343, nightK 349
+- **Drawn** (351): stoneFill 352, drawSquares 353, drawStone 361, outline 362, drawBuilt 367, draw 378
+- **Inside** (490): goIn 491, goOut 492, HOURS 498, hourOf 504, hasVerses 505, shelves 506, drawRoom 515, drawSpine 524, drawBook 538
+- **The choir** (571): freed 577, GLORIA 578, VOW 579, sylls 581, tone 590, hourVerses 609, sing 618, chorister 633, stallSeats 646, drawChoir 655, INSIDE 722
+- **Choosing where to build** (779): span 784, fits 785, emptyAt 792, openMenu 793, setPlace 799, unplace 804, drawMenu 805
+- **Hands on it** (816): down 817, move 829, up 836, key 837, leave 855, open 857, M 868
 
 ### game.js (261 lines)
 
