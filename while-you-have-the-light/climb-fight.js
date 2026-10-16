@@ -686,6 +686,7 @@ function updThing(o, dt) {
   o.age += dt;
   if (o.st === "held" || o.st === "gone") return;
   if (o.st === "stuck") { if (o.age > o.life) o.st = "gone"; return; }
+  if (o.kind === "frog") { flyFrog(o, dt); return; }
   if (o.kind === "coin") {
     if (o.age > o.life) { o.st = "gone"; if (S.mark === o) S.mark = null; return; }
     if (o.st === "rest") return;

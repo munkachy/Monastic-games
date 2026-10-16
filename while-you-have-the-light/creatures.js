@@ -118,7 +118,8 @@ function backAhead(d) {
 }
 
 function stepCritters(dt) {
-  stepHermits(dt);
+  stepHermits(dt); stepToads(dt);
+  if (S.frogMark) { const c = S.frogMark; if (c.st === "dead" || !S.critters.includes(c)) S.frogMark = null; else if (Math.abs(c.x - S.x) < HW + 14 && Math.abs(c.y - S.y) < 20) pickFrog(c); }
   if (!S.critters) return;
   const [mx, my] = middle();
   for (const c of S.critters) {
@@ -135,11 +136,13 @@ function stepCritters(dt) {
       c.vy = Math.min(VMAX, c.vy + GRAV * dt);
       const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw, K.ht); const ground = hy > 0;
       if (hx) c.vx = -c.vx * 0.3;
-      if (ground) { c.vy = 0; if (c.st === "leap") { c.st = "idle"; c.t = 0; c.vx = 0; } }
+      if (ground) { c.vy = 0; if (c.st === "leap") { c.st = "idle"; c.t = 0; c.vx = 0; } else c.vx *= Math.exp(-12 * dt); }      // (thrown back by the ward: it skids, and stops)
       if (c.st === "idle" && ground && seen && d < 170 && c.t > 1.1) { c.st = "crouch"; c.t = 0; c.dir = sign(S.x - c.x) || c.dir; }
       else if (c.st === "crouch" && c.t > 0.45) { c.st = "leap"; c.t = 0; c.dir = sign(S.x - c.x) || c.dir; c.vx = c.dir * clamp(Math.abs(S.x - c.x) * 1.6, 90, 210); c.vy = -250 - Math.random() * 60; Sound.fx.tick(300, 0.25); }
       // (Landed on from above: it is crushed, and he springs up off it.)
       if (S.vy > 120 && !S.ground && Math.abs(S.x - c.x) < HW + K.hw && S.y > c.y - K.ht - 4 && S.y < c.y + 2) { killCritter(c, S.dir); S.vy = -280; continue; }
+      // (Marked, and his hands free: leaping at him, it is caught.)
+      if (S.frogMark === c && touches(c, 4) && pickFrog(c)) continue;
       if (c.st === "leap" && touches(c)) { const w = !!S.ward; critterHits(c, c.dir * 120, 0.05); if (!w) { c.vx = -c.vx * 0.4; c.st = "idle"; c.t = 0; } }
     } else if (c.kind === "spider") {
       // (Its thread from the roof: down to his height, a while there, and up again.)
@@ -223,6 +226,9 @@ function floorBelow(x, y) { for (let d = 0; d < 900; d += 4) if (solidAt(x, y + 
 
 function drawCritters(cam) {
   for (const h of S.hermits || []) drawHermit(h, cam);
+  drawToads(cam);
+  // (A frog he has marked: a ring about it, as about a thing he means to catch.)
+  if (S.frogMark) { const c = S.frogMark, b = 0.6 + 0.4 * Math.sin(S.rt * 10); ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = "rgba(255,241,196," + (0.55 + 0.4 * b) + ")"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(c.x - cam.x, c.y - 6 - cam.y, 13 + 2 * b, 0, TAU); ctx.stroke(); ctx.restore(); }
   for (const c of S.critters || []) {
     const x = c.x - cam.x, y = c.y - cam.y; if (x < -60 || x > W + 60 || y < -60 || y > H + 400) continue;
     ctx.globalAlpha = c.a; const ink = "#0a090b";
@@ -322,7 +328,16 @@ function peopleMountain(sec, dom) {
   }
   // The gates: in each gallery at a stretch's head, the lay brother, his cart and donkey on its
   // longest floor (he takes the blocks brought from the idols, and his blessing fills the torch).
-  S.gates = []; S.hermits = [];
+  S.gates = []; S.hermits = []; S.toads = [];
+  // (At the end of each crawlway, in the little chamber past the low way, a reliquary.)
+  sec.relics = [];
+  for (const S0 of R.slots) if (S0.kind === "crawl") {
+    let best = null; for (let r = S0.oy + 2; r < S0.oy + RH - 1; r++) for (let i = S0.ox + 2; i < S0.ox + RW - 2; i++) if (air(i, r) && !air(i, r + 1) && (!best || i > best[0])) best = [i, r];
+    if (best) { sec.relics.push({ x: cellX(best[0]), y: cellY(best[1]), got: false }); taken.push(best); }
+  }
+  // (A giant toad now and then in a great room on the way, from the second stretch: one a stretch at most.)
+  { const had = new Set(); for (const S0 of R.slots) { if (!S0.onWay || S0.gate || S0.stretch < 1 || had.has(S0.stretch) || (S0.kind !== "hall" && S0.kind !== "platforms") || rnd() > 0.12) continue;
+    const p = spot(S0, "floor"); if (p && !solidAt(p[0] - 40, p[1] - 40) && !solidAt(p[0] + 40, p[1] - 40) && solidAt(p[0] - 30, p[1] + 4) && solidAt(p[0] + 30, p[1] + 4)) { spawnToad(p[0], p[1], rnd() < 0.5 ? -1 : 1); had.add(S0.stretch); } } }
   for (const S0 of R.slots) if (S0.kind === "cell") {
     const E = R.marks.E.find(([i, r]) => i >= S0.ox && i < S0.ox + RW && r >= S0.oy && r < S0.oy + RH); if (!E) continue;
     let q = E[1]; while (air(E[0], q + 1)) q++; taken.push([E[0], q]);
@@ -514,4 +529,141 @@ function drawHermit(h, cam) {
   ctx.restore();
   // Near him, and before the trade: what he asks.
   if (h.st === "stand" && !h.sold && !S.pick && lit > 0.2) text("TAP HIM: A PICKAXE, FOR SOUP OR TWO HERBS", x, y - 62, { align: "center", size: 7, weight: 800, spacing: 1.5, color: "rgba(255,220,180," + (0.5 + 0.4 * lit) + ")" });
+}
+
+// ---- The little frog in his hand -----------------------------------------------------------------
+// A tap on a little frog marks it (a ring about it); come up to it (or let it leap at him) with his
+// hands free, and he picks it up. Held in one hand, it is thrown as anything is (a tap where it is
+// to go): it dies where it strikes, on a demon (a blow) or the giant toad (the one thing that hurts
+// it), on the rock, anywhere.
+function markFrog(c) { S.frogMark = c; Sound.fx.tick(1200, 0.35); }
+function pickFrog(c) {
+  if (S.held || S.atk || S.act || S.latched || S.dying || (S.tied && S.tied.st === "hand")) return false;
+  S.critters = S.critters.filter((q) => q !== c); S.frogMark = null;
+  const o = { kind: "frog", st: "held", x: c.x, y: c.y - 6, vx: 0, vy: 0, rot: 0, vr: 0, age: 0, dir: c.dir, by: null };
+  S.things.push(o); S.held = o;
+  S.atk = { kind: "catch", o, t: 0, dur: 0.24, from: [S.x, S.y], to: [S.x, S.y], dash: 0, arrived: true, hit: true };
+  S.dir = c.x < S.x ? -1 : 1; Sound.fx.catchIt(); ev("picked up a frog");
+  return true;
+}
+function frogDies(o) {
+  o.st = "gone"; const c = spawnCritter("frog", o.x, o.y + 6);
+  if (c) { killCritter(c, -sign(o.vx || 1)); c.dir = sign(o.vx) || 1; }
+  Sound.fx.splat(panX(o.x), 0.35);
+}
+// Its flight: tumbling over and over; anything it meets, it dies on.
+function flyFrog(o, dt) {
+  const n = clamp(Math.ceil(Math.max(Math.abs(o.vx), Math.abs(o.vy)) * dt / 4), 1, 12), h = dt / n;
+  if (o.age > 5) { frogDies(o); return; }
+  for (let k = 0; k < n; k++) {
+    o.vy += (o.g === undefined ? 560 : o.g) * h; o.rot += 12 * sign(o.vx || 1) * h;
+    if (solidAt(o.x + o.vx * h, o.y) || solidAt(o.x, o.y + o.vy * h)) { frogDies(o); return; }
+    o.x += o.vx * h; o.y += o.vy * h;
+    if (toadHitBy(o) || strikeDemon(o, 8)) { frogDies(o); return; }
+  }
+}
+function drawFrogThing(o, cam) {
+  const k = o.st === "held" ? "fg0" : "fg3", P = new Path2D(), x = o.x - cam.x, y = o.y - cam.y, d = o.dir || 1, c = Math.cos(o.rot || 0), s = Math.sin(o.rot || 0);
+  addShape(P, TRACED[k], (u, v) => { const a = u * d, b = -(v - 6); return [x + a * c - b * s, y + a * s + b * c]; });
+  litDraw([[P, "#0a090b", "evenodd"]], o.x, o.y, 1);
+}
+
+// ---- The giant toad -------------------------------------------------------------------------------
+// Rare, in the great rooms on the way: a toad as big as a cart, sitting. Near him, it burps up little
+// frogs (three of them out at most), or swells its throat (the warning) and lashes its tongue at him,
+// as far as its reach. Caught, he is swallowed whole (a heart gone): it sits full and swollen, and
+// each blow from inside bulges and shakes it, till it spits him out. Nothing of his hurts it but a
+// little frog thrown at it: three, and it dies. (The blessing turns the tongue.)
+const TOAD_K = 1.7, TOAD_REACH = 240, TOAD_NEED = 8, TOAD_HP = 3, TOAD_MOUTH = [30, 40];   // its size; the tongue's reach; blows to get out; frogs to kill it; its mouth (u, v)
+function spawnToad(x, y, dir) { const t = { x, y, dir: dir || 1, st: "rest", t: 0, cd: 2 + Math.random() * 2, hp: TOAD_HP, kids: [], tongue: 0, hurtT: 0, a: 1, blows: 0 }; (S.toads = S.toads || []).push(t); return t; }
+const toadMouth = (t) => [t.x + t.dir * TOAD_MOUTH[0] * TOAD_K, t.y - TOAD_MOUTH[1] * TOAD_K];
+function stepToads(dt) {
+  for (const t of S.toads || []) {
+    t.t += dt; t.hurtT = Math.max(0, t.hurtT - dt); t.cd -= dt;
+    if (t.st === "dead") { t.a = Math.max(0, 1 - t.t / 2.5); continue; }
+    if (t.st === "full") {
+      // (He inside: held where it sits, his light slowly going.)
+      S.x = t.x; S.y = t.y - 6; S.vx = 0; S.vy = 0; S.invT = Math.max(S.invT, 0.3);
+      if (!S.dying && !boonOn("unconsumed")) { S.fuel -= dt * 0.03; if (S.fuel <= 0) { drained(); spitToad(t); } }
+      continue;
+    }
+    const [mx, my] = middle(), d = Math.abs(S.x - t.x), near = d < 300 && Math.abs(S.y - t.y) < 120 && los(t.x, t.y - 40, mx, my);
+    if (t.st === "rest") { if (near && !S.dying && !S.inToad) t.dir = sign(S.x - t.x) || t.dir;
+      if (near && t.cd <= 0 && !S.inToad && !S.dying) {
+        t.kids = t.kids.filter((c) => c.st !== "dead" && S.critters.includes(c));
+        if (t.kids.length < 3 && (d > TOAD_REACH + 30 || Math.random() < 0.4)) { t.st = "burp"; t.t = 0; }
+        else if (d < TOAD_REACH + 20) { t.st = "swell"; t.t = 0; Sound.fx.growl(panX(t.x), 0.4); }
+        else t.cd = 0.8;
+      } }
+    else if (t.st === "burp" && t.t > 0.45) {
+      const [ox, oy] = toadMouth(t), c = spawnCritter("frog", ox, oy);
+      if (c) { c.vx = t.dir * 140; c.vy = -180; c.dir = t.dir; c.st = "leap"; t.kids.push(c); }
+      Sound.fx.splat(panX(t.x), 0.3); t.st = "rest"; t.t = 0; t.cd = 2.2 + Math.random() * 1.5;
+    } else if (t.st === "swell" && t.t > 0.8) {
+      // (Aimed, as it opens, at where he is: down at him from its high mouth, or up a little.)
+      const [ox, oy] = toadMouth(t); t.ang = clamp(Math.atan2(my - oy, Math.abs(mx - ox)), -0.35, 0.9); t.st = "lash"; t.t = 0; Sound.fx.whoosh(0.5);
+    }
+    else if (t.st === "lash") {
+      // The tongue: out to its reach in a quarter second, and back in a third.
+      t.tongue = t.t < 0.25 ? TOAD_REACH * ease(t.t / 0.25) : TOAD_REACH * (1 - clamp((t.t - 0.25) / 0.35, 0, 1));
+      const [ox, oy] = toadMouth(t), ca = Math.cos(t.ang || 0), sa = Math.sin(t.ang || 0), tx = ox + t.dir * ca * t.tongue, ty = oy + sa * t.tongue;
+      // (Its tip near any part of him: from his feet to his head.)
+      let hit = false; for (let q = 0; q <= 4 && !hit; q++) { const py = S.y - 4 - q * (HT - 8) / 4; hit = dist(tx, ty, S.x, py) < HW + 8; }
+      if (t.t < 0.3 && !S.inToad && !S.dying && !(S.invT > 0) && hit) {
+        if (S.ward) { spendWard(); const [wx, wy] = middle(); S.crosses.push({ kind: "turn", x: wx, y: wy, t: 0, size: 22 }); Sound.fx.parry(); t.st = "rest"; t.t = 0; t.cd = 2.5; t.tongue = 0; ev("the ward turned the toad's tongue"); continue; }
+        swallowToad(t); continue;
+      }
+      if (t.t > 0.6) { t.st = "rest"; t.t = 0; t.cd = 1.6 + Math.random(); t.tongue = 0; }
+    } else if (t.st === "spit" && t.t > 0.5) { t.st = "rest"; t.t = 0; t.cd = 2.5; }
+  }
+  if (S.toads) S.toads = S.toads.filter((t) => t.st !== "dead" || t.a > 0);
+}
+function swallowToad(t) {
+  if (S.rope) dropRope(true);
+  if (S.held) { S.held.st = "fly"; S.held.by = null; S.held.vx = -S.dir * 60; S.held.vy = -80; S.held = null; }
+  S.inToad = t; t.st = "full"; t.t = 0; t.tongue = 0; t.blows = 0; S.atk = null; S.act = null; S.cling = 0; S.hang = null; S.climbing = false;
+  S.hearts = Math.max(0, S.hearts - 1); S.shake = 0.3; Sound.fx.chomp(panX(t.x)); ev("swallowed by the giant toad");
+  if (S.hearts <= 0) { S.inToad = null; die(); return; }
+  if (!S.toadSeen) { S.toadSeen = true; S.say = { text: "SWALLOWED WHOLE", sub: usingKeys() ? "Any key, again and again: punch your way out." : "Tap, again and again: punch your way out.", t: 0 }; }
+}
+function punchToad() {
+  const t = S.inToad; if (!t || (t.blowCd || 0) > S.rt) return;
+  t.blowCd = S.rt + 0.06; t.blows++; t.bulge = { t: 0, a: Math.random() * TAU }; Sound.fx.thump(0.5 + 0.5 * t.blows / TOAD_NEED, panX(t.x)); S.shake = Math.max(S.shake, 0.1);
+  if (t.blows >= TOAD_NEED) spitToad(t);
+}
+function spitToad(t) {
+  S.inToad = null; t.st = "spit"; t.t = 0; t.bulge = null;
+  const [ox, oy] = toadMouth(t); S.x = ox + t.dir * 14; S.y = oy + 20; const f = freeSpot(S.x, S.y); if (f) { S.x = f[0]; S.y = f[1]; }
+  S.vx = t.dir * 220; S.vy = -200; S.ground = false; S.invT = 1.2; Sound.fx.spit(); ev("spat out by the giant toad");
+}
+// A little frog thrown at it: a blow; the third, and it dies.
+function toadHitBy(o) {
+  for (const t of S.toads || []) {
+    if (t.st === "dead" || t.st === "full" || Math.abs(o.x - t.x) > 36 * TOAD_K || o.y < t.y - 64 * TOAD_K || o.y > t.y + 4) continue;
+    t.hp--; t.hurtT = 0.35; S.shake = Math.max(S.shake, 0.18); Sound.fx.thump(1, panX(t.x)); gain(0.1);
+    if (t.hp <= 0) { t.st = "dead"; t.t = 0; t.tongue = 0; Sound.fx.greatFall(panX(t.x)); ev("the giant toad killed"); S.say = { text: "THE GIANT TOAD IS DEAD", sub: "Struck down by its own brood.", t: 0 }; }
+    else ev("the giant toad struck", { hp: t.hp });
+    return true;
+  }
+  return false;
+}
+const toadAt = (wx, wy) => (S.toads || []).find((t) => t.st !== "dead" && Math.abs(wx - t.x) < 38 * TOAD_K && wy > t.y - 66 * TOAD_K && wy < t.y + 4) || null;
+function drawToads(cam) {
+  for (const t of S.toads || []) {
+    const x = t.x - cam.x, y = t.y - cam.y; if (x < -120 || x > W + 120 || y < -120 || y > H + 60) continue;
+    const k = t.st === "dead" ? "td4" : t.st === "full" ? "td3" : t.st === "swell" ? "td0" : t.st === "burp" ? "td2" : t.st === "lash" || t.st === "spit" ? "td1" : "td4";
+    // (Full: each blow bulges it and shakes it. Swelling: its throat comes on. Struck: it shudders.)
+    let sx = 1, sy = 1, jx = 0;
+    if (t.bulge) { t.bulge.t += 1 / 60; const b = Math.max(0, 1 - t.bulge.t / 0.3); sx = 1 + 0.08 * b; sy = 1 - 0.05 * b; jx = Math.sin(t.bulge.t * 60) * 2 * b; if (t.bulge.t > 0.3) t.bulge = null; }
+    else if (t.st === "full") { const w = Math.sin(S.rt * 3); sx = 1 + 0.02 * w; sy = 1 - 0.02 * w; }
+    if (t.hurtT > 0) jx += Math.sin(S.rt * 70) * 2.5;
+    const P = new Path2D(), T = (u, v) => [x + jx + t.dir * u * TOAD_K * sx, y - (t.st === "dead" ? v * Math.max(0.2, 1 - t.t * 0.6) : v * sy) * TOAD_K];
+    addShape(P, TRACED[k], T);
+    if (t.tongue > 1) {
+      const [ox, oy] = toadMouth(t), sx0 = ox - cam.x, sy0 = oy - cam.y + 2, ca = Math.cos(t.ang || 0), sa = Math.sin(t.ang || 0), ex = sx0 + t.dir * ca * t.tongue, ey = sy0 + sa * t.tongue, nx = -sa * t.dir, ny = ca;
+      P.moveTo(sx0 + nx * 2.2, sy0 + ny * 2.2); P.lineTo(ex + nx * 1.6, ey + ny * 1.6); P.lineTo(ex - nx * 1.6, ey - ny * 1.6); P.lineTo(sx0 - nx * 2.2, sy0 - ny * 2.2); P.closePath();
+      P.moveTo(ex + 6, ey); P.ellipse(ex + t.dir * ca * 3, ey + sa * 3, 6, 4.4, (t.dir > 0 ? 0 : PI) + (t.ang || 0) * t.dir, 0, TAU);
+    }
+    litDraw([[P, "#0a090b", "evenodd"]], t.x, t.y - 32, t.a);
+  }
 }

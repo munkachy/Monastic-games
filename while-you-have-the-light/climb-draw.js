@@ -895,6 +895,7 @@ function drawWorld() {
     if (o.kind === "fire") { lights.push({ x: o.x - cam.x, y: o.y - cam.y, r: 95, a: 0.85 }); continue; }
     const lit = dist(lx0, ly0, o.x, o.y) < R0 * 0.85 && los(lx0, ly0, o.x, o.y);
     if (o.kind === "fat") { drawFat(o.x - cam.x, o.y - cam.y, o, lit); continue; }
+    if (o.kind === "frog") { drawFrogThing(o, cam); continue; }
     if (o.kind === "coin") { drawCoin(o.x - cam.x, o.y - cam.y, o.st === "rest" ? 1 : Math.cos(o.age * 14), lit, o.st === "rest" ? clamp(o.life - o.age, 0, 1) : 1); continue; }
     if (o.kind === "thorn") { drawThorn(o.x - cam.x, o.y - cam.y, o.st === "stuck" ? o.rot + 0.06 * Math.sin(o.age * 40) * Math.max(0, 1 - o.age * 2) : Math.atan2(o.vy, o.vx), lit); continue; }
     if (o.shard) drawShardOf(o.x - cam.x, o.y - cam.y + (o.st === "rest" ? tiltDy(o.x, o.y + BR) + 3 : 0), o.rot, lit, o.shard, o.sid);
@@ -931,8 +932,9 @@ function drawWorld() {
   if (S.boonShow) { r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, S.boonShow.t); S.boonShow.up = r.up; }
   // Swallowed to the waist: turned to us, flailing his free arm.
   else if (S.legsIn) r = drawMonkFront(mx - cam.x, my - cam.y, S.dir, 0.35 * (0.5 + 0.5 * Math.sin(S.rt * 11)));
-  else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (soupOn("unseen") ? 0.38 : 1) * (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
+  else r = drawMonk(mx - cam.x, my - cam.y, S.dir, p, { t: S.t, vx: S.vx, vy: S.vy, alpha: (S.inToad ? 0 : 1) * (soupOn("unseen") ? 0.38 : 1) * (F.on ? 0.8 : 1) * (S.flashT > 0 && Math.floor(S.rt * 24) % 2 ? 0.35 : 1) });
   if (r && r.torch) S.torch = [r.torch[0] + cam.x, r.torch[1] + cam.y];
+  if (S.inToad) S.torch = [S.inToad.x, S.inToad.y - 40];
   // The gold clinging to his habit, coin by coin.
   if (S.coins > 0) {
     const hp = monkJoint(mx, my, S.dir, p, "hip"), nk = monkJoint(mx, my, S.dir, p, "neck");
@@ -961,6 +963,7 @@ function drawWorld() {
     else if (S.held.kind === "fat") { S.held.wv = (S.held.wv || 0) + (-90 * (S.held.w || 0) - 7 * S.held.wv) * fdt; S.held.w = (S.held.w || 0) + S.held.wv * fdt; drawFat(S.held.x - cam.x, S.held.y - cam.y, S.held, true); }
     else if (S.held.kind === "coin") drawCoin(S.held.x - cam.x, S.held.y - cam.y, Math.cos(S.rt * 3), true, 1);
     else if (S.held.kind === "thorn") drawThorn(S.held.x - cam.x, S.held.y - cam.y, -PI / 2 + S.dir * 0.4, true);
+    else if (S.held.kind === "frog") drawFrogThing(S.held, cam);
     else if (S.held.shard) drawShardOf(S.held.x - cam.x, S.held.y - cam.y, S.rt * 0.5, true, S.held.shard, S.held.sid);
     else drawBoulder(S.held.x - cam.x, S.held.y - cam.y, 0, 1);
   }
@@ -1017,6 +1020,7 @@ function drawWorld() {
   // (The sky's own lights are not darkened: over the dark, where no rock stands in front of them.)
   if (skyB > -40) {
     const yr = Math.min(H, skyB - SUM_G * CELL + 4), Q = new Path2D(); Q.rect(-10, -10, W + 20, H + 20); Q.addPath(P);
+    for (const g of S.bigs) if (g.summit && g.bossP) Q.addPath(g.bossP);      // (nor through the summit's demon, which stands before them)
     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W, yr); ctx.clip(); ctx.clip(Q, "evenodd"); drawSky(cam, skyB, t, true); ctx.restore();
   }
   ctx.save(); ctx.clip(S.light);
@@ -1143,7 +1147,8 @@ function drawWorld() {
   }
 
   // (Held up out of a great demon's mouth, the torch gutters as its light goes.)
-  if (S.dark && !S.dying) { glow(tx, ty, 8, C.ember, 0.5 + 0.2 * Math.sin(t * 3)); rect(tx - 1, ty - 1, 2, 2, C.ember); }   // (out: only an ember left on it)
+  if (S.inToad) { /* (inside the toad: his torch is hidden, its light a dim glow through the hide) */ }
+  else if (S.dark && !S.dying) { glow(tx, ty, 8, C.ember, 0.5 + 0.2 * Math.sin(t * 3)); rect(tx - 1, ty - 1, 2, 2, C.ember); }   // (out: only an ember left on it)
   else if (!S.dying || S.dying < 1.2) drawFlame(tx, ty, S.latched ? 0.45 + 0.5 * S.fuel : F.on ? 1.3 : boonOn("unconsumed") ? 1.25 : 1, t, { flare: F.on ? 1 : 0, gutter: S.dying ? 1 : S.latched ? clamp(1.1 - S.fuel, 0.35, 1) : clamp((0.18 - S.fuel) / 0.18, 0, 1), vx: S.vx });
   for (const q of S.parts) {
     const a = 1 - q.age / q.life, x = q.x - cam.x, y = q.y - cam.y;

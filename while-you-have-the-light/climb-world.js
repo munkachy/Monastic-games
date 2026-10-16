@@ -490,7 +490,7 @@ function crawlOf(sec) {
   return sec.crawl;
 }
 const NO_RELICS = [];
-const relicsOf = (sec) => { const cw = crawlOf(sec); return sec.type === "cave" ? cave(sec).relics : cw ? cw.relics : NO_RELICS; };
+const relicsOf = (sec) => { if (sec.type === "room") return sec.relics || NO_RELICS; const cw = crawlOf(sec); return sec.type === "cave" ? cave(sec).relics : cw ? cw.relics : NO_RELICS; };
 // The verses on the walls: one in each shaft, about halfway up.
 function wallAt(n) {
   // (In rooms, the verses stand where the rooms' drawings put them, and no others.)

@@ -79,6 +79,7 @@ const M = {
     if (inDpad(p)) { S.touches.set(id, { pad: 0, dpad: true, x: p.x, y: p.y, born: performance.now() }); return; }
     // Held in a great demon's jaws: every tap (but on the thumb's cross) is a blow from inside it.
     if (S.latched) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); punchOut(); return; }
+    if (S.inToad) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); punchToad(); return; }
     if (S.legsIn && dist(p.x + S.cam.x, p.y + S.cam.y, S.x, S.y - 8) < 46) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); kickLegs(); return; }
     const ab = actBtn(); if (!usingKeys() && dist(p.x, p.y, ab.x, ab.y) < ab.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); action(); return; }
     const fb = flareBtn(); if (!usingKeys() && dist(p.x, p.y, fb.x, fb.y) < fb.r + 10) { S.touches.set(id, { pad: 0, act: true, born: performance.now() }); if (S.flare.on) endFlare(); else startFlare(); return; }
@@ -115,7 +116,12 @@ const M = {
     if (B && !S.atk && B.st === "tied" && !B.flung && dist(wx, wy, B.x, B.y - B.ht / 2) < Math.max(26, B.hw + 14)) { if (!takeUp()) Sound.fx.tick(420, 0.3); return; }
     // On a demon or a boulder: wait to see if it is a tap or a swipe.
     // A boulder tapped right on wins over the demon behind it.
-    { const cr = critterAt(wx, wy); if (cr && strikeCritter(cr)) return; }
+    { const td = toadAt(wx, wy);
+      if (td) { if (S.held) { S.atk = null; throwHeld(td.x, td.y - 30, null); } else { Sound.fx.tick(420, 0.3); if (!S.toadHint) { S.toadHint = true; S.say = { text: "NOTHING OF HIS HURTS IT", sub: "Only a little frog, thrown at it.", t: 0 }; } } return; } }
+    { const cr = critterAt(wx, wy);
+      // (A little frog: with his hands full, what he holds is thrown at it; else it is marked, to be picked up.)
+      if (cr && cr.kind === "frog") { if (S.held) { S.atk = null; throwHeld(cr.x, cr.y - 6, null); } else markFrog(cr); return; }
+      if (cr && strikeCritter(cr)) return; }
     { const ck = crackAt(wx, wy); if (ck && strikeCrack(ck)) return; }
     { const hm = hermitAt(wx, wy); if (hm) { talkHermit(hm); return; } }
     let f = demonAt(wx, wy), o = thingAt(wx, wy);
@@ -191,7 +197,8 @@ const M = {
     if (!down) return;
     if ((S.dread || S.boonShow || S.angel) && code !== "Escape" && code !== "KeyP") return;
     if (code === "Escape" || code === "KeyP") M.pause();
-    else if (S.latched) { if (!(e && e.repeat)) punchOut(); }          // (in its jaws: any key, a blow)
+    else if (S.latched) { if (!(e && e.repeat)) punchOut(); }
+    else if (S.inToad) { if (!(e && e.repeat)) punchToad(); }          // (in its jaws: any key, a blow)
     else if (code === "Space") action();
     else if (code === "ShiftLeft" || code === "ShiftRight") { if (S.flare.on) endFlare(); else startFlare(); }
   },

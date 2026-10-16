@@ -294,7 +294,7 @@ function makeMountain(rnd) {
   // left. Some of them hidden: the way to them walled up, the wall cracked, to be broken through.
   const hidden = new Set();
   for (let c = 0; c < GW * GH; c++) {
-    if (onWay.has(c) || rnd() > 0.12) continue; const x = c % GW, y = Math.floor(c / GW);
+    if (onWay.has(c) || rnd() > 0.25) continue; const x = c % GW, y = Math.floor(c / GW);
     if (y < 2) continue;
     if (x < GW - 1 && onWay.has(at(x + 1, y)) && !kind.has(c)) { kind.set(c, "shrine"); link(c, at(x + 1, y)); }
     else if (x > 0 && onWay.has(at(x - 1, y)) && !kind.has(c)) { kind.set(c, "crawl"); link(c, at(x - 1, y)); }
@@ -310,9 +310,8 @@ function makeMountain(rnd) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
     const row = Math.floor(c / GW);
     slots.push({ c, kind: name, ox, oy, onWay: onWay.has(c), row, stretch: Math.min(4, Math.floor(row / STRETCH)), gate: gateAt.includes(c), mouth: c === at(starts[0], 0), hidden: hidden.has(c) });
-    // (A verse in about one room in six on the ways, one at most, so that each is come on as a gift; and
-    // one in every hidden room. A hidden room keeps all its herbs.)
-    R.marks.V = hidden.has(c) || (onWay.has(c) && rnd() < 1 / 6) ? R.marks.V.slice(0, 1) : []; if (!hidden.has(c)) R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
+    // (A verse in about half the rooms, one at most; and one in every hidden room. A hidden room keeps all its herbs.)
+    R.marks.V = hidden.has(c) || rnd() < 0.5 ? R.marks.V.slice(0, 1) : []; if (!hidden.has(c)) R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
     for (let r = 0; r < RH; r++) for (let q = 0; q < RW; q++) g[oy + r][ox + q] = R.g[r][q];
     for (const m in R.marks) if (m !== "S" || c === at(starts[0], 0)) for (const [q, r] of R.marks[m]) marks[m].push([q + ox, r + oy]);
   }

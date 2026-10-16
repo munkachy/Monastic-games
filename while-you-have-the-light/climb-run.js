@@ -116,7 +116,7 @@ function keepPlace(x, y, why) {
   for (let n = 0; n < 5000; n++) { const w = wallAt(n); if (w.h > S.top / CELL + 40) break; if (w.read) walls.push(n); }
   for (const sec of secs) {
     lampsOf(sec).forEach((L, i) => { if (L.lit) lamps.push([sec.k, i]); });
-    if ((sec.type === "cave" && sec.info) || sec.crawl) relicsOf(sec).forEach((R, i) => { if (R.got) got.push([sec.k, i]); });
+    if ((sec.type === "cave" && sec.info) || sec.crawl || sec.relics) relicsOf(sec).forEach((R, i) => { if (R.got) got.push([sec.k, i]); });
     const G = sec.gate && sec.type === "trav" ? brotherOf(sec) : null;
     if (G && G.bin.length) bins[sec.k] = G.bin.map((b) => [b.shape, b.dom]);
   }
