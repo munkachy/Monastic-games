@@ -211,7 +211,10 @@ function physics(dt) {
       wrapRope(S.rope, pgx, pgy);
     }
   }
-  S.ground = S.vy >= 0 && boxHit(S.x, S.y + 1);
+  // (On a platform bird's back: he stands on it, and it carries him.)
+  const rb = !S.rope && !S.cling && S.vy >= 0 ? backUnder() : null; S.rideOn = rb ? rb.c : null;
+  if (rb) { S.y = rb.top; S.vy = 0; }
+  S.ground = rb ? true : S.vy >= 0 && boxHit(S.x, S.y + 1);
   if (S.ground && !wasGround && vyIn > 300) { S.landT = vyIn > 620 ? 0.5 : 0.32; S.landMax = S.landT; Sound.fx.land(clamp(vyIn / 700, 0.3, 1)); }
   // Swinging, his feet touch the ground: he lets go of the rope (and the hook comes back), and
   // stands. No dragging and bouncing along the ground at the rope's end.

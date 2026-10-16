@@ -20,7 +20,11 @@ const CRITTERS = {
   // The bird: flies about a place of its own. The hook can take it (as it takes a chain), and then
   // it panics: it flies wildly, dragging him about, and tears free.
   bird: { role: "neutral", hw: 6, ht: 6, w: 1, air: true },
+  // The platform bird: a bloated vulture with a broad flat back, flying slowly to and fro on its
+  // beat (across a pit, or up a shaft). He can stand on its back and be carried; it sags under him.
+  vulture: { role: "platform", hw: 30, ht: 30, w: 1, air: true },
 };
+const PB_K = 1.4, PB_TOP = 23, PB_U0 = -22, PB_U1 = 12;      // its size; its back's height, and from where to where along it (facing +u)
 const ROLES = { harmful: [], neutral: [], platform: [] };
 for (const k in CRITTERS) ROLES[CRITTERS[k].role].push(k);
 // One kind of a role, drawn by weight.
@@ -34,6 +38,7 @@ function spawnCritter(kind, x, y) {
   const K = CRITTERS[kind]; if (!K) return null;
   const c = { kind, x, y, vx: 0, vy: 0, dir: Math.random() < 0.5 ? -1 : 1, st: "idle", t: Math.random() * 2, hp: 1, id: ++S.ids, a: 1, ph: Math.random() * TAU, hx: x, hy: y, len: 2, ang: 0 };
   if (K.roof) { c.ay = y; c.st = "wait"; }
+  if (kind === "vulture") { c.beat = { ax: x - 150, ay: y, bx: x + 150, by: y }; c.u = 0.5; c.s = 1; }
   (S.critters = S.critters || []).push(c);
   return c;
 }
@@ -95,6 +100,16 @@ function stepCritters(dt) {
       else c.vx = c.dir * 170;
       const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw, K.ht); if (hy) c.vy = 0; if (hx) c.dir = -c.dir;
       c.ph += Math.abs(c.vx) * dt * 0.4;
+    } else if (c.kind === "vulture") {
+      const B = c.beat, len = Math.max(40, dist(B.ax, B.ay, B.bx, B.by)), x0 = c.x, y0 = c.y;
+      c.u += c.s * dt * 52 / len; if (c.u > 1) { c.u = 1; c.s = -1; c.turnT = 0.35; } if (c.u < 0) { c.u = 0; c.s = 1; c.turnT = 0.35; }
+      const e = smooth(c.u), ride = S.rideOn === c; c.sag = (c.sag || 0) + ((ride ? 7 : 0) - (c.sag || 0)) * Math.min(1, dt * 4);
+      c.x = lerp(B.ax, B.bx, e); c.y = lerp(B.ay, B.by, e) + Math.sin(c.t * 1.3 + c.ph) * 4 + c.sag;
+      if (Math.abs(B.bx - B.ax) > 4) c.dir = sign((B.bx - B.ax) * c.s); c.turnT = Math.max(0, (c.turnT || 0) - dt);
+      c.ph += dt * (ride ? 3.2 : 2.2);
+      // (Carried: he goes where it goes.)
+      if (ride) { S.x += c.x - x0; S.y += c.y - y0; }
+      continue;
     } else if (c.kind === "bird") {
       const held = S.rope && S.rope.chain === c;
       if (held) {
@@ -139,6 +154,9 @@ function drawCritters(cam) {
       circle(x + s * 4.6, y - 6.6, 1.6, ink);
       line(x - s * 6, y - 3, x - s * 13, y - 4 + Math.sin(c.ph * 3) * 2, ink, 1);
       line(x - 3 + b, y - 1, x - 3 - b, y + 0.3, ink, 1.2); line(x + 3 - b, y - 1, x + 3 + b, y + 0.3, ink, 1.2);
+    } else if (c.kind === "vulture") {
+      const k = S.rideOn === c ? "pb3" : c.turnT > 0 ? "pb5" : ["pb0", "pb1", "pb0", "pb2"][Math.floor(c.ph) % 4], P = new Path2D(), T = put(c.x, c.y, c.dir, cam);
+      addShape(P, TRACED[k], (u, v) => T(u * PB_K, v * PB_K)); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
     } else if (c.kind === "bird") {
       const s = c.dir, fl = Math.sin(c.ph), dead = c.st === "dead";
       ctx.save(); ctx.translate(x, y - 4); if (dead) ctx.rotate(c.t * 4);
@@ -181,9 +199,25 @@ function peopleMountain(sec, dom) {
       const kind = pickKind("harmful", rnd), p = kind && spot(S0, CRITTERS[kind].roof ? "roof" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
+    if (S0.onWay && (S0.kind === "gap" || (S0.kind === "shaft" && rnd() < 0.4))) {
+      const kind = pickKind("platform", rnd);
+      if (kind) { const cx = cellX(S0.ox + RW / 2), cy = cellY(S0.oy + RH * 0.45), c = spawnCritter(kind, cx, cy);
+        if (c && S0.kind === "shaft") c.beat = { ax: cx, ay: cellY(S0.oy + RH - 8), bx: cx, by: cellY(S0.oy + 6) };
+        else if (c) c.beat = { ax: cellX(S0.ox + 14), ay: cy, bx: cellX(S0.ox + RW - 14), by: cy }; }
+    }
     for (let q = 0; q < n(0.6); q++) {
       const kind = pickKind("neutral", rnd), p = kind && spot(S0, CRITTERS[kind].air ? "open" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
   }
+}
+
+// The back of a platform bird under his feet, if he stands (or comes down) on one: its top, and the bird.
+function backUnder() {
+  for (const c of S.critters || []) {
+    if (c.kind !== "vulture" || c.st === "dead") continue;
+    const top = c.y - PB_TOP * PB_K, a = c.x + c.dir * PB_U0 * PB_K, b = c.x + c.dir * PB_U1 * PB_K;
+    if (S.x > Math.min(a, b) - HW + 2 && S.x < Math.max(a, b) + HW - 2 && S.y >= top - 3 && S.y <= top + 16) return { top, c };
+  }
+  return null;
 }
