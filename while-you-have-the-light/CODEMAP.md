@@ -96,14 +96,14 @@ the build and test scripts (see tools/README.md).
 - **Things lying about, and thrown** (906): OBJECTS 907, OBJ_PAINT 908, drawObject 944, drawShard 953
 - **The backdrop** (966): BACK_LAYERS 972, BACK 979, buildBackdrop 980, drawBackdrop 1034, paintBackdrop 1052
 
-### shapes.js (60 lines)
+### shapes.js (92 lines)
 
 - (top): TRACED 5
 
-### rooms.js (350 lines)
+### rooms.js (358 lines)
 
 - (top): ROOMS 15, makeRoom 186, seal 201
-- **A whole mountain** (211): makeMountain 218, largest 308, WAYS 323, fits 325, linkRooms 326
+- **A whole mountain** (211): makeMountain 218, largest 316, WAYS 331, fits 333, linkRooms 334
 
 ### climb-world.js (678 lines)
 
@@ -131,56 +131,60 @@ the build and test scripts (see tools/README.md).
 - **The rope round the rock** (703): bendsOf 708, pivotOf 709, freeOf 710, setFixed 711, sweepCorner 714, wrapRope 736
 - **The flare** (754): startFlare 755, endFlare 761, puff 765, blink 772
 
-### climb-foes.js (1199 lines)
+### climb-foes.js (1201 lines)
 
 - **The demons, and what they throw** (5): DEM 13, boxAt 15, moveBox 21, dFree 27, los 33, dMid 34, alive 35, panX 36, gain 37, setSt 38, spawnDemon 39, spotsFor 48, placeFor 90, placeRocks 123
 - **The shrines** (138): placeShrine 147
-- **The blocks** (172): SHAPES 189, newBlock 192, makeBlock 196, reveal 201, tie 210, takeUp 218, throwBlock 227, loosen 236, carryOff 244, shrineFor 250, dropBlock 257, seekBlock 263, floatTo 278, alight 298, floatDemon 299, rebuild 315, raiseIdol 321, yank 335, stepYank 340, brotherOf 353, binSlot 362, deliver 365, cartAt 374, unbin 381, stepBlocks 390, stepLoose 412, stepTied 438, flail 484, drawBlock 501, GLOWS 513, drawBlocks 514, drawTied 535, drawHeld 546, drawYank 555, drawBrother 562, rimNow 589, blockGlows 598
-- **The great demons** (613): GREAT 625, GREAT_V 626, planGreat 630, placeGreat 647, placeSummit 658, bigAt 668, stepGreat 669, updGreat 673, greatReach 729, latch 758, holdHim 771, punchOut 778, spitOut 784, strikeGreat 798, greatThrows 825, breakGreat 837, hurl 854, freedSay 863
-- **A great demon's dread** (864): DREAD_T 872
-- **The angel** (873): ANG 878, startAngel 879, stepAngel 888, angelAt 898, drawBeam 902, drawAngel 910, drawAngelOver 935, finishWon 946, hauntWait 958, canDread 959, onView 961, greatSays 965, startDread 968, stepDread 973, burstSpot 984, burstAfter 999, drawDread 1007, MAW_STONE 1033, MAW_FLESH 1034, MAW_EYES 1035, MAW_CRACKS 1036, mawParts 1037, greatT 1118, laughK 1125, headTilt 1126, latchFrame 1131, paintMaw 1132, drawGreat 1147, drawLatch 1165, greatGlows 1172
+- **The blocks** (172): SHAPES 189, newBlock 192, makeBlock 196, reveal 201, tie 210, takeUp 218, throwBlock 227, loosen 236, carryOff 244, shrineFor 250, dropBlock 257, seekBlock 263, floatTo 278, alight 298, floatDemon 299, rebuild 315, raiseIdol 321, yank 335, stepYank 340, brotherOf 353, binSlot 362, deliver 365, cartAt 374, unbin 382, stepBlocks 391, stepLoose 413, stepTied 439, flail 485, drawBlock 502, GLOWS 514, drawBlocks 515, drawTied 537, drawHeld 548, drawYank 557, drawBrother 564, rimNow 591, blockGlows 600
+- **The great demons** (615): GREAT 627, GREAT_V 628, planGreat 632, placeGreat 649, placeSummit 660, bigAt 670, stepGreat 671, updGreat 675, greatReach 731, latch 760, holdHim 773, punchOut 780, spitOut 786, strikeGreat 800, greatThrows 827, breakGreat 839, hurl 856, freedSay 865
+- **A great demon's dread** (866): DREAD_T 874
+- **The angel** (875): ANG 880, startAngel 881, stepAngel 890, angelAt 900, drawBeam 904, drawAngel 912, drawAngelOver 937, finishWon 948, hauntWait 960, canDread 961, onView 963, greatSays 967, startDread 970, stepDread 975, burstSpot 986, burstAfter 1001, drawDread 1009, MAW_STONE 1035, MAW_FLESH 1036, MAW_EYES 1037, MAW_CRACKS 1038, mawParts 1039, greatT 1120, laughK 1127, headTilt 1128, latchFrame 1133, paintMaw 1134, drawGreat 1149, drawLatch 1167, greatGlows 1174
 
-### climb-fight.js (1061 lines)
+### climb-fight.js (1063 lines)
 
 - **The weight of a blow** (5): impact 9, impactAt 12, hitIdol 20, scatter 41, updIdol 48, populate 70, hurtDemon 79, castOut 103, flyDemon 111, updDemon 137, wander 157, stepWrath 164
 - **Avarice's gold** (178): heavy 184, blowTo 186, comboOn 197, comboHit 198, CROWNED 214, wouldCrown 215, crownFX 216, drawCrown 221, breakCombo 228, drawCombo 230, throwCoins 246, coinSticks 254, giveAlms 260, stepAvarice 270, snatchLight 305, stepLust 319, ribbonHand 343, castRibbon 344, holdRibbon 355, pullOf 366, throwThorn 374, briars 382, briarHit 392, mouth 397, stepGluttony 403, inhale 443
 - **Gluttony's swallow** (458): swallowLegs 465, stepLegs 477, offHim 486, freeLegs 491, kickLegs 499, GS_AT 506, drawLegsSac 507, eat 524, lob 534, lobFat 544, throwFire 552, thornStuck 559, sendAt 566, rockAt 574, burst 580, splat 585
 - **Slime, grease, and rock that lies askew** (590): grease 595, slabAt 603, slickAt 610, tiltDy 616, slickWall 621, tryCatch 626, kickBack 636, strikeMonk 646, strikeDemon 663, updThing 677
 - **The rock that gives way (Wrath's)** (742): crumblerAt 747, cellsOf 754, weigh 755, strikeRock 756, crack 757, stepCrumbling 772, hitMonk 780, demonAt 797, thingAt 798
-- **His blows, and the boulders in his hands** (800): inLight 807, reachable 808, jumpTo 809, startMove 816, strikeSpot 827, attack 835, heave 843, catchThing 850, throwHeld 860, besides 869, closeBy 871, swingBlock 873, bash 879, release 885, ATK_ANIM 894, stepAtk 895, gesture 956, stroke 976, blessDemon 991, ward 1007, spendWard 1024, wardFade 1028, stomp 1032, swingKick 1050
+- **His blows, and the boulders in his hands** (800): inLight 807, reachable 808, jumpTo 809, startMove 816, strikeSpot 827, attack 835, heave 843, catchThing 850, throwHeld 860, besides 869, closeBy 871, swingBlock 873, bash 879, release 885, ATK_ANIM 894, stepAtk 895, gesture 958, stroke 978, blessDemon 993, ward 1009, spendWard 1026, wardFade 1030, stomp 1034, swingKick 1052
 
-### climb-frame.js (423 lines)
+### climb-frame.js (458 lines)
 
-- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 235, step 243
+- **Each frame** (4): pads 6, lowWay 19, startCrawl 20, upFromCrawl 26, hangAt 27, physics 33, unlose 266, step 274
 
-### climb-draw.js (1393 lines)
+### climb-draw.js (1394 lines)
 
 - **Drawing** (4): lightR 5, visPoly 19, drawSky 43, darkness 66, slab 90, rockPath 100, drawTablet 185, torchBack 210, wallWalk 211, wallClimb 219, crawlPose 227, monkPose 231, demonPose 282, lightCross 313, drawSign 321, drawBoulder 351, drawRope 352, drawHook 358, goOnLine 368, drawHerb 372, pouchBtn 385, drawSoups 386, drawHeart 421, draw 425
-- **The domains, drawn** (433): rgb 436, rgbs 437, tintStep 438, put 446, drawGlutton 448, shadeGlut 461, eyeGlut 472, GLUT_EYE 477, glutEye 478, addShape 489, addPoly 492, addOval 493, BEL 498, idolPath 508, drawShrine 545, drawWorshipper 571, W_KNEEL 581, worshipPose 582, worshipPath 594, drawShardOf 602, carved 609, drawGate 610, briarStrip 662, drawBriars 675, drawChain 699, drawCoin 710, drawAlms 718, drawThorn 728, drawRibbon 734, drawLamp 744, drawRelic 758, crackLines 768, drawFat 786, sheen 797, drawPrints 817, drawSlime 827, drawFire 845, drawWorld 851, lostMarker 1179, dpad 1197, dpadDir 1198, actBtn 1203, flareBtn 1204, climbWay 1207, sideArrow 1208, hud 1214
-- **The map** (1318): markSeen 1322, bandRGB 1329, buildMap 1330, drawMap 1343
-- **The near wall, and the strata** (1357): STRATA 1363, strataAt 1368, drawNearWall 1372
+- **The domains, drawn** (433): rgb 436, rgbs 437, tintStep 438, put 446, drawGlutton 448, shadeGlut 461, eyeGlut 472, GLUT_EYE 477, glutEye 478, addShape 489, addPoly 492, addOval 493, BEL 498, idolPath 508, drawShrine 545, drawWorshipper 571, W_KNEEL 581, worshipPose 582, worshipPath 594, drawShardOf 602, carved 609, drawGate 610, briarStrip 662, drawBriars 675, drawChain 699, drawCoin 710, drawAlms 718, drawThorn 728, drawRibbon 734, drawLamp 744, drawRelic 758, crackLines 768, drawFat 786, sheen 797, drawPrints 817, drawSlime 827, drawFire 845, drawWorld 851, lostMarker 1180, dpad 1198, dpadDir 1199, actBtn 1204, flareBtn 1205, climbWay 1208, sideArrow 1209, hud 1215
+- **The map** (1319): markSeen 1323, bandRGB 1330, buildMap 1331, drawMap 1344
+- **The near wall, and the strata** (1358): STRATA 1364, strataAt 1369, drawNearWall 1373
 
-### creatures.js (190 lines)
+### creatures.js (361 lines)
 
-- (top): CRITTERS 11, ROLES 24, pickKind 27, spawnCritter 33, critterMid 40, touches 41, critterAt 43, strikeCritter 47, killCritter 52, birdsNear 57, stepCritters 59, floorBelow 122, drawCritters 124
-- **The rules that people a whole mountain** (154): peopleMountain 159
+- (top): CRITTERS 11, PB_SH 28, pbWing 31, BB_SH 32, wingShape 33, ROLES 46, pickKind 49, spawnCritter 55, critterMid 63, touches 64, critterAt 66, strikeCritter 71, critterHits 81, killCritter 91, birdsNear 96, a0 98, perchNear 100, backAhead 111, stepCritters 120, floorBelow 221, drawCritters 223
+- **The rules that people a whole mountain** (267): peopleMountain 272, backUnder 333, SHAPE_H 343, shapeH 344, litDraw 349, birdAt 357
 
-### climb.js (267 lines)
+### gate.js (105 lines)
+
+- (top): Gate 8, drawGateScene 52
+
+### climb.js (269 lines)
 
 - **The record, for notes to Claude** (28): ev 35, r2 36, doing 37, snapNow 40, record 48, grabScreen 56
-- **Touch, mouse and keys** (59): goOn 61, inDpad 62, pid 63, M 64, ClimbPause 215
+- **Touch, mouse and keys** (59): goOn 61, inDpad 62, pid 63, M 64, ClimbPause 217
 
 ### notes.js (106 lines)
 
 - (top): N 10, build 20, close 69, send 72
 
-### room.js (134 lines)
+### room.js (137 lines)
 
 - (top): R 11
 - **The places** (16): base 17, PLACES 18, go 24
-- **What can be put in (built from the game's own lists, so what is added to it shows here)** (30): here 31, floorAt 33, roofAt 39, mark 40, KINDS 41
-- **The menu, held open over the play (the play stands still under it)** (81): Menu 88
-- **The list of places** (117)
+- **What can be put in (built from the game's own lists, so what is added to it shows here)** (32): here 33, floorAt 35, roofAt 41, mark 42, KINDS 43
+- **The menu, held open over the play (the play stands still under it)** (84): Menu 91
+- **The list of places** (120)
 
 ### psalm.js (184 lines)
 

@@ -23,8 +23,10 @@ const Room = (() => {
   ];
   function go(P) {
     R.menu = null;
-    Game.scene(Object.assign({}, base, P.sc, { title: P.name, seed: (Math.random() * 1e9) | 0 }));
-    Climb.S.placed = [];
+    const sc = Object.assign({}, base, P.sc, { title: P.name, seed: (Math.random() * 1e9) | 0 });
+    // (A whole mountain: first its gate, outside under the moon; its mouth takes him in.)
+    if (sc.piece && sc.piece[0] === "mountain") { Gate.open(sc); return; }
+    Game.scene(sc); Climb.S.placed = [];
   }
 
   // ---- What can be put in (built from the game's own lists, so what is added to it shows here) ----

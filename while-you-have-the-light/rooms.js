@@ -247,7 +247,7 @@ function makeMountain(rnd) {
       step(x, y + 1);
     }
   }
-  const nWays = 2 + (rnd() < 0.5 ? 1 : 0), starts = [0];          // (the main way begins in the room at the foot, on the left: behind the mouth)
+  const nWays = 2 + (rnd() < 0.5 ? 1 : 0), starts = [0];          // (the main way begins in the room at the foot, on the left: in at the mouth)
   way(starts[0], true);
   for (let w = 1; w < nWays; w++) { let x0 = Math.floor(rnd() * GW); if (x0 === starts[0]) x0 = (x0 + 1 + Math.floor(rnd() * (GW - 1))) % GW; starts.push(x0); way(x0, false); }
   // (The ways' feet joined along the bottom, so whichever he starts by, all are open to him.)
@@ -274,8 +274,7 @@ function makeMountain(rnd) {
   }
   // The grid of cells: rock, with each room laid in its place (row 0 is the top: the grid's top row of
   // places is GH - 1). Each room keeps only its largest hollow (the rest becomes rock).
-  // (OUT: the ground outside the mountain, on its left, where he starts, before the mouth.)
-  const OUT = 120, W = OUT + GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
+  const OUT = 0, W = OUT + GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
   const marks = { S: [], V: [], D: [], H: [], I: [] }, box = (c) => [OUT + (c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
   const slots = [];
   for (const [c, name] of kind) {
@@ -311,14 +310,7 @@ function makeMountain(rnd) {
   }
   // The summit: up from the top room's highest air to the sky.
   { const A = best(top, (u, r) => r + Math.abs(u - RW / 2) * 0.1, false); if (A) cut(A[0] - 3, 0, A[0] + 2, A[1]); for (let x = A[0] - 3; x <= A[0] + 2; x++) g[0][x] = false; }
-  // Outside, at the foot on the left: open ground under the night sky (the overhang far above),
-  // and the door into the mountain: Gluttony's face, seen from the front, its mouth the door (it
-  // is drawn, in climb-draw.js; he goes in by it, and comes out inside, in the first room).
-  const GR = Hh - 14;                                           // the ground's row
-  for (let r = Hh - 3 * RH; r < GR; r++) for (let x = 1; x < OUT; x++) g[r][x] = false;
-  const inside = marks.S[0];
-  marks.S = [[52, GR - 1], inside];
-  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT, gate: { door: OUT - 40, GR, inside } });
+  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots });
 }
 // A room's largest hollow, and the rest of its air made rock (its marks in the rock dropped).
 function largest(R) {
