@@ -221,9 +221,11 @@ function makeMountain(rnd) {
   const at = (x, y) => y * GW + x, links = new Set(), onWay = new Set(), link = (p, q) => { links.add(Math.min(p, q) + "," + Math.max(p, q)); onWay.add(p); onWay.add(q); };
   const top = at(Math.floor(GW / 2), GH - 1), swingRow = 6 + Math.floor(rnd() * (GH - 14));
   // One way up, from (x, 0): mostly up; sideways runs; a dip now and then (never back on itself).
+  const mainWay = [];
   function way(x0, main) {
     let x = x0, y = 0, prev = at(x, y), dipped = 0; const seen = new Set([prev]);
-    const step = (nx, ny) => { const c = at(nx, ny); link(prev, c); seen.add(c); prev = c; x = nx; y = ny; };
+    if (main) mainWay.push(prev);
+    const step = (nx, ny) => { const c = at(nx, ny); link(prev, c); seen.add(c); prev = c; x = nx; y = ny; if (main) mainWay.push(c); };
     while (y < GH - 1) {
       if (main && y === swingRow) { const d = x < GW / 2 ? 1 : -1; for (let k = 0; k < 3 && x + d >= 0 && x + d < GW; k++) step(x + d, y); step(x, y + 1); continue; }
       const r = rnd();
@@ -258,6 +260,11 @@ function makeMountain(rnd) {
     const S = sides(c), y = Math.floor(c / GW), flat = (S.left || S.right) && !S.up && !S.down, tall = (S.up || S.down) && !S.left && !S.right;
     kind.set(c, y === swingRow && flat ? "gap" : tall ? pick(["shaft", "shaft", "platforms", "hall"]) : flat ? pick(["gap", "corridor", "hall", "platforms"]) : pick(["hall", "platforms", "hall"]));
   }
+  // In five stretches: at the head of each but the last, on the main way, a long gallery where the
+  // lay brother waits with his cart (the gate). And at the foot, where the main way begins, the mouth.
+  const STRETCH = Math.ceil(GH / 5), gateAt = [];
+  for (let g = 1; g < 5; g++) { const row = g * STRETCH, c = mainWay.find((q) => Math.floor(q / GW) === row); if (c !== undefined) { kind.set(c, "corridor"); gateAt.push(c); } }
+  kind.set(at(starts[0], 0), "hall");
   // Rooms off the ways, found by chance: a shrine with its way to the right, a crawl with its way to the left.
   for (let c = 0; c < GW * GH; c++) {
     if (onWay.has(c) || rnd() > 0.12) continue; const x = c % GW, y = Math.floor(c / GW);
@@ -272,7 +279,8 @@ function makeMountain(rnd) {
   const slots = [];
   for (const [c, name] of kind) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
-    slots.push({ c, kind: name, ox, oy, onWay: onWay.has(c) });
+    const row = Math.floor(c / GW);
+    slots.push({ c, kind: name, ox, oy, onWay: onWay.has(c), row, stretch: Math.min(4, Math.floor(row / STRETCH)), gate: gateAt.includes(c), mouth: c === at(starts[0], 0) });
     // (A verse in about half the rooms, one at most: not one at every mark.)
     R.marks.V = rnd() < 0.5 ? R.marks.V.slice(0, 1) : []; R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
     for (let r = 0; r < RH; r++) for (let q = 0; q < RW; q++) g[oy + r][ox + q] = R.g[r][q];

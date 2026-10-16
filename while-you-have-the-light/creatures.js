@@ -286,10 +286,34 @@ function peopleMountain(sec, dom) {
     }
     return null;
   }
+  // The gates: in each gallery at a stretch's head, the lay brother, his cart and donkey on its
+  // longest floor (he takes the blocks brought from the idols, and his blessing fills the torch).
+  S.gates = [];
+  // (The mouth at the foot: where he starts, inside it.)
+  S.mouth = { x: cellX(start[0]), y: cellY(start[1]) };
+  for (const S0 of R.slots) if (S0.gate) {
+    let best = null;
+    for (let r = S0.oy + 2; r < S0.oy + RH - 1; r++) for (let i = S0.ox + 2; i < S0.ox + RW - 2; i++) {
+      if (!(air(i, r) && !air(i, r + 1) && air(i, r - 3))) continue; let j = i; while (j + 1 < S0.ox + RW - 2 && air(j + 1, r) && !air(j + 1, r + 1) && air(j + 1, r - 3)) j++;
+      if (!best || j - i > best.n) best = { i, r, n: j - i }; i = j;
+    }
+    // (On a shorter floor, they stand a little closer together.)
+    if (best && best.n >= 9) { const base = cellX(best.i) - CELL / 2, y = cellY(best.r), q = Math.min(1, best.n / 15); S.gates.push({ sec: 0, dir: 1, y, x: base + 4.5 * CELL * q, cart: base + 8.5 * CELL * q, donkey: base + 12.5 * CELL * q, bin: [], cheer: -9 }); taken.push([best.i + 6, best.r], [best.i + 12, best.r]); }
+  }
+  // The great demons: one in a large room on the ways in each of the three stretches above the
+  // first gate, each a tier stronger (the summit's own above them all). Only a block can hurt one.
+  for (let st = 1; st <= 3; st++) {
+    const big = R.slots.filter((q) => q.onWay && q.stretch === st && !q.gate && (q.kind === "hall" || q.kind === "gap" || q.kind === "platforms"));
+    const S0 = big[Math.floor(rnd() * big.length)]; if (!S0) continue;
+    const G = GREAT[dom] || GREAT.gluttony, tier = st, sc = 1 + 0.2 * (tier - 1), hw = G.hw * sc, ht = G.ht * sc, p = spot(S0, "floor");
+    const at = p && dFree(p[0], p[1] - 30, hw, ht); if (!at) continue;
+    S.bigs.push({ sin: dom, tier, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: rnd() < 0.5 ? -1 : 1, hp: tier + 2, maxHp: tier + 2, st: "stone", t: 0, wake: 0, lit: 0, anim: rnd() * 9,
+      stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: 0, id: ++S.ids, growlT: -9, stoneT: -9 });
+  }
   for (const S0 of R.slots) {
     const up = 1 - S0.oy / R.h, quiet = S0.kind === "shrine" || S0.kind === "crawl", n = (base) => Math.floor(base + rnd() * (base + 1));
     if (S0.kind === "shrine") { const I = R.marks.I.find(([i, r]) => i >= S0.ox && i < S0.ox + RW && r >= S0.oy && r < S0.oy + RH); if (I) { let q = I[1]; while (air(I[0], q + 1)) q++; placeShrine(0, dom, [[cellX(I[0]), cellY(q), cellX(I[0]) - 90, cellX(I[0]) + 90]], []); } }
-    if (S0.onWay && !quiet) for (let q = 0; q < n(0.1 + 0.45 * up); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
+    if (S0.onWay && !quiet && !S0.gate && !S0.mouth) for (let q = 0; q < n(0.1 + 0.45 * up); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
     if (!quiet) for (let q = 0; q < n(0.2 + 0.8 * up); q++) {
       const kind = pickKind("harmful", rnd), p = kind && spot(S0, CRITTERS[kind].roof ? "roof" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);

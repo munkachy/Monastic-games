@@ -373,6 +373,7 @@ function deliver(G) {
 // The cart he stands at, if any (and has blocks in it, if asked).
 function cartAt(x, y, full) {
   const h = -y / CELL;
+  for (const G of S.gates || []) if (Math.abs(x - G.cart) < 48 && Math.abs(y - G.y) < 56 && (!full || G.bin.some((b) => b.st === "bin"))) return G;
   for (const sec of sectionsIn(h - 10, h + 10)) { const G = brotherOf(sec); if (G && Math.abs(x - G.cart) < 48 && Math.abs(y - G.y) < 56 && (!full || G.bin.some((b) => b.st === "bin"))) return G; }
   return null;
 }
@@ -514,6 +515,7 @@ const GLOWS = [];
 function drawBlocks(cam, rimP, lights) {
   GLOWS.length = 0;
   if (S.blockSeen) for (const sec of sectionsIn(-(cam.y + H) / CELL - 6, -cam.y / CELL + 6)) { const G = brotherOf(sec); if (G) drawBrother(G, cam, rimP, lights); }
+  if (S.blockSeen) for (const G of S.gates || []) if (Math.abs(G.y - cam.y - H / 2) < H) drawBrother(G, cam, rimP, lights);
   for (const b of S.blocks) {
     let x, y, rot = b.rot || 0;
     if (b.st === "loose") { x = b.x; y = b.y - b.ht / 2; }
