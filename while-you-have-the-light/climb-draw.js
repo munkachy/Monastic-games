@@ -988,6 +988,7 @@ function drawWorld() {
   if (S.yank) drawYank(cam);
   // The rock, in front of him: its crags overlap him where he stands or clings against it.
   ctx.fillStyle = C.ink; ctx.fill(P);
+  { const FP = facePath(cam); if (FP) { ctx.fill(FP, "evenodd"); rimP.addPath(FP); } }
   // In the rock: the gates; the lamps; the tablets.
   for (const sec of view) {
     if (sec.type === "slope") drawBriars(sec, cam, rimP, idols);
@@ -1013,7 +1014,7 @@ function drawWorld() {
   S.light.moveTo(vp[0] - cam.x, vp[1] - cam.y); for (let k = 2; k < vp.length; k += 2) S.light.lineTo(vp[k] - cam.x, vp[k + 1] - cam.y); S.light.closePath();
   const tx = S.torch[0] - cam.x, ty = S.torch[1] - cam.y;
   darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 1 - 0.27 * sky));
-  drawFace(cam);      // (black where no light reaches; under the open sky, the moon's light)
+  drawFaceLines(cam);      // (black where no light reaches; under the open sky, the moon's light)
   // (The sky's own lights are not darkened: over the dark, where no rock stands in front of them.)
   if (skyB > -40) {
     const yr = Math.min(H, skyB - SUM_G * CELL + 4), Q = new Path2D(); Q.rect(-10, -10, W + 20, H + 20); Q.addPath(P);
@@ -1392,18 +1393,17 @@ function drawNearWall(cam, t, dom) {
   }
 }
 
-// Gluttony's face at the foot of a whole mountain: of the mountain's own rock (it is rock to walk
-// on and into), but unlike the rest of the rock its features show, even in the dark: drawn over
-// the dark in the stone of its band, its cracks and its eye pale, so that he sees the whole of it,
-// a screen high, as he comes to it.
-function drawFace(cam) {
-  const sec = secs[0], F = sec && sec.type === "room" && sec.R.face; if (!F) return;
-  const T = (u, v) => [(sec.x0 + F.FX + (u + 47.7) * F.FK) * CELL - cam.x, -(sec.h1 - (F.GR - v * F.FK)) * CELL - cam.y];
-  const [ax, ay] = T(-48, 100), [bx, by] = T(48, 0); if (bx < -20 || ax > W + 20 || by < -20 || ay > H + 20) return;
-  const P = new Path2D(); addShape(P, TRACED.wf0, T);
-  const band = strataAt(F.GR > 0 ? sec.R.h - F.GR : 0, (NOV && NOV.domain) || "gluttony");
-  ctx.save(); ctx.globalAlpha = 0.92;
-  ctx.fillStyle = mix("#2a221c", band, 0.35); ctx.fill(P, "nonzero");          // (its cracks and eye: the pale of old stone)
-  ctx.fillStyle = mix("#0b090a", band, 0.22); ctx.fill(P, "evenodd");         // (the face itself: dark stone)
-  ctx.restore();
+// Gluttony's face at the foot of a whole mountain (gluttony-mouth-2.png): the mountain's own rock,
+// drawn as the rest is (filled with it, and rimmed by his torch with it), but in the shape of the
+// drawing rather than of its cells; and its cracks and its eye drawn in it as fine pale lines,
+// faintly, even in the dark, so that the face is seen whole as he comes to it.
+function facePath(cam) {
+  const sec = secs[0], F = sec && sec.type === "room" && sec.R.face; if (!F) return null;
+  const T = (u, v) => [(sec.x0 + F.FX + (u + 54.35) * F.FK) * CELL - cam.x, -(sec.h1 - (F.GR - v * F.FK)) * CELL - cam.y];
+  const [ax] = T(-55, 0), [bx] = T(55, 0), [, ty] = T(0, 100), [, by] = T(0, 0); if (bx < -20 || ax > W + 20 || by < -20 || ty > H + 20) return null;
+  const P = new Path2D(); addShape(P, TRACED.wf1, T); return P;
+}
+function drawFaceLines(cam) {
+  const P = facePath(cam); if (!P) return;
+  ctx.save(); ctx.strokeStyle = "rgba(214,196,160,0.3)"; ctx.lineWidth = 1; ctx.stroke(P); ctx.restore();
 }
