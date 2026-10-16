@@ -1,5 +1,7 @@
 // Vox Machina user interface: controls, presets, preview, download, batch.
 import { preload, speak, render, toWav } from './engine.js';
+import { sing } from './sing.js';
+import { makeMelody, describe, STYLES } from './melody.js';
 
 const $ = id => document.getElementById(id);
 
@@ -13,6 +15,9 @@ const SLIDERS = [
   { key: 'pitchRange', box: 'voiceBox', label: 'Pitch range (0 = monotone)', min: 0, max: 99, step: 1 },
   { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5 },
   { key: 'wordGap', box: 'voiceBox', label: 'Word gap', min: 0, max: 40, step: 1, fmt: v => v * 10 + ' ms' },
+  { key: 'bpm', box: 'melodyBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
+  { key: 'sustain', box: 'melodyBox', label: 'Sustain (hold the vowels)', min: 0, max: 1, step: 0.05, fmt: pct },
+  { key: 'glide', box: 'melodyBox', label: 'Glide between notes', min: 0.001, max: 0.15, step: 0.001, fmt: v => Math.round(v * 1000) + ' ms' },
   { key: 'bits', box: 'crushBox', label: 'Bit depth', min: 1, max: 16, step: 0.5, fmt: v => v + ' bit' },
   { key: 'crushRate', box: 'crushBox', label: 'Sample-rate reduction', min: 1, max: 40, step: 0.5,
     fmt: v => Math.round(44100 / v) + ' Hz' },
@@ -50,7 +55,13 @@ const DEFAULTS = {
   robot: 0.6, bits: 10, crushRate: 2, ringFreq: 60, ringMix: 0.3,
   choirMix: 0, choirVoices: 3, delayTime: 0.25, delayFeedback: 0.3, delayMix: 0.1,
   reverbSize: 1.5, reverbMix: 0.2,
+  // Singing
+  mode: 'speak', key: 'Bm', octave: 0, style: 'psalmTone', harmony: 'none', seed: 1,
+  carrierChoir: false, bpm: 100, sustain: 0.8, glide: 0.03,
 };
+// Fields read from plain form inputs (not sliders) and how to read them.
+const FIELDS = { voice: 'value', variant: 'value', key: 'value', octave: 'number', style: 'value',
+  harmony: 'value', carrierChoir: 'checked' };
 const BUILTIN = {
   'Kraftwerk': { variant: 'robosoft', pitch: 40, pitchRange: 0, speed: 140, wordGap: 4,
     robot: 1, bits: 12, crushRate: 1.5, ringFreq: 30, ringMix: 0.45, choirMix: 0.4, choirVoices: 2,
@@ -64,6 +75,18 @@ const BUILTIN = {
   'Dalek Lector': { variant: 'croak', pitch: 45, pitchRange: 20, speed: 150, wordGap: 0,
     robot: 1, bits: 16, crushRate: 1, ringFreq: 30, ringMix: 1, choirMix: 0, choirVoices: 1,
     delayTime: 0.1, delayFeedback: 0, delayMix: 0, reverbSize: 0.6, reverbMix: 0.1 },
+  'Gregorian Machine': { mode: 'sing', style: 'psalmTone', harmony: 'organum', variant: 'm3', bpm: 92,
+    sustain: 0.85, glide: 0.04, carrierChoir: true,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 110, ringMix: 0, choirMix: 0.5, choirVoices: 3,
+    delayTime: 0.5, delayFeedback: 0.2, delayMix: 0.1, reverbSize: 4.5, reverbMix: 0.9 },
+  'Vocoder Hymn': { mode: 'sing', style: 'hymn', harmony: 'choir', variant: '', bpm: 96,
+    sustain: 0.8, glide: 0.02, carrierChoir: true,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 60, ringMix: 0, choirMix: 0.3, choirVoices: 2,
+    delayTime: 0.31, delayFeedback: 0.3, delayMix: 0.15, reverbSize: 2.5, reverbMix: 0.5 },
+  'Robot Arpeggio': { mode: 'sing', style: 'arpeggio', harmony: 'octave', variant: 'robosoft', bpm: 124,
+    sustain: 0.5, glide: 0.005, carrierChoir: false,
+    robot: 1, bits: 10, crushRate: 2, ringFreq: 30, ringMix: 0.15, choirMix: 0, choirVoices: 1,
+    delayTime: 0.242, delayFeedback: 0.4, delayMix: 0.25, reverbSize: 1.2, reverbMix: 0.2 },
   'Whispered Vigil': { variant: 'whisper', pitch: 50, pitchRange: 50, speed: 130, wordGap: 5,
     robot: 1, bits: 14, crushRate: 1, ringFreq: 800, ringMix: 0.1, choirMix: 0.7, choirVoices: 4,
     delayTime: 0.45, delayFeedback: 0.45, delayMix: 0.3, reverbSize: 3.5, reverbMix: 0.7 },
@@ -96,28 +119,54 @@ function buildControls() {
     div.querySelector('input').addEventListener('input', () => showValue(s));
   }
   for (const [v, label] of VARIANTS) $('variant').add(new Option(label, v));
+  for (const [v, st] of Object.entries(STYLES)) $('style').add(new Option(st.label, v));
 }
 function showValue(s) {
   const v = +$('c_' + s.key).value;
   $('o_' + s.key).textContent = s.fmt ? s.fmt(v) : v;
 }
 function getSettings() {
-  const o = { voice: $('voice').value, variant: $('variant').value };
+  const o = { mode, seed };
+  for (const [k, how] of Object.entries(FIELDS)) o[k] = how === 'number' ? +$(k).value : $(k)[how];
   for (const s of SLIDERS) o[s.key] = +$('c_' + s.key).value;
   return o;
 }
 function setSettings(p) {
-  const o = { ...DEFAULTS, ...p };
-  $('voice').value = o.voice; $('variant').value = o.variant;
+  // A preset that doesn't mention the mode or key keeps the current ones.
+  const o = { ...DEFAULTS, mode, key: $('key').value || DEFAULTS.key, ...p };
+  for (const [k, how] of Object.entries(FIELDS)) $(k)[how === 'number' ? 'value' : how] = o[k];
   for (const s of SLIDERS) { $('c_' + s.key).value = o[s.key]; showValue(s); }
+  seed = o.seed; setMode(o.mode);
 }
 
 // ---------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------
 async function renderText(text, settings) {
-  const voice = await speak(text, settings);
+  const voice = settings.mode === 'sing'
+    ? await sing(text, settings, msg => status(msg))
+    : await speak(text, settings);
   return render(voice, settings);
+}
+
+// Speak or Sing. The Melody panel only shows when singing.
+let mode = 'speak', seed = 1;
+function setMode(m) {
+  mode = m;
+  $('modeSpeak').classList.toggle('on', m === 'speak');
+  $('modeSing').classList.toggle('on', m === 'sing');
+  $('singBox').hidden = m !== 'sing';
+  showTune();
+}
+// Show the notes the verse will be sung to (or why the key isn't valid).
+function showTune() {
+  $('seedShow').textContent = seed;
+  $('styleAbout').textContent = STYLES[$('style').value]?.about || '';
+  if (mode !== 'sing') return;
+  try {
+    const t = makeMelody($('text').value, { key: $('key').value, style: $('style').value, seed, octave: +$('octave').value, harmony: $('harmony').value });
+    $('tuneShow').textContent = t.key.label + ': ' + describe(t);
+  } catch (e) { $('tuneShow').textContent = e.message; }
 }
 
 // One AudioContext for previews. iOS only allows sound if it is created or
@@ -165,6 +214,11 @@ async function busy(btn, fn) {
 // Wire up
 // ---------------------------------------------------------------------------
 buildControls();
+$('modeSpeak').onclick = () => setMode('speak');
+$('modeSing').onclick = () => setMode('sing');
+$('nextMelody').onclick = () => { seed++; showTune(); };
+$('prevMelody').onclick = () => { seed = Math.max(1, seed - 1); showTune(); };
+for (const id of ['text', 'key', 'style', 'octave', 'harmony']) $(id).addEventListener('input', showTune);
 setSettings(BUILTIN['Kraftwerk']);
 refreshPresetList('b:Kraftwerk');
 

@@ -21,10 +21,25 @@ built-in `speechSynthesis`.
   bitcrusher (bit depth and sample-rate reduction) → delay and reverb.
 - **Robot amount** scales every effect at once. At 0% you hear plain eSpeak;
   at 100% each effect is where its own slider puts it.
+- **Sing:** tap *Sing*, type a key (`Bm`, `F#`, `Eb`, `D dorian`, `E phrygian`)
+  and pick a style, and the verse is sung on exact notes, one per syllable.
+  The tune is shown on screen, note by note; *Melody ▶* gives another tune in
+  the same style. Tempo is in BPM, so clips sit on the grid in Remixlive.
+  - Styles: **Monastic psalm tone** (rise to a reciting note, mid-verse
+    cadence, a fall to the tonic), **Monastic recto tono** (all on one note,
+    as the Office is said in choir), **Hymn**, **Kraftwerk**, **Lament**,
+    **Trance arpeggio**.
+  - Harmony: organum (parallel fifths), octave, thirds, choir chords, or a
+    tonic-and-fifth drone. *Ensemble* adds detuned copies of each voice.
+  - How it works: eSpeak speaks each word on a flat pitch, stretched to its
+    notes; a synthesizer plays the tune; a 22-band **vocoder** puts the shape
+    of the words onto the synth (`melody.js`, `sing.js`). Still no recorded
+    voice anywhere.
 - **Batch:** one line per clip, `filename | verse text`. One tap renders them
   all with the current settings and downloads a ZIP.
 - **Presets:** Kraftwerk, Cold Cathedral, 8-bit Monk, Dalek Lector and
-  Whispered Vigil are built in. *Save as…* stores your own in the browser
+  Whispered Vigil (speaking), and Gregorian Machine, Vocoder Hymn and Robot
+  Arpeggio (singing) are built in. *Save as…* stores your own in the browser
   (localStorage).
 
 Preview and export use the same rendered buffer from an `OfflineAudioContext`,
@@ -48,6 +63,8 @@ To run it locally: `python3 -m http.server` in this folder, then open
 | `index.html` | The page and its styles |
 | `app.js` | Controls, presets, preview, download, batch |
 | `engine.js` | eSpeak NG wrapper, the effects chain, and the WAV writer |
+| `melody.js` | Keys, scales, syllables, and the melody styles |
+| `sing.js` | Fits words to notes, the synthesizer, and the vocoder |
 | `sw.js` | Offline cache. Change `VERSION` after editing any file |
 | `lib/` | Bundled third-party code and its licenses |
 
