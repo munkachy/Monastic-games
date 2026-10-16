@@ -672,6 +672,14 @@ function strikeDemon(o, r) {
     S.shake = 0.2; gain(0.12);
     return true;
   }
+  // (A great demon is hurt by its own mountain's missiles thrown back at it: the fat, the fire, the
+  // coin, the thorn. A stone does not hurt it; only a block of an idol does that.)
+  if (o.kind === "fat" || o.kind === "fire" || o.kind === "coin" || o.kind === "thorn") for (const g of S.bigs) {
+    if (g.st === "dying" || g.st === "latch" || Math.abs(o.x - g.x) > g.hw + r || o.y < g.y - g.ht - r || o.y > g.y + r) continue;
+    strikeGreat(g, { vx: o.vx, vy: o.vy, x: o.x, y: o.y, ht: 0, flung: true });
+    if (o.kind === "fire") burst(o, o.x, o.y); else if (o.kind === "fat") splat(o, o.x, o.y, false); else { o.st = "gone"; if (o.kind === "thorn") briarHit(o.x, o.y); }
+    return true;
+  }
   return false;
 }
 function updThing(o, dt) {
@@ -907,6 +915,7 @@ function stepAtk(dt) {
     // (A creature struck: frog or spider.)
     if (a.crit) { if (a.crit.st !== "dead" && dist(S.x, S.y, a.crit.x, a.crit.y) < 60) { killCritter(a.crit, S.dir); Sound.fx.kick(1, panX(a.crit.x)); S.shake = 0.1; gain(0.06); } }
     else if (a.crack) hitCrack(a.crack);
+    else if (a.great) bounceGreat(a.great);
     else if (a.kind === "toss" || a.kind === "fling") release(a.tx, a.ty, f);
     else if (a.kind === "brick") {
       const b = a.o, g = a.g;
