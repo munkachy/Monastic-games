@@ -19,7 +19,7 @@ const CRITTERS = {
   mouse: { role: "neutral", hw: 5, ht: 5, w: 2 },
   // The bird: flies about a place of its own. The hook can take it (as it takes a chain), and then
   // it panics: it flies wildly, dragging him about, and tears free.
-  bird: { role: "neutral", hw: 6, ht: 6, w: 1, air: true },
+  bird: { role: "neutral", hw: 9, ht: 9, w: 1, air: true },
   // The platform bird: a bloated vulture with a broad flat back, flying slowly to and fro on its
   // beat (across a pit, or up a shaft). He can stand on its back and be carried; it sags under him.
   vulture: { role: "platform", hw: 30, ht: 30, w: 1, air: true },
@@ -196,12 +196,11 @@ function drawCritters(cam) {
       const P = new Path2D(); addShape(P, TRACED.pbB, TK); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
       const near = new Path2D(); addPoly(near, pbWing(a, false), TK); ctx.fillStyle = ink; ctx.fill(near);
     } else if (c.kind === "bird") {
-      const s = c.dir, fl = Math.sin(c.ph), dead = c.st === "dead";
-      ctx.save(); ctx.translate(x, y - 4); if (dead) ctx.rotate(c.t * 4);
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(0, 0, 6.5, 3.6, 0, 0, TAU); ctx.fill();
-      circle(s * 6.2, -2, 2.6, ink); poly([s * 8, -2.6, s * 11.5, -1.4, s * 8, -0.8], ink); poly([-s * 6, -0.5, -s * 11, -2.5, -s * 10, 1.5], ink);
-      const wy = dead ? 2 : -fl * 9; poly([-2, -1, 3, -1, s * -1 + 1, wy - 2, -s * 6, wy], ink);
-      ctx.restore();
+      // (Traced: its wings beating through glide, up, glide, down; faster fleeing; on the hook,
+      // panicking and startled by turns; dead, tumbling. Drawn about its middle.)
+      const k = c.st === "dead" ? "bd8" : c.st === "panic" ? (Math.floor(c.t * 9) % 2 ? "bd5" : "bd4") : ["bd0", "bd1", "bd0", "bd2"][Math.floor(c.ph * (c.st === "flee" ? 0.5 : 0.32)) % 4];
+      const sh = TRACED[k], hh = shapeH(k), T = put(c.x, c.y - 4 + hh / 2, c.dir, cam), P = new Path2D();
+      addShape(P, sh, T); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
     }
     ctx.globalAlpha = 1;
   }
@@ -259,3 +258,7 @@ function backUnder() {
   }
   return null;
 }
+
+// A traced shape's height (its highest point above its feet), kept once worked out.
+const SHAPE_H = {};
+function shapeH(k) { if (SHAPE_H[k] === undefined) { let m = 0; for (const L of TRACED[k]) for (let i = 1; i < L.length; i += 2) m = Math.max(m, L[i]); SHAPE_H[k] = m; } return SHAPE_H[k]; }
