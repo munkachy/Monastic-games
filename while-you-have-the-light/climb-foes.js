@@ -704,9 +704,10 @@ function updGreat(g, dt) {
     if (g.lostT > g.wait && canDread()) { if (burstAfter(g)) return; g.lostT = g.wait - 1.5; }      // (no room for it near him: it tries again soon)
   }
   const below = g.summit && S.y > -(secs[g.sec].h0 + 2) * CELL;     // (gone down off the summit: it waits for him there)
-  const awake = lit && facing && g.stunT <= 0 && !S.dying && !S.latched && !below;
+  // (Once woken it chases him, his back turned or not, and out of the light: only stunned does it stop a while.)
+  const free = g.stunT <= 0 && !S.dying && !S.latched && !below, awake = free && ((lit && facing) || g.chase);
   if (awake && g.st !== "hunt") {
-    g.st = "hunt"; g.t = 0; ev("a great demon woke", { tier: g.tier });
+    g.st = "hunt"; g.t = 0; g.chase = true; ev("a great demon woke", { tier: g.tier });
     if (g.met && S.haunt !== g && !g.summit) { S.haunt = g; g.lostT = 0; g.wait = hauntWait(g); }      // (woken again, it follows him again)
     if (S.rt - g.growlT > 1.6) { g.growlT = S.rt; Sound.fx.growl(panX(g.x), 0.75 + 0.08 * g.tier); }
     greatSays();
@@ -829,6 +830,8 @@ function greatThrows(g, cx, cy, dt) {
   if (g.summit || g.stunT > 0 || S.dying || S.latched || g.st === "stone" && g.wake < 0.5) return;
   const [mx, my] = middle(), near = dist(cx, cy, mx, my) < 480 && los(cx, cy - g.ht * 0.25, mx, my);
   if (g.throwT === undefined) { if (near) g.throwT = 2; return; }
+  // (Come up behind him, close: it fires at once.)
+  if (g.st === "hunt" && near && (cx - S.x) * S.dir < -10 && dist(cx, cy, mx, my) < 320 && S.rt > (g.backT || 0)) { g.throwT = 0; g.backT = S.rt + 3; }
   g.throwT -= dt; if (g.throwT > 0) return;
   g.throwT = 2.4 + Math.random() * 1.4; if (!near) return;
   const hx = g.x + g.dir * g.hw * 0.7, hy = g.y - g.ht * 0.78;
@@ -1197,4 +1200,20 @@ function greatGlows(cam) {
     }
     if (g.showHp > 0 && g.st !== "dying") { const a = Math.min(1, g.showHp), [hx, hy] = T(4, 96); for (let k = 0; k < g.maxHp; k++) circle(hx - (g.maxHp - 1) * 4 + k * 8, hy, 2.6, k < g.hp ? hexA(SINS[g.sin].color, a) : "rgba(40,40,46," + a + ")"); }
   }
+}
+// A punch at a great demon: he goes to it and strikes, and bounces off it, thrown back (nothing of
+// his own hurts it: only its own missiles thrown back at it, or a block).
+function punchGreat(g) {
+  if (S.act || (S.atk && !S.atk.hit) || !upFromCrawl() || g.st === "dying" || g.st === "latch") return;
+  if (!reachable(g.x, g.y - g.ht / 2, true)) { Sound.fx.tick(420, 0.3); return; }
+  if (S.atk) S.atk = null;
+  const sp = strikeSpot({ x: g.x, y: g.y, hw: g.hw, ground: false });
+  startMove("punch", sp, { f: null, great: g, dur: 0.3 }); S.dir = g.x < sp[0] ? -1 : 1;
+}
+function bounceGreat(g) {
+  const s = sign(S.x - g.x) || -S.dir;
+  S.atk = null; S.vx = s * 240; S.vy = -190; S.ground = false; S.invT = Math.max(S.invT, 0.5);
+  g.hurtT = 0.12; impactAt(g.x - s * g.hw * 0.6, S.y - HT * 0.6, -s, 0, 1, null);
+  Sound.fx.punch(0.7, panX(g.x)); Sound.fx.stone(panX(g.x)); S.shake = Math.max(S.shake, 0.12); ev("punched a great demon, and bounced off");
+  if (!S.bounceSeen) { S.bounceSeen = true; S.say = { text: "HIS FISTS DO NOT HURT IT", sub: "Throw back its own missiles at it: take one from a demon, and fling it. Or a block.", t: 0 }; }
 }

@@ -109,7 +109,7 @@ const M = {
     }
     if (gB) {
       if (B && !S.atk && takeUp()) throwBlock(gB.x, gB.y - gB.ht / 2);
-      else { Sound.fx.tick(420, 0.3); if (!S.say) S.say = { text: "ONLY A BLOCK CAN HURT IT", sub: B ? "Go up to the block on your rope, then tap the demon." : "Throw down an idol for its block.", t: 0 }; }
+      else punchGreat(gB);
       return;
     }
     if (B && !S.atk && B.st === "tied" && !B.flung && dist(wx, wy, B.x, B.y - B.ht / 2) < Math.max(26, B.hw + 14)) { if (!takeUp()) Sound.fx.tick(420, 0.3); return; }
