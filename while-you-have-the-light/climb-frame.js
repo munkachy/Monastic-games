@@ -411,7 +411,7 @@ function step(dt) {
       const vv = typeof Verses !== "undefined" ? Verses.next(si, !(NOV && NOV.room)) : CLIMB_VERSES[si];
       S.verse = { v: vv, ps: "PSALM " + (vv[4] || 118), t: 0, book: typeof Verses !== "undefined" && !(NOV && NOV.room) && Verses.count(si) > had ? Verses.count(si) : 0 };
       // (Playing, the game stops here, so the verse can be read; a tap, and it goes on.)
-      if (mode === M) { S.verseHold = true; Sound.muffle(true, 0.4); }
+      if (mode === M) { S.verseHold = true; S.verseAt = performance.now(); Sound.muffle(true, 0.4); }
       Sound.fx.unlock();
       for (let k = 0; k < 16; k++) S.parts.push({ kind: "spark", x: p.x, y: p.y + (Math.random() - 0.5) * 30, vx: -w.side * (30 + Math.random() * 90), vy: -20 - Math.random() * 80, life: 0.9, age: 0, real: true });
     }
