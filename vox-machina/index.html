@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<title>Vox Machina</title>
+<style>
+  :root { --bg:#0d0f14; --panel:#171a22; --line:#2a2f3b; --ink:#e8e6df; --dim:#9a988f; --gold:#e0b030; --go:#3fbf8f; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.4 system-ui, -apple-system, sans-serif;
+         padding: 16px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 4px 0 2px; letter-spacing: .04em; }
+  .tag { color: var(--gold); font-size: 14px; margin: 0 0 14px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 14px 0; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 10px; }
+  textarea, input[type=text], select { width:100%; font: inherit; font-size: 17px; color: var(--ink); background: #0f1218;
+         border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  textarea { min-height: 96px; resize: vertical; }
+  #batch { min-height: 160px; font-family: ui-monospace, Menlo, monospace; font-size: 15px; }
+  .row { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
+  button { flex: 1 1 140px; min-height: 54px; font: inherit; font-weight: 600; font-size: 18px; border-radius: 12px;
+           border: 1px solid var(--line); background: #222736; color: var(--ink); cursor: pointer; }
+  button.go { background: var(--go); color: #06110c; border-color: var(--go); }
+  button.gold { background: var(--gold); color: #1a1405; border-color: var(--gold); }
+  button:disabled { opacity: .45; }
+  .ctl { margin: 12px 0; }
+  .ctl label { display:flex; justify-content: space-between; font-size: 15px; }
+  .ctl label output { color: var(--gold); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; height: 36px; accent-color: var(--gold); }
+  .robot input[type=range] { height: 48px; }
+  .robot label { font-size: 18px; font-weight: 700; }
+  #status { min-height: 1.4em; color: var(--dim); font-size: 15px; margin-top: 10px; }
+  .note { color: var(--dim); font-size: 14px; }
+  footer { text-align:center; color: var(--dim); font-size: 13px; margin-top: 24px; }
+  footer a { color: var(--gold); }
+</style>
+</head>
+<body>
+<main>
+  <h1>VOX MACHINA</h1>
+  <p class="tag">Synthetic voice. No human voice recordings used.</p>
+
+  <section>
+    <h2>Verse</h2>
+    <textarea id="text">In the beginning was the Word, and the Word was with God, and the Word was God.</textarea>
+    <div class="row"><input type="text" id="filename" value="verse" aria-label="File name"></div>
+    <div class="row">
+      <button id="preview" class="go">▶ Preview</button>
+      <button id="download" class="gold">⬇ WAV</button>
+      <button id="share" hidden>Share…</button>
+    </div>
+    <div id="status">Loading voice engine…</div>
+    <p class="note">On iPhone, turn the silent switch off to hear previews.</p>
+  </section>
+
+  <section>
+    <h2>Presets</h2>
+    <select id="presetList"></select>
+    <div class="row">
+      <button id="presetLoad">Load</button>
+      <button id="presetSave">Save as…</button>
+      <button id="presetDelete">Delete</button>
+    </div>
+  </section>
+
+  <section class="robot" id="robotBox"></section>
+
+  <section>
+    <h2>Voice (eSpeak NG)</h2>
+    <div class="ctl">
+      <label for="variant">Variant</label>
+      <select id="variant"></select>
+    </div>
+    <div class="ctl">
+      <label for="voice">Accent</label>
+      <select id="voice">
+        <option value="en-us">English (American)</option>
+        <option value="en">English (British)</option>
+        <option value="en-gb-scotland">English (Scottish)</option>
+        <option value="en-029">English (Caribbean)</option>
+        <option value="la">Latin</option>
+      </select>
+    </div>
+    <div id="voiceBox"></div>
+  </section>
+
+  <section><h2>Bitcrusher</h2><div id="crushBox"></div></section>
+  <section><h2>Ring modulator</h2><div id="ringBox"></div></section>
+  <section><h2>Synthetic choir (chorus)</h2><div id="choirBox"></div></section>
+  <section><h2>Delay &amp; reverb</h2><div id="spaceBox"></div></section>
+
+  <section>
+    <h2>Batch</h2>
+    <p class="note">One clip per line: <code>filename | verse text</code></p>
+    <textarea id="batch">john-1-1 | In the beginning was the Word.
+ps-23-1 | The Lord is my shepherd; I shall not want.
+gen-1-3 | And God said, Let there be light: and there was light.</textarea>
+    <div class="row"><button id="batchGo" class="gold">⬇ Render all as ZIP</button></div>
+    <div id="batchStatus" class="note"></div>
+  </section>
+
+  <footer>
+    Voice: <a href="https://github.com/espeak-ng/espeak-ng">eSpeak NG</a> (GPL v3), formant synthesis by rule.
+    ZIP: <a href="https://stuk.github.io/jszip/">JSZip</a> (MIT). See README for licenses.<br>
+    <a href="../">Monastic Games</a>
+  </footer>
+</main>
+<script src="lib/jszip.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

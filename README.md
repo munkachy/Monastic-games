@@ -113,6 +113,29 @@ The first build: the arena, played with the phone sideways. The name is from the
 - **The arena:** waves of the seven, growing, with a line of Scripture between. **Practice:** choose which sins come; nothing can hurt you. `?arena` or `?practice` in the address starts them.
 - Everything is drawn in code (`art.js`, with `art.html` to see every figure and move); the arena and its routes are in `world.js`; the music is built on the old Compline hymn *Christe qui lux es et dies* on the synth engine from Luminaries.
 
+## Tools
+
+### [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/)
+
+Type a Bible verse and a robot speaks it. Shape the sound, then download it as
+a WAV sample for a music app such as Remixlive, or for a game.
+
+- **Synthetic voice. No human voice recordings used.** The voice is
+  [eSpeak NG](https://github.com/espeak-ng/espeak-ng), which builds speech from
+  rules and formant tables. No neural, cloud or built-in browser voices.
+- **Voice:** about twenty eSpeak variants (Robosoft, UniRobot, croak, whisper,
+  Demonic and more), five accents including Latin, and pitch, pitch range,
+  speed and word gap.
+- **Effects:** synthetic choir, ring modulator, bitcrusher, delay and reverb,
+  with one *Robot amount* knob that blends them all.
+- **Presets:** Kraftwerk, Cold Cathedral, 8-bit Monk, Dalek Lector and
+  Whispered Vigil, and your own saved in the browser.
+- **Export:** 44.1 kHz, 16-bit WAV. Preview and file are rendered the same way,
+  so they sound the same. On iPhone, *Share* sends the file to Files or another app.
+- **Batch:** one line per clip, `filename | verse text`, all downloaded as a ZIP.
+- Works offline after the first visit. Licenses and sources are in
+  [`vox-machina/README.md`](vox-machina/README.md); eSpeak NG is GPL v3.
+
 ## Recent highlights
 
 - **Luminaries:** all 38 Doctors; three difficulties with one smooth speed curve; closing scenes with the Doctors; your own instruments in every song; St. Teresa's new gift, the Interior Castle; the title music from the first tap; a "turn sideways" screen.
