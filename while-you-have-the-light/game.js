@@ -1,0 +1,271 @@
+"use strict";
+// While You Have the Light: the game. The title, the endless climb, the seven mountains (one domain
+// to a mountain, once the novitiate), and the end, when the light goes out (the climb's own pause
+// is in climb.js). Played sideways; where the phone allows, it locks to sideways when play starts.
+
+const Game = {
+  music: false,
+  soundWoke() {
+    if (Game.music || !Sound.ctx()) return;
+    Game.music = true;
+    if (mode === Title || mode === Novitiate) { Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); }
+  },
+  climb() { goSideways(); Game.music = true; Game.last = { climb: true }; Climb.start(); },
+  // (On a mountain with a place kept, he goes on from it; unless asked to begin again from its foot.)
+  // (Gluttony's mountain is made of rooms: a new one is come to by its gate, and made while he stands
+  // there; begun again, he is in its first room, on the same mountain.)
+  novitiate(fresh, sd) {
+    goSideways(); Game.music = true;
+    const N = novSettings(), rooms = N.domain === "gluttony", K0 = fresh ? null : Climb.keptPlace(N.domain), K = K0 && !!rooms === (K0.v === 3) ? K0 : null, climbs = (save.climbs && save.climbs[N.domain]) || 0;
+    if (rooms && !K && !sd) { Gate.open({}, (s) => Game.novitiate(true, s), () => Game.toNovitiate()); return; }
+    const seed = K ? K.seed : sd || undefined;
+    Game.last = { climb: true, nov: true, seed };
+    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare, climbs, piece: rooms ? ["mountain"] : undefined }, seed, resume: K || undefined });
+  },
+  // A scene from the white room (it is kept, so BEGIN AGAIN makes the same one).
+  scene(sc) { goSideways(); Game.music = true; Game.last = { climb: true, nov: true, room: sc }; Climb.scene(sc); },
+  toNovitiate() { Title.updated = false; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
+  again(fresh) { if (Game.last && Game.last.room) Game.scene(Object.assign({}, Game.last.room, Game.last.room.piece && Game.last.room.piece[0] !== "mountain" ? { seed: (Math.random() * 1e9) | 0 } : {})); else if (Game.last && Game.last.nov) Game.novitiate(fresh, Game.last.seed); else Game.climb(); },
+  toTitle() {
+    Title.t = 0; mode = Title;
+    Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });
+  },
+  pause() { if (mode === Climb) Climb.pause(); },
+};
+
+// A monk on a crag with his torch, for the title and the end.
+function vignetteMonk(x, y, t, flame) {
+  const p = MONK_ANIM.idle((t * 0.4) % 1, t);
+  // The crag he stands on, black and sharp.
+  poly([x - 120, H + 4, x - 70, y + 10, x - 30, y, x + 22, y, x + 40, y + 6, x + 70, y + 40, x + 96, y + 30, x + 150, H + 4], C.ink);
+  poly([x + 70, y + 40, x + 82, y - 10, x + 92, y + 34], C.ink);
+  glow(x + 4, y - 40, 140, C.flame, 0.16 * flame); glow(x + 4, y - 40, 60, C.warm, 0.14 * flame);
+  const r = drawMonk(x, y, 1, p, { t });
+  if (r && r.torch) { drawFlame(r.torch[0], r.torch[1], 1.1, t, {}); glow(r.torch[0], r.torch[1], 30, C.flame, 0.5 * flame); }
+}
+
+// ---- The title -----------------------------------------------------------------------------------------
+const Title = {
+  t: 0,
+  step(dt) { Title.t += dt; },
+  draw() {
+    const t = Title.t;
+    drawBackdrop(600 + t * 6, 300, 1, t, { warm: { x: W * 0.72, y: H * 0.58, r: 160 } });
+    // Eyes in the dark, watching.
+    for (let i = 0; i < 5; i++) {
+      const ex = W * (0.42 + i * 0.13) % W, ey = H * (0.6 + 0.12 * Math.sin(i * 2.1)), on = Math.sin(t * 0.7 + i * 1.7) > 0.2;
+      if (on && Math.abs(ex - W * 0.72) > 70) { glow(ex - 3, ey, 4, "#e8e8f0", 0.6); glow(ex + 3, ey, 4, "#e8e8f0", 0.6); circle(ex - 3, ey, 1, "#f4f4fa"); circle(ex + 3, ey, 1, "#f4f4fa"); }
+    }
+    vignetteMonk(W * 0.72, H * 0.68, t, 1);
+    const g = ctx.createLinearGradient(0, 0, W * 0.6, 0); g.addColorStop(0, "rgba(3,3,5,0.85)"); g.addColorStop(1, "rgba(3,3,5,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W * 0.6, H);
+    const x = Math.max(32, W * 0.07);
+    text("WHILE YOU HAVE", x, 70, { font: FONT.title, size: 30, weight: 700, spacing: 5, color: "#ffffff", glow: "rgba(255,179,71,0.6)", blur: 20 });
+    text("THE LIGHT", x, 104, { font: FONT.title, size: 30, weight: 700, spacing: 5, color: "#ffffff", glow: "rgba(255,179,71,0.6)", blur: 20 });
+    text("Run while you have the light of life, lest the darkness of death overtake you.", x + 2, 128, { font: FONT.line, italic: true, size: 14, weight: 500, color: C.warm, max: W * 0.5 });
+    text("THE RULE OF ST. BENEDICT, PROLOGUE", x + 2, 142, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)" });
+    const by = 166;
+    button("THE ENDLESS CLIMB", x, by, 200, 42, () => Game.climb(), { hot: true, sub: save.climbBest ? "Up for ever · your best: " + save.climbBest + " m" : "Up for ever, while the torch lasts" });
+    button("THE SEVEN MOUNTAINS", x, by + 50, 200, 34, () => Game.toNovitiate(), { sub: "One sin to a mountain, as high as you like" });
+    button(soundLabel(), x, by + 92, 97, 26, cycleSound, {});
+    if (typeof House !== "undefined" && House.ok()) button("THE MONASTERY", x, by + 124, 200, 26, () => House.open(), { size: 9 });
+    // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
+    // can be asked, the white room is, in their place.)
+    if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
+    else if (!window.claude) {
+      buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
+      text("Design notes ›", x + 151, by + 109, { align: "center", size: 9, weight: 600, color: "rgba(255,179,71,0.75)" });
+    }
+    // (Just updated: claude.ai loads a new version over the one being played. Said so, and the way back.)
+    if (Title.updated) textLines("The game was just updated, so it started again. Your place on the mountain is kept: THE SEVEN MOUNTAINS, then GO ON.", x, H - 14, Math.max(W * 0.55, 300), { size: 9, weight: 600, color: C.warm, up: true, lh: 12 });
+    else textLines("Four of the seven domains are open: the belly's, the flesh's, the purse's, and anger's. Best with sound, phone sideways.", x, H - 14, Math.max(W * 0.55, 300), { size: 8.5, weight: 500, color: "rgba(233,230,223,0.5)", up: true, lh: 11 });
+    if (t < 0.8) rect(0, 0, W, H, "rgba(0,0,0," + (1 - t / 0.8) + ")");
+  },
+  key(code, down) { if (down && (code === "Enter" || code === "Space")) Game.climb(); },
+};
+
+// ---- The seven mountains: one domain to a mountain ---------------------------------------------------------
+// (Once the novitiate.) A mountain that is all one domain, its demons coming back as often as they are
+// cast out; the torch, and the flare, endless if you like. Here the domains are named; on the climb
+// they are not. Its idols, thrown down, give up blocks for the lay brothers at the gates.
+const NOV_SUB = {
+  gluttony: "Swollen caverns; the pit below",
+  lust: "Long climbs through the briars",
+  avarice: "A mine: chains, and gold that weighs",
+  wrath: "Fire thrown; rock that gives way",
+};
+function novSettings() {
+  const N = save.novitiate || (save.novitiate = { domain: "gluttony", demons: 1, torch: true, flare: false });
+  if (!Climb.BUILT.includes(N.domain)) N.domain = Climb.BUILT[0];
+  return N;
+}
+const Novitiate = {
+  t: 0,
+  step(dt) { Novitiate.t += dt; },
+  draw() {
+    const N = novSettings();
+    drawBackdrop(300 + Novitiate.t * 4, 300, 1, Novitiate.t, {});
+    rect(0, 0, W, H, "rgba(3,3,5,0.66)");
+    text("THE SEVEN MOUNTAINS", W / 2, 38, { align: "center", font: FONT.title, size: 22, weight: 700, spacing: 5, color: "#fff", max: W - 40 });
+    text("A mountain for each of the seven. Throw down its idols for their blocks, and bring them to the gate.", W / 2, 58, { align: "center", font: FONT.line, italic: true, size: 13, color: C.warm, max: W - 40 });
+    text("THE MOUNTAIN", W / 2, 84, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    const D = Climb.DOMAINS, bw = Math.min(84, (W - 40) / D.length - 6), x0 = W / 2 - (bw + 6) * D.length / 2 + 3;
+    D.forEach((s, i) => {
+      const built = Climb.BUILT.includes(s), on = N.domain === s, x = x0 + i * (bw + 6), y = 94;
+      if (built) buttons.push({ x, y, w: bw, h: 62, act: () => { N.domain = s; store(); } });
+      rect(x, y, bw, 62, on ? hexA(SINS[s].color, 0.2) : "rgba(8,8,10,0.7)");
+      ctx.strokeStyle = on ? SINS[s].color : built ? "rgba(233,230,223,0.3)" : "rgba(233,230,223,0.1)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, 61);
+      circle(x + bw / 2, y + 18, 8, built ? SINS[s].color : "#202024");
+      if (on) glow(x + bw / 2, y + 18, 18, SINS[s].color, 0.4);
+      text(SINS[s].name.toUpperCase(), x + bw / 2, y + 42, { align: "center", size: 8, weight: 800, spacing: 1, color: on ? "#fff" : built ? "#d6d2c8" : "#5c5852", max: bw - 6 });
+      if (!built) text("To come", x + bw / 2, y + 54, { align: "center", size: 7, weight: 500, color: "#4c4944", max: bw - 6 });
+    });
+    // What the chosen domain is like, under the row (there is no room in its box); and how often he has
+    // been carried home from its top (each time, it is higher, and its demons strike harder).
+    const won = (save.climbs && save.climbs[N.domain]) || 0;
+    text((NOV_SUB[N.domain] || "") + (won ? "  \u00b7  Climbed to the top " + (won === 1 ? "once" : won + " times") + ": now higher, and harder" : ""), W / 2, 172, { align: "center", font: FONT.line, italic: true, size: 12, color: SINS[N.domain].light, max: W - 40 });
+    text("DEMONS IN EACH PLACE", W / 2, 192, { align: "center", size: 8, weight: 800, spacing: 3, color: "rgba(233,230,223,0.65)" });
+    for (let n = 0; n <= 3; n++) button(n ? String(n) : "NONE", W / 2 - 2 * 46 + n * 46 + 2, 199, 42, 26, () => { N.demons = n; store(); }, { hot: N.demons === n });
+    button(N.torch ? "TORCH: ENDLESS" : "TORCH: BLOWS DIM IT", W / 2 - 154, 234, 150, 32, () => { N.torch = !N.torch; store(); }, { hot: N.torch, sub: N.torch ? "No blow can put it out" : "The higher, the more each takes" });
+    button(N.flare ? "FLARE: ENDLESS" : "FLARE: EARNED", W / 2 + 4, 234, 150, 32, () => { N.flare = !N.flare; store(); }, { hot: N.flare, sub: N.flare ? "Slow time as long as you like" : "Fighting fills it, as on the climb" });
+    // A place kept on this mountain: going on from it, or (smaller, beside it) from the foot.
+    const K = Climb.keptPlace(N.domain);
+    if (K) {
+      button("GO ON", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true, sub: "From " + (K.m || 0) + " m, where you stopped" });
+      button("FROM THE FOOT", W / 2 + 108, 282, Math.min(120, W / 2 - 124), 26, () => Game.novitiate(true), { size: 8 });
+    } else button("BEGIN", W / 2 - 100, 276, 200, 38, () => Game.novitiate(), { hot: true });
+    button("BACK", 16, H - 44, 80, 30, () => Game.toTitle(), {});
+  },
+  key(code, down) { if (down && code === "Escape") Game.toTitle(); if (down && code === "Enter") Game.novitiate(); },
+};
+
+// ---- Home: carried there from a summit won ------------------------------------------------------------------
+// Morning, at the monastery under the mountains, where the angel set him down. What the climb was,
+// what he brought home, and what waits next time; and the way in, to the house (house.js), where the
+// blocks he brings are laid.
+const Home = {
+  t: 0, r: null,
+  show(r) { Home.r = r; Home.t = 0; mode = Home; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.2 }); },
+  again() { const N = novSettings(); N.domain = Home.r.dom; store(); Game.novitiate(true); },
+  step(dt) { Home.t += dt; },
+  draw() {
+    const t = Home.t, r = Home.r || {}, hz = H * 0.66;
+    // The dawn: night going up, rose and gold low down, the sun not yet up behind the far mountains.
+    const g = ctx.createLinearGradient(0, 0, 0, hz);
+    g.addColorStop(0, "#151a33"); g.addColorStop(0.45, "#4a4566"); g.addColorStop(0.78, "#b57a6a"); g.addColorStop(1, "#f0c88e");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, hz + 2);
+    const lo = ctx.createLinearGradient(0, hz, 0, H); lo.addColorStop(0, "#3a3346"); lo.addColorStop(1, "#14121c");
+    ctx.fillStyle = lo; ctx.fillRect(0, hz, W, H - hz);                                       // (the plain below, in the mist of the morning)
+    glow(W * 0.7, hz, 160, "#ffd9a0", 0.5); glow(W * 0.7, hz, 60, "#fff1c4", 0.5);
+    // The seven mountains far off, and the one he climbed a little lit by the coming sun.
+    const D = Climb.DOMAINS;
+    D.forEach((d, i) => {
+      const cx = W * (0.08 + i * 0.145), hgt = 70 + 30 * Math.sin(i * 1.9 + 1) + (d === r.dom ? 28 : 0), w = 90 + 20 * Math.cos(i * 2.3);
+      poly([cx - w, hz + 2, cx - w * 0.2, hz - hgt * 0.7, cx, hz - hgt, cx + w * 0.25, hz - hgt * 0.75, cx + w, hz + 2], d === r.dom ? "#5b4f5e" : "#3e3a50");
+      if (d === r.dom) { glow(cx, hz - hgt, 26, SINS[d].color, 0.35 + 0.1 * Math.sin(t * 1.5)); }
+    });
+    // Near: the hill, and the monastery on it: the church, its tower, the cloister; a light in a window.
+    const bx = W * 0.62, by = H * 0.8;
+    poly([W * 0.25, H + 2, W * 0.45, by + 6, bx - 60, by, bx + 160, by - 4, W + 2, by + 10, W + 2, H + 2], "#0b0a10");
+    rect(0, H * 0.86, W, H * 0.14 + 2, "#0b0a10");
+    const ink = "#0b0a10";
+    rect(bx, by - 40, 110, 40, ink); poly([bx - 4, by - 40, bx + 55, by - 66, bx + 114, by - 40], ink);      // the nave and its roof
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(bx + 110, by - 20, 20, -PI / 2, PI / 2); ctx.fill();   // the apse
+    rect(bx - 26, by - 86, 24, 86, ink); poly([bx - 30, by - 86, bx - 14, by - 112, bx + 2, by - 86], ink); // the tower
+    rect(bx - 15, by - 124, 2, 14, ink); rect(bx - 19, by - 119, 10, 2, ink);                               // its cross
+    for (let i = 0; i < 5; i++) { rect(bx + 120 + i * 14, by - 18, 10, 18, ink); }                           // the cloister
+    rect(bx + 116, by - 22, 72, 4, ink);
+    const lamp = 0.6 + 0.4 * Math.sin(t * 2.1);
+    rect(bx + 30, by - 30, 5, 10, "rgba(255,200,120," + (0.75 * lamp) + ")"); glow(bx + 32, by - 25, 14, C.flame, 0.35 * lamp);
+    rect(bx - 17, by - 76, 4, 9, "rgba(255,200,120,0.7)");
+    // He, set down at the gate.
+    const p = MONK_ANIM.idle((t * 0.4) % 1, t); drawMonk(bx - 70, by + 2, 1, p, { t });
+    // The words: dark over the dawn, to the left.
+    const a = clamp(t / 1.2, 0, 1), x = 22, cw = Math.min(W * 0.5, 330);
+    const sh = ctx.createLinearGradient(0, 0, cw + 80, 0); sh.addColorStop(0, "rgba(10,10,18,0.78)"); sh.addColorStop(1, "rgba(10,10,18,0)"); ctx.fillStyle = sh; ctx.fillRect(0, 0, cw + 80, H);
+    text("THE MONASTERY", x, 40, { font: FONT.title, size: 24, weight: 700, spacing: 6, color: "#fff", alpha: a, glow: "rgba(255,200,140,0.5)", blur: 14, max: cw + 40 });
+    text("\u201cAnd the angel of the Lord presently set Habacuc again in his own place.\u201d", x, 58, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: a, max: cw });
+    text("DANIEL 14:38", x, 70, { size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.55)", alpha: a });
+    let y = 92;
+    y += 13 * textLines("Each mountain is a soul: someone you may never meet, their sin grown into rock and dark. The climb was your prayer for them, and every demon you cast down, you cast down for them. Tonight that soul is a little freer.", x, y, cw, { font: FONT.line, size: 13, color: "#efe9dc", alpha: clamp((t - 0.6) / 1.2, 0, 1), lh: 15 }) + 10;
+    const b = clamp((t - 1.4) / 1, 0, 1), rows = [["The mountain of " + SINS[r.dom || "gluttony"].name, r.m + " m to its top"], ["Blocks brought to the carts", String(r.binned || 0) + (r.room ? "" : "  (" + (r.bricks || 0) + " kept)")], ["Demons cast out", String(r.cast || 0)], ["Verses read", String(r.read || 0)]];
+    if (r.freed) rows.push(["Freed from the idols", String(r.freed)]);
+    for (const [k, v] of rows) { text(k.toUpperCase(), x, y, { size: 7.5, weight: 700, spacing: 1.5, color: "rgba(233,230,223,0.6)", alpha: b, max: cw * 0.6 }); text(v, x + cw * 0.62, y, { size: 10, weight: 700, color: C.flameHot, alpha: b, max: cw * 0.4 }); y += 15; }
+    y += 4;
+    text(r.room ? "A scene from the white room: nothing of it is kept." : "Climb it again, and it will be higher, and its demons will strike harder.", x, y, { font: FONT.line, italic: true, size: 12, color: C.warm, alpha: b, max: cw });
+    if (t > 1.6) {
+      const bw = Math.min(150, (cw - 8) / 2);
+      if (!r.room && typeof House !== "undefined" && House.ok()) button("GO IN", x, H - 90, bw * 2 + 8, 30, () => House.open(), { sub: "Lay the stones you brought down" });
+      if (r.room && typeof Room !== "undefined") button("THE WHITE ROOM", x, H - 52, bw, 34, () => Room.open(), { hot: true });
+      else button("CLIMB IT AGAIN", x, H - 52, bw, 34, () => Home.again(), { hot: true, sub: "Higher, and harder" });
+      button("THE SEVEN MOUNTAINS", x + bw + 8, H - 52, bw, 34, () => Game.toNovitiate(), { size: 9 });
+    }
+    if (t < 1) rect(0, 0, W, H, "rgba(255,252,244," + (1 - t) + ")");      // (out of the white)
+  },
+  key(code, down) { if (!down || Home.t < 1.6) return; if (code === "Enter") { if (Home.r && Home.r.room && typeof Room !== "undefined") Room.open(); else Home.again(); } if (code === "Escape") Game.toNovitiate(); },
+};
+
+// ---- The end: the light goes out ------------------------------------------------------------------------
+const Over = {
+  t: 0,
+  step(dt) { Over.t += dt; },
+  draw() {
+    const t = Over.t;
+    rect(0, 0, W, H, "#030304");
+    drawBackdrop(500, 300, 1, t, {});
+    rect(0, 0, W, H, "rgba(3,3,5," + Math.min(0.82, 0.5 + t * 0.3) + ")");
+    const a = clamp(t / 0.8, 0, 1);
+    const fell = Game.last && Game.last.climb && Climb.fell();
+    if (pieceOut) {
+      text("OUT OF THE ROOM", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
+      text("He found the way through.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a });
+    } else
+    text(fell ? "BROTHER " + fell.name.toUpperCase() : "HE HAS FALLEN", W / 2, 70, { align: "center", font: FONT.title, size: 24, weight: 700, spacing: 5, color: "#fff", alpha: a });
+    if (pieceOut) { /* (nothing more) */ } else if (fell) text(fell.left ? fell.line : "He was the last of the brothers. The monastery is no more; all of it begins again.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
+    else text("Walk whilst you have the light, that the darkness overtake you not.", W / 2, 94, { align: "center", font: FONT.line, italic: true, size: 14, color: C.warm, alpha: a, max: W - 40 });
+    if (!fell && !pieceOut) text("JOHN 12:35", W / 2, 108, { align: "center", size: 7, weight: 700, spacing: 2, color: "rgba(233,230,223,0.5)", alpha: a });
+    if (Game.last && Game.last.climb) {
+      Climb.over().forEach(([k, v], i) => {
+        text(k.toUpperCase(), W / 2 - 8, 140 + i * 22, { align: "right", size: 9, weight: 700, spacing: 2, color: "rgba(233,230,223,0.65)", alpha: a });
+        text(String(v), W / 2 + 8, 141 + i * 22, { font: FONT.title, size: 15, weight: 700, color: C.flameHot, alpha: a });
+      });
+    }
+    if (t > 0.6) {
+      const x0 = W / 2 - 104;
+      button("AGAIN", x0, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
+      if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
+      else button("TITLE", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
+    }
+  },
+  key(code, down) { if (down && (code === "Enter" || code === "Space") && Over.t > 0.6) { Sound.muffle(false); Game.again(); } if (down && code === "Escape") Game.toTitle(); },
+};
+
+// ---- The loop ---------------------------------------------------------------------------------------
+function onResize() { }
+addEventListener("blur", () => Game.pause());
+document.addEventListener("visibilitychange", () => { if (document.hidden) Game.pause(); });
+let last = performance.now();
+function frame(now) {
+  const dt = clamp((now - last) / 1000, 0, 0.05); last = now;
+  buttons.length = 0;
+  if (portrait) { drawTurnCard(now / 1000); requestAnimationFrame(frame); return; }
+  ctx.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0);
+  try { if (mode.step) mode.step(dt); mode.draw(dt); }
+  catch (e) {
+    console.error(e); fault(e);
+    // (Whatever failed, the pause can still be reached: from it, the title, or a note about it.)
+    if (mode === Climb) { try { ctx.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0); pauseButton(); } catch (q) { } }
+  }
+  requestAnimationFrame(frame);
+}
+resize();
+applySound();
+mode = Title;
+// A new version, since the game was last opened here?
+try {
+  const now = typeof Notes !== "undefined" && Notes.version, was = localStorage.getItem("wyhtl-version");
+  if (now) { if (was && was !== now) Title.updated = true; localStorage.setItem("wyhtl-version", now); }
+} catch (e) { }
+// For trying things directly: ?climb starts the climb, ?novitiate opens the novitiate.
+if (/[?&]climb\b/.test(location.search)) setTimeout(() => Game.climb(), 50);
+if (/[?&]novitiate\b/.test(location.search)) setTimeout(() => Game.toNovitiate(), 50);
+requestAnimationFrame(frame);

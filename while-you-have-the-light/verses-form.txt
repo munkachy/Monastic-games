@@ -1,0 +1,74 @@
+# While You Have the Light: the verses on the rock, in your own translation.
+# One verse for each letter of the psalm, Aleph to Tau. Write each after its letter's colon
+# (it may go on over the next lines). Lines that begin with # are notes, and are left out.
+# The number in brackets is the verse used: change it to use another verse of that stanza.
+# The line below gives the psalm's number as it will be shown: 119 is the breviary's.
+
+PSALM 119
+
+ALEPH [1]: 
+# Douay: Blessed are the undefiled in the way, who walk in the law of the Lord.
+
+BETH [11]: 
+# Douay: Thy words have I hidden in my heart, that I may not sin against thee.
+
+GIMEL [18]: 
+# Douay: Open thou my eyes: and I will consider the wondrous things of thy law.
+
+DALETH [25]: 
+# Douay: My soul hath cleaved to the pavement: quicken thou me according to thy word.
+
+HE [33]: 
+# Douay: Set before me for a law the way of thy justifications, O Lord: and I will always seek after it.
+
+VAU [45]: 
+# Douay: And I walked at large: because I have sought after thy commandments.
+
+ZAIN [54]: 
+# Douay: Thy justifications were the subject of my song, in the place of my pilgrimage.
+
+HETH [62]: 
+# Douay: I rose at midnight to give praise to thee; for the judgments of thy justification.
+
+TETH [71]: 
+# Douay: It is good for me that thou hast humbled me, that I may learn thy justifications.
+
+JOD [73]: 
+# Douay: Thy hands have made me and formed me: give me understanding, and I will learn thy commandments.
+
+CAPH [81]: 
+# Douay: My soul hath fainted after thy salvation: and in thy word I have very much hoped.
+
+LAMED [89]: 
+# Douay: For ever, O Lord, thy word standeth firm in heaven.
+
+MEM [103]: 
+# Douay: How sweet are thy words to my palate! more than honey to my mouth.
+
+NUN [105]: 
+# Douay: Thy word is a lamp to my feet, and a light to my paths.
+
+SAMECH [114]: 
+# Douay: Thou art my helper and my protector: and in thy word I have greatly hoped.
+
+AIN [125]: 
+# Douay: I am thy servant: give me understanding that I may know thy testimonies.
+
+PHE [130]: 
+# Douay: The declaration of thy words giveth light: and giveth understanding to little ones.
+
+SADE [137]: 
+# Douay: Thou art just, O Lord: and thy judgment is right.
+
+COPH [147]: 
+# Douay: I prevented the dawning of the day, and cried: because in thy words I very much hoped.
+
+RES [160]: 
+# Douay: The beginning of thy words is truth: all the judgments of thy justice are for ever.
+
+SIN [164]: 
+# Douay: Seven times a day I have given praise to thee, for the judgments of thy justice.
+
+TAU [176]: 
+# Douay: I have gone astray like a sheep that is lost: seek thy servant, because I have not forgotten thy commandments.
+

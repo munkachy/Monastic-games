@@ -371,9 +371,10 @@ function cornerStore(x, y, w, h, t, o) {
   neon("DELI", x + w * 0.79, y - h * 0.68, 9, C.cyan, t, {});
 }
 // Wet asphalt between two lines, with the light above it lying in long streaks.
-function wetStreet(y0, y1, lights, t) {
+function wetStreet(y0, y1, lights, t, x0, x1) {
+  x0 = x0 === undefined ? 0 : x0; x1 = x1 === undefined ? W : x1;
   const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, "#0c1020"); g.addColorStop(1, "#06070d");
-  ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0);
+  ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
   for (const [x, c, a, w] of lights) {
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     const gr = ctx.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, hexA(c, 0.32 * a)); gr.addColorStop(1, hexA(c, 0));

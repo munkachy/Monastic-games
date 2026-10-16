@@ -146,7 +146,7 @@ const STAGES = [
     id: "teresa", n: 30, name: "St. Teresa of Ávila", short: "Teresa", title: "Doctor of Prayer", life: "1515–1582", place: "Ávila",
     song: "teresa", scale: [69, 71, 73, 76, 78, 81, 83, 85],
     colors: { a: ["#9ae4ff", "#ffffff", "#2a8ac0"], b: ["#e8902e", "#ffd28a", "#8a4a0a"], line: "#ffffff", panel: "rgba(10,14,40,0.5)", ink: "#fff6e8", accent: "#9ae4ff" },
-    gift: { name: "Let nothing disturb thee", about: "For twenty seconds the blocks hang where they are, until you let them fall.", kind: "hang" },
+    gift: { name: "The Interior Castle", about: "Through the seven mansions: the field moves seven places toward its fuller side, and every block carried out counts for points.", kind: "shift" },
     motif: (c, k, s) => { if (k === "a") { c.strokeStyle = "rgba(255,255,255,0.6)"; c.lineWidth = 1; c.beginPath(); c.moveTo(s * 0.2, s * 0.5); c.lineTo(s * 0.5, s * 0.2); c.lineTo(s * 0.8, s * 0.5); c.lineTo(s * 0.5, s * 0.8); c.closePath(); c.moveTo(s * 0.5, s * 0.2); c.lineTo(s * 0.5, s * 0.8); c.stroke(); } },
     bg(c, I) {
       const { t, pulse, L, energy } = I;

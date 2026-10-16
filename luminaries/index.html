@@ -12,27 +12,40 @@
 <style>
   html, body { margin: 0; height: 100%; background: #050309; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   canvas { position: absolute; display: block; }
+  /* Upright on a phone: the game waits behind this card until the phone is turned. */
+  #turn { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; text-align: center; color: #fff8e8; background: radial-gradient(ellipse at 50% 42%, #22143c 0%, #0a0616 55%, #050309 100%); }
+  @media (orientation: portrait) and (hover: none) and (pointer: coarse) { #turn { display: flex; } }
+  #turn .phone { position: relative; width: 44px; height: 78px; border: 3px solid #ffe8c0; border-radius: 10px; box-shadow: 0 0 24px rgba(255, 220, 140, 0.35); animation: lumturn 2.6s ease-in-out infinite; }
+  #turn .phone::before { content: ""; position: absolute; inset: 7px 5px 12px; border-radius: 3px; background: linear-gradient(135deg, #4a3478, #140c28); }
+  #turn .phone::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 9px; height: 2px; margin-left: -4.5px; border-radius: 1px; background: #ffe8c0; }
+  @keyframes lumturn { 0%, 18% { transform: rotate(0deg); } 48%, 82% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+  @media (prefers-reduced-motion: reduce) { #turn .phone { animation: none; transform: rotate(-90deg); } }
+  #turn .name { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 28px; letter-spacing: 7px; text-shadow: 0 0 18px rgba(255, 220, 140, 0.6); }
+  #turn .msg { font-family: Montserrat, system-ui, sans-serif; font-weight: 600; font-size: 14px; letter-spacing: 1.5px; color: #ffe8c0; }
+  #turn .sub { font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 16px; color: rgba(255, 240, 220, 0.7); }
 </style>
 </head>
 <body>
 <canvas id="screen"></canvas>
-<script src="quotes.js?v=202610030231"></script>
-<script src="quotes2.js?v=202610030231"></script>
-<script src="quotes3.js?v=202610030231"></script>
-<script src="quotes4.js?v=202610030231"></script>
-<script src="quotes5.js?v=202610030231"></script>
-<script src="audio.js?v=202610030231"></script>
-<script src="songs.js?v=202610030231"></script>
-<script src="songs2.js?v=202610030231"></script>
-<script src="songs3.js?v=202610030231"></script>
-<script src="songs4.js?v=202610030231"></script>
-<script src="songs5.js?v=202610030231"></script>
-<script src="stages.js?v=202610030231"></script>
-<script src="stages2.js?v=202610030231"></script>
-<script src="stages3.js?v=202610030231"></script>
-<script src="stages4.js?v=202610030231"></script>
-<script src="stages5.js?v=202610030231"></script>
-<script src="game.js?v=202610030231"></script>
-<script src="scenes.js?v=202610030231"></script>
+<div id="turn"><div class="phone"></div><div class="name">LUMINARIES</div><div class="msg">Turn your phone sideways to play</div><div class="sub">The game waits for you.</div></div>
+<script src="quotes.js?v=202610032148"></script>
+<script src="quotes2.js?v=202610032148"></script>
+<script src="quotes3.js?v=202610032148"></script>
+<script src="quotes4.js?v=202610032148"></script>
+<script src="quotes5.js?v=202610032148"></script>
+<script src="audio.js?v=202610032148"></script>
+<script src="songs.js?v=202610032148"></script>
+<script src="songs2.js?v=202610032148"></script>
+<script src="songs3.js?v=202610032148"></script>
+<script src="songs4.js?v=202610032148"></script>
+<script src="songs5.js?v=202610032148"></script>
+<script src="stages.js?v=202610032148"></script>
+<script src="stages2.js?v=202610032148"></script>
+<script src="stages3.js?v=202610032148"></script>
+<script src="stages4.js?v=202610032148"></script>
+<script src="stages5.js?v=202610032148"></script>
+<script src="kit.js?v=202610032148"></script>
+<script src="game.js?v=202610032148"></script>
+<script src="scenes.js?v=202610032148"></script>
 </body>
 </html>

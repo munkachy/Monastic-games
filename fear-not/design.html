@@ -52,7 +52,7 @@
   <li><b>What he can do that no angel can.</b> The angels are far mightier, but only the priest can absolve, anoint the dying and bless with a priest's blessing. Every big encounter ends with what only he can give. A confession is never shown or overheard: the view turns away (the seal).</li>
   <li><b>His weakness is part of the game.</b> When he stumbles, the angel catches him and the stumble becomes a move. When he drops the holy water, it splashes the demon behind him. When he forgets the words of a prayer, the angel prompts him. His mistakes turn into grace.</li>
   <li><b>He grew up on kung fu films.</b> As a boy he watched Hong Kong kung fu movies over and over. He gave them up when he entered a monastery with no television. Now, when the angel shows him the spiritual battle, he sees it as kung fu, because those are the pictures his mind still holds. St. Thomas teaches that an angel can stir a person's imagination, but only with images already there, as a man born blind cannot be shown colour (ST I q.111 a.3). So the whole look of the fighting is explained by the story. Nothing given up for God is lost (Mark 10:29&ndash;30); He gives it back, changed.</li>
-  <li><b>Drunken master.</b> His fighting style is drunken-fist kung fu: he sways, staggers, nearly falls, and every stumble turns into a strike or a dodge. But he is not drunk on wine. At Pentecost the crowd mocked the apostles, "These men are full of new wine" (Acts 2:13), and St. Paul says "be not drunk with wine... but be ye filled with the holy Spirit" (Ephesians 5:18). St. Ambrose's hymn at Lauds sings of the "sober drunkenness of the Spirit" (<i>sobriam ebrietatem Spiritus</i>, in <i>Splendor paternae gloriae</i>). His style is that: <b>Sobria Ebrietas</b>.</li>
+  <li><b>Drunken master.</b> His fighting style is drunken-fist kung fu: he sways, staggers, nearly falls, and every stumble turns into a strike or a block. But he is not drunk on wine. At Pentecost the crowd mocked the apostles, "These men are full of new wine" (Acts 2:13), and St. Paul says "be not drunk with wine... but be ye filled with the holy Spirit" (Ephesians 5:18). St. Ambrose's hymn at Lauds sings of the "sober drunkenness of the Spirit" (<i>sobriam ebrietatem Spiritus</i>, in <i>Splendor paternae gloriae</i>). His style is that: <b>Sobria Ebrietas</b>.</li>
   <li><b>The Spirit meter.</b> Some drunken fighters in games grow wilder and stronger the more they drink. Fr. Lawrence's meter fills with prayer and with a flowing combo instead. Each level loosens his sway and opens new moves.</li>
   <li><b>A running joke.</b> The angel: "If you had grown up on westerns, this would be a showdown at noon."</li>
   <li><b>The night has an end.</b> He must be back before the bell for Vigils. Each night is one session; at the bell he wakes in the chapel, and the brothers never know.</li>
@@ -87,67 +87,80 @@
     </div>
     Gold is kept for holy light: the angel, candles, church windows.</li>
   <li><b>The art.</b> Simple, elegant, flat shapes: silhouettes in long coats and hats, clean edges, strong rim light from the neon, rain drawn in straight streaks. Faces are simple, or left in shadow.</li>  <li><b>Faces.</b> Angels' faces are a soft blank glare of light; demons' faces are blank darkness with a faint ember glow. Clean, eerie and anime-like.</li>
+  <li><b>The cut scenes, after storyboard sheets.</b> (Redrawn after a playtest.) Each sequence was first made as one storyboard sheet in an image AI, every shot a numbered panel, so the whole look could be tuned at once; then each panel was drawn again in the game's own code to match it. Dark and wet, one strong light in each picture and the rest left to the dark: neon in the city, gold only where the light is holy, warm adobe in the desert. What does not move is drawn once and kept; only the rain, the flicker of a candle or a sign, and a fine film grain move.</li>
   <li><b>Cut scenes in close-up.</b> Many shots, not all, push in tight: an eye filling the screen, a mouth, hands on a rosary, rain on a hat brim. Flat colour, a few sharp shapes, neon light down one side of the face. The style is like Sergio Leone's westerns, which cut to the eyes before a showdown; that fits the angel's joke about westerns. It also echoes icons, where the eyes are large and everything is in the gaze. Close-ups are also cheap to draw well: one strong picture instead of a whole scene.</li>
   <li><b>Cut scene shots.</b> They move between tight close-ups and medium side views of a figure standing in front of the skyline, still framed close. The dialogue sits in a clean band below the picture. Everything slick and classy: few words, plain type, slow cuts.</li>
   <li><b>Whose eyes.</b> Fr. Lawrence's eyes are tired and kind. The angel's face is too bright to look at: the close-up shows only light, and perhaps the faint shape of an eye within it. A demon's close-up is darkness with an ember where the eye should be. The people's eyes show what they are going through.</li>
   <li><b>Long, slender figures.</b> Drawn from jointed parts moved in code, like SaintStyle Turbo's saints, but everyone a little long and slender, with arms and legs slightly longer than life. In a fight the limbs fly wide, so the kung fu reads beautifully from across the screen. Think of El Greco, whose saints are drawn out long as if pulled toward heaven.</li>
   <li><b>Tone.</b> The demons take all the slapstick; the angels keep their dignity. Defeated demons are <i>cast out</i>, vanishing with a yelp in a puff of light, never killed (spirits cannot be destroyed).</li>
-  <li><b>Music.</b> Noir jazz while flying and walking the city. When a fight starts it turns to kung fu film music, and when the fight ends it slides back into the jazz (the synth engine from Luminaries).</li>
+  <li><b>Music.</b> Jazz techno, the Detroit kind: four on the floor under wide jazz chords on an electric piano, a deep bass, and a muted trumpet far off in the echo. The city is deep and slow-burning; when a fight starts it turns harder and faster and builds with the combo, and when the fight ends it slides back (the synth engine from Luminaries).</li>
 </ul>
 
 <h2>Flying the city</h2>
 <p><b>An open world from above, in 2D.</b> The city is seen from straight above, with Fr. Lawrence riding his angel over it. It looks 3D through three cheap tricks:</p>
 <ul>
   <li><b>Leaning buildings.</b> Each building is drawn as its roof plus its walls, and the taller it is, the further its roof leans away from the centre of the screen. As you fly past, the towers seem to swing, and you see the neon signs on their walls. This is how the first top-down Grand Theft Auto games made a flat city feel deep.</li>
-  <li><b>Speed is zoom.</b> As in the first Grand Theft Auto, the camera draws back as the angel gathers speed and comes in close when it slows, and it always stays well above the tallest roof in view, so the towers loom up toward you. Clouds and rain drift between you and the ground at their own speed.</li>
+  <li><b>Speed is zoom.</b> As in the first Grand Theft Auto, the camera draws back while the angel is in the air and comes in close when it lands, staying above the towers right round him; the tallest, further off, reach up past it. Rain falls between you and the ground.</li>
   <li><b>A shadow on the roofs.</b> The angel's shadow falls on the rooftops below, small and far away when you are high, close beneath you when you dive. That shows your height at a glance.</li>
 </ul>
 <p>The joins come naturally: dive to the street and the view cuts, often through a close-up, to the side-on fight; win, and the angel lifts off and the camera rises back to the view from above. The skyline lives in the cut scenes and the side-on fights.</p>
 <ul>
-  <li><b>Down into the streets.</b> (Changed after the first playtests.) The angel can dive right down to street level and fly between the buildings, over the traffic and the people under their umbrellas, scraping the walls if you steer badly; beat the wings to climb back over the roofs. The street lamps and the neon fill your light down there; the dark round the temptation drains it.</li>
+  <li><b>Rooftop to rooftop.</b> (Changed after playtests: first free flight with a swing on the lights, then free flight down into the streets, now this.) Tap a roof near you and the angel leaps to it: up over anything taller on the way, beating its wings hard to climb to a higher roof, gliding down to a lower one. Only so far at a leap, so a way across the city is taken building by building. The roofs within a leap are outlined in gold.</li>
   <li><b>Churches recharge you.</b> Fly near a church and its light fills you again; a lit church is a place to rest and recover.</li>
 </ul>
 <p>Light is your anchor; shadow is the demons' ground. This is what web-slinging is to Spider-Man.</p>
 <table>
   <tr><th>Move</th><th>What it does</th></tr>
   <tr><td><s>Light-tether</s></td><td>Dropped after the first playtests: swinging round lights did not feel good. The dive and the flap up carry the flight.</td></tr>
-  <tr><td>Dive and pull up</td><td>Fold your wings to dive through the rain and gain speed; pull up and the speed becomes height. A good flight is a wave of dives and climbs.</td></tr>
-  <tr><td>Flap on the beat</td><td>Flaps cost breath; a flap timed to the music gives a strong surge.</td></tr>
+  <tr><td>The leap</td><td>Tap a roof within reach: a climb with the wings beating hard, or a glide down.</td></tr>
   <tr><td>Updrafts</td><td>Churches, adoration chapels and people praying send up columns of light that lift you high.</td></tr>
   <tr><td>Shadow</td><td>Deep dark slowly drains your flight, so you plan routes from light to light. Win a district back and its lights come on again; it becomes easier to fly.</td></tr>
   <tr><td>The Angelus</td><td>Morning, noon and evening the bells ring, and for a while everything is strengthened.</td></tr>
   <tr><td>Sensing</td><td>Hold two thumbs to listen: the colour drains away, prayers rise as golden threads, and temptations show as dark smoke. Pick one and swoop down.</td></tr>
 </table>
 
+<h3>Gangs on the roofs</h3>
+<p>(Changed after playtests: first three set fights on the way; then fights from roof to roof seen from above, which were not as much fun as the fight side on; now this.) The demons roam the roofs all over the city, in twos and threes, a roof at a time, and they keep to the dark: the fewer lights burning round a roof, the likelier they are on it, and none come near the church. Each one smoulders red, with a red ripple now and then, so they are seen from far off; red arrows at the edge of the screen point to the nearest ones out of sight. Stop on a roof near them, and they come after him a roof at a time.</p>
+<ul>
+  <li><b>Land near them, and the whole gang comes.</b> The view goes down to that roof, side on, and it is the fight from the street, with every move: one round of it, as in the Holy Hour. A few on the map means a gang on the roof.</li>
+  <li><b>The roof.</b> A city roof at night, in the rain, the towers beyond its parapet, a water tank, the air units. At one end the brick hut over the stairs, with its caged lamp; at the other the lift's machine room with a neon sign on it. Both are walls: a demon thrown into either slams off it. The wider the roof on the map, the wider the fight.</li>
+  <li><b>How big the gang.</b> Bigger the further on in the night, and the more of them you have beaten; bigger again in the darkest places; biggest round his father's car, which is guarded, so the roofs round it must be cleared before the dive.</li>
+  <li><b>Win or fall.</b> Beat them, and he is back on his angel's back on the same roof, and that pack is gone from the map. Fall, and the angel carries him off: no ending, but they are still there to come back for.</li>
+  <li><b>The first time.</b> If he has never practised, the angel shows him every move first, on a roof in his mind, and then the gang is there.</li>
+  <li><b>Never empty.</b> Those beaten are made up again from the dark, far from him, and more of them as the dark spreads round the car.</li>
+</ul>
+
 <h2>Fighting</h2>
 <p>Flowing crowd combat, as in the Batman Arkham games, played with touch alone: no D-pad, no clutter. Many demons at once; you flow from one to the next.</p>
 <table>
   <tr><th>Gesture</th><th>Move</th></tr>
-  <tr><td>Tap empty ground</td><td>Move there (the stage is side-on with room to move up and down, like Double Dragon)</td></tr>
+  <tr><td>Tap empty ground</td><td>Move there (the stage is side-on with room to move up and down, like Double Dragon; it is a long street, and the camera stays on him while the demons climb up out of the ground near him)</td></tr>
   <tr><td>Tap a demon</td><td>Zip to it and strike; keep tapping demons to chain the combo</td></tr>
-  <tr><td>Double-tap a demon</td><td>Wing bash: heavy, breaks guards</td></tr>
+  <tr><td>Double-tap a demon</td><td>Heavy blow</td></tr>
+  <tr><td>Drag a demon behind a shield</td><td>The rosary snatches the shield away and it goes spinning off; the rosary again hauls the demon in. The only way past a shield: strike it, and it is he who is hurt</td></tr>
   <tr><td>Swipe up on a demon</td><td>Wing uppercut: launches it into the air</td></tr>
   <tr><td>Swipe down</td><td>Slam; on a demon in the air, spike it down</td></tr>
   <tr><td>Swipe sideways through several</td><td>Wing sweep along the line</td></tr>
   <tr><td>Hold a demon, drag, release</td><td>Grab and throw it into the others</td></tr>
-  <tr><td>Hold on empty ground</td><td>Wing shield (block)</td></tr>
+  <tr><td>Two fingers down, or hold on empty ground</td><td>Block at once, in prayer, turned to us: one blow at a time, then block again</td></tr>
   <tr><td>Tap a demon showing the <span class="gold">gold sign</span></td><td>Counter</td></tr>
-  <tr><td>Swipe away from a <span class="red">red sign</span></td><td>Dodge: grabs and rage attacks cannot be countered</td></tr>
-  <tr><td>Swipe toward a demon close by</td><td>Vault over it, as Batman does</td></tr>
+  <tr><td>Block a <span class="red">red sign</span></td><td>A grab cannot be countered, only blocked: the light throws the grabber off (there is no dodge)</td></tr>
   <tr><td>Tap a demon lying on the ground</td><td>Takedown: finish it before it rises</td></tr>
+  <tr><td>Hold on a demon, then let go</td><td>Holy water, near or far</td></tr>
+  <tr><td>Drag a demon far off</td><td>The rosary: thrown crucifix first, it wraps round the demon and he hauls it in</td></tr>
   <tr><td>Circle a group</td><td>Halo spin (a special, unlocked at a high combo)</td></tr>
 </table>
 <ul>
   <li><b>Dizzy stars.</b> A demon beaten enough is dazed for a moment: an opening.</li>
-  <li><b>Rage.</b> Sometimes a demon rages and attacking it is useless; dodge until it calms. (Both from Batman: Arkham City Lockdown on phones.)</li>
+  <li><b>Rage.</b> Sometimes a demon rages and attacking it is useless; block until it calms. (Both from Batman: Arkham City Lockdown on phones.)</li>
   <li><b>Combo buttons.</b> At, say, ×5, ×10 and ×20 hits, special buttons light up in the corners; a hit taken resets the count.</li>
 </ul>
 
 <h3>The Heights and the Depths</h3>
 <p>Like the uppercut in Mortal Kombat that sends a fighter through the ceiling to another level.</p>
 <ul>
-  <li><b>Rise to the Heights.</b> Uppercut a <i>dizzy</i> demon and you both burst up into the clouds. Up there angels are stronger: wider counter windows, faster combos, light restores you.</li>
-  <li><b>Dragged to the Depths.</b> Some demons grab; miss the dodge and you are both dragged into a dark under-layer. Demons hit harder there, your combo fades faster, whispers distract you. Fight your way back up by reaching a combo count, for a big reward.</li>
+  <li><b>Rise to the Heights.</b> Twelve in a row, and the whole fight rises into the clouds. Up there angels are stronger: wider counter windows, light restores you. Only there can he bless them: then they all come down together, his angel comes down on them like a hammer, rings of light run out over the ground and halos rise from where it lands, and every demon is struck flat as the light reaches it, harder the longer the flow. Let the flow break up there, and they all fall back with nothing done (no blow on him, but the count starts again).</li>
+  <li><b>Dragged to the Depths.</b> Some demons grab; miss the block and you are both dragged into a dark under-layer. Demons hit harder there, your combo fades faster, whispers distract you. Fight your way back up by reaching a combo count, for a big reward.</li>
   <li>These are pictures of the spiritual struggle, not literal places.</li>
 </ul>
 
@@ -165,7 +178,7 @@
 <p><b>The look of the fights</b> follows those films: wire-work leaps, long poses, whip-fast exchanges, sound effects on every blow, and the long limbs of the figures flying wide.</p>
 <ul>
   <li><b>Never a plain walk.</b> When he goes from one demon to the next, he always flips, rolls, or staggers across in a drunken lurch that ends in the strike.</li>
-  <li><b>The angel blocks.</b> Sometimes, when he dodges, his angel steps in and takes the blow for him.</li>
+  <li><b>The angel blocks.</b> Sometimes, when he blocks, his angel steps in and takes the blow for him.</li>
   <li><b>The angel strikes.</b> In some combos the angel comes in for a hit while Fr. Lawrence steps aside, then they trade places again.</li>
   <li><b>Ideas to study.</b> Drunken fighters in other games: Lei Wulong in <i>Tekken</i>, Shun Di in <i>Virtua Fighter</i>, Brad Wong in <i>Dead or Alive</i>, Jamie in <i>Street Fighter 6</i> (his moves grow with his "drink level"), and the Stagger style in <i>Absolver</i>, which dodges by swaying. All take their look from Hong Kong drunken-fist films.</li>
 </ul>
@@ -251,9 +264,9 @@
 <ol>
   <li><b>Cold open: "Bring Daddy Home".</b> 2 AM. A radio in the dark: for a week the lights have been going out across the city, block by block. In a small apartment a girl of about seven kneels at her window in her pyjamas: "Please bring Daddy home." Out in the rain her father sits in his car across from a corner store, deep in debt to the wrong people, a gun in his lap. Shapes in the dark lean close and whisper: <i>Just this once. Nobody gets hurt. You have no choice.</i></li>
   <li><b>The desert.</b> Hard cut to silence and stars. Fr. Lawrence asleep in his cell. A light. "Get up. Someone asked." The one who asked is a child. His protest ("I'm not Padre Pio"), and the angel's answer.</li>
-  <li><b>The flight.</b> Riding the angel's back over the district from above: learning to steer, to dive down into the streets and to climb back over the roofs, and to recharge near a church, while the darkness closes round the car.</li>
-  <li><b>The fight.</b> First, in his mind, the angel shows him every move against shades (the practice). Then down to the wet street around the car, side-on, against the demons crowding it, played as close to Batman: Arkham Asylum as we can: free-flowing strikes; counters that catch the wrist or ankle, throw the demon down and pin it; vaults over attackers; demons knocked flat who can be finished before they rise; gadgets in the flow (holy water, the stole, throws); time slowing with each blow and all but stopping at the warning sign. His angel waits above and swoops down at five in a row. The father, who never sees them, sits frozen. His guardian angel is pinned against the car in chains of shadow. Freed, he tells them the first clue to the larger mystery: the man the father owes, and where the lights first went out.</li>
-  <li><b>The choice.</b> He makes his own choice: he drops the gun into a storm drain and drives home. The street's lights come back on. In the last close-up the apartment door opens, and we see her face.</li>
+  <li><b>The flight.</b> Riding the angel's back over the district from above, leaping rooftop to rooftop: to the church, to the girl's window, and to the car, while the darkness closes round it.</li>
+  <li><b>The fight.</b> First, in his mind, the angel shows him every move against shades (the practice). Then down to the wet street around the car, side-on, against the demons crowding it, played as close to Batman: Arkham Asylum as we can, with one rule of its own, the drunken master's: never the same blow twice on the same demon, or he trips; three falls in a row and the fight is dragged down to the Depths. Free-flowing strikes, flown in on a flip, a roll, a flying kick, a cartwheel or a prostrate dive, harder and slower the longer the flow; counters that catch the wrist or ankle, throw the demon down and pin it; demons knocked flat who can be finished before they rise; gadgets in the flow (holy water, the rosary, throws); time slowing with each blow and all but stopping at the warning sign. His angel waits above and takes the 3rd and 7th blows of a combo (and every fourth after), darting down while he stands aside; twelve in a row lifts the fight to the Heights, ended by the angel's blow from on high while he prays. The father's guardian stays in chains until the street is clear. The father, who never sees them, sits frozen. His guardian angel is pinned against the car in chains of shadow. Freed, he tells them the first clue to the larger mystery: the man the father owes, and where the lights first went out.</li>
+  <li><b>The choice.</b> He makes his own choice: he looks at her drawing taped to the dashboard, and drives home. The street's lights come back on. In the last close-up the apartment door opens, and we see her face.</li>
   <li><b>The bell.</b> Back to the chapel as the bell rings for Vigils. The brothers file in. Fr. Lawrence's knees ache.</li>
 </ol>
 <ul>
@@ -263,9 +276,18 @@
   <li><b>Saving.</b> Progress is saved after each part.</li>
 </ul>
 
+<h2>The Holy Hour</h2>
+<p>A survival mode, from the title screen. Fr. Lawrence keeps the Holy Hour before the Blessed Sacrament, kneeling in the monastery chapel at night. His angel comes and stands beside him and asks him the question asked in the garden: <i>Could you not watch one hour with me?</i> (Matthew 26:40). Then: <i>Watch with me now. They come at every hour of prayer, in every place a monk prays. Let us see how long you can last.</i></p>
+<ul>
+  <li><b>One place to a round.</b> The chapel, the monstrance on the altar; the cloister under the stars; his cell; the roof by the bell tower; the crypt with the brothers' graves; the desert. Then round again.</li>
+  <li><b>Rooms with walls.</b> The chapel, the cell and the crypt are rooms. A demon thrown into a wall slams into it and flies back across the room, bowling over whoever is there; one with its back to the wall is driven into it by a blow.</li>
+  <li><b>Harder each round.</b> More demons and sooner, the grabbers from the second round and the shields from the third; shorter wind-ups and heavier blows; one knocked down up again sooner; two, then three striking at once. Only so many at a time (fewer in the small cell); the rest wait their turn.</li>
+  <li><b>Between rounds</b> he kneels, the angel gives him a line of Scripture, and some of his strength comes back. One fall ends the watch: the angel carries him out of it, he kneels again, and the angel counts the rounds. The best is kept.</li>
+</ul>
+
 <h2>Build order (after the first build)</h2>
 <ol>
-  <li><b>Combat arena:</b> the priest and his angel; three demons (one to counter, one to dodge, one with a shield); all the gestures; dizzy and rage; the combo meter; a first Heights/Depths shift.</li>
+  <li><b>Combat arena:</b> the priest and his angel; three demons (one to counter, one to block, one with a shield); all the gestures; dizzy and rage; the combo meter; a first Heights/Depths shift.</li>
   <li><b>Michael and tag-ins.</b></li>
   <li><b>One full encounter:</b> a person, a temptation, the fight, their choice.</li>
   <li><b>Flight prototype:</b> one district in shadow; dive and pull-up, flying the streets, updrafts, shadow drain.</li>
