@@ -126,10 +126,15 @@ a WAV sample for a music app such as Remixlive, or for a game.
 - **Voice:** about twenty eSpeak variants (Robosoft, UniRobot, croak, whisper,
   Demonic and more), five accents including Latin, and pitch, pitch range,
   speed and word gap.
+- **Sing:** give it a key such as `Bm` or `D dorian` and a style (Monastic
+  psalm tone, recto tono, hymn, Kraftwerk, lament, trance arpeggio), and a
+  vocoder sings the verse on exact notes at your tempo, with optional organum,
+  thirds, choir chords or a drone.
 - **Effects:** synthetic choir, ring modulator, bitcrusher, delay and reverb,
   with one *Robot amount* knob that blends them all.
-- **Presets:** Kraftwerk, Cold Cathedral, 8-bit Monk, Dalek Lector and
-  Whispered Vigil, and your own saved in the browser.
+- **Presets:** Kraftwerk, Cold Cathedral, 8-bit Monk, Dalek Lector,
+  Whispered Vigil, and for singing Gregorian Machine, Vocoder Hymn and Robot
+  Arpeggio, and your own saved in the browser.
 - **Export:** 44.1 kHz, 16-bit WAV. Preview and file are rendered the same way,
   so they sound the same. On iPhone, *Share* sends the file to Files or another app.
 - **Batch:** one line per clip, `filename | verse text`, all downloaded as a ZIP.
