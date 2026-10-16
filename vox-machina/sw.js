@@ -1,7 +1,7 @@
 // Service worker: keeps every file of Vox Machina on the device after the
 // first visit, so the tool works with no connection. Bump VERSION after edits.
-const VERSION = 'vox-machina-v1';
-const FILES = ['./', 'index.html', 'app.js', 'engine.js', 'lib/espeak-ng.js',
+const VERSION = 'vox-machina-v2';
+const FILES = ['./', 'index.html', 'app.js', 'engine.js', 'melody.js', 'sing.js', 'lib/espeak-ng.js',
   'lib/espeak-ng.wasm', 'lib/jszip.min.js'];
 
 self.addEventListener('install', e => {
