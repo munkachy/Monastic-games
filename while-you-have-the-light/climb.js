@@ -126,6 +126,8 @@ const M = {
     if (S.held) { S.atk = null; throwHeld(wx, wy, null); return; }
     if (S.flare.on) { blink(wx, wy); return; }
     if (S.atk) return;
+    // (Gluttony's mouth tapped, standing at it: in.)
+    { const Gt = gateOf(); if (Gt && atGateDoor() && Math.abs(wx - Gt.door) < 130 && wy > Gt.ground - 170 && wy < Gt.ground) { enterGate(); return; } }
     // (A bird tapped, even one on the floor by him: the hook goes for it.)
     if (!S.rope && birdAt(wx, wy)) { throwHook(wx, wy); return; }
     if (S.ground && wy > S.y - 30) return;

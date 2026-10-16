@@ -35,6 +35,7 @@ function physics(dt) {
   S.clingWas = S.cling;
   briars();
   const I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false, u: false, dn: false } : pads(), d = I.d, wasGround = S.ground, vyIn = S.vy, vxIn = S.vx;
+  if (I.u && !S.rope && atGateDoor()) { enterGate(); return; }        // (at Gluttony's mouth, up: in)
   if (S.hang) {
     const H0 = S.hang, s = H0.L.s, up = d === s || I.u;
     H0.k = Math.min(1, H0.k + dt / 0.12);
@@ -436,7 +437,9 @@ function step(dt) {
   // The camera: a little below the middle, so more of the way up shows; ahead of him in a crossing.
   const sec = sectionAt(Math.max(1, Math.floor(hNow))), cv = sec.type === "cave", sl = sec.type === "slope", look = sec.type === "trav" ? trav(sec).dir * 90 : cv ? cave(sec).dir * 140 : sl ? slope(sec).dir * 120 : 0;
   const tx = clamp(S.x + look - W / 2, 0, COLS * CELL - W), ty = Math.min(S.y - HT / 2 - H * (sec.type === "summit" ? 0.74 : sec.type === "trav" || sl ? 0.5 : cv ? 0.42 : 0.58), 70 - H);
-  S.cam.x += (tx - S.cam.x) * (1 - Math.exp(-dt * 4)); S.cam.y += (ty - S.cam.y) * (1 - Math.exp(-dt * 4));
+  // (Outside, before Gluttony's mouth: the ground low on the screen, the night sky and the moon over him.)
+  const Gt = gateOf(), outside = Gt && S.x < Gt.wall && S.y > Gt.ground - 300, tyO = outside ? Gt.ground - H * 0.84 : ty;
+  S.cam.x += (tx - S.cam.x) * (1 - Math.exp(-dt * 4)); S.cam.y += (tyO - S.cam.y) * (1 - Math.exp(-dt * 4));
   if (!S.dying && Math.random() < (F.on ? 0.9 : boonOn("unconsumed") ? 0.75 : 0.3)) S.parts.push({ kind: "ember", x: S.torch[0] + (Math.random() - 0.5) * 4, y: S.torch[1] - 6, vx: (Math.random() - 0.5) * 30, vy: -30 - Math.random() * 40, life: 0.8, age: 0 });
   for (const p of S.parts) {
     const k = p.real ? dt : wdt; p.age += k; p.x += p.vx * k; p.y += p.vy * k;
