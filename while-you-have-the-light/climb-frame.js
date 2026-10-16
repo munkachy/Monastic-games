@@ -190,7 +190,10 @@ function physics(dt) {
   // Walking on to a small gap in the floor (up to five cells across, the floor going on at his
   // height beyond it): a little hop over it, without stopping.
   if (S.hopT > 0) { S.hopT -= dt; if (!S.ground && d) S.vx = d * Math.max(Math.abs(S.vx), 120); }
-  else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0)) {
+  else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0) && !S.rideOn && backAhead(d)) {
+    // (A platform bird's back within a hop: on to it, as high as it needs.)
+    const B = backAhead(d), rise = Math.max(0, S.y - B.top); S.vy = -Math.sqrt(2 * GRAV * (rise + 22)); S.vx = d * 120; S.ground = false; S.hopT = 0.7; ev("hopped on to a platform bird");
+  } else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0)) {
     const xf = S.x + d * (HW + 3);
     if (!solidAt(xf, S.y + 4) && !solidAt(xf, S.y + CELL + 4)) for (let g = 1; g <= 5; g++) {
       const x2 = S.x + d * (HW + 6 + g * CELL);
@@ -222,7 +225,9 @@ function physics(dt) {
     }
   }
   // (On a platform bird's back: he stands on it, and it carries him.)
-  const rb = !S.rope && !S.cling && S.vy >= 0 ? backUnder() : null; S.rideOn = rb ? rb.c : null;
+  // (Just pulled up on to one by the rope: on it, whatever this moment's motion did.)
+  if (S.boardT > 0) S.boardT -= dt; else S.boardOn = null;
+  const rb = S.boardOn ? { top: S.boardOn.y - PB_TOP * PB_K, c: S.boardOn } : !S.rope && !S.cling && S.vy >= 0 ? backUnder() : null; S.rideOn = rb ? rb.c : null;
   if (rb) { S.y = rb.top; S.vy = 0; }
   S.ground = rb ? true : S.vy >= 0 && boxHit(S.x, S.y + 1);
   if (S.ground && !wasGround && vyIn > 300) { S.landT = vyIn > 620 ? 0.5 : 0.32; S.landMax = S.landT; Sound.fx.land(clamp(vyIn / 700, 0.3, 1)); }
@@ -305,6 +310,10 @@ function step(dt) {
     else if (S.act) { if (S.shot) flyShot(wdt); stepAct(wdt); }
     else if (S.atk) { if (S.shot) flyShot(wdt); stepAtk(F.on ? dt * 0.8 : wdt); }       // his blows keep their speed in the flare
     else physics(wdt);
+    // (Just pulled up on to a platform bird by the rope: set on its back, whatever his motion did.)
+    if (S.boardOn && !S.rope) { S.y = S.boardOn.y - PB_TOP * PB_K; S.vy = 0; S.vx = 0; S.flip = null; S.ground = true; S.rideOn = S.boardOn; }
+    // (On a platform bird's back, after all his motion: standing on it.)
+    else if (!S.rope && !S.cling && S.vy >= 0 && !S.act) { const rb = backUnder(); if (rb) { S.y = rb.top; S.vy = 0; S.ground = true; S.rideOn = rb.c; } }
     // Rock that crumbles: his weight on it (his feet, or his hook) cracks it.
     if (S.ground) { weigh(crumblerAt(S.x - HW + 2, S.y + 3)); weigh(crumblerAt(S.x + HW - 2, S.y + 3)); }
     if (S.rope) weigh(crumblerAt(S.rope.hx === undefined ? S.rope.x : S.rope.hx, S.rope.hy === undefined ? S.rope.y : S.rope.hy));
