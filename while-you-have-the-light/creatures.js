@@ -28,17 +28,19 @@ const PB_K = 1.4, PB_TOP = 24.3, PB_U0 = -23, PB_U1 = 9;    // its size; its bac
 const PB_SH = [3, 19];                                      // its shoulder (u, v), where the wings are jointed
 // A wing, jointed at the shoulder, wrist and the spread of its long feathers, at angle a (0 level,
 // back along the body; up positive): its outline in the bird's own (u, v).
-function pbWing(a, far) {
-  const [su, sv] = PB_SH, a2 = a * 1.35 + 0.08, L1 = far ? 19 : 22, L2 = far ? 26 : 30;
+const pbWing = (a, far) => wingShape(a, far, PB_SH, far ? 19 : 22, far ? 26 : 30);
+const BB_SH = [6, 12];                                       // the big bird's shoulder, on its gliding body
+function wingShape(a, far, sh, L1, L2) {
+  const [su, sv] = sh, a2 = a * 1.35 + 0.08, fk = L2 / 30;
   const d1 = [-Math.cos(a), Math.sin(a)], d2 = [-Math.cos(a2), Math.sin(a2)], n1 = [-d1[1], d1[0]], n2 = [-d2[1], d2[0]];
   const Wr = [su + d1[0] * L1, sv + d1[1] * L1], Tp = [Wr[0] + d2[0] * L2, Wr[1] + d2[1] * L2], out = [[su + 3, sv + 1], Wr, Tp];
   // (The long feathers of the hand, each a finger with a notch between; then the arm's shorter ones.)
   for (let i = 0; i <= 6; i++) {
-    const k = i / 6, b = [Tp[0] - d2[0] * L2 * k, Tp[1] - d2[1] * L2 * k], f = 9 + 5 * Math.sin(k * PI) + (i === 0 ? 2 : 0);
+    const k = i / 6, b = [Tp[0] - d2[0] * L2 * k, Tp[1] - d2[1] * L2 * k], f = (9 + 5 * Math.sin(k * PI) + (i === 0 ? 2 : 0)) * fk;
     out.push([b[0] + n2[0] * f - d2[0] * 3, b[1] + n2[1] * f - d2[1] * 3], [b[0] + n2[0] * f * 0.55, b[1] + n2[1] * f * 0.55]);
   }
-  for (let i = 1; i <= 4; i++) { const k = i / 4, b = [Wr[0] - d1[0] * L1 * k, Wr[1] - d1[1] * L1 * k], f = 8 - 2 * k; out.push([b[0] + n1[0] * f, b[1] + n1[1] * f], [b[0] + n1[0] * f * 0.6 + d1[0] * 2, b[1] + n1[1] * f * 0.6 + d1[1] * 2]); }
-  out.push([su + 2, sv - 5]);
+  for (let i = 1; i <= 4; i++) { const k = i / 4, b = [Wr[0] - d1[0] * L1 * k, Wr[1] - d1[1] * L1 * k], f = (8 - 2 * k) * fk; out.push([b[0] + n1[0] * f, b[1] + n1[1] * f], [b[0] + n1[0] * f * 0.6 + d1[0] * 2, b[1] + n1[1] * f * 0.6 + d1[1] * 2]); }
+  out.push([su + 2, sv - 5 * fk]);
   return out;
 }
 const ROLES = { harmful: [], neutral: [], platform: [] };
@@ -226,12 +228,11 @@ function drawCritters(cam) {
       if (c.kind === "spider" && c.st !== "dead") line(x, c.ay - cam.y - 2, x, y - 14, "rgba(30,28,32,0.8)", 1);
       const P = new Path2D(), T = put(c.x, c.y, c.dir, cam);
       addShape(P, TRACED[k], c.kind === "spider" && c.st === "wait" ? (u, v) => T(u, -v + 16) : T);
-      ctx.fillStyle = ink; ctx.fill(P, "evenodd");
+      litDraw([[P, ink, "evenodd"]], c.x, c.y - CRITTERS[c.kind].ht / 2, c.a);
     } else if (c.kind === "mouse") {
-      const s = c.dir, run = Math.abs(c.vx) > 40, b = run ? Math.sin(c.ph * 6) * 1.2 : 0;
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(x, y - 3.5 + b * 0.3, 6, 3.4, 0, 0, TAU); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(x + s * 6, y - 4, 3, 2.3, s * 0.3, 0, TAU); ctx.fill();
-      circle(x + s * 4.6, y - 6.6, 1.6, ink);
+      const s = c.dir, run = Math.abs(c.vx) > 40, b = run ? Math.sin(c.ph * 6) * 1.2 : 0, P = new Path2D();
+      P.ellipse(x, y - 3.5 + b * 0.3, 6, 3.4, 0, 0, TAU); P.moveTo(x + s * 9, y - 4); P.ellipse(x + s * 6, y - 4, 3, 2.3, s * 0.3, 0, TAU); P.moveTo(x + s * 6.2, y - 6.6); P.arc(x + s * 4.6, y - 6.6, 1.6, 0, TAU);
+      litDraw([[P, ink]], c.x, c.y - 4, c.a);
       line(x - s * 6, y - 3, x - s * 13, y - 4 + Math.sin(c.ph * 3) * 2, ink, 1);
       line(x - 3 + b, y - 1, x - 3 - b, y + 0.3, ink, 1.2); line(x + 3 - b, y - 1, x + 3 + b, y + 0.3, ink, 1.2);
     } else if (c.kind === "vulture") {
@@ -239,22 +240,23 @@ function drawCritters(cam) {
       const T = put(c.x, c.y, c.dir, cam), TK = (u, v) => T(u * PB_K, v * PB_K), beat = Math.sin(c.ph), a = 0.15 + 0.62 * beat - (S.rideOn === c ? 0.12 : 0);
       const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK);
       const P = new Path2D(), rid = S.rideOn === c; addShape(P, rid ? TRACED.pbR : TRACED.pbB, rid ? (u, v) => TK(u - 4.3, v - 2.6) : TK);
-
       const near = new Path2D(); addPoly(near, pbWing(a, false), TK);
-      // (Lit by his torch as he is: the shape laid a pixel toward the flame in its warm light, and
-      // the black laid over it, so only the edges that face the flame stay lit.)
-      let dx = S.torch[0] - c.x, dy = S.torch[1] - (c.y - 18); const dl = Math.hypot(dx, dy) || 1, lit = clamp(1 - dl / (lightR() * 1.1), 0, 1); dx /= dl; dy /= dl;
-      const lay = (path, col, k, al, rule) => { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = c.a * al; ctx.fillStyle = col; ctx.fill(path, rule); ctx.restore(); };
-      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
-      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(near);
+      litDraw([[far, "#151318"], [P, ink, "evenodd"], [near, ink]], c.x, c.y - 18, c.a);
     } else if (c.kind === "bird") {
-      // (Traced: its wings beating through glide, up, glide, down; faster fleeing; on the hook,
-      // panicking and startled by turns; dead, tumbling. Drawn about its middle.)
-      const near = c.to && c.st === "fly" && dist(c.x, c.y, c.to[0], c.to[1]) < 50;
-      const k = c.st === "dead" ? "bd8" : c.st === "perch" ? "bd7" : near ? "bd6" : c.st === "carry" ? (Math.floor(c.t * 3) % 5 === 0 ? "bd4" : ["bd1", "bd0", "bd2", "bd0"][Math.floor(c.ph * 0.5) % 4]) : ["bd0", "bd1", "bd0", "bd2"][Math.floor(c.ph * 0.32) % 4];
-      // (Perched, its feet on the ledge; in the air, drawn about its middle.)
-      const hh = shapeH(k) * BD_K, T0 = put(c.x, c.st === "perch" ? c.y : c.y + hh / 2 - 10, c.dir, cam), T = (u, v) => T0(u * BD_K, v * BD_K), P = new Path2D();
-      addShape(P, TRACED[k], T); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
+      // (Its body traced, without wings: gliding; landing, its feet out; perched; on the hook; dead.
+      // Its wings jointed, as the platform bird's: beating in flight, braking as it lands, thrashing
+      // on the hook. Perched, its own folded wing is in the drawing.)
+      const near = c.to && c.st === "fly" && dist(c.x, c.y, c.to[0], c.to[1]) < 50, perch = c.st === "perch", dead = c.st === "dead", carry = c.st === "carry";
+      const k = dead ? "bbD" : perch ? (c.t > c.rest - 0.6 ? "bbS" : "bbP") : near ? "bbL" : carry ? "bbH" : "bbG", hh = shapeH(k);
+      const T = put(c.x, perch ? c.y : c.y + hh / 2 - 6, c.dir, cam), list = [];
+      const wings = !perch && !dead, beat = Math.sin(c.ph), a = near ? 1.05 + 0.15 * beat : carry ? 0.2 + 0.85 * beat : 0.1 + 0.7 * beat;
+      const sh = k === "bbG" ? BB_SH : k === "bbL" ? [2, 20] : [4, 18];
+      const far = new Path2D(), nearW = new Path2D(), P = new Path2D();
+      if (wings) addPoly(far, wingShape(a + 0.2, true, sh, 13, 19), T);
+      addShape(P, TRACED[k], T);
+      if (wings) addPoly(nearW, wingShape(a, false, sh, 15, 22), T);
+      if (wings) list.push([far, "#151318"]); list.push([P, ink, "evenodd"]); if (wings) list.push([nearW, ink]);
+      litDraw(list, c.x, c.y - 10, c.a);
     }
     ctx.globalAlpha = 1;
   }
@@ -316,3 +318,13 @@ function backUnder() {
 // A traced shape's height (its highest point above its feet), kept once worked out.
 const SHAPE_H = {};
 function shapeH(k) { if (SHAPE_H[k] === undefined) { let m = 0; for (const L of TRACED[k]) for (let i = 1; i < L.length; i += 2) m = Math.max(m, L[i]); SHAPE_H[k] = m; } return SHAPE_H[k]; }
+
+// A creature drawn as the monk is: each shape laid a pixel toward his torch in its warm light, and
+// the dark laid over it, so only the edges that face the flame are lit; fading as it is farther
+// from his light. list: [[path, colour, fill rule], ...]; (wx, wy): its middle, in the world.
+function litDraw(list, wx, wy, alpha) {
+  let dx = S.torch[0] - wx, dy = S.torch[1] - wy; const dl = Math.hypot(dx, dy) || 1, lit = clamp(1 - dl / (lightR() * 1.1), 0, 1); dx /= dl; dy /= dl;
+  const a0 = alpha === undefined ? 1 : alpha;
+  if (lit > 0) for (const [k, col, al] of [[1.3, MONK_RIM2, 0.3], [0.65, MONK_RIM, 1]]) for (const [p, , rule] of list) { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = a0 * al * lit; ctx.fillStyle = col; ctx.fill(p, rule || "nonzero"); ctx.restore(); }
+  ctx.globalAlpha = a0; for (const [p, col, rule] of list) { ctx.fillStyle = col; ctx.fill(p, rule || "nonzero"); }
+}
