@@ -247,7 +247,7 @@ function makeMountain(rnd) {
       step(x, y + 1);
     }
   }
-  const nWays = 2 + (rnd() < 0.5 ? 1 : 0), starts = [Math.floor(GW / 2)];
+  const nWays = 2 + (rnd() < 0.5 ? 1 : 0), starts = [0];          // (the main way begins in the room at the foot, on the left: behind the mouth)
   way(starts[0], true);
   for (let w = 1; w < nWays; w++) { let x0 = Math.floor(rnd() * GW); if (x0 === starts[0]) x0 = (x0 + 1 + Math.floor(rnd() * (GW - 1))) % GW; starts.push(x0); way(x0, false); }
   // (The ways' feet joined along the bottom, so whichever he starts by, all are open to him.)
@@ -274,8 +274,9 @@ function makeMountain(rnd) {
   }
   // The grid of cells: rock, with each room laid in its place (row 0 is the top: the grid's top row of
   // places is GH - 1). Each room keeps only its largest hollow (the rest becomes rock).
-  const W = GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
-  const marks = { S: [], V: [], D: [], H: [], I: [] }, box = (c) => [(c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
+  // (OUT: the ground outside the mountain, on its left, where he starts, before the mouth.)
+  const OUT = 120, W = OUT + GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
+  const marks = { S: [], V: [], D: [], H: [], I: [] }, box = (c) => [OUT + (c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
   const slots = [];
   for (const [c, name] of kind) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
@@ -300,7 +301,7 @@ function makeMountain(rnd) {
     if (q - p === 1) {
       // Side by side: p on the left.
       const A = best(p, (u, r) => -u + Math.abs(r - RH * 0.6) * 0.3, true), B = best(q, (u, r) => u + Math.abs(r - RH * 0.6) * 0.3, true); if (!A || !B) continue;
-      const xm = (p % GW + 1) * RW;
+      const xm = OUT + (p % GW + 1) * RW;
       cut(A[0], A[1] - 5, xm + 2, A[1]); cut(xm - 3, Math.min(A[1], B[1]) - 5, xm + 2, Math.max(A[1], B[1])); cut(xm - 3, B[1] - 5, B[0], B[1]);
     } else {
       // One above the other: p below.
@@ -310,7 +311,19 @@ function makeMountain(rnd) {
   }
   // The summit: up from the top room's highest air to the sky.
   { const A = best(top, (u, r) => r + Math.abs(u - RW / 2) * 0.1, false); if (A) cut(A[0] - 3, 0, A[0] + 2, A[1]); for (let x = A[0] - 3; x <= A[0] + 2; x++) g[0][x] = false; }
-  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots });
+  // Outside, at the foot on the left: open ground under an overhang of the mountain, and in the
+  // mountain's wall Gluttony's face (traced from gluttony-mouth-1.png) of the mountain's own rock,
+  // looking out, its jaws open; a tunnel from the back of its mouth into the first room.
+  const GR = Hh - 14, FK = 0.75, FX = OUT - 67;                 // the ground's row; cells to a unit of the face; where its left edge stands
+  for (let r = Hh - 3 * RH; r < GR; r++) for (let x = 1; x < OUT; x++) g[r][x] = false;
+  { const F = new Path2D(), cell = (u, v) => [FX + (u + 47.7) * FK, GR - v * FK];
+    for (const L of TRACED.wf0) { const a = cell(L[0], L[1]); F.moveTo(a[0], a[1]); for (let i = 2; i < L.length; i += 2) { const b = cell(L[i], L[i + 1]); F.lineTo(b[0], b[1]); } F.closePath(); }
+    const cx = (typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(1, 1) : document.createElement("canvas")).getContext("2d");
+    for (let r = GR - Math.ceil(100 * FK) - 2; r < GR; r++) for (let x = Math.max(1, FX - 2); x < Math.min(W - 1, FX + Math.ceil(96 * FK) + 2); x++) if (cx.isPointInPath(F, x + 0.5, r + 0.5, "evenodd")) g[r][x] = true; }
+  // (The lower jaw kept only as a low lip of teeth, two cells, to step over into the mouth; then the throat.)
+  cut(FX - 2, GR - 12, OUT - 30, GR - 3); cut(OUT - 30, GR - 9, OUT + 10, GR - 1);
+  marks.S = [[FX - 16, GR - 1]];
+  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT });
 }
 // A room's largest hollow, and the rest of its air made rock (its marks in the rock dropped).
 function largest(R) {

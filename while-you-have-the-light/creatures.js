@@ -289,8 +289,6 @@ function peopleMountain(sec, dom) {
   // The gates: in each gallery at a stretch's head, the lay brother, his cart and donkey on its
   // longest floor (he takes the blocks brought from the idols, and his blessing fills the torch).
   S.gates = [];
-  // (The mouth at the foot: where he starts, inside it.)
-  S.mouth = { x: cellX(start[0]), y: cellY(start[1]) };
   for (const S0 of R.slots) if (S0.gate) {
     let best = null;
     for (let r = S0.oy + 2; r < S0.oy + RH - 1; r++) for (let i = S0.ox + 2; i < S0.ox + RW - 2; i++) {
