@@ -311,23 +311,14 @@ function makeMountain(rnd) {
   }
   // The summit: up from the top room's highest air to the sky.
   { const A = best(top, (u, r) => r + Math.abs(u - RW / 2) * 0.1, false); if (A) cut(A[0] - 3, 0, A[0] + 2, A[1]); for (let x = A[0] - 3; x <= A[0] + 2; x++) g[0][x] = false; }
-  // Outside, at the foot on the left: open ground under an overhang of the mountain, and in the
-  // mountain's wall Gluttony's face (traced from gluttony-mouth-1.png) of the mountain's own rock,
-  // looking out, its jaws open; a tunnel from the back of its mouth into the first room.
-  const GR = Hh - 14, FK = 0.1625, FX = OUT - Math.round(108.7 * FK);    // the ground's row; cells to a unit of the face (it stands a screen high); where its left edge stands
+  // Outside, at the foot on the left: open ground under the night sky (the overhang far above),
+  // and the door into the mountain: Gluttony's face, seen from the front, its mouth the door (it
+  // is drawn, in climb-draw.js; he goes in by it, and comes out inside, in the first room).
+  const GR = Hh - 14;                                           // the ground's row
   for (let r = Hh - 3 * RH; r < GR; r++) for (let x = 1; x < OUT; x++) g[r][x] = false;
-  { const F = new Path2D(), cell = (u, v) => [FX + (u + 54.35) * FK, GR - v * FK];
-    for (const L of TRACED.wf1) { const a = cell(L[0], L[1]); F.moveTo(a[0], a[1]); for (let i = 2; i < L.length; i += 2) { const b = cell(L[i], L[i + 1]); F.lineTo(b[0], b[1]); } F.closePath(); }
-    const cx = (typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(1, 1) : document.createElement("canvas")).getContext("2d");
-    // (A cell is rock if most of it is the face's rock: the face's cracks are too fine to leave gaps.)
-    const inF = (x, y) => cx.isPointInPath(F, x, y, "nonzero");
-    for (let r = GR - Math.ceil(100 * FK) - 2; r < GR; r++) for (let x = Math.max(1, FX - 2); x < Math.min(W - 1, FX + Math.ceil(110 * FK) + 2); x++) {
-      const n = [[0.5, 0.5], [0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9]].filter(([a, b]) => inF(x + a, r + b)).length; if (n >= 3) g[r][x] = true; } }
-  // (The lower jaw kept only as a low lip of teeth, two cells, to step over into the mouth; then the throat.)
-  // (The throat: from the back of the mouth, under the jaw, into the first room.)
-  cut(FX + 11, GR - 3, OUT + 10, GR - 1);
-  marks.S = [[FX - 16, GR - 1]];
-  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT, face: { FX, GR, FK } });
+  const inside = marks.S[0];
+  marks.S = [[52, GR - 1], inside];
+  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT, gate: { door: OUT - 40, GR, inside } });
 }
 // A room's largest hollow, and the rest of its air made rock (its marks in the rock dropped).
 function largest(R) {
