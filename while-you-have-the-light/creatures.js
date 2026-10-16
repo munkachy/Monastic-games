@@ -352,8 +352,8 @@ function peopleMountain(sec, dom) {
     const more = 1 + Math.min(3, (NOV && NOV.climbs) || 0) / 3;
     const up = 1 - S0.oy / R.h, quiet = S0.kind === "shrine" || S0.kind === "crawl", n = (base) => Math.floor(base + rnd() * (base + 1));
     if (S0.kind === "shrine") { const I = R.marks.I.find(([i, r]) => i >= S0.ox && i < S0.ox + RW && r >= S0.oy && r < S0.oy + RH); if (I) { let q = I[1]; while (air(I[0], q + 1)) q++; placeShrine(0, dom, [[cellX(I[0]), cellY(q), cellX(I[0]) - 90, cellX(I[0]) + 90]], []); } }
-    if (S0.onWay && !quiet && !S0.gate && !S0.mouth) for (let q = 0; q < n((0.1 + 0.45 * up) * more); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
-    if (!quiet) for (let q = 0; q < n((0.2 + 0.8 * up) * more); q++) {
+    if (S0.onWay && !quiet && !S0.gate && !S0.mouth) for (let q = 0; q < n((0.25 + 0.6 * up) * more); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
+    if (!quiet) for (let q = 0; q < n((0.6 + 1.2 * up) * more); q++) {
       const kind = pickKind("harmful", rnd), p = kind && spot(S0, CRITTERS[kind].roof ? "roof" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
@@ -362,7 +362,7 @@ function peopleMountain(sec, dom) {
     const pb = S0.onWay && (S0.kind === "gap" || (S0.kind === "shaft" && rnd() < 0.4) || (S0.kind === "platforms" && rnd() < 0.6)) && pickKind("platform", rnd);
     const P = pb && birdPath(S0);
     if (P) { const c = spawnCritter(pb, cellX(P[0]), cellY(P[1])); if (c) { c.beat = { ax: cellX(P[0]), ay: cellY(P[1]), bx: cellX(P[2]), by: cellY(P[3]) }; c.x = c.beat.ax; c.y = c.beat.ay; } }
-    for (let q = 0; q < n(0.6); q++) {
+    for (let q = 0; q < n(1.2); q++) {
       const kind = pickKind("neutral", rnd), p = kind && spot(S0, CRITTERS[kind].air ? "open" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
