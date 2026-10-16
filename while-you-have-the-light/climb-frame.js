@@ -30,17 +30,36 @@ function hangAt(L) {
   S.rope = null; S.cling = 0; S.climbing = false; S.vx = 0; S.vy = 0; S.dir = L.s;
   S.hangs = (S.hangs || 0) + 1; Sound.fx.grab();
 }
+// Standing at the edge of what he stands on, a fresh press of down: he lowers himself over it and
+// hangs from it by his hands. The edge nearer the way he faces first.
+function edgeUnder() {
+  const j = Math.floor((S.y + 1) / CELL);
+  for (const sd of [S.dir || 1, -(S.dir || 1)]) {
+    for (let off = -HW; off <= HW + 10; off += 2) {
+      const xa = S.x + sd * off, ci = Math.floor(xa / CELL), cb = ci + sd;
+      if (!solid(ci, j) || solid(cb, j) || solid(cb, j + 1) || solid(cb, j - 1)) continue;
+      const edge = sd > 0 ? cb * CELL : ci * CELL;
+      if (Math.abs(edge - S.x) > HW + 10) continue;
+      const L = { top: j * CELL, edge, x1: edge - sd * 12, s: -sd, h: 0 };
+      if (boxHit(edge + sd * 7, L.top - 0.01 + hangReach())) continue;
+      return L;
+    }
+  }
+  return null;
+}
 function physics(dt) {
   if (S.clingWas && !S.cling) unclip(S.clingWas);
   S.clingWas = S.cling;
   briars();
   const I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false, u: false, dn: false } : pads(), d = I.d, wasGround = S.ground, vyIn = S.vy, vxIn = S.vx;
+  const dnFresh = I.dn && !S.dnWas; S.dnWas = I.dn;
   if (S.hang) {
     const H0 = S.hang, s = H0.L.s, up = d === s || I.u;
     H0.k = Math.min(1, H0.k + dt / 0.12);
     S.x = lerp(H0.fx, H0.x, ease(H0.k)); S.y = lerp(H0.fy, H0.y, ease(H0.k)); S.vx = 0; S.vy = 0; S.dir = s;
     if (!up) H0.need = false;
-    if (d === -s || I.dn) { S.hang = null; S.ground = false; return; }
+    if (!I.dn) H0.dnHeld = false;
+    if (d === -s || (I.dn && !H0.dnHeld)) { S.hang = null; S.ground = false; return; }
     if (up && !H0.need && H0.k >= 1) { S.hang = null; startAct("ledge", H0.L); }
     return;
   }
@@ -141,6 +160,7 @@ function physics(dt) {
     // Down (off the rope), or a way before him too low to stand in: he gets down on his hands and
     // knees, and crawls. He gets up again where there is room, unless down is still held.
     // (On the rope, not at a touch of the ground in a swing: only once he is standing.)
+    if (dnFresh && !R && !S.held && !S.legsIn && !S.crawl && !S.rideOn) { const L = edgeUnder(); if (L) { hangAt(L); S.hang.dnHeld = true; return; } }
     if (!S.crawl && !S.held && !S.legsIn && ((I.dn && !R) || (d && lowWay(d) && (!R || S.groundT > 0.35)))) startCrawl();
     else if (S.crawl && !I.dn && !(d && lowWay(d)) && !boxAt(S.x, S.y - 0.5, HW, HT)) S.crawl = false;
     // Walking: careful and heavy. Into a step, he steps up; into a ledge he can reach, he climbs.
