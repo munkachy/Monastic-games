@@ -1383,24 +1383,26 @@ function drawNearWall(cam, t, dom) {
         const k = Math.min(up ? smooth(q / 5) : 1, dn ? smooth((9 - q) / 5) : 1), hw = (w / 2) * (0.08 + 0.92 * k);
         L.push([cx - hw + n * k, y]); R.push([cx + hw + m * k, y]);
       }
-      poly([...L, ...R.reverse()].flat(), body);
+      const outline = [...L, ...R.reverse()]; poly(outline.flat(), body);
       poly([L[2][0] + 6, L[2][1], L[6][0] + 10, L[6][1], L[7][0] + 4, L[7][1]], shade);
-      // Now and then, a face in it: hollow eyes not quite alike, a mouth that slowly opens and shuts.
-      if (hash2(ix, iy, sd + 5) < 0.16 && w > 70) {
-        const fx = cx + (hash2(ix, iy, sd + 6) - 0.5) * 14, fy = y0 + TH * (0.3 + 0.35 * hash2(ix, iy, sd + 7)), tilt = (hash2(ix, iy, sd + 8) - 0.5) * 0.5;
-        const e1 = 5 + 4 * hash2(ix, iy, sd + 9), e2 = 4 + 6 * hash2(ix, iy, sd + 10), open = 0.4 + 0.6 * Math.max(0, Math.sin(t * 0.35 + ix * 1.7 + iy));
-        ctx.save(); ctx.translate(fx, fy); ctx.rotate(tilt); ctx.scale(1.7, 1.7); ctx.fillStyle = "#030204";
-        ctx.beginPath(); ctx.ellipse(-11, 0, e1 * 0.8, e1, 0.2, 0, TAU); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(11, 2, e2 * 0.75, e2, -0.15, 0, TAU); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(1, 24, 7 + 2 * open, 4 + 13 * open, 0, 0, TAU); ctx.fill();
-        // (Lit, an eye glints.)
-        const near = dist(lx - cam.x, ly - cam.y, fx, fy) < lightR() * 0.9;
-        if (near && Math.sin(t * 0.9 + ix) > 0.2) { circle(-11, 0.5, 1.1, "rgba(255,226,180,0.8)"); circle(11, 2.5, 0.9, "rgba(255,226,180,0.6)"); }
-        ctx.restore();
+      // Now and then, a face in the stone (the traced face of Gluttony's mouth), set into the column's
+      // side as though carved there: a shade darker than the rock, its cracks showing the rock through.
+      if (hash2(ix, iy, sd + 5) < 0.14 && w > 60) {
+        const side = hash2(ix, iy, sd + 6) < 0.5 ? 1 : -1, k = (w / 64) * (0.9 + 0.3 * hash2(ix, iy, sd + 7)), fx = cx + side * w * 0.12, fy = y0 + TH * (0.5 + 0.3 * hash2(ix, iy, sd + 8));
+        const T = (u, v) => [fx + side * u * k, fy - v * k], F = new Path2D(); addShape(F, TRACED.wf0, T);
+        // (Only within the column: the face is in the rock, and does not stand out of it.)
+        const C = new Path2D(); C.moveTo(outline[0][0], outline[0][1]); for (const q of outline) C.lineTo(q[0], q[1]); C.closePath();
+        ctx.save(); ctx.clip(C); ctx.globalAlpha = 0.8; ctx.fillStyle = mix(body, "#040305", 0.5); ctx.fill(F, "evenodd"); ctx.restore();
+        // (Lit, its eye glints, now and then.)
+        const [ex, ey] = T(-0.6, 69.9);
+        if (dist(lx - cam.x, ly - cam.y, ex, ey) < lightR() * 0.9 && Math.sin(t * 0.7 + ix * 2.3) > 0.55) circle(ex, ey, 1.4, "rgba(255,226,180,0.7)");
       }
     } else if (hash2(ix, iy, sd + 14) < 0.35) {
       // Teeth of rock hanging from above.
-      for (let q = 0; q < 4; q++) { const x = x0 + TW * (0.1 + 0.25 * q) + (hash2(ix, iy * 7 + q, sd + 11) - 0.5) * 20, w = 10 + 16 * hash2(ix, q, sd + 12), l = 40 + 90 * hash2(ix + q, iy, sd + 13); poly([x - w / 2, y0, x + w / 2, y0, x + w * 0.1, y0 + l], body); }
+      // (The fat of Gluttony dripping from a ledge: traced.)
+      const D = new Path2D();
+      for (let q = 0; q < 2; q++) { const sh = TRACED["wd" + Math.floor(hash2(ix, iy * 3 + q, sd + 11) * 3)], k = 1.6 + 1.6 * hash2(ix, q, sd + 12), x = x0 + TW * (0.25 + 0.5 * q), top = sh === TRACED.wd2 ? 40 : 30; addShape(D, sh, (u, v) => [x + u * k, y0 + (top - v) * k]); }
+      ctx.fillStyle = body; ctx.fill(D);
     }
   }
 }
