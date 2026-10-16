@@ -433,7 +433,7 @@ const summitSec = () => (NOV && secs.length > summitK() && secs[summitK()].type 
 // A room as a section of the mountain: set in the middle of it, its rock from its made grid, the
 // mountain's rock about it. c, its way out at the top (for what comes above it).
 function roomSec(name, k, h0) {
-  const rnd = seeded(seed + 101 * k + 7), R = name[0] === "mountain" ? makeMountain(rnd) : Array.isArray(name) ? (name.length > 1 ? linkRooms(name, rnd) : makeRoom(name[0], rnd)) : makeRoom(name, rnd);
+  const rnd = seeded(seed + 101 * k + 7), R = name[0] === "mountain" ? mountainFor(seed) : Array.isArray(name) ? (name.length > 1 ? linkRooms(name, rnd) : makeRoom(name[0], rnd)) : makeRoom(name, rnd);
   if (R.w + 40 > COLS) COLS = R.w + 40;
   const x0 = Math.round(R.w + 40 > 330 ? 20 : MID - R.w / 2), top = [];
   for (let c = 0; c < R.w; c++) if (!R.g[0][c]) top.push(c);

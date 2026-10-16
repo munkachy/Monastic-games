@@ -10,7 +10,7 @@ function start(opts) {
   NOV = opts.nov ? Object.assign({}, opts.nov) : null;
   seed = opts.seed || (Math.random() * 1e9) | 0; rows = new Map(); slots = new Map(); walls.length = 0; secs.length = 0; COLS = 330;
   // (A place kept on Gluttony's mountain as it was made before its maps: from the foot, on the new mountain.)
-  if (opts.resume && opts.resume.v === 2) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
+  if (opts.resume && (opts.resume.v === 2 || (NOV && !!NOV.piece !== (opts.resume.v === 3)))) { forget(NOV.domain); opts = Object.assign({}, opts, { resume: null, seed: undefined }); seed = (Math.random() * 1e9) | 0; }
   const r = seeded(seed); wallPh = [r() * TAU, r() * TAU, r() * TAU];
   // Where the summit is: as asked; or as kept with his place; or (a place kept before there were
   // summits) above the place kept.
@@ -122,7 +122,7 @@ function keepPlace(x, y, why) {
   }
   for (const k of SEEN) if (S[k]) seen[k] = true;
   const all = keptAll();
-  all[NOV.domain] = { v: 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, pouch: S.pouch, flasks: S.flasks, healed: S.healed ? [...S.healed] : [],
+  all[NOV.domain] = { v: NOV.piece ? 3 : 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, pouch: S.pouch, flasks: S.flasks, healed: S.healed ? [...S.healed] : [],
     coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
   try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
   Kept.wrote(KEEP);
