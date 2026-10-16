@@ -47,6 +47,15 @@ function scatter(f) {
 // into the dark after a while; the idol, struck down, falling, and breaking in pieces.
 function updIdol(f, dt) {
   if (f.st === "rise" && f.t > 0.9) setSt(f, "idle");
+  // (They have weight: at prayer too they rest on the ground, and none stands where another is.)
+  for (const w of f.who) {
+    if (w.st === "run") continue;
+    w.vy = Math.min(VMAX, (w.vy || 0) + GRAV * dt); const [, hy] = moveBox(w, 0, w.vy * dt, 6, 34); if (hy) w.vy = 0;
+  }
+  for (const w of f.who) for (const g of S.demons) if (g.idol && g.who) for (const u of g.who) {
+    if (u === w) continue; const dx = w.x - u.x, gap = 20;
+    if (Math.abs(dx) < gap && Math.abs(w.y - u.y) < 30) { const push = (gap - Math.abs(dx)) * 0.5 * Math.min(1, dt * 12); moveBox(w, (dx >= 0 ? 1 : -1) * push, 0, 6, 34); }
+  }
   for (const w of f.who) {
     if (w.st !== "run") continue;
     w.t += dt; w.ph += dt * 12;
