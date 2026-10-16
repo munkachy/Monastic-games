@@ -271,7 +271,7 @@ function drawCritters(cam) {
 // never near a room's sides (where the passages come in), never near where he starts.
 function peopleMountain(sec, dom) {
   const R = sec.R, rnd = seeded(seed + 9091), RW = ROOM_W * ROOM_K, RH = ROOM_H * ROOM_K, start = R.marks.S[0] || [-999, -999], taken = [];
-  const cellX = (i) => (sec.x0 + i + 0.5) * CELL, cellY = (r) => -(sec.h1 - r) * CELL - 0.01;
+  const cellX = (i) => (sec.x0 + i + 0.5) * CELL, cellY = (r) => -(sec.h1 - r - 1) * CELL - 0.01;   // (the bottom of cell row r: the floor under it)
   const air = (i, r) => i >= 0 && r >= 0 && i < R.w && r < R.h && !R.g[r][i];
   const free = (i, r) => !taken.some(([a, b]) => Math.abs(a - i) < 10 && Math.abs(b - r) < 6) && Math.hypot(i - start[0], r - start[1]) > 22;
   // A spot in a room: on a floor (air over rock, room to stand), or under a roof (air under rock,
@@ -281,7 +281,7 @@ function peopleMountain(sec, dom) {
       const i = S0.ox + 8 + Math.floor(rnd() * (RW - 16)), r = S0.oy + 4 + Math.floor(rnd() * (RH - 8));
       if (!air(i, r) || !free(i, r)) continue;
       if (kind === "floor") { let q = r; while (air(i, q + 1) && q < S0.oy + RH - 1) q++; if (air(i, q + 1) || !air(i, q - 3) || !air(i - 2, q) || !air(i + 2, q) || air(i - 2, q + 1) || air(i + 2, q + 1)) continue; taken.push([i, q]); return [cellX(i), cellY(q)]; }
-      if (kind === "roof") { let q = r; while (air(i, q - 1) && q > S0.oy) q--; if (air(i, q - 1)) continue; let f = q; while (air(i, f + 1) && f - q < 30) f++; if (f - q < 10) continue; taken.push([i, q]); return [cellX(i), cellY(q) + CELL]; }
+      if (kind === "roof") { let q = r; while (air(i, q - 1) && q > S0.oy) q--; if (air(i, q - 1)) continue; let f = q; while (air(i, f + 1) && f - q < 30) f++; if (f - q < 10) continue; taken.push([i, q]); return [cellX(i), cellY(q) - CELL]; }
       if (kind === "open") { let ok = true; for (let a = -4; a <= 4 && ok; a++) for (let b = -3; b <= 3 && ok; b++) if (!air(i + a, r + b)) ok = false; if (!ok) continue; taken.push([i, r]); return [cellX(i), cellY(r)]; }
     }
     return null;
