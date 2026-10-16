@@ -98,7 +98,8 @@ function stepCritters(dt) {
       if (c.st === "idle") { if (c.t > 1.5 + (c.ph % 1.5)) { c.st = Math.random() < 0.5 ? "walk" : "idle"; c.t = 0; c.dir = Math.random() < 0.5 ? -1 : 1; } c.vx = 0; }
       else if (c.st === "walk") { c.vx = c.dir * 30; if (c.t > 1.2) { c.st = "idle"; c.t = 0; } }
       else c.vx = c.dir * 170;
-      const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw, K.ht); if (hy) c.vy = 0; if (hx) c.dir = -c.dir;
+      // (Into a wall, it is gone: into some crack too small to see.)
+      const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw, K.ht); if (hy) c.vy = 0; if (hx) { c.a = 0; continue; }
       c.ph += Math.abs(c.vx) * dt * 0.4;
     } else if (c.kind === "vulture") {
       const B = c.beat, len = Math.max(40, dist(B.ax, B.ay, B.bx, B.by)), x0 = c.x, y0 = c.y;
