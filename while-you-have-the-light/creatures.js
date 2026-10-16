@@ -24,7 +24,23 @@ const CRITTERS = {
   // beat (across a pit, or up a shaft). He can stand on its back and be carried; it sags under him.
   vulture: { role: "platform", hw: 30, ht: 30, w: 1, air: true },
 };
-const PB_K = 1.4, PB_TOP = 23, PB_U0 = -22, PB_U1 = 12;      // its size; its back's height, and from where to where along it (facing +u)
+const PB_K = 1.4, PB_TOP = 24.5, PB_U0 = -27, PB_U1 = 16;    // its size; its back's height, and from where to where along it (facing +u)
+const PB_SH = [-2, 20];                                      // its shoulder (u, v), where the wings are jointed
+// A wing, jointed at the shoulder, wrist and the spread of its long feathers, at angle a (0 level,
+// back along the body; up positive): its outline in the bird's own (u, v).
+function pbWing(a, far) {
+  const [su, sv] = PB_SH, a2 = a * 1.35 + 0.08, L1 = far ? 19 : 22, L2 = far ? 26 : 30;
+  const d1 = [-Math.cos(a), Math.sin(a)], d2 = [-Math.cos(a2), Math.sin(a2)], n1 = [-d1[1], d1[0]], n2 = [-d2[1], d2[0]];
+  const Wr = [su + d1[0] * L1, sv + d1[1] * L1], Tp = [Wr[0] + d2[0] * L2, Wr[1] + d2[1] * L2], out = [[su + 3, sv + 1], Wr, Tp];
+  // (The long feathers of the hand, each a finger with a notch between; then the arm's shorter ones.)
+  for (let i = 0; i <= 6; i++) {
+    const k = i / 6, b = [Tp[0] - d2[0] * L2 * k, Tp[1] - d2[1] * L2 * k], f = 9 + 5 * Math.sin(k * PI) + (i === 0 ? 2 : 0);
+    out.push([b[0] + n2[0] * f - d2[0] * 3, b[1] + n2[1] * f - d2[1] * 3], [b[0] + n2[0] * f * 0.55, b[1] + n2[1] * f * 0.55]);
+  }
+  for (let i = 1; i <= 4; i++) { const k = i / 4, b = [Wr[0] - d1[0] * L1 * k, Wr[1] - d1[1] * L1 * k], f = 8 - 2 * k; out.push([b[0] + n1[0] * f, b[1] + n1[1] * f], [b[0] + n1[0] * f * 0.6 + d1[0] * 2, b[1] + n1[1] * f * 0.6 + d1[1] * 2]); }
+  out.push([su + 2, sv - 5]);
+  return out;
+}
 const ROLES = { harmful: [], neutral: [], platform: [] };
 for (const k in CRITTERS) ROLES[CRITTERS[k].role].push(k);
 // One kind of a role, drawn by weight.
@@ -59,7 +75,16 @@ function killCritter(c, kx) {
   for (let q = 0; q < 6; q++) S.parts.push({ kind: "chip", x: c.x, y: c.y - 5, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0.5, age: 0 });
 }
 // The birds, for the hook: as chains are (a point it can be taken by).
-const birdsNear = () => (S.critters || []).filter((c) => c.kind === "bird" && c.st !== "dead" && Math.abs(c.y - S.y) < 600);
+const birdsNear = () => (S.critters || []).filter((c) => c.st !== "dead" && Math.abs(c.y - S.y) < 600 && (c.kind === "bird" || (c.kind === "vulture" && c.grab))).map((c) => (c.kind === "vulture" ? c.grab : c));
+// A platform bird's back within a hop of him, the way he walks: where to land on it.
+function backAhead(d) {
+  for (const c of S.critters || []) {
+    if (c.kind !== "vulture" || S.rideOn === c) continue;
+    const top = c.y - PB_TOP * PB_K, a = c.x + c.dir * PB_U0 * PB_K, b = c.x + c.dir * PB_U1 * PB_K, near = d > 0 ? Math.min(a, b) : Math.max(a, b), gap = (near - S.x) * d;
+    if (gap > -4 && gap < 5 * CELL + HW && top > S.y - 56 && top < S.y + 40) return { x: (a + b) / 2, top };
+  }
+  return null;
+}
 
 function stepCritters(dt) {
   if (!S.critters) return;
@@ -107,7 +132,16 @@ function stepCritters(dt) {
       const e = smooth(c.u), ride = S.rideOn === c; c.sag = (c.sag || 0) + ((ride ? 7 : 0) - (c.sag || 0)) * Math.min(1, dt * 4);
       c.x = lerp(B.ax, B.bx, e); c.y = lerp(B.ay, B.by, e) + Math.sin(c.t * 1.3 + c.ph) * 4 + c.sag;
       if (Math.abs(B.bx - B.ax) > 4) c.dir = sign((B.bx - B.ax) * c.s); c.turnT = Math.max(0, (c.turnT || 0) - dt);
-      c.ph += dt * (ride ? 3.2 : 2.2);
+      c.ph += dt * (ride ? 4.6 : 2.6);
+      // (Its back, for the hook: a line along it, as a chain is, that the rope can take.)
+      { const ua = c.dir * PB_U0 * PB_K, ub = c.dir * PB_U1 * PB_K; c.grab = c.grab || { kind: "grab", owner: c, len: 1, ang: 0 };
+        c.grab.x = c.x + Math.min(ua, ub); c.grab.y = c.y - PB_TOP * PB_K; c.grab.len = Math.abs(ub - ua); c.grab.ang = PI / 2; }
+      // Hooked by its back: he hauls himself up the rope, and steps on to it.
+      if (S.rope && S.rope.chain === c.grab) {
+        const R = S.rope; R.x = c.grab.x + c.grab.len / 2; R.y = c.grab.y; R.along = 1; R.len = Math.max(ROPE_MIN * 0.5, R.len - 320 * dt);
+        { const dx = R.x - S.x, dy = R.y - S.y, l = Math.hypot(dx, dy) || 1; S.vx = (dx / l) * 300; S.vy = (dy / l) * 300; S.ground = false; S.liftT = 0.15; }
+        if (dist(S.x, S.y, R.x, R.y) < 44) { dropRope(true); S.x = R.x; S.y = R.y; S.vy = 0; S.vx = 0; S.rideOn = c; S.boardOn = c; S.boardT = 0.25; S.flip = null; S.hoverT = 0; ev("pulled up on to a platform bird"); }
+      }
       // (Carried: he goes where it goes.)
       if (ride) { S.x += c.x - x0; S.y += c.y - y0; }
       continue;
@@ -156,8 +190,11 @@ function drawCritters(cam) {
       line(x - s * 6, y - 3, x - s * 13, y - 4 + Math.sin(c.ph * 3) * 2, ink, 1);
       line(x - 3 + b, y - 1, x - 3 - b, y + 0.3, ink, 1.2); line(x + 3 - b, y - 1, x + 3 + b, y + 0.3, ink, 1.2);
     } else if (c.kind === "vulture") {
-      const k = S.rideOn === c ? "pb3" : c.turnT > 0 ? "pb5" : ["pb0", "pb1", "pb0", "pb2"][Math.floor(c.ph) % 4], P = new Path2D(), T = put(c.x, c.y, c.dir, cam);
-      addShape(P, TRACED[k], (u, v) => T(u * PB_K, v * PB_K)); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
+      // (Its body traced; its wings jointed, beating smoothly: slow and deep, faster and harder carrying him.)
+      const T = put(c.x, c.y, c.dir, cam), TK = (u, v) => T(u * PB_K, v * PB_K), beat = Math.sin(c.ph), a = 0.15 + 0.62 * beat - (S.rideOn === c ? 0.12 : 0);
+      const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK); ctx.fillStyle = "#151318"; ctx.fill(far);
+      const P = new Path2D(); addShape(P, TRACED.pbB, TK); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
+      const near = new Path2D(); addPoly(near, pbWing(a, false), TK); ctx.fillStyle = ink; ctx.fill(near);
     } else if (c.kind === "bird") {
       const s = c.dir, fl = Math.sin(c.ph), dead = c.st === "dead";
       ctx.save(); ctx.translate(x, y - 4); if (dead) ctx.rotate(c.t * 4);
