@@ -491,8 +491,6 @@ function addShape(path, loops, T, du = 0, lean = 0) {
 }
 function addPoly(path, pts, T) { const a = T(pts[0][0], pts[0][1]); path.moveTo(a[0], a[1]); for (let i = 1; i < pts.length; i++) { const b = T(pts[i][0], pts[i][1]); path.lineTo(b[0], b[1]); } path.closePath(); }
 function addOval(path, u, v, ru, rv, T, n) { n = n || 12; const pts = []; for (let i = 0; i < n; i++) { const a = i / n * TAU; pts.push([u + Math.cos(a) * ru, v + Math.sin(a) * rv]); } addPoly(path, pts, T); }
-// The traced worshippers (TRACED) for each kind: kneeling with hands lifted; bowed; prostrate; standing (Lust's, swaying).
-const WORSHIP_ART = [["w0", "w5"], ["w1", "w7"], ["w2"], ["w4", "w3", "w6"]];
 // Bel, seated on his plinth, his head thrown back and his mouth open, reaching to the loaves on his
 // table: traced from a silhouette made for the game (black on white, the white lines in it cut through),
 // in the idol's own frame (its middle at u 33, its foot at v 0). The first outline is his; the rest,
@@ -572,20 +570,33 @@ function drawShrine(f, cam, rimP, idols, lights) {
 // its robe flying, and fading into the dark.
 function drawWorshipper(w, cam, rimP, near) {
   const x = w.x - cam.x, y = w.y - cam.y; if (x < -30 || x > W + 30 || y < -40 || y > H + 30) return;
-  const P = new Path2D(), run = w.st === "run", T0 = put(w.x, w.y, run ? w.dir : w.side, cam);
-  if (run) {
-    // Fleeing: a moment of panic as the idol falls, then running (a cycle of four).
-    const R = (u, v) => T0(u * ART_K, v * ART_K);
-    const sh = w.t < 0.4 ? TRACED[["fp0", "fp1", "fp2"][Math.abs(Math.floor(w.x)) % 3]] : TRACED["fr" + (((Math.floor(w.ph / (PI / 2)) % 4) + 4) % 4)];
-    addShape(P, sh, R);
-  } else {
-    // At prayer: one of the traced figures for its kind, the Lust kind swaying.
-    const set = WORSHIP_ART[w.kind] || WORSHIP_ART[0], sh = TRACED[set[Math.floor(w.ph * 7) % set.length]];
-    const lean = w.kind === 3 ? Math.sin(S.rt * 1.6 + w.ph) * 0.06 : 0, T1 = put(w.x, w.y, w.side, cam);
-    addShape(P, sh, (u, v) => T1(u * ART_K, v * ART_K), 0, lean);
-  }
-  ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P, "evenodd"); ctx.globalAlpha = 1;
+  const run = w.st === "run", P = worshipPath(x, y, run ? w.dir : w.side, worshipPose(w, S.rt), { t: S.rt, vx: run ? w.dir * (w.sp || 80) : 0, vy: w.vy || 0, noTorch: true, drape: 3.5 });
+  ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P); ctx.globalAlpha = 1;
   if (w.a > 0.5) rimNow(P);   // (rimmed now, not with the rest after him: he stands before them)
+}
+// The worshippers are jointed like the monk (his body and habit, without the torch), after the
+// worshippers' sheets: kneeling with hands lifted; bowed low; flat on the face; standing with arms
+// raised (Lust's, swaying). Their hands rise and fall a little as they pray. When the idol falls:
+// a moment's panic, hands to the head, and then they run.
+const W_KNEEL = { lean: 0.12, hF: 1.45, kF: 1.5, hB: -0.12, kB: 1.75 };
+function worshipPose(w, t) {
+  const b = Math.sin(t * 1.4 + w.ph * 3), k = w.kind;
+  if (w.st === "run") {
+    if (w.t < 0.4) return pose(Object.assign({}, W_KNEEL, { lean: -0.12 + w.t * 0.5, head: 0.35, sF: 2.85, eF: 2.5, sB: 2.95, eB: 2.4, hF: 1.45 * (1 - w.t / 0.4), kF: 1.5 * (1 - w.t / 0.4), hB: 0, kB: 0.3 }));
+    const p = MONK_ANIM.run(((w.ph / TAU) % 1 + 1) % 1); p.sB = 0.3 - 1.0 * p.hB; p.eB = 1.7; p.head = -0.25; return p;
+  }
+  if (k === 1) return pose(Object.assign({}, W_KNEEL, { lean: 1.25 + 0.04 * b, head: 0.5, sF: 1.45, eF: 0.2, sB: 1.35, eB: 0.25 }));
+  if (k === 2) return pose({ spin: 1.52, lift: -19.5, lean: 0, head: 0.15, sF: 2.95 + 0.05 * b, eF: 0.05, sB: 2.85, eB: 0.1, hF: 0.05, kF: 0.2, hB: -0.05, kB: 0.35 });
+  if (k === 3) return pose({ lean: Math.sin(t * 1.6 + w.ph) * 0.07, head: -0.35, sF: 2.55 + 0.12 * b, eF: 0.35, sB: 2.2 + 0.1 * b, eB: 0.5, hF: 0.06, kF: 0.04, hB: -0.06, kB: 0.08 });
+  return pose(Object.assign({}, W_KNEEL, { head: -0.4, sF: 2.6 + 0.12 * b, eF: 0.45, sB: 2.35 + 0.1 * b, eB: 0.55 }));
+}
+// A figure's shape as one path on the screen (its feet at x, y, facing dir).
+function worshipPath(x, y, dir, p, o) {
+  const J = solve(MONK_BODY, p), G = monkGeo(J, p, o, dir), P = new Path2D();
+  const c = Math.cos(p.spin || 0), s = Math.sin(p.spin || 0);
+  const tf = (q) => q.map(([u, v]) => { const dx = u - J.hip[0], dy = v - J.hip[1]; return [x + (J.hip[0] + dx * c - dy * s) * dir, y + J.hip[1] + dx * s + dy * c]; });
+  for (const q of G.A) addPts(P, tf(q)); for (const q of G.B) addPts(P, tf(q));
+  return P;
 }
 // A piece of a broken idol: a rough lump of it, its colour showing in the light.
 function drawShardOf(x, y, rot, lit, dom, sid) {

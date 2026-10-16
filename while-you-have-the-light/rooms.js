@@ -341,41 +341,5 @@ function linkRooms(names, rnd) {
   return { name: names.join(" + "), w: W, h: Hh, g, marks };
 }
 
-// ---- The piece picker -----------------------------------------------------------------------------
-// For trying the rooms (on the title, with ?pieces in the address): each room alone, or several
-// linked (chosen, or at random), with a demon or two, made afresh each time (or begun again).
-let pieceOut = false;                            // (he walked out of the room by one of its ways)
-const Pieces = {
-  t: 0, linking: false, chain: [],
-  can: (n) => Pieces.chain.length < 5 && (!Pieces.chain.length || fits(Pieces.chain[Pieces.chain.length - 1], n)),
-  open() { Pieces.t = 0; mode = Pieces; Sound.flare(false); Sound.muffle(false); },
-  go(names) {
-    names = [].concat(names); pieceOut = false;
-    if (names[0] === "mountain") return Game.scene({ title: "A WHOLE MOUNTAIN", mountain: "gluttony", summit: false, metres: 0, place: "any", demons: 3, near: [], great: 0, block: false, boon: null, torch: 1, endlessTorch: true, flare: 1, endlessFlare: false, seed: (Math.random() * 1e9) | 0, piece: ["mountain"] });
-    Game.scene({ title: names.length > 1 ? names.length + " ROOMS LINKED" : ROOMS[names[0]].name, mountain: "gluttony", summit: false, metres: 0, place: "any", demons: names.length, near: [], great: 0, block: false, boon: null, torch: 1, endlessTorch: true, flare: 1, endlessFlare: false, seed: (Math.random() * 1e9) | 0, piece: names });
-  },
-  // A random chain: three to five rooms, each one that can be come into from the last where there is one.
-  random() {
-    const all = Object.keys(ROOMS), pick = (a) => a[Math.floor(Math.random() * a.length)], out = [pick(all.filter((n) => WAYS(n).length > 1))], len = 3 + Math.floor(Math.random() * 3);
-    while (out.length < len) { const last = out[out.length - 1], ok = all.filter((n) => fits(last, n)); if (!ok.length) break; out.push(pick(ok)); if (WAYS(out[out.length - 1]).length < 2) break; }
-    Pieces.go(out);
-  },
-  step(dt) { Pieces.t += dt; },
-  draw() {
-    rect(0, 0, W, H, "#f2efe8");
-    text("THE PIECES", W / 2, 34, { align: "center", font: FONT.title, size: 18, weight: 700, spacing: 5, color: "#2a2620" });
-    text("Each room of the mountain, alone. Made afresh each time: try one again and its maybe-rock falls otherwise.", W / 2, 52, { align: "center", font: FONT.line, italic: true, size: 12, color: "#6a6255", max: W - 40 });
-    const names = Object.keys(ROOMS), cols = 3, bw = Math.min(200, (W - 60) / cols - 10);
-    names.forEach((n, i) => { const x = W / 2 - (cols * (bw + 10)) / 2 + 5 + (i % cols) * (bw + 10), y = 80 + Math.floor(i / cols) * 54; button(ROOMS[n].name, x, y, bw, 44, () => (Pieces.linking ? Pieces.can(n) && Pieces.chain.push(n) : Pieces.go(n)), { sub: "Ways: " + ROOMS[n].ways, off: Pieces.linking && !Pieces.can(n) }); });
-    const y = 80 + Math.ceil(names.length / cols) * 54 + 8, P = Pieces;
-    button("A RANDOM CHAIN", W / 2 - 215, y, 140, 36, () => P.random(), { sub: "3 to 5 rooms, linked" });
-    button("A WHOLE MOUNTAIN", W / 2 - 70, y + 66, 140, 36, () => P.go("mountain"), { sub: "Two or three ways to the top" });
-    button(P.linking ? "LINKING: ON" : "LINK ROOMS", W / 2 - 70, y, 140, 36, () => { P.linking = !P.linking; P.chain = []; }, { sub: P.linking ? "Up to 5; only rooms that join the last can be chosen" : "Choose several, and see them joined" });
-    if (P.linking) {
-      button("PLAY THE CHAIN", W / 2 + 75, y, 140, 36, () => P.chain.length > 1 && P.go(P.chain), { off: P.chain.length < 2, sub: "Or press BACK to clear" });
-      text(P.chain.length ? P.chain.map((n) => ROOMS[n].name.replace(/^THE /, "")).join("  \u2192  ") : "(none chosen yet)", W / 2, y + 56, { align: "center", font: FONT.line, size: 12, color: "#2a2620", max: W - 40 });
-    }
-    button("BACK", 16, H - 44, 80, 30, () => (P.linking ? (P.linking = false, P.chain = []) : Game.toTitle()), {});
-  },
-  key(code, down) { if (down && code === "Escape") Game.toTitle(); },
-};
+// (A room alone, walked out of by a way at its side, is done: OUT OF THE ROOM.)
+let pieceOut = false;

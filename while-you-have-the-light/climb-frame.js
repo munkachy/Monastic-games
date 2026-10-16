@@ -273,6 +273,8 @@ function step(dt) {
   }
   if (S.dying) { S.dying += dt; if (S.dying > 1.7) { finish(); return; } }
   markSeen();
+  // (The white room: a finger held still a second on the rock or the air opens its menu there.)
+  for (const t of S.touches.values()) if (t.lab && !(t.g && (t.g.f || t.g.self || t.g.o)) && S.rt - t.lab.t0 >= Room.HOLD) { const q = t.lab; t.lab = null; S.touches.clear(); Room.menuAt(q.x, q.y); return; }
   // (A room alone, from the piece picker: walked out by a way at its side, it is done.)
   if (NOV && NOV.piece && secs[0] && secs[0].type === "room" && !secs[0].R.whole && !S.dying) { const r = secs[0]; if (S.x < (r.x0 + 1) * CELL || S.x > (r.x0 + r.R.w - 1) * CELL) { pieceOut = true; finish(); return; } }
   const F = S.flare;

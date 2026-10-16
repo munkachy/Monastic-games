@@ -90,6 +90,7 @@ function spotsFor(k, sin) {
 function placeFor(k, demonsOnly) {
   // (A cavern or a corridor of briars is long: twice as many demons in it, met along the way over.)
   ensureSecs(k); const sec = secs[k], sin = sec.dom || "wrath", n = demonsFor(k) * (sec.type === "cave" || sec.type === "slope" ? 2 : 1);
+  if (NOV && NOV.empty && sec.type !== "summit") return;     // (the white room's places: empty, to be filled by hand)
   if (sec.type === "summit") {
     if (sec.filler) return;
     if (!demonsOnly) placeSummit(k);

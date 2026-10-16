@@ -65,7 +65,6 @@ const Title = {
     if (typeof House !== "undefined" && House.ok()) button("THE MONASTERY", x, by + 124, 200, 26, () => House.open(), { size: 9 });
     // (Not on the copy kept on claude.ai: there the design notes are not beside it; but where Claude
     // can be asked, the white room is, in their place.)
-    if (/[?&]pieces\b/.test(location.search) || window.claude) button("THE PIECES", x, by + 154, 200, 24, () => Pieces.open(), { size: 8, sub: "Each room of the mountain, alone" });
     if (typeof Room !== "undefined" && Room.ok) button("THE WHITE ROOM", x + 103, by + 92, 97, 26, () => Room.open(), { size: 8 });
     else if (!window.claude) {
       buttons.push({ x: x + 103, y: by + 92, w: 97, h: 26, act: () => { location.href = "design.html"; } });
@@ -228,8 +227,7 @@ const Over = {
     if (t > 0.6) {
       const x0 = W / 2 - 104;
       button("AGAIN", x0, H - 76, 100, 36, () => { Sound.muffle(false); Game.again(); }, { hot: true });
-      if (Game.last && Game.last.room && Game.last.room.piece) button("THE PIECES", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Pieces.open(); }, {});
-      else if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
+      if (Game.last && Game.last.room && typeof Room !== "undefined") button("THE ROOM", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Room.open(); }, {});
       else button("TITLE", x0 + 108, H - 76, 100, 36, () => { Sound.muffle(false); Game.toTitle(); }, {});
     }
   },
