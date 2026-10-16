@@ -247,10 +247,10 @@ function drawCritters(cam) {
       // Its wings jointed, as the platform bird's: beating in flight, braking as it lands, thrashing
       // on the hook. Perched, its own folded wing is in the drawing.)
       const near = c.to && c.st === "fly" && dist(c.x, c.y, c.to[0], c.to[1]) < 50, perch = c.st === "perch", dead = c.st === "dead", carry = c.st === "carry";
-      const k = dead ? "bbD" : perch ? (c.t > c.rest - 0.6 ? "bbS" : "bbP") : near ? "bbL" : carry ? "bbH" : "bbG", hh = shapeH(k);
+      const k = dead ? "bbD" : perch ? (c.t > c.rest - 0.6 ? "bbS" : "bbP") : near ? "bbL" : carry ? (Math.floor(c.t * 4) % 3 === 0 ? "bbL" : "bbG") : "bbG", hh = shapeH(k);
       const T = put(c.x, perch ? c.y : c.y + hh / 2 - 6, c.dir, cam), list = [];
       const wings = !perch && !dead, beat = Math.sin(c.ph), a = near ? 1.05 + 0.15 * beat : carry ? 0.2 + 0.85 * beat : 0.1 + 0.7 * beat;
-      const sh = k === "bbG" ? BB_SH : k === "bbL" ? [2, 20] : [4, 18];
+      const sh = k === "bbG" ? BB_SH : [2, 20];
       const far = new Path2D(), nearW = new Path2D(), P = new Path2D();
       if (wings) addPoly(far, wingShape(a + 0.2, true, sh, 13, 19), T);
       addShape(P, TRACED[k], T);
