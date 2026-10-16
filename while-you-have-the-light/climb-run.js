@@ -123,7 +123,7 @@ function keepPlace(x, y, why) {
   for (const k of SEEN) if (S[k]) seen[k] = true;
   const all = keptAll();
   all[NOV.domain] = { v: NOV.piece ? 3 : 1, seed, summitK: NOV.summitK, x: Math.round(x * 10) / 10, y: Math.round(y * 100) / 100, m: metres(-y), why, top: Math.round(Math.max(S.top, -y)), read: S.read, cast: S.cast, relics: S.relics, binned: S.binned, blockK: S.blockK, hearts: S.hearts, pouch: S.pouch, flasks: S.flasks, healed: S.healed ? [...S.healed] : [],
-    coins: S.coins || 0, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
+    coins: S.coins || 0, pick: !!S.pick, freed: S.freedList, fuel: r2(S.fuel), meter: r2(S.meter), walls, lamps, got, bins, greatDown: [...S.greatDown], tied: S.tied ? [S.tied.shape, S.tied.dom] : null, seen, at: Date.now() };
   try { localStorage.setItem(KEEP, JSON.stringify(all)); } catch (e) { return; }
   Kept.wrote(KEEP);
   S.keptAt = [x, y]; S.kept = { t: S.rt }; ev("place kept", { why, m: metres(-y) });
@@ -137,7 +137,7 @@ function restore(R) {
   const at = Number.isFinite(R.x) && Number.isFinite(R.y) && R.y < 0 ? freeSpot(R.x, R.y) : null;
   if (!at) { forget(NOV.domain); return; }
   S.x = at[0]; S.y = at[1]; S.vx = 0; S.vy = 0; S.ground = boxHit(S.x, S.y + 3); S.dir = 1; S.keptAt = [S.x, S.y]; S.foot = S.ground ? [S.x, S.y] : null;
-  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.hearts = clamp(Number.isInteger(R.hearts) ? R.hearts : HEARTS, 1, HEARTS); S.pouch = Object.assign({}, R.pouch || {}); S.flasks = Array.isArray(R.flasks) ? R.flasks.filter((q) => SOUPS[q]).slice(0, FLASKS) : []; S.healed = new Set(Array.isArray(R.healed) ? R.healed : []); S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0;
+  S.top = Math.max(R.top || 0, -R.y); S.read = R.read || 0; S.cast = R.cast || 0; S.relics = R.relics || 0; S.binned = R.binned || 0; S.hearts = clamp(Number.isInteger(R.hearts) ? R.hearts : HEARTS, 1, HEARTS); S.pouch = Object.assign({}, R.pouch || {}); S.flasks = Array.isArray(R.flasks) ? R.flasks.filter((q) => SOUPS[q]).slice(0, FLASKS) : []; S.healed = new Set(Array.isArray(R.healed) ? R.healed : []); S.blockK = Number.isInteger(R.blockK) ? R.blockK : undefined; S.coins = R.coins || 0; S.pick = !!R.pick;
   S.freedList = Array.isArray(R.freed) ? R.freed.filter((q) => Array.isArray(q) && SINS[q[0]]).slice(0, 60) : [];
   if (Number.isFinite(R.fuel)) S.fuel = clamp(R.fuel, 0.25, 1);
   if (Number.isFinite(R.meter)) S.meter = clamp(R.meter, 0, 1);
