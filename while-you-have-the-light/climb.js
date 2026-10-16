@@ -115,6 +115,7 @@ const M = {
     if (B && !S.atk && B.st === "tied" && !B.flung && dist(wx, wy, B.x, B.y - B.ht / 2) < Math.max(26, B.hw + 14)) { if (!takeUp()) Sound.fx.tick(420, 0.3); return; }
     // On a demon or a boulder: wait to see if it is a tap or a swipe.
     // A boulder tapped right on wins over the demon behind it.
+    { const cr = critterAt(wx, wy); if (cr && strikeCritter(cr)) return; }
     let f = demonAt(wx, wy), o = thingAt(wx, wy);
     if (f && o) { if (dist(wx, wy, o.x, o.y) < 22) f = null; else o = null; }
     if (f || o) { t.g = { f, o, path: [[p.x, p.y]], t0: S.rt }; return; }

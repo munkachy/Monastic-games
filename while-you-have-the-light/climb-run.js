@@ -430,7 +430,7 @@ function nearLine(gx, gy, a0, lim, spread) {
 function chainsNear() {
   const out = [];
   for (const sec of sectionsIn(-S.y / CELL - 40, -S.y / CELL + 40)) if (sec.type === "trav" && MINE[sec.dom]) for (const c of trav(sec).chains || []) out.push(c);
-  return out;
+  return out.concat(birdsNear());          // (and the birds: the hook takes one as it takes a chain)
 }
 const chainTip = (c) => [c.x + Math.sin(c.ang || 0) * c.len, c.y + Math.cos(c.ang || 0) * c.len];
 function onSeg(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, u = clamp(((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1), 0, 1); return [ax + dx * u, ay + dy * u, u]; }
@@ -451,6 +451,7 @@ function chainHit(gx, gy, a, rockD, tx, ty) {
 function swingChains(dt) {
   const [gx, gy] = grip();
   for (const c of chainsNear()) {
+    if (c.kind) continue;                   // (a bird flies by itself)
     if (S.rope && S.rope.chain === c) { const a = Math.atan2(gx - c.x, gy - c.y); c.av = (a - (c.ang || 0)) / Math.max(dt, 1e-3); c.ang = a; continue; }
     c.av = ((c.av || 0) - GRAV / c.len * Math.sin(c.ang || 0) * dt) * (1 - 0.7 * dt); c.ang = (c.ang || 0) + c.av * dt;
   }
