@@ -1466,7 +1466,7 @@ const GATE_K = 0.62;                                   // the gate's scale
 function atGateDoor() { const Gt = gateOf(); return !!Gt && S.ground && Math.abs(S.x - Gt.door) < 120 * GATE_K && Math.abs(S.y - Gt.ground) < 12; }
 function drawGateHint(cam) {
   const Gt = gateOf(); if (!Gt || !atGateDoor()) return;
-  text(usingKeys() ? "↑  GO IN" : "TAP THE MOUTH TO GO IN", Gt.door - cam.x, Gt.ground - cam.y - 190 * GATE_K - 16, { align: "center", size: 9, weight: 800, spacing: 3, color: "rgba(255,200,150,0.85)" });
+  text(usingKeys() ? "↑  GO IN" : "TAP THE MOUTH TO GO IN", Gt.door - cam.x, Gt.ground - cam.y + 24, { align: "center", size: 9, weight: 800, spacing: 3, color: "rgba(255,200,150,0.85)" });
 }
 // In by the mouth: he comes out inside, in the first room.
 function enterGate() {
