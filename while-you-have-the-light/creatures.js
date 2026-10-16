@@ -24,8 +24,8 @@ const CRITTERS = {
   // beat (across a pit, or up a shaft). He can stand on its back and be carried; it sags under him.
   vulture: { role: "platform", hw: 30, ht: 30, w: 1, air: true },
 };
-const PB_K = 1.4, PB_TOP = 24.5, PB_U0 = -27, PB_U1 = 16;    // its size; its back's height, and from where to where along it (facing +u)
-const PB_SH = [-2, 20];                                      // its shoulder (u, v), where the wings are jointed
+const PB_K = 1.4, PB_TOP = 24.3, PB_U0 = -23, PB_U1 = 9;    // its size; its back's height, and from where to where along it (facing +u)
+const PB_SH = [3, 19];                                      // its shoulder (u, v), where the wings are jointed
 // A wing, jointed at the shoulder, wrist and the spread of its long feathers, at angle a (0 level,
 // back along the body; up positive): its outline in the bird's own (u, v).
 function pbWing(a, far) {
@@ -238,18 +238,15 @@ function drawCritters(cam) {
       // (Its body traced; its wings jointed, beating smoothly: slow and deep, faster and harder carrying him.)
       const T = put(c.x, c.y, c.dir, cam), TK = (u, v) => T(u * PB_K, v * PB_K), beat = Math.sin(c.ph), a = 0.15 + 0.62 * beat - (S.rideOn === c ? 0.12 : 0);
       const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK);
-      const P = new Path2D(); addShape(P, TRACED.pbB, TK);
-      // (Its rear tapering away like the end of a long loaf, its top still flat: not the square cut the wing left.)
-      const Rr = new Path2D(), rear = [[-18, 24.6]];
-      for (let i = 0; i <= 12; i++) { const t = PI / 2 + (i / 12) * PI; rear.push([-36 + Math.cos(t) * 13, 15 + Math.sin(t) * (Math.sin(t) > 0 ? 9.6 : 8.5)]); }
-      rear.push([-18, 6.5]); addPoly(Rr, rear, TK);
+      const P = new Path2D(), rid = S.rideOn === c; addShape(P, rid ? TRACED.pbR : TRACED.pbB, rid ? (u, v) => TK(u - 4.3, v - 2.6) : TK);
+
       const near = new Path2D(); addPoly(near, pbWing(a, false), TK);
       // (Lit by his torch as he is: the shape laid a pixel toward the flame in its warm light, and
       // the black laid over it, so only the edges that face the flame stay lit.)
       let dx = S.torch[0] - c.x, dy = S.torch[1] - (c.y - 18); const dl = Math.hypot(dx, dy) || 1, lit = clamp(1 - dl / (lightR() * 1.1), 0, 1); dx /= dl; dy /= dl;
       const lay = (path, col, k, al, rule) => { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = c.a * al; ctx.fillStyle = col; ctx.fill(path, rule); ctx.restore(); };
-      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(Rr, MONK_RIM2, 1.3, 0.3 * lit); lay(Rr, MONK_RIM, 0.65, lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
-      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(Rr); ctx.fill(near);
+      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
+      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(near);
     } else if (c.kind === "bird") {
       // (Traced: its wings beating through glide, up, glide, down; faster fleeing; on the hook,
       // panicking and startled by turns; dead, tumbling. Drawn about its middle.)
