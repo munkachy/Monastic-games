@@ -65,10 +65,26 @@ function critterAt(wx, wy) {
   for (const c of S.critters || []) { if (c.st === "dead" || CRITTERS[c.kind].role !== "harmful") continue; const [cx, cy] = critterMid(c); if (dist(wx, wy, cx, cy) < 22) return c; }
   return null;
 }
+// A tap on one: he goes to it (a dash, as to a demon) and strikes it; it is struck when the blow lands.
 function strikeCritter(c) {
-  if (dist(c.x, c.y, S.x, S.y) > 72) return false;
-  killCritter(c, sign(c.x - S.x) || S.dir); S.dir = sign(c.x - S.x) || S.dir; Sound.fx.kick(1, panX(c.x)); S.shake = 0.08;
+  if (S.act || (S.atk && !S.atk.hit) || !upFromCrawl()) return true;
+  const K = CRITTERS[c.kind], [cx, cy] = critterMid(c);
+  if (!reachable(cx, cy, true)) { Sound.fx.tick(420, 0.3); return true; }
+  if (S.atk) S.atk = null;
+  const sp = strikeSpot({ x: c.x, y: c.y, hw: K.hw, ground: c.kind === "frog" });
+  startMove("punch", sp, { f: null, crit: c, dur: 0.34 }); S.dir = c.x < sp[0] ? -1 : 1;
   return true;
+}
+// Its blow on him: unless he is warded (signed with the cross), when it is turned back, and the ward spent.
+function critterHits(c, kx, cost) {
+  if (S.ward) {
+    spendWard(); ev("ward turned a " + c.kind);
+    const [mx, my] = middle(); S.crosses.push({ kind: "turn", x: mx, y: my - 4, t: 0, size: 22 }); S.whiteT = 0.12; Sound.fx.parry(); S.shake = 0.12;
+    if (c.kind === "frog") { c.vx = sign(c.x - S.x) * 200; c.vy = -200; c.st = "idle"; c.t = 0; }
+    else if (c.kind === "spider") { c.st = "climb"; c.t = 0; }
+    return;
+  }
+  hitMonk(kx, cost);
 }
 function killCritter(c, kx) {
   c.st = "dead"; c.t = 0; c.vx = kx * 90; c.vy = -170; ev("a creature struck", { kind: c.kind });
@@ -108,14 +124,14 @@ function stepCritters(dt) {
       else if (c.st === "crouch" && c.t > 0.45) { c.st = "leap"; c.t = 0; c.dir = sign(S.x - c.x) || c.dir; c.vx = c.dir * clamp(Math.abs(S.x - c.x) * 1.6, 90, 210); c.vy = -250 - Math.random() * 60; Sound.fx.tick(300, 0.25); }
       // (Landed on from above: it is crushed, and he springs up off it.)
       if (S.vy > 120 && !S.ground && Math.abs(S.x - c.x) < HW + K.hw && S.y > c.y - K.ht - 4 && S.y < c.y + 2) { killCritter(c, S.dir); S.vy = -280; continue; }
-      if (c.st === "leap" && touches(c)) { hitMonk(c.dir * 120, 0.05); c.vx = -c.vx * 0.4; c.st = "idle"; c.t = 0; }
+      if (c.st === "leap" && touches(c)) { const w = !!S.ward; critterHits(c, c.dir * 120, 0.05); if (!w) { c.vx = -c.vx * 0.4; c.st = "idle"; c.t = 0; } }
     } else if (c.kind === "spider") {
       // (Its thread from the roof: down to his height, a while there, and up again.)
       if (c.st === "wait") { c.y = c.ay; if (Math.abs(S.x - c.x) < 50 && S.y > c.ay && S.y - c.ay < 340 && los(c.x, c.ay + 4, mx, my)) { c.st = "drop"; c.t = 0; Sound.fx.tick(1800, 0.15); } }
       else if (c.st === "drop") { const to = Math.min(S.y - 10, floorBelow(c.x, c.ay) - 2); c.y = Math.min(to, c.y + 420 * dt); if (c.y >= to - 1) { c.st = "hang"; c.t = 0; } }
       else if (c.st === "hang") { c.y += Math.sin(c.t * 3) * 6 * dt; if (c.t > 3) { c.st = "climb"; c.t = 0; } }
       else if (c.st === "climb") { c.y = Math.max(c.ay, c.y - 70 * dt); if (c.y <= c.ay + 0.5) { c.st = "wait"; c.t = 0; } }
-      if (c.st !== "wait" && touches(c, -2) && !(S.invT > 0)) hitMonk(sign(S.x - c.x) * 100, 0.05);
+      if (c.st !== "wait" && c.st !== "climb" && touches(c, -2) && !(S.invT > 0)) critterHits(c, sign(S.x - c.x) * 100, 0.05);
     } else if (c.kind === "mouse") {
       c.vy = Math.min(VMAX, c.vy + GRAV * dt);
       if (seen && d < 120) { c.st = "flee"; c.dir = sign(c.x - S.x) || c.dir; c.t = 0; }
@@ -192,9 +208,15 @@ function drawCritters(cam) {
     } else if (c.kind === "vulture") {
       // (Its body traced; its wings jointed, beating smoothly: slow and deep, faster and harder carrying him.)
       const T = put(c.x, c.y, c.dir, cam), TK = (u, v) => T(u * PB_K, v * PB_K), beat = Math.sin(c.ph), a = 0.15 + 0.62 * beat - (S.rideOn === c ? 0.12 : 0);
-      const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK); ctx.fillStyle = "#151318"; ctx.fill(far);
-      const P = new Path2D(); addShape(P, TRACED.pbB, TK); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
-      const near = new Path2D(); addPoly(near, pbWing(a, false), TK); ctx.fillStyle = ink; ctx.fill(near);
+      const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK);
+      const P = new Path2D(); addShape(P, TRACED.pbB, TK);
+      const near = new Path2D(); addPoly(near, pbWing(a, false), TK);
+      // (Lit by his torch as he is: the shape laid a pixel toward the flame in its warm light, and
+      // the black laid over it, so only the edges that face the flame stay lit.)
+      let dx = S.torch[0] - c.x, dy = S.torch[1] - (c.y - 18); const dl = Math.hypot(dx, dy) || 1, lit = clamp(1 - dl / (lightR() * 1.1), 0, 1); dx /= dl; dy /= dl;
+      const lay = (path, col, k, al, rule) => { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = c.a * al; ctx.fillStyle = col; ctx.fill(path, rule); ctx.restore(); };
+      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
+      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(near);
     } else if (c.kind === "bird") {
       // (Traced: its wings beating through glide, up, glide, down; faster fleeing; on the hook,
       // panicking and startled by turns; dead, tumbling. Drawn about its middle.)

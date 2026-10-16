@@ -904,7 +904,9 @@ function stepAtk(dt) {
   if (f && alive(f) && a.kind !== "toss" && a.kind !== "fling") S.dir = f.x < S.x ? -1 : 1;
   if (!a.hit && u >= ATK_ANIM[a.kind][1]) {
     a.hit = true;
-    if (a.kind === "toss" || a.kind === "fling") release(a.tx, a.ty, f);
+    // (A creature struck: frog or spider.)
+    if (a.crit) { if (a.crit.st !== "dead" && dist(S.x, S.y, a.crit.x, a.crit.y) < 60) { killCritter(a.crit, S.dir); Sound.fx.kick(1, panX(a.crit.x)); S.shake = 0.1; gain(0.06); } }
+    else if (a.kind === "toss" || a.kind === "fling") release(a.tx, a.ty, f);
     else if (a.kind === "brick") {
       const b = a.o, g = a.g;
       if (S.tied === b && b.st === "hand") {
