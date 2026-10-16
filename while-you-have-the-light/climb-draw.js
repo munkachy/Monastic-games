@@ -1012,7 +1012,8 @@ function drawWorld() {
   const vp = visPoly(lx, ly, R);
   S.light.moveTo(vp[0] - cam.x, vp[1] - cam.y); for (let k = 2; k < vp.length; k += 2) S.light.lineTo(vp[k] - cam.x, vp[k + 1] - cam.y); S.light.closePath();
   const tx = S.torch[0] - cam.x, ty = S.torch[1] - cam.y;
-  darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 1 - 0.27 * sky));      // (black where no light reaches; under the open sky, the moon's light)
+  darkness(cam, lx - cam.x, ly - cam.y, R, lights, rgbs(S.tint.d, 1 - 0.27 * sky));
+  drawFace(cam);      // (black where no light reaches; under the open sky, the moon's light)
   // (The sky's own lights are not darkened: over the dark, where no rock stands in front of them.)
   if (skyB > -40) {
     const yr = Math.min(H, skyB - SUM_G * CELL + 4), Q = new Path2D(); Q.rect(-10, -10, W + 20, H + 20); Q.addPath(P);
@@ -1389,4 +1390,20 @@ function drawNearWall(cam, t, dom) {
       poly([L[2][0] + 6, L[2][1], L[6][0] + 10, L[6][1], L[7][0] + 4, L[7][1]], shade);
     }
   }
+}
+
+// Gluttony's face at the foot of a whole mountain: of the mountain's own rock (it is rock to walk
+// on and into), but unlike the rest of the rock its features show, even in the dark: drawn over
+// the dark in the stone of its band, its cracks and its eye pale, so that he sees the whole of it,
+// a screen high, as he comes to it.
+function drawFace(cam) {
+  const sec = secs[0], F = sec && sec.type === "room" && sec.R.face; if (!F) return;
+  const T = (u, v) => [(sec.x0 + F.FX + (u + 47.7) * F.FK) * CELL - cam.x, -(sec.h1 - (F.GR - v * F.FK)) * CELL - cam.y];
+  const [ax, ay] = T(-48, 100), [bx, by] = T(48, 0); if (bx < -20 || ax > W + 20 || by < -20 || ay > H + 20) return;
+  const P = new Path2D(); addShape(P, TRACED.wf0, T);
+  const band = strataAt(F.GR > 0 ? sec.R.h - F.GR : 0, (NOV && NOV.domain) || "gluttony");
+  ctx.save(); ctx.globalAlpha = 0.92;
+  ctx.fillStyle = mix("#2a221c", band, 0.35); ctx.fill(P, "nonzero");          // (its cracks and eye: the pale of old stone)
+  ctx.fillStyle = mix("#0b090a", band, 0.22); ctx.fill(P, "evenodd");         // (the face itself: dark stone)
+  ctx.restore();
 }
