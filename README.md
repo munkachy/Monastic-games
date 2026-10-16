@@ -19,7 +19,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [SELAH](https://munkachy.github.io/Monastic-games/selah/) | A rhythm game where you play the drums and every word of the Psalms rides the strokes, to techno-funk, drum and bass, dubstep, Afro house and odd meters. Eight psalms so far, Compline among them ([the plan](selah/PLAN.md)) |
 | [While You Have the Light](https://munkachy.github.io/Monastic-games/while-you-have-the-light/) | A hooded monk with a torch fights the seven deadly sins in a black, angular world of crags and floating rock. In the torchlight the demons show their true colours and he fights hand to hand in flowing combos; in the dark he has only holy water. A first build: the arena ([design notes](https://munkachy.github.io/Monastic-games/while-you-have-the-light/design.html)) |
 | [The Seven Lampstands](https://munkachy.github.io/Monastic-games/seven-lampstands/design.html) | Not built yet: the [design notes](https://munkachy.github.io/Monastic-games/seven-lampstands/design.html). You are the unseen angel of a church, building it from a cross in the wilderness to a consecrated church, in the manner of Kingdom Two Crowns, one island for each of the seven churches of the Apocalypse, while the seven capital sins come by night to lead its people away. |
-
+| [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/) | A tool: type a verse, hear it in a robotic eSpeak NG voice with effects, and download 44.1 kHz WAV samples (batch ZIP too) |
 
 ## Benedictine Bricks
 
