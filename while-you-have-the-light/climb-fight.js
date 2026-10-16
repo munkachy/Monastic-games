@@ -906,6 +906,7 @@ function stepAtk(dt) {
     a.hit = true;
     // (A creature struck: frog or spider.)
     if (a.crit) { if (a.crit.st !== "dead" && dist(S.x, S.y, a.crit.x, a.crit.y) < 60) { killCritter(a.crit, S.dir); Sound.fx.kick(1, panX(a.crit.x)); S.shake = 0.1; gain(0.06); } }
+    else if (a.crack) hitCrack(a.crack);
     else if (a.kind === "toss" || a.kind === "fling") release(a.tx, a.ty, f);
     else if (a.kind === "brick") {
       const b = a.o, g = a.g;

@@ -8,7 +8,8 @@ const { chromium } = require('playwright');
   await pg.mouse.click(370, 200); await pg.waitForTimeout(300);
   const r = await pg.evaluate(async () => {
     const srcs = [...document.scripts].map(s => s.src.split('/').pop());
-    Game.novitiate(); await new Promise(r => setTimeout(r, 1500));
+    Game.novitiate(); if (mode === Gate) { while (!prepMountain(Gate.sc.seed, 5)) await new Promise(r => setTimeout(r, 0)); Gate.go(); }
+    await new Promise(r => setTimeout(r, 1500));
     const s = Climb.S; return { srcs, mode: mode === Climb, t: +s.rt.toFixed(1), verses: typeof Verses, notes: typeof Notes, bigs: s.bigs.length };
   });
   console.log(JSON.stringify(r), errs);

@@ -286,6 +286,38 @@ function peopleMountain(sec, dom) {
     }
     return null;
   }
+  // (Room for a platform bird with its rider, its base in cell (i, r): three cells either side of it,
+  // six above it, for him on its back, and one below.)
+  const roomy = (i, r) => { for (let a = -3; a <= 3; a++) for (let b = -6; b <= 1; b++) if (!air(i + a, r + b)) return false; return true; };
+  function birdPath(S0) {
+    const x0 = S0.ox + 4, x1 = S0.ox + RW - 5, y0 = S0.oy + 7, y1 = S0.oy + RH - 3;
+    if (S0.kind === "shaft") {
+      const i = S0.ox + RW / 2; let best = null;
+      for (const di of [0, -4, 4, -8, 8]) { let a = Math.round(S0.oy + RH * 0.45); if (!roomy(i + di, a)) continue; let b = a; while (a > y0 && roomy(i + di, a - 1)) a--; while (b < y1 && roomy(i + di, b + 1)) b++; if (b - a >= 10 && (!best || b - a > best[3] - best[1])) best = [i + di, b, i + di, a]; }
+      return best;
+    }
+    if (S0.kind === "platforms") {
+      // Two stones near level, a gap between them: from beside the one to beside the other, its back
+      // level with their tops.
+      const tops = [];
+      for (let r = y0; r <= y1; r++) for (let i = x0; i <= x1; i++) { if (!(air(i, r) && !air(i, r + 1))) continue; let j = i; while (j + 1 <= x1 && air(j + 1, r) && !air(j + 1, r + 1)) j++; if (j - i >= 2 && j - i <= 16) tops.push([i, j, r]); i = j; }
+      const pairs = [];
+      for (const A of tops) for (const B of tops) {
+        const gap = B[0] - A[1]; if (gap < 9 || gap > 34 || Math.abs(A[2] - B[2]) > 2) continue;
+        const r = Math.max(A[2], B[2]) + 2, ia = A[1] + 4, ib = B[0] - 4; let ok = ib - ia >= 1;
+        for (let i = ia; i <= ib && ok; i++) ok = roomy(i, r);
+        if (ok) pairs.push([ia, r, ib, r]);
+      }
+      return pairs.length ? pairs[Math.floor(rnd() * pairs.length)] : null;
+    }
+    // Over a pit: the row with the longest run of room, near the middle of the room's height.
+    let best = null;
+    for (let r = Math.round(S0.oy + RH * 0.3); r <= Math.round(S0.oy + RH * 0.6); r++) {
+      const mid = S0.ox + RW / 2; if (!roomy(mid, r)) continue; let a = mid, b = mid; while (a > x0 && roomy(a - 1, r)) a--; while (b < x1 && roomy(b + 1, r)) b++;
+      if (b - a >= 16 && (!best || b - a > best[2] - best[0])) best = [a, r, b, r];
+    }
+    return best;
+  }
   // The gates: in each gallery at a stretch's head, the lay brother, his cart and donkey on its
   // longest floor (he takes the blocks brought from the idols, and his blessing fills the torch).
   S.gates = [];
@@ -316,12 +348,11 @@ function peopleMountain(sec, dom) {
       const kind = pickKind("harmful", rnd), p = kind && spot(S0, CRITTERS[kind].roof ? "roof" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
-    if (S0.onWay && (S0.kind === "gap" || (S0.kind === "shaft" && rnd() < 0.4))) {
-      const kind = pickKind("platform", rnd);
-      if (kind) { const cx = cellX(S0.ox + RW / 2), cy = cellY(S0.oy + RH * 0.45), c = spawnCritter(kind, cx, cy);
-        if (c && S0.kind === "shaft") c.beat = { ax: cx, ay: cellY(S0.oy + RH - 8), bx: cx, by: cellY(S0.oy + 6) };
-        else if (c) c.beat = { ax: cellX(S0.ox + 14), ay: cy, bx: cellX(S0.ox + RW - 14), by: cy }; }
-    }
+    // The platform birds: to and fro over a pit, up and down a shaft, or across from one hanging
+    // stone to the next; always with room over its back for him to stand, under any roof.
+    const pb = S0.onWay && (S0.kind === "gap" || (S0.kind === "shaft" && rnd() < 0.4) || (S0.kind === "platforms" && rnd() < 0.6)) && pickKind("platform", rnd);
+    const P = pb && birdPath(S0);
+    if (P) { const c = spawnCritter(pb, cellX(P[0]), cellY(P[1])); if (c) { c.beat = { ax: cellX(P[0]), ay: cellY(P[1]), bx: cellX(P[2]), by: cellY(P[3]) }; c.x = c.beat.ax; c.y = c.beat.ay; } }
     for (let q = 0; q < n(0.6); q++) {
       const kind = pickKind("neutral", rnd), p = kind && spot(S0, CRITTERS[kind].air ? "open" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
@@ -357,4 +388,56 @@ function litDraw(list, wx, wy, alpha) {
 function birdAt(wx, wy) {
   for (const c of S.critters || []) { if ((c.kind !== "bird" && c.kind !== "vulture") || c.st === "dead" || !c.grab) continue; const g = c.grab; if (wx > g.x - 10 && wx < g.x + g.len + 10 && Math.abs(wy - g.y) < 22) return c; }
   return null;
+}
+
+// ---- Cracked walls ------------------------------------------------------------------------------
+// The way to a hidden room, walled up again: the rock there cracked, seen only in his light. Struck
+// three times (a tap on it, near it), it breaks, and the way is open.
+const crackBox = (sec, c) => [(sec.x0 + c.x0) * CELL, (c.y0 - sec.h1) * CELL, (sec.x0 + c.x1 + 1) * CELL, (c.y1 + 1 - sec.h1) * CELL];
+function cracksIn(view) { const out = []; for (const sec of view || secs) if (sec.type === "room" && sec.R.cracks) for (const c of sec.R.cracks) if (c.hp > 0) out.push([sec, c]); return out; }
+function crackAt(wx, wy) {
+  for (const k of cracksIn()) { const [x0, y0, x1, y1] = crackBox(k[0], k[1]); if (wx > x0 - 14 && wx < x1 + 14 && wy > y0 - 14 && wy < y1 + 14) return k; }
+  return null;
+}
+function strikeCrack(k) {
+  if (S.act || (S.atk && !S.atk.hit) || !upFromCrawl()) return true;
+  const [x0, y0, x1, y1] = crackBox(k[0], k[1]), side = S.x < (x0 + x1) / 2 ? -1 : 1, fx = side < 0 ? x0 : x1;
+  if (Math.abs(S.x - fx) > 170 || S.y < y0 - 30 || S.y > y1 + 80) { Sound.fx.tick(420, 0.3); return true; }
+  if (S.atk) S.atk = null;
+  const sp = freeSpot(fx + side * (HW + 3), y1 - 0.01) || [S.x, S.y];
+  startMove("punch", sp, { f: null, crack: k, dur: 0.34 }); S.dir = -side;
+  return true;
+}
+function hitCrack(k) {
+  const [sec, c] = k, [x0, y0, x1, y1] = crackBox(sec, c), fx = S.x < x0 ? x0 : x1;
+  c.hp--; c.hitT = S.rt; S.shake = Math.max(S.shake, c.hp > 0 ? 0.12 : 0.3);
+  Sound.fx.punch(1, panX(fx)); Sound.fx.crack(panX(fx));
+  for (let q = 0; q < (c.hp > 0 ? 6 : 26); q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: c.hp > 0 ? fx : lerp(x0, x1, Math.random()), y: lerp(y0, y1, Math.random()), vx: (Math.random() - 0.5) * 220, vy: -40 - Math.random() * 160, life: 0.7, age: 0 });
+  if (c.hp > 0) { ev("struck a cracked wall", { left: c.hp }); return; }
+  for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) sec.R.g[y][x] = false;
+  MAP = null; ev("broke through a cracked wall");
+  S.say = { text: "A HIDDEN WAY", sub: "The cracked rock gives way.", t: 0 };
+}
+// The cracks: down the face of it toward the way, more of them, and wider, the more it has been struck.
+function drawCracks(cam, view, lr) {
+  for (const [sec, c] of cracksIn(view)) {
+    const [x0, y0, x1, y1] = crackBox(sec, c); if (y1 - cam.y < -20 || y0 - cam.y > H + 20) continue;
+    const [tx, ty] = S.torch, near = clamp(1.3 - dist(tx, ty, clamp(tx, x0, x1), clamp(ty, y0, y1)) / Math.max(60, lr || 160), 0, 1); if (!near) continue;
+    const dmg = 3 - c.hp, shake = c.hitT && S.rt - c.hitT < 0.15 ? (Math.random() - 0.5) * 2 : 0;
+    ctx.save(); ctx.strokeStyle = "rgba(214,190,150," + near * (0.3 + 0.15 * dmg) + ")"; ctx.lineWidth = 0.7 + 0.3 * dmg; ctx.beginPath();
+    // (Down the face toward the way, one crack the height of it, close in to the face; off it, branches into the
+    // rock, more of them the more it has been struck.)
+    for (const [fx, s] of c.from > 0 ? [[x1, -1]] : [[x0, 1]]) {
+      const n = Math.max(4, Math.round((y1 - y0) / 14)), pts = [];
+      for (let m = 0; m <= n; m++) pts.push([fx + s * (3 + hash2(c.x0 + s, m, 3) * 6) - cam.x + shake, lerp(y0 + 4, y1 - 2, m / n) - cam.y]);
+      pts.forEach(([x, y], m) => (m ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      for (let m = 1; m < n; m++) {
+        if (hash2(c.y0 + s, m, 11) > 0.15 + 0.12 * dmg) continue;
+        let [x, y] = pts[m]; ctx.moveTo(x, y);
+        const dn = hash2(m, c.x0, 13) < 0.3 ? -1 : 1, L = 1 + dmg;
+        for (let q = 0; q < L; q++) { x += s * (2 + hash2(m, q, 15) * 3); y += dn * (3 + hash2(q, m, 17) * 5); ctx.lineTo(x, y); }
+      }
+    }
+    ctx.stroke(); ctx.restore();
+  }
 }

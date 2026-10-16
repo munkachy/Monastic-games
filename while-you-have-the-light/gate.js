@@ -6,16 +6,20 @@
 
 const GATE_K = 0.62;                                   // the face's scale on the screen
 const Gate = {
-  t: 0, x: 0, dir: 1, ph: 0, to: null, keys: {}, sc: null,
-  open(sc) {
-    Object.assign(Gate, { t: 0, x: W * 0.1, dir: 1, ph: 0, to: null, keys: {}, sc });
+  t: 0, x: 0, dir: 1, ph: 0, to: null, keys: {}, sc: null, onGo: null, back: null,
+  // sc.seed: the mountain behind it (made now, a little each frame, while he stands here). onGo: in
+  // at the mouth (else the scene sc, from the white room); back: the way back out (else the white room).
+  open(sc, onGo, back) {
+    sc = Object.assign({}, sc); if (!sc.seed) sc.seed = (Math.random() * 1e9) | 0;
+    Object.assign(Gate, { t: 0, x: W * 0.1, dir: 1, ph: 0, to: null, keys: {}, sc, onGo: onGo || null, back: back || null });
     mode = Gate; Sound.flare(false); Sound.muffle(false); Sound.ambience({ wind: 0.6 });
   },
   door: () => W * 0.66, ground: () => H * 0.84,
   at: () => Math.abs(Gate.x - Gate.door()) < 120 * GATE_K,
-  go() { ev("in at the mouth"); Sound.fx.whoosh(0.6); Game.scene(Gate.sc); Climb.S.say = { text: "INTO THE MOUTH", sub: "The mountain of Gluttony.", t: 0 }; },
+  out() { if (Gate.back) Gate.back(); else Room.open(); },
+  go() { ev("in at the mouth"); prepMountain(Gate.sc.seed); Sound.fx.whoosh(0.6); if (Gate.onGo) Gate.onGo(Gate.sc.seed); else Game.scene(Gate.sc); Climb.S.say = { text: "INTO THE MOUTH", sub: "The mountain of Gluttony.", t: 0 }; },
   step(dt) {
-    Gate.t += dt;
+    Gate.t += dt; prepMountain(Gate.sc.seed, 1);
     const K = Gate.keys, l = K.ArrowLeft || K.KeyA, r = K.ArrowRight || K.KeyD;
     let d = l === r ? 0 : r ? 1 : -1;
     if (!d && Gate.to !== null) { if (Math.abs(Gate.to - Gate.x) < 4) Gate.to = null; else d = Math.sign(Gate.to - Gate.x); }
@@ -32,13 +36,13 @@ const Gate = {
     const o = drawMonk(Gate.x, G, Gate.dir, p, { t }); glow(o.torch[0], o.torch[1], 60, C.flame, 0.35); drawFlame(o.torch[0], o.torch[1], 1, t * 1.4, { vx: 0 });
     if (Gate.at()) text(usingKeys() ? "↑  GO IN" : "TAP THE MOUTH TO GO IN", D, G + 24, { align: "center", size: 9, weight: 800, spacing: 3, color: "rgba(255,200,150,0.85)" });
     if (t < 4) { const a = clamp(Math.min(t / 0.8, (4 - t) / 0.8), 0, 1); text("THE MOUNTAIN OF GLUTTONY", W / 2, 34, { align: "center", font: FONT.title, size: 16, weight: 700, spacing: 5, color: "#fff", alpha: a }); }
-    button("‹", 10, 10, 30, 26, () => Room.open(), { size: 12 });
+    button("‹", 10, 10, 30, 26, () => Gate.out(), { size: 12 });
   },
   key(code, down) {
     Gate.keys[code] = down;
     if (!down) return;
     if ((code === "ArrowUp" || code === "KeyW" || code === "Space" || code === "Enter") && Gate.at()) Gate.go();
-    if (code === "Escape") Room.open();
+    if (code === "Escape") Gate.out();
   },
   down(p) {
     const D = Gate.door(), G = Gate.ground();

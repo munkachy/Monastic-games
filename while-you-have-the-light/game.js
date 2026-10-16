@@ -12,15 +12,20 @@ const Game = {
   },
   climb() { goSideways(); Game.music = true; Game.last = { climb: true }; Climb.start(); },
   // (On a mountain with a place kept, he goes on from it; unless asked to begin again from its foot.)
-  novitiate(fresh) {
-    goSideways(); Game.music = true; Game.last = { climb: true, nov: true };
-    const N = novSettings(), K = fresh ? null : Climb.keptPlace(N.domain), climbs = (save.climbs && save.climbs[N.domain]) || 0;
-    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare, climbs }, seed: K ? K.seed : undefined, resume: K || undefined });
+  // (Gluttony's mountain is made of rooms: a new one is come to by its gate, and made while he stands
+  // there; begun again, he is in its first room, on the same mountain.)
+  novitiate(fresh, sd) {
+    goSideways(); Game.music = true;
+    const N = novSettings(), rooms = N.domain === "gluttony", K0 = fresh ? null : Climb.keptPlace(N.domain), K = K0 && !!rooms === (K0.v === 3) ? K0 : null, climbs = (save.climbs && save.climbs[N.domain]) || 0;
+    if (rooms && !K && !sd) { Gate.open({}, (s) => Game.novitiate(true, s), () => Game.toNovitiate()); return; }
+    const seed = K ? K.seed : sd || undefined;
+    Game.last = { climb: true, nov: true, seed };
+    Climb.start({ nov: { domain: N.domain, demons: N.demons, torch: N.torch, flare: N.flare, climbs, piece: rooms ? ["mountain"] : undefined }, seed, resume: K || undefined });
   },
   // A scene from the white room (it is kept, so BEGIN AGAIN makes the same one).
   scene(sc) { goSideways(); Game.music = true; Game.last = { climb: true, nov: true, room: sc }; Climb.scene(sc); },
   toNovitiate() { Title.updated = false; Novitiate.t = 0; mode = Novitiate; Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 }); },
-  again(fresh) { if (Game.last && Game.last.room) Game.scene(Object.assign({}, Game.last.room, Game.last.room.piece ? { seed: (Math.random() * 1e9) | 0 } : {})); else if (Game.last && Game.last.nov) Game.novitiate(fresh); else Game.climb(); },
+  again(fresh) { if (Game.last && Game.last.room) Game.scene(Object.assign({}, Game.last.room, Game.last.room.piece && Game.last.room.piece[0] !== "mountain" ? { seed: (Math.random() * 1e9) | 0 } : {})); else if (Game.last && Game.last.nov) Game.novitiate(fresh, Game.last.seed); else Game.climb(); },
   toTitle() {
     Title.t = 0; mode = Title;
     Sound.flare(false); Sound.muffle(false); Sound.play(SONGS.title); Sound.setLevel(0); Sound.ambience({ wind: 0.5 });

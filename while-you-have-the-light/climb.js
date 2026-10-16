@@ -116,6 +116,7 @@ const M = {
     // On a demon or a boulder: wait to see if it is a tap or a swipe.
     // A boulder tapped right on wins over the demon behind it.
     { const cr = critterAt(wx, wy); if (cr && strikeCritter(cr)) return; }
+    { const ck = crackAt(wx, wy); if (ck && strikeCrack(ck)) return; }
     let f = demonAt(wx, wy), o = thingAt(wx, wy);
     if (f && o) { if (dist(wx, wy, o.x, o.y) < 22) f = null; else o = null; }
     if (f || o) { t.g = { f, o, path: [[p.x, p.y]], t0: S.rt }; return; }

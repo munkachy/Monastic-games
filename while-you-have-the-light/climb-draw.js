@@ -1050,6 +1050,8 @@ function drawWorld() {
   if (S.crownShow) drawCrown();
   // What has a light of its own, or shows in the dark: the lamps, the reliquaries, the glow-worms
   // on a cavern's roof, the fire in Moloch's belly and in the cracks of Wrath's gates and rock.
+  // (And the cracks in a walled-up way, where his torch is near enough to show them.)
+  drawCracks(cam, view, R);
   for (const sec of view) {
     for (const L of lampsOf(sec)) drawLamp(L, cam, lights, true);
     if (sec.type === "cave") {
