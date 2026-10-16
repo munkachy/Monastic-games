@@ -118,6 +118,7 @@ function backAhead(d) {
 }
 
 function stepCritters(dt) {
+  stepHermits(dt);
   if (!S.critters) return;
   const [mx, my] = middle();
   for (const c of S.critters) {
@@ -221,6 +222,7 @@ function stepCritters(dt) {
 function floorBelow(x, y) { for (let d = 0; d < 900; d += 4) if (solidAt(x, y + d)) return y + d; return y + 900; }
 
 function drawCritters(cam) {
+  for (const h of S.hermits || []) drawHermit(h, cam);
   for (const c of S.critters || []) {
     const x = c.x - cam.x, y = c.y - cam.y; if (x < -60 || x > W + 60 || y < -60 || y > H + 400) continue;
     ctx.globalAlpha = c.a; const ink = "#0a090b";
@@ -320,7 +322,12 @@ function peopleMountain(sec, dom) {
   }
   // The gates: in each gallery at a stretch's head, the lay brother, his cart and donkey on its
   // longest floor (he takes the blocks brought from the idols, and his blessing fills the torch).
-  S.gates = [];
+  S.gates = []; S.hermits = [];
+  for (const S0 of R.slots) if (S0.kind === "cell") {
+    const E = R.marks.E.find(([i, r]) => i >= S0.ox && i < S0.ox + RW && r >= S0.oy && r < S0.oy + RH); if (!E) continue;
+    let q = E[1]; while (air(E[0], q + 1)) q++; taken.push([E[0], q]);
+    S.hermits.push({ x: cellX(E[0]), y: cellY(q), dir: 1, ph: rnd() * TAU, st: "pray", t: 0, said: Math.floor(rnd() * SAYINGS.length), met: false, sold: false });
+  }
   for (const S0 of R.slots) if (S0.gate) {
     let best = null;
     for (let r = S0.oy + 2; r < S0.oy + RH - 1; r++) for (let i = S0.ox + 2; i < S0.ox + RW - 2; i++) {
@@ -415,6 +422,7 @@ function hitCrack(k) {
   c.hp0 = c.hp0 || c.hp; c.hp--; c.hitT = S.rt; S.shake = Math.max(S.shake, c.hp > 0 ? 0.12 : 0.3);
   Sound.fx.punch(1, panX(fx)); Sound.fx.crack(panX(fx));
   for (let q = 0; q < (c.hp > 0 ? 6 : 26); q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: c.hp > 0 ? fx : lerp(x0, x1, Math.random()), y: lerp(y0, y1, Math.random()), vx: (Math.random() - 0.5) * 220, vy: -40 - Math.random() * 160, life: 0.7, age: 0 });
+  if (S.pick) c.hp = 0;                     // (the hermit's pickaxe: one blow)
   if (c.hp > 0) { ev("struck a cracked wall", { left: c.hp }); return; }
   for (let y = c.y0; y <= c.y1; y++) for (let x = c.x0; x <= c.x1; x++) sec.R.g[y][x] = false;
   MAP = null; ev("broke through a cracked wall");
@@ -442,4 +450,68 @@ function drawCracks(cam, view, lr) {
     }
     ctx.stroke(); ctx.restore();
   }
+}
+
+// ---- The hermit ---------------------------------------------------------------------------------
+// In a cell behind a cracked wall, an old monk who left the world long ago: drawn as the monk is
+// (the same jointed body), but scrawnier and bent, his habit of undyed wool, ragged at the hem and
+// the sleeves. He kneels at prayer; as the monk comes near he gets up and turns to him, and speaks a
+// saying of the desert fathers. He has a pickaxe, and asks for it a bowl of soup, or two herbs: with
+// it, a cracked wall breaks at one blow. (Tap him to speak with him.)
+const SAYINGS = [
+  ["Go, sit in your cell, and your cell will teach you everything.", "ABBA MOSES"],
+  ["If you will, you can become all flame.", "ABBA JOSEPH OF PANEPHYSIS"],
+  ["I saw the snares of the enemy spread over all the world, and I said, What can get through them? And a voice said to me: Humility.", "ABBA ANTONY"],
+  ["Do not give your heart to that which does not satisfy your heart.", "ABBA POEMEN"],
+];
+const HERMIT_ROBE = "#1f1810", HERMIT_RIM = "rgba(255,206,150,0.6)", HERMIT_K = 0.8;     // undyed wool; his torchlit edge; how much narrower than the monk
+function stepHermits(dt) {
+  for (const h of S.hermits || []) {
+    h.t += dt; const d = Math.abs(S.x - h.x), dy = Math.abs(S.y - h.y);
+    if (h.st === "pray" && d < 120 && dy < 50) { h.st = "rise"; h.t = 0; }
+    else if (h.st !== "pray" && (d > 220 || dy > 120)) { h.st = "pray"; h.t = 0; }
+    if (h.st !== "pray") h.dir = S.x < h.x ? -1 : 1;
+    if (h.st === "rise" && h.t > 0.8) h.st = "stand";
+    if (h.st === "stand" && !h.met) { h.met = true; hermitSays(h); ev("met the hermit"); }
+  }
+}
+function hermitSays(h) { const [line, who] = SAYINGS[h.said % SAYINGS.length]; h.said++; S.say = { text: "THE HERMIT", sub: "“" + line + "”  " + who, t: 0 }; }
+function hermitAt(wx, wy) { for (const h of S.hermits || []) if (dist(wx, wy, h.x, h.y - 22) < 28) return h; return null; }
+function talkHermit(h) {
+  if (Math.abs(S.x - h.x) > 120 || Math.abs(S.y - h.y) > 60) { Sound.fx.tick(420, 0.3); return; }
+  if (h.sold || S.pick) { hermitSays(h); return; }
+  const herbs = HERB_KEYS.filter((k) => (S.pouch[k] || 0) > 0).sort((a, b) => S.pouch[b] - S.pouch[a]), nh = HERB_KEYS.reduce((a, k) => a + (S.pouch[k] || 0), 0);
+  let paid = null;
+  if (S.flasks.length) { paid = "your soup"; S.flasks.shift(); }
+  else if (nh >= 2) { paid = "two herbs"; for (let n = 0; n < 2; n++) { const k = HERB_KEYS.filter((q) => (S.pouch[q] || 0) > 0).sort((a, b) => S.pouch[b] - S.pouch[a])[0]; S.pouch[k]--; } }
+  if (!paid) { S.say = { text: "THE HERMIT", sub: herbs.length ? "“A pickaxe, for a bowl of soup, or two herbs.” (You have one herb.)" : "“A pickaxe, for a bowl of soup, or two herbs.”", t: 0 }; Sound.fx.tick(600, 0.3); return; }
+  S.pick = true; h.sold = true; Sound.fx.pickup(); ev("the hermit's pickaxe", { paid });
+  S.say = { text: "A PICKAXE", sub: "From the hermit, for " + paid + ". A cracked wall breaks at one blow.", t: 0 };
+}
+function hermitPose(h, t) {
+  const b = Math.sin(t * 1.3 + h.ph);
+  const kneel = pose(Object.assign({}, W_KNEEL, { lean: 0.3, head: 0.35, sF: 1.0 + 0.04 * b, eF: 1.9, sB: 0.9 + 0.04 * b, eB: 1.9 }));
+  const stand = pose({ lean: 0.32 + 0.02 * b, head: -0.05, sF: 0.35, eF: 0.9, sB: 0.15, eB: 0.7, hF: 0.12, kF: 0.25, hB: -0.08, kB: 0.3 });
+  if (h.st === "pray") return kneel;
+  if (h.st === "rise") { const k = ease(clamp(h.t / 0.8, 0, 1)), o = {}; for (const key in stand) o[key] = typeof stand[key] === "number" ? lerp(kneel[key] || 0, stand[key], k) : stand[key]; return o; }
+  return stand;
+}
+function drawHermit(h, cam) {
+  const x = h.x - cam.x, y = h.y - cam.y; if (x < -40 || x > W + 40 || y < -60 || y > H + 30) return;
+  const p = hermitPose(h, S.rt), o = { t: S.rt, vx: 0, vy: 0, noTorch: true, drape: 3.5 };
+  const [tx, ty] = S.torch, lit = clamp(1.25 - dist(tx, ty, h.x, h.y - 22) / Math.max(80, lightR()), 0, 1);
+  ctx.save(); ctx.translate(x, 0); ctx.scale(HERMIT_K, 1); ctx.translate(-x, 0);
+  const P = worshipPath(x, y, h.dir, p, o);
+  // His rags: tatters hanging from the hem, between his shins, and from the ends of his sleeves.
+  const J = (n) => monkJoint(x, y, h.dir, p, n), kF = J("kF"), kB = J("kB"), fF = J("fF"), fB = J("fB"), a = [lerp(kF[0], fF[0], 0.5), lerp(kF[1], fF[1], 0.5)], b2 = [lerp(kB[0], fB[0], 0.5), lerp(kB[1], fB[1], 0.5)];
+  for (let n = 0; n <= 6; n++) {
+    const u = n / 6, hx = lerp(a[0], b2[0], u) + (u - 0.5) * 6, hy = lerp(a[1], b2[1], u), L = 3 + hash2(n, 3, 7) * 5, sw = Math.sin(S.rt * 2 + n) * 0.8;
+    P.moveTo(hx - 1.8, hy - 2); P.lineTo(hx + 1.8, hy - 2); P.lineTo(hx + sw + 0.4, hy + L); P.closePath();
+  }
+  for (const n of ["hF", "hB"]) { const [hx, hy] = J(n); for (let q = 0; q < 3; q++) { const L = 3 + hash2(q, n.length, 9) * 4; P.moveTo(hx - 2.5 + q * 1.6, hy - 2); P.lineTo(hx - 1 + q * 1.6, hy - 2); P.lineTo(hx - 1.6 + q * 1.6, hy + L); P.closePath(); } }
+  if (lit > 0) { const dx = tx - h.x, dy = ty - (h.y - 22), l = Math.hypot(dx, dy) || 1; ctx.save(); ctx.translate(dx / l * 1.2 / HERMIT_K, dy / l * 1.2); ctx.globalAlpha = lit; ctx.fillStyle = HERMIT_RIM; ctx.fill(P); ctx.restore(); }
+  ctx.fillStyle = HERMIT_ROBE; ctx.fill(P);
+  ctx.restore();
+  // Near him, and before the trade: what he asks.
+  if (h.st === "stand" && !h.sold && !S.pick && lit > 0.2) text("TAP HIM: A PICKAXE, FOR SOUP OR TWO HERBS", x, y - 62, { align: "center", size: 7, weight: 800, spacing: 1.5, color: "rgba(255,220,180," + (0.5 + 0.4 * lit) + ")" });
 }

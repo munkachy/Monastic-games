@@ -7,7 +7,7 @@
 //   ?  rock, one time in two          1  rock, two times in three
 //   S  where he starts (on the floor under it)
 //   V  a carved verse (in the rock beside it)      D  a demon's place      H  an herb's place
-//   I  an idol's place
+//   I  an idol's place                              E  the hermit's place
 // Its openings are where its edges are open: the ways it would rather be come into by. (In a whole
 // mountain, passages are dug between rooms wherever the way runs; never through a side it is sealed on.)
 const ROOM_W = 46, ROOM_H = 22, ROOM_K = 2;     // characters across and down; cells to a character
@@ -181,10 +181,34 @@ const ROOMS = {
     "##############################################",
     "##############################################",
   ] },
+  cell: { name: "THE HERMIT'S CELL", ways: "right", seal: "up, down, left", rows: [
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "############??????????????####################",
+    "##########..................##################",
+    "#########.....................################",
+    "########........................##############",
+    "########.........................#############",
+    "########V..........E..........................",
+    "########......................................",
+    "#########111.............S....................",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+    "##############################################",
+  ] },
 };
 // A room made: its rock (a cell grid, top row first), and its marks, in cells from its top left.
 function makeRoom(name, rnd) {
-  const T = ROOMS[name], W = ROOM_W * ROOM_K, Hh = ROOM_H * ROOM_K, g = [], marks = { S: [], V: [], D: [], H: [], I: [] };
+  const T = ROOMS[name], W = ROOM_W * ROOM_K, Hh = ROOM_H * ROOM_K, g = [], marks = { S: [], V: [], D: [], H: [], I: [], E: [] };
   for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(false));
   T.rows.forEach((row, r) => {
     for (let c = 0; c < ROOM_W; c++) {
@@ -275,12 +299,12 @@ function makeMountain(rnd) {
     if (x < GW - 1 && onWay.has(at(x + 1, y)) && !kind.has(c)) { kind.set(c, "shrine"); link(c, at(x + 1, y)); }
     else if (x > 0 && onWay.has(at(x - 1, y)) && !kind.has(c)) { kind.set(c, "crawl"); link(c, at(x - 1, y)); }
     else continue;
-    onWay.delete(c); if (rnd() < 0.5) hidden.add(c);
+    onWay.delete(c); if (rnd() < 0.5) { hidden.add(c); if (kind.get(c) === "shrine" && rnd() < 0.6) kind.set(c, "cell"); }
   }
   // The grid of cells: rock, with each room laid in its place (row 0 is the top: the grid's top row of
   // places is GH - 1). Each room keeps only its largest hollow (the rest becomes rock).
   const OUT = 0, W = OUT + GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
-  const marks = { S: [], V: [], D: [], H: [], I: [] }, box = (c) => [OUT + (c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
+  const marks = { S: [], V: [], D: [], H: [], I: [], E: [] }, box = (c) => [OUT + (c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
   const slots = [], cracks = [], keep = [];
   for (const [c, name] of kind) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
@@ -358,7 +382,7 @@ function linkRooms(names, rnd) {
   const xs = at.map((p) => p[0]), ys = at.map((p) => p[1]), mx = Math.min(...xs), my = Math.min(...ys);
   const RW = ROOM_W * ROOM_K, RH = ROOM_H * ROOM_K, W = (Math.max(...xs) - mx + 1) * RW, Hh = (Math.max(...ys) - my + 1) * RH;
   const g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
-  const marks = { S: [], V: [], D: [], H: [], I: [] };
+  const marks = { S: [], V: [], D: [], H: [], I: [], E: [] };
   names.forEach((n, i) => {
     const R = makeRoom(n, rnd), ox = (at[i][0] - mx) * RW, oy = (at[i][1] - my) * RH;
     for (let r = 0; r < RH; r++) for (let c = 0; c < RW; c++) g[oy + r][ox + c] = R.g[r][c];
