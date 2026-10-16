@@ -570,7 +570,7 @@ function drawShrine(f, cam, rimP, idols, lights) {
 // its robe flying, and fading into the dark.
 function drawWorshipper(w, cam, rimP, near) {
   const x = w.x - cam.x, y = w.y - cam.y; if (x < -30 || x > W + 30 || y < -40 || y > H + 30) return;
-  const run = w.st === "run", P = worshipPath(x, y, run ? w.dir : w.side, worshipPose(w, S.rt), { t: S.rt, vx: run ? w.dir * (w.sp || 80) : 0, vy: w.vy || 0, noTorch: true, drape: 3.5 });
+  const run = w.st === "run", P = worshipPath(x, y, run ? w.dir : w.side, worshipPose(w, S.rt), { t: S.rt, vx: run ? w.dir * (w.sp || 80) : 0, vy: w.vy || 0, noTorch: true, drape: 3.5, pointed: true });
   ctx.globalAlpha = w.a; ctx.fillStyle = ROBE; ctx.fill(P); ctx.globalAlpha = 1;
   if (w.a > 0.5) rimNow(P);   // (rimmed now, not with the rest after him: he stands before them)
 }

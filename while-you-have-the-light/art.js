@@ -163,10 +163,16 @@ function monkGeo(J, p, o, dir) {
   }
   // The hood: deep, its brow standing out over the hidden face, its point falling down his back,
   // and the cowl's collar joining it to the shoulders.
-  A.push(HLs(J, [2.9, 4.4, 2.2, 1.1, 4.5, -1.1, 4.3, -2.3, 2.4, -4.0, -0.6, -4.5, -3.2, -3.6, -4.7, -1.2, -4.8, 2.2, -3.8, 4.9]));
-  const b1 = HL(J, -0.8, -4.5), b2 = HL(J, -4.4, 3.4), bm = P2(b1, b2, 0.35);
-  const px = wind[0] * 1.3 - 0.8, py = wind[1], hl = Math.hypot(px, py) || 1;
-  A.push([b1, HL(J, -4.6, -2.6), [bm[0] + px / hl * 9.5, bm[1] + py / hl * 9.5], b2]);
+  if (o.pointed) {
+    // (The worshippers': a tall pointed hood, its tip standing up and a little back, bending with the wind.)
+    const tip = HL(J, -3.2 + wind[0] * 1.2, -15.5);
+    A.push([HL(J, 2.9, 4.4), HL(J, 2.2, 1.1), HL(J, 4.4, -1.2), HL(J, 3.6, -3.4), HL(J, 1.2, -6.5), tip, HL(J, -3.6, -6.0), HL(J, -4.8, -1.2), HL(J, -4.8, 2.2), HL(J, -3.8, 4.9)]);
+  } else {
+    A.push(HLs(J, [2.9, 4.4, 2.2, 1.1, 4.5, -1.1, 4.3, -2.3, 2.4, -4.0, -0.6, -4.5, -3.2, -3.6, -4.7, -1.2, -4.8, 2.2, -3.8, 4.9]));
+    const b1 = HL(J, -0.8, -4.5), b2 = HL(J, -4.4, 3.4), bm = P2(b1, b2, 0.35);
+    const px = wind[0] * 1.3 - 0.8, py = wind[1], hl = Math.hypot(px, py) || 1;
+    A.push([b1, HL(J, -4.6, -2.6), [bm[0] + px / hl * 9.5, bm[1] + py / hl * 9.5], b2]);
+  }
   A.push([HL(J, -3.8, 4.9), PA(J.sh, n, -4.4), PA(J.sh, n, 3.8), HL(J, 2.9, 4.4)]);
   // The near arm, free for blows and for catching.
   sleeve(Bn, PA(J.sh, n, 0.6), J.eF, J.hF, wind, o.drape || 9.5);

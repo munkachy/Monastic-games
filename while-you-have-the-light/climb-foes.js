@@ -161,7 +161,8 @@ function placeShrine(k, dom, spots, taken) {
   const kinds = dom === "lust" ? [3, 3, 1] : dom === "wrath" ? [2, 1, 2] : dom === "avarice" ? [1, 0, 1] : [0, 1, 0], who = [], n = clamp(Math.floor((best.w - 44) / 30), 1, 4);
   for (let q = 0; q < n; q++) {
     const side = q % 2 ? 1 : -1, row = Math.floor(q / 2), x = best.x + side * (dom === "gluttony" ? (side < 0 ? 44 : 60) : (dom === "wrath" || dom === "avarice") && side > 0 ? 52 : dom === "avarice" ? 46 : 32) + side * row * 27;
-    who.push({ x, y: best.y, side: -side, kind: kinds[q % kinds.length], look: 0, st: "pray", vx: 0, vy: 0, t: 0, a: 1, ph: Math.random() * TAU });
+    let y = best.y; for (let q = 0; q < 24 && boxAt(x, y, 6, 34); q++) y -= 2;      // (out of the rock, where the ground rises)
+    who.push({ x, y, side: -side, kind: kinds[q % kinds.length], look: 0, st: "pray", vx: 0, vy: 0, t: 0, a: 1, ph: Math.random() * TAU });
   }
   S.demons.push({ idol: true, sin: dom, hw: 13, ht: 60, maxHp: IDOL_HP, hp: IDOL_HP, x: best.x, y: best.y, vx: 0, vy: 0, dir: 1, st: "idle", t: 0, cd: 0, x0: best.x, x1: best.x, sec: k,
     ground: true, juggle: 0, hurtT: 0, showHp: 0, lit: 0, id: ++S.ids, size: 0, who, fled: false, whoKinds: who.map((w) => w.kind) });
