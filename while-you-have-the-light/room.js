@@ -57,6 +57,9 @@ const Room = (() => {
         for (const f of S.demons.slice(n0)) f.placed = true;
       } }))] },
       { name: "PLATFORMS", items: ROLES.platform.map((k) => ({ name: "A " + (k === "vulture" ? "PLATFORM BIRD" : k.toUpperCase()), sub: "Flies to and fro across here", put(m) { const c = spawnCritter(k, m.x, m.y); if (c) c.placed = true; } })) },
+      { name: "PEOPLE", items: [
+        { name: "THE HERMIT", sub: "At prayer; his pickaxe for soup or two herbs", put(m) { (S.hermits = S.hermits || []).push({ x: m.x, y: floorAt(m.x, m.y), dir: sign(S.x - m.x) || 1, ph: Math.random() * TAU, st: "pray", t: 0, said: Math.floor(Math.random() * SAYINGS.length), met: false, sold: false, placed: true }); } },
+      ] },
       { name: "THINGS", items: [
         ...HERB_KEYS.map((k) => ({ name: "AN HERB: " + HERBS[k].name.toUpperCase(), put(m) { S.herbs.push({ x: m.x, y: floorAt(m.x, m.y), kind: k, k: here(m), got: false, placed: true }); } })),
         { name: "A STONE BLOCK", sub: "Loose, to take up", put(m) { const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], NOV ? NOV.domain : "gluttony"); b.x = m.x; b.y = floorAt(m.x, m.y); b.placed = true; S.blocks.push(b); } },
@@ -68,12 +71,13 @@ const Room = (() => {
       { name: "YOURSELF", items: [
         { name: "ALL HEARTS", put() { S.hearts = HEARTS; } },
         { name: "A FULL TORCH", put() { S.fuel = 1; } },
+        { name: "THE HERMIT'S PICKAXE", sub: "A cracked wall at one blow", off: () => !!S.pick, put() { S.pick = true; } },
         { name: "THE TORCH NEARLY OUT", put() { S.fuel = 0.08; NOV.torch = false; } },
         { name: "A BLOCK ON YOUR ROPE", off: () => !!S.tied, put() { const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], NOV.domain); b.x = S.x - S.dir * 18; b.y = S.y; S.blocks.push(b); b.st = "tied"; b.rope = TETHER; S.tied = b; } },
         ...Object.keys(BOONS).map((k) => ({ name: "A RELIC: " + BOONS[k].name.toUpperCase(), put() { showBoon(k); } })),
       ] },
       { name: "CLEAR WHAT I PUT IN", put() {
-        S.demons = S.demons.filter((f) => !f.placed); S.critters = (S.critters || []).filter((c) => !c.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed);
+        S.demons = S.demons.filter((f) => !f.placed); S.critters = (S.critters || []).filter((c) => !c.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed); S.hermits = (S.hermits || []).filter((h) => !h.placed);
         if (S.tied && S.tied.placed) S.tied = null; S.blocks = S.blocks.filter((b) => !b.placed);
         for (let i = walls.length - 1; i >= 0; i--) if (walls[i].placed) walls.splice(i, 1); walls.forEach((w, i) => { w.n = i; });
         S.placed = []; ev("cleared, in the white room", {});
