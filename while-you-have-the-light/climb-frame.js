@@ -189,15 +189,23 @@ function physics(dt) {
   if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, Math.max(ROPE_MAX, R.len));
   // Walking on to a small gap in the floor (up to five cells across, the floor going on at his
   // height beyond it): a little hop over it, without stopping.
-  if (S.hopT > 0) { S.hopT -= dt; if (!S.ground && d) S.vx = d * Math.max(Math.abs(S.vx), 120); }
+  // (In the hop, he keeps the pace that lands him where it was aimed.)
+  if (S.hopT > 0) { S.hopT -= dt; if (!S.ground && S.hopVx !== undefined) S.vx = S.hopVx; if (S.ground && S.hopT < 0.6) S.hopT = 0; }
   else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0) && !S.rideOn && backAhead(d)) {
     // (A platform bird's back within a hop: on to it, as high as it needs.)
-    const B = backAhead(d), rise = Math.max(0, S.y - B.top); S.vy = -Math.sqrt(2 * GRAV * (rise + 22)); S.vx = d * 120; S.ground = false; S.hopT = 0.7; ev("hopped on to a platform bird");
+    const B = backAhead(d), rise = Math.max(0, S.y - B.top), vy = Math.sqrt(2 * GRAV * (rise + 22)), up = vy / GRAV, down = Math.sqrt(2 * 22 / GRAV);
+    S.vy = -vy; S.hopVx = clamp((B.x - S.x) / (up + down), -170, 170); S.vx = S.hopVx; S.ground = false; S.hopT = 0.7; ev("hopped on to a platform bird");
   } else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0)) {
     const xf = S.x + d * (HW + 3);
     if (!solidAt(xf, S.y + 4) && !solidAt(xf, S.y + CELL + 4)) for (let g = 1; g <= 5; g++) {
       const x2 = S.x + d * (HW + 6 + g * CELL);
-      if (solidAt(x2, S.y + 4) && !solidAt(x2, S.y - 4) && !boxAt(x2, S.y - 8, HW, HT)) { S.vy = -250; S.vx = d * 120; S.ground = false; S.hopT = 0.7; ev("hopped a gap", { cells: g }); break; }
+      if (solidAt(x2, S.y + 4) && !solidAt(x2, S.y - 4) && !boxAt(x2, S.y - 8, HW, HT)) {
+        // (Aimed at the nearest footing: just on to its near edge, whatever the gap's width.)
+        const i = Math.floor(x2 / CELL), edge = d > 0 ? i * CELL : (i + 1) * CELL;
+        let ie = i; while (solidAt((ie + d + 0.5) * CELL, S.y + 4) && !solidAt((ie + d + 0.5) * CELL, S.y - 4) && Math.abs(ie - i) < 8) ie += d;
+        const room = (Math.abs(ie - i) + 1) * CELL, land = edge + d * Math.min(HW + 4, room / 2), vy = g <= 2 ? 200 : 240, T = 2 * vy / GRAV;
+        S.vy = -vy; S.hopVx = (land - S.x) / T; S.vx = S.hopVx; S.ground = false; S.hopT = 0.7; ev("hopped a gap", { cells: g }); break;
+      }
     }
   }
   const n = clamp(Math.ceil(Math.max(Math.abs(S.vx), Math.abs(S.vy)) * dt / 6), 1, 10), h = dt / n;
