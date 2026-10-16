@@ -1355,7 +1355,7 @@ function drawMap(x, y, w, h, near) {
 
 // ---- The near wall, and the strata -----------------------------------------------------------------
 // Behind the rock he climbs, nearer than the far mist: the cave's own wall, moving at half his pace,
-// columns and ribs of rock, teeth hanging from above, and here and there a face in the stone. It
+// long columns of rock, each a little its own colour. It
 // changes colour by bands as he climbs, as rock is laid down in strata, a band to each row of rooms;
 // the map shows the bands too. Seen only where his light reaches.
 const BAND = 44;                                 // rows of cells to a band (a row of rooms)
@@ -1370,8 +1370,8 @@ function strataAt(h, dom) {
 }
 function drawNearWall(cam, t, dom) {
   const PX = 0.5, ox = cam.x * PX, oy = cam.y * PX, TW = 170, TH = 230, hMid = -(cam.y + H / 2) / CELL;
-  const col = strataAt(hMid, dom), body = mix("#0b0a0c", col, 0.42), shade = mix("#060507", col, 0.18);
-  const [lx, ly] = S.torch, sd = (seed % 997) + 3;
+  const col = strataAt(hMid, dom), shade = mix("#060507", col, 0.18);
+  const sd = (seed % 997) + 3;
   for (let iy = Math.floor(oy / TH) - 1; iy <= Math.floor((oy + H) / TH) + 1; iy++) for (let ix = Math.floor(ox / TW) - 1; ix <= Math.floor((ox + W) / TW) + 1; ix++) {
     // (A column runs unbroken through two or more tiles, and comes to a point where it ends.)
     const has = (j) => hash2(ix, Math.floor(j / 2), sd) < 0.42, x0 = ix * TW - ox, y0 = iy * TH - oy;
@@ -1383,26 +1383,9 @@ function drawNearWall(cam, t, dom) {
         const k = Math.min(up ? smooth(q / 5) : 1, dn ? smooth((9 - q) / 5) : 1), hw = (w / 2) * (0.08 + 0.92 * k);
         L.push([cx - hw + n * k, y]); R.push([cx + hw + m * k, y]);
       }
-      const outline = [...L, ...R.reverse()]; poly(outline.flat(), body);
+      const pal = STRATA[dom] || STRATA.gluttony, own = mix(col, pal[Math.floor(hash2(ix, 1, sd + 15) * pal.length)], 0.3 + 0.5 * hash2(ix, 2, sd + 16));
+      poly([...L, ...R.reverse()].flat(), mix("#0b0a0c", own, 0.44 + 0.18 * hash2(ix, 3, sd + 17)));
       poly([L[2][0] + 6, L[2][1], L[6][0] + 10, L[6][1], L[7][0] + 4, L[7][1]], shade);
-      // Now and then, a face in the stone (the traced face of Gluttony's mouth), set into the column's
-      // side as though carved there: a shade darker than the rock, its cracks showing the rock through.
-      if (hash2(ix, iy, sd + 5) < 0.14 && w > 60) {
-        const side = hash2(ix, iy, sd + 6) < 0.5 ? 1 : -1, k = (w / 64) * (0.9 + 0.3 * hash2(ix, iy, sd + 7)), fx = cx + side * w * 0.12, fy = y0 + TH * (0.5 + 0.3 * hash2(ix, iy, sd + 8));
-        const T = (u, v) => [fx + side * u * k, fy - v * k], F = new Path2D(); addShape(F, TRACED.wf0, T);
-        // (Only within the column: the face is in the rock, and does not stand out of it.)
-        const C = new Path2D(); C.moveTo(outline[0][0], outline[0][1]); for (const q of outline) C.lineTo(q[0], q[1]); C.closePath();
-        ctx.save(); ctx.clip(C); ctx.globalAlpha = 0.8; ctx.fillStyle = mix(body, "#040305", 0.5); ctx.fill(F, "evenodd"); ctx.restore();
-        // (Lit, its eye glints, now and then.)
-        const [ex, ey] = T(-0.6, 69.9);
-        if (dist(lx - cam.x, ly - cam.y, ex, ey) < lightR() * 0.9 && Math.sin(t * 0.7 + ix * 2.3) > 0.55) circle(ex, ey, 1.4, "rgba(255,226,180,0.7)");
-      }
-    } else if (hash2(ix, iy, sd + 14) < 0.35) {
-      // Teeth of rock hanging from above.
-      // (The fat of Gluttony dripping from a ledge: traced.)
-      const D = new Path2D();
-      for (let q = 0; q < 2; q++) { const sh = TRACED["wd" + Math.floor(hash2(ix, iy * 3 + q, sd + 11) * 3)], k = 1.6 + 1.6 * hash2(ix, q, sd + 12), x = x0 + TW * (0.25 + 0.5 * q), top = sh === TRACED.wd2 ? 40 : 30; addShape(D, sh, (u, v) => [x + u * k, y0 + (top - v) * k]); }
-      ctx.fillStyle = body; ctx.fill(D);
     }
   }
 }
