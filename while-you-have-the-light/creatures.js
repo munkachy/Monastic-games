@@ -182,9 +182,10 @@ function stepCritters(dt) {
       // under it), and at last, ten to fifteen seconds on, it shakes him off.
       const held = S.rope && c.grab && S.rope.chain === c.grab, B = BD_K;
       if (held) {
-        if (c.st !== "carry") { c.st = "carry"; c.t = 0; c.carryT = 10 + Math.random() * 5; c.to = null; ev("a bird taken by the hook"); Sound.fx.tick(2200, 0.4); }
+        // (Taken: at once it bolts, up and away from him.)
+        if (c.st !== "carry") { c.st = "carry"; c.t = 0; c.carryT = 10 + Math.random() * 5; c.to = null; const aw = sign(c.x - S.x) || c.dir; c.head = [aw * 0.8, -0.6]; c.vx = aw * 140; c.vy = -170; ev("a bird taken by the hook"); Sound.fx.tick(2200, 0.4); }
         // (Labouring with his weight: a heading kept a while, then changed; mostly level or up; away from the rock.)
-        if (!c.head || Math.random() < dt * 0.6) { const a = (Math.random() < 0.5 ? PI : 0) + (Math.random() - 0.5) * 1.2 - (Math.random() < 0.6 ? 0.35 * sign(Math.cos(a0(c))) : 0); c.head = [Math.cos(a), Math.min(0.3, Math.sin(a)) - 0.15]; }
+        if (!c.head || (c.t > 1.5 && Math.random() < dt * 0.6)) { const a = (Math.random() < 0.5 ? PI : 0) + (Math.random() - 0.5) * 1.2 - (Math.random() < 0.6 ? 0.35 * sign(Math.cos(a0(c))) : 0); c.head = [Math.cos(a), Math.min(0.3, Math.sin(a)) - 0.15]; }
         c.vx += (c.head[0] * 150 - c.vx) * dt * 1.5; c.vy += (c.head[1] * 150 - c.vy) * dt * 1.5;
         if (c.t > c.carryT) { dropRope(true); c.st = "fly"; c.t = 0; c.to = null; ev("the bird let him go"); }
       } else if (c.st === "carry") { c.st = "fly"; c.t = 0; c.to = null; }
@@ -209,7 +210,8 @@ function stepCritters(dt) {
       if (held) {
         // (It takes up the rope, and lifts him off his feet: he hangs and swings under it.)
         const R = S.rope; R.x = c.x; R.y = c.y - 4; R.along = 1; R.len = Math.max(ROPE_MIN + 20, Math.min(R.len, 150) - 60 * dt);
-        if (S.ground) { S.ground = false; S.vy = Math.min(S.vy, -120); S.liftT = 0.2; }
+        // (While it has him, his feet touching the ground do not make him let go.)
+        S.liftT = 0.3; if (S.ground) { S.ground = false; S.vy = Math.min(S.vy, -160); }
       }
     }
   }
@@ -327,4 +329,10 @@ function litDraw(list, wx, wy, alpha) {
   const a0 = alpha === undefined ? 1 : alpha;
   if (lit > 0) for (const [k, col, al] of [[1.3, MONK_RIM2, 0.3], [0.65, MONK_RIM, 1]]) for (const [p, , rule] of list) { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = a0 * al * lit; ctx.fillStyle = col; ctx.fill(p, rule || "nonzero"); ctx.restore(); }
   ctx.globalAlpha = a0; for (const [p, col, rule] of list) { ctx.fillStyle = col; ctx.fill(p, rule || "nonzero"); }
+}
+
+// A bird (or platform bird) under a tap.
+function birdAt(wx, wy) {
+  for (const c of S.critters || []) { if ((c.kind !== "bird" && c.kind !== "vulture") || c.st === "dead" || !c.grab) continue; const g = c.grab; if (wx > g.x - 10 && wx < g.x + g.len + 10 && Math.abs(wy - g.y) < 22) return c; }
+  return null;
 }

@@ -126,6 +126,8 @@ const M = {
     if (S.held) { S.atk = null; throwHeld(wx, wy, null); return; }
     if (S.flare.on) { blink(wx, wy); return; }
     if (S.atk) return;
+    // (A bird tapped, even one on the floor by him: the hook goes for it.)
+    if (!S.rope && birdAt(wx, wy)) { throwHook(wx, wy); return; }
     if (S.ground && wy > S.y - 30) return;
     // Swinging, a tap on fresh rock: he lets go, flips over, and hooks it as he comes round.
     // (On a touch screen, a tenth of a second late: if a second finger follows, it was the
