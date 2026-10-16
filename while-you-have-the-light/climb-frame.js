@@ -187,6 +187,16 @@ function physics(dt) {
   const sp = Math.hypot(S.vx, S.vy); if (sp > VMAX) { S.vx *= VMAX / sp; S.vy *= VMAX / sp; }
   // On the ground the rope pays out as he walks, unless he is climbing it.
   if (R && S.ground && !S.climbing) R.len = clamp((R.fixed || 0) + rd, ROPE_MIN, Math.max(ROPE_MAX, R.len));
+  // Walking on to a small gap in the floor (up to five cells across, the floor going on at his
+  // height beyond it): a little hop over it, without stopping.
+  if (S.hopT > 0) { S.hopT -= dt; if (!S.ground && d) S.vx = d * Math.max(Math.abs(S.vx), 120); }
+  else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0)) {
+    const xf = S.x + d * (HW + 3);
+    if (!solidAt(xf, S.y + 4) && !solidAt(xf, S.y + CELL + 4)) for (let g = 1; g <= 5; g++) {
+      const x2 = S.x + d * (HW + 6 + g * CELL);
+      if (solidAt(x2, S.y + 4) && !solidAt(x2, S.y - 4) && !boxAt(x2, S.y - 8, HW, HT)) { S.vy = -250; S.vx = d * 120; S.ground = false; S.hopT = 0.7; ev("hopped a gap", { cells: g }); break; }
+    }
+  }
   const n = clamp(Math.ceil(Math.max(Math.abs(S.vx), Math.abs(S.vy)) * dt / 6), 1, 10), h = dt / n;
   let side = 0;
   for (let k = 0; k < n; k++) {
