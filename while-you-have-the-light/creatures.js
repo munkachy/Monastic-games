@@ -112,7 +112,7 @@ function backAhead(d) {
   for (const c of S.critters || []) {
     if (c.kind !== "vulture" || S.rideOn === c) continue;
     const top = c.y - PB_TOP * PB_K, a = c.x + c.dir * PB_U0 * PB_K, b = c.x + c.dir * PB_U1 * PB_K, near = d > 0 ? Math.min(a, b) : Math.max(a, b), gap = (near - S.x) * d;
-    if (gap > -4 && gap < 5 * CELL + HW && top > S.y - 56 && top < S.y + 40) return { x: (a + b) / 2, top };
+    if (gap > -4 && gap < 5 * CELL + HW && top > S.y - 56 && top < S.y + 40) return { x: (a + b) / 2, top, c };
   }
   return null;
 }

@@ -51,7 +51,13 @@ function physics(dt) {
   if (S.clingWas && !S.cling) unclip(S.clingWas);
   S.clingWas = S.cling;
   briars();
-  const I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false, u: false, dn: false } : pads(), d = I.d, wasGround = S.ground, vyIn = S.vy, vxIn = S.vx;
+  let I = S.hurtT > 0 ? { l: false, r: false, d: 0, both: false, u: false, dn: false } : pads();
+  // (Come on to a platform bird with an arrow held, he stands on its back till the arrow is let go:
+  // else the same press would walk him straight off the far end of it.)
+  if (S.rideOn && !S.rideWas && I.d) S.rideHold = I.d; S.rideWas = !!S.rideOn;
+  if (S.rideHold && (I.d !== S.rideHold || !S.rideOn)) S.rideHold = 0;
+  if (S.rideHold) I = Object.assign({}, I, { d: 0, l: false, r: false });
+  const d = I.d, wasGround = S.ground, vyIn = S.vy, vxIn = S.vx;
   const dnFresh = I.dn && !S.dnWas; S.dnWas = I.dn;
   if (S.hang) {
     const H0 = S.hang, s = H0.L.s, up = d === s || I.u;
@@ -215,11 +221,22 @@ function physics(dt) {
   // Walking on to a small gap in the floor (up to five cells across, the floor going on at his
   // height beyond it): a little hop over it, without stopping.
   // (In the hop, he keeps the pace that lands him where it was aimed.)
+  // (Hopping on to a platform bird: it goes on flying, so he is steered all the way to where its back
+  // will be when he comes down to it.)
+  if (S.hopBird) {
+    const c = S.hopBird;
+    if (S.ground || S.rideOn || S.rope || S.cling || c.st === "dead") S.hopBird = null;
+    else {
+      const top = c.y - PB_TOP * PB_K, mid = c.x + c.dir * (PB_U0 + PB_U1) / 2 * PB_K, disc = S.vy * S.vy + 2 * GRAV * (top - S.y);
+      const t = disc >= 0 ? (-S.vy + Math.sqrt(disc)) / GRAV : 0.05;
+      S.hopVx = clamp((mid - S.x) / Math.max(0.06, t), -320, 320); S.hopT = Math.max(S.hopT, 0.1);
+    }
+  }
   if (S.hopT > 0) { S.hopT -= dt; if (!S.ground && S.hopVx !== undefined) S.vx = S.hopVx; if (S.ground && S.hopT < 0.6) S.hopT = 0; }
   else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0) && !S.rideOn && backAhead(d)) {
     // (A platform bird's back within a hop: on to it, as high as it needs.)
     const B = backAhead(d), rise = Math.max(0, S.y - B.top), vy = Math.sqrt(2 * GRAV * (rise + 22)), up = vy / GRAV, down = Math.sqrt(2 * 22 / GRAV);
-    S.vy = -vy; S.hopVx = clamp((B.x - S.x) / (up + down), -170, 170); S.vx = S.hopVx; S.ground = false; S.hopT = 0.7; ev("hopped on to a platform bird");
+    S.vy = -vy; S.hopVx = clamp((B.x - S.x) / (up + down), -170, 170); S.vx = S.hopVx; S.ground = false; S.hopT = 0.7; S.hopBird = B.c; ev("hopped on to a platform bird");
   } else if (S.ground && d && !S.crawl && !R && !S.held && !S.cling && !(S.landT > 0)) {
     const xf = S.x + d * (HW + 3);
     if (!solidAt(xf, S.y + 4) && !solidAt(xf, S.y + CELL + 4)) for (let g = 1; g <= 5; g++) {
