@@ -341,10 +341,12 @@ function peopleMountain(sec, dom) {
       stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: 0, id: ++S.ids, growlT: -9, stoneT: -9 });
   }
   for (const S0 of R.slots) {
+    // (Each time the mountain has been climbed before, more of them: a third more a time, to twice as many.)
+    const more = 1 + Math.min(3, (NOV && NOV.climbs) || 0) / 3;
     const up = 1 - S0.oy / R.h, quiet = S0.kind === "shrine" || S0.kind === "crawl", n = (base) => Math.floor(base + rnd() * (base + 1));
     if (S0.kind === "shrine") { const I = R.marks.I.find(([i, r]) => i >= S0.ox && i < S0.ox + RW && r >= S0.oy && r < S0.oy + RH); if (I) { let q = I[1]; while (air(I[0], q + 1)) q++; placeShrine(0, dom, [[cellX(I[0]), cellY(q), cellX(I[0]) - 90, cellX(I[0]) + 90]], []); } }
-    if (S0.onWay && !quiet && !S0.gate && !S0.mouth) for (let q = 0; q < n(0.1 + 0.45 * up); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
-    if (!quiet) for (let q = 0; q < n(0.2 + 0.8 * up); q++) {
+    if (S0.onWay && !quiet && !S0.gate && !S0.mouth) for (let q = 0; q < n((0.1 + 0.45 * up) * more); q++) { const p = spot(S0, "floor"); if (p) spawnDemon(dom, p[0], p[1], p[0] - 110, p[0] + 110, 0); }
+    if (!quiet) for (let q = 0; q < n((0.2 + 0.8 * up) * more); q++) {
       const kind = pickKind("harmful", rnd), p = kind && spot(S0, CRITTERS[kind].roof ? "roof" : "floor");
       if (p) spawnCritter(kind, p[0], p[1]);
     }
@@ -392,7 +394,7 @@ function birdAt(wx, wy) {
 
 // ---- Cracked walls ------------------------------------------------------------------------------
 // The way to a hidden room, walled up again: the rock there cracked, seen only in his light. Struck
-// three times (a tap on it, near it), it breaks, and the way is open.
+// five or six times (a tap on it, near it), it breaks, and the way is open. (Later, a pickaxe: one blow.)
 const crackBox = (sec, c) => [(sec.x0 + c.x0) * CELL, (c.y0 - sec.h1) * CELL, (sec.x0 + c.x1 + 1) * CELL, (c.y1 + 1 - sec.h1) * CELL];
 function cracksIn(view) { const out = []; for (const sec of view || secs) if (sec.type === "room" && sec.R.cracks) for (const c of sec.R.cracks) if (c.hp > 0) out.push([sec, c]); return out; }
 function crackAt(wx, wy) {
@@ -410,7 +412,7 @@ function strikeCrack(k) {
 }
 function hitCrack(k) {
   const [sec, c] = k, [x0, y0, x1, y1] = crackBox(sec, c), fx = S.x < x0 ? x0 : x1;
-  c.hp--; c.hitT = S.rt; S.shake = Math.max(S.shake, c.hp > 0 ? 0.12 : 0.3);
+  c.hp0 = c.hp0 || c.hp; c.hp--; c.hitT = S.rt; S.shake = Math.max(S.shake, c.hp > 0 ? 0.12 : 0.3);
   Sound.fx.punch(1, panX(fx)); Sound.fx.crack(panX(fx));
   for (let q = 0; q < (c.hp > 0 ? 6 : 26); q++) S.parts.push({ kind: "chip", big: q % 3 === 0, x: c.hp > 0 ? fx : lerp(x0, x1, Math.random()), y: lerp(y0, y1, Math.random()), vx: (Math.random() - 0.5) * 220, vy: -40 - Math.random() * 160, life: 0.7, age: 0 });
   if (c.hp > 0) { ev("struck a cracked wall", { left: c.hp }); return; }
@@ -423,7 +425,7 @@ function drawCracks(cam, view, lr) {
   for (const [sec, c] of cracksIn(view)) {
     const [x0, y0, x1, y1] = crackBox(sec, c); if (y1 - cam.y < -20 || y0 - cam.y > H + 20) continue;
     const [tx, ty] = S.torch, near = clamp(1.3 - dist(tx, ty, clamp(tx, x0, x1), clamp(ty, y0, y1)) / Math.max(60, lr || 160), 0, 1); if (!near) continue;
-    const dmg = 3 - c.hp, shake = c.hitT && S.rt - c.hitT < 0.15 ? (Math.random() - 0.5) * 2 : 0;
+    const dmg = 3 * (1 - c.hp / (c.hp0 || (c.hp0 = c.hp))), shake = c.hitT && S.rt - c.hitT < 0.15 ? (Math.random() - 0.5) * 2 : 0;
     ctx.save(); ctx.strokeStyle = "rgba(214,190,150," + near * (0.3 + 0.15 * dmg) + ")"; ctx.lineWidth = 0.7 + 0.3 * dmg; ctx.beginPath();
     // (Down the face toward the way, one crack the height of it, close in to the face; off it, branches into the
     // rock, more of them the more it has been struck.)

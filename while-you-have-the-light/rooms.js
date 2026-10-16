@@ -146,7 +146,7 @@ const ROOMS = {
     "............................##################",
     "...S..........................################",
     "##########......................##############",
-    "###########..........1..............#.......##",
+    "###########..........1..............#V......##",
     "##################################........H.##",
     "##############################################",
     "##############################################",
@@ -168,7 +168,7 @@ const ROOMS = {
     "######............................############",
     "######............................############",
     "######..........I.............................",
-    "######..............................H.........",
+    "######V.............................H.........",
     "######......................S.................",
     "##########111111111111111111##################",
     "##############################################",
@@ -286,8 +286,9 @@ function makeMountain(rnd) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
     const row = Math.floor(c / GW);
     slots.push({ c, kind: name, ox, oy, onWay: onWay.has(c), row, stretch: Math.min(4, Math.floor(row / STRETCH)), gate: gateAt.includes(c), mouth: c === at(starts[0], 0), hidden: hidden.has(c) });
-    // (A verse in about half the rooms, one at most: not one at every mark. A hidden room keeps all its herbs.)
-    R.marks.V = rnd() < 0.5 ? R.marks.V.slice(0, 1) : []; if (!hidden.has(c)) R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
+    // (A verse in about one room in six on the ways, one at most, so that each is come on as a gift; and
+    // one in every hidden room. A hidden room keeps all its herbs.)
+    R.marks.V = hidden.has(c) || (onWay.has(c) && rnd() < 1 / 6) ? R.marks.V.slice(0, 1) : []; if (!hidden.has(c)) R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
     for (let r = 0; r < RH; r++) for (let q = 0; q < RW; q++) g[oy + r][ox + q] = R.g[r][q];
     for (const m in R.marks) if (m !== "S" || c === at(starts[0], 0)) for (const [q, r] of R.marks[m]) marks[m].push([q + ox, r + oy]);
   }
@@ -310,7 +311,7 @@ function makeMountain(rnd) {
       // (To a hidden room: walled up again where the rooms meet, two cells thick, and cracked.)
       if (hidden.has(p) || hidden.has(q)) {
         const y0 = Math.min(A[1], B[1]) - 5, y1 = Math.max(A[1], B[1]);
-        cracks.push({ x0: xm - 1, x1: xm, y0, y1, hp: 3, from: hidden.has(p) ? 1 : -1 });
+        cracks.push({ x0: xm - 1, x1: xm, y0, y1, hp: 5 + (rnd() < 0.5 ? 1 : 0), from: hidden.has(p) ? 1 : -1 });
         keep.push(hidden.has(p) ? [xm - 3, y1] : [xm + 2, y1]);
       }
     } else {
