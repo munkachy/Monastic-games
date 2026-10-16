@@ -16,6 +16,7 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [Luminaries](https://munkachy.github.io/Monastic-games/luminaries/) | A falling-block music puzzle in the spirit of Lumines through all 38 Doctors of the Church, each with a world, a song, a gift and their own words |
 | [Catholic Truth Squad: Tactics](https://munkachy.github.io/Monastic-games/new-apologetics/play.html) | Assemble a squad, level up, light up the world: a team battler starring today's Catholic apologists (still under review; [about it](https://munkachy.github.io/Monastic-games/new-apologetics/)) |
 | [Fear Not](https://munkachy.github.io/Monastic-games/fear-not/) | A desert monk rides his guardian angel over a neon-noir city to fight the demons tempting a man in his car. The first night is playable as a first build ([design notes](https://munkachy.github.io/Monastic-games/fear-not/design.html)) |
+| [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/) | A tool: type a verse, hear it in a robotic eSpeak NG voice with effects, and download 44.1 kHz WAV samples (batch ZIP too) |
 
 ## Benedictine Bricks
 
