@@ -57,6 +57,9 @@ const Room = (() => {
         for (const f of S.demons.slice(n0)) f.placed = true;
       } }))] },
       { name: "PLATFORMS", items: ROLES.platform.map((k) => ({ name: "A " + (k === "vulture" ? "PLATFORM BIRD" : k.toUpperCase()), sub: "Flies to and fro across here", put(m) { const c = spawnCritter(k, m.x, m.y); if (c) c.placed = true; } })) },
+      { name: "BEASTS", items: [
+        { name: "THE GIANT TOAD", sub: "Hurt only by little frogs thrown at it", put(m) { const t = spawnToad(m.x, floorAt(m.x, m.y), sign(S.x - m.x) || 1); t.placed = true; } },
+      ] },
       { name: "PEOPLE", items: [
         { name: "THE HERMIT", sub: "At prayer; his pickaxe for soup or two herbs", put(m) { (S.hermits = S.hermits || []).push({ x: m.x, y: floorAt(m.x, m.y), dir: sign(S.x - m.x) || 1, ph: Math.random() * TAU, st: "pray", t: 0, said: Math.floor(Math.random() * SAYINGS.length), met: false, sold: false, placed: true }); } },
       ] },
@@ -77,7 +80,7 @@ const Room = (() => {
         ...Object.keys(BOONS).map((k) => ({ name: "A RELIC: " + BOONS[k].name.toUpperCase(), put() { showBoon(k); } })),
       ] },
       { name: "CLEAR WHAT I PUT IN", put() {
-        S.demons = S.demons.filter((f) => !f.placed); S.critters = (S.critters || []).filter((c) => !c.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed); S.hermits = (S.hermits || []).filter((h) => !h.placed);
+        S.demons = S.demons.filter((f) => !f.placed); S.critters = (S.critters || []).filter((c) => !c.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed); S.hermits = (S.hermits || []).filter((h) => !h.placed); S.toads = (S.toads || []).filter((t) => !t.placed);
         if (S.tied && S.tied.placed) S.tied = null; S.blocks = S.blocks.filter((b) => !b.placed);
         for (let i = walls.length - 1; i >= 0; i--) if (walls[i].placed) walls.splice(i, 1); walls.forEach((w, i) => { w.n = i; });
         S.placed = []; ev("cleared, in the white room", {});

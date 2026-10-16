@@ -661,7 +661,8 @@ function placeSummit(k) {
   const sec = secs[k];
   if (S.greatDown.has(k)) { S.won = S.won || { t: 9 }; return; }        // (won before he left the mountain: the angel waits)
   if (S.bigs.some((g) => g.summit)) return;
-  const G = GREAT.gluttony, sc = 1.9, hw = G.hw * sc, ht = G.ht * sc, side = hash2(k, 995, seed) < 0.5 ? -1 : 1, i = sec.c + side * 17;
+  // (Drawn from boss-maw.png: seven times his height, floating, its claws out.)
+  const sc = 1.9, hw = 70, ht = 300, side = hash2(k, 995, seed) < 0.5 ? -1 : 1, i = sec.c + side * 17;
   const at = dFree((i + 0.5) * CELL, -(sec.h0 + summitG(i, sec)) * CELL - 1, hw, ht) || [(i + 0.5) * CELL, -(sec.h0 + SUM_G) * CELL - 1];
   S.bigs.push({ sin: "gluttony", tier: 5, sc, hw, ht, x: at[0], y: at[1], vx: 0, vy: 0, kx: 0, ky: 0, dir: -side, hp: 7, maxHp: 7, st: "stone", t: 0, wake: 0, lit: 0, anim: hash2(k, 993, seed) * 9,
     stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: k, id: ++S.ids, growlT: -9, stoneT: -9, summit: true });
@@ -1024,6 +1025,7 @@ function drawDread(cam) {
   const T = greatT(g, cam), c = T(0, 42), white = [0, 0.27, 0.54].some((q) => t >= q && t < q + 0.085);
   glow(c[0], c[1], 95 * g.sc, "#7a1408", 0.45 * fade);
   ctx.save(); const j = (1 - clamp(t / 0.5, 0, 1)) * 3; ctx.translate((Math.random() - 0.5) * j, (Math.random() - 0.5) * j);
+  if (g.summit) { drawBoss(g, cam, fade, white ? 0.9 : 0); const [ex, ey] = g.bossEye; glow(ex, ey, 40, "#ff2a12", 0.95 * fade); circle(ex, ey, 3, "rgba(255,236,210," + fade + ")"); ctx.restore(); [g.x, g.y, g.wake, g.anim, g.hurtT, g.st] = keep; return; }
   paintMaw(mawParts(g), T, 1, 1, fade, white ? 0.9 : 0);
   for (const [u, v, r] of MAW_EYES) { const [x, y] = T(u, v); glow(x, y, 18 * r * g.sc, "#ff2a12", 0.95 * fade); circle(x, y, 1.3 * r * g.sc, "rgba(255,236,210," + fade + ")"); }
   ctx.restore();
@@ -1152,6 +1154,7 @@ function paintMaw(P, T, w, lit, al, flash) {
 function drawGreat(g, cam) {
   if (g.st === "latch") return;                  // (drawn over him, with him)
   if (S.dread && S.dread.g === g) { g.T = null; return; }
+  if (g.summit) { drawBoss(g, cam, g.st === "dying" ? clamp(1 - (g.t - 0.75) / 0.35, 0, 1) : 1, 0); return; }
   const cx = g.x, cy = g.y - g.ht / 2;
   if (cx < cam.x - 140 || cx > cam.x + W + 140 || cy < cam.y - 160 || cy > cam.y + H + 160) { g.T = null; return; }
   const [lx, ly] = S.torch, R = lightR();
@@ -1176,6 +1179,9 @@ function drawLatch(g, mx, my, cam) {
 // his light through its flesh.
 function greatGlows(cam) {
   for (const g of S.bigs) {
+    // (The summit's: its eye, red, burning when it is awake, a dull coal as stone.)
+    if (g.summit && g.bossEye && g.st !== "latch") { const w = smooth(g.wake), al = g.st === "dying" ? clamp(1 - (g.t - 0.6) / 0.4, 0, 1) : 1, [ex, ey] = g.bossEye;
+      glow(ex, ey, 14 + 26 * w, "#ff2a12", (0.35 + 0.6 * w) * al); glow(ex, ey, 6 + 6 * w, "#ff6a3a", (0.5 + 0.5 * w) * al); circle(ex, ey, 1.6 + 1.2 * w, w > 0.4 ? "rgba(255,236,210," + (w * al) + ")" : "rgba(255,80,50," + (0.6 * al) + ")"); continue; }
     const T = g.T; if (!T) continue;
     const w = g.st === "latch" ? 1 : smooth(g.wake), al = g.st === "dying" ? clamp(1 - (g.t - 0.6) / 0.4, 0, 1) : 1;
     if (g.st === "latch") {
@@ -1216,4 +1222,16 @@ function bounceGreat(g) {
   g.hurtT = 0.12; impactAt(g.x - s * g.hw * 0.6, S.y - HT * 0.6, -s, 0, 1, null);
   Sound.fx.punch(0.7, panX(g.x)); Sound.fx.stone(panX(g.x)); S.shake = Math.max(S.shake, 0.12); ev("punched a great demon, and bounced off");
   if (!S.bounceSeen) { S.bounceSeen = true; S.say = { text: "HIS FISTS DO NOT HURT IT", sub: "Throw back its own missiles at it: take one from a demon, and fling it. Or a block.", t: 0 }; }
+}
+// The summit's great demon: its traced shape, as big as a tower, lit at its edges by his torch as
+// the birds are (the side toward the flame catching the light), bobbing as it floats; flushed with
+// its sin's colour when struck, white in the dread's flashes. Its eye is drawn over the dark (greatGlows).
+function drawBoss(g, cam, al, white) {
+  const K = g.ht / 300, d = g.dir || 1, bob = Math.sin(S.rt * 1.1 + g.anim * 0.3) * 5 * (0.3 + 0.7 * smooth(g.wake)), x = g.x - cam.x, y = g.y - cam.y + bob;
+  const P = new Path2D(); addShape(P, TRACED.bossM, (u, v) => [x + d * u * K, y - v * K]);
+  const [tx, ty] = S.torch, nx = clamp(tx, g.x - g.hw * 2, g.x + g.hw * 2), ny = clamp(ty, g.y - g.ht, g.y);
+  litDraw([[P, "#0a090b", "evenodd"]], nx, ny, al);
+  const flush = white || (g.hurtT > 0 ? 0.6 * g.hurtT / 0.3 : 0);
+  if (flush > 0) { ctx.save(); ctx.globalAlpha = al * flush; ctx.fillStyle = white ? "#ffffff" : SINS[g.sin].color; ctx.fill(P, "evenodd"); ctx.restore(); }
+  g.bossEye = [x + d * 62.9 * K, y - 262.9 * K]; g.bossP = P; g.T = null;
 }

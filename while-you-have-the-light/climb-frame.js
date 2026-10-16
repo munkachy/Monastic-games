@@ -356,7 +356,7 @@ function step(dt) {
     else if (S.fuel < 0.15 && Math.floor(S.rt * 0.8) !== Math.floor((S.rt - dt) * 0.8)) Sound.fx.gutter();
   }
   if (!S.dying) {
-    if (S.latched) { S.vx = 0; S.vy = 0; if (S.shot) flyShot(wdt); }       // (held up in a great demon's jaws)
+    if (S.latched || S.inToad) { S.vx = 0; S.vy = 0; if (S.shot) flyShot(wdt); }       // (held up in a great demon's jaws)
     else if (S.act) { if (S.shot) flyShot(wdt); stepAct(wdt); }
     else if (S.atk) { if (S.shot) flyShot(wdt); stepAtk(F.on ? dt * 0.8 : wdt); }       // his blows keep their speed in the flare
     else physics(wdt);
