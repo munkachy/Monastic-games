@@ -857,6 +857,7 @@ function drawWorld() {
   const m = S.tint.m;
   drawBackdrop(600 + cam.x * 0.6, 300 + clamp(cam.y * 0.05, -70, 70), 1, t, { y0: 300, dim: "rgba(12,12,14,0.3)", tint: m[0] + m[1] + m[2] < 760 ? rgbs(m, 1) : null });
   drawNearWall(cam, t, (NOV && NOV.domain) || sectionAt(Math.max(1, Math.floor(-(cam.y + H / 2) / CELL))).dom);
+  if (S.mouth) drawMouth(cam);
   const dawn = clamp(metres(S.top) / 1500, 0, 1);
   if (dawn > 0.01) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "rgba(200,190,170," + (0.22 * dawn) + ")"); g.addColorStop(1, "rgba(200,190,170,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   // Over the summit, the open sky. (sky: how much of the screen it fills, for the dark below.)
@@ -1389,4 +1390,17 @@ function drawNearWall(cam, t, dom) {
       poly([L[2][0] + 6, L[2][1], L[6][0] + 10, L[6][1], L[7][0] + 4, L[7][1]], shade);
     }
   }
+}
+
+// Gluttony's mouth, at the foot of a whole mountain: the great face of stone (traced from
+// gluttony-mouth-1.png), and he starts in its open jaws, looking out. It is drawn behind the rock
+// he walks on, darker than the near wall, so the rock of the room is its lip and its teeth.
+const MOUTH_K = 5.2, MOUTH_C = [-10, 25];              // its size; the middle of its open mouth (u, v)
+function drawMouth(cam) {
+  const M = S.mouth, k = MOUTH_K, cx = M.x - 30, cy = M.y - 50;
+  if (Math.abs(cx - cam.x - W / 2) > W + 300 || Math.abs(cy - cam.y - H / 2) > H + 300) return;
+  const T = (u, v) => [cx + (u - MOUTH_C[0]) * k - cam.x, cy - (v - MOUTH_C[1]) * k - cam.y], P = new Path2D();
+  addShape(P, TRACED.wf0, T);
+  const col = mix("#070608", strataAt(-M.y / CELL, (NOV && NOV.domain) || "gluttony"), 0.3);
+  ctx.fillStyle = col; ctx.fill(P, "evenodd");
 }
