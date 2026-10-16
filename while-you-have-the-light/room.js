@@ -54,6 +54,7 @@ const Room = (() => {
         const y = floorAt(m.x, m.y), n0 = S.demons.length; placeShrine(here(m), d, [[m.x, y, m.x - 90, m.x + 90]], []);
         for (const f of S.demons.slice(n0)) f.placed = true;
       } }))] },
+      { name: "PLATFORMS", items: ROLES.platform.map((k) => ({ name: "A " + (k === "vulture" ? "PLATFORM BIRD" : k.toUpperCase()), sub: "Flies to and fro across here", put(m) { const c = spawnCritter(k, m.x, m.y); if (c) c.placed = true; } })) },
       { name: "THINGS", items: [
         ...HERB_KEYS.map((k) => ({ name: "AN HERB: " + HERBS[k].name.toUpperCase(), put(m) { S.herbs.push({ x: m.x, y: floorAt(m.x, m.y), kind: k, k: here(m), got: false, placed: true }); } })),
         { name: "A STONE BLOCK", sub: "Loose, to take up", put(m) { const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], NOV ? NOV.domain : "gluttony"); b.x = m.x; b.y = floorAt(m.x, m.y); b.placed = true; S.blocks.push(b); } },
