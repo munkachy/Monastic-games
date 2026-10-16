@@ -314,16 +314,16 @@ function makeMountain(rnd) {
   // Outside, at the foot on the left: open ground under an overhang of the mountain, and in the
   // mountain's wall Gluttony's face (traced from gluttony-mouth-1.png) of the mountain's own rock,
   // looking out, its jaws open; a tunnel from the back of its mouth into the first room.
-  const GR = Hh - 14, FK = 0.75, FX = OUT - 67;                 // the ground's row; cells to a unit of the face; where its left edge stands
+  const GR = Hh - 14, FK = 0.15, FX = OUT - 14;                  // the ground's row; cells to a unit of the face (it stands a screen high); where its left edge stands
   for (let r = Hh - 3 * RH; r < GR; r++) for (let x = 1; x < OUT; x++) g[r][x] = false;
   { const F = new Path2D(), cell = (u, v) => [FX + (u + 47.7) * FK, GR - v * FK];
     for (const L of TRACED.wf0) { const a = cell(L[0], L[1]); F.moveTo(a[0], a[1]); for (let i = 2; i < L.length; i += 2) { const b = cell(L[i], L[i + 1]); F.lineTo(b[0], b[1]); } F.closePath(); }
     const cx = (typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(1, 1) : document.createElement("canvas")).getContext("2d");
     for (let r = GR - Math.ceil(100 * FK) - 2; r < GR; r++) for (let x = Math.max(1, FX - 2); x < Math.min(W - 1, FX + Math.ceil(96 * FK) + 2); x++) if (cx.isPointInPath(F, x + 0.5, r + 0.5, "evenodd")) g[r][x] = true; }
   // (The lower jaw kept only as a low lip of teeth, two cells, to step over into the mouth; then the throat.)
-  cut(FX - 2, GR - 12, OUT - 30, GR - 3); cut(OUT - 30, GR - 9, OUT + 10, GR - 1);
+  cut(FX - 1, GR - 5, FX + 9, GR - 2); cut(FX + 7, GR - 5, OUT + 10, GR - 1);
   marks.S = [[FX - 16, GR - 1]];
-  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT });
+  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots, out: OUT, face: { FX, GR, FK } });
 }
 // A room's largest hollow, and the rest of its air made rock (its marks in the rock dropped).
 function largest(R) {
