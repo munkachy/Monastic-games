@@ -179,7 +179,7 @@ const SCENE_PLACE = { shaft: ["shaft"], crossing: ["trav", "cave", "slope"] };
 function scene(sc) {
   sc = sc || {};
   const dom = BUILT.includes(sc.mountain) ? sc.mountain : "gluttony";
-  pieceOut = false; start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true, piece: [].concat(sc.piece || [])[0] === "mountain" ? ["mountain"] : [].concat(sc.piece || []).filter((n) => ROOMS[n]).length ? [].concat(sc.piece).filter((n) => ROOMS[n]) : null }, seed: sc.seed });
+  pieceOut = false; start({ nov: { domain: dom, demons: clamp(Math.round(+sc.demons || 0), 0, 3), torch: !!sc.endlessTorch, flare: !!sc.endlessFlare, room: true, empty: !!sc.empty, piece: [].concat(sc.piece || [])[0] === "mountain" ? ["mountain"] : [].concat(sc.piece || []).filter((n) => ROOMS[n]).length ? [].concat(sc.piece).filter((n) => ROOMS[n]) : null }, seed: sc.seed });
   for (const k of SEEN) S[k] = true;                // (he knows the mountain: no lessons on the way)
   S.fightHintT = 99; S.hintT = 99; S.hooked = 9;
   // The place: the first of the kind asked for at that height or above it, with ground to stand on.

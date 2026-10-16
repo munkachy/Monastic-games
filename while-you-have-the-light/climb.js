@@ -49,7 +49,8 @@ function record() {
   const sec = sectionAt(Math.max(1, Math.floor(-S.y / CELL)));
   return { mode: NOV ? "seven mountains" : "endless climb", mountain: NOV ? NOV.domain : sec.dom, section: { k: sec.k, type: sec.type, dom: sec.dom, gate: !!sec.gate }, seed,
     now: snapNow(), recent: REC.snaps.slice(), events: REC.events.slice(), blocks: S.blocks.map((b) => ({ shape: b.shape, st: b.st })), binned: S.binned, best: metres(S.top),
-    faults: typeof FAULTS !== "undefined" ? FAULTS.slice() : [] };
+    faults: typeof FAULTS !== "undefined" ? FAULTS.slice() : [],
+    whiteRoom: NOV && NOV.room ? { place: Game.last && Game.last.room ? Game.last.room.title : null, placed: (S.placed || []).map((q) => ({ what: q.what, m: q.m, dx: q.x - Math.round(S.x), dy: q.y - Math.round(S.y), x: q.x, y: q.y })) } : null };
 }
 // A picture of the moment (taken as the pause begins, before the pause screen is drawn over it).
 function grabScreen() {
@@ -84,6 +85,7 @@ const M = {
     const wx = p.x + S.cam.x, wy = p.y + S.cam.y, t = { pad: 0, born: performance.now() };
     { const G = cartAt(S.x, S.y); if (G && Math.abs(wx - G.cart) < 30 && wy > G.y - 40 && wy < G.y + 6) { if (S.tied && S.tied.out === G) { S.tied.out = null; deliver(G); } else if (!S.tied) unbin(G); return; } }
     S.touches.set(id, t);
+    if (typeof Room !== "undefined" && Room.live()) { t.lab = { x: p.x, y: p.y, t0: S.rt }; Room.rope0 = !!S.rope; }
     // Two fingers down on the play together: he signs himself (the ward). The first finger's
     // throw, if it is still in the air, is called back; neither finger's tap or swipe counts.
     const other = [...S.touches.entries()].find(([k, u]) => k !== id && !u.dpad && !u.act);
@@ -141,6 +143,7 @@ const M = {
       S.pend = null; ward(); return;
     }
     if (t && t.dpad) { t.x = p.x; t.y = p.y; }
+    if (t && t.lab && dist(p.x, p.y, t.lab.x, t.lab.y) > 14) t.lab = null;
     if (t && t.g && t.g.path.length < 80) t.g.path.push([p.x, p.y]);
   },
   up(p, ev) {
@@ -221,8 +224,7 @@ const ClimbPause = {
     b("GO ON", () => Climb.resume(), { hot: true });
     const room = Climb.nov && Climb.nov.room && typeof Room !== "undefined";
     b("BEGIN AGAIN", () => { Sound.muffle(false); Game.again(true); }, room ? { sub: "The same scene, from its start" } : Climb.nov ? { sub: "From the foot of the mountain" } : {});
-    if (room && Climb.nov.piece) b("THE PIECES", () => Pieces.open(), { sub: "Another room" });
-    else if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Say another scene" });
+    if (room) b("THE WHITE ROOM", () => Room.open(), { sub: "Another place (all put in is cleared)" });
     else b(Climb.nov ? "THE SEVEN MOUNTAINS" : "TO THE SEVEN MOUNTAINS", () => Game.toNovitiate());
     { const hw = bw / 2 - 3; button(soundLabel(), cx - bw / 2, y, hw, 30, cycleSound, {});
       button(tipsOn() ? "TIPS: ON" : "TIPS: OFF", cx + 3, y, hw, 30, () => setTips(!tipsOn()), { sub: tipsOn() ? "" : "On again: all shown again" }); y += 38; }
