@@ -19,6 +19,7 @@ const Room = (() => {
     { name: "A WHOLE MOUNTAIN", sub: "Two or three ways to the top", sc: { piece: ["mountain"] } },
     ...Object.keys(ROOMS).map((n) => ({ name: ROOMS[n].name, sub: "Ways: " + ROOMS[n].ways, sc: { piece: [n] } })),
     { name: "THE SUMMIT", sub: "Gluttony's top, and its great demon", sc: { summit: true } },
+    { name: "A WHOLE MOUNTAIN, PEOPLED", sub: "Its demons and creatures placed by the rules", sc: { piece: ["mountain"], empty: false } },
   ];
   function go(P) {
     R.menu = null;
@@ -34,6 +35,8 @@ const Room = (() => {
     for (let d = 0; d < 900; d += 2) if (solidAt(x, yy + d + 1)) return yy + d - 0.01;
     return y;
   }
+  // (The roof over a point: up from it to the rock.)
+  function roofAt(x, y) { for (let d = 0; d < 900; d += 2) if (solidAt(x, y - d - 1)) return y - d + 16; return y; }
   const mark = (what, m) => { const S = Climb.S; (S.placed = S.placed || []).push({ what, x: Math.round(m.x), y: Math.round(m.y), m: metres(-m.y) }); ev("put in, in the white room", { what }); };
   const KINDS = () => {
     const S = Climb.S, sins = BUILT.filter((d) => DEM[d]);
@@ -45,10 +48,12 @@ const Room = (() => {
           anim: Math.random() * 9, stunT: 0, hurtT: 0, showHp: 0, chew: 0, sec: here(m), id: ++S.ids, growlT: -9, stoneT: -9, placed: true });
         if (!S.tied) { const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], "gluttony"); b.x = S.x - S.dir * 18; b.y = S.y; S.blocks.push(b); b.st = "tied"; b.rope = TETHER; S.tied = b; }
       } })) },
-      { name: "NEUTRAL", items: sins.map((d) => ({ name: "AN IDOL OF " + SINS[d].name.toUpperCase(), sub: "And its worshippers", put(m) {
+      { name: "HARMFUL", items: ROLES.harmful.map((k) => ({ name: "A " + k.toUpperCase(), put(m) { const c = spawnCritter(k, m.x, CRITTERS[k].roof ? roofAt(m.x, m.y) : floorAt(m.x, m.y)); if (c) c.placed = true; } })) },
+      { name: "NEUTRAL", items: [...ROLES.neutral.map((k) => ({ name: "A " + k.toUpperCase(), put(m) { const c = spawnCritter(k, m.x, CRITTERS[k].air ? m.y : floorAt(m.x, m.y)); if (c) c.placed = true; } })),
+        ...sins.map((d) => ({ name: "AN IDOL OF " + SINS[d].name.toUpperCase(), sub: "And its worshippers", put(m) {
         const y = floorAt(m.x, m.y), n0 = S.demons.length; placeShrine(here(m), d, [[m.x, y, m.x - 90, m.x + 90]], []);
         for (const f of S.demons.slice(n0)) f.placed = true;
-      } })) },
+      } }))] },
       { name: "THINGS", items: [
         ...HERB_KEYS.map((k) => ({ name: "AN HERB: " + HERBS[k].name.toUpperCase(), put(m) { S.herbs.push({ x: m.x, y: floorAt(m.x, m.y), kind: k, k: here(m), got: false, placed: true }); } })),
         { name: "A STONE BLOCK", sub: "Loose, to take up", put(m) { const b = makeBlock(SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)], NOV ? NOV.domain : "gluttony"); b.x = m.x; b.y = floorAt(m.x, m.y); b.placed = true; S.blocks.push(b); } },
@@ -65,7 +70,7 @@ const Room = (() => {
         ...Object.keys(BOONS).map((k) => ({ name: "A RELIC: " + BOONS[k].name.toUpperCase(), put() { showBoon(k); } })),
       ] },
       { name: "CLEAR WHAT I PUT IN", put() {
-        S.demons = S.demons.filter((f) => !f.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed);
+        S.demons = S.demons.filter((f) => !f.placed); S.critters = (S.critters || []).filter((c) => !c.placed); S.bigs = S.bigs.filter((g) => !g.placed); S.herbs = S.herbs.filter((h) => !h.placed);
         if (S.tied && S.tied.placed) S.tied = null; S.blocks = S.blocks.filter((b) => !b.placed);
         for (let i = walls.length - 1; i >= 0; i--) if (walls[i].placed) walls.splice(i, 1); walls.forEach((w, i) => { w.n = i; });
         S.placed = []; ev("cleared, in the white room", {});

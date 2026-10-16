@@ -272,7 +272,7 @@ function step(dt) {
     if (S.rt - g.t0 >= HOLD_SIGN) { g.done = true; if (g.f) blessDemon(g.f); else ward(); }
   }
   if (S.dying) { S.dying += dt; if (S.dying > 1.7) { finish(); return; } }
-  markSeen();
+  markSeen(); stepCritters(dt);
   // (The white room: a finger held still a second on the rock or the air opens its menu there.)
   for (const t of S.touches.values()) if (t.lab && !(t.g && (t.g.f || t.g.self || t.g.o)) && S.rt - t.lab.t0 >= Room.HOLD) { const q = t.lab; t.lab = null; S.touches.clear(); Room.menuAt(q.x, q.y); return; }
   // (A room alone, from the piece picker: walked out by a way at its side, it is done.)

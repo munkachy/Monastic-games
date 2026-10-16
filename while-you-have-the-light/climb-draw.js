@@ -871,6 +871,7 @@ function drawWorld() {
   const rimP = new Path2D(), idols = [], embers = []; carved.length = 0;
   const [lx0, ly0] = S.torch, R0 = lightR();
   for (const h of S.herbs) if (!h.got) drawHerb(h, cam);
+  drawCritters(cam);
   for (const f of S.demons) if (f.idol) drawShrine(f, cam, rimP, idols, lights);
   for (const f of S.demons) {
     if (f.idol || f.st === "legs") continue;

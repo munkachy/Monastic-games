@@ -269,8 +269,12 @@ function makeMountain(rnd) {
   // places is GH - 1). Each room keeps only its largest hollow (the rest becomes rock).
   const W = GW * RW, Hh = GH * RH, g = []; for (let r = 0; r < Hh; r++) g.push(new Array(W).fill(true));
   const marks = { S: [], V: [], D: [], H: [], I: [] }, box = (c) => [(c % GW) * RW, (GH - 1 - Math.floor(c / GW)) * RH];
+  const slots = [];
   for (const [c, name] of kind) {
     const R = largest(makeRoom(name, rnd)), [ox, oy] = box(c);
+    slots.push({ c, kind: name, ox, oy, onWay: onWay.has(c) });
+    // (A verse in about half the rooms, one at most: not one at every mark.)
+    R.marks.V = rnd() < 0.5 ? R.marks.V.slice(0, 1) : []; R.marks.H = rnd() < 0.4 ? R.marks.H.slice(0, 1) : [];
     for (let r = 0; r < RH; r++) for (let q = 0; q < RW; q++) g[oy + r][ox + q] = R.g[r][q];
     for (const m in R.marks) if (m !== "S" || c === at(starts[0], 0)) for (const [q, r] of R.marks[m]) marks[m].push([q + ox, r + oy]);
   }
@@ -298,7 +302,7 @@ function makeMountain(rnd) {
   }
   // The summit: up from the top room's highest air to the sky.
   { const A = best(top, (u, r) => r + Math.abs(u - RW / 2) * 0.1, false); if (A) cut(A[0] - 3, 0, A[0] + 2, A[1]); for (let x = A[0] - 3; x <= A[0] + 2; x++) g[0][x] = false; }
-  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true });
+  return seal({ name: "A WHOLE MOUNTAIN", w: W, h: Hh, g, marks, whole: true, slots });
 }
 // A room's largest hollow, and the rest of its air made rock (its marks in the rock dropped).
 function largest(R) {
