@@ -19,7 +19,7 @@ const CRITTERS = {
   mouse: { role: "neutral", hw: 5, ht: 5, w: 2 },
   // The bird: flies about a place of its own. The hook can take it (as it takes a chain), and then
   // it panics: it flies wildly, dragging him about, and tears free.
-  bird: { role: "neutral", hw: 9, ht: 9, w: 1, air: true },
+  bird: { role: "neutral", hw: 12, ht: 24, w: 1, air: true },
   // The platform bird: a bloated vulture with a broad flat back, flying slowly to and fro on its
   // beat (across a pit, or up a shaft). He can stand on its back and be carried; it sags under him.
   vulture: { role: "platform", hw: 30, ht: 30, w: 1, air: true },
@@ -91,7 +91,20 @@ function killCritter(c, kx) {
   for (let q = 0; q < 6; q++) S.parts.push({ kind: "chip", x: c.x, y: c.y - 5, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 120, life: 0.5, age: 0 });
 }
 // The birds, for the hook: as chains are (a point it can be taken by).
-const birdsNear = () => (S.critters || []).filter((c) => c.st !== "dead" && Math.abs(c.y - S.y) < 600 && (c.kind === "bird" || (c.kind === "vulture" && c.grab))).map((c) => (c.kind === "vulture" ? c.grab : c));
+const birdsNear = () => (S.critters || []).filter((c) => c.st !== "dead" && c.grab && Math.abs(c.y - S.y) < 600 && (c.kind === "bird" || c.kind === "vulture")).map((c) => c.grab);
+const BD_K = 2.6;                                            // the bird's size: about three quarters his height perched
+const a0 = (c) => Math.atan2(c.vy, c.vx || 1e-6);
+// A ledge for a bird: a floor near it (in its sight, with room above), not where it is now.
+function perchNear(c) {
+  for (let n = 0; n < 40; n++) {
+    const x = c.x + (Math.random() - 0.5) * 760, y0 = c.y - 220 + Math.random() * 300; if (solidAt(x, y0)) continue;
+    let y = y0; while (!solidAt(x, y + 1) && y - y0 < 400) y += 4; if (!solidAt(x, y + 1)) continue;
+    if (solidAt(x - 12, y - 30) || solidAt(x + 12, y - 30) || !solidAt(x - 8, y + 3) || !solidAt(x + 8, y + 3)) continue;
+    if (Math.abs(x - c.x) < 80 || !los(c.x, c.y - 10, x, y - 12)) continue;
+    return [x, y - 0.5];
+  }
+  return null;
+}
 // A platform bird's back within a hop of him, the way he walks: where to land on it.
 function backAhead(d) {
   for (const c of S.critters || []) {
@@ -162,24 +175,40 @@ function stepCritters(dt) {
       if (ride) { S.x += c.x - x0; S.y += c.y - y0; }
       continue;
     } else if (c.kind === "bird") {
-      const held = S.rope && S.rope.chain === c;
+      // From ledge to ledge: it perches a while, then flies to another; startled when he comes
+      // close, it goes at once. Taken by the hook, it flies off with him (he hangs from the rope
+      // under it), and at last, ten to fifteen seconds on, it shakes him off.
+      const held = S.rope && c.grab && S.rope.chain === c.grab, B = BD_K;
       if (held) {
-        // Panic: wild, sudden turns, mostly up and away; then it tears free.
-        if (c.st !== "panic") { c.st = "panic"; c.t = 0; ev("a bird taken by the hook"); Sound.fx.tick(2200, 0.4); }
-        if (Math.random() < dt * 3) { c.vx = (Math.random() - 0.5) * 420; c.vy = -60 - Math.random() * 220 + (Math.random() < 0.25 ? 260 : 0); }
-        if (c.t > 2.4 + (c.ph % 1)) { dropRope(true); c.st = "flee"; c.t = 0; c.vy = -160; }
-      } else if (c.st === "panic") c.st = "flee";
-      else if (c.st === "flee") { c.vy += (-60 - c.vy) * dt; c.vx += (c.dir * 160 - c.vx) * dt * 2; if (c.t > 3) { c.st = "idle"; c.hx = c.x; c.hy = c.y; } }
-      else {
-        // About its place, rising and falling as it beats its wings; startled when he comes close.
-        const tx = c.hx + Math.sin(c.t * 0.5 + c.ph) * 110, ty = c.hy + Math.sin(c.t * 0.9 + c.ph * 2) * 40;
-        c.vx += ((tx - c.x) * 1.2 - c.vx) * dt * 1.5; c.vy += ((ty - c.y) * 1.2 - c.vy) * dt * 1.5;
-        if (seen && d < 60) { c.st = "flee"; c.t = 0; c.dir = sign(c.x - S.x) || 1; }
+        if (c.st !== "carry") { c.st = "carry"; c.t = 0; c.carryT = 10 + Math.random() * 5; c.to = null; ev("a bird taken by the hook"); Sound.fx.tick(2200, 0.4); }
+        // (Labouring with his weight: a heading kept a while, then changed; mostly level or up; away from the rock.)
+        if (!c.head || Math.random() < dt * 0.6) { const a = (Math.random() < 0.5 ? PI : 0) + (Math.random() - 0.5) * 1.2 - (Math.random() < 0.6 ? 0.35 * sign(Math.cos(a0(c))) : 0); c.head = [Math.cos(a), Math.min(0.3, Math.sin(a)) - 0.15]; }
+        c.vx += (c.head[0] * 150 - c.vx) * dt * 1.5; c.vy += (c.head[1] * 150 - c.vy) * dt * 1.5;
+        if (c.t > c.carryT) { dropRope(true); c.st = "fly"; c.t = 0; c.to = null; ev("the bird let him go"); }
+      } else if (c.st === "carry") { c.st = "fly"; c.t = 0; c.to = null; }
+      if (!held) {
+        if (c.st === "perch") {
+          c.vx = 0; c.vy = 0;
+          if (c.t > c.rest || (seen && d < 90)) { c.st = "fly"; c.t = 0; c.to = null; c.vy = -120; }
+        } else {
+          // Flying to a ledge (found once): there, it lands and perches.
+          if (!c.to) c.to = perchNear(c) || [c.x + (Math.random() - 0.5) * 300, c.y - 60];
+          const dx = c.to[0] - c.x, dy = c.to[1] - c.y, l = Math.hypot(dx, dy) || 1, sp = Math.min(170, 60 + l);
+          c.vx += ((dx / l) * sp - c.vx) * dt * 2.2; c.vy += ((dy / l) * sp - 30 * Math.sin(c.t * 2) - c.vy) * dt * 2.2;
+          if (l < 10) { c.st = "perch"; c.t = 0; c.rest = 2 + Math.random() * 4; c.x = c.to[0]; c.y = c.to[1]; c.vx = 0; c.vy = 0; }
+          if (c.t > 6) { c.to = null; c.t = 0; }
+        }
       }
-      const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw, K.ht); if (hx) { c.vx = -c.vx * 0.6; c.dir = -c.dir; } if (hy) c.vy = -c.vy * 0.6;
-      if (Math.abs(c.vx) > 5) c.dir = sign(c.vx);
-      c.ph += dt * (c.st === "panic" ? 30 : 13);
-      if (held) { S.rope.x = c.x; S.rope.y = c.y; }
+      if (c.st !== "perch") { const [hx, hy] = moveBox(c, c.vx * dt, c.vy * dt, K.hw * B * 0.5, K.ht * B * 0.5); if (hx) { c.vx = -c.vx * 0.5; c.to = null; if (c.head) c.head[0] = -c.head[0]; } if (hy) { c.vy = -c.vy * 0.5; if (c.head) c.head[1] = -Math.abs(c.head[1]); } }
+      if (Math.abs(c.vx) > 8) c.dir = sign(c.vx);
+      c.ph += dt * (c.st === "carry" ? 22 : 12);
+      // (For the hook: a line across its body, as a chain is.)
+      c.grab = c.grab || { kind: "grab", owner: c, len: 1, ang: PI / 2 }; c.grab.x = c.x - 14 * B * 0.5; c.grab.y = c.y - 8 * B * 0.5; c.grab.len = 14 * B;
+      if (held) {
+        // (It takes up the rope, and lifts him off his feet: he hangs and swings under it.)
+        const R = S.rope; R.x = c.x; R.y = c.y - 4; R.along = 1; R.len = Math.max(ROPE_MIN + 20, Math.min(R.len, 150) - 60 * dt);
+        if (S.ground) { S.ground = false; S.vy = Math.min(S.vy, -120); S.liftT = 0.2; }
+      }
     }
   }
   S.critters = S.critters.filter((c) => c.a > 0.02);
@@ -210,19 +239,25 @@ function drawCritters(cam) {
       const T = put(c.x, c.y, c.dir, cam), TK = (u, v) => T(u * PB_K, v * PB_K), beat = Math.sin(c.ph), a = 0.15 + 0.62 * beat - (S.rideOn === c ? 0.12 : 0);
       const far = new Path2D(); addPoly(far, pbWing(a + 0.18, true), TK);
       const P = new Path2D(); addShape(P, TRACED.pbB, TK);
+      // (Its rear tapering away like the end of a long loaf, its top still flat: not the square cut the wing left.)
+      const Rr = new Path2D(), rear = [[-18, 24.6]];
+      for (let i = 0; i <= 12; i++) { const t = PI / 2 + (i / 12) * PI; rear.push([-36 + Math.cos(t) * 13, 15 + Math.sin(t) * (Math.sin(t) > 0 ? 9.6 : 8.5)]); }
+      rear.push([-18, 6.5]); addPoly(Rr, rear, TK);
       const near = new Path2D(); addPoly(near, pbWing(a, false), TK);
       // (Lit by his torch as he is: the shape laid a pixel toward the flame in its warm light, and
       // the black laid over it, so only the edges that face the flame stay lit.)
       let dx = S.torch[0] - c.x, dy = S.torch[1] - (c.y - 18); const dl = Math.hypot(dx, dy) || 1, lit = clamp(1 - dl / (lightR() * 1.1), 0, 1); dx /= dl; dy /= dl;
       const lay = (path, col, k, al, rule) => { ctx.save(); ctx.translate(dx * k, dy * k); ctx.globalAlpha = c.a * al; ctx.fillStyle = col; ctx.fill(path, rule); ctx.restore(); };
-      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
-      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(near);
+      if (lit > 0) { lay(far, MONK_RIM2, 1.3, 0.3 * lit); lay(P, MONK_RIM2, 1.3, 0.3 * lit, "evenodd"); lay(near, MONK_RIM2, 1.3, 0.3 * lit); lay(Rr, MONK_RIM2, 1.3, 0.3 * lit); lay(Rr, MONK_RIM, 0.65, lit); lay(far, MONK_RIM, 0.65, lit); lay(P, MONK_RIM, 0.65, lit, "evenodd"); lay(near, MONK_RIM, 0.65, lit); }
+      ctx.globalAlpha = c.a; ctx.fillStyle = "#151318"; ctx.fill(far); ctx.fillStyle = ink; ctx.fill(P, "evenodd"); ctx.fill(Rr); ctx.fill(near);
     } else if (c.kind === "bird") {
       // (Traced: its wings beating through glide, up, glide, down; faster fleeing; on the hook,
       // panicking and startled by turns; dead, tumbling. Drawn about its middle.)
-      const k = c.st === "dead" ? "bd8" : c.st === "panic" ? (Math.floor(c.t * 9) % 2 ? "bd5" : "bd4") : ["bd0", "bd1", "bd0", "bd2"][Math.floor(c.ph * (c.st === "flee" ? 0.5 : 0.32)) % 4];
-      const sh = TRACED[k], hh = shapeH(k), T = put(c.x, c.y - 4 + hh / 2, c.dir, cam), P = new Path2D();
-      addShape(P, sh, T); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
+      const near = c.to && c.st === "fly" && dist(c.x, c.y, c.to[0], c.to[1]) < 50;
+      const k = c.st === "dead" ? "bd8" : c.st === "perch" ? "bd7" : near ? "bd6" : c.st === "carry" ? (Math.floor(c.t * 3) % 5 === 0 ? "bd4" : ["bd1", "bd0", "bd2", "bd0"][Math.floor(c.ph * 0.5) % 4]) : ["bd0", "bd1", "bd0", "bd2"][Math.floor(c.ph * 0.32) % 4];
+      // (Perched, its feet on the ledge; in the air, drawn about its middle.)
+      const hh = shapeH(k) * BD_K, T0 = put(c.x, c.st === "perch" ? c.y : c.y + hh / 2 - 10, c.dir, cam), T = (u, v) => T0(u * BD_K, v * BD_K), P = new Path2D();
+      addShape(P, TRACED[k], T); ctx.fillStyle = ink; ctx.fill(P, "evenodd");
     }
     ctx.globalAlpha = 1;
   }
