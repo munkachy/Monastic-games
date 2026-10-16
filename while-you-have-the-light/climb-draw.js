@@ -437,7 +437,7 @@ const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, 
 const rgbs = (c, a) => "rgba(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + "," + a + ")";
 function tintStep(dt) {
   const dom = sectionAt(Math.max(1, Math.floor(-(S.cam.y + H / 2) / CELL))).dom;
-  const m = rgb(dom ? mix("#ffffff", SINS[dom].color, 0.34) : "#ffffff"), d = rgb(dom ? mix("#040406", SINS[dom].deep, 0.28) : "#040406");
+  const hc = -(S.cam.y + H / 2) / CELL, m = rgb(dom ? mix(mix("#ffffff", SINS[dom].color, 0.34), strataAt(hc, dom), 0.22) : "#ffffff"), d = rgb(dom ? mix("#040406", SINS[dom].deep, 0.28) : "#040406");
   if (!S.tint) S.tint = { m, d };
   const k = 1 - Math.exp(-dt * 1.2);
   for (let i = 0; i < 3; i++) { S.tint.m[i] += (m[i] - S.tint.m[i]) * k; S.tint.d[i] += (d[i] - S.tint.d[i]) * k; }
@@ -856,6 +856,7 @@ function drawWorld() {
   // The far mist set back, so the near rock stands out; and the domain's colour in it.
   const m = S.tint.m;
   drawBackdrop(600 + cam.x * 0.6, 300 + clamp(cam.y * 0.05, -70, 70), 1, t, { y0: 300, dim: "rgba(12,12,14,0.3)", tint: m[0] + m[1] + m[2] < 760 ? rgbs(m, 1) : null });
+  drawNearWall(cam, t, (NOV && NOV.domain) || sectionAt(Math.max(1, Math.floor(-(cam.y + H / 2) / CELL))).dom);
   const dawn = clamp(metres(S.top) / 1500, 0, 1);
   if (dawn > 0.01) { const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "rgba(200,190,170," + (0.22 * dawn) + ")"); g.addColorStop(1, "rgba(200,190,170,0)"); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
   // Over the summit, the open sky. (sky: how much of the screen it fills, for the dark below.)
@@ -1324,6 +1325,7 @@ function markSeen() {
 }
 // (Built once each pause: a pixel to MAP_P cells, from the foot to the summit, the width of the world.)
 let MAP = null;
+const bandRGB = (h) => rgb(strataAt(h, (NOV && NOV.domain) || "gluttony"));
 function buildMap() {
   if (NOV && Number.isFinite(summitK())) ensureSecs(summitK());
   const su = summitSec(), top = su ? su.h0 + 8 : Math.ceil(S.top / CELL) + 60, w = Math.ceil(COLS / MAP_P), h = Math.ceil(top / MAP_P);
@@ -1331,8 +1333,8 @@ function buildMap() {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = x * MAP_P, hh = (h - y) * MAP_P, p = (y * w + x) * 4;
     if (!ClimbPause.all && !(S.seen && S.seen.has(Math.floor(i / MAP_T) * 4096 + Math.floor(hh / MAP_T)))) { d[p + 3] = 0; continue; }
-    const rock = solid(i + 1, -hh);
-    d[p] = rock ? 58 : 196; d[p + 1] = rock ? 50 : 182; d[p + 2] = rock ? 42 : 156; d[p + 3] = 255;
+    const rock = solid(i + 1, -hh), c = bandRGB(hh);
+    d[p] = rock ? c[0] * 0.45 : 150 + c[0] * 0.35; d[p + 1] = rock ? c[1] * 0.45 : 150 + c[1] * 0.3; d[p + 2] = rock ? c[2] * 0.45 : 140 + c[2] * 0.25; d[p + 3] = 255;
   }
   g.putImageData(img, 0, 0); MAP = { c, w, h, top };
 }
@@ -1349,4 +1351,56 @@ function drawMap(x, y, w, h, near) {
   const px = ox + (mx - sx) * k, py = y + (my - sy) * k;
   glow(px, py, 9, C.flame, 0.6); circle(px, py, 2.2, C.flameHot);
   return [ox, y, vw, vh];
+}
+
+// ---- The near wall, and the strata -----------------------------------------------------------------
+// Behind the rock he climbs, nearer than the far mist: the cave's own wall, moving at half his pace,
+// columns and ribs of rock, teeth hanging from above, and here and there a face in the stone. It
+// changes colour by bands as he climbs, as rock is laid down in strata, a band to each row of rooms;
+// the map shows the bands too. Seen only where his light reaches.
+const BAND = 44;                                 // rows of cells to a band (a row of rooms)
+const STRATA = {
+  gluttony: ["#8a6a3e", "#6e6c3a", "#a3963e", "#7c4a30", "#6a3a34", "#8a7a52"],
+  lust: ["#7a4a5e", "#5e3e5a", "#8a5a6a", "#4e3a52"], avarice: ["#7a6a3a", "#5e5a4a", "#8a7a4a", "#4e4a3e"], wrath: ["#7a3a2e", "#5a3a34", "#8a4a32", "#4a2e2a"],
+};
+// The band's colour at height h (in cells): each band its own, blending into the next at its top.
+function strataAt(h, dom) {
+  const c = STRATA[dom] || STRATA.gluttony, b = Math.max(0, h) / BAND, i = Math.floor(b), k = smooth((b - i - 0.82) / 0.18);
+  return mix(c[i % c.length], c[(i + 1) % c.length], k);
+}
+function drawNearWall(cam, t, dom) {
+  const PX = 0.5, ox = cam.x * PX, oy = cam.y * PX, TW = 170, TH = 230, hMid = -(cam.y + H / 2) / CELL;
+  const col = strataAt(hMid, dom), body = mix("#0b0a0c", col, 0.42), shade = mix("#060507", col, 0.18);
+  const [lx, ly] = S.torch, sd = (seed % 997) + 3;
+  for (let iy = Math.floor(oy / TH) - 1; iy <= Math.floor((oy + H) / TH) + 1; iy++) for (let ix = Math.floor(ox / TW) - 1; ix <= Math.floor((ox + W) / TW) + 1; ix++) {
+    // (A column runs unbroken through two or more tiles, and comes to a point where it ends.)
+    const has = (j) => hash2(ix, Math.floor(j / 2), sd) < 0.42, x0 = ix * TW - ox, y0 = iy * TH - oy;
+    if (has(iy)) {
+      // A column of rock, its sides broken.
+      const cx = x0 + TW * (0.25 + 0.5 * hash2(ix, 0, sd + 1)), w = 40 + 80 * hash2(ix, 0, sd + 2), L = [], R = [], up = !has(iy - 1), dn = !has(iy + 1);
+      for (let q = 0; q <= 9; q++) {
+        const g = iy * 9 + q, y = y0 + (TH * q) / 9, n = (hash2(ix * 13, g, sd + 3) - 0.5) * 22, m = (hash2(ix * 13, g, sd + 4) - 0.5) * 22;
+        const k = Math.min(up ? smooth(q / 5) : 1, dn ? smooth((9 - q) / 5) : 1), hw = (w / 2) * (0.08 + 0.92 * k);
+        L.push([cx - hw + n * k, y]); R.push([cx + hw + m * k, y]);
+      }
+      poly([...L, ...R.reverse()].flat(), body);
+      poly([L[2][0] + 6, L[2][1], L[6][0] + 10, L[6][1], L[7][0] + 4, L[7][1]], shade);
+      // Now and then, a face in it: hollow eyes not quite alike, a mouth that slowly opens and shuts.
+      if (hash2(ix, iy, sd + 5) < 0.16 && w > 70) {
+        const fx = cx + (hash2(ix, iy, sd + 6) - 0.5) * 14, fy = y0 + TH * (0.3 + 0.35 * hash2(ix, iy, sd + 7)), tilt = (hash2(ix, iy, sd + 8) - 0.5) * 0.5;
+        const e1 = 5 + 4 * hash2(ix, iy, sd + 9), e2 = 4 + 6 * hash2(ix, iy, sd + 10), open = 0.4 + 0.6 * Math.max(0, Math.sin(t * 0.35 + ix * 1.7 + iy));
+        ctx.save(); ctx.translate(fx, fy); ctx.rotate(tilt); ctx.scale(1.7, 1.7); ctx.fillStyle = "#030204";
+        ctx.beginPath(); ctx.ellipse(-11, 0, e1 * 0.8, e1, 0.2, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(11, 2, e2 * 0.75, e2, -0.15, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(1, 24, 7 + 2 * open, 4 + 13 * open, 0, 0, TAU); ctx.fill();
+        // (Lit, an eye glints.)
+        const near = dist(lx - cam.x, ly - cam.y, fx, fy) < lightR() * 0.9;
+        if (near && Math.sin(t * 0.9 + ix) > 0.2) { circle(-11, 0.5, 1.1, "rgba(255,226,180,0.8)"); circle(11, 2.5, 0.9, "rgba(255,226,180,0.6)"); }
+        ctx.restore();
+      }
+    } else if (hash2(ix, iy, sd + 14) < 0.35) {
+      // Teeth of rock hanging from above.
+      for (let q = 0; q < 4; q++) { const x = x0 + TW * (0.1 + 0.25 * q) + (hash2(ix, iy * 7 + q, sd + 11) - 0.5) * 20, w = 10 + 16 * hash2(ix, q, sd + 12), l = 40 + 90 * hash2(ix + q, iy, sd + 13); poly([x - w / 2, y0, x + w / 2, y0, x + w * 0.1, y0 + l], body); }
+    }
+  }
 }
