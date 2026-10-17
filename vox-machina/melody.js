@@ -97,6 +97,9 @@ export const STYLES = {
   techno: { label: 'Techno', about: 'Hypnotic: nearly all on the home note, stabbing on and off the beat with gaps, one note bending away. Try 125-135 BPM with Gate.' },
   electro: { label: 'Electro', about: 'Robot funk: syncopated 3-3-2 rhythm with octave jumps. Try 110-128 BPM.' },
   dubstep: { label: 'Dubstep', about: 'Half-time, low and heavy: long held notes, the flat second and the low octave, sudden gaps. Try 140 BPM with Wobble.' },
+  hiphop: { label: 'Hip-hop flow', about: 'Boom-bap rap cadence: swung sixteenths, a narrow pitch range around the home note, a drop at the end of each line. Try 85-95 BPM.' },
+  gfunk: { label: 'G-funk hook', about: 'West Coast talkbox hook: laid-back minor-pentatonic phrases that slide between notes. Try 90-100 BPM with Glide up.' },
+  trap: { label: 'Trap flow', about: 'Triplet bursts and hard stops over a half-time feel. Try 140 BPM (felt as 70).' },
   acid: { label: 'Acid', about: 'Squelchy 303-style line: wide leaps and slides around the home note. Turn Glide up. Try 125-135 BPM.' },
 };
 
@@ -107,12 +110,19 @@ const GROOVES = {
   electro: [[0.75, 0.75, 0.5], [0.75, 0.75, 0.5, 0.5, -0.5, 0.5, 0.5], [0.5, 0.25, -0.25, 0.75, 0.25]],
   dubstep: [[1.5, 0.5, -1, 1], [0.75, 0.75, -0.5, 2], [1, -0.5, 0.5, 1.5, -0.5], [0.5, 0.5, 0.5, -0.5, 2]],
   acid: [[0.5], [0.5, 0.5, 0.25, 0.25, 0.5], [0.5, -0.25, 0.25]],
+  // Swung sixteenths: 1/3 + 1/6 of a beat instead of 1/4 + 1/4.
+  hiphop: [[1 / 3, 1 / 6, 1 / 3, 1 / 6, 0.5, -0.5], [0.5, 1 / 3, 1 / 6, 0.5, -0.25, 0.25, 0.5], [1 / 3, 1 / 6, 1 / 3, 1 / 6, 1 / 3, 1 / 6, -0.5, 0.5]],
+  gfunk: [[0.75, 0.75, 0.5, 1, -1], [0.5, 0.5, 1, 0.5, 1.5, -0.5], [-0.5, 0.5, 0.75, 0.75, 1.5]],
+  trap: [[1 / 3, 1 / 3, 1 / 3, 0.5, 0.5, -0.5, 0.5], [0.5, -0.25, 0.25, 1 / 3, 1 / 3, 1 / 3, 1], [1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3, -1]],
 };
 // Note patterns (scale degrees) for each dance style.
 const RIFFS = {
   techno: [[0, 0, 0, -2], [0, 0, 2, 0], [0, 0, 0, 0, 4, 0], [0, 7, 0, 0], [0, 0, -3, 0]],
   electro: [[0, 0, 7, 0, 4, 0, 2, 3], [0, 7, 0, 6, 0, 4, 2, 0], [0, 0, 2, 0, -3, -2]],
   dubstep: [[0, 0, 1, 0, -7, 0], [0, -7, 0, 1, 0, 4, 3], [0, 0, 4, 3, 1, 0], [-7, 0, -7, 1]],
+  hiphop: [[0, 0, 0, -1, 0, 0, 1, 0], [0, 0, 2, 0, 0, -2], [0, 0, 0, 0, -1, -2]],
+  gfunk: [[7, 6, 4, 6, 7, 4, 3, 2, 0], [0, 2, 3, 4, 6, 4, 3, 2], [4, 6, 7, 6, 4, 3, 2, 0]],
+  trap: [[0, 0, 0, 7, 0, 0, 1, 0], [0, 0, 0, -1, 0, 0, 4, 0], [0, 4, 0, 0, 2, 0]],
   acid: [[0, 7, 0, 2, 0, 9, 4, 7], [0, 0, 7, 0, 3, 0, 6, 7], [0, -7, 0, 2, 4, 0, 7, -1]],
 };
 
@@ -129,7 +139,7 @@ const triad = root => [root, root + 2, root + 4];
 // { word, syllable, midi, beats, chord: [midi...] }, and rests are
 // { rest: true, beats }.
 export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed = 1,
-  octave = 0, harmony = 'none' } = {}) {
+  octave = 0, harmony = 'none', melisma = 0 } = {}) {
   const key = parseKey(keyStr, octave);
   const words = wordsOf(text);
   const r = rng(seed);
@@ -248,10 +258,34 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
     }
   };
 
+  // Melisma: in chant a single vowel is often carried over a run of notes
+  // (the long "a" of an Alleluia). Runs go on the last syllable of a word,
+  // most often at the end of a phrase; more melisma means more and longer
+  // runs. Each run wanders by step around the note and comes home to it.
+  const fast = GROOVES[style] ? 0.25 : 0.5;              // run note length
+  const runs = new Array(n).fill(null);
+  if (melisma > 0) syl.forEach((s, i) => {
+    if (!s.last) return;
+    const chance = s.pause || i === n - 1 ? Math.min(1, melisma * 2) : melisma * 0.6;
+    if (r() >= chance) return;
+    const len = 2 + Math.round(melisma * 6 * (0.4 + 0.6 * r()));
+    const run = []; let d = degs[i];
+    for (let k = 0; k < len - 1; k++) {
+      const pull = d > degs[i] + 2 ? -1 : d < degs[i] - 2 ? 1 : 0;   // don't wander too far
+      d += pull || pick(r, [1, 1, -1, -1, 2, -2, 0]);
+      run.push(d);
+    }
+    run.push(degs[i]);
+    runs[i] = run;
+  });
+
   const notes = [];
   syl.forEach((s, i) => {
     if (pre[i]) notes.push({ rest: true, beats: pre[i] });
-    notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, degs[i]), beats: beats[i], chord: harm(degs[i], chordRoot[i]) });
+    // "spoken" = how much of the note's time the word itself gets; run notes
+    // get none, so the vowel is held through them.
+    notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, degs[i]), beats: beats[i], spoken: beats[i], chord: harm(degs[i], chordRoot[i]) });
+    if (runs[i]) for (const d of runs[i]) notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, d), beats: fast, spoken: 0, chord: harm(d, chordRoot[i]), run: true });
     if (s.pause && i < n - 1) notes.push({ rest: true, beats: s.pause === 2 ? 1 : 0.5 });
   });
   return { notes, words, key };

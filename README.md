@@ -127,13 +127,14 @@ a WAV sample for a music app such as Remixlive, or for a game.
   speed and word gap.
 - **Sing:** give it a key such as `Bm` or `D dorian` and a style (Monastic
   psalm tone, recto tono, hymn, Kraftwerk, lament, trance arpeggio, techno,
-  electro, dubstep, acid), and a
+  electro, dubstep, acid, hip-hop flow, G-funk hook, trap), with chant-style
+  melismas and vowels held up to double length,, and a
   vocoder sings the verse on exact notes at your tempo, with optional organum,
   thirds, choir chords or a drone.
 - **Effects:** synthetic choir, ring modulator, bitcrusher, delay and reverb,
   with one *Robot amount* knob that blends them all.
-- **Presets:** 18 built in, from Cold Cathedral, Night Office and Seraphim to
-  Basilica Dub, Warehouse Vespers and Acid Compline, and your own saved in the
+- **Presets:** 22 built in, from Cold Cathedral, Night Office, Jubilus and
+  Seraphim to West Coast Talkbox, Trap Psalm, Basilica Dub, Warehouse Vespers and Acid Compline, and your own saved in the
   browser. Tempo-locked **Wobble** and **Gate** effects for dance tracks.
 - **Export:** 44.1 kHz, 16-bit WAV. Preview and file are rendered the same way,
   so they sound the same. On iPhone, *Share* sends the file to Files or another app.

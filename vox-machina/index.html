@@ -8,140 +8,166 @@
 <style>
   :root { --bg:#0d0f14; --panel:#171a22; --line:#2a2f3b; --ink:#e8e6df; --dim:#9a988f; --gold:#e0b030; --go:#3fbf8f; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.4 system-ui, -apple-system, sans-serif;
-         padding: 16px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.35 system-ui, -apple-system, sans-serif;
+         padding: 10px max(12px, env(safe-area-inset-right)) 130px max(12px, env(safe-area-inset-left)); }
   main { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 26px; margin: 4px 0 2px; letter-spacing: .04em; }
-  .tag { color: var(--gold); font-size: 14px; margin: 0 0 14px; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 14px 0; }
-  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 10px; }
-  textarea, input[type=text], select { width:100%; font: inherit; font-size: 17px; color: var(--ink); background: #0f1218;
-         border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-  textarea { min-height: 96px; resize: vertical; }
-  #batch { min-height: 160px; font-family: ui-monospace, Menlo, monospace; font-size: 15px; }
-  .row { display:flex; gap:10px; flex-wrap: wrap; margin-top: 10px; }
-  button { flex: 1 1 140px; min-height: 54px; font: inherit; font-weight: 600; font-size: 18px; border-radius: 12px;
-           border: 1px solid var(--line); background: #222736; color: var(--ink); cursor: pointer; }
+  header { display:flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 2px 0; letter-spacing: .06em; }
+  .tag { color: var(--gold); font-size: 12px; margin: 0; }
+  textarea, input[type=text], select { width:100%; font: inherit; font-size: 16px; color: var(--ink); background: #0f1218;
+         border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+  textarea { min-height: 70px; resize: vertical; margin-top: 8px; }
+  #batch { min-height: 120px; font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+  .row { display:flex; gap:8px; margin-top: 8px; align-items: center; }
+  .row > * { min-width: 0; }
+  button { flex: 1 1 0; min-height: 46px; font: inherit; font-weight: 600; font-size: 16px; border-radius: 11px;
+           border: 1px solid var(--line); background: #222736; color: var(--ink); cursor: pointer; padding: 0 8px; }
+  button.small { flex: 0 0 46px; }
   button.go { background: var(--go); color: #06110c; border-color: var(--go); }
   button.gold { background: var(--gold); color: #1a1405; border-color: var(--gold); }
   button:disabled { opacity: .45; }
-  .ctl { margin: 12px 0; }
-  .ctl label { display:flex; justify-content: space-between; font-size: 15px; }
-  .ctl label output { color: var(--gold); font-variant-numeric: tabular-nums; }
-  input[type=range] { width: 100%; height: 36px; accent-color: var(--gold); }
-  .robot input[type=range] { height: 48px; }
-  .robot label { font-size: 18px; font-weight: 700; }
-  #status { min-height: 1.4em; color: var(--dim); font-size: 15px; margin-top: 10px; }
   .mode button.on { background: var(--gold); color: #1a1405; border-color: var(--gold); }
-  .two > .ctl { flex: 1 1 120px; margin: 0; }
-  #tuneShow { font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.6; word-break: break-word; }
-  .note { color: var(--dim); font-size: 14px; }
-  footer { text-align:center; color: var(--dim); font-size: 13px; margin-top: 24px; }
+
+  /* Folding panels */
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; }
+  summary { list-style: none; cursor: pointer; padding: 12px 14px; font-weight: 700; font-size: 15px;
+            display:flex; justify-content: space-between; align-items: center; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '▸'; color: var(--dim); transition: transform .15s; }
+  details[open] > summary::after { transform: rotate(90deg); }
+  summary small { color: var(--dim); font-weight: 400; margin-left: auto; margin-right: 10px; font-size: 13px;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; }
+  .body { padding: 0 14px 12px; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 14px 0 2px; }
+
+  /* Sliders: label on the left, slider on the right, value under the label */
+  .ctl { display: grid; grid-template-columns: minmax(96px, 38%) 1fr; align-items: center; column-gap: 10px; margin: 2px 0; }
+  .ctl label { font-size: 14px; line-height: 1.15; }
+  .ctl label output { display:block; color: var(--gold); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .ctl.wide { display:block; margin: 6px 0; }
+  .ctl.wide label { display:block; margin-bottom: 4px; }
+  input[type=range] { width: 100%; height: 34px; accent-color: var(--gold); margin: 0; }
+  #robotBox .ctl label { font-weight: 700; }
+
+  .note { color: var(--dim); font-size: 13px; margin: 6px 0; }
+  #tuneShow { font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.5; word-break: break-word; color: var(--ink); }
+  .edited { color: var(--gold); font-size: 12px; white-space: nowrap; }
+
+  /* The play bar stays at the bottom of the screen */
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(13,15,20,.96); border-top: 1px solid var(--line);
+         padding: 8px max(12px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  #bar .inner { max-width: 640px; margin: 0 auto; }
+  #bar .row { margin: 0; }
+  #status { color: var(--dim); font-size: 13px; margin-top: 5px; min-height: 1.2em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  footer { text-align:center; color: var(--dim); font-size: 12px; margin-top: 16px; }
   footer a { color: var(--gold); }
 </style>
 </head>
 <body>
 <main>
-  <h1>VOX MACHINA</h1>
-  <p class="tag">Synthetic voice. No human voice recordings used.</p>
+  <header>
+    <h1>VOX MACHINA</h1>
+    <p class="tag">Synthetic voice. No human voice recordings used.</p>
+  </header>
 
-  <section>
-    <h2>Verse</h2>
-    <div class="row mode">
-      <button id="modeSpeak" class="on">🗣 Speak</button>
-      <button id="modeSing">🎵 Sing</button>
+  <textarea id="text" aria-label="Verse">In the beginning was the Word, and the Word was with God, and the Word was God.</textarea>
+
+  <div class="row mode">
+    <button id="modeSpeak" class="on">🗣 Speak</button>
+    <button id="modeSing">🎵 Sing</button>
+  </div>
+
+  <!-- Choosing a preset loads it at once. Changing any control after that
+       takes effect on the next Preview; no need to load anything again. -->
+  <div class="row">
+    <select id="presetList" aria-label="Preset"></select>
+    <button id="presetSave" class="small" title="Save current settings as a preset" aria-label="Save preset">💾</button>
+    <button id="presetDelete" class="small" title="Delete this preset" aria-label="Delete preset">🗑</button>
+  </div>
+  <div class="row" style="margin-top:4px; justify-content: space-between">
+    <span class="note" style="margin:0">Any change applies to the next Preview.</span>
+    <span id="edited" class="edited" hidden>● edited · 💾 to keep</span>
+  </div>
+
+  <details id="singBox" open hidden>
+    <summary>Melody <small id="melodySum"></small></summary>
+    <div class="body">
+      <div class="row">
+        <input type="text" id="key" value="Bm" autocapitalize="off" autocomplete="off" aria-label="Key" style="flex:1">
+        <select id="octave" aria-label="Octave" style="flex:1"><option value="-1">Low</option><option value="0" selected>Middle</option><option value="1">High</option></select>
+      </div>
+      <p class="note">Key: Bm, F#, Eb, C major, D dorian, E phrygian…</p>
+      <select id="style" aria-label="Style"></select>
+      <p class="note" id="styleAbout"></p>
+      <div class="row">
+        <select id="harmony" aria-label="Harmony" style="flex:2">
+          <option value="none">Harmony: none</option>
+          <option value="organum">Organum (fifths)</option>
+          <option value="octave">Octave below</option>
+          <option value="thirds">Thirds below</option>
+          <option value="choir">Choir chords</option>
+          <option value="drone">Drone</option>
+        </select>
+        <label style="flex:1; display:flex; align-items:center; gap:6px; font-size:14px">
+          <input type="checkbox" id="carrierChoir" style="width:24px;height:24px"> Ensemble</label>
+      </div>
+      <div id="melodyBox"></div>
+      <div class="row">
+        <button id="prevMelody">◀ Tune</button>
+        <span class="note" style="flex:0 0 auto; margin:0">#<span id="seedShow">1</span></span>
+        <button id="nextMelody">Tune ▶</button>
+      </div>
+      <p class="note" id="tuneShow"></p>
     </div>
-    <textarea id="text">In the beginning was the Word, and the Word was with God, and the Word was God.</textarea>
-    <div class="row"><input type="text" id="filename" value="verse" aria-label="File name"></div>
-    <div class="row">
-      <button id="preview" class="go">▶ Preview</button>
-      <button id="stop">■ Stop</button>
-      <button id="download" class="gold">⬇ WAV</button>
-      <button id="share" hidden>Share…</button>
+  </details>
+
+  <details>
+    <summary>Tempo &amp; rhythm <small id="tempoSum"></small></summary>
+    <div class="body">
+      <p class="note">Tempo sets the singing speed and keeps Wobble and Gate on the beat. Match your Remixlive BPM.</p>
+      <div id="tempoBox"></div>
     </div>
-    <div id="status">Loading voice engine…</div>
-      </section>
+  </details>
 
-  <section id="singBox" hidden>
-    <h2>Melody</h2>
-    <div class="row two">
-      <div class="ctl"><label for="key">Key</label><input type="text" id="key" value="Bm" autocapitalize="off" autocomplete="off"></div>
-      <div class="ctl"><label for="octave">Octave</label>
-        <select id="octave"><option value="-1">Low</option><option value="0" selected>Middle</option><option value="1">High</option></select></div>
+  <details>
+    <summary>Voice <small id="voiceSum"></small></summary>
+    <div class="body">
+      <div class="row">
+        <select id="variant" aria-label="Variant"></select>
+        <select id="voice" aria-label="Accent">
+          <option value="en-us">American</option>
+          <option value="en">British</option>
+          <option value="en-gb-scotland">Scottish</option>
+          <option value="en-029">Caribbean</option>
+          <option value="la">Latin</option>
+        </select>
+      </div>
+      <div id="voiceBox"></div>
     </div>
-    <p class="note">Like Bm, F#, Eb, C major, D dorian, E phrygian, G mixolydian.</p>
-    <div class="ctl"><label for="style">Style</label><select id="style"></select></div>
-    <p class="note" id="styleAbout"></p>
-    <div class="ctl"><label for="harmony">Harmony</label>
-      <select id="harmony">
-        <option value="none">None (one voice)</option>
-        <option value="organum">Organum (parallel fifths)</option>
-        <option value="octave">Octave below</option>
-        <option value="thirds">Thirds below</option>
-        <option value="choir">Choir chords</option>
-        <option value="drone">Drone (tonic and fifth)</option>
-      </select></div>
-    <div class="ctl"><label><span>Ensemble (detuned voices)</span><input type="checkbox" id="carrierChoir" style="width:28px;height:28px"></label></div>
-    <div id="melodyBox"></div>
-    <div class="row">
-      <button id="prevMelody">◀ Melody</button>
-      <button id="nextMelody">Melody ▶</button>
+  </details>
+
+  <details>
+    <summary>Effects <small id="fxSum"></small></summary>
+    <div class="body">
+      <div id="robotBox"></div>
+      <h3>Bitcrusher</h3><div id="crushBox"></div>
+      <h3>Ring modulator</h3><div id="ringBox"></div>
+      <h3>Synthetic choir</h3><div id="choirBox"></div>
+      <h3>Delay &amp; reverb</h3><div id="spaceBox"></div>
     </div>
-    <p class="note">Variation <span id="seedShow">1</span>. Each one is a different tune in the same style.</p>
-    <p class="note" id="tuneShow"></p>
-  </section>
+  </details>
 
-  <section>
-    <h2>Tempo &amp; rhythm effects</h2>
-    <p class="note">Tempo sets the singing speed, and keeps Wobble and Gate on the beat. Set it to your Remixlive project's BPM.</p>
-    <div id="tempoBox"></div>
-  </section>
-
-  <section>
-    <h2>Presets</h2>
-    <select id="presetList"></select>
-    <div class="row">
-      <button id="presetLoad">Load</button>
-      <button id="presetSave">Save as…</button>
-      <button id="presetDelete">Delete</button>
-    </div>
-  </section>
-
-  <section class="robot" id="robotBox"></section>
-
-  <section>
-    <h2>Voice (eSpeak NG)</h2>
-    <div class="ctl">
-      <label for="variant">Variant</label>
-      <select id="variant"></select>
-    </div>
-    <div class="ctl">
-      <label for="voice">Accent</label>
-      <select id="voice">
-        <option value="en-us">English (American)</option>
-        <option value="en">English (British)</option>
-        <option value="en-gb-scotland">English (Scottish)</option>
-        <option value="en-029">English (Caribbean)</option>
-        <option value="la">Latin</option>
-      </select>
-    </div>
-    <div id="voiceBox"></div>
-  </section>
-
-  <section><h2>Bitcrusher</h2><div id="crushBox"></div></section>
-  <section><h2>Ring modulator</h2><div id="ringBox"></div></section>
-  <section><h2>Synthetic choir (chorus)</h2><div id="choirBox"></div></section>
-  <section><h2>Delay &amp; reverb</h2><div id="spaceBox"></div></section>
-
-  <section>
-    <h2>Batch</h2>
-    <p class="note">One clip per line: <code>filename | verse text</code></p>
-    <textarea id="batch">john-1-1 | In the beginning was the Word.
+  <details>
+    <summary>Batch: many clips as a ZIP</summary>
+    <div class="body">
+      <p class="note">One clip per line: <code>filename | verse text</code></p>
+      <textarea id="batch">john-1-1 | In the beginning was the Word.
 ps-23-1 | The Lord is my shepherd; I shall not want.
 gen-1-3 | And God said, Let there be light: and there was light.</textarea>
-    <div class="row"><button id="batchGo" class="gold">⬇ Render all as ZIP</button></div>
-    <div id="batchStatus" class="note"></div>
-  </section>
+      <div class="row"><button id="batchGo" class="gold">⬇ Render all as ZIP</button></div>
+      <div id="batchStatus" class="note"></div>
+    </div>
+  </details>
 
   <footer>
     Voice: <a href="https://github.com/espeak-ng/espeak-ng">eSpeak NG</a> (GPL v3), formant synthesis by rule.
@@ -149,6 +175,17 @@ gen-1-3 | And God said, Let there be light: and there was light.</textarea>
     <a href="../">Monastic Games</a>
   </footer>
 </main>
+
+<div id="bar"><div class="inner">
+  <div class="row">
+    <input type="text" id="filename" value="verse" aria-label="File name" style="flex:1.3">
+    <button id="preview" class="go">▶</button>
+    <button id="stop" class="small">■</button>
+    <button id="download" class="gold">⬇ WAV</button>
+    <button id="share" class="small" hidden aria-label="Share">⇪</button>
+  </div>
+  <div id="status">Loading voice engine…</div>
+</div></div>
 <script src="lib/jszip.min.js"></script>
 <script type="module" src="app.js"></script>
 </body>

@@ -21,41 +21,85 @@ import { makeMelody, midiToHz } from './melody.js';
 const SR = 44100;
 
 export async function sing(text, s, onProgress = () => {}) {
-  const tune = makeMelody(text, { key: s.key, style: s.style, seed: s.seed, octave: s.octave, harmony: s.harmony });
+  const tune = makeMelody(text, { key: s.key, style: s.style, seed: s.seed, octave: s.octave,
+    harmony: s.harmony, melisma: s.melisma || 0 });
   const spb = 60 / s.bpm;                                  // seconds per beat
+  // Vowel length above 100% lengthens every note (to double at 200%),
+  // rounded to a twelfth of a beat so the clip stays on the grid.
+  const stretch = Math.max(1, s.sustain);
+  const hold = Math.min(1, s.sustain);
 
-  // --- Lay out time: when each note starts and ends. ---
-  let t = 0;                                               // start right on the beat
-  const events = tune.notes.map(n => { const e = { ...n, start: t, end: t + n.beats * spb }; t = e.end; return e; });
-  const total = t + 0.3;
-  const len = Math.ceil(total * SR);
+  // --- Two clocks. "Speech time" is how long the words take to say;
+  // "sung time" is how long the notes last. They differ when vowels are
+  // stretched or carried over a run. Each syllable is one segment on both
+  // clocks; rests are the same length on both. ---
+  const segs = [], events = [];
+  let sc = 0, tc = 0;                                     // cursors, in seconds
+  for (let i = 0; i < tune.notes.length;) {
+    const n = tune.notes[i];
+    if (n.rest) { const d = n.beats * spb; segs.push({ rest: true, s0: sc, s1: sc + d, t0: tc, t1: tc + d }); sc += d; tc += d; i++; continue; }
+    const seg = { word: n.word, s0: sc, t0: tc, notes: [] };
+    // Gather this syllable's notes: its own note and any run after it.
+    for (; i < tune.notes.length && !tune.notes[i].rest && tune.notes[i].word === n.word && tune.notes[i].syllable === n.syllable; i++) {
+      const m = tune.notes[i], sung = Math.max(1 / 12, Math.round(m.beats * stretch * 12) / 12) * spb;
+      const e = { ...m, start: tc, end: tc + sung };
+      events.push(e); seg.notes.push(e);
+      sc += m.spoken * spb; tc += sung;
+    }
+    seg.s1 = sc; seg.t1 = tc; segs.push(seg);
+  }
+  const speechLen = Math.ceil((sc + 0.6) * SR), len = Math.ceil((tc + 0.3) * SR);
 
-  // --- Modulator: each word spoken by eSpeak, fitted to its notes. ---
-  const mod = new Float32Array(len);
+  // --- Modulator: each word spoken by eSpeak, fitted to its speech time. ---
+  const mod = new Float32Array(speechLen);
   for (let wi = 0; wi < tune.words.length; wi++) {
-    const notes = events.filter(e => !e.rest && e.word === wi);
-    if (!notes.length) continue;
-    const start = notes[0].start, target = notes[notes.length - 1].end - start;
+    const ws = segs.filter(g => !g.rest && g.word === wi);
+    if (!ws.length) continue;
+    const start = ws[0].s0, target = ws[ws.length - 1].s1 - start;
     onProgress(`Speaking word ${wi + 1} of ${tune.words.length}…`);
     const w = await fitWord(tune.words[wi].text, target, s);
-    const k = SR / w.rate;
-    const n = Math.min(Math.floor(w.samples.length * k), len - Math.floor(start * SR));
-    const at = Math.floor(start * SR);
+    const k = SR / w.rate, at = Math.floor(start * SR);
+    const n = Math.min(Math.floor(w.samples.length * k), speechLen - at);
     for (let i = 0; i < n; i++) {                           // linear resample to 44.1 kHz
       const x = i / k, j = Math.floor(x), f = x - j;
-      const v = (w.samples[j] || 0) * (1 - f) + (w.samples[j + 1] || 0) * f;
-      mod[at + i] += v;
+      mod[at + i] += (w.samples[j] || 0) * (1 - f) + (w.samples[j + 1] || 0) * f;
     }
   }
 
-  // --- Carrier: the notes on sawtooth oscillators. ---
+  // --- Carrier: the notes on sawtooth oscillators, in sung time. ---
   onProgress('Playing the notes…');
   const car = carrier(events, len, s);
 
-  // --- Vocoder ---
+  // --- Vocoder: reads the speech through the time map below. ---
   onProgress('Vocoding…');
-  const out = vocode(mod, car, events, s);
+  const out = vocode(mod, car, segs, len, hold);
   return { samples: out, rate: SR, tune };
+}
+
+// Build the map from sung time to speech time. Within each syllable: the
+// start of the syllable (its consonants, up to the loudest point of the
+// vowel) plays at normal speed; then the vowel is frozen for as long as the
+// notes need; then the rest of the syllable (closing consonants) plays.
+function timeMap(segs, len, whole) {
+  const map = new Int32Array(len), frozen = new Uint8Array(len);
+  const holds = [];
+  for (const g of segs) {
+    const s0 = Math.floor(g.s0 * SR), s1 = Math.floor(g.s1 * SR), t0 = Math.floor(g.t0 * SR), t1 = Math.min(len, Math.floor(g.t1 * SR));
+    if (g.rest || s1 <= s0) { for (let i = t0; i < t1; i++) map[i] = Math.min(whole.length - 1, s0 + Math.floor((i - t0) * (s1 - s0) / Math.max(1, t1 - t0))); continue; }
+    let p = s0; for (let i = s0; i < s1; i++) if (whole[i] > whole[p]) p = i;
+    const a = p - s0, r = s1 - p, L = t1 - t0;
+    for (let i = t0; i < t1; i++) {
+      const x = i - t0;
+      if (L >= s1 - s0) {
+        if (x < a) map[i] = s0 + x;
+        else if (x < L - r) { map[i] = p; frozen[i] = 1; }
+        else map[i] = p + (x - (L - r));
+      } else map[i] = s0 + Math.floor(x * (s1 - s0) / L);
+    }
+    // Where each note of a run begins, for a small re-articulation.
+    holds.push({ p, from: t0 + Math.min(a, L), to: t1, starts: g.notes.slice(1).map(n => Math.floor(n.start * SR)) });
+  }
+  return { map, frozen, holds };
 }
 
 // Speak one word so that it lasts about `target` seconds. eSpeak's speed is
@@ -136,38 +180,40 @@ function follow(x) {
   return env;
 }
 
-function vocode(mod, car, events, s) {
-  const len = mod.length, out = new Float32Array(len);
+function vocode(mod, car, segs, len, hold) {
+  const out = new Float32Array(len);
   const BANDS = 22, lo = 110, hi = 7500, q = 6;
-  // Sung vowels hold: for each note, find where the speech is loudest and
-  // keep each band at least near that level until the note ends ("sustain").
   const whole = follow(mod);
-  const holds = events.filter(e => !e.rest).map(e => {
-    const a = Math.floor(e.start * SR), b = Math.min(len, Math.floor(e.end * SR));
-    let p = a; for (let i = a; i < b; i++) if (whole[i] > whole[p]) p = i;
-    return { p, b };
-  });
+  const { map, frozen, holds } = timeMap(segs, len, whole);
   // White noise stands in for the synth in the top bands, so s, t, sh and f
   // come through as hiss, the way they do in speech.
   let seed = 7;
   const noise = new Float32Array(len).map(() => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2147483648 - 1));
+  const dipW = 0.018 * SR, endFade = 0.04 * SR;
 
   for (let k = 0; k < BANDS; k++) {
     const f = lo * Math.pow(hi / lo, k / (BANDS - 1));
-    const env = follow(bandpass4(mod, f, q));
-    if (s.sustain > 0) for (const { p, b } of holds) {
-      const level = env[p] * s.sustain, endFade = Math.floor(0.04 * SR);
-      for (let i = p; i < b; i++) {
-        const fade = Math.min(1, (b - i) / endFade) * (1 - 0.25 * (i - p) / Math.max(1, b - p));
-        if (env[i] < level * fade) env[i] = level * fade;
+    const envS = follow(bandpass4(mod, f, q));            // in speech time
+    const env = new Float32Array(len);
+    for (let i = 0; i < len; i++) env[i] = envS[map[i]];   // into sung time
+    // Hold the vowel: from its loudest point to the end of the syllable keep
+    // each band near that level ("Vowel length"), easing off slightly, with a
+    // short dip where each note of a run begins so the run is heard.
+    if (hold > 0) for (const h of holds) {
+      const level = envS[h.p] * hold;
+      for (let i = h.from; i < h.to; i++) {
+        let v = level * Math.min(1, (h.to - i) / endFade) * (1 - 0.2 * (i - h.from) / Math.max(1, h.to - h.from));
+        for (const st of h.starts) { const d = (i - st) / dipW; if (d > -1.5 && d < 1.5) v *= 1 - 0.4 * Math.exp(-d * d * 3); }
+        if (env[i] < v) env[i] = v;
       }
     }
     const hiss = f > 3500 ? Math.min(1, (f - 3500) / 3000) : 0;
     const cb = bandpass4(car, f, q), nb = hiss ? bandpass4(noise, f, q) : null;
     for (let i = 0; i < len; i++) out[i] += env[i] * (cb[i] * (1 - hiss) * 6 + (nb ? nb[i] * hiss * 3 : 0));
   }
-  // A little of the speech's own top end, for crisp consonants.
+  // A little of the speech's own top end, for crisp consonants (not while a
+  // vowel is frozen, where it would just be a stuck sample).
   const top = bandpass(bandpass(mod, 6000, 0.7), 6000, 0.7);
-  for (let i = 0; i < len; i++) out[i] += top[i] * 0.4;
+  for (let i = 0; i < len; i++) if (!frozen[i]) out[i] += top[map[i]] * 0.4;
   return out;
 }
