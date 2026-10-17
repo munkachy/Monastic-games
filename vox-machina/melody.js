@@ -139,7 +139,7 @@ const triad = root => [root, root + 2, root + 4];
 // { word, syllable, midi, beats, chord: [midi...] }, and rests are
 // { rest: true, beats }.
 export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed = 1,
-  octave = 0, harmony = 'none', melisma = 0 } = {}) {
+  octave = 0, harmony = 'none', melisma = 0, transpose = 0, range = 1 } = {}) {
   const key = parseKey(keyStr, octave);
   const words = wordsOf(text);
   const r = rng(seed);
@@ -247,13 +247,18 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
   } else throw new Error('Unknown style ' + style);
 
   // Harmony voices for each note.
+  // Pitch range widens or narrows every interval from the home note (0 =
+  // all on one note, 1 = as written, 2 = twice as wide); Pitch transposes the
+  // whole tune by semitones. Both come from the Voice sliders.
+  const sd = d => Math.round(d * range);
+  const D = d => degToMidi(key, sd(d)) + transpose;
   const harm = (d, root) => {
     switch (harmony) {
-      case 'organum': return [degToMidi(key, d) - 7];        // parallel fifth below
-      case 'octave': return [degToMidi(key, d) - 12];
-      case 'thirds': return [degToMidi(key, d - 2)];         // a third below, in the scale
-      case 'choir': return triad(root).map(x => degToMidi(key, x - 7)).filter(m => m !== degToMidi(key, d));
-      case 'drone': return [key.tonic - 12, key.tonic - 5];  // tonic and fifth, held
+      case 'organum': return [D(d) - 7];                     // parallel fifth below
+      case 'octave': return [D(d) - 12];
+      case 'thirds': return [degToMidi(key, sd(d) - 2) + transpose];   // a third below, in the scale
+      case 'choir': return triad(root).map(x => D(x - 7)).filter(m => m !== D(d));
+      case 'drone': return [key.tonic - 12 + transpose, key.tonic - 5 + transpose];  // tonic and fifth, held
       default: return [];
     }
   };
@@ -284,8 +289,8 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
     if (pre[i]) notes.push({ rest: true, beats: pre[i] });
     // "spoken" = how much of the note's time the word itself gets; run notes
     // get none, so the vowel is held through them.
-    notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, degs[i]), beats: beats[i], spoken: beats[i], chord: harm(degs[i], chordRoot[i]) });
-    if (runs[i]) for (const d of runs[i]) notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, d), beats: fast, spoken: 0, chord: harm(d, chordRoot[i]), run: true });
+    notes.push({ word: s.wi, syllable: s.s, midi: D(degs[i]), beats: beats[i], spoken: beats[i], chord: harm(degs[i], chordRoot[i]) });
+    if (runs[i]) for (const d of runs[i]) notes.push({ word: s.wi, syllable: s.s, midi: D(d), beats: fast, spoken: 0, chord: harm(d, chordRoot[i]), run: true });
     if (s.pause && i < n - 1) notes.push({ rest: true, beats: s.pause === 2 ? 1 : 0.5 });
   });
   return { notes, words, key };
