@@ -40,6 +40,10 @@ built-in `speechSynthesis`.
     voice anywhere.
 - **Vowel length (0-200%)** holds each vowel through its note; above 100%
   the notes grow (to double at 200%) while the words stay crisp.
+- **Voice sliders when singing:** Pitch transposes the tune (up to an octave
+  either way), Pitch range widens or narrows its leaps (0 = all on one note),
+  Speed sets how quickly words are said inside their notes (faster is snappier,
+  with a longer held vowel), and Word gap separates the words.
 - **Melisma** carries a vowel over a run of notes, as chant does on the long
   "a" of an Alleluia: runs wander by step and come home, mostly at the ends of
   phrases. The words are spoken at their own pace and only the vowel is

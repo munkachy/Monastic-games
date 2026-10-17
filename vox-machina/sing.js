@@ -22,7 +22,10 @@ const SR = 44100;
 
 export async function sing(text, s, onProgress = () => {}) {
   const tune = makeMelody(text, { key: s.key, style: s.style, seed: s.seed, octave: s.octave,
-    harmony: s.harmony, melisma: s.melisma || 0 });
+    harmony: s.harmony, melisma: s.melisma || 0,
+    // The Voice sliders, as they apply to singing:
+    transpose: Math.round(((s.pitch ?? 50) - 50) / 50 * 12),   // Pitch: up to an octave either way
+    range: (s.pitchRange ?? 50) / 50 });                        // Pitch range: 0 = one note, 2 = twice as wide
   const spb = 60 / s.bpm;                                  // seconds per beat
   // Vowel length above 100% lengthens every note (to double at 200%),
   // rounded to a twelfth of a beat so the clip stays on the grid.
@@ -73,6 +76,21 @@ export async function sing(text, s, onProgress = () => {}) {
   // --- Vocoder: reads the speech through the time map below. ---
   onProgress('Vocoding…');
   const out = vocode(mod, car, segs, len, hold);
+
+  // Word gap: silence the end of each word's last note, so the words come
+  // out separated (detached, staccato). 10 ms per step, as in speech mode,
+  // but never more than 60% of the note.
+  const gap = (s.wordGap || 0) * 0.01;
+  if (gap > 0) segs.forEach((g, i) => {
+    const next = segs[i + 1];
+    if (g.rest || (next && !next.rest && next.word === g.word)) return;   // not the end of a word
+    const t1 = Math.min(len, Math.floor(g.t1 * SR));
+    const cut = Math.floor(Math.min(gap, 0.6 * (g.t1 - g.t0)) * SR), fade = Math.floor(0.008 * SR);
+    for (let k = 0; k < cut; k++) {
+      const i2 = t1 - cut + k; if (i2 < 0) continue;
+      out[i2] *= k < fade ? 1 - k / fade : 0;
+    }
+  });
   return { samples: out, rate: SR, tune };
 }
 
@@ -104,14 +122,18 @@ function timeMap(segs, len, whole) {
 
 // Speak one word so that it lasts about `target` seconds. eSpeak's speed is
 // in words per minute (80 to 450); we guess, measure, and correct once.
+// Speed decides how much of its notes a word takes to say: at the default
+// 160 it fills about 90%; faster speech is snappier, leaving the vowel held
+// longer; slower fills the whole note.
 async function fitWord(word, target, s) {
+  const fill = clamp(0.9 * 160 / (s.speed || 160), 0.3, 1);
   const opts = { voice: s.voice, variant: s.variant, pitch: 50, pitchRange: 0, wordGap: 0 };
   const syl = Math.max(1, word.replace(/[^aeiouy]+/gi, ' ').trim().split(' ').length);
-  let speed = clamp(175 * (0.1 + 0.2 * syl) / (target * 0.9), 80, 450);
+  let speed = clamp(175 * (0.1 + 0.2 * syl) / (target * fill), 80, 450);
   let w = await speak(word, { ...opts, speed });
   const got = w.samples.length / w.rate;
-  if (Math.abs(got / (target * 0.9) - 1) > 0.2) {
-    const better = clamp(speed * got / (target * 0.9), 80, 450);
+  if (Math.abs(got / (target * fill) - 1) > 0.2) {
+    const better = clamp(speed * got / (target * fill), 80, 450);
     if (Math.abs(better - speed) > 5) w = await speak(word, { ...opts, speed: better });
   }
   return w;
