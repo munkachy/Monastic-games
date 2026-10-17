@@ -11,9 +11,9 @@ const $ = id => document.getElementById(id);
 // ---------------------------------------------------------------------------
 const SLIDERS = [
   { key: 'robot', box: 'robotBox', label: 'ROBOT AMOUNT', min: 0, max: 1, step: 0.01, fmt: v => Math.round(v * 100) + '%' },
-  { key: 'pitch', box: 'voiceBox', label: 'Pitch', min: 0, max: 99, step: 1 },
-  { key: 'pitchRange', box: 'voiceBox', label: 'Pitch range (0 = monotone)', min: 0, max: 99, step: 1 },
-  { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5 },
+  { key: 'pitch', box: 'voiceBox', label: 'Pitch', min: 0, max: 99, step: 1, fmt: v => mode === 'sing' ? semis(v) : v },
+  { key: 'pitchRange', box: 'voiceBox', label: 'Pitch range (0 = monotone)', min: 0, max: 99, step: 1, fmt: v => mode === 'sing' ? Math.round(v * 2) + '% leaps' : v },
+  { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5, fmt: v => mode === 'sing' ? v + ' · words ' + (v > 160 ? 'snappier' : v < 160 ? 'fuller' : 'normal') : v },
   { key: 'wordGap', box: 'voiceBox', label: 'Word gap', min: 0, max: 40, step: 1, fmt: v => v * 10 + ' ms' },
   { key: 'bpm', box: 'tempoBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
   // Vowel length: up to 100% it holds each vowel through its note; above
@@ -42,6 +42,7 @@ const SLIDERS = [
 function beatName(b) {
   return { 2: '1/2 note', 1: '1/4 note', 0.75: 'dotted 1/8', 0.5: '1/8 note', 0.25: '1/16 note', 0.125: '1/32 note' }[b] || '1/8 triplet';
 }
+function semis(v) { const n = Math.round((v - 50) / 50 * 12); return (n > 0 ? '+' : '') + n + ' semitones'; }
 function pct(v) { return Math.round(v * 100) + '%'; }
 
 // eSpeak NG voice variants bundled in this build. They change the formant
@@ -227,6 +228,7 @@ function setMode(m) {
   $('modeSpeak').classList.toggle('on', m === 'speak');
   $('modeSing').classList.toggle('on', m === 'sing');
   $('singBox').hidden = m !== 'sing';
+  for (const s of SLIDERS) if (['pitch', 'pitchRange', 'speed'].includes(s.key)) showValue(s);
   showTune();
 }
 // Show the notes the verse will be sung to (or why the key isn't valid).
@@ -235,7 +237,8 @@ function showTune() {
   $('styleAbout').textContent = STYLES[$('style').value]?.about || '';
   if (mode !== 'sing') return;
   try {
-    const t = makeMelody($('text').value, { key: $('key').value, style: $('style').value, seed, octave: +$('octave').value, harmony: $('harmony').value, melisma: +$('c_melisma').value });
+    const t = makeMelody($('text').value, { key: $('key').value, style: $('style').value, seed, octave: +$('octave').value, harmony: $('harmony').value, melisma: +$('c_melisma').value,
+      transpose: Math.round((+$('c_pitch').value - 50) / 50 * 12), range: +$('c_pitchRange').value / 50 });
     $('tuneShow').textContent = t.key.label + ': ' + describe(t);
   } catch (e) { $('tuneShow').textContent = e.message; }
 }
@@ -348,6 +351,7 @@ function setEdited(on) { $('edited').hidden = !on; }
 document.querySelector('main').addEventListener('input', e => {
   if (!['text', 'filename', 'batch', 'presetList'].includes(e.target.id)) setEdited(true);
   summarize();
+  if (/^c_(pitch|pitchRange)$/.test(e.target.id)) showTune();
 });
 // One-line summaries on the folded panels, so you can see settings without opening them.
 function summarize() {
