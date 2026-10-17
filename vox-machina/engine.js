@@ -104,8 +104,18 @@ function effective(fx) {
     delayMix: fx.delayMix * r,
     reverbSize: fx.reverbSize,
     reverbMix: fx.reverbMix * r,
+    bpm: fx.bpm || 120,
+    wobbleBeats: WOBBLE_STEPS[fx.wobbleRate | 0] ?? 0.5,
+    wobbleDepth: (fx.wobbleDepth || 0) * r,
+    gateBeats: GATE_STEPS[fx.gateRate | 0] ?? 0.25,
+    gateDepth: (fx.gateDepth || 0) * r,
   };
 }
+
+// Tempo-synced effects. Their rate sliders pick one of these note lengths
+// (in beats): 2 = half note, 1 = quarter, 1/3 = eighth-note triplet ...
+export const WOBBLE_STEPS = [2, 1, 0.75, 0.5, 1 / 3, 0.25];
+export const GATE_STEPS = [1, 0.5, 1 / 3, 0.25, 0.125];
 
 // Render the whole chain. Returns a mono AudioBuffer at 44.1 kHz.
 export async function render(voice, fxIn) {
@@ -150,7 +160,33 @@ export async function render(voice, fxIn) {
   const ringDry = ctxA.createGain(); ringDry.gain.value = 1 - fx.ringMix;
   sum.connect(ring).connect(ringWet).connect(out);
   sum.connect(ringDry).connect(out);
-  out.connect(ctxA.destination);
+  // Wobble: a resonant low-pass filter swept up and down in time with the
+  // tempo (the dubstep "wub"). Gate: the volume chopped on and off in time
+  // (the trance/techno stutter). Both are drawn as curves from time zero,
+  // so they always line up with the beat of a sung clip.
+  let chain = out;
+  const dur = lenA / SAMPLE_RATE, pts = Math.ceil(dur * 400);
+  if (fx.wobbleDepth > 0.001) {
+    const lp = ctxA.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6;
+    const curve = new Float32Array(pts), cyc = 60 / fx.bpm * fx.wobbleBeats;
+    for (let i = 0; i < pts; i++) {
+      const ph = (i / pts * dur / cyc) % 1;
+      curve[i] = 180 * Math.pow(2, 6 * fx.wobbleDepth * (0.5 - 0.5 * Math.cos(2 * Math.PI * ph))) + 8000 * (1 - fx.wobbleDepth);
+    }
+    lp.frequency.setValueCurveAtTime(curve, 0, dur);
+    chain.connect(lp); chain = lp;
+  }
+  if (fx.gateDepth > 0.001) {
+    const g = ctxA.createGain();
+    const curve = new Float32Array(pts), step = 60 / fx.bpm * fx.gateBeats;
+    for (let i = 0; i < pts; i++) {
+      const ph = (i / pts * dur / step) % 1;
+      curve[i] = ph < 0.55 ? 1 : 1 - fx.gateDepth;                // on for the first half of each step
+    }
+    g.gain.setValueCurveAtTime(curve, 0, dur);
+    chain.connect(g); chain = g;
+  }
+  chain.connect(ctxA.destination);
   const a = await ctxA.startRendering();
 
   // --- Pass B: bitcrusher (plain JavaScript, sample by sample) ---

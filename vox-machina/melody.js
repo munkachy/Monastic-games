@@ -94,6 +94,26 @@ export const STYLES = {
   kraftwerk: { label: 'Kraftwerk', about: 'A short repeated machine motif on the triad, strict even notes.' },
   lament: { label: 'Lament', about: 'Each phrase walks slowly down the scale, in long-short rhythm.' },
   arpeggio: { label: 'Trance arpeggio', about: 'Quick notes running up and down the chords.' },
+  techno: { label: 'Techno', about: 'Hypnotic: nearly all on the home note, stabbing on and off the beat with gaps, one note bending away. Try 125-135 BPM with Gate.' },
+  electro: { label: 'Electro', about: 'Robot funk: syncopated 3-3-2 rhythm with octave jumps. Try 110-128 BPM.' },
+  dubstep: { label: 'Dubstep', about: 'Half-time, low and heavy: long held notes, the flat second and the low octave, sudden gaps. Try 140 BPM with Wobble.' },
+  acid: { label: 'Acid', about: 'Squelchy 303-style line: wide leaps and slides around the home note. Turn Glide up. Try 125-135 BPM.' },
+};
+
+// Rhythm patterns for the dance styles, in beats: a positive number is a
+// note, a negative one a rest. The pattern repeats; each phrase restarts it.
+const GROOVES = {
+  techno: [[-0.5, 0.5], [0.5, 0.5, -0.5, 0.5], [0.75, 0.75, 0.5, -0.5, 0.5, 0.5, 0.5], [0.5, -0.25, 0.25, 0.5, 0.5]],
+  electro: [[0.75, 0.75, 0.5], [0.75, 0.75, 0.5, 0.5, -0.5, 0.5, 0.5], [0.5, 0.25, -0.25, 0.75, 0.25]],
+  dubstep: [[1.5, 0.5, -1, 1], [0.75, 0.75, -0.5, 2], [1, -0.5, 0.5, 1.5, -0.5], [0.5, 0.5, 0.5, -0.5, 2]],
+  acid: [[0.5], [0.5, 0.5, 0.25, 0.25, 0.5], [0.5, -0.25, 0.25]],
+};
+// Note patterns (scale degrees) for each dance style.
+const RIFFS = {
+  techno: [[0, 0, 0, -2], [0, 0, 2, 0], [0, 0, 0, 0, 4, 0], [0, 7, 0, 0], [0, 0, -3, 0]],
+  electro: [[0, 0, 7, 0, 4, 0, 2, 3], [0, 7, 0, 6, 0, 4, 2, 0], [0, 0, 2, 0, -3, -2]],
+  dubstep: [[0, 0, 1, 0, -7, 0], [0, -7, 0, 1, 0, 4, 3], [0, 0, 4, 3, 1, 0], [-7, 0, -7, 1]],
+  acid: [[0, 7, 0, 2, 0, 9, 4, 7], [0, 0, 7, 0, 3, 0, 6, 7], [0, -7, 0, 2, 4, 0, 7, -1]],
 };
 
 // Chord roots as scale degrees: a progression that suits major or minor.
@@ -118,6 +138,7 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
   words.forEach((w, wi) => { for (let s = 0; s < w.syllables; s++) syl.push({ wi, s, last: s === w.syllables - 1, pause: s === w.syllables - 1 ? w.pause : 0 }); });
   const n = syl.length;
   const degs = new Array(n).fill(0), beats = new Array(n).fill(0.5);
+  const pre = new Array(n).fill(0);                      // rest before each syllable
   let chordRoot = new Array(n).fill(0);
 
   // Phrases end where the text pauses.
@@ -198,6 +219,21 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
       degs[i] = tones[shape[i % shape.length]];
       beats[i] = syl[i].pause ? 1 : 0.5; chordRoot[i] = chord; t += beats[i];
     }
+  } else if (GROOVES[style]) {
+    const groove = pick(r, GROOVES[style]), riff = pick(r, RIFFS[style]);
+    let p = 0;
+    phrases.forEach(([a, b], k) => {
+      let g = 0;
+      for (let i = a; i <= b; i++) {
+        // Rests fall only between words, never inside one.
+        while (groove[g % groove.length] < 0) { const rest = -groove[g++ % groove.length]; if (syl[i].s === 0) pre[i] += rest; }
+        beats[i] = groove[g++ % groove.length];
+        degs[i] = riff[p++ % riff.length];
+      }
+      degs[b] = k === phrases.length - 1 ? 0 : degs[b];
+      beats[b] = Math.max(beats[b], style === 'dubstep' ? 2 : 1);   // land each phrase
+    });
+    chordRoot = degs.map(() => 0);
   } else throw new Error('Unknown style ' + style);
 
   // Harmony voices for each note.
@@ -214,6 +250,7 @@ export function makeMelody(text, { key: keyStr = 'Bm', style = 'psalmTone', seed
 
   const notes = [];
   syl.forEach((s, i) => {
+    if (pre[i]) notes.push({ rest: true, beats: pre[i] });
     notes.push({ word: s.wi, syllable: s.s, midi: degToMidi(key, degs[i]), beats: beats[i], chord: harm(degs[i], chordRoot[i]) });
     if (s.pause && i < n - 1) notes.push({ rest: true, beats: s.pause === 2 ? 1 : 0.5 });
   });

@@ -55,12 +55,12 @@
     <div class="row"><input type="text" id="filename" value="verse" aria-label="File name"></div>
     <div class="row">
       <button id="preview" class="go">▶ Preview</button>
+      <button id="stop">■ Stop</button>
       <button id="download" class="gold">⬇ WAV</button>
       <button id="share" hidden>Share…</button>
     </div>
     <div id="status">Loading voice engine…</div>
-    <p class="note">On iPhone, turn the silent switch off to hear previews.</p>
-  </section>
+      </section>
 
   <section id="singBox" hidden>
     <h2>Melody</h2>
@@ -89,6 +89,12 @@
     </div>
     <p class="note">Variation <span id="seedShow">1</span>. Each one is a different tune in the same style.</p>
     <p class="note" id="tuneShow"></p>
+  </section>
+
+  <section>
+    <h2>Tempo &amp; rhythm effects</h2>
+    <p class="note">Tempo sets the singing speed, and keeps Wobble and Gate on the beat. Set it to your Remixlive project's BPM.</p>
+    <div id="tempoBox"></div>
   </section>
 
   <section>
