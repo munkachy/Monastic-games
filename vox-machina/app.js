@@ -1,5 +1,5 @@
 // Vox Machina user interface: controls, presets, preview, download, batch.
-import { preload, speak, render, toWav, WOBBLE_STEPS, GATE_STEPS } from './engine.js';
+import { preload, speak, render, toWav, stretchVowels, WOBBLE_STEPS, GATE_STEPS } from './engine.js';
 import { sing } from './sing.js';
 import { makeMelody, describe, STYLES } from './melody.js';
 
@@ -14,6 +14,7 @@ const SLIDERS = [
   { key: 'pitch', box: 'voiceBox', label: 'Pitch', min: 0, max: 99, step: 1, fmt: v => mode === 'sing' ? semis(v) : v },
   { key: 'pitchRange', box: 'voiceBox', label: 'Pitch range (0 = monotone)', min: 0, max: 99, step: 1, fmt: v => mode === 'sing' ? Math.round(v * 2) + '% leaps' : v },
   { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5, fmt: v => mode === 'sing' ? v + ' · words ' + (v > 160 ? 'snappier' : v < 160 ? 'fuller' : 'normal') : v },
+  { key: 'speakVowel', box: 'voiceBox', label: 'Vowel length (speech)', min: 1, max: 2, step: 0.05, fmt: pct },
   { key: 'wordGap', box: 'voiceBox', label: 'Word gap', min: 0, max: 40, step: 1, fmt: v => v * 10 + ' ms' },
   { key: 'bpm', box: 'tempoBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
   // Vowel length: up to 100% it holds each vowel through its note; above
@@ -63,7 +64,7 @@ const VARIANTS = [
 // Presets
 // ---------------------------------------------------------------------------
 const DEFAULTS = {
-  voice: 'en-us', variant: '', pitch: 50, pitchRange: 50, speed: 160, wordGap: 0,
+  voice: 'en-us', variant: '', pitch: 50, pitchRange: 50, speed: 160, wordGap: 0, speakVowel: 1,
   robot: 0.6, bits: 10, crushRate: 2, ringFreq: 60, ringMix: 0.3,
   choirMix: 0, choirVoices: 3, delayTime: 0.25, delayFeedback: 0.3, delayMix: 0.1,
   reverbSize: 1.5, reverbMix: 0.2,
@@ -217,7 +218,7 @@ function setSettings(p) {
 async function renderText(text, settings) {
   const voice = settings.mode === 'sing'
     ? await sing(text, settings, msg => status(msg))
-    : await speak(text, settings);
+    : stretchVowels(await speak(text, settings), settings.speakVowel || 1);
   return render(voice, settings);
 }
 
