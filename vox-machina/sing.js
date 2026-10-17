@@ -25,7 +25,7 @@ export async function sing(text, s, onProgress = () => {}) {
   const spb = 60 / s.bpm;                                  // seconds per beat
 
   // --- Lay out time: when each note starts and ends. ---
-  let t = 0.05;
+  let t = 0;                                               // start right on the beat
   const events = tune.notes.map(n => { const e = { ...n, start: t, end: t + n.beats * spb }; t = e.end; return e; });
   const total = t + 0.3;
   const len = Math.ceil(total * SR);
