@@ -16,7 +16,11 @@ const SLIDERS = [
   { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5 },
   { key: 'wordGap', box: 'voiceBox', label: 'Word gap', min: 0, max: 40, step: 1, fmt: v => v * 10 + ' ms' },
   { key: 'bpm', box: 'tempoBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
-  { key: 'sustain', box: 'melodyBox', label: 'Sustain (hold the vowels)', min: 0, max: 1, step: 0.05, fmt: pct },
+  // Vowel length: up to 100% it holds each vowel through its note; above
+  // 100% the notes themselves grow (to double at 200%) while the words stay
+  // crisp, so only the vowels get longer.
+  { key: 'sustain', box: 'melodyBox', label: 'Vowel length', min: 0, max: 2, step: 0.05, fmt: pct },
+  { key: 'melisma', box: 'melodyBox', label: 'Melisma (runs on vowels)', min: 0, max: 1, step: 0.05, fmt: pct },
   { key: 'glide', box: 'melodyBox', label: 'Glide between notes', min: 0.001, max: 0.15, step: 0.001, fmt: v => Math.round(v * 1000) + ' ms' },
   { key: 'wobbleRate', box: 'tempoBox', label: 'Wobble rate', min: 0, max: WOBBLE_STEPS.length - 1, step: 1, fmt: v => beatName(WOBBLE_STEPS[v]) },
   { key: 'wobbleDepth', box: 'tempoBox', label: 'Wobble depth', min: 0, max: 1, step: 0.01, fmt: pct },
@@ -64,7 +68,7 @@ const DEFAULTS = {
   reverbSize: 1.5, reverbMix: 0.2,
   // Singing
   mode: 'speak', key: 'Bm', octave: 0, style: 'psalmTone', harmony: 'none', seed: 1,
-  carrierChoir: false, bpm: 100, sustain: 0.8, glide: 0.03,
+  carrierChoir: false, bpm: 100, sustain: 0.8, glide: 0.03, melisma: 0,
   wobbleRate: 3, wobbleDepth: 0, gateRate: 3, gateDepth: 0,
 };
 // Fields read from plain form inputs (not sliders) and how to read them.
@@ -113,6 +117,25 @@ const BUILTIN = {
   'Satellite Psalm': { variant: 'Tweaky', pitch: 60, pitchRange: 0, speed: 150, wordGap: 3,
     robot: 1, bits: 12, crushRate: 1.5, ringFreq: 880, ringMix: 0.5, choirMix: 0.3, choirVoices: 2,
     delayTime: 0.45, delayFeedback: 0.55, delayMix: 0.35, reverbSize: 2.5, reverbMix: 0.4 },
+  'Jubilus': { mode: 'sing', style: 'psalmTone', harmony: 'organum', variant: 'm3', octave: 0, bpm: 84,
+    sustain: 1.25, melisma: 0.75, glide: 0.035, carrierChoir: true,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 55, ringMix: 0, choirMix: 1.1, choirVoices: 5,
+    delayTime: 0.71, delayFeedback: 0.25, delayMix: 0.12, reverbSize: 6, reverbMix: 1.3 },
+  // --- Hip-hop ---
+  // West Coast talkbox, in the spirit of "California Love": one bright synth
+  // line that slides into its notes, laid-back G-funk hook, short room.
+  'West Coast Talkbox': { mode: 'sing', style: 'gfunk', harmony: 'none', variant: '', octave: 1, bpm: 92,
+    sustain: 1, melisma: 0.15, glide: 0.08, carrierChoir: false,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 60, ringMix: 0, choirMix: 0.15, choirVoices: 2,
+    delayTime: 0.163, delayFeedback: 0.15, delayMix: 0.12, reverbSize: 0.8, reverbMix: 0.15 },
+  'Boom-bap Lector': { mode: 'sing', style: 'hiphop', harmony: 'none', variant: 'm1', octave: 0, bpm: 90,
+    sustain: 0.4, melisma: 0, glide: 0.01, carrierChoir: false,
+    robot: 1, bits: 12, crushRate: 2, ringFreq: 60, ringMix: 0.1, choirMix: 0, choirVoices: 1,
+    delayTime: 0.333, delayFeedback: 0.2, delayMix: 0.12, reverbSize: 0.6, reverbMix: 0.1 },
+  'Trap Psalm': { mode: 'sing', style: 'trap', harmony: 'octave', variant: 'm7', octave: -1, bpm: 140,
+    sustain: 0.6, melisma: 0, glide: 0.04, carrierChoir: false, gateRate: 3, gateDepth: 0.2,
+    robot: 1, bits: 14, crushRate: 1, ringFreq: 60, ringMix: 0, choirMix: 0.2, choirVoices: 2,
+    delayTime: 0.214, delayFeedback: 0.3, delayMix: 0.15, reverbSize: 1.5, reverbMix: 0.25 },
   // --- Dance floor ---
   'Basilica Dub': { mode: 'sing', style: 'dubstep', harmony: 'organum', variant: 'm3', octave: -1, bpm: 140,
     sustain: 0.85, glide: 0.03, carrierChoir: true, wobbleRate: 4, wobbleDepth: 0.75, gateDepth: 0,
@@ -184,6 +207,7 @@ function setSettings(p) {
   for (const [k, how] of Object.entries(FIELDS)) $(k)[how === 'number' ? 'value' : how] = o[k];
   for (const s of SLIDERS) { $('c_' + s.key).value = o[s.key]; showValue(s); }
   seed = o.seed; setMode(o.mode);
+  summarize();
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +235,7 @@ function showTune() {
   $('styleAbout').textContent = STYLES[$('style').value]?.about || '';
   if (mode !== 'sing') return;
   try {
-    const t = makeMelody($('text').value, { key: $('key').value, style: $('style').value, seed, octave: +$('octave').value, harmony: $('harmony').value });
+    const t = makeMelody($('text').value, { key: $('key').value, style: $('style').value, seed, octave: +$('octave').value, harmony: $('harmony').value, melisma: +$('c_melisma').value });
     $('tuneShow').textContent = t.key.label + ': ' + describe(t);
   } catch (e) { $('tuneShow').textContent = e.message; }
 }
@@ -286,6 +310,7 @@ $('modeSing').onclick = () => setMode('sing');
 $('nextMelody').onclick = () => { seed++; showTune(); };
 $('prevMelody').onclick = () => { seed = Math.max(1, seed - 1); showTune(); };
 for (const id of ['text', 'key', 'style', 'octave', 'harmony']) $(id).addEventListener('input', showTune);
+$('c_melisma').addEventListener('input', showTune);
 setSettings(BUILTIN['Kraftwerk']);
 refreshPresetList('b:Kraftwerk');
 
@@ -311,15 +336,31 @@ $('share').onclick = () => busy($('share'), async () => {
   await navigator.share({ files: [file] });
 });
 
-$('presetLoad').onclick = () => {
+// Choosing a preset loads it straight away.
+$('presetList').onchange = () => {
   const [kind, name] = [$('presetList').value.slice(0, 1), $('presetList').value.slice(2)];
   setSettings(kind === 'b' ? BUILTIN[name] : userPresets()[name]);
-  status('Loaded preset: ' + name);
+  setEdited(false);
+  status('Preset: ' + name + '. Tap ▶ to hear it.');
 };
+// After any change, show that the settings differ from the preset.
+function setEdited(on) { $('edited').hidden = !on; }
+document.querySelector('main').addEventListener('input', e => {
+  if (!['text', 'filename', 'batch', 'presetList'].includes(e.target.id)) setEdited(true);
+  summarize();
+});
+// One-line summaries on the folded panels, so you can see settings without opening them.
+function summarize() {
+  const g = getSettings(), vName = $('variant').selectedOptions[0]?.text || '';
+  $('melodySum').textContent = `${g.key} · ${STYLES[g.style]?.label || ''}`;
+  $('tempoSum').textContent = `${g.bpm} BPM` + (g.wobbleDepth ? ' · wobble' : '') + (g.gateDepth ? ' · gate' : '');
+  $('voiceSum').textContent = vName;
+  $('fxSum').textContent = `robot ${Math.round(g.robot * 100)}%`;
+}
 $('presetSave').onclick = () => {
   const name = prompt('Preset name:'); if (!name) return;
   const p = userPresets(); p[name] = getSettings(); saveUserPresets(p);
-  refreshPresetList('u:' + name); status('Saved preset: ' + name);
+  refreshPresetList('u:' + name); setEdited(false); status('Saved preset: ' + name);
 };
 $('presetDelete').onclick = () => {
   const v = $('presetList').value;
