@@ -1,5 +1,5 @@
 // Vox Machina user interface: controls, presets, preview, download, batch.
-import { preload, speak, render, toWav } from './engine.js';
+import { preload, speak, render, toWav, WOBBLE_STEPS, GATE_STEPS } from './engine.js';
 import { sing } from './sing.js';
 import { makeMelody, describe, STYLES } from './melody.js';
 
@@ -15,9 +15,13 @@ const SLIDERS = [
   { key: 'pitchRange', box: 'voiceBox', label: 'Pitch range (0 = monotone)', min: 0, max: 99, step: 1 },
   { key: 'speed', box: 'voiceBox', label: 'Speed (words/min)', min: 80, max: 400, step: 5 },
   { key: 'wordGap', box: 'voiceBox', label: 'Word gap', min: 0, max: 40, step: 1, fmt: v => v * 10 + ' ms' },
-  { key: 'bpm', box: 'melodyBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
+  { key: 'bpm', box: 'tempoBox', label: 'Tempo', min: 50, max: 180, step: 1, fmt: v => v + ' BPM' },
   { key: 'sustain', box: 'melodyBox', label: 'Sustain (hold the vowels)', min: 0, max: 1, step: 0.05, fmt: pct },
   { key: 'glide', box: 'melodyBox', label: 'Glide between notes', min: 0.001, max: 0.15, step: 0.001, fmt: v => Math.round(v * 1000) + ' ms' },
+  { key: 'wobbleRate', box: 'tempoBox', label: 'Wobble rate', min: 0, max: WOBBLE_STEPS.length - 1, step: 1, fmt: v => beatName(WOBBLE_STEPS[v]) },
+  { key: 'wobbleDepth', box: 'tempoBox', label: 'Wobble depth', min: 0, max: 1, step: 0.01, fmt: pct },
+  { key: 'gateRate', box: 'tempoBox', label: 'Gate rate', min: 0, max: GATE_STEPS.length - 1, step: 1, fmt: v => beatName(GATE_STEPS[v]) },
+  { key: 'gateDepth', box: 'tempoBox', label: 'Gate depth', min: 0, max: 1, step: 0.01, fmt: pct },
   { key: 'bits', box: 'crushBox', label: 'Bit depth', min: 1, max: 16, step: 0.5, fmt: v => v + ' bit' },
   { key: 'crushRate', box: 'crushBox', label: 'Sample-rate reduction', min: 1, max: 40, step: 0.5,
     fmt: v => Math.round(44100 / v) + ' Hz' },
@@ -31,6 +35,9 @@ const SLIDERS = [
   { key: 'reverbSize', box: 'spaceBox', label: 'Reverb size', min: 0.2, max: 6, step: 0.1, fmt: v => v + ' s' },
   { key: 'reverbMix', box: 'spaceBox', label: 'Reverb mix', min: 0, max: 1.5, step: 0.01, fmt: pct },
 ];
+function beatName(b) {
+  return { 2: '1/2 note', 1: '1/4 note', 0.75: 'dotted 1/8', 0.5: '1/8 note', 0.25: '1/16 note', 0.125: '1/32 note' }[b] || '1/8 triplet';
+}
 function pct(v) { return Math.round(v * 100) + '%'; }
 
 // eSpeak NG voice variants bundled in this build. They change the formant
@@ -58,6 +65,7 @@ const DEFAULTS = {
   // Singing
   mode: 'speak', key: 'Bm', octave: 0, style: 'psalmTone', harmony: 'none', seed: 1,
   carrierChoir: false, bpm: 100, sustain: 0.8, glide: 0.03,
+  wobbleRate: 3, wobbleDepth: 0, gateRate: 3, gateDepth: 0,
 };
 // Fields read from plain form inputs (not sliders) and how to read them.
 const FIELDS = { voice: 'value', variant: 'value', key: 'value', octave: 'number', style: 'value',
@@ -87,6 +95,45 @@ const BUILTIN = {
     sustain: 0.5, glide: 0.005, carrierChoir: false,
     robot: 1, bits: 10, crushRate: 2, ringFreq: 30, ringMix: 0.15, choirMix: 0, choirVoices: 1,
     delayTime: 0.242, delayFeedback: 0.4, delayMix: 0.25, reverbSize: 1.2, reverbMix: 0.2 },
+  // --- Cathedral family ---
+  'Night Office': { mode: 'sing', style: 'psalmTone', harmony: 'organum', variant: 'm7', octave: -1, bpm: 72,
+    sustain: 0.9, glide: 0.06, carrierChoir: true,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 55, ringMix: 0.05, choirMix: 1.3, choirVoices: 6,
+    delayTime: 0.83, delayFeedback: 0.35, delayMix: 0.2, reverbSize: 6, reverbMix: 1.4 },
+  'Seraphim': { mode: 'sing', style: 'hymn', harmony: 'choir', variant: 'f2', octave: 1, bpm: 80,
+    sustain: 0.9, glide: 0.05, carrierChoir: true,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 1200, ringMix: 0.08, choirMix: 1.2, choirVoices: 5,
+    delayTime: 0.375, delayFeedback: 0.45, delayMix: 0.25, reverbSize: 5.5, reverbMix: 1.2 },
+  'Crypt': { variant: 'm7', pitch: 8, pitchRange: 15, speed: 115, wordGap: 6,
+    robot: 1, bits: 11, crushRate: 2.5, ringFreq: 38, ringMix: 0.35, choirMix: 0.8, choirVoices: 3,
+    delayTime: 0.7, delayFeedback: 0.3, delayMix: 0.15, reverbSize: 4.5, reverbMix: 0.9 },
+  'Abbey Ruins': { variant: 'whisper', pitch: 40, pitchRange: 30, speed: 125, wordGap: 10,
+    robot: 1, bits: 9, crushRate: 4, ringFreq: 300, ringMix: 0.1, choirMix: 0.6, choirVoices: 3,
+    delayTime: 0.9, delayFeedback: 0.6, delayMix: 0.35, reverbSize: 6, reverbMix: 1.3 },
+  'Satellite Psalm': { variant: 'Tweaky', pitch: 60, pitchRange: 0, speed: 150, wordGap: 3,
+    robot: 1, bits: 12, crushRate: 1.5, ringFreq: 880, ringMix: 0.5, choirMix: 0.3, choirVoices: 2,
+    delayTime: 0.45, delayFeedback: 0.55, delayMix: 0.35, reverbSize: 2.5, reverbMix: 0.4 },
+  // --- Dance floor ---
+  'Basilica Dub': { mode: 'sing', style: 'dubstep', harmony: 'organum', variant: 'm3', octave: -1, bpm: 140,
+    sustain: 0.85, glide: 0.03, carrierChoir: true, wobbleRate: 4, wobbleDepth: 0.75, gateDepth: 0,
+    robot: 1, bits: 16, crushRate: 1, ringFreq: 60, ringMix: 0, choirMix: 0.5, choirVoices: 3,
+    delayTime: 0.32, delayFeedback: 0.3, delayMix: 0.15, reverbSize: 4, reverbMix: 0.7 },
+  'Dubstep Doom': { mode: 'sing', style: 'dubstep', harmony: 'octave', variant: 'Demonic', octave: -1, bpm: 140,
+    sustain: 0.9, glide: 0.02, carrierChoir: false, wobbleRate: 3, wobbleDepth: 1, gateDepth: 0,
+    robot: 1, bits: 8, crushRate: 2, ringFreq: 45, ringMix: 0.2, choirMix: 0, choirVoices: 1,
+    delayTime: 0.214, delayFeedback: 0.2, delayMix: 0.1, reverbSize: 1, reverbMix: 0.15 },
+  'Warehouse Vespers': { mode: 'sing', style: 'techno', harmony: 'drone', variant: 'robosoft', bpm: 128,
+    sustain: 0.6, glide: 0.005, carrierChoir: false, wobbleDepth: 0, gateRate: 3, gateDepth: 0.85,
+    robot: 1, bits: 12, crushRate: 1, ringFreq: 30, ringMix: 0.1, choirMix: 0.2, choirVoices: 2,
+    delayTime: 0.352, delayFeedback: 0.45, delayMix: 0.3, reverbSize: 2, reverbMix: 0.35 },
+  'Electro Lector': { mode: 'sing', style: 'electro', harmony: 'octave', variant: 'robosoft3', bpm: 118,
+    sustain: 0.5, glide: 0.01, carrierChoir: false, wobbleDepth: 0, gateRate: 2, gateDepth: 0.3,
+    robot: 1, bits: 10, crushRate: 1.5, ringFreq: 30, ringMix: 0.3, choirMix: 0, choirVoices: 1,
+    delayTime: 0.381, delayFeedback: 0.35, delayMix: 0.25, reverbSize: 1, reverbMix: 0.15 },
+  'Acid Compline': { mode: 'sing', style: 'acid', harmony: 'none', variant: 'm1', bpm: 130,
+    sustain: 0.6, glide: 0.09, carrierChoir: false, wobbleRate: 5, wobbleDepth: 0.55, gateDepth: 0,
+    robot: 1, bits: 12, crushRate: 1, ringFreq: 220, ringMix: 0.15, choirMix: 0, choirVoices: 1,
+    delayTime: 0.346, delayFeedback: 0.5, delayMix: 0.3, reverbSize: 1.5, reverbMix: 0.25 },
   'Whispered Vigil': { variant: 'whisper', pitch: 50, pitchRange: 50, speed: 130, wordGap: 5,
     robot: 1, bits: 14, crushRate: 1, ringFreq: 800, ringMix: 0.1, choirMix: 0.7, choirVoices: 4,
     delayTime: 0.45, delayFeedback: 0.45, delayMix: 0.3, reverbSize: 3.5, reverbMix: 0.7 },
@@ -169,12 +216,32 @@ function showTune() {
   } catch (e) { $('tuneShow').textContent = e.message; }
 }
 
-// One AudioContext for previews. iOS only allows sound if it is created or
-// resumed during a tap, so we do that first thing in the click handler.
-let playCtx = null, playing = null;
-function unlockAudio() {
-  if (!playCtx) playCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (playCtx.state !== 'running') playCtx.resume();
+// Preview plays the exact WAV file through one <audio> element.
+//
+// Why not Web Audio here: on iPhone, Safari puts an AudioContext into an
+// "interrupted" state whenever the page loses audio focus - when a download
+// sheet opens, you switch apps, or the screen locks - and it often refuses to
+// resume it. Preview then played into a dead context: silence, though the WAV
+// was fine. An <audio> element doesn't have that problem, and it also plays
+// with the silent switch on. iOS still only lets an element play if it was
+// first started during a tap, so we "unlock" it with a silent clip at the very
+// start of the click, before the render's await.
+const player = new Audio();
+player.preload = 'auto';
+const SILENT = URL.createObjectURL(toWav({ sampleRate: 44100, getChannelData: () => new Float32Array(2205) }));  // 50 ms of silence
+let previewUrl = null;
+function unlockAudio() {          // call first thing in a tap handler
+  player.pause();
+  player.src = SILENT;
+  player.play().catch(() => {});
+}
+function playBuffer(buf) {
+  player.pause();
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(toWav(buf));
+  player.src = previewUrl;
+  player.currentTime = 0;
+  return player.play();
 }
 
 function status(msg) { $('status').textContent = msg; }
@@ -224,10 +291,11 @@ refreshPresetList('b:Kraftwerk');
 
 $('preview').onclick = () => { unlockAudio(); busy($('preview'), async () => {
   const buf = await currentBuffer();
-  if (playing) try { playing.stop(); } catch {}
-  playing = playCtx.createBufferSource();
-  playing.buffer = buf; playing.connect(playCtx.destination); playing.start();
+  try { await playBuffer(buf); }
+  catch (e) { status('The browser blocked playback. Tap Preview again.'); }
 }); };
+
+$('stop').onclick = () => player.pause();
 
 $('download').onclick = () => busy($('download'), async () => {
   const buf = await currentBuffer();

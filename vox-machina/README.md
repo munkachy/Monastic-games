@@ -28,20 +28,31 @@ built-in `speechSynthesis`.
   - Styles: **Monastic psalm tone** (rise to a reciting note, mid-verse
     cadence, a fall to the tonic), **Monastic recto tono** (all on one note,
     as the Office is said in choir), **Hymn**, **Kraftwerk**, **Lament**,
-    **Trance arpeggio**.
+    **Trance arpeggio**, and for the dance floor **Techno**, **Electro**,
+    **Dubstep** (half-time) and **Acid**, which use syncopated rhythms with
+    rests between words.
   - Harmony: organum (parallel fifths), octave, thirds, choir chords, or a
     tonic-and-fifth drone. *Ensemble* adds detuned copies of each voice.
   - How it works: eSpeak speaks each word on a flat pitch, stretched to its
     notes; a synthesizer plays the tune; a 22-band **vocoder** puts the shape
     of the words onto the synth (`melody.js`, `sing.js`). Still no recorded
     voice anywhere.
+- **Tempo & rhythm effects:** Tempo (BPM) drives the singing, and two
+  tempo-locked effects: **Wobble** (a resonant filter swept in time: the
+  dubstep "wub") and **Gate** (the volume chopped in time: the trance stutter).
+  Sung clips start exactly on the beat.
 - **Batch:** one line per clip, `filename | verse text`. One tap renders them
   all with the current settings and downloads a ZIP.
-- **Presets:** Kraftwerk, Cold Cathedral, 8-bit Monk, Dalek Lector and
-  Whispered Vigil (speaking), and Gregorian Machine, Vocoder Hymn and Robot
-  Arpeggio (singing) are built in. *Save as…* stores your own in the browser
+- **Presets:** 18 built in. Speaking: Kraftwerk, Cold Cathedral, Crypt,
+  Abbey Ruins, Satellite Psalm, 8-bit Monk, Dalek Lector, Whispered Vigil.
+  Singing: Gregorian Machine, Night Office, Seraphim, Vocoder Hymn, Robot
+  Arpeggio, Basilica Dub, Dubstep Doom, Warehouse Vespers, Electro Lector,
+  Acid Compline. A preset keeps your current key and Speak/Sing choice
+  unless it is a singing preset. *Save as…* stores your own in the browser
   (localStorage).
 
+Preview plays the exact WAV file you would download (through an `<audio>`
+element, which iPhone Safari handles more reliably than Web Audio playback).
 Preview and export use the same rendered buffer from an `OfflineAudioContext`,
 so the file sounds exactly like the preview.
 
