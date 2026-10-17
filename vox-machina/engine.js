@@ -254,6 +254,53 @@ function impulse(ctx, seconds) {
 }
 
 // ---------------------------------------------------------------------------
+// Vowel length for speech: stretch only the vowels, keep the pitch
+// ---------------------------------------------------------------------------
+// eSpeak has no vowel-length control, so we stretch its output afterwards.
+// 1. Find the vowels: 10 ms frames that are loud and smooth (a low
+//    zero-crossing rate means voiced, not hiss like s or sh).
+// 2. Time-stretch with WSOLA (waveform-similarity overlap-add): read short
+//    overlapping windows from the input, moving through vowels more slowly,
+//    and nudge each read to where the waveform lines up with the last one,
+//    so the pitch doesn't change and there are no clicks.
+// factor: 1 = unchanged, 2 = vowels twice as long.
+export function stretchVowels({ samples: x, rate }, factor) {
+  if (!(factor > 1.01)) return { samples: x, rate };
+  const F = Math.round(rate * 0.01), frames = Math.ceil(x.length / F);
+  const rms = new Float32Array(frames), zcr = new Float32Array(frames);
+  let peak = 0;
+  for (let f = 0; f < frames; f++) {
+    let e = 0, z = 0;
+    for (let i = f * F + 1; i < Math.min(x.length, (f + 1) * F); i++) { e += x[i] * x[i]; if ((x[i] >= 0) !== (x[i - 1] >= 0)) z++; }
+    rms[f] = Math.sqrt(e / F); zcr[f] = z / F; peak = Math.max(peak, rms[f]);
+  }
+  // How fast to move through the input at each frame (1 = normal speed),
+  // smoothed so the change in speed is gradual.
+  const speed = new Float32Array(frames);
+  for (let f = 0; f < frames; f++) speed[f] = rms[f] > 0.08 * peak && zcr[f] < 0.16 ? 1 / factor : 1;
+  for (let pass = 0; pass < 2; pass++) for (let f = 1; f < frames - 1; f++) speed[f] = (speed[f - 1] + speed[f] + speed[f + 1]) / 3;
+
+  const N = Math.round(rate * 0.03), H = N >> 1, tol = Math.round(rate * 0.008);
+  const win = new Float32Array(N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const out = new Float32Array(Math.ceil(x.length * factor) + N * 2), norm = new Float32Array(out.length);
+  let inPos = 0, prev = 0, o = 0;
+  while (inPos + N + tol < x.length && o + N < out.length) {
+    // Find the read point near inPos that best continues the previous window.
+    let best = Math.round(inPos), bestScore = -Infinity;
+    if (o > 0) for (let d = -tol; d <= tol; d += 2) {
+      const c = Math.round(inPos) + d; if (c < 0) continue;
+      let sc = 0; for (let i = 0; i < H; i += 2) sc += x[c + i] * x[prev + H + i];
+      if (sc > bestScore) { bestScore = sc; best = c; }
+    }
+    for (let i = 0; i < N; i++) { out[o + i] += x[best + i] * win[i]; norm[o + i] += win[i]; }
+    prev = best; o += H;
+    inPos += H * speed[Math.min(frames - 1, Math.floor(inPos / F))];
+  }
+  for (let i = 0; i < o + N && i < out.length; i++) if (norm[i] > 1e-3) out[i] /= norm[i];
+  return { samples: out.subarray(0, Math.min(out.length, o + H)), rate };
+}
+
+// ---------------------------------------------------------------------------
 // WAV export: 44.1 kHz, 16-bit, mono PCM
 // ---------------------------------------------------------------------------
 export function toWav(buffer) {

@@ -44,6 +44,9 @@ built-in `speechSynthesis`.
   either way), Pitch range widens or narrows its leaps (0 = all on one note),
   Speed sets how quickly words are said inside their notes (faster is snappier,
   with a longer held vowel), and Word gap separates the words.
+- **Vowel length when speaking (100-200%)** stretches only the vowels of
+  the spoken verse, without changing their pitch (WSOLA time-stretching on the
+  loud, voiced parts); consonants keep their timing.
 - **Melisma** carries a vowel over a run of notes, as chant does on the long
   "a" of an Alleluia: runs wander by step and come home, mostly at the ends of
   phrases. The words are spoken at their own pace and only the vowel is
