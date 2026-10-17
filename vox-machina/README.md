@@ -29,26 +29,32 @@ built-in `speechSynthesis`.
     cadence, a fall to the tonic), **Monastic recto tono** (all on one note,
     as the Office is said in choir), **Hymn**, **Kraftwerk**, **Lament**,
     **Trance arpeggio**, and for the dance floor **Techno**, **Electro**,
-    **Dubstep** (half-time) and **Acid**, which use syncopated rhythms with
-    rests between words.
+    **Dubstep** (half-time) and **Acid**, and for hip-hop **Hip-hop flow** (swung
+    boom-bap), **G-funk hook** (West Coast talkbox) and **Trap flow**.
+    The dance and hip-hop styles use syncopated rhythms with rests between words.
   - Harmony: organum (parallel fifths), octave, thirds, choir chords, or a
     tonic-and-fifth drone. *Ensemble* adds detuned copies of each voice.
   - How it works: eSpeak speaks each word on a flat pitch, stretched to its
     notes; a synthesizer plays the tune; a 22-band **vocoder** puts the shape
     of the words onto the synth (`melody.js`, `sing.js`). Still no recorded
     voice anywhere.
+- **Vowel length (0-200%)** holds each vowel through its note; above 100%
+  the notes grow (to double at 200%) while the words stay crisp.
+- **Melisma** carries a vowel over a run of notes, as chant does on the long
+  "a" of an Alleluia: runs wander by step and come home, mostly at the ends of
+  phrases. The words are spoken at their own pace and only the vowel is
+  stretched, so they stay clear.
 - **Tempo & rhythm effects:** Tempo (BPM) drives the singing, and two
   tempo-locked effects: **Wobble** (a resonant filter swept in time: the
   dubstep "wub") and **Gate** (the volume chopped in time: the trance stutter).
   Sung clips start exactly on the beat.
 - **Batch:** one line per clip, `filename | verse text`. One tap renders them
   all with the current settings and downloads a ZIP.
-- **Presets:** 18 built in. Speaking: Kraftwerk, Cold Cathedral, Crypt,
-  Abbey Ruins, Satellite Psalm, 8-bit Monk, Dalek Lector, Whispered Vigil.
-  Singing: Gregorian Machine, Night Office, Seraphim, Vocoder Hymn, Robot
-  Arpeggio, Basilica Dub, Dubstep Doom, Warehouse Vespers, Electro Lector,
-  Acid Compline. A preset keeps your current key and Speak/Sing choice
-  unless it is a singing preset. *Save as…* stores your own in the browser
+- **Presets:** 22 built in, including Cold Cathedral, Night Office, Seraphim,
+  Jubilus (long melismatic chant), West Coast Talkbox (a G-funk talkbox hook in
+  the spirit of "California Love"), Boom-bap Lector, Trap Psalm, Basilica Dub
+  and Warehouse Vespers. Choosing a preset loads it at once; any change after
+  that applies to the next Preview, and 💾 saves it as your own. *Save as…* stores your own in the browser
   (localStorage).
 
 Preview plays the exact WAV file you would download (through an `<audio>`
