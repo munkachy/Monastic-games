@@ -67,7 +67,7 @@
 <main>
   <header>
     <h1>VOX MACHINA</h1>
-    <p class="tag">Synthetic voice. No human voice recordings used.</p>
+    <p class="tag" id="tagline">Synthetic voice. No human voice recordings used.</p>
   </header>
 
   <textarea id="text" aria-label="Verse">In the beginning was the Word, and the Word was with God, and the Word was God.</textarea>
@@ -75,6 +75,7 @@
   <div class="row mode">
     <button id="modeSpeak" class="on">🗣 Speak</button>
     <button id="modeSing">🎵 Sing</button>
+    <button id="modeSystem">📱 iPhone</button>
   </div>
 
   <!-- Choosing a preset loads it at once. Changing any control after that
@@ -118,6 +119,27 @@
         <button id="nextMelody">Tune ▶</button>
       </div>
       <p class="note" id="tuneShow"></p>
+    </div>
+  </details>
+
+  <details id="sysBox" open hidden>
+    <summary>iPhone voices <small id="sysSum"></small></summary>
+    <div class="body">
+      <select id="sysVoice" aria-label="iPhone voice"></select>
+      <p class="note" id="sysCount"></p>
+      <p class="note"><b>▶ speaks the verse with this voice</b>, using Pitch and Speed from the Voice panel.
+        Safari plays these voices straight to the speaker and never lets a web page record them,
+        so they can't go through the effects or be saved from here.</p>
+      <h3>To make a WAV with an iPhone voice</h3>
+      <p class="note">1. In the Shortcuts app, make a shortcut with <b>Make Spoken Audio from Text</b>
+        (choose the voice in the action), then <b>Save File</b>.<br>
+        2. Choose that file below. Vox Machina runs it through the effects, Vowel length included,
+        and ⬇ WAV exports it as usual.</p>
+      <div class="row">
+        <input type="file" id="importAudio" accept="audio/*,.m4a,.wav,.mp3,.aiff,.caf" style="flex:1; font-size:14px">
+        <button id="importClear" class="small" title="Stop using the imported file" aria-label="Clear import">✕</button>
+      </div>
+      <p class="note" id="importInfo">No file chosen: ▶ speaks live.</p>
     </div>
   </details>
 
