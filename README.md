@@ -137,6 +137,8 @@ a WAV sample for a music app such as Remixlive, or for a game.
 - **Presets:** 22 built in, from Cold Cathedral, Night Office, Jubilus and
   Seraphim to West Coast Talkbox, Trap Psalm, Basilica Dub, Warehouse Vespers and Acid Compline, and your own saved in the
   browser. Tempo-locked **Wobble** and **Gate** effects for dance tracks.
+- **📱 iPhone mode:** speaks with any iPhone voice you've installed, and can
+  import a file saved by the Shortcuts app to run through the effects.
 - **Export:** 44.1 kHz, 16-bit WAV. Preview and file are rendered the same way,
   so they sound the same. On iPhone, *Share* sends the file to Files or another app.
 - **Batch:** one line per clip, `filename | verse text`, all downloaded as a ZIP.

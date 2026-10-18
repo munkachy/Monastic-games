@@ -216,10 +216,53 @@ function setSettings(p) {
 // Rendering
 // ---------------------------------------------------------------------------
 async function renderText(text, settings) {
-  const voice = settings.mode === 'sing'
-    ? await sing(text, settings, msg => status(msg))
-    : stretchVowels(await speak(text, settings), settings.speakVowel || 1);
+  let voice;
+  if (settings.mode === 'sing') voice = await sing(text, settings, msg => status(msg));
+  else if (settings.mode === 'system') {
+    if (!imported) throw new Error('iPhone voices play live only. Choose an audio file in the iPhone panel to process and save one.');
+    voice = stretchVowels(imported, settings.speakVowel || 1);
+  } else voice = stretchVowels(await speak(text, settings), settings.speakVowel || 1);
   return render(voice, settings);
+}
+
+// ---------------------------------------------------------------------------
+// iPhone (system) voices
+// ---------------------------------------------------------------------------
+// speechSynthesis lists the voices installed on the device, including any
+// Enhanced or Premium voices you have downloaded in Settings. These voices
+// are built from recordings of real speakers, unlike eSpeak, so the tagline
+// changes in this mode.
+const TAG_SYNTH = 'Synthetic voice. No human voice recordings used.';
+const TAG_SYSTEM = 'iPhone voice: built by Apple from recordings of human speakers.';
+let sysVoices = [], imported = null;
+function loadSystemVoices() {
+  if (!('speechSynthesis' in window)) { $('sysCount').textContent = 'This browser has no system voices.'; return; }
+  const keep = $('sysVoice').value;
+  sysVoices = speechSynthesis.getVoices().slice().sort((a, b) =>
+    (b.lang.startsWith('en') - a.lang.startsWith('en')) || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name));
+  $('sysVoice').innerHTML = '';
+  let group = null, lang = '';
+  for (const v of sysVoices) {
+    if (v.lang !== lang) { lang = v.lang; group = document.createElement('optgroup'); group.label = lang; $('sysVoice').append(group); }
+    group.append(new Option(v.name + (v.default ? ' (default)' : ''), v.voiceURI));
+  }
+  if (keep) $('sysVoice').value = keep;
+  $('sysCount').textContent = sysVoices.length
+    ? `${sysVoices.length} voices on this device. To add more, go to Settings › Accessibility › Spoken Content › Voices, then reopen this page.`
+    : 'No voices reported yet. Tap ▶ once; Safari sometimes lists them only after first use.';
+  summarizeSystem();
+}
+function summarizeSystem() { $('sysSum').textContent = $('sysVoice').selectedOptions[0]?.text || ''; }
+function speakSystem(text, g) {
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = sysVoices.find(x => x.voiceURI === $('sysVoice').value);
+  if (v) { u.voice = v; u.lang = v.lang; }
+  u.rate = Math.max(0.1, Math.min(4, g.speed / 160));     // 160 words/min = normal
+  u.pitch = Math.max(0, Math.min(2, g.pitch / 50));       // 50 = normal
+  u.onend = () => status('Done.');
+  speechSynthesis.speak(u);
+  if (!sysVoices.length) setTimeout(loadSystemVoices, 300);
 }
 
 // Speak or Sing. The Melody panel only shows when singing.
@@ -229,6 +272,10 @@ function setMode(m) {
   $('modeSpeak').classList.toggle('on', m === 'speak');
   $('modeSing').classList.toggle('on', m === 'sing');
   $('singBox').hidden = m !== 'sing';
+  $('modeSystem').classList.toggle('on', m === 'system');
+  $('sysBox').hidden = m !== 'system';
+  $('tagline').textContent = m === 'system' ? TAG_SYSTEM : TAG_SYNTH;
+  if (m === 'system' && !sysVoices.length) loadSystemVoices();
   for (const s of SLIDERS) if (['pitch', 'pitchRange', 'speed'].includes(s.key)) showValue(s);
   showTune();
 }
@@ -288,7 +335,7 @@ async function currentBuffer() {
   const text = $('text').value.trim();
   if (!text) throw new Error('Type a verse first.');
   const settings = getSettings();
-  const key = JSON.stringify([text, settings]);
+  const key = JSON.stringify([text, settings, settings.mode === 'system' ? importedName : '']);
   if (last.key !== key) {
     status('Rendering…');
     const t0 = performance.now();
@@ -311,6 +358,29 @@ async function busy(btn, fn) {
 buildControls();
 $('modeSpeak').onclick = () => setMode('speak');
 $('modeSing').onclick = () => setMode('sing');
+$('modeSystem').onclick = () => setMode('system');
+if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = loadSystemVoices;
+$('sysVoice').onchange = summarizeSystem;
+
+// Import an audio file (for example one the Shortcuts app saved with an
+// iPhone voice) to use as the voice: mixed to mono and run through effects.
+let importedName = '';
+$('importAudio').onchange = async () => {
+  const f = $('importAudio').files[0]; if (!f) return;
+  try {
+    status('Reading ' + f.name + '…');
+    const buf = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(await f.arrayBuffer());
+    const mono = new Float32Array(buf.length);
+    for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) mono[i] += d[i] / buf.numberOfChannels; }
+    imported = { samples: mono, rate: buf.sampleRate }; importedName = f.name + f.size;
+    $('importInfo').textContent = `Using ${f.name} (${buf.duration.toFixed(1)} s). ▶ and ⬇ WAV now process this file.`;
+    status('Imported ' + f.name + '.');
+  } catch (e) { status('Could not read that file: ' + e.message); }
+};
+$('importClear').onclick = () => {
+  imported = null; importedName = ''; $('importAudio').value = '';
+  $('importInfo').textContent = 'No file chosen: ▶ speaks live.';
+};
 $('nextMelody').onclick = () => { seed++; showTune(); };
 $('prevMelody').onclick = () => { seed = Math.max(1, seed - 1); showTune(); };
 for (const id of ['text', 'key', 'style', 'octave', 'harmony']) $(id).addEventListener('input', showTune);
@@ -318,13 +388,21 @@ $('c_melisma').addEventListener('input', showTune);
 setSettings(BUILTIN['Kraftwerk']);
 refreshPresetList('b:Kraftwerk');
 
-$('preview').onclick = () => { unlockAudio(); busy($('preview'), async () => {
+$('preview').onclick = () => {
+  // iPhone voice, live: must start inside the tap, so no waiting first.
+  if (mode === 'system' && !imported) {
+    const text = $('text').value.trim();
+    if (!text) { status('Type a verse first.'); return; }
+    speakSystem(text, getSettings()); status('Speaking with ' + ($('sysVoice').selectedOptions[0]?.text || 'the default voice') + '…');
+    return;
+  }
+  unlockAudio(); busy($('preview'), async () => {
   const buf = await currentBuffer();
   try { await playBuffer(buf); }
   catch (e) { status('The browser blocked playback. Tap Preview again.'); }
 }); };
 
-$('stop').onclick = () => player.pause();
+$('stop').onclick = () => { player.pause(); if ('speechSynthesis' in window) speechSynthesis.cancel(); };
 
 $('download').onclick = () => busy($('download'), async () => {
   const buf = await currentBuffer();

@@ -55,6 +55,17 @@ built-in `speechSynthesis`.
   tempo-locked effects: **Wobble** (a resonant filter swept in time: the
   dubstep "wub") and **Gate** (the volume chopped in time: the trance stutter).
   Sung clips start exactly on the beat.
+- **📱 iPhone mode:** lists every system voice installed on the device
+  (including Enhanced and Premium voices you've downloaded in Settings ›
+  Accessibility › Spoken Content › Voices) and speaks the verse live with the
+  one you pick, using Pitch and Speed. Browsers never let a page record these
+  voices, so live playback can't be processed or saved. To get a WAV, save the
+  speech to a file with the Shortcuts action *Make Spoken Audio from Text*,
+  then import it in this panel: it goes through the effects and exports
+  like any other clip. These voices are built by Apple from recordings of
+  human speakers, so the "no human voice recordings" line changes in this
+  mode. Apple's software license sets the terms for using their voices'
+  output, so check it before releasing anything commercially.
 - **Batch:** one line per clip, `filename | verse text`. One tap renders them
   all with the current settings and downloads a ZIP.
 - **Presets:** 22 built in, including Cold Cathedral, Night Office, Seraphim,
