@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020j';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020k';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -11,6 +11,36 @@ const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint
 const eng = new Engine(ctx);
 const engReady = eng.init();
 const scope = ctx.createAnalyser(); scope.fftSize = 1024; eng.master.connect(scope);
+
+// iPhone: Web Audio is muted by the silent switch and is put into an
+// "interrupted" state when the page loses audio focus (a menu or share sheet,
+// another app, the lock screen). Declaring this a music player ("playback")
+// fixes both: newer iOS has navigator.audioSession for it; on older iOS a
+// silent clip looping in an <audio> element puts the page in that mode. Both
+// can only start from a tap, so the first tap anywhere does it.
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+const keepAlive = new Audio();
+keepAlive.loop = true; keepAlive.setAttribute('playsinline', '');
+keepAlive.src = URL.createObjectURL(new Blob([silentWav()], { type: 'audio/wav' }));
+function silentWav() {          // half a second of silence, 8 kHz mono
+  const n = 4000, v = new DataView(new ArrayBuffer(44 + n * 2));
+  const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 16000, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
+  return v.buffer;
+}
+// Every tap: make sure the sound is running, and say so if the phone won't let it.
+function wake() {
+  if (keepAlive.paused) keepAlive.play().catch(() => {});
+  if (ctx.state !== 'running') ctx.resume().then(() => {
+    if (ctx.state !== 'running') status('The phone has paused the sound. Tap a key again; if it stays silent, reload the page.');
+  }, () => {});
+}
+addEventListener('pointerdown', wake, true);
+addEventListener('keydown', wake, true);
+ctx.addEventListener?.('statechange', () => { if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.'); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
 
 // ---------------------------------------------------------------------------
 // The built-in sounds
@@ -134,10 +164,18 @@ function schedule() {
       S.chain = pendingChain; pendingChain = null; tick = 0;
     }
     const sw = tick % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0;
-    playTick(eng, tick, nextT + sw, true);
+    try { playTick(eng, tick, nextT + sw, true); } catch (e) { soundError(e); }   // one bad note never stops the beat
     nextT += stepDur(); tick++;
   }
   timer = setTimeout(schedule, 25);
+}
+// Show what went wrong (once each), so it can be reported, and carry on.
+const errorsSeen = new Set();
+function soundError(e) {
+  console.error(e);
+  const msg = String(e?.message || e).slice(0, 120);
+  if (errorsSeen.has(msg)) return;
+  errorsSeen.add(msg); status('Sound error (the beat carries on): ' + msg);
 }
 
 // The effect on tick t: the one held now, or else the one saved on that step.
@@ -169,7 +207,7 @@ function playTick(e, t, when, live) {
   // Write is on and an effect is held: save it on this step.
   if (held && S.write) { S.fx[patAt(t)][t % 16] = lastFx; dirty(); }
   const fxs = held ? [...activeFx] : savedFx(t) != null ? [savedFx(t)] : [];
-  // Saved audio effects (crush, filter, echo, tape) switch on and off on the beat.
+  // Saved audio effects (crush, filter, echo) switch on and off on the beat.
   if (!held) {
     const want = fxs.length && FX[fxs[0]][1].audio || null;
     if (want !== e.recAudio) {
@@ -199,8 +237,10 @@ function playTick(e, t, when, live) {
 function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null, hold = false) {
   const slot = S.slots[si]; if (!slot) return null;
   if (e === eng) lastNoteAt = Math.max(lastNoteAt, when);
-  return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, lock,
-    scale: S.scale, bpm: S.bpm, root: S.root, hold });
+  try {
+    return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, lock,
+      scale: S.scale, bpm: S.bpm, root: S.root, hold });
+  } catch (err) { soundError(err); return null; }
 }
 const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot') !== 'oneshot';
 
@@ -210,7 +250,7 @@ const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot
 // ---------------------------------------------------------------------------
 const FX = [
   ['Loop 1/4', { seq: 'loop', L: 4 }], ['Loop 1/8', { seq: 'loop', L: 2 }], ['Loop 1/16', { seq: 'loop', L: 1 }], ['Roll 1/32', { seq: 'loop', L: 1, r: 2 }],
-  ['Scratch', { mod: 'scratch', f: 6 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Tape stop', { audio: 'tape' }],
+  ['Scratch', { mod: 'scratch', f: 6 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Pitch dive', { mod: 'dive' }],
   ['Octave up', { mod: 'up' }], ['Octave down', { mod: 'down' }], ['Reverse', { mod: 'reverse' }], ['Unison', { mod: 'unison' }],
   ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['Scratch fast', { mod: 'scratch', f: 15 }], ['Echo', { audio: 'echo' }],
 ];
@@ -238,6 +278,7 @@ function modsOf(list) {
     if (f.mod === 'up') m.rate *= 2; if (f.mod === 'down') m.rate /= 2;
     if (f.mod === 'reverse') m.reverse = true; if (f.mod === 'unison') m.unison = true;
     if (f.mod === 'scratch') m.scratch = f.f;
+    if (f.mod === 'dive') m.dive = true;
   }
   return m;
 }

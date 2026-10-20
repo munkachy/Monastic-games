@@ -146,7 +146,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
-- **16 punch-in effects:** loops, rolls, half time, scramble, tape stop,
+- **16 punch-in effects:** loops, rolls, half time, scramble, pitch dive,
   octaves, reverse, unison, bitcrush, filters and echo.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
