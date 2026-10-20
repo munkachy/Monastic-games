@@ -37,6 +37,11 @@
     box-shadow: 0 3px 0 #000; touch-action: manipulation; }
   .fn button.on { background: var(--accent); color: #fff; }
   .fn button:disabled { opacity: .45; }
+  .fn .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .fn .pair button { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: .02em; }
+  /* Holding a key or button should play, not start selecting or copying text. */
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   .fn button:active, .fn button.held { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
   #rec.held { background: #c21b1b; color: #fff; }
 
@@ -83,7 +88,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020c</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020d</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -99,7 +104,7 @@
     <button id="play">▶ Play</button>
     <button id="rec">● Rec</button>
     <button id="dice" title="Random sound">🎲 Roll</button>
-    <button id="voxBtn">Voice</button>
+    <div class="pair"><button id="copy" title="Copy this pattern">Copy</button><button id="paste" title="Paste into this pattern" disabled>Paste</button></div>
     <button id="undo" disabled>↶ Undo</button>
     <button id="redo" disabled>↷ Redo</button>
     <button id="beatsBtn">Beats</button>
@@ -176,6 +181,7 @@
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
+    <p><b>Copy / Paste</b> copy the pattern you're on and paste it over another: Pattern + 1, Copy, Pattern + 2, Paste.</p>
     <p><b>Write</b> turns writing on and off. Stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
     <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, tape stop, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
@@ -188,6 +194,6 @@
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261020c"></script>
+<script type="module" src="app.js?v=20261020d"></script>
 </body>
 </html>
