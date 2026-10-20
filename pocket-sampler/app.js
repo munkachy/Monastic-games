@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020f';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020g';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -26,8 +26,29 @@ const LIBRARY = {
   pluck: { name: 'Pluck', synth: { type: 'pluck', root: 60, cutoff: 700, res: 3 }, len: 0.15 },
   organ: { name: 'Organ', synth: { type: 'organ', root: 48, attack: 0.03, hold: true }, len: 0.3 },
   choir: { name: 'Choir', synth: { type: 'choir', root: 48, attack: 0.12, hold: true }, len: 0.5 },
+  subsine: { name: 'Sub Bass', synth: { type: 'sub', root: 36 }, len: 0.5 },
+  sqbass: { name: 'Square Bass', synth: { type: 'sqbass', root: 36, cutoff: 380, res: 4, drive: 1.5 }, len: 0.25 },
+  sawbass: { name: 'Analog Bass', synth: { type: 'sawbass', root: 36, cutoff: 220, res: 9, drive: 1.5 }, len: 0.22 },
+  fmbass: { name: 'FM Bass', synth: { type: 'fm', root: 36, ratio: 1, index: 3, idecay: 0.12, floor: 0.3, drive: 1.5 }, len: 0.3 },
+  growl: { name: 'Growl', synth: { type: 'wobble', root: 36, cutoff: 120, res: 14, depth: 2600, rate: 4, hold: true, drive: 3 }, len: 0.38 },
+  uprightbass: { name: 'Upright Bass', multi: 'uprightbass', base: 36 }, elecbass: { name: 'Electric Bass', multi: 'elecbass', base: 36 },
+  piano: { name: 'Grand Piano', multi: 'piano', base: 48 }, upright: { name: 'Upright Piano', multi: 'upright', base: 48 },
+  epiano: { name: 'FM E-Piano', multi: 'epiano', base: 48 }, harpsichord: { name: 'Harpsichord', multi: 'harpsichord', base: 48 },
+  pipeorgan: { name: 'Pipe Organ', multi: 'pipeorgan', base: 48 }, renorgan: { name: 'Renaissance Organ', multi: 'renorgan', base: 48 },
+  vibes: { name: 'Vibraphone', multi: 'vibes', base: 60 }, marimba: { name: 'Marimba', multi: 'marimba', base: 60 },
+  kalimba: { name: 'Kalimba', multi: 'kalimba', base: 60 }, bells: { name: 'Tubular Bells', multi: 'bells', base: 60 },
+  harp: { name: 'Harp', multi: 'harp', base: 48 }, glock: { name: 'Glockenspiel', multi: 'glock', base: 72 },
+  supersaw: { name: 'Supersaw', synth: { type: 'supersaw', root: 60, cutoff: 6000, res: 1, hold: true }, len: 0.3 },
+  strings: { name: 'Strings', synth: { type: 'strings', root: 48, cutoff: 2600, attack: 0.25, hold: true }, len: 0.6 },
+  pad: { name: 'Warm Pad', synth: { type: 'strings', root: 48, cutoff: 1100, attack: 0.6, hold: true }, len: 0.9 },
+  brass: { name: 'Brass', synth: { type: 'brass', root: 48, cutoff: 700, res: 1, attack: 0.03, hold: true }, len: 0.35 },
+  fmbell: { name: 'FM Bell', synth: { type: 'fm', root: 60, ratio: 3.5, index: 4, idecay: 0.5 }, len: 0.8 },
+  glass: { name: 'Glass Keys', synth: { type: 'fm', root: 48, ratio: 1, index: 1.6, idecay: 0.35 }, len: 0.6 },
   acoustic: { name: 'Acoustic Kit', bank: 'acoustic' }, percussion: { name: 'Percussion', bank: 'percussion' },
+  gogodze: { name: 'Gogodze Kit', bank: 'gogodze' }, gogodzelofi: { name: 'Lo-fi Kit', bank: 'gogodzelofi' },
+  bigrusty: { name: 'Big Rusty Kit', bank: 'bigrusty' }, swirly: { name: 'Brush Kit', bank: 'swirly' },
   kit808: { name: '808 Kit', kit: '808' }, kit909: { name: '909 Kit', kit: '909' },
+  kitcr78: { name: 'CR-78 Kit', kit: 'cr78' }, kit606: { name: '606 Kit', kit: '606' }, kitminimal: { name: 'Minimal Kit', kit: 'minimal' },
   hits: { name: '8-bit Hits', bank: 'hits' }, blips: { name: 'Blips', bank: 'blips' }, lasers: { name: 'Lasers', bank: 'lasers' },
   glitch: { name: 'Glitch', bank: 'glitch' }, coins: { name: 'Coins', bank: 'coins' }, robots: { name: 'Robots', bank: 'robots' },
 };
@@ -43,6 +64,7 @@ const kitCache = {};
 async function factorySlot(id) {
   const F = LIBRARY[id], slot = { factory: id, name: F.name, params: defParams() };
   if (F.synth) Object.assign(slot, { kind: 'synth', synth: { ...F.synth } }), slot.params.len = F.len;
+  else if (F.multi) return multiSlot(slot, F);
   else if (F.kit) {
     kitCache[F.kit] ||= await makeKit(F.kit);
     Object.assign(slot, { kind: 'chop', slices: kitCache[F.kit].map(d => ({ buf: d.buf, s: 0, e: d.buf.duration, name: d.name })) });
@@ -53,6 +75,19 @@ async function factorySlot(id) {
     const r = B.rate || 22050;
     Object.assign(slot, { kind: 'chop', buf: B.buf, slices: B.slices.map(([a, b], k) => ({ s: a / r, e: b / r, name: shortName(B.from[k]) })) });
   }
+  return slot;
+}
+// A sampled instrument: one recording every few notes; each key plays the nearest.
+async function bankOf(id) {
+  if (!banks) banks = await (await fetch('sounds/banks.json')).json();
+  const B = banks[id];
+  B.buf ||= await decode(await (await fetch(`sounds/${id}.wav`)).arrayBuffer());
+  return B;
+}
+async function multiSlot(slot, F) {
+  const B = await bankOf(F.multi), r = B.rate;
+  return Object.assign(slot, { kind: 'multi', buf: B.buf, base: F.base,
+    zones: B.zones.map(([m, a, b, la, lb]) => ({ m, s: a / r, e: b / r, ...(la != null && { ls: la / r, le: lb / r }) })) });
   return slot;
 }
 const shortName = s => s.replace(/^sfx_/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 18);
@@ -229,7 +264,7 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      S.cur = k; S.lastKey[k] ||= 0; noteOn(eng, k, S.lastKey[k], ctx.currentTime); syncPanel(); persist(); break;
+      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k); syncPanel(); persist(); break;
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -266,11 +301,16 @@ function trigger(k) {
   S.lastKey[S.cur] = k;
   flash = { k, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  const id = `${S.cur}:${k}`;
+  return playHeld(S.cur, k, k);
+}
+// Play key `key` of sound `si` from the pad under the finger, as One shot,
+// Gate (until the pad is let go) or Loop (until it is tapped again).
+function playHeld(si, key, pad) {
+  const id = `${si}:${key}`;
   if (looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
-  const h = { voice: noteOn(eng, S.cur, k, ctx.currentTime, undefined, null, true), at: ctx.currentTime };
-  if (S.slots[S.cur]?.params.trig === 'loop' && h.voice?.sustain) looping.set(id, h);
-  else holding[k] = h;
+  const h = { voice: noteOn(eng, si, key, ctx.currentTime, undefined, null, true), at: ctx.currentTime };
+  if (S.slots[si]?.params.trig === 'loop' && h.voice?.sustain) looping.set(id, h);
+  else holding[pad] = h;
   return h;
 }
 let flash = null;
@@ -314,7 +354,7 @@ function copySound(from, to) {
   const sl = S.slots[from];
   S.slots[to] = { ...sl, factory: null, name: sl.name + (from === to ? '' : ' copy'), params: { ...sl.params },
     synth: sl.synth && { ...sl.synth }, slices: sl.slices?.map(s => ({ ...s })) };
-  if ((from < 8) !== (to < 8) && S.slots[to].kind !== 'synth') {
+  if ((from < 8) !== (to < 8) && S.slots[to].kind !== 'synth' && S.slots[to].kind !== 'multi') {
     // A melodic sample moved to the drum side is chopped, and the other way round.
     const buf = sl.kind === 'chop' ? (sl.buf || sl.slices[S.lastKey[from]].buf) : sl.buf;
     copying = null; assignBuffer(to, buf, sl.name + ' copy'); return;
@@ -502,12 +542,17 @@ function syncPanel() {
   if (wob) { $('pWob').value = sl.synth.rate; $('oWob').textContent = WOBBLE_RATES[sl.synth.rate][1]; }
   $('rollAll').style.display = S.cur >= 8 ? '' : 'none';
   $('soundNote').textContent = `Sound ${S.cur + 1}: ${sl.name}. ` + (sl.kind === 'synth' ? 'Synth: Length is how long each note rings.'
+    : sl.kind === 'multi' ? 'A recorded instrument: each key plays the nearest recording, tuned to its note.'
     : sl.kind === 'chop' ? `Each key is one slice. Start and Length trim slice ${S.lastKey[S.cur] + 1}, the last one played.`
     : 'Key 8 plays it at its own pitch; the others go up and down the scale.');
 }
 for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slice(1), f));
-const GROUPS = [['Melodic', ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir']],
-  ['Drums', ['acoustic', 'percussion', 'kit808', 'kit909']], ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']]];
+const GROUPS = [
+  ['Bass', ['bass808', 'subsine', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass']],
+  ['Keys', ['piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'vibes', 'marimba', 'kalimba', 'harp', 'bells', 'glock']],
+  ['Synth', ['supersaw', 'strings', 'pad', 'brass', 'choir', 'fmbell', 'glass', 'chip', 'pluck']],
+  ['Drum kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal', 'percussion']],
+  ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']]];
 $('library').add(new Option('Choose…', ''));
 for (const [g, ids] of GROUPS) {
   const og = document.createElement('optgroup'); og.label = g;
@@ -668,7 +713,7 @@ function keyLabel(k) {
     const d = keySemis(k, S.scale) - 12 + sl.params.pitch + S.root;
     return d === 0 ? 'original' : (d > 0 ? '+' : '−') + Math.abs(d);
   }
-  const m = sl.synth.root + keySemis(k, S.scale) + sl.params.pitch + S.root;
+  const m = (sl.kind === 'multi' ? sl.base : sl.synth.root) + keySemis(k, S.scale) + sl.params.pitch + S.root;
   return NOTE[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 }
 function draw() {
@@ -696,7 +741,8 @@ function draw() {
     }
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
-    el.classList.toggle('down', down.has(k) || looping.has(`${S.cur}:${k}`) || (flash?.k === k && performance.now() < flash.until));
+    const loops = S.mode === 'sound' ? [...looping.keys()].some(id => id.startsWith(k + ':')) : looping.has(`${S.cur}:${k}`);
+    el.classList.toggle('down', down.has(k) || loops || (flash?.k === k && performance.now() < flash.until));
     const ci = S.mode === 'pattern' && S.chain.length > 1 ? S.chain.indexOf(k) : -1;
     el.classList.toggle('chain', ci >= 0); el.dataset.chain = ci >= 0 ? S.chain.map((p, i) => p === k ? i + 1 : null).filter(Boolean).join(',') : '';
     el.querySelector('span').textContent = keyLabel(k);
@@ -744,6 +790,11 @@ function waveView() {
   const sl = S.slots[S.cur];
   if (sl.kind === 'synth') return null;
   if (sl.kind === 'sample') return { buf: sl.buf, a: 0, b: sl.buf.duration };
+  if (sl.kind === 'multi') {            // the recording the last key played
+    const midi = sl.base + keySemis(S.lastKey[S.cur], S.scale) + sl.params.pitch + S.root;
+    const z = sl.zones.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
+    return { buf: sl.buf, a: z.s, b: z.e };
+  }
   const lk = S.lastKey[S.cur], one = sl.buf && sl.slices.every(s => !s.buf);
   if (one) return { buf: sl.buf, a: 0, b: sl.buf.duration, marks: sl.slices };
   const s = sl.slices[lk]; const buf = s.buf || sl.buf;
@@ -875,7 +926,7 @@ const STYLES = {
 };
 const ROLES = {
   kick: [/^kick$/i, /kick/i], softkick: [/soft kick/i], snare: [/^snare$/i, /snare/i, /clap/i], clap: [/clap/i],
-  ghost: [/ghost/i], rim: [/rim|cross-?stick|clave/i], hat: [/^(closed )?hat$/i, /closed hat/i], open: [/open hat/i],
+  ghost: [/ghost/i], rim: [/rim|cross[- ]?stick|clave/i], hat: [/^(closed )?hat$/i, /closed hat/i], open: [/open hat/i],
   pedal: [/pedal/i], ride: [/^ride$/i, /ride/i], crash: [/crash|cymbal/i], tom: [/tom/i],
   conga: [/^conga$/i, /conga|tumba/i], bongo: [/bongo/i], shaker: [/^shaker$/i, /shaker|cabasa/i],
 };
@@ -999,7 +1050,7 @@ function save() {
     };
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth,
       trims: sl.slices?.map(x => [x.start ?? 0, x.len ?? 1]) } : {
-      kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf),
+      kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base,
       slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
     const { mode, write, ...rest } = S;
@@ -1020,7 +1071,7 @@ async function load() {
     const s = saved?.slots?.[i];
     try {
       if (s && s.factory == null) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf) };
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }

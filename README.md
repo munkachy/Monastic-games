@@ -123,8 +123,16 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
   and choir. 9–16 are kits, one hit per key: a real acoustic drum kit and
   hand percussion, 808 and 909 kits drawn in code, then blips, lasers,
-  glitches and coins. *Load sound* puts any of them (and 8-bit hits and
-  robots) on any key.
+  glitches and coins. *Load sound* puts any of 50 sounds on any key:
+  - **Bass:** 808, sub, wobble, growl, Reese, analog, square, FM and acid
+    synths, and a real upright bass and electric bass.
+  - **Keys:** grand and upright piano, FM electric piano, harpsichord, pipe
+    organ, Renaissance organ, vibraphone, marimba, kalimba, harp, tubular bells
+    and glockenspiel, all recorded, each key playing the nearest recording.
+  - **Synth:** supersaw, strings, warm pad, brass, choir, FM bell, glass keys.
+  - **Drum kits:** three recorded acoustic kits (jazz, a big 1980s kit, a
+    brush kit), a lo-fi kit, hand percussion, and 808, 909, CR-78, 606 and
+    minimal kits drawn in code.
 - **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
   techno, Afro house, dembow, drum & bass, dubstep and jazz swing, on
   whatever kit you've chosen; **🎲 Beat** makes a new one in that style
@@ -142,6 +150,17 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   octaves, reverse, unison, bitcrush, filters and echo.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
+- **One shot / Gate / Loop** per sound: the whole sound, only while held, or
+  looping from one tap to the next; held organs and the electric bass ring
+  on a seamless loop for as long as they're held.
+- The keys, upright and electric bass and the Gogodze, Big Rusty and Brush
+  kits are CC0, from the [Versilian Community Sample Library](https://github.com/sgossner/VCSL)
+  and Karoryfer Samples ([Gogodze Phu Vol II](https://github.com/sfzinstruments/karoryfer.gogodze-phu-vol-ii),
+  [Big Rusty Drums](https://github.com/sfzinstruments/karoryfer.big-rusty-drums),
+  [Swirly Drums](https://github.com/sfzinstruments/karoryfer.swirly-drums),
+  [Meatbass](https://github.com/sfzinstruments/karoryfer.meatbass),
+  [Growlybass](https://github.com/sfzinstruments/karoryfer.growlybass));
+  `pocket-sampler/tools/instruments.py` and `kits.py` build them.
 - The Acoustic Kit and Percussion are from Karoryfer Samples' [Virtuosity
   Drums](https://github.com/sfzinstruments/virtuosity_drums), played by
   Austin McMahon (CC0); `pocket-sampler/tools/drums.py` builds them.
