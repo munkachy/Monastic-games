@@ -184,8 +184,14 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     if (unison) synthNote(ctx, env, sp, hz(slot.synth.root + semis + 0.15) * rate, t + 0.012, L, bpm, voice);
     if (sustain) voice.end = Infinity;
   } else {
-    let buf, s, e, r, start, len;
-    if (slot.kind === 'chop') {
+    let buf, s, e, r, start, len, zl = null;
+    if (slot.kind === 'multi') {      // a sampled instrument: the nearest recording, retuned
+      const midi = slot.base + keySemis(k, scale) + P.pitch + root;
+      const z = slot.zones.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
+      buf = slot.buf; s = z.s; e = z.e; r = Math.pow(2, (midi - z.m) / 12) * rate;
+      start = P.start || 0; len = P.len;
+      if (z.ls != null && !start) zl = [z.ls, z.le];
+    } else if (slot.kind === 'chop') {
       const sl = slot.slices[k]; if (!sl) return null;
       buf = sl.buf || slot.buf; s = sl.s; e = sl.e;
       r = Math.pow(2, P.pitch / 12) * rate;
@@ -198,7 +204,10 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     if (!buf) return null;
     s += (e - s) * start;
     const dur = Math.max(0.01, (e - s) * len);
-    if (reverse) { const rb = reverseOf(ctx, buf); [s, e] = [buf.duration - s - dur, buf.duration - s]; buf = rb; }
+    if (reverse) { const rb = reverseOf(ctx, buf); [s, e] = [buf.duration - s - dur, buf.duration - s]; buf = rb; zl = null; }
+    // What loops: on Loop, the whole sound or slice; held on Gate, a sustained
+    // instrument (organ, electric bass) rings on its seamless loop.
+    const lp = loop ? [Math.max(0, s), Math.max(0, s) + dur] : sustain && zl ? zl : null;
     const go = (rr, delay) => {
       const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rr;
       if (scratch) {        // scratch: the speed swings back and forth, like a hand on the record
@@ -207,7 +216,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
         src.playbackRate.setValueCurveAtTime(c, t + delay, real);
       }
       src.connect(env);
-      if (loop) { src.loop = true; src.loopStart = Math.max(0, s); src.loopEnd = Math.max(0, s) + dur; src.start(t + delay, Math.max(0, s)); }
+      if (lp) { src.loop = true; src.loopStart = lp[0]; src.loopEnd = lp[1]; src.start(t + delay, Math.max(0, s)); }
       else src.start(t + delay, Math.max(0, s), dur);
       voice.rates.push(src.playbackRate); voice.nodes.push(src);
     };
@@ -216,7 +225,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     const real = dur / r;
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(1, t + 0.003);
-    if (loop) voice.end = Infinity;
+    if (lp) voice.end = Infinity;
     else {
       env.gain.setValueAtTime(1, Math.max(t + 0.003, t + real - 0.006));
       env.gain.linearRampToValueAtTime(0, t + real);
@@ -332,6 +341,44 @@ function synthNote(ctx, out, sp, f, t, len, bpm, voice) {
       });
       break;
     }
+    case 'supersaw': {     // seven saws spread wide, the trance lead
+      const fl = filt();
+      for (const d of [-28, -17, -8, 0, 8, 17, 28]) { const g = ctx.createGain(); g.gain.value = 0.22; g.connect(fl); osc(ctx, 'sawtooth', f, t, voice, d * (sp.spread || 1)).connect(g); }
+      break;
+    }
+    case 'strings': {      // an ensemble: five slightly detuned saws, soft and dark
+      const fl = filt(), vib = ctx.createOscillator(), vd = ctx.createGain();
+      vib.frequency.value = 5.2; vd.gain.value = 4; vib.connect(vd); vib.start(t); voice.nodes.push(vib);
+      for (const d of [-11, -5, 0, 6, 12]) { const g = ctx.createGain(); g.gain.value = 0.25; g.connect(fl); const o = osc(ctx, 'sawtooth', f, t, voice, d); vd.connect(o.detune); o.connect(g); }
+      break;
+    }
+    case 'brass': {        // two saws; the filter opens on each note like a breath
+      const fl = filt();
+      fl.frequency.setValueAtTime(sp.cutoff * 0.4, t); fl.frequency.linearRampToValueAtTime(sp.cutoff * 3, t + 0.07);
+      fl.frequency.setTargetAtTime(sp.cutoff * 1.4, t + 0.07, 0.15);
+      osc(ctx, 'sawtooth', f, t, voice, -6).connect(fl); osc(ctx, 'sawtooth', f, t, voice, 6).connect(fl);
+      break;
+    }
+    case 'fm': {           // two-operator FM: bells, glassy keys, FM bass
+      const car = osc(ctx, 'sine', f, t, voice), mod = osc(ctx, 'sine', f * sp.ratio, t, voice), idx = ctx.createGain();
+      idx.gain.setValueAtTime(f * sp.index, t); idx.gain.setTargetAtTime(f * sp.index * (sp.floor || 0), t, sp.idecay || 0.3);
+      mod.connect(idx); idx.connect(car.frequency); car.connect(into);
+      break;
+    }
+    case 'sqbass': {       // square bass with a sub an octave down
+      const fl = filt();
+      fl.frequency.setValueAtTime(sp.cutoff * 4, t); fl.frequency.setTargetAtTime(sp.cutoff, t, 0.06);
+      osc(ctx, 'square', f, t, voice).connect(fl);
+      const g = ctx.createGain(); g.gain.value = 0.6; g.connect(into); osc(ctx, 'sine', f / 2, t, voice).connect(g);
+      break;
+    }
+    case 'sawbass': {      // the classic analog bass: saws through a resonant filter that snaps down
+      const fl = filt();
+      fl.frequency.setValueAtTime(sp.cutoff * 7, t); fl.frequency.setTargetAtTime(sp.cutoff, t, 0.09);
+      osc(ctx, 'sawtooth', f, t, voice, -4).connect(fl); osc(ctx, 'sawtooth', f, t, voice, 4).connect(fl);
+      osc(ctx, 'square', f / 2, t, voice).connect(fl);
+      break;
+    }
     case 'choir': {        // "aah": buzzing saws through three vowel formants
       const mix = ctx.createGain(); mix.gain.value = 0.9;
       for (const d of [-12, 0, 11]) osc(ctx, 'sawtooth', f, t, voice, d).connect(mix);
@@ -369,6 +416,60 @@ const KITS = {
     ['Conga', { len: 0.3, tone: { f0: 420, f1: 330, sweep: 0.03, decay: 0.18 } }],
     ['Zap', { len: 0.25, tone: { f0: 3000, f1: 90, sweep: 0.15, decay: 0.15, wave: 'square', gain: 0.4 } }],
     ['Clave', { len: 0.12, tone: { f0: 2500, f1: 2500, sweep: 0.01, decay: 0.04 } }],
+  ],
+  'cr78': [                // soft, round, a little toy-like
+    ['Kick', { len: 0.5, tone: { f0: 95, f1: 55, sweep: 0.05, decay: 0.3 } }],
+    ['Snare', { len: 0.3, tone: { f0: 330, f1: 300, sweep: 0.02, decay: 0.08, gain: 0.5 }, noise: { type: 'bandpass', f: 3500, q: 1, decay: 0.12, gain: 0.8 } }],
+    ['Rim', { len: 0.08, tone: { f0: 900, f1: 880, sweep: 0.01, decay: 0.02 } }],
+    ['Hat', { len: 0.1, metal: { f: 10000, decay: 0.03, gain: 0.6 } }],
+    ['Open hat', { len: 0.5, metal: { f: 9500, decay: 0.3, gain: 0.5 } }],
+    ['Cymbal', { len: 1.2, metal: { f: 7000, decay: 0.9, gain: 0.4 } }],
+    ['Maracas', { len: 0.1, noise: { type: 'highpass', f: 7000, decay: 0.04, gain: 0.6, attack: 0.01 } }],
+    ['Tambourine', { len: 0.3, metal: { f: 8000, decay: 0.18, gain: 0.5 }, noise: { type: 'highpass', f: 6000, decay: 0.15, gain: 0.3 } }],
+    ['Cowbell', { len: 0.3, bell: { f: [800, 1200], decay: 0.15 } }],
+    ['Guiro', { len: 0.3, noise: { type: 'bandpass', f: 2500, q: 2, decay: 0.12, gain: 1.4, bursts: 9 } }],
+    ['Bongo high', { len: 0.2, tone: { f0: 520, f1: 480, sweep: 0.02, decay: 0.1 } }],
+    ['Bongo low', { len: 0.25, tone: { f0: 360, f1: 330, sweep: 0.02, decay: 0.13 } }],
+    ['Conga', { len: 0.3, tone: { f0: 250, f1: 220, sweep: 0.02, decay: 0.18 } }],
+    ['Clave', { len: 0.1, tone: { f0: 2200, f1: 2200, sweep: 0.01, decay: 0.035 } }],
+    ['Soft kick', { len: 0.4, tone: { f0: 80, f1: 50, sweep: 0.05, decay: 0.22, gain: 0.5 } }],
+    ['Brush', { len: 0.4, noise: { type: 'bandpass', f: 4000, q: 0.7, decay: 0.2, gain: 0.5, attack: 0.06 } }],
+  ],
+  '606': [                 // thin and snappy, electro
+    ['Kick', { len: 0.4, tone: { f0: 180, f1: 50, sweep: 0.03, decay: 0.25 }, drive: 1.5 }],
+    ['Snare', { len: 0.25, tone: { f0: 260, f1: 220, sweep: 0.02, decay: 0.06, gain: 0.4 }, noise: { type: 'highpass', f: 2500, decay: 0.15, gain: 1 } }],
+    ['Clap', { len: 0.35, noise: { type: 'bandpass', f: 1600, q: 1.4, decay: 0.2, gain: 1.4, bursts: 3 } }],
+    ['Hat', { len: 0.08, metal: { f: 9000, decay: 0.025, gain: 0.7 } }],
+    ['Open hat', { len: 0.4, metal: { f: 8500, decay: 0.22, gain: 0.6 } }],
+    ['Cymbal', { len: 1.3, metal: { f: 6500, decay: 1, gain: 0.45 } }],
+    ['Low tom', { len: 0.5, tone: { f0: 160, f1: 120, sweep: 0.1, decay: 0.3 } }],
+    ['High tom', { len: 0.4, tone: { f0: 260, f1: 200, sweep: 0.1, decay: 0.22 } }],
+    ['Rim', { len: 0.06, tone: { f0: 1600, f1: 1500, sweep: 0.01, decay: 0.02, wave: 'square', gain: 0.4 } }],
+    ['Cowbell', { len: 0.3, bell: { f: [587, 845], decay: 0.18 } }],
+    ['Zap', { len: 0.2, tone: { f0: 2500, f1: 120, sweep: 0.12, decay: 0.12, wave: 'square', gain: 0.4 } }],
+    ['Long kick', { len: 1.2, tone: { f0: 140, f1: 42, sweep: 0.08, decay: 1, gain: 1 }, drive: 2.5 }],
+    ['Snare 2', { len: 0.3, noise: { type: 'bandpass', f: 1800, q: 0.8, decay: 0.18, gain: 1.2 } }],
+    ['Shaker', { len: 0.12, noise: { type: 'highpass', f: 6500, decay: 0.05, gain: 0.6, attack: 0.02 } }],
+    ['Laser', { len: 0.3, tone: { f0: 4000, f1: 300, sweep: 0.2, decay: 0.2, wave: 'sawtooth', gain: 0.3 } }],
+    ['Perc', { len: 0.15, tone: { f0: 900, f1: 600, sweep: 0.03, decay: 0.07 } }],
+  ],
+  minimal: [               // clicks, ticks and a deep kick
+    ['Kick', { len: 0.45, tone: { f0: 200, f1: 48, sweep: 0.025, decay: 0.3 }, noise: { type: 'highpass', f: 3000, decay: 0.004, gain: 0.5 }, drive: 2 }],
+    ['Sub kick', { len: 1, tone: { f0: 90, f1: 40, sweep: 0.1, decay: 0.8 } }],
+    ['Clap', { len: 0.3, noise: { type: 'bandpass', f: 1300, q: 2, decay: 0.15, gain: 1.4, bursts: 3 } }],
+    ['Rim', { len: 0.05, tone: { f0: 2000, f1: 1900, sweep: 0.005, decay: 0.012 }, noise: { type: 'highpass', f: 5000, decay: 0.005, gain: 0.5 } }],
+    ['Hat', { len: 0.05, noise: { type: 'highpass', f: 9000, decay: 0.015, gain: 0.7 } }],
+    ['Open hat', { len: 0.25, noise: { type: 'highpass', f: 8000, decay: 0.12, gain: 0.5 } }],
+    ['Shaker', { len: 0.1, noise: { type: 'bandpass', f: 7000, q: 1.5, decay: 0.04, gain: 0.8, attack: 0.015 } }],
+    ['Tick', { len: 0.03, tone: { f0: 4000, f1: 4000, sweep: 0.005, decay: 0.006 } }],
+    ['Blip high', { len: 0.1, tone: { f0: 1800, f1: 1700, sweep: 0.01, decay: 0.04 } }],
+    ['Blip low', { len: 0.12, tone: { f0: 600, f1: 560, sweep: 0.01, decay: 0.05 } }],
+    ['Wood', { len: 0.1, tone: { f0: 1100, f1: 1000, sweep: 0.01, decay: 0.03, wave: 'triangle' } }],
+    ['Snap', { len: 0.12, noise: { type: 'bandpass', f: 2500, q: 3, decay: 0.05, gain: 1.4 } }],
+    ['Noise hit', { len: 0.3, noise: { type: 'lowpass', f: 2000, decay: 0.15, gain: 1 } }],
+    ['Conga', { len: 0.25, tone: { f0: 330, f1: 300, sweep: 0.02, decay: 0.12 } }],
+    ['Tom', { len: 0.4, tone: { f0: 140, f1: 100, sweep: 0.08, decay: 0.25 } }],
+    ['Zap', { len: 0.25, tone: { f0: 3000, f1: 80, sweep: 0.15, decay: 0.15, gain: 0.5 } }],
   ],
   '909': [
     ['Kick', { len: 0.5, tone: { f0: 240, f1: 52, sweep: 0.04, decay: 0.35 }, noise: { type: 'lowpass', f: 3000, decay: 0.008, gain: 0.6 }, drive: 2.5 }],
