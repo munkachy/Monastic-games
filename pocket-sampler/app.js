@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020c';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020d';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -518,10 +518,22 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === b.dataset.tab));
 }));
-$('voxBtn').addEventListener('click', () => {
-  document.querySelector('[data-tab="tVoice"]').click();
-  $('tVoice').scrollIntoView({ behavior: 'smooth', block: 'center' });
+// Copy and Paste: the pattern you're on, steps and saved effects.
+let clipboard = null;
+$('copy').addEventListener('click', () => {
+  clipboard = { from: S.pat, steps: S.patterns[S.pat].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } }))), fx: [...S.fx[S.pat]] };
+  $('paste').disabled = false;
+  status(`Pattern ${S.pat + 1} copied. Choose another pattern and press Paste.`);
 });
+$('paste').addEventListener('click', () => {
+  if (!clipboard) { status('Copy a pattern first.'); return; }
+  checkpoint();
+  S.patterns[S.pat] = clipboard.steps.map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })));
+  S.fx[S.pat] = [...clipboard.fx];
+  dirty(); draw(); status(`Pattern ${clipboard.from + 1} pasted into pattern ${S.pat + 1}. ↶ Undo takes it back.`);
+});
+// Long presses should never bring up the browser's copy menu.
+document.addEventListener('contextmenu', ev => { if (!ev.target.closest('input, textarea, select')) ev.preventDefault(); });
 
 // ---------------------------------------------------------------------------
 // Voice, from Vox Machina's eSpeak NG engine
@@ -781,7 +793,8 @@ function closeUndo() { clearTimeout(undoTimer); undoOpen = false; committed = sn
 // is not merged with whatever came just before.
 function checkpoint() { if (undoOpen) closeUndo(); }
 function restore(snap) {
-  Object.assign(S, snapshot(snap)); committed = snapshot();
+  const { pat, cur } = S;             // stay on the pattern and sound you're looking at
+  Object.assign(S, snapshot(snap), { pat, cur }); committed = snapshot();
   for (const f of [...activeFx]) releaseFx(f);
   setVolume(); syncPanel(); draw(); persist(); showUndo();
 }
