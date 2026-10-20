@@ -26,7 +26,7 @@ const FACTORY = [
   { name: '8-bit Hits', bank: 'hits' }, { name: 'Blips', bank: 'blips' }, { name: 'Lasers', bank: 'lasers' },
   { name: 'Glitch', bank: 'glitch' }, { name: 'Coins', bank: 'coins' }, { name: 'Robots', bank: 'robots' },
 ];
-const defParams = () => ({ vol: 0.8, pitch: 0, tone: 1, len: 1, choke: false });
+const defParams = () => ({ vol: 0.8, pitch: 0, filter: 0, res: 0, start: 0, len: 1, choke: false });
 let banks = null;
 const kitCache = {};
 
@@ -53,7 +53,8 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
-  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0,
+  fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
+  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, write: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -78,6 +79,7 @@ function stop() {
   playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1;
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
   for (const f of activeFx) releaseFx(f);
+  if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
 }
 function schedule() {
@@ -92,70 +94,95 @@ function schedule() {
   timer = setTimeout(schedule, 25);
 }
 
-// Which tick of the pattern to play now, and how many times (rolls), given
-// the sequencer effect being held.
-function mapTick(t) {
-  const f = seqFx;
+// The effect on tick t: the one held now, or else the one saved on that step.
+const savedFx = t => S.fx[patAt(t)][t % 16];
+// Which tick of the pattern to play, and how many times (rolls).
+function mapTick(t, held) {
+  let f = held ? seqFx : null, anchor = f?.anchor;
+  if (!held) {
+    const i = savedFx(t);
+    if (i != null && FX[i][1].seq) {
+      f = FX[i][1]; anchor = t;                // a saved loop starts where its run of steps starts
+      while (anchor > 0 && t - anchor < 16 && savedFx(anchor - 1) === i) anchor--;
+      if (f.seq === 'half') anchor++;
+    }
+  }
   if (!f) return [t, 1];
-  const d = t - f.anchor;
+  const d = t - anchor;
   if (d < 0) return [t, 1];
   switch (f.seq) {
-    case 'loop': return [f.anchor + (d % f.L), f.r || 1];
-    case 'half': return d % 2 ? [null, 0] : [f.anchor + d / 2, 1];
-    case 'glitch': return [f.anchor - (f.anchor % 16) + ((Math.random() * 16) | 0), Math.random() < 0.3 ? 2 + ((Math.random() * 2) | 0) : 1];
+    case 'loop': return [anchor + (d % f.L), f.r || 1];
+    case 'half': return d % 2 ? [null, 0] : [anchor + d / 2, 1];
+    case 'glitch': return [anchor - (anchor % 16) + ((Math.random() * 16) | 0), Math.random() < 0.3 ? 2 + ((Math.random() * 2) | 0) : 1];
   }
   return [t, 1];
 }
 function playTick(e, t, when, live) {
-  const [src, r] = live ? mapTick(t) : [t, 1];
+  const held = live && activeFx.size > 0;
+  // Write is on and an effect is held: save it on this step.
+  if (held && S.write) { S.fx[patAt(t)][t % 16] = lastFx; dirty(); }
+  const fxs = held ? [...activeFx] : savedFx(t) != null ? [savedFx(t)] : [];
+  // Saved audio effects (crush, filter, echo, tape) switch on and off on the beat.
+  if (!held) {
+    const want = fxs.length && FX[fxs[0]][1].audio || null;
+    if (want !== e.recAudio) {
+      if (e.recAudio) e.setFx(e.recAudio, false, stepDur(), when);
+      if (want) e.setFx(want, true, stepDur(), when);
+      e.recAudio = want;
+    }
+  }
+  const [src, r] = mapTick(t, held);
   const p = patAt(src ?? t), step = (src ?? t) % 16;
   if (live) uiQueue.push({ t: when, tick: t, step, pat: p });
   if (src == null) return;
+  const m = modsOf(fxs);
   for (const n of S.patterns[p][step]) {
     if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
-    for (let i = 0; i < r; i++) noteOn(e, n.s, n.k, when + i * stepDur() / r, live);
+    for (let i = 0; i < r; i++) noteOn(e, n.s, n.k, when + i * stepDur() / r, m, n.lock);
   }
 }
-function noteOn(e, si, k, when, live = true) {
+function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null) {
   const slot = S.slots[si]; if (!slot) return;
-  const m = live ? mods : {};
-  playNote(e, slot, si, k, when, { rate: m.rate || 1, reverse: m.reverse, unison: m.unison, scale: S.scale, bpm: S.bpm, root: S.root });
+  playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, lock,
+    scale: S.scale, bpm: S.bpm, root: S.root });
 }
 
 // ---------------------------------------------------------------------------
-// Effects: hold a key in FX mode
+// Effects: hold a key in FX mode. With Write on while playing, the effect is
+// saved on each step it is held through, as on the PO-33.
 // ---------------------------------------------------------------------------
 const FX = [
   ['Loop 1/4', { seq: 'loop', L: 4 }], ['Loop 1/8', { seq: 'loop', L: 2 }], ['Loop 1/16', { seq: 'loop', L: 1 }], ['Roll 1/32', { seq: 'loop', L: 1, r: 2 }],
-  ['Roll ×3', { seq: 'loop', L: 1, r: 3 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Tape stop', { audio: 'tape' }],
+  ['Scratch', { mod: 'scratch', f: 6 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Tape stop', { audio: 'tape' }],
   ['Octave up', { mod: 'up' }], ['Octave down', { mod: 'down' }], ['Reverse', { mod: 'reverse' }], ['Unison', { mod: 'unison' }],
-  ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['High pass', { audio: 'highpass' }], ['Echo', { audio: 'echo' }],
+  ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['Scratch fast', { mod: 'scratch', f: 15 }], ['Echo', { audio: 'echo' }],
 ];
 const activeFx = new Set();
-let seqFx = null, mods = {};
+let seqFx = null, lastFx = null;
 function engageFx(k) {
-  const f = FX[k][1]; activeFx.add(k); ctx.resume();
+  const f = FX[k][1]; activeFx.add(k); lastFx = k; ctx.resume();
+  if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   if (f.seq) {
     const at = headTick >= 0 ? headTick : tick;
     const L = f.L || 16;
     seqFx = { ...f, k, anchor: f.seq === 'loop' ? at - (at % L) : at + 1 };
   }
   if (f.audio) eng.setFx(f.audio, true, stepDur());
-  if (f.mod) recalcMods();
 }
 function releaseFx(k) {
   const f = FX[k][1]; activeFx.delete(k);
   if (f.seq && seqFx?.k === k) seqFx = null;
   if (f.audio) eng.setFx(f.audio, false, stepDur());
-  if (f.mod) recalcMods();
 }
-function recalcMods() {
-  mods = { rate: 1 };
-  for (const k of activeFx) {
-    const m = FX[k][1].mod;
-    if (m === 'up') mods.rate *= 2; if (m === 'down') mods.rate /= 2;
-    if (m === 'reverse') mods.reverse = true; if (m === 'unison') mods.unison = true;
+function modsOf(list) {
+  const m = { rate: 1 };
+  for (const k of list) {
+    const f = FX[k][1];
+    if (f.mod === 'up') m.rate *= 2; if (f.mod === 'down') m.rate /= 2;
+    if (f.mod === 'reverse') m.reverse = true; if (f.mod === 'unison') m.unison = true;
+    if (f.mod === 'scratch') m.scratch = f.f;
   }
+  return m;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,21 +199,27 @@ for (let k = 0; k < 16; k++) {
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   $('keys').appendChild(b); keyEls.push(b);
 }
+let copying = null;           // 'sound' or 'pattern': the next key is where it goes
 function press(k) {
   if (down.has(k)) return;
   down.add(k); ctx.resume();
+  if (recBtn.classList.contains('held')) {     // Rec + key: record into that sound
+    S.cur = k; syncPanel(); status(`● Recording into sound ${k + 1}… let go to stop.`); draw(); return;
+  }
   switch (S.mode) {
-    case 'sound': S.cur = k; S.lastKey[k] ||= 0; noteOn(eng, k, S.lastKey[k], ctx.currentTime + 0.005); syncPanel(); dirty(); break;
+    case 'sound':
+      if (copying === 'sound') { copySound(S.cur, k); break; }
+      S.cur = k; S.lastKey[k] ||= 0; noteOn(eng, k, S.lastKey[k], ctx.currentTime + 0.005); syncPanel(); dirty(); break;
     case 'pattern':
+      if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
       else { S.pat = k; if (playing) pendingChain = [k]; else S.chain = [k]; }
       dirty(); break;
     case 'fx': engageFx(k); break;
-    case 'write':
-      if (playing) { trigger(k); recordLive(k); }
+    default:
+      if (!S.write) trigger(k);
+      else if (playing) { trigger(k); recordLive(k); }
       else toggleStep(k);
-      break;
-    default: trigger(k);
   }
   draw();
 }
@@ -199,6 +232,7 @@ function trigger(k) {
   S.lastKey[S.cur] = k;
   noteOn(eng, S.cur, k, ctx.currentTime + 0.005);
   flash = { k, until: performance.now() + 160 };
+  if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
 }
 let flash = null;
 function toggleStep(k) {
@@ -208,14 +242,38 @@ function toggleStep(k) {
   else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.005); }
   dirty();
 }
-// Put what was just played on the nearest step.
+// Put what was just played on the nearest step (swing included).
 function recordLive(k) {
-  const jf = tick - (nextT - ctx.currentTime) / stepDur();
-  const j = Math.max(0, Math.round(jf)), p = patAt(j), step = j % 16;
+  const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
+  let j = Math.max(0, Math.round(tick - (nextT - now) / sd)), best = Infinity;
+  for (const c of [j - 1, j, j + 1]) {
+    if (c < 0) continue;
+    const d = Math.abs(nextT - (tick - c) * sd + (c % 2 ? sw : 0) - now);
+    if (d < best) { best = d; j = c; }
+  }
+  const p = patAt(j), step = j % 16;
   const notes = S.patterns[p][step];
   if (!notes.some(n => n.s === S.cur && n.k === k)) notes.push({ s: S.cur, k });
   if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
   dirty();
+}
+function copySound(from, to) {
+  const sl = S.slots[from];
+  S.slots[to] = { ...sl, factory: null, name: sl.name + (from === to ? '' : ' copy'), params: { ...sl.params },
+    synth: sl.synth && { ...sl.synth }, slices: sl.slices?.map(s => ({ ...s })) };
+  if ((from < 8) !== (to < 8) && S.slots[to].kind !== 'synth') {
+    // A melodic sample moved to the drum side is chopped, and the other way round.
+    const buf = sl.kind === 'chop' ? (sl.buf || sl.slices[S.lastKey[from]].buf) : sl.buf;
+    copying = null; assignBuffer(to, buf, sl.name + ' copy'); return;
+  }
+  copying = null; S.cur = to; syncPanel(); dirty();
+  status(`Sound ${from + 1} copied to ${to + 1}.`);
+}
+function copyPattern(from, to) {
+  S.patterns[to] = S.patterns[from].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })));
+  S.fx[to] = [...S.fx[from]];
+  copying = null; S.pat = to; if (!playing) S.chain = [to];
+  status(`Pattern ${from + 1} copied to ${to + 1}.`); dirty();
 }
 
 // ---------------------------------------------------------------------------
@@ -227,15 +285,17 @@ document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click'
   S.mode = S.mode === m ? 'play' : m;
   if (S.mode !== 'fx') for (const f of [...activeFx]) releaseFx(f);
   if (S.mode !== 'pattern' && chainEdit) setChainEdit(false);
+  if (copying && S.mode !== copying) copying = null;
   draw();
 }));
+$('write').addEventListener('click', () => { S.write = !S.write; draw(); });
 $('play').addEventListener('click', () => playing ? stop() : start());
 $('chainBtn').addEventListener('click', () => setChainEdit(!chainEdit));
 function setChainEdit(on) {
   chainEdit = on; chainFresh = on;
   $('chainBtn').classList.toggle('go', on);
   $('chainBtn').textContent = on ? 'Done chaining' : 'Chain patterns';
-  if (on) { S.mode = 'pattern'; status('Tap patterns in the order they should play.'); }
+  if (on) { S.mode = 'pattern'; status('Tap patterns in the order they should play. The same one can go in more than once.'); }
   else status(S.chain.length > 1 ? `Chain: ${S.chain.map(p => p + 1).join(' → ')}` : '');
   draw();
 }
@@ -334,12 +394,25 @@ $('reset').addEventListener('click', async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sound panel
+// Sound panel. On drum sounds (9-16) Start and Length trim the last slice
+// played. With Write on while playing, moving a slider locks its value onto
+// the step now playing instead (a parameter lock).
 // ---------------------------------------------------------------------------
+const pct = v => Math.round(v * 100) + '%';
 const PARAMS = [['pVol', 'vol', v => Math.round(v * 100)], ['pPitch', 'pitch', v => (v > 0 ? '+' : '') + v],
-  ['pTone', 'tone', v => Math.round(v * 100)], ['pLen', 'len', v => Math.round(v * 100) + '%']];
+  ['pFilter', 'filter', v => Math.abs(v) < 0.02 ? 'off' : (v < 0 ? 'LP ' : 'HP ') + Math.round(Math.abs(v) * 100)],
+  ['pRes', 'res', pct], ['pStart', 'start', pct], ['pLen', 'len', pct]];
+const perSlice = key => (key === 'start' || key === 'len') && S.slots[S.cur]?.kind === 'chop';
 for (const [id, key, fmt] of PARAMS) $(id).addEventListener('input', () => {
-  const v = +$(id).value; S.slots[S.cur].params[key] = v; $('o' + id.slice(1)).textContent = fmt(v); dirty();
+  const v = +$(id).value, sl = S.slots[S.cur];
+  $('o' + id.slice(1)).textContent = fmt(v);
+  if (S.write && playing && headStep >= 0) {
+    const mine = S.patterns[headPat][headStep].filter(n => n.s === S.cur);
+    for (const n of mine) n.lock = { ...n.lock, [key]: v };
+    if (mine.length) status(`Locked ${key} on step ${headStep + 1}.`);
+  } else if (perSlice(key)) sl.slices[S.lastKey[S.cur]][key] = v;
+  else sl.params[key] = v;
+  dirty();
 });
 $('pChoke').addEventListener('change', () => { S.slots[S.cur].params.choke = $('pChoke').checked; dirty(); });
 $('pWob').addEventListener('input', () => {
@@ -348,33 +421,47 @@ $('pWob').addEventListener('input', () => {
 });
 function syncPanel() {
   const sl = S.slots[S.cur]; if (!sl) return;
-  for (const [id, key, fmt] of PARAMS) { $(id).value = sl.params[key]; $('o' + id.slice(1)).textContent = fmt(sl.params[key]); }
+  const slice = sl.kind === 'chop' ? sl.slices[S.lastKey[S.cur]] : null;
+  for (const [id, key, fmt] of PARAMS) {
+    const v = perSlice(key) ? (slice?.[key] ?? (key === 'len' ? 1 : 0)) : sl.params[key];
+    $(id).value = v; $('o' + id.slice(1)).textContent = fmt(v);
+  }
   $('pChoke').checked = !!sl.params.choke;
+  $('startRow').style.display = sl.kind === 'synth' ? 'none' : '';
   const wob = sl.synth?.type === 'wobble';
   $('wobRow').style.display = wob ? '' : 'none';
   if (wob) { $('pWob').value = sl.synth.rate; $('oWob').textContent = WOBBLE_RATES[sl.synth.rate][1]; }
   $('rollAll').style.display = S.cur >= 8 ? '' : 'none';
   $('soundNote').textContent = `Sound ${S.cur + 1}: ${sl.name}. ` + (sl.kind === 'synth' ? 'Synth: Length is how long each note rings.'
-    : sl.kind === 'chop' ? 'Each key is one slice.' : 'Key 8 plays it at its own pitch; the others go up and down the scale.');
+    : sl.kind === 'chop' ? `Each key is one slice. Start and Length trim slice ${S.lastKey[S.cur] + 1}, the last one played.`
+    : 'Key 8 plays it at its own pitch; the others go up and down the scale.');
 }
 for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slice(1), f));
+$('copySound').addEventListener('click', () => {
+  copying = 'sound'; S.mode = 'sound'; draw(); status(`Tap the sound to copy sound ${S.cur + 1} onto.`);
+});
 
 // Beat panel
 for (const s of Object.keys(SCALES)) $('scale').add(new Option(s[0].toUpperCase() + s.slice(1), s));
 ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'].forEach((n, i) => $('root').add(new Option(n, i)));
 $('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); });
+document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { S.bpm = +b.dataset.bpm; dirty(); draw(); }));
 $('swing').addEventListener('input', () => { S.swing = +$('swing').value; dirty(); draw(); });
+$('vol').addEventListener('input', () => { S.vol = +$('vol').value; setVolume(); dirty(); draw(); });
+function setVolume() { eng.vol = S.vol; eng.master.gain.setTargetAtTime(S.vol, ctx.currentTime, 0.02); }
 $('scale').addEventListener('change', () => { S.scale = $('scale').value; dirty(); draw(); });
 $('root').addEventListener('change', () => { S.root = +$('root').value; dirty(); draw(); });
-$('clearPat').addEventListener('click', () => { S.patterns[S.pat] = Array.from({ length: 16 }, () => []); dirty(); draw(); status(`Pattern ${S.pat + 1} cleared.`); });
+$('clearPat').addEventListener('click', () => {
+  S.patterns[S.pat] = Array.from({ length: 16 }, () => []); S.fx[S.pat] = new Array(16).fill(null);
+  dirty(); draw(); status(`Pattern ${S.pat + 1} cleared.`);
+});
+$('clearFx').addEventListener('click', () => { S.fx[S.pat] = new Array(16).fill(null); dirty(); draw(); status(`Effects taken out of pattern ${S.pat + 1}.`); });
 $('clearSound').addEventListener('click', () => {
   S.patterns[S.pat] = S.patterns[S.pat].map(st => st.filter(n => n.s !== S.cur)); dirty(); draw();
   status(`Sound ${S.cur + 1} taken out of pattern ${S.pat + 1}.`);
 });
 $('copyPat').addEventListener('click', () => {
-  const to = (S.pat + 1) % 16;
-  S.patterns[to] = S.patterns[S.pat].map(st => st.map(n => ({ ...n })));
-  status(`Pattern ${S.pat + 1} copied to ${to + 1}.`); dirty(); draw();
+  copying = 'pattern'; S.mode = 'pattern'; draw(); status(`Tap the pattern to copy pattern ${S.pat + 1} onto.`);
 });
 document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
@@ -468,7 +555,10 @@ function keyLabel(k) {
     case 'sound': return S.slots[k]?.name || '';
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[k][0];
-    case 'write': if (!playing) return S.patterns[S.pat][k].length ? S.patterns[S.pat][k].map(n => n.s + 1).join(' ') : ''; break;
+    case 'play': if (S.write && !playing) {
+      const f = S.fx[S.pat][k], ns = S.patterns[S.pat][k].map(n => n.s + 1).join(' ');
+      return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
+    } break;
   }
   if (sl.kind === 'chop') return sl.slices[k]?.name || '';
   if (sl.kind === 'sample') {            // a recording has no known pitch: show how far each key moves it
@@ -480,11 +570,15 @@ function keyLabel(k) {
 }
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  $('write').classList.toggle('on', S.write);
   const sl = S.slots[S.cur];
   $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
   $('lcdPat').textContent = S.chain.length > 1 ? `CHAIN ${S.chain.map(p => p + 1).join('·')}` : `PAT ${S.pat + 1}`;
-  $('lcdMode').textContent = { play: 'PLAY', sound: 'SOUND: PICK ONE', pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
-    write: playing ? 'WRITE: LIVE RECORD' : 'WRITE: TAP STEPS', fx: 'FX: HOLD A KEY' }[S.mode];
+  $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
+    play: S.write ? (playing ? 'WRITE: LIVE RECORD' : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
+    pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
+    fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
+  $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
   $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''} ${S.scale.toUpperCase().slice(0, 5)}`;
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
   $('scale').value = S.scale; $('root').value = S.root;
@@ -640,9 +734,9 @@ function save() {
     };
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth } : {
       kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf),
-      slices: sl.slices?.map(s => ({ s: s.s, e: s.e, name: s.name, buf: ref(s.buf) })),
+      slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
-    const { mode, ...rest } = S;
+    const { mode, write, ...rest } = S;
     tx.objectStore('state').put({ ...rest, slots }, 'v1');
     const keys = bufs.getAllKeys();
     keys.onsuccess = () => { for (const k of keys.result) if (!used.has(k)) bufs.delete(k); };
@@ -660,19 +754,21 @@ async function load() {
     const s = saved?.slots?.[i];
     try {
       if (s && s.factory == null) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: s.params, synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf) };
-        if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ s: x.s, e: x.e, name: x.name, buf: await getBuf(x.buf) })));
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf) };
+        if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }
       S.slots[i] = await factorySlot(i);
-      if (s?.factory === i) { Object.assign(S.slots[i].params, s.params); if (s.synth) S.slots[i].synth = s.synth; }
+      if (s?.factory === i) { S.slots[i].params = params(s.params); if (s.synth) S.slots[i].synth = s.synth; }
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(i).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
   else demo();
-  syncPanel(); draw();
+  setVolume(); syncPanel(); draw();
 }
+// Sound settings saved by an older version had a low-pass "tone" instead of the filter.
+function params(p) { const { tone, ...rest } = p || {}; return { ...defParams(), ...rest }; }
 // A first beat, so pressing play does something.
 function demo() {
   const P = S.patterns[0], put = (s, k, steps) => steps.forEach(i => P[i].push({ s, k }));

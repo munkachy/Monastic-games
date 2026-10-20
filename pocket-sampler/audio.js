@@ -61,7 +61,7 @@ export class Engine {
     this.send = ctx.createGain(); this.send.gain.value = 0;
     this.comp = ctx.createDynamicsCompressor();
     this.comp.threshold.value = -10; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.15;
-    this.master = ctx.createGain(); this.master.gain.value = 0.9;
+    this.vol = 0.9; this.master = ctx.createGain(); this.master.gain.value = this.vol;
     this.bus.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
@@ -83,12 +83,13 @@ export class Engine {
     if (this.tap) this.master.connect(this.tap);
   }
 
-  // Punch-in effects. on = true while the key is held.
-  setFx(name, on, stepDur) {
-    const t = this.ctx.currentTime, p = (param, v, s = 0.04) => { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, s); };
+  // Punch-in effects, switched on or off at time `at` (now, for a held key;
+  // on the beat, for effects saved in a pattern).
+  setFx(name, on, stepDur, at = this.ctx.currentTime) {
+    const t = Math.max(at, this.ctx.currentTime), p = (param, v, s = 0.04) => { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, s); };
     switch (name) {
       case 'crush':
-        if (this.crush) { this.crush.parameters.get('bits').value = on ? 4 : 16; this.crush.parameters.get('hold').value = on ? 10 : 1; }
+        if (this.crush) { this.crush.parameters.get('bits').setValueAtTime(on ? 4 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 10 : 1, t); }
         break;
       case 'lowpass': p(this.lp.frequency, on ? 420 : 20000, on ? 0.12 : 0.05); break;
       case 'highpass': p(this.hp.frequency, on ? 1600 : 10, on ? 0.12 : 0.05); break;
@@ -99,7 +100,7 @@ export class Engine {
         if (on) {
           for (const v of this.voices) for (const r of v.rates) { r.cancelScheduledValues(t); r.setValueAtTime(r.value, t); r.exponentialRampToValueAtTime(r.value * 0.08, t + 0.7); }
           p(this.master.gain, 0, 0.25);
-        } else p(this.master.gain, 0.9, 0.01);
+        } else p(this.master.gain, this.vol, 0.01);
         break;
     }
   }
@@ -107,7 +108,8 @@ export class Engine {
 
 // ---------------------------------------------------------------------------
 // One note. slot: a sound (see app.js). k: key 0-15. t: start time.
-// mods: { rate: extra speed factor, reverse, unison }
+// mods: { rate: extra speed factor, reverse, unison, scratch: wobbles a second }
+// lock: sound settings saved on this one step (parameter locks).
 // ---------------------------------------------------------------------------
 const reversed = new WeakMap();
 function reverseOf(ctx, buf) {
@@ -121,14 +123,17 @@ function reverseOf(ctx, buf) {
   return r;
 }
 
-export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scale = 'minor', bpm = 120, root = 0 } = {}) {
-  const ctx = eng.ctx, P = slot.params;
+export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, lock = null,
+  scale = 'minor', bpm = 120, root = 0 } = {}) {
+  const ctx = eng.ctx, P = lock ? { ...slot.params, ...lock } : slot.params;
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
   const out = ctx.createGain(); out.gain.value = P.vol;
   let dest = out;
-  if (P.tone < 0.99) {
-    const f = ctx.createBiquadFilter(); f.type = 'lowpass';
-    f.frequency.value = 120 * Math.pow(160, P.tone); f.Q.value = 1;
+  if (Math.abs(P.filter) > 0.02) {   // filter: below 0 low-pass, above 0 high-pass
+    const f = ctx.createBiquadFilter();
+    f.type = P.filter < 0 ? 'lowpass' : 'highpass';
+    f.frequency.value = P.filter < 0 ? 120 * Math.pow(160, 1 + P.filter) : 20 * Math.pow(250, P.filter);
+    f.Q.value = 0.7 + P.res * 14;
     f.connect(out); dest = f;
   }
   out.connect(eng.bus);
@@ -140,20 +145,28 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     synthNote(ctx, env, slot.synth, hz(slot.synth.root + semis) * rate, t, 0.05 + P.len * 2, bpm, voice);
     if (unison) synthNote(ctx, env, slot.synth, hz(slot.synth.root + semis + 0.15) * rate, t + 0.012, 0.05 + P.len * 2, bpm, voice);
   } else {
-    let buf, s, e, r;
+    let buf, s, e, r, start, len;
     if (slot.kind === 'chop') {
       const sl = slot.slices[k]; if (!sl) return null;
       buf = sl.buf || slot.buf; s = sl.s; e = sl.e;
       r = Math.pow(2, P.pitch / 12) * rate;
+      start = lock?.start ?? sl.start ?? 0; len = lock?.len ?? sl.len ?? 1;   // trim is per slice
     } else {
       buf = slot.buf; s = 0; e = buf.duration;
       r = Math.pow(2, (keySemis(k, scale) - 12 + P.pitch + root) / 12) * rate;
+      start = P.start || 0; len = P.len;
     }
     if (!buf) return null;
-    const dur = Math.max(0.01, (e - s) * P.len);
+    s += (e - s) * start;
+    const dur = Math.max(0.01, (e - s) * len);
     if (reverse) { const rb = reverseOf(ctx, buf); [s, e] = [buf.duration - s - dur, buf.duration - s]; buf = rb; }
     const go = (rr, delay) => {
       const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rr;
+      if (scratch) {        // scratch: the speed swings back and forth, like a hand on the record
+        const n = 64, real = dur / rr, c = new Float32Array(n);
+        for (let i = 0; i < n; i++) c[i] = rr * Math.max(0.05, 1 + 0.9 * Math.sin(2 * Math.PI * scratch * real * i / n));
+        src.playbackRate.setValueCurveAtTime(c, t + delay, real);
+      }
       src.connect(env); src.start(t + delay, Math.max(0, s), dur);
       voice.rates.push(src.playbackRate); voice.nodes.push(src);
     };

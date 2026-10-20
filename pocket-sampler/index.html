@@ -93,7 +93,7 @@
   <div class="fn">
     <button data-mode="sound">Sound</button>
     <button data-mode="pattern">Pattern</button>
-    <button data-mode="write">Write</button>
+    <button id="write">Write</button>
     <button data-mode="fx">FX</button>
     <button id="play">▶ Play</button>
     <button id="rec">● Rec</button>
@@ -113,7 +113,9 @@
   <div class="panel on" id="tSound">
     <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="1" step="0.01"><output id="oVol"></output></div>
     <div class="row"><label for="pPitch">Pitch</label><input type="range" id="pPitch" min="-24" max="24" step="1"><output id="oPitch"></output></div>
-    <div class="row"><label for="pTone">Tone</label><input type="range" id="pTone" min="0" max="1" step="0.01"><output id="oTone"></output></div>
+    <div class="row"><label for="pFilter">Filter</label><input type="range" id="pFilter" min="-1" max="1" step="0.01"><output id="oFilter"></output></div>
+    <div class="row"><label for="pRes">Resonance</label><input type="range" id="pRes" min="0" max="1" step="0.01"><output id="oRes"></output></div>
+    <div class="row" id="startRow"><label for="pStart">Start</label><input type="range" id="pStart" min="0" max="0.95" step="0.01"><output id="oStart"></output></div>
     <div class="row"><label for="pLen">Length</label><input type="range" id="pLen" min="0.02" max="1" step="0.01"><output id="oLen"></output></div>
     <div class="row" id="wobRow"><label for="pWob">Wobble</label><input type="range" id="pWob" min="0" max="4" step="1"><output id="oWob"></output></div>
     <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
@@ -124,14 +126,17 @@
     <div class="btns">
       <label class="file">Load file…<input type="file" id="file" accept="audio/*"></label>
       <button id="rollAll">🎲 Roll all 16</button>
+      <button id="copySound">Copy sound to…</button>
       <button id="reset">Reset sound</button>
     </div>
     <p class="note" id="soundNote"></p>
   </div>
 
   <div class="panel" id="tBeat">
-    <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="180" step="1"><output id="oBpm"></output></div>
+    <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
+    <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
     <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
+    <div class="row"><label for="vol">Volume</label><input type="range" id="vol" min="0" max="1" step="0.01"><output id="oVol2"></output></div>
     <div class="row"><label for="scale">Scale</label>
       <select id="scale"></select><span></span></div>
     <div class="row"><label for="root">Key</label>
@@ -140,7 +145,8 @@
       <button id="chainBtn">Chain patterns</button>
       <button id="clearPat">Clear pattern</button>
       <button id="clearSound">Clear this sound</button>
-      <button id="copyPat">Copy to next</button>
+      <button id="copyPat">Copy pattern to…</button>
+      <button id="clearFx">Clear effects</button>
       <button id="export" class="go">⬇ Export loop WAV</button>
     </div>
     <p class="note" id="beatNote">The export is the pattern (or the chain) as one seamless loop, ready for Remixlive.</p>
@@ -160,9 +166,11 @@
   <div class="panel help" id="tHelp">
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
-    <p><b>Write</b>, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it. Tap again to remove it. <b>Write</b> while playing: whatever you play is recorded into the beat.</p>
-    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, half time, scramble, tape stop, octaves, reverse, crush, filters and echo.</p>
-    <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. Set "Rec from" to the beat to resample what's playing.</p>
+    <p><b>Write</b> turns writing on and off. Stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step.</p>
+    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, tape stop, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
+    <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
+    <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
+    <p><b>Trim:</b> Start and Length cut the sound down. On 9–16 they trim only the slice you played last.</p>
     <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played. "Roll all 16" fills a whole kit.</p>
     <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
