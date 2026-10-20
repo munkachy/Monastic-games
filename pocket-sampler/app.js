@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020h';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020i';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -100,7 +100,7 @@ const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false,
+  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -122,7 +122,7 @@ function start() {
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
 }
 function stop() {
-  playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1;
+  playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1; take = null;
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
   for (const f of activeFx) releaseFx(f);
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
@@ -165,6 +165,7 @@ function mapTick(t, held) {
 }
 function playTick(e, t, when, live) {
   const held = live && activeFx.size > 0;
+  if (live && take && (!S.write || !S.replace || t - take.last >= 16)) take = null;
   // Write is on and an effect is held: save it on this step.
   if (held && S.write) { S.fx[patAt(t)][t % 16] = lastFx; dirty(); }
   const fxs = held ? [...activeFx] : savedFx(t) != null ? [savedFx(t)] : [];
@@ -184,6 +185,7 @@ function playTick(e, t, when, live) {
   const m = modsOf(fxs);
   for (const n of S.patterns[p][step]) {
     if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
+    if (live && take?.si === n.s && !take.notes.has(n)) continue;     // Replace: the old line is silent
     // A note played off the grid keeps its own place, swing or not.
     const at = n.o ? when - (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0) + n.o * stepDur() : when;
     // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
@@ -329,9 +331,11 @@ function recordLive(k) {
   const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
   if (!S.quant) {
     const jf = Math.max(0, tick - (nextT - now) / sd), j = Math.floor(jf);
+    replaceFrom(j);
     const o = Math.round((jf - j) * 1000) / 1000, notes = S.patterns[patAt(j)][j % 16];
     let note = notes.find(n => n.s === S.cur && n.k === k && Math.abs((n.o || 0) - o) < 0.1);
     if (!note) notes.push(note = { s: S.cur, k, ...(o > 0.01 && { o }) });
+    take?.notes.add(note);
     if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
     dirty(); return note;
   }
@@ -341,13 +345,33 @@ function recordLive(k) {
     const d = Math.abs(nextT - (tick - c) * sd + (c % 2 ? sw : 0) - now);
     if (d < best) { best = d; j = c; }
   }
+  replaceFrom(j);
   const p = patAt(j), step = j % 16;
   const notes = S.patterns[p][step];
   let note = notes.find(n => n.s === S.cur && n.k === k);
   if (!note) notes.push(note = { s: S.cur, k });
+  take?.notes.add(note);
   if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
   dirty();
   return note;
+}
+// Replace (Write pressed twice). From the first note you play, the current
+// sound's old notes stop sounding, and each new note deletes them on every
+// step from the one before it up to itself. So only the stretch you played
+// over is replaced: if you stop, nothing after your last note is deleted (it
+// plays again once a whole pattern passes with no new note), and if you don't
+// play, nothing is deleted at all.
+let take = null;            // { si, notes: the notes of this take, last: tick of the latest }
+function replaceFrom(j) {
+  if (!S.replace) return;
+  if (take?.si !== S.cur) { checkpoint(); take = { si: S.cur, notes: new WeakSet(), last: j - 1 }; }
+  for (let c = take.last + 1; c <= j; c++) clearOld(c);
+  take.last = Math.max(take.last, j);
+}
+function clearOld(t) {
+  const P = S.patterns[patAt(t)], st = t % 16;
+  const keep = P[st].filter(n => n.s !== take.si || take.notes.has(n));
+  if (keep.length !== P[st].length) { P[st] = keep; dirty(); }
 }
 function copySound(from, to) {
   checkpoint();
@@ -382,7 +406,12 @@ document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click'
   if (copying && S.mode !== copying) copying = null;
   draw();
 }));
-$('write').addEventListener('click', () => { S.write = !S.write; draw(); });
+$('write').addEventListener('click', () => {
+  if (!S.write) S.write = true;
+  else if (!S.replace) S.replace = true;
+  else S.write = S.replace = false;
+  take = null; draw();
+});
 $('play').addEventListener('click', () => playing ? stop() : start());
 $('chainBtn').addEventListener('click', () => setChainEdit(!chainEdit));
 function setChainEdit(on) {
@@ -719,11 +748,13 @@ function keyLabel(k) {
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   $('write').classList.toggle('on', S.write);
+  $('write').classList.toggle('replace', S.replace);
+  $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
   $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
   $('lcdPat').textContent = S.chain.length > 1 ? `CHAIN ${S.chain.map(p => p + 1).join('·')}` : `PAT ${S.pat + 1}`;
   $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
-    play: S.write ? (playing ? (S.quant ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
+    play: S.write ? (playing ? (S.replace ? 'WRITE: LIVE, REPLACE' : S.quant ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
     fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
@@ -1062,7 +1093,7 @@ function save() {
       kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base,
       slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
-    const { mode, write, ...rest } = S;
+    const { mode, write, replace, ...rest } = S;
     tx.objectStore('state').put({ ...rest, slots }, 'v1');
     const keys = bufs.getAllKeys();
     keys.onsuccess = () => { for (const k of keys.result) if (!used.has(k)) { bufs.delete(k); stored.delete(k); } };
