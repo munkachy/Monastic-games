@@ -1,7 +1,9 @@
 // Pocket Sampler: a 16-key sampler and step sequencer in the manner of a
 // pocket drum machine. Sounds 1-8 are melodic, 9-16 are kits and chops.
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js';
+// Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
+// with each release, so phones fetch the new files instead of cached ones.
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020a';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
