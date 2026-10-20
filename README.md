@@ -138,8 +138,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Everything is saved on the phone between visits.
 - The video-game sounds are CC0, from Juhani Junkala's [Essential Retro Video
   Game Sound Effects Collection](https://opengameart.org/content/512-sound-effects-8-bit-style)
-  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001);
-  `pocket-sampler/tools/banks.py` builds the banks from them.
+  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001).
 
 ### [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/)
 
