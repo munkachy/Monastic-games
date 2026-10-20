@@ -123,9 +123,21 @@ function reverseOf(ctx, buf) {
   return r;
 }
 
+// The context a note builds with: the real one, except that it remembers
+// every node made, so they can all be unplugged when the note is over.
+// (Safari keeps a finished node working, and in memory, for as long as it is
+// still plugged in, so without this each note played leaves a little more
+// work behind and the whole app slows down the longer you play.)
+function tracking(ctx, made) {
+  const keep = name => (...a) => { const n = ctx[name](...a); made.push(n); return n; };
+  return { createGain: keep('createGain'), createBiquadFilter: keep('createBiquadFilter'), createWaveShaper: keep('createWaveShaper'),
+    createOscillator: keep('createOscillator'), createBufferSource: keep('createBufferSource'),
+    createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
+}
+
 export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, lock = null,
   scale = 'minor', bpm = 120, root = 0 } = {}) {
-  const ctx = eng.ctx, P = lock ? { ...slot.params, ...lock } : slot.params;
+  const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
   const out = ctx.createGain(); out.gain.value = P.vol;
   let dest = out;
@@ -188,7 +200,11 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
   };
   eng.voices.add(voice);
   const done = Math.max(0, (voice.end - ctx.currentTime) * 1000 + 100);
-  if (eng.live) setTimeout(() => eng.voices.delete(voice), done);
+  if (eng.live) setTimeout(() => {
+    eng.voices.delete(voice);
+    if (eng.choke.get(si) === voice) eng.choke.delete(si);
+    for (const n of made) try { n.disconnect(); } catch (e) {}
+  }, done + 150);
   if (P.choke) eng.choke.set(si, voice);
   return voice;
 }
