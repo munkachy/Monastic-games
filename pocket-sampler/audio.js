@@ -75,11 +75,12 @@ export class Engine {
     this.bus.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
-    // Tape stop: everything passes through a delay that is normally 0. To stop
-    // the tape, the delay grows faster and faster, so the sound slows and drops
-    // in pitch together, notes that start during it too, as a real tape would.
+    // Tape stop: while it runs, everything passes through a delay that grows
+    // faster and faster, so the sound slows and drops in pitch together, notes
+    // that start during it too, as a real tape would. The delay is in the path
+    // only then (setFx), so normal playing goes straight to the speaker.
     this.tape = ctx.createDelay(1);
-    this.limit.connect(this.tape); this.tape.connect(this.master); this.master.connect(ctx.destination);
+    this.limit.connect(this.master); this.master.connect(ctx.destination);
     this.voices = new Set();       // sounding voices, for choke and tape stop
     this.choke = new Map();        // slot -> its last voice
   }
@@ -125,11 +126,20 @@ export class Engine {
         // Speed falls from 1 to 0 over T seconds: the delay is T/2 * u^2, u = 0..1.
         const T = 0.9, d = this.tape.delayTime, g = this.master.gain;
         d.cancelScheduledValues(t); g.cancelScheduledValues(t);
+        this.tapeOn = on;
+        if (on && !this.tapeIn) {            // at delay 0 it passes the sound unchanged until t
+          this.limit.connect(this.tape); this.tape.connect(this.master); this.limit.disconnect(this.master); this.tapeIn = true;
+        }
         if (on) {
           d.setValueCurveAtTime(TAPE_CURVE.map(v => v * T), t, T);
           g.setValueAtTime(this.vol, t); g.setValueAtTime(this.vol, t + T * 0.8); g.linearRampToValueAtTime(0, t + T);
         } else {
           g.setValueAtTime(0, t); d.setValueAtTime(0, t + 0.005); g.linearRampToValueAtTime(this.vol, t + 0.02);
+          // back to the straight path once the sound is back (live only; an export keeps it)
+          if (this.live && this.tapeIn) setTimeout(() => {
+            if (this.tapeOn || !this.tapeIn) return;
+            this.limit.connect(this.master); this.limit.disconnect(this.tape); this.tape.disconnect(); this.tapeIn = false;
+          }, (t - this.ctx.currentTime) * 1000 + 80);
         }
         break;
       }
