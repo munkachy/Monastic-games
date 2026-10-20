@@ -20,7 +20,6 @@ is plain HTML and JavaScript with no build step, and most are made for phones.
 | [While You Have the Light](https://munkachy.github.io/Monastic-games/while-you-have-the-light/) | A hooded monk with a torch fights the seven deadly sins in a black, angular world of crags and floating rock. In the torchlight the demons show their true colours and he fights hand to hand in flowing combos; in the dark he has only holy water. A first build: the arena ([design notes](https://munkachy.github.io/Monastic-games/while-you-have-the-light/design.html)) |
 | [The Seven Lampstands](https://munkachy.github.io/Monastic-games/seven-lampstands/design.html) | Not built yet: the [design notes](https://munkachy.github.io/Monastic-games/seven-lampstands/design.html). You are the unseen angel of a church, building it from a cross in the wilderness to a consecrated church, in the manner of Kingdom Two Crowns, one island for each of the seven churches of the Apocalypse, while the seven capital sins come by night to lead its people away. |
 
-
 ## Benedictine Bricks
 
 - Stack stones into an abbey tower with real physics ([planck.js](https://github.com/piqnt/planck.js), a port of Box2D).
@@ -114,6 +113,33 @@ The first build: the arena, played with the phone sideways. The name is from the
 - Everything is drawn in code (`art.js`, with `art.html` to see every figure and move); the arena and its routes are in `world.js`; the music is built on the old Compline hymn *Christe qui lux es et dies* on the synth engine from Luminaries.
 
 ## Tools
+
+### [Pocket Sampler](https://munkachy.github.io/Monastic-games/pocket-sampler/)
+
+A 16-key pocket sampler and step sequencer, played like a Teenage Engineering
+PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
+
+- **Sixteen sounds.** 1–8 are melodic and play up a scale: 808 bass, dubstep
+  wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
+  and choir. 9–16 are kits, one hit per key: 808 and 909 kits drawn in code,
+  then 8-bit hits, blips, lasers, glitches, coins and robots.
+- **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
+  is chopped at each syllable or hit, one per key; drag the markers on the
+  screen to move the cuts. It can also resample the beat that's playing.
+- **Voice:** type words and Vox Machina's eSpeak engine says them onto the
+  current sound, with tone variation (0 = flat monotone) and vowel length.
+- **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
+  hit, jump, blip, glitch) on the last key played, or a whole kit of them.
+- **16 patterns,** chainable, with swing, eight scales and any key. **Write**
+  places steps when stopped and records live when playing.
+- **16 punch-in effects:** loops, rolls, half time, scramble, tape stop,
+  octaves, reverse, unison, bitcrush, filters and echo.
+- **Export** the pattern or chain as a seamless loop WAV for Remixlive.
+  Everything is saved on the phone between visits.
+- The video-game sounds are CC0, from Juhani Junkala's [Essential Retro Video
+  Game Sound Effects Collection](https://opengameart.org/content/512-sound-effects-8-bit-style)
+  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001);
+  `pocket-sampler/tools/banks.py` builds the banks from them.
 
 ### [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/)
 
