@@ -83,7 +83,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020b</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020c</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -144,6 +144,7 @@
     <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
     <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
     <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
+    <label class="check"><input type="checkbox" id="quant" checked> Quantize: notes played live snap to the nearest step</label>
     <div class="row"><label for="vol">Volume</label><input type="range" id="vol" min="0" max="1" step="0.01"><output id="oVol2"></output></div>
     <div class="row"><label for="scale">Scale</label>
       <select id="scale"></select><span></span></div>
@@ -175,7 +176,7 @@
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
-    <p><b>Write</b> turns writing on and off. Stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step.</p>
+    <p><b>Write</b> turns writing on and off. Stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
     <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, tape stop, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
@@ -187,6 +188,6 @@
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261020b"></script>
+<script type="module" src="app.js?v=20261020c"></script>
 </body>
 </html>

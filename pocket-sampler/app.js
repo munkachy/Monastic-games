@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020b';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020c';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -65,7 +65,7 @@ const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, write: false,
+  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -149,7 +149,9 @@ function playTick(e, t, when, live) {
   const m = modsOf(fxs);
   for (const n of S.patterns[p][step]) {
     if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
-    for (let i = 0; i < r; i++) noteOn(e, n.s, n.k, when + i * stepDur() / r, m, n.lock);
+    // A note played off the grid keeps its own place, swing or not.
+    const at = n.o ? when - (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0) + n.o * stepDur() : when;
+    for (let i = 0; i < r; i++) noteOn(e, n.s, n.k, at + i * stepDur() / r, m, n.lock);
   }
 }
 function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null) {
@@ -255,9 +257,18 @@ function toggleStep(k) {
   else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); }
   dirty();
 }
-// Put what was just played on the nearest step (swing included).
+// Put what was just played on the nearest step (swing included). With
+// Quantize off it goes on the step before, with `o`: how far past that step
+// (0-1 of a step, swing ignored) it was played, so it plays back just so.
 function recordLive(k) {
   const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
+  if (!S.quant) {
+    const jf = Math.max(0, tick - (nextT - now) / sd), j = Math.floor(jf);
+    const o = Math.round((jf - j) * 1000) / 1000, notes = S.patterns[patAt(j)][j % 16];
+    if (!notes.some(n => n.s === S.cur && n.k === k && Math.abs((n.o || 0) - o) < 0.1)) notes.push({ s: S.cur, k, ...(o > 0.01 && { o }) });
+    if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
+    dirty(); return;
+  }
   let j = Math.max(0, Math.round(tick - (nextT - now) / sd)), best = Infinity;
   for (const c of [j - 1, j, j + 1]) {
     if (c < 0) continue;
@@ -483,6 +494,7 @@ for (const s of Object.keys(SCALES)) $('scale').add(new Option(s[0].toUpperCase(
 ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'].forEach((n, i) => $('root').add(new Option(n, i)));
 $('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); });
 document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { checkpoint(); S.bpm = +b.dataset.bpm; dirty(); draw(); }));
+$('quant').addEventListener('change', () => { S.quant = $('quant').checked; persist(); draw(); });
 $('swing').addEventListener('input', () => { S.swing = +$('swing').value; dirty(); draw(); });
 $('vol').addEventListener('input', () => { S.vol = +$('vol').value; setVolume(); dirty(); draw(); });
 function setVolume() { eng.vol = S.vol; eng.master.gain.setTargetAtTime(S.vol, ctx.currentTime, 0.02); }
@@ -614,13 +626,13 @@ function draw() {
   $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
   $('lcdPat').textContent = S.chain.length > 1 ? `CHAIN ${S.chain.map(p => p + 1).join('·')}` : `PAT ${S.pat + 1}`;
   $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
-    play: S.write ? (playing ? 'WRITE: LIVE RECORD' : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
+    play: S.write ? (playing ? (S.quant ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
     fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
   $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''} ${S.scale.toUpperCase().slice(0, 5)}`;
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
-  $('scale').value = S.scale; $('root').value = S.root;
+  $('scale').value = S.scale; $('root').value = S.root; $('quant').checked = S.quant;
   for (let k = 0; k < 16; k++) {
     const el = keyEls[k], steps = S.patterns[S.pat][k];
     let lit = false, some = false, cur = false;
@@ -968,7 +980,7 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
   else demo();
   setVolume(); syncPanel(); draw();
   committed = snapshot();
