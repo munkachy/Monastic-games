@@ -2,8 +2,7 @@
 //
 // Everything here works on any BaseAudioContext, so the same code plays live
 // (AudioContext) and renders the WAV export (OfflineAudioContext).
-//   - Engine: the master chain and the punch-in effects (crush, filters, echo,
-//     tape stop).
+//   - Engine: the master chain and the punch-in effects (crush, filters, echo).
 //   - playNote(): one note of one sound: a synth, a pitched sample, or one
 //     slice of a chopped sample.
 //   - makeKit(): the 808 and 909 kits, drawn from oscillators and noise.
@@ -50,7 +49,6 @@ class Crush extends AudioWorkletProcessor {
 }
 registerProcessor('crush', Crush);`;
 
-const TAPE_CURVE = new Float32Array(64).map((_, i) => 0.5 * (i / 63) ** 2);
 const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
   const v = (i / 1024 - 1) * 2, a = Math.abs(v);
   return Math.sign(v) * (a < 0.7 ? a : 0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3));
@@ -75,13 +73,8 @@ export class Engine {
     this.bus.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
-    // Tape stop: while it runs, everything passes through a delay that grows
-    // faster and faster, so the sound slows and drops in pitch together, notes
-    // that start during it too, as a real tape would. The delay is in the path
-    // only then (setFx), so normal playing goes straight to the speaker.
-    this.tape = ctx.createDelay(1);
     this.limit.connect(this.master); this.master.connect(ctx.destination);
-    this.voices = new Set();       // sounding voices, for choke and tape stop
+    this.voices = new Set();       // sounding voices
     this.choke = new Map();        // slot -> its last voice
   }
 
@@ -122,27 +115,6 @@ export class Engine {
       case 'echo':
         this.delay.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t);
         p(this.send.gain, on ? 0.7 : 0, 0.02); break;
-      case 'tape': {
-        // Speed falls from 1 to 0 over T seconds: the delay is T/2 * u^2, u = 0..1.
-        const T = 0.9, d = this.tape.delayTime, g = this.master.gain;
-        d.cancelScheduledValues(t); g.cancelScheduledValues(t);
-        this.tapeOn = on;
-        if (on && !this.tapeIn) {            // at delay 0 it passes the sound unchanged until t
-          this.limit.connect(this.tape); this.tape.connect(this.master); this.limit.disconnect(this.master); this.tapeIn = true;
-        }
-        if (on) {
-          d.setValueCurveAtTime(TAPE_CURVE.map(v => v * T), t, T);
-          g.setValueAtTime(this.vol, t); g.setValueAtTime(this.vol, t + T * 0.8); g.linearRampToValueAtTime(0, t + T);
-        } else {
-          g.setValueAtTime(0, t); d.setValueAtTime(0, t + 0.005); g.linearRampToValueAtTime(this.vol, t + 0.02);
-          // back to the straight path once the sound is back (live only; an export keeps it)
-          if (this.live && this.tapeIn) setTimeout(() => {
-            if (this.tapeOn || !this.tapeIn) return;
-            this.limit.connect(this.master); this.limit.disconnect(this.tape); this.tape.disconnect(); this.tapeIn = false;
-          }, (t - this.ctx.currentTime) * 1000 + 80);
-        }
-        break;
-      }
     }
   }
 }
@@ -179,7 +151,7 @@ function tracking(ctx, made) {
     createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
 }
 
-export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, lock = null,
+export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = false, lock = null,
   scale = 'minor', bpm = 120, root = 0, hold = false } = {}) {
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
@@ -271,6 +243,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     voice.end = when + 0.015;
     if (eng.live) setTimeout(free, (when - ctx.currentTime) * 1000 + 80);
   };
+  // Pitch dive: the note slides down two octaves as it plays.
+  if (dive && !scratch) for (const r of voice.rates) r.setTargetAtTime(r.value * 0.25, t + 0.02, 0.2);
   eng.voices.add(voice);
   if (eng.live && voice.end < Infinity) setTimeout(free, Math.max(0, (voice.end - ctx.currentTime) * 1000) + 60);
   if (P.choke) eng.choke.set(si, voice);
