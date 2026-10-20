@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020a';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020b';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -154,6 +154,7 @@ function playTick(e, t, when, live) {
 }
 function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null) {
   const slot = S.slots[si]; if (!slot) return;
+  if (e === eng) lastNoteAt = Math.max(lastNoteAt, when);
   playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, lock,
     scale: S.scale, bpm: S.bpm, root: S.root });
 }
@@ -220,7 +221,7 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      S.cur = k; S.lastKey[k] ||= 0; noteOn(eng, k, S.lastKey[k], ctx.currentTime + 0.005); syncPanel(); persist(); break;
+      S.cur = k; S.lastKey[k] ||= 0; noteOn(eng, k, S.lastKey[k], ctx.currentTime); syncPanel(); persist(); break;
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -241,7 +242,7 @@ function release(k) {
 }
 function trigger(k) {
   S.lastKey[S.cur] = k;
-  noteOn(eng, S.cur, k, ctx.currentTime + 0.005);
+  noteOn(eng, S.cur, k, ctx.currentTime);
   flash = { k, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
 }
@@ -251,7 +252,7 @@ function toggleStep(k) {
   const notes = S.patterns[S.pat][k];
   const mine = notes.filter(n => n.s === S.cur);
   if (mine.length) S.patterns[S.pat][k] = notes.filter(n => n.s !== S.cur);
-  else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.005); }
+  else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); }
   dirty();
 }
 // Put what was just played on the nearest step (swing included).
@@ -694,7 +695,7 @@ cv.addEventListener('pointerdown', ev => {
   const sl = S.slots[S.cur];
   if (near > 0 && sl.contiguous) { drag = near; return; }
   const k = v.marks.findIndex(m => T >= m.s && T < m.e);
-  if (k >= 0) { S.lastKey[S.cur] = k; noteOn(eng, S.cur, k, ctx.currentTime + 0.005); flash = { k, until: performance.now() + 160 }; draw(); }
+  if (k >= 0) { S.lastKey[S.cur] = k; noteOn(eng, S.cur, k, ctx.currentTime); flash = { k, until: performance.now() + 160 }; draw(); }
 });
 cv.addEventListener('pointermove', ev => {
   if (drag == null) return;
@@ -703,9 +704,10 @@ cv.addEventListener('pointermove', ev => {
   const lo = m[drag - 1].s + 0.01, hi = (m[drag + 1]?.s ?? v.b) - 0.01;
   m[drag].s = Math.min(hi, Math.max(lo, T)); m[drag - 1].e = m[drag].s;
 });
-const endDrag = () => { if (drag != null) { S.lastKey[S.cur] = drag; noteOn(eng, S.cur, drag, ctx.currentTime + 0.005); drag = null; dirty(); } };
+const endDrag = () => { if (drag != null) { S.lastKey[S.cur] = drag; noteOn(eng, S.cur, drag, ctx.currentTime); drag = null; dirty(); } };
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 
+let lastSeen = [], lastNoteAt = 0;
 function frame() {
   const now = ctx.currentTime;
   let changed = false;
@@ -717,7 +719,11 @@ function frame() {
   }
   if (flash && performance.now() > flash.until) { flash = null; changed = true; }
   if (changed) draw();
-  drawWave();
+  // Redraw the screen only when what it shows has changed (or the scope is
+  // moving), so the phone has its time free to answer the keys.
+  const sl = S.slots[S.cur], seen = [sl, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
+  const scopeLive = sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5);
+  if (drag != null || scopeLive || seen.some((v, i) => v !== lastSeen[i])) { drawWave(); lastSeen = seen; }
   requestAnimationFrame(frame);
 }
 
