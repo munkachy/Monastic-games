@@ -114,6 +114,33 @@ The first build: the arena, played with the phone sideways. The name is from the
 
 ## Tools
 
+### [Pocket Sampler](https://munkachy.github.io/Monastic-games/pocket-sampler/)
+
+A 16-key pocket sampler and step sequencer, played like a Teenage Engineering
+PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
+
+- **Sixteen sounds.** 1–8 are melodic and play up a scale: 808 bass, dubstep
+  wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
+  and choir. 9–16 are kits, one hit per key: 808 and 909 kits drawn in code,
+  then 8-bit hits, blips, lasers, glitches, coins and robots.
+- **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
+  is chopped at each syllable or hit, one per key; drag the markers on the
+  screen to move the cuts. It can also resample the beat that's playing.
+- **Voice:** type words and Vox Machina's eSpeak engine says them onto the
+  current sound, with tone variation (0 = flat monotone) and vowel length.
+- **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
+  hit, jump, blip, glitch) on the last key played, or a whole kit of them.
+- **16 patterns,** chainable, with swing, eight scales and any key. **Write**
+  places steps when stopped and records live when playing.
+- **16 punch-in effects:** loops, rolls, half time, scramble, tape stop,
+  octaves, reverse, unison, bitcrush, filters and echo.
+- **Export** the pattern or chain as a seamless loop WAV for Remixlive.
+  Everything is saved on the phone between visits.
+- The video-game sounds are CC0, from Juhani Junkala's [Essential Retro Video
+  Game Sound Effects Collection](https://opengameart.org/content/512-sound-effects-8-bit-style)
+  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001);
+  `pocket-sampler/tools/banks.py` builds the banks from them.
+
 ### [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/)
 
 Type a Bible verse and a robot speaks it. Shape the sound, then download it as

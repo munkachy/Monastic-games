@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1b1a17">
+<title>Pocket Sampler</title>
+<style>
+  :root {
+    --body: #d9d4c7; --body-dark: #bdb6a4; --ink: #1b1a17; --lcd: #9fb18c; --lcd-ink: #1f2a17;
+    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #ff8a3d; --dim: #8a8475;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: #1b1a17; color: var(--ink);
+    font: 14px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  body { min-height: 100vh; display: flex; justify-content: center; padding: 12px 12px 40px; }
+  .device { width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 14px;
+    box-shadow: inset 0 -4px 0 var(--body-dark), 0 10px 40px #000a; }
+  .brand { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; margin: 0 2px 8px; }
+  .brand b { font-size: 13px; letter-spacing: .2em; }
+  .brand a { color: var(--ink); }
+
+  /* LCD */
+  .screen { background: var(--lcd); border-radius: 6px; padding: 6px 8px; box-shadow: inset 0 2px 6px #0005;
+    color: var(--lcd-ink); user-select: none; touch-action: none; }
+  .lcdtop, .lcdbot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lcdtop span:first-child { overflow: hidden; text-overflow: ellipsis; }
+  .lcdbot { font-weight: 400; font-size: 11px; opacity: .85; }
+  canvas#wave { width: 100%; height: 92px; display: block; margin: 4px 0; }
+
+  /* function buttons */
+  .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 12px 0 10px; }
+  .fn button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    border: 0; border-radius: 7px; padding: 10px 2px; background: var(--ink); color: var(--body);
+    box-shadow: 0 3px 0 #000; touch-action: manipulation; }
+  .fn button.on { background: var(--accent); color: #fff; }
+  .fn button:active, .fn button.held { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  #rec.held { background: #c21b1b; color: #fff; }
+
+  /* keys */
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .key { position: relative; aspect-ratio: 1; border-radius: 10px; background: var(--key); border: 0; padding: 6px;
+    box-shadow: 0 4px 0 var(--body-dark), 0 5px 4px #0003; text-align: left; display: flex; flex-direction: column;
+    justify-content: space-between; font: inherit; color: var(--ink); overflow: hidden; }
+  .key b { font-size: 15px; }
+  .key span { font-size: 9.5px; line-height: 1.15; color: #555; overflow: hidden; max-height: 3.5em; word-break: break-word; }
+  .key i { position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: #c9c3b3; }
+  .key.lit i { background: var(--lit); box-shadow: 0 0 8px var(--lit); }
+  .key.some i { background: #e6b98f; }
+  .key.cur { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .key.head { background: #fff6e2; }
+  .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--body-dark); background: var(--key-down); }
+  .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; }
+
+  /* panels */
+  .tabs { display: flex; gap: 6px; margin: 14px 0 0; }
+  .tabs button { flex: 1; font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border: 0;
+    background: var(--body-dark); border-radius: 7px 7px 0 0; padding: 8px 0; color: var(--ink); }
+  .tabs button.on { background: #ece8dc; font-weight: 700; }
+  .panel { background: #ece8dc; border-radius: 0 0 10px 10px; padding: 10px 12px 12px; display: none; }
+  .panel.on { display: block; }
+  .row { display: grid; grid-template-columns: 92px 1fr 46px; gap: 8px; align-items: center; margin: 6px 0; }
+  .row label { font-size: 12px; }
+  .row output { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select, textarea, input[type=text] { font: inherit; font-size: 14px; width: 100%; border: 1px solid #b7b09e; border-radius: 6px;
+    background: #fff; padding: 6px; color: var(--ink); }
+  textarea { min-height: 60px; resize: vertical; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .btns button, .btns label.file { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 8px 10px;
+    background: var(--ink); color: var(--body); }
+  .btns button.go { background: var(--accent); color: #fff; font-weight: 700; }
+  .btns label.file input { display: none; }
+  .note { font-size: 11.5px; color: #555; margin: 8px 0 0; }
+  .help p { margin: 6px 0; font-size: 12.5px; }
+  .help b { color: var(--accent); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
+  #status { min-height: 1.3em; }
+</style>
+</head>
+<body>
+<div class="device">
+  <div class="brand"><b>Pocket Sampler</b><a href="../">◂ Monastic Games</a></div>
+
+  <div class="screen" id="screen">
+    <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
+    <canvas id="wave"></canvas>
+    <div class="lcdbot"><span id="lcdMode">PLAY</span><span id="lcdInfo">120 BPM</span></div>
+  </div>
+
+  <div class="fn">
+    <button data-mode="sound">Sound</button>
+    <button data-mode="pattern">Pattern</button>
+    <button data-mode="write">Write</button>
+    <button data-mode="fx">FX</button>
+    <button id="play">▶ Play</button>
+    <button id="rec">● Rec</button>
+    <button id="dice" title="Random sound">🎲 Roll</button>
+    <button id="voxBtn">Voice</button>
+  </div>
+
+  <div class="keys" id="keys"></div>
+
+  <div class="tabs">
+    <button data-tab="tSound" class="on">Sound</button>
+    <button data-tab="tBeat">Beat</button>
+    <button data-tab="tVoice">Voice</button>
+    <button data-tab="tHelp">Help</button>
+  </div>
+
+  <div class="panel on" id="tSound">
+    <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="1" step="0.01"><output id="oVol"></output></div>
+    <div class="row"><label for="pPitch">Pitch</label><input type="range" id="pPitch" min="-24" max="24" step="1"><output id="oPitch"></output></div>
+    <div class="row"><label for="pTone">Tone</label><input type="range" id="pTone" min="0" max="1" step="0.01"><output id="oTone"></output></div>
+    <div class="row"><label for="pLen">Length</label><input type="range" id="pLen" min="0.02" max="1" step="0.01"><output id="oLen"></output></div>
+    <div class="row" id="wobRow"><label for="pWob">Wobble</label><input type="range" id="pWob" min="0" max="4" step="1"><output id="oWob"></output></div>
+    <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
+    <div class="row"><label for="recSrc">Rec from</label>
+      <select id="recSrc"><option value="mic">Microphone</option><option value="beat">The beat (resample)</option></select><span></span></div>
+    <div class="row"><label for="family">Roll makes</label>
+      <select id="family"><option value="">Anything</option></select><span></span></div>
+    <div class="btns">
+      <label class="file">Load file…<input type="file" id="file" accept="audio/*"></label>
+      <button id="rollAll">🎲 Roll all 16</button>
+      <button id="reset">Reset sound</button>
+    </div>
+    <p class="note" id="soundNote"></p>
+  </div>
+
+  <div class="panel" id="tBeat">
+    <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="180" step="1"><output id="oBpm"></output></div>
+    <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
+    <div class="row"><label for="scale">Scale</label>
+      <select id="scale"></select><span></span></div>
+    <div class="row"><label for="root">Key</label>
+      <select id="root"></select><span></span></div>
+    <div class="btns">
+      <button id="chainBtn">Chain patterns</button>
+      <button id="clearPat">Clear pattern</button>
+      <button id="clearSound">Clear this sound</button>
+      <button id="copyPat">Copy to next</button>
+      <button id="export" class="go">⬇ Export loop WAV</button>
+    </div>
+    <p class="note" id="beatNote">The export is the pattern (or the chain) as one seamless loop, ready for Remixlive.</p>
+  </div>
+
+  <div class="panel" id="tVoice">
+    <textarea id="voxText" aria-label="Words to speak">In the beginning was the Word</textarea>
+    <div class="row"><label for="voxVariant">Voice</label><select id="voxVariant"></select><span></span></div>
+    <div class="row"><label for="voxPitch">Pitch</label><input type="range" id="voxPitch" min="0" max="99" step="1" value="40"><output id="oVoxPitch"></output></div>
+    <div class="row"><label for="voxRange">Tone variation</label><input type="range" id="voxRange" min="0" max="99" step="1" value="0"><output id="oVoxRange"></output></div>
+    <div class="row"><label for="voxSpeed">Speed</label><input type="range" id="voxSpeed" min="80" max="320" step="5" value="150"><output id="oVoxSpeed"></output></div>
+    <div class="row"><label for="voxVowel">Vowel length</label><input type="range" id="voxVowel" min="1" max="3" step="0.05" value="1.5"><output id="oVoxVowel"></output></div>
+    <div class="btns"><button id="voxMake" class="go">Make voice → this sound</button><button id="voxHear">Hear it</button></div>
+    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
+  </div>
+
+  <div class="panel help" id="tHelp">
+    <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
+    <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
+    <p><b>Write</b>, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it. Tap again to remove it. <b>Write</b> while playing: whatever you play is recorded into the beat.</p>
+    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, half time, scramble, tape stop, octaves, reverse, crush, filters and echo.</p>
+    <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. Set "Rec from" to the beat to resample what's playing.</p>
+    <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played. "Roll all 16" fills a whole kit.</p>
+    <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
+    <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
+    <p class="note">Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code.</p>
+  </div>
+  <p class="note" id="status"></p>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
