@@ -9,7 +9,7 @@
 <style>
   :root {
     --body: #d9d4c7; --body-dark: #bdb6a4; --ink: #1b1a17; --lcd: #9fb18c; --lcd-ink: #1f2a17;
-    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #ff8a3d; --dim: #8a8475;
+    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #ff8a3d; --dim: #8a8475; --head: #1f7ae0;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: #1b1a17; color: var(--ink);
@@ -56,7 +56,9 @@
   .key.lit i { background: var(--lit); box-shadow: 0 0 8px var(--lit); }
   .key.some i { background: #e6b98f; }
   .key.cur { outline: 3px solid var(--accent); outline-offset: -3px; }
-  .key.head { background: #fff6e2; }
+  /* The step now playing: blue, so it never looks like a lit (orange) step. */
+  .key.head { box-shadow: inset 0 0 0 3px var(--head), 0 4px 0 var(--body-dark); }
+  .key.head i { background: var(--head); box-shadow: 0 0 8px var(--head); }
   .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--body-dark); background: var(--key-down); }
   .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; }
 
@@ -88,7 +90,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020g</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020h</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -198,6 +200,6 @@
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261020g"></script>
+<script type="module" src="app.js?v=20261020h"></script>
 </body>
 </html>

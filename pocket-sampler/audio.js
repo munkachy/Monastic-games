@@ -50,6 +50,7 @@ class Crush extends AudioWorkletProcessor {
 }
 registerProcessor('crush', Crush);`;
 
+const TAPE_CURVE = new Float32Array(64).map((_, i) => 0.5 * (i / 63) ** 2);
 const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
   const v = (i / 1024 - 1) * 2, a = Math.abs(v);
   return Math.sign(v) * (a < 0.7 ? a : 0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3));
@@ -74,7 +75,11 @@ export class Engine {
     this.bus.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
-    this.limit.connect(this.master); this.master.connect(ctx.destination);
+    // Tape stop: everything passes through a delay that is normally 0. To stop
+    // the tape, the delay grows faster and faster, so the sound slows and drops
+    // in pitch together, notes that start during it too, as a real tape would.
+    this.tape = ctx.createDelay(1);
+    this.limit.connect(this.tape); this.tape.connect(this.master); this.master.connect(ctx.destination);
     this.voices = new Set();       // sounding voices, for choke and tape stop
     this.choke = new Map();        // slot -> its last voice
   }
@@ -116,12 +121,18 @@ export class Engine {
       case 'echo':
         this.delay.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t);
         p(this.send.gain, on ? 0.7 : 0, 0.02); break;
-      case 'tape':
+      case 'tape': {
+        // Speed falls from 1 to 0 over T seconds: the delay is T/2 * u^2, u = 0..1.
+        const T = 0.9, d = this.tape.delayTime, g = this.master.gain;
+        d.cancelScheduledValues(t); g.cancelScheduledValues(t);
         if (on) {
-          for (const v of this.voices) for (const r of v.rates) { r.cancelScheduledValues(t); r.setValueAtTime(r.value, t); r.exponentialRampToValueAtTime(r.value * 0.08, t + 0.7); }
-          p(this.master.gain, 0, 0.25);
-        } else p(this.master.gain, this.vol, 0.01);
+          d.setValueCurveAtTime(TAPE_CURVE.map(v => v * T), t, T);
+          g.setValueAtTime(this.vol, t); g.setValueAtTime(this.vol, t + T * 0.8); g.linearRampToValueAtTime(0, t + T);
+        } else {
+          g.setValueAtTime(0, t); d.setValueAtTime(0, t + 0.005); g.linearRampToValueAtTime(this.vol, t + 0.02);
+        }
         break;
+      }
     }
   }
 }

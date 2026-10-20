@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020g';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020h';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -918,7 +918,16 @@ const STYLES = {
   rock: { name: 'Rock', bpm: 112, swing: 50, parts: { kick: 'x.....x.x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', crash: 'x...............' } },
   house: { name: 'House', bpm: 124, swing: 54, parts: { kick: 'x...x...x...x...', clap: '....x.......x...', hat: 'x...x...x...x...', open: '..x...x...x...x.' } },
   techno: { name: 'Techno', bpm: 132, swing: 50, parts: { kick: 'x...x...x...x...', open: '..x...x...x...x.', rim: '...x..x....x..x.', clap: '............x...' } },
-  afro: { name: 'Afro house', bpm: 122, swing: 52, parts: { kick: 'x...x...x...x...', hat: '..x...x...x...x.', shaker: 'xxxxxxxxxxxxxxxx', conga: 'x..x..x...x..x..', bongo: '......x.......x.' } },
+  disco: { name: 'Disco', bpm: 118, swing: 50, parts: { kick: 'x...x...x...x...', snare: '....x.......x...', hat: 'xxxxxxxxxxxxxxxx', open: '..x...x...x...x.' } },
+  funk: { name: 'Funk', bpm: 104, swing: 54, parts: { kick: 'x.x...x...x..x..', snare: '....x..x.x..x...', hat: 'x.x.x.x.x.x.x.x.', ghost: '..x.....x.....x.', open: '...............x' } },
+  motown: { name: 'Motown', bpm: 120, swing: 52, parts: { kick: 'x.....x.x.....x.', snare: 'x...x...x...x...', hat: 'x.x.x.x.x.x.x.x.' } },
+  shuffle: { name: 'Blues shuffle', bpm: 96, swing: 68, parts: { kick: 'x.......x.......', snare: '....x.......x...', ride: 'x.xxx.xxx.xxx.xx' } },
+  reggae: { name: 'Reggae one drop', bpm: 76, swing: 58, parts: { kick: '........x.......', rim: '........x.......', hat: 'x.x.x.x.x.x.x.x.', open: '..............x.' } },
+  bossa: { name: 'Bossa nova', bpm: 130, swing: 50, parts: { kick: 'x..xx..xx..xx..x', rim: 'x..x..x...x..x..', hat: 'x.x.x.x.x.x.x.x.' } },
+  garage: { name: 'UK garage', bpm: 132, swing: 62, parts: { kick: 'x......x..x.....', snare: '....x.......x...', hat: '..x...x...x...xx', rim: '.......x......x.' } },
+  jungle: { name: 'Jungle', bpm: 168, swing: 52, parts: { kick: 'x.........x..x..', snare: '....x..x.x..x...', hat: 'x.x.x.x.x.x.x.x.', ghost: '.x.....x......x.' } },
+  drill: { name: 'Drill', bpm: 142, swing: 50, parts: { kick: 'x.....x...x...x.', snare: '........x.....x.', hat: 'x..x..x.x..x..x.', open: '.............x..' } },
+  march: { name: 'Second line', bpm: 100, swing: 60, parts: { kick: 'x.......x..x....', snare: 'x.xxx.x.x.xxx.x.', crash: 'x...............' } },
   dembow: { name: 'Dembow', bpm: 96, swing: 50, parts: { kick: 'x...x...x...x...', snare: '...x..x....x..x.', hat: 'x.x.x.x.x.x.x.x.' } },
   dnb: { name: 'Drum & bass', bpm: 172, swing: 50, parts: { kick: 'x.........x.....', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', ghost: '.......x.x....x.' } },
   dubstep: { name: 'Dubstep', bpm: 140, swing: 50, parts: { kick: 'x.........x.....', snare: '........x.......', hat: 'x.x.x.x.x.x.x.x.', open: '......x.........' } },
