@@ -50,6 +50,11 @@ class Crush extends AudioWorkletProcessor {
 }
 registerProcessor('crush', Crush);`;
 
+const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
+  const v = (i / 1024 - 1) * 2, a = Math.abs(v);
+  return Math.sign(v) * (a < 0.7 ? a : 0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3));
+});
+
 export class Engine {
   // live: true for the speaker (adds the crusher and a tap for resampling).
   constructor(ctx, { live = true } = {}) {
@@ -59,25 +64,30 @@ export class Engine {
     this.hp = ctx.createBiquadFilter(); this.hp.type = 'highpass'; this.hp.frequency.value = 10; this.hp.Q.value = 4;
     this.delay = ctx.createDelay(2); this.fb = ctx.createGain(); this.fb.gain.value = 0.45;
     this.send = ctx.createGain(); this.send.gain.value = 0;
-    this.comp = ctx.createDynamicsCompressor();
-    this.comp.threshold.value = -10; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.15;
+    // A limiter with no delay: below 0.7 the sound passes untouched, above it
+    // the peaks are rounded off so that nothing goes past 1. (A compressor
+    // here held every sound back 6 ms and bent the start of loud notes.)
+    this.comp = ctx.createGain(); this.comp.gain.value = 0.5;       // the curve's input runs -2..2
+    this.limit = ctx.createWaveShaper(); this.limit.curve = LIMIT_CURVE;
+    this.comp.connect(this.limit);
     this.vol = 0.9; this.master = ctx.createGain(); this.master.gain.value = this.vol;
     this.bus.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
-    this.comp.connect(this.master); this.master.connect(ctx.destination);
+    this.limit.connect(this.master); this.master.connect(ctx.destination);
     this.voices = new Set();       // sounding voices, for choke and tape stop
     this.choke = new Map();        // slot -> its last voice
   }
 
-  // Load the crusher (live only) and put it between the bus and the filters.
+  // Load the crusher (live only). It is put between the bus and the filters
+  // only while Crush is on: it runs as script on the audio thread, and kept
+  // there all the time it can make a busy phone miss a beat (a crackle).
   async init() {
     if (!this.live || !this.ctx.audioWorklet) return;
     try {
       const url = URL.createObjectURL(new Blob([CRUSH_SRC], { type: 'application/javascript' }));
       await this.ctx.audioWorklet.addModule(url);
       this.crush = new AudioWorkletNode(this.ctx, 'crush', { outputChannelCount: [1] });
-      this.bus.disconnect(); this.bus.connect(this.crush); this.crush.connect(this.lp);
     } catch (e) { console.warn('No bit crusher:', e); }
     this.tap = this.ctx.createMediaStreamDestination?.();
     if (this.tap) this.master.connect(this.tap);
@@ -89,7 +99,17 @@ export class Engine {
     const t = Math.max(at, this.ctx.currentTime), p = (param, v, s = 0.04) => { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, s); };
     switch (name) {
       case 'crush':
-        if (this.crush) { this.crush.parameters.get('bits').setValueAtTime(on ? 4 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 10 : 1, t); }
+        if (!this.crush) break;
+        this.crushOn = on;
+        this.crush.parameters.get('bits').setValueAtTime(on ? 4 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 10 : 1, t);
+        if (on && !this.crushIn) {          // at 16 bits it passes the sound unchanged until t
+          this.bus.connect(this.crush); this.crush.connect(this.lp); this.bus.disconnect(this.lp); this.crushIn = true;
+        } else if (!on && this.crushIn) {
+          setTimeout(() => {
+            if (this.crushOn || !this.crushIn) return;
+            this.bus.connect(this.lp); this.bus.disconnect(this.crush); this.crush.disconnect(); this.crushIn = false;
+          }, (t - this.ctx.currentTime) * 1000 + 60);
+        }
         break;
       case 'lowpass': p(this.lp.frequency, on ? 420 : 20000, on ? 0.12 : 0.05); break;
       case 'highpass': p(this.hp.frequency, on ? 1600 : 10, on ? 0.12 : 0.05); break;
@@ -199,12 +219,12 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     for (const n of voice.nodes) try { n.stop(when + 0.01); } catch (e) {}
   };
   eng.voices.add(voice);
-  const done = Math.max(0, (voice.end - ctx.currentTime) * 1000 + 100);
+  const done = Math.max(0, (voice.end - ctx.currentTime) * 1000);
   if (eng.live) setTimeout(() => {
     eng.voices.delete(voice);
     if (eng.choke.get(si) === voice) eng.choke.delete(si);
     for (const n of made) try { n.disconnect(); } catch (e) {}
-  }, done + 150);
+  }, done + 60);
   if (P.choke) eng.choke.set(si, voice);
   return voice;
 }
