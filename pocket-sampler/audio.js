@@ -130,6 +130,9 @@ export class Engine {
 // One note. slot: a sound (see app.js). k: key 0-15. t: start time.
 // mods: { rate: extra speed factor, reverse, unison, scratch: wobbles a second }
 // lock: sound settings saved on this one step (parameter locks).
+// hold: the note is held down (a key under a finger, or a sequenced note with
+// a length). Then a sound set to Gate keeps playing until voice.stop(), and
+// one set to Loop also repeats its sound or slice; One shot ignores it.
 // ---------------------------------------------------------------------------
 const reversed = new WeakMap();
 function reverseOf(ctx, buf) {
@@ -156,8 +159,9 @@ function tracking(ctx, made) {
 }
 
 export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, lock = null,
-  scale = 'minor', bpm = 120, root = 0 } = {}) {
+  scale = 'minor', bpm = 120, root = 0, hold = false } = {}) {
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
+  const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
   const out = ctx.createGain(); out.gain.value = P.vol;
   let dest = out;
@@ -169,13 +173,16 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     f.connect(out); dest = f;
   }
   out.connect(eng.bus);
-  const voice = { rates: [], nodes: [], end: t, stop: null };
+  const voice = { rates: [], nodes: [], end: t, stop: null, sustain };
   const env = ctx.createGain(); env.connect(dest);
 
   if (slot.kind === 'synth') {
-    const semis = keySemis(k, scale) + P.pitch + root;
-    synthNote(ctx, env, slot.synth, hz(slot.synth.root + semis) * rate, t, 0.05 + P.len * 2, bpm, voice);
-    if (unison) synthNote(ctx, env, slot.synth, hz(slot.synth.root + semis + 0.15) * rate, t + 0.012, 0.05 + P.len * 2, bpm, voice);
+    // Held on Gate or Loop, a synth rings at full level until it is let go.
+    const semis = keySemis(k, scale) + P.pitch + root, sp = sustain ? { ...slot.synth, hold: true } : slot.synth;
+    const L = sustain ? 120 : 0.05 + P.len * 2;
+    synthNote(ctx, env, sp, hz(slot.synth.root + semis) * rate, t, L, bpm, voice);
+    if (unison) synthNote(ctx, env, sp, hz(slot.synth.root + semis + 0.15) * rate, t + 0.012, L, bpm, voice);
+    if (sustain) voice.end = Infinity;
   } else {
     let buf, s, e, r, start, len;
     if (slot.kind === 'chop') {
@@ -199,7 +206,9 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
         for (let i = 0; i < n; i++) c[i] = rr * Math.max(0.05, 1 + 0.9 * Math.sin(2 * Math.PI * scratch * real * i / n));
         src.playbackRate.setValueCurveAtTime(c, t + delay, real);
       }
-      src.connect(env); src.start(t + delay, Math.max(0, s), dur);
+      src.connect(env);
+      if (loop) { src.loop = true; src.loopStart = Math.max(0, s); src.loopEnd = Math.max(0, s) + dur; src.start(t + delay, Math.max(0, s)); }
+      else src.start(t + delay, Math.max(0, s), dur);
       voice.rates.push(src.playbackRate); voice.nodes.push(src);
     };
     go(r, 0);
@@ -207,24 +216,33 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     const real = dur / r;
     env.gain.setValueAtTime(0, t);
     env.gain.linearRampToValueAtTime(1, t + 0.003);
-    env.gain.setValueAtTime(1, Math.max(t + 0.003, t + real - 0.006));
-    env.gain.linearRampToValueAtTime(0, t + real);
-    voice.end = t + real + 0.02;
+    if (loop) voice.end = Infinity;
+    else {
+      env.gain.setValueAtTime(1, Math.max(t + 0.003, t + real - 0.006));
+      env.gain.linearRampToValueAtTime(0, t + real);
+      voice.end = t + real + 0.02;
+    }
   }
 
-  voice.stop = when => {
-    when = Math.max(when, ctx.currentTime);
-    env.gain.cancelScheduledValues(when); env.gain.setValueAtTime(env.gain.value, when);
-    env.gain.linearRampToValueAtTime(0, when + 0.008);
-    for (const n of voice.nodes) try { n.stop(when + 0.01); } catch (e) {}
-  };
-  eng.voices.add(voice);
-  const done = Math.max(0, (voice.end - ctx.currentTime) * 1000);
-  if (eng.live) setTimeout(() => {
+  // Unplug everything the note made, once it is silent.
+  const free = () => {
     eng.voices.delete(voice);
     if (eng.choke.get(si) === voice) eng.choke.delete(si);
     for (const n of made) try { n.disconnect(); } catch (e) {}
-  }, done + 60);
+  };
+  voice.stop = when => {
+    when = Math.max(when, ctx.currentTime);
+    if (when >= voice.end) return;
+    // A held note is at full level once its 3 ms attack is over.
+    const level = sustain && when > t + 0.004 ? 1 : env.gain.value;
+    env.gain.cancelScheduledValues(when); env.gain.setValueAtTime(level, when);
+    env.gain.linearRampToValueAtTime(0, when + 0.012);
+    for (const n of voice.nodes) try { n.stop(when + 0.015); } catch (e) {}
+    voice.end = when + 0.015;
+    if (eng.live) setTimeout(free, (when - ctx.currentTime) * 1000 + 80);
+  };
+  eng.voices.add(voice);
+  if (eng.live && voice.end < Infinity) setTimeout(free, Math.max(0, (voice.end - ctx.currentTime) * 1000) + 60);
   if (P.choke) eng.choke.set(si, voice);
   return voice;
 }
