@@ -88,7 +88,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020d</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020f</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -103,12 +103,12 @@
     <button data-mode="fx">FX</button>
     <button id="play">▶ Play</button>
     <button id="rec">● Rec</button>
-    <button id="dice" title="Random sound">🎲 Roll</button>
+    <button id="trigBtn" title="How a key plays: One shot, Gate or Loop">1 Shot</button>
     <div class="pair"><button id="copy" title="Copy this pattern">Copy</button><button id="paste" title="Paste into this pattern" disabled>Paste</button></div>
     <button id="undo" disabled>↶ Undo</button>
     <button id="redo" disabled>↷ Redo</button>
     <button id="beatsBtn">Beats</button>
-    <button id="beatBtn" title="Make a new drum beat">🎲 Beat</button>
+    <div class="pair"><button id="dice" title="A new random sound on the last key played">🎲 Roll</button><button id="beatBtn" title="A new drum beat in the chosen style">🎲 Beat</button></div>
   </div>
 
   <div class="keys" id="keys"></div>
@@ -129,6 +129,8 @@
     <div class="row" id="startRow"><label for="pStart">Start</label><input type="range" id="pStart" min="0" max="0.95" step="0.01"><output id="oStart"></output></div>
     <div class="row"><label for="pLen">Length</label><input type="range" id="pLen" min="0.02" max="1" step="0.01"><output id="oLen"></output></div>
     <div class="row" id="wobRow"><label for="pWob">Wobble</label><input type="range" id="pWob" min="0" max="4" step="1"><output id="oWob"></output></div>
+    <div class="row"><label for="pTrig">Play as</label>
+      <select id="pTrig"><option value="oneshot">One shot: the whole sound</option><option value="gate">Gate: only while held</option><option value="loop">Loop: tap on, tap again off</option></select><span></span></div>
     <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
     <div class="row"><label for="recSrc">Rec from</label>
       <select id="recSrc"><option value="mic">Microphone</option><option value="beat">The beat (resample)</option></select><span></span></div>
@@ -186,14 +188,16 @@
     <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, tape stop, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
+    <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>Trim:</b> Start and Length cut the sound down. On 9–16 they trim only the slice you played last.</p>
-    <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played. "Roll all 16" fills a whole kit.</p>
+    <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played ("Roll all 16" in the Sound tab fills a whole kit). <b>🎲 Beat</b>: a new drum beat in the style chosen in the Beat tab.</p>
+    <p><b>1 Shot / Gate / Loop</b> (the button next to Rec) switches how the current sound's keys play; it is the same as "Play as" in the Sound tab.</p>
     <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
     <p class="note">Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code.</p>
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261020d"></script>
+<script type="module" src="app.js?v=20261020f"></script>
 </body>
 </html>

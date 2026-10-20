@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020d';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020f';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -36,7 +36,7 @@ const DEFAULT = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ',
 // The first version saved sounds by number, in this order.
 const OLD_ORDER = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir',
   'kit808', 'kit909', 'hits', 'blips', 'lasers', 'glitch', 'coins', 'robots'];
-const defParams = () => ({ vol: 0.8, pitch: 0, filter: 0, res: 0, start: 0, len: 1, choke: false });
+const defParams = () => ({ vol: 0.8, pitch: 0, filter: 0, res: 0, start: 0, len: 1, choke: false, trig: 'oneshot' });
 let banks = null;
 const kitCache = {};
 
@@ -151,15 +151,21 @@ function playTick(e, t, when, live) {
     if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
     // A note played off the grid keeps its own place, swing or not.
     const at = n.o ? when - (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0) + n.o * stepDur() : when;
-    for (let i = 0; i < r; i++) noteOn(e, n.s, n.k, at + i * stepDur() / r, m, n.lock);
+    // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
+    const hold = isHeld(n.s, n.lock), len = (n.d || 1) * stepDur() / r;
+    for (let i = 0; i < r; i++) {
+      const v = noteOn(e, n.s, n.k, at + i * stepDur() / r, m, n.lock, hold);
+      if (hold) v?.stop(at + i * stepDur() / r + len);
+    }
   }
 }
-function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null) {
-  const slot = S.slots[si]; if (!slot) return;
+function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null, hold = false) {
+  const slot = S.slots[si]; if (!slot) return null;
   if (e === eng) lastNoteAt = Math.max(lastNoteAt, when);
-  playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, lock,
-    scale: S.scale, bpm: S.bpm, root: S.root });
+  return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, lock,
+    scale: S.scale, bpm: S.bpm, root: S.root, hold });
 }
+const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot') !== 'oneshot';
 
 // ---------------------------------------------------------------------------
 // Effects: hold a key in FX mode. With Write on while playing, the effect is
@@ -232,7 +238,7 @@ function press(k) {
     case 'fx': engageFx(k); break;
     default:
       if (!S.write) trigger(k);
-      else if (playing) { trigger(k); recordLive(k); }
+      else if (playing) { const h = trigger(k); if (h) h.note = recordLive(k); }
       else toggleStep(k);
   }
   draw();
@@ -240,13 +246,32 @@ function press(k) {
 function release(k) {
   if (!down.delete(k)) return;
   if (S.mode === 'fx' || activeFx.has(k)) releaseFx(k);
+  const h = holding[k]; delete holding[k];
+  if (h?.voice?.sustain) endHeld(h);           // Gate: lifting the finger stops it
   draw();
 }
+// Stop a held or looping note; if it was recorded live, keep how long it
+// sounded, in steps, as the note's length.
+function endHeld(h) {
+  h.voice.stop(ctx.currentTime);
+  if (!h.note) return;
+  const d = (ctx.currentTime - h.at) / stepDur();
+  h.note.d = S.quant ? Math.max(1, Math.round(d)) : Math.max(0.1, Math.round(d * 100) / 100);
+  dirty();
+}
+const holding = {};          // key -> { voice, at, note } while a finger is on it (Gate)
+const looping = new Map();   // "sound:key" -> the same, for a Loop running until it's tapped again
+// Play a key of the current sound. Returns false when the tap only stopped a loop.
 function trigger(k) {
   S.lastKey[S.cur] = k;
-  noteOn(eng, S.cur, k, ctx.currentTime);
   flash = { k, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
+  const id = `${S.cur}:${k}`;
+  if (looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
+  const h = { voice: noteOn(eng, S.cur, k, ctx.currentTime, undefined, null, true), at: ctx.currentTime };
+  if (S.slots[S.cur]?.params.trig === 'loop' && h.voice?.sustain) looping.set(id, h);
+  else holding[k] = h;
+  return h;
 }
 let flash = null;
 function toggleStep(k) {
@@ -265,9 +290,10 @@ function recordLive(k) {
   if (!S.quant) {
     const jf = Math.max(0, tick - (nextT - now) / sd), j = Math.floor(jf);
     const o = Math.round((jf - j) * 1000) / 1000, notes = S.patterns[patAt(j)][j % 16];
-    if (!notes.some(n => n.s === S.cur && n.k === k && Math.abs((n.o || 0) - o) < 0.1)) notes.push({ s: S.cur, k, ...(o > 0.01 && { o }) });
+    let note = notes.find(n => n.s === S.cur && n.k === k && Math.abs((n.o || 0) - o) < 0.1);
+    if (!note) notes.push(note = { s: S.cur, k, ...(o > 0.01 && { o }) });
     if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
-    dirty(); return;
+    dirty(); return note;
   }
   let j = Math.max(0, Math.round(tick - (nextT - now) / sd)), best = Infinity;
   for (const c of [j - 1, j, j + 1]) {
@@ -277,9 +303,11 @@ function recordLive(k) {
   }
   const p = patAt(j), step = j % 16;
   const notes = S.patterns[p][step];
-  if (!notes.some(n => n.s === S.cur && n.k === k)) notes.push({ s: S.cur, k });
+  let note = notes.find(n => n.s === S.cur && n.k === k);
+  if (!note) notes.push(note = { s: S.cur, k });
   if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
   dirty();
+  return note;
 }
 function copySound(from, to) {
   checkpoint();
@@ -444,6 +472,17 @@ for (const [id, key, fmt] of PARAMS) $(id).addEventListener('input', () => {
   dirty();
 });
 $('pChoke').addEventListener('change', () => { S.slots[S.cur].params.choke = $('pChoke').checked; dirty(); });
+const TRIGS = ['oneshot', 'gate', 'loop'], TRIG_LABEL = { oneshot: '1 Shot', gate: 'Gate', loop: 'Loop' };
+$('trigBtn').addEventListener('click', () => {
+  const t = TRIGS[(TRIGS.indexOf(S.slots[S.cur].params.trig || 'oneshot') + 1) % 3];
+  $('pTrig').value = t; $('pTrig').dispatchEvent(new Event('change'));
+  status(`Sound ${S.cur + 1} plays as ${{ oneshot: 'One shot: the whole sound', gate: 'Gate: only while held', loop: 'Loop: tap on, tap again off' }[t]}.`);
+});
+$('pTrig').addEventListener('change', () => {
+  checkpoint(); S.slots[S.cur].params.trig = $('pTrig').value; syncPanel();
+  for (const [id, h] of looping) if (id.startsWith(S.cur + ':')) { h.voice.stop(ctx.currentTime); looping.delete(id); }
+  dirty(); draw();
+});
 $('pWob').addEventListener('input', () => {
   const sl = S.slots[S.cur]; if (sl.synth) sl.synth.rate = +$('pWob').value;
   $('oWob').textContent = WOBBLE_RATES[+$('pWob').value][1]; dirty();
@@ -455,7 +494,8 @@ function syncPanel() {
     const v = perSlice(key) ? (slice?.[key] ?? (key === 'len' ? 1 : 0)) : sl.params[key];
     $(id).value = v; $('o' + id.slice(1)).textContent = fmt(v);
   }
-  $('pChoke').checked = !!sl.params.choke;
+  $('pChoke').checked = !!sl.params.choke; $('pTrig').value = sl.params.trig || 'oneshot';
+  $('trigBtn').textContent = TRIG_LABEL[$('pTrig').value]; $('trigBtn').classList.toggle('on', $('pTrig').value !== 'oneshot');
   $('startRow').style.display = sl.kind === 'synth' ? 'none' : '';
   const wob = sl.synth?.type === 'wobble';
   $('wobRow').style.display = wob ? '' : 'none';
@@ -656,7 +696,7 @@ function draw() {
     }
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
-    el.classList.toggle('down', down.has(k) || (flash?.k === k && performance.now() < flash.until));
+    el.classList.toggle('down', down.has(k) || looping.has(`${S.cur}:${k}`) || (flash?.k === k && performance.now() < flash.until));
     const ci = S.mode === 'pattern' && S.chain.length > 1 ? S.chain.indexOf(k) : -1;
     el.classList.toggle('chain', ci >= 0); el.dataset.chain = ci >= 0 ? S.chain.map((p, i) => p === k ? i + 1 : null).filter(Boolean).join(',') : '';
     el.querySelector('span').textContent = keyLabel(k);
