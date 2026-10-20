@@ -36,6 +36,7 @@
     border: 0; border-radius: 7px; padding: 10px 2px; background: var(--ink); color: var(--body);
     box-shadow: 0 3px 0 #000; touch-action: manipulation; }
   .fn button.on { background: var(--accent); color: #fff; }
+  .fn button:disabled { opacity: .45; }
   .fn button:active, .fn button.held { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
   #rec.held { background: #c21b1b; color: #fff; }
 
@@ -99,6 +100,10 @@
     <button id="rec">● Rec</button>
     <button id="dice" title="Random sound">🎲 Roll</button>
     <button id="voxBtn">Voice</button>
+    <button id="undo" disabled>↶ Undo</button>
+    <button id="redo" disabled>↷ Redo</button>
+    <button id="beatsBtn">Beats</button>
+    <button id="beatBtn" title="Make a new drum beat">🎲 Beat</button>
   </div>
 
   <div class="keys" id="keys"></div>
@@ -111,6 +116,7 @@
   </div>
 
   <div class="panel on" id="tSound">
+    <div class="row"><label for="library">Load sound</label><select id="library"></select><span></span></div>
     <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="1" step="0.01"><output id="oVol"></output></div>
     <div class="row"><label for="pPitch">Pitch</label><input type="range" id="pPitch" min="-24" max="24" step="1"><output id="oPitch"></output></div>
     <div class="row"><label for="pFilter">Filter</label><input type="range" id="pFilter" min="-1" max="1" step="0.01"><output id="oFilter"></output></div>
@@ -133,6 +139,8 @@
   </div>
 
   <div class="panel" id="tBeat">
+    <div class="row"><label for="style">Drum beat</label><select id="style"></select><span></span></div>
+    <div class="btns" style="margin:0 0 10px"><button id="putBeat">Put this beat in</button><button id="genBeat" class="go">🎲 Make a new one</button></div>
     <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
     <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
     <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
@@ -164,6 +172,7 @@
   </div>
 
   <div class="panel help" id="tHelp">
+    <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b> turns writing on and off. Stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step.</p>
@@ -174,7 +183,7 @@
     <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played. "Roll all 16" fills a whole kit.</p>
     <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
-    <p class="note">Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code.</p>
+    <p class="note">Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code.</p>
   </div>
   <p class="note" id="status"></p>
 </div>

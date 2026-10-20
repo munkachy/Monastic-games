@@ -121,8 +121,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 
 - **Sixteen sounds.** 1–8 are melodic and play up a scale: 808 bass, dubstep
   wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
-  and choir. 9–16 are kits, one hit per key: 808 and 909 kits drawn in code,
-  then 8-bit hits, blips, lasers, glitches, coins and robots.
+  and choir. 9–16 are kits, one hit per key: a real acoustic drum kit and
+  hand percussion, 808 and 909 kits drawn in code, then blips, lasers,
+  glitches and coins. *Load sound* puts any of them (and 8-bit hits and
+  robots) on any key.
+- **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
+  techno, Afro house, dembow, drum & bass, dubstep and jazz swing, on
+  whatever kit you've chosen; **🎲 Beat** makes a new one in that style
+  each time. **↶ Undo / ↷ Redo** for every change.
 - **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
   is chopped at each syllable or hit, one per key; drag the markers on the
   screen to move the cuts. It can also resample the beat that's playing.
@@ -136,6 +142,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   octaves, reverse, unison, bitcrush, filters and echo.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
+- The Acoustic Kit and Percussion are from Karoryfer Samples' [Virtuosity
+  Drums](https://github.com/sfzinstruments/virtuosity_drums), played by
+  Austin McMahon (CC0); `pocket-sampler/tools/drums.py` builds them.
 - The video-game sounds are CC0, from Juhani Junkala's [Essential Retro Video
   Game Sound Effects Collection](https://opengameart.org/content/512-sound-effects-8-bit-style)
   and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001);
