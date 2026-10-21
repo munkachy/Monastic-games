@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021b';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021c';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -281,6 +281,7 @@ function playTick(e, t, when, live) {
   if (src == null) return;
   const m = modsOf(fxs);
   for (const n of S.patterns[p][step]) {
+    if (S.muteBeat && isDrum(n.s)) continue;
     if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
     if (live && take?.si === n.s && !take.notes.has(n)) continue;     // Replace: the old line is silent
     // A note played off the grid keeps its own place, swing or not.
@@ -292,6 +293,13 @@ function playTick(e, t, when, live) {
       if (hold) v?.stop(at + i * stepDur() / r + len);
     }
   }
+}
+// Drums, for Mute: a kit (a kick, snare or hi-hat in it) or hand drums.
+const drumMemo = new WeakMap();
+function isDrum(si) {
+  const sl = S.slots[si]; if (!sl) return false;
+  if (!drumMemo.has(sl)) drumMemo.set(sl, ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)));
+  return drumMemo.get(sl);
 }
 function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null, hold = false) {
   const slot = S.slots[si]; if (!slot) return null;
@@ -797,24 +805,56 @@ $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
 // Export: the pattern or chain as one seamless loop. The ringing tail past
 // the end is folded back onto the start, so it loops without a click.
 // ---------------------------------------------------------------------------
-$('export').addEventListener('click', busy($('export'), async () => {
+// Export: the pattern or chain as one seamless loop. The ringing tail past
+// the end is folded back onto the start, so it loops without a click. The
+// loop is rendered as soon as the box opens, so ⬆ can open the share sheet
+// straight from the tap (an iPhone allows that only right after one).
+async function renderLoop() {
   const ticks = 16 * S.chain.length, len = ticks * stepDur(), tail = 2.5;
   const off = new OfflineAudioContext(1, Math.ceil((len + tail) * SR), SR);
   const e = new Engine(off, { live: false });
   for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false);
-  status('Rendering…');
   const buf = await off.startRendering(), x = buf.getChannelData(0), n = Math.round(len * SR);
   for (let i = n; i < x.length; i++) x[i % n] += x[i];
   const loop = x.subarray(0, n);
   let top = 0; for (const v of loop) top = Math.max(top, Math.abs(v));
   if (top > 0.98) for (let i = 0; i < n; i++) loop[i] *= 0.98 / top;
-  const name = `pocket-${S.bpm}bpm-pattern${S.chain.map(p => p + 1).join('-')}.wav`;
-  const file = new File([wav(loop, SR)], name, { type: 'audio/wav' });
-  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file] }); status(''); return; } catch (err) { if (err.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; a.click();
+  return { data: wav(loop, SR), len };
+}
+let exported = null;
+const safeName = s => s.replace(/[^\w\- .]+/g, '').replace(/\.wav$/i, '').trim() || 'pocket loop';
+function openExport() {
+  exported = null;
+  $('expName').value = `pocket ${S.bpm}bpm pattern ${S.chain.map(p => p + 1).join('-')}${S.muteBeat ? ' no drums' : ''}`;
+  $('expShare').disabled = $('expDownload').disabled = true;
+  $('expShare').hidden = !navigator.canShare?.({ files: [new File([''], 'x.wav', { type: 'audio/wav' })] });
+  $('expInfo').textContent = 'Getting the loop ready…';
+  $('exportBox').hidden = false;
+  renderLoop().then(r => {
+    exported = r;
+    $('expShare').disabled = $('expDownload').disabled = false;
+    $('expInfo').textContent = `${r.len.toFixed(2)} s, ${S.chain.length * 4} beats at ${S.bpm} BPM${S.muteBeat ? ', drums muted' : ''}.`;
+  }, err => { $('expInfo').textContent = 'Could not make the loop: ' + err.message; log('error', 'export: ' + err.message); });
+}
+const exportFile = () => new File([exported.data], safeName($('expName').value) + '.wav', { type: 'audio/wav' });
+$('exportBtn').addEventListener('click', openExport);
+$('export').addEventListener('click', openExport);
+$('expCancel').addEventListener('click', () => { $('exportBox').hidden = true; });
+$('expShare').addEventListener('click', () => {
+  if (!exported) return;
+  navigator.share({ files: [exportFile()] }).then(() => { $('exportBox').hidden = true; status('Exported.'); },
+    err => { if (err.name !== 'AbortError') { status('Could not share: ' + err.message); log('error', 'share: ' + err.message); } });
+});
+$('expDownload').addEventListener('click', () => {
+  if (!exported) return;
+  const f = exportFile(), a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  status(`Saved ${name} (${len.toFixed(2)} s, ${S.chain.length * 4} beats).`);
-}));
+  $('exportBox').hidden = true; status(`Saved ${f.name}.`);
+});
+$('muteBeat').addEventListener('click', () => {
+  S.muteBeat = !S.muteBeat; persist(); draw();
+  status(S.muteBeat ? 'Drums muted: the beat and the export leave them out.' : 'Drums back on.');
+});
 function wav(x, rate) {
   const v = new DataView(new ArrayBuffer(44 + x.length * 2));
   const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
@@ -853,6 +893,7 @@ function keyLabel(k) {
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   $('write').classList.toggle('on', S.write);
+  $('muteBeat').classList.toggle('on', !!S.muteBeat);
   $('write').classList.toggle('replace', S.replace);
   $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
@@ -1236,7 +1277,7 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'muteBeat', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
   else demo();
   setVolume(); syncPanel(); draw();
   committed = snapshot();
