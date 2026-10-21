@@ -40,6 +40,10 @@
   .fn button:disabled { opacity: .45; }
   .fn .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .fn .pair button { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: .02em; }
+  .overlay { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .overlay[hidden] { display: none; }
+  .sheet { background: #ece8dc; border-radius: 12px; padding: 16px; width: 100%; max-width: 400px; display: grid; gap: 8px; }
+  .sheet b { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
   /* Holding a key or button should play, not start selecting or copying text. */
   body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
@@ -93,7 +97,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261021b</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261021c</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -110,9 +114,9 @@
     <button id="rec">● Rec</button>
     <button id="trigBtn" title="How a key plays: One shot, Gate or Loop">1 Shot</button>
     <div class="pair"><button id="copy" title="Copy this pattern">Copy</button><button id="paste" title="Paste into this pattern" disabled>Paste</button></div>
-    <button id="undo" disabled>↶ Undo</button>
-    <button id="redo" disabled>↷ Redo</button>
-    <button id="beatsBtn">Beats</button>
+    <div class="pair"><button id="undo" disabled title="Undo">↶ Undo</button><button id="redo" disabled title="Redo">↷ Redo</button></div>
+    <button id="exportBtn" title="Save the loop as a WAV">⬆ Export</button>
+    <div class="pair"><button id="beatsBtn">Beats</button><button id="muteBeat" title="Silence the drums in the beat and the export">Mute</button></div>
     <div class="pair"><button id="dice" title="A new random sound on the last key played">🎲 Roll</button><button id="beatBtn" title="A new drum beat in the chosen style">🎲 Beat</button></div>
   </div>
 
@@ -169,9 +173,9 @@
       <button id="clearSound">Clear this sound</button>
       <button id="copyPat">Copy pattern to…</button>
       <button id="clearFx">Clear effects</button>
-      <button id="export" class="go">⬇ Export loop WAV</button>
+      <button id="export" class="go">⬆ Export loop WAV</button>
     </div>
-    <p class="note" id="beatNote">The export is the pattern (or the chain) as one seamless loop, ready for Remixlive.</p>
+    <p class="note" id="beatNote">The export is the pattern (or the chain) as one seamless loop, ready for Remixlive. With <b>Mute</b> on, the drums are left out, so you can export just the rest to put over a beat.</p>
   </div>
 
   <div class="panel" id="tVoice">
@@ -211,6 +215,15 @@
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261021b"></script>
+ <div id="exportBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Export loop</b>
+    <input type="text" id="expName" aria-label="File name" autocomplete="off">
+    <p class="note" id="expInfo"></p>
+    <div class="btns"><button id="expShare" class="go" disabled>⬆ Save / Share</button><button id="expDownload" disabled>⬇ Download</button><button id="expCancel">Cancel</button></div>
+    <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
+  </div>
+</div>
+<script type="module" src="app.js?v=20261021c"></script>
 </body>
 </html>
