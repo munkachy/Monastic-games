@@ -83,6 +83,8 @@
   .btns button.go { background: var(--accent); color: #fff; font-weight: 700; }
   .btns label.file input { display: none; }
   .note { font-size: 11.5px; color: #555; margin: 8px 0 0; }
+  #logView { font-size: 10px; line-height: 1.35; background: #1b1a17; color: #c8e6b0; padding: 8px; border-radius: 6px;
+    height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; -webkit-user-select: text; user-select: text; }
   .help p { margin: 6px 0; font-size: 12.5px; }
   .help b { color: var(--accent); }
   .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
@@ -91,7 +93,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261020k</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261021a</span><a href="../">◂ Monastic Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -121,6 +123,7 @@
     <button data-tab="tBeat">Beat</button>
     <button data-tab="tVoice">Voice</button>
     <button data-tab="tHelp">Help</button>
+    <button data-tab="tLog">Log</button>
   </div>
 
   <div class="panel on" id="tSound">
@@ -182,6 +185,13 @@
     <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
   </div>
 
+  <div class="panel" id="tLog">
+    <label class="check"><input type="checkbox" id="verbose"> Verbose: also every note and tap</label>
+    <div class="btns" style="margin:0 0 8px"><button id="copyLog" class="go">Copy log</button><button id="clearLog">Clear</button></div>
+    <pre id="logView"></pre>
+    <p class="note">If the sound misbehaves: turn Verbose on, play until it happens, then Copy log and paste it into a message.</p>
+  </div>
+
   <div class="panel help" id="tHelp">
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
@@ -201,6 +211,6 @@
   </div>
   <p class="note" id="status"></p>
 </div>
-<script type="module" src="app.js?v=20261020k"></script>
+<script type="module" src="app.js?v=20261021a"></script>
 </body>
 </html>

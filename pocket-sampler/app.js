@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261020k';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021a';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -12,35 +12,64 @@ const eng = new Engine(ctx);
 const engReady = eng.init();
 const scope = ctx.createAnalyser(); scope.fftSize = 1024; eng.master.connect(scope);
 
-// iPhone: Web Audio is muted by the silent switch and is put into an
-// "interrupted" state when the page loses audio focus (a menu or share sheet,
-// another app, the lock screen). Declaring this a music player ("playback")
-// fixes both: newer iOS has navigator.audioSession for it; on older iOS a
-// silent clip looping in an <audio> element puts the page in that mode. Both
-// can only start from a tap, so the first tap anywhere does it.
-try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
-const keepAlive = new Audio();
-keepAlive.loop = true; keepAlive.setAttribute('playsinline', '');
-keepAlive.src = URL.createObjectURL(new Blob([silentWav()], { type: 'audio/wav' }));
-function silentWav() {          // half a second of silence, 8 kHz mono
-  const n = 4000, v = new DataView(new ArrayBuffer(44 + n * 2));
-  const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
-  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 16000, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
-  return v.buffer;
+// ---------------------------------------------------------------------------
+// Log (Help > Log tab): what the sound is doing, to find out why it fails on
+// a phone. Always: errors, the audio's state and why it changed, the phone's
+// audio set-up, glitches (the audio clock falling behind the real clock means
+// the phone dropped sound) and the beat engine waking late. Verbose adds every
+// note and tap.
+// ---------------------------------------------------------------------------
+const LOG = [], t0 = performance.now();
+let verbose = false, logDrawn = false;
+function log(kind, msg) {
+  LOG.push(`${((performance.now() - t0) / 1000).toFixed(2).padStart(7)}s ${kind.padEnd(6)} ${msg}`);
+  if (LOG.length > 800) LOG.splice(0, LOG.length - 800);
+  if (!logDrawn) { logDrawn = true; requestAnimationFrame(drawLog); }
 }
+function drawLog() {
+  logDrawn = false;
+  const v = document.getElementById('logView');
+  if (v && v.offsetParent) { v.textContent = LOG.join('\n'); v.scrollTop = v.scrollHeight; }
+}
+addEventListener('error', e => log('error', `${e.message} (${(e.filename || '').split('/').pop()}:${e.lineno})`));
+addEventListener('unhandledrejection', e => log('error', 'promise: ' + (e.reason?.message || e.reason)));
+log('start', `${document.querySelector('.brand span')?.textContent || 'build ?'}; ${navigator.userAgent}`);
+log('audio', `sample rate ${ctx.sampleRate} Hz, base latency ${((ctx.baseLatency || 0) * 1000).toFixed(1)} ms, state ${ctx.state}`);
+
+// iPhone: Web Audio is muted by the silent switch unless the page says it is
+// a music player; newer iOS lets it say so with navigator.audioSession.
+try {
+  if (navigator.audioSession) { navigator.audioSession.type = 'playback'; log('audio', 'audio session set to playback'); }
+  else log('audio', 'no navigator.audioSession on this browser');
+} catch (e) { log('error', 'audio session: ' + e.message); }
 // Every tap: make sure the sound is running, and say so if the phone won't let it.
-function wake() {
-  if (keepAlive.paused) keepAlive.play().catch(() => {});
-  if (ctx.state !== 'running') ctx.resume().then(() => {
+function wake(why) {
+  if (ctx.state === 'running') return;
+  const was = ctx.state;
+  ctx.resume().then(() => {
+    log('wake', `${why}: ${was} -> ${ctx.state}`);
     if (ctx.state !== 'running') status('The phone has paused the sound. Tap a key again; if it stays silent, reload the page.');
-  }, () => {});
+  }, e => log('error', `resume (${why}): ${e.message}`));
 }
-addEventListener('pointerdown', wake, true);
-addEventListener('keydown', wake, true);
-ctx.addEventListener?.('statechange', () => { if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.'); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+addEventListener('pointerdown', () => wake('tap'), true);
+addEventListener('keydown', () => wake('key'), true);
+ctx.addEventListener?.('statechange', () => {
+  log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
+  if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
+});
+document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
+// Once a second: did the audio clock keep up with the real clock?
+let clockA = ctx.currentTime, clockW = performance.now(), outLat = -1;
+setInterval(() => {
+  const a = ctx.currentTime, w = performance.now(), dA = a - clockA, dW = (w - clockW) / 1000;
+  if (ctx.state === 'running' && dW > 0.3) {
+    if (dA < dW - 0.03) log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+    if (dW > 1.6) log('stall', `the page was frozen for ${((dW - 1) * 1000).toFixed(0)} ms`);
+  }
+  const ol = Math.round((ctx.outputLatency || 0) * 1000);
+  if (ol !== outLat) { outLat = ol; log('audio', `output latency ${ol} ms`); }
+  clockA = a; clockW = w;
+}, 1000);
 
 // ---------------------------------------------------------------------------
 // The built-in sounds
@@ -158,7 +187,11 @@ function stop() {
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
 }
+let lateLogged = 0;
 function schedule() {
+  if (nextT < ctx.currentTime - 0.01 && performance.now() - lateLogged > 1000) {
+    lateLogged = performance.now(); log('late', `beat engine woke ${((ctx.currentTime - nextT) * 1000).toFixed(0)} ms late: notes in that gap are cut short`);
+  }
   while (nextT < ctx.currentTime + 0.12) {
     if (tick % 16 === 0 && pendingChain) {      // a new pattern starts at the top of the bar
       S.chain = pendingChain; pendingChain = null; tick = 0;
@@ -172,7 +205,7 @@ function schedule() {
 // Show what went wrong (once each), so it can be reported, and carry on.
 const errorsSeen = new Set();
 function soundError(e) {
-  console.error(e);
+  console.error(e); log('error', (e?.stack || String(e)).split('\n').slice(0, 2).join(' | '));
   const msg = String(e?.message || e).slice(0, 120);
   if (errorsSeen.has(msg)) return;
   errorsSeen.add(msg); status('Sound error (the beat carries on): ' + msg);
@@ -236,7 +269,10 @@ function playTick(e, t, when, live) {
 }
 function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null, hold = false) {
   const slot = S.slots[si]; if (!slot) return null;
-  if (e === eng) lastNoteAt = Math.max(lastNoteAt, when);
+  if (e === eng) {
+    lastNoteAt = Math.max(lastNoteAt, when);
+    if (verbose) log('note', `sound ${si + 1} key ${k + 1}${hold ? ' held' : ''}: starts in ${((when - ctx.currentTime) * 1000).toFixed(0)} ms, ${eng.voices.size} sounding, audio ${ctx.state}`);
+  }
   try {
     return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, lock,
       scale: S.scale, bpm: S.bpm, root: S.root, hold });
@@ -300,6 +336,7 @@ for (let k = 0; k < 16; k++) {
 let copying = null;           // 'sound' or 'pattern': the next key is where it goes
 function press(k) {
   if (down.has(k)) return;
+  if (verbose) log('tap', `key ${k + 1} (${S.mode}${S.write ? ', write' : ''}${playing ? ', playing' : ''})`);
   down.add(k); ctx.resume();
   if (recBtn.classList.contains('held')) {     // Rec + key: record into that sound
     S.cur = k; syncPanel(); status(`● Recording into sound ${k + 1}… let go to stop.`); draw(); return;
@@ -672,6 +709,7 @@ $('copyPat').addEventListener('click', () => {
 document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === b.dataset.tab));
+  if (b.dataset.tab === 'tLog') drawLog();
 }));
 // Copy and Paste: the pattern you're on, steps and saved effects.
 let clipboard = null;
@@ -973,6 +1011,13 @@ function redo() {
 }
 function showUndo() { $('undo').disabled = !undoStack.length; $('redo').disabled = !redoStack.length; }
 $('undo').addEventListener('click', undo);
+$('verbose').addEventListener('change', () => { verbose = $('verbose').checked; log('log', verbose ? 'verbose on' : 'verbose off'); });
+$('copyLog').addEventListener('click', async () => {
+  const text = LOG.join('\n');
+  try { await navigator.clipboard.writeText(text); status('Log copied. Paste it into a message.'); }
+  catch (e) { const v = $('logView'); getSelection().selectAllChildren(v); status('Select all of the log and copy it.'); }
+});
+$('clearLog').addEventListener('click', () => { LOG.length = 0; log('log', 'cleared'); });
 $('redo').addEventListener('click', redo);
 
 // ---------------------------------------------------------------------------
