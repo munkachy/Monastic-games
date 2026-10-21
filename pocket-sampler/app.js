@@ -3,14 +3,22 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021a';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021b';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
-const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-const eng = new Engine(ctx);
-const engReady = eng.init();
-const scope = ctx.createAnalyser(); scope.fftSize = 1024; eng.master.connect(scope);
+// The audio engine. It can be thrown away and built again (rebuildAudio) if
+// the phone leaves it stuck; recorded sound lives in AudioBuffers, which don't
+// belong to any one engine, so nothing is lost.
+let ctx, eng, engReady, scope;
+function makeAudio() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+  eng = new Engine(ctx);
+  engReady = eng.init();
+  scope = ctx.createAnalyser(); scope.fftSize = 1024; eng.master.connect(scope);
+  ctx.addEventListener?.('statechange', onAudioState);
+}
+makeAudio();
 
 // ---------------------------------------------------------------------------
 // Log (Help > Log tab): what the sound is doing, to find out why it fails on
@@ -36,34 +44,52 @@ addEventListener('unhandledrejection', e => log('error', 'promise: ' + (e.reason
 log('start', `${document.querySelector('.brand span')?.textContent || 'build ?'}; ${navigator.userAgent}`);
 log('audio', `sample rate ${ctx.sampleRate} Hz, base latency ${((ctx.baseLatency || 0) * 1000).toFixed(1)} ms, state ${ctx.state}`);
 
-// iPhone: Web Audio is muted by the silent switch unless the page says it is
-// a music player; newer iOS lets it say so with navigator.audioSession.
-try {
-  if (navigator.audioSession) { navigator.audioSession.type = 'playback'; log('audio', 'audio session set to playback'); }
-  else log('audio', 'no navigator.audioSession on this browser');
-} catch (e) { log('error', 'audio session: ' + e.message); }
-// Every tap: make sure the sound is running, and say so if the phone won't let it.
+// (Setting navigator.audioSession.type = 'playback' made an iPhone interrupt
+// the sound at once and keep taking it away, so the page leaves it alone.)
+log('audio', `audio session: ${navigator.audioSession ? navigator.audioSession.type : 'none'}`);
+// Every tap: make sure the sound is running. If the phone has left the engine
+// stuck (it won't resume, or its clock has stopped), build a fresh one: that
+// has to happen in a tap for an iPhone to allow it.
+let resuming = false, stuck = '';
 function wake(why) {
-  if (ctx.state === 'running') return;
-  const was = ctx.state;
+  if (stuck) { rebuildAudio(stuck); return; }
+  if (ctx.state === 'running' || resuming) return;
+  const was = ctx.state; resuming = true;
   ctx.resume().then(() => {
+    resuming = false;
     log('wake', `${why}: ${was} -> ${ctx.state}`);
-    if (ctx.state !== 'running') status('The phone has paused the sound. Tap a key again; if it stays silent, reload the page.');
-  }, e => log('error', `resume (${why}): ${e.message}`));
+    if (ctx.state !== 'running') { stuck = `would not resume (${ctx.state})`; status('The sound is stuck. Tap a key to restart it.'); }
+  }, e => { resuming = false; log('error', `resume (${why}): ${e.message}`); stuck = 'resume failed'; });
 }
-addEventListener('pointerdown', () => wake('tap'), true);
-addEventListener('keydown', () => wake('key'), true);
-ctx.addEventListener?.('statechange', () => {
+function rebuildAudio(why) {
+  log('rebuild', `rebuilt the sound engine: ${why}`);
+  stuck = ''; resuming = false;
+  for (const f of [...activeFx]) releaseFx(f);
+  looping.clear(); for (const k in holding) delete holding[k];
+  const old = ctx;
+  try { old.removeEventListener?.('statechange', onAudioState); old.close(); } catch (e) {}
+  makeAudio(); setVolume(); ctx.resume();
+  clockA = ctx.currentTime; clockW = performance.now(); frozen = 0;
+  if (playing) { uiQueue.length = 0; nextT = ctx.currentTime + 0.06; }
+  status('The sound engine was stuck, so it was restarted.');
+}
+function onAudioState() {
   log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
-});
+}
+window.pocketDebug = { rebuildAudio };   // for testing the restart from the browser console
+addEventListener('pointerdown', () => wake('tap'), true);
+addEventListener('keydown', () => wake('key'), true);
 document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
 // Once a second: did the audio clock keep up with the real clock?
-let clockA = ctx.currentTime, clockW = performance.now(), outLat = -1;
+let clockA = ctx.currentTime, clockW = performance.now(), outLat = -1, frozen = 0;
 setInterval(() => {
   const a = ctx.currentTime, w = performance.now(), dA = a - clockA, dW = (w - clockW) / 1000;
   if (ctx.state === 'running' && dW > 0.3) {
     if (dA < dW - 0.03) log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+    // "running" but the clock hasn't moved for two seconds: the engine is dead
+    frozen = dA < 0.01 && !document.hidden ? frozen + 1 : 0;
+    if (frozen === 2 && !stuck) { stuck = 'its clock stopped'; log('stuck', 'the audio clock has stopped; the next tap restarts the engine'); status('The sound is stuck. Tap a key to restart it.'); }
     if (dW > 1.6) log('stall', `the page was frozen for ${((dW - 1) * 1000).toFixed(0)} ms`);
   }
   const ol = Math.round((ctx.outputLatency || 0) * 1000);
