@@ -182,9 +182,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   the 16 sounds has a fixed colour (1–8 Remixlive's red, orange, yellow,
   green, teal, pink, purple and blue; 9–16 lime, cyan, magenta, amber,
   indigo, coral, mint and lavender). Sound mode shows each pad in its
-  colour, Play tints the keys in the current sound's, and in Write each
-  step is filled with the colours of the sounds on it: split side by side
-  for two to four, a small grid of blocks for five or more.
+  colour, Play tints the keys in the current sound's, and in Write the
+  beat is the background (stripes in the drum kit's colour) and the
+  instruments are blocks on top: split side by side for two to four, a
+  small grid of blocks for five or more.
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
   sideways (turned a quarter turn when the phone is upright). Eight
   columns in the colours of sounds 1–8 (kick, snare, tops, bass, chords,

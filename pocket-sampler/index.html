@@ -142,8 +142,15 @@
   :root.classic .key.tint b { color: var(--key-ink); }
   .key.tint.down u.fill { opacity: .75; }
   .key.tint.cur u.fill { opacity: 1; }
+  /* A step with a beat on it: the drum kits' colours as stripes in the background. */
+  .key q.wash { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; display: none; background: var(--wash); opacity: .38; }
+  .key.steps.beat q.wash { display: block; }
+  .key.steps.beat { box-shadow: inset 0 0 0 1px #ffffff26, 0 4px 0 var(--key-sh); }
+  /* the instruments, on top: inset a little when there is a beat, so the stripes show round them */
+  .key.steps.beat.inst u.fill { inset: 7px; border-radius: 6px; }
+  .key.steps.beat u.fill s { background: var(--key); }
   /* A step: each sound on it a dark, see-through block of its colour with a neon edge, as on the pads. */
-  .key.steps.full u.fill { display: grid; gap: 3px; }
+  .key.steps.inst u.fill { display: grid; gap: 3px; }
   .key.steps u.fill s { position: relative; display: block; border-radius: 6px; box-shadow: inset 0 0 0 2px var(--c); }
   .key.steps u.fill s:only-child { border-radius: inherit; }
   .key.steps u.fill.many s { border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--c); }
@@ -305,7 +312,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022x</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022y</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -515,7 +522,7 @@
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns, in the colours of sounds 1–8 (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) to set it to Loop, One shot or Gate (only while held, from the next beat) and to choose its sound from the loops and packs. Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. The grid starts with the app's own drum loops, breaks, vinyl and hype words; a set made for it comes next.</p>
-    <p><b>Colours:</b> each of the 16 sounds has its own colour (1–8 red, orange, yellow, green, teal, pink, purple, blue; 9–16 lime, cyan, magenta, amber, indigo, coral, mint, lavender). In Sound mode each pad shows its sound's colour; in Play the keys take the current sound's colour. With <b>Write</b> on, each step is filled with the colours of the sounds on it, in sound order: one fills it, two to four split it side by side, five or more make a small grid. The step with the current sound has a white light, and its block a white edge; the step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
+    <p><b>Colours:</b> each of the 16 sounds has its own colour (1–8 red, orange, yellow, green, teal, pink, purple, blue; 9–16 lime, cyan, magenta, amber, indigo, coral, mint, lavender). In Sound mode each pad shows its sound's colour; in Play the keys take the current sound's colour. With <b>Write</b> on, the beat is the background: a step with drums on it is striped in the drum kit's colour (two kits, both colours by turns). The instruments (bass, keys, voice and the rest) are blocks on top, in sound order: one fills the step, two to four split it side by side, five or more make a small grid. The step with the current sound has a white light, and its block a white edge; the step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
@@ -585,6 +592,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022x"></script>
+<script type="module" src="app.js?v=20261022y"></script>
 </body>
 </html>

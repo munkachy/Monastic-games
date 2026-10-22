@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022x';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022y';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -570,7 +570,7 @@ const keyEls = [];
 const down = new Set();
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
-  b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
+  b.innerHTML = `<q class="wash"></q><u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
   b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); press(k); });
   const up = () => release(k);
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
@@ -1624,7 +1624,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022y'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1717,7 +1717,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022y'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2109,14 +2109,20 @@ function setLook(look) {
 try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}
 $('look').value = classic() ? 'classic' : 'dark';
 $('look').addEventListener('change', e => setLook(e.target.value));
-// A step's colours: one sound fills it; 2-4 split it side by side; 5 or more, a grid of blocks
+// A step's colours. The beat (drum kits) is the background: stripes in the
+// kit's colour (two kits: both colours by turns). The instruments are blocks
+// on top: one fills it; 2-4 split it side by side; 5 or more, a grid of blocks
 // (each block dark and see-through, with a neon edge: the CSS for .key.steps).
-function stepFill(el, sounds) {
-  const n = sounds.length, sig = sounds.join(',') + '|' + S.cur;
+function stepFill(el, all) {
+  const drums = all.filter(isDrum), sounds = all.filter(s => !isDrum(s));
+  const n = sounds.length, sig = drums.join(',') + '|' + sounds.join(',') + '|' + S.cur;
   if (el.dataset.fill === sig) return;
   el.dataset.fill = sig;
+  el.classList.toggle('beat', drums.length > 0); el.classList.toggle('inst', n > 0);
+  el.style.setProperty('--wash', `repeating-linear-gradient(135deg, ${drums.map((d, i) =>
+    `${soundVar(d)} ${i * 14}px ${i * 14 + 5}px, transparent ${i * 14 + 5}px ${(i + 1) * 14}px`).join(', ')})`);
   const [c, r] = n <= 4 ? [n, 1] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 4];
-  const u = el.firstChild;
+  const u = el.querySelector('u');
   u.style.gridTemplateColumns = `repeat(${c}, 1fr)`; u.style.gridTemplateRows = `repeat(${r}, 1fr)`;
   u.classList.toggle('many', n > 4);
   u.innerHTML = sounds.map(s => `<s style="--c:${soundVar(s)}"${s === S.cur && n > 1 ? ' class="me"' : ''}></s>`).join('');
@@ -2162,7 +2168,7 @@ function draw() {
     if (steps_) {
       const on = [...new Set(steps.map(n => n.s))].sort((a, b) => a - b);
       stepFill(el, on); el.classList.toggle('full', on.length > 0); some = false;
-    } else if (el.dataset.fill) { el.dataset.fill = ''; el.firstChild.innerHTML = ''; el.classList.remove('full'); }
+    } else if (el.dataset.fill) { el.dataset.fill = ''; el.querySelector('u').innerHTML = ''; el.classList.remove('full', 'beat', 'inst'); }
     el.classList.toggle('fxon', S.mode === 'fx' && lit);
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
