@@ -129,7 +129,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022b</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022c</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -168,6 +168,7 @@
     <button data-tab="tBrowse" class="on">Sounds</button>
     <button data-tab="tSound">Settings</button>
     <button data-tab="tBeat">Beat</button>
+    <button data-tab="tEffects">Effects</button>
     <button data-tab="tVoice">Voice</button>
     <button data-tab="tButtons">Buttons</button>
     <button data-tab="tHelp">Help</button>
@@ -179,6 +180,13 @@
     <div class="crumbs" id="crumbs"></div>
     <div class="blist" id="blist"></div>
     <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button></div>
+  </div>
+
+  <div class="panel" id="tEffects">
+    <label class="check"><input type="checkbox" id="fxLatch" checked> Tap an effect on, tap again to turn it off (off: on only while held)</label>
+    <p class="note" style="margin:0 0 6px">Choose the effect on each FX key. Effects saved in a pattern are saved by name, so they stay the same when you move them.</p>
+    <div id="fxSlots"></div>
+    <div class="btns"><button id="fxReset">Back to the standard 16</button></div>
   </div>
 
   <div class="panel" id="tButtons">
@@ -266,7 +274,7 @@
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
-    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
+    <p><b>FX</b>: tap a key to turn an effect on, tap again to turn it off (or hold, if you switch that in Menu › Effects, where you also choose the effect on each key, from 26: loops, rolls, scratch, pitch, reverb, echo, ping-pong, chorus, filters, crush, overdrive, fuzz, wavefold and tape saturation). Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
@@ -298,6 +306,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022b"></script>
+<script type="module" src="app.js?v=20261022c"></script>
 </body>
 </html>

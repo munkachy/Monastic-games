@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022b';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022c';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -181,12 +181,15 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+// The first version's 16 effects, in key order (old saved patterns used these numbers).
+const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 'scramble', 'dive',
+  'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
 const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat'];    // the four small buttons, at first
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: new Array(16).fill(0.6), write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -210,7 +213,7 @@ function start() {
 function stop() {
   playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1; take = null;
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
-  for (const f of activeFx) releaseFx(f);
+  for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
 }
@@ -239,9 +242,9 @@ function soundError(e) {
 }
 
 // The effect on tick t: the one held now, or else the one saved on that step.
-// A saved effect is its number (all tracks) or { f: number, t: [sounds] }.
-const fxIdx = e => (e == null ? null : typeof e === 'number' ? e : e.f);
-const fxTo = e => (typeof e === 'number' ? 'all' : new Set(e.t));
+// A saved effect is its name (all tracks) or { f: name, t: [sounds] }.
+const fxIdx = e => (e == null ? null : typeof e === 'string' ? e : e.f);
+const fxTo = e => (typeof e === 'string' ? 'all' : new Set(e.t));
 const savedFx = t => S.fx[patAt(t)][t % 16];
 // Which tick of the pattern to play, and how many times (rolls).
 function mapTick(t, held) {
@@ -277,7 +280,7 @@ function playTick(e, t, when, live) {
     const k = list.length && FX[list[0][0]][1].audio ? list[0][0] : null, want = k != null ? FX[k][1].audio : null;
     if (want !== e.recAudio) {
       if (e.recAudio) e.setFx(e.recAudio, false, stepDur(), when);
-      if (want) e.setFx(want, true, stepDur(), when, S.fxAmt[k]);
+      if (want) e.setFx(want, true, stepDur(), when, amtOf(k));
       e.recAudio = want;
     }
   }
@@ -333,13 +336,26 @@ const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot
 // Effects: hold a key in FX mode. With Write on while playing, the effect is
 // saved on each step it is held through, as on the PO-33.
 // ---------------------------------------------------------------------------
-const FX = [
-  ['Loop 1/4', { seq: 'loop', L: 4 }], ['Loop 1/8', { seq: 'loop', L: 2 }], ['Loop 1/16', { seq: 'loop', L: 1 }], ['Roll 1/32', { seq: 'loop', L: 1, r: 2 }],
-  ['Scratch', { mod: 'scratch', f: 6 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Pitch dive', { mod: 'dive' }],
-  ['Octave up', { mod: 'up' }], ['Octave down', { mod: 'down' }], ['Reverse', { mod: 'reverse' }], ['Chorus', { audio: 'chorus' }],
-  ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['Reverb', { audio: 'reverb' }], ['Ping-pong', { audio: 'pingpong' }],
-];
+// Every effect, by name. The 16 FX keys each hold one (S.fxSlots, chosen in
+// Menu › Effects); effects saved in a pattern are saved by name, so moving an
+// effect to another key doesn't change a pattern.
+const FX = {
+  loop2: ['Loop 1/2 bar', { seq: 'loop', L: 8 }], loop4: ['Loop 1/4', { seq: 'loop', L: 4 }], loop8: ['Loop 1/8', { seq: 'loop', L: 2 }],
+  loop16: ['Loop 1/16', { seq: 'loop', L: 1 }], roll32: ['Roll 1/32', { seq: 'loop', L: 1, r: 2 }], roll48: ['Roll triplet', { seq: 'loop', L: 1, r: 3 }],
+  half: ['Half time', { seq: 'half' }], scramble: ['Scramble', { seq: 'glitch' }],
+  scratch: ['Scratch', { mod: 'scratch', f: 6 }], scratchfast: ['Scratch fast', { mod: 'scratch', f: 15 }], dive: ['Pitch dive', { mod: 'dive' }],
+  octup: ['Octave up', { mod: 'up' }], octdown: ['Octave down', { mod: 'down' }], reverse: ['Reverse', { mod: 'reverse' }], unison: ['Unison', { mod: 'unison' }],
+  reverb: ['Reverb', { audio: 'reverb' }], echo: ['Echo', { audio: 'echo' }], pingpong: ['Ping-pong', { audio: 'pingpong' }], chorus: ['Chorus', { audio: 'chorus' }],
+  lowpass: ['Low pass', { audio: 'lowpass' }], highpass: ['High pass', { audio: 'highpass' }],
+  crush: ['Crush', { audio: 'crush' }], overdrive: ['Overdrive', { audio: 'overdrive' }], fuzz: ['Fuzz', { audio: 'fuzz' }],
+  wavefold: ['Wavefold', { audio: 'wavefold' }], tape: ['Tape saturation', { audio: 'tape' }],
+};
+const FX_GROUPS = [['Timing', ['loop2', 'loop4', 'loop8', 'loop16', 'roll32', 'roll48', 'half', 'scramble']],
+  ['Pitch', ['scratch', 'scratchfast', 'dive', 'octup', 'octdown', 'reverse', 'unison']],
+  ['Space', ['reverb', 'echo', 'pingpong', 'chorus']], ['Filter', ['lowpass', 'highpass']],
+  ['Distortion', ['crush', 'overdrive', 'fuzz', 'wavefold', 'tape']]];
 const hasAmount = k => !!FX[k][1].audio || FX[k][1].mod === 'dive';
+const amtOf = k => S.fxAmt[k] ?? 0.6;
 const activeFx = new Set();
 const fxAim = new Map();     // held effect -> the tracks it is aimed at: 'all' or a Set of sounds
 let seqFx = null, lastFx = null;
@@ -352,7 +368,7 @@ function engageFx(k, aim = 'all') {
     const L = f.L || 16;
     seqFx = { ...f, k, anchor: f.seq === 'loop' ? at - (at % L) : at + 1 };
   }
-  if (f.audio) eng.setFx(f.audio, true, stepDur(), ctx.currentTime, S.fxAmt[k]);
+  if (f.audio) eng.setFx(f.audio, true, stepDur(), ctx.currentTime, amtOf(k));
 }
 function releaseFx(k) {
   const f = FX[k][1]; activeFx.delete(k); fxAim.delete(k);
@@ -370,7 +386,7 @@ function modsFor(si, list) {
     if (f.mod === 'up') m.rate *= 2; if (f.mod === 'down') m.rate /= 2;
     if (f.mod === 'reverse') m.reverse = true; if (f.mod === 'unison') m.unison = true;
     if (f.mod === 'scratch') m.scratch = f.f;
-    if (f.mod === 'dive') m.dive = S.fxAmt[k];
+    if (f.mod === 'dive') m.dive = amtOf(k);
   }
   return m;
 }
@@ -406,7 +422,12 @@ function press(k) {
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
       else { S.pat = k; if (playing) pendingChain = [k]; else S.chain = [k]; persist(); break; }
       dirty(); break;
-    case 'fx': engageFx(k, S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget)); break;
+    case 'fx': {
+      const id = S.fxSlots[k];
+      if (S.fxLatch && activeFx.has(id)) releaseFx(id);           // tap on, tap again off
+      else engageFx(id, S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget));
+      break;
+    }
     default:
       if (!S.write) trigger(k);
       else if (playing) { const h = trigger(k); if (h) h.note = recordLive(k, h.tick); }
@@ -416,7 +437,7 @@ function press(k) {
 }
 function release(k) {
   if (!down.delete(k)) return;
-  if (S.mode === 'fx' || activeFx.has(k)) releaseFx(k);
+  if (S.mode === 'fx' && !S.fxLatch && activeFx.has(S.fxSlots[k])) releaseFx(S.fxSlots[k]);
   const h = holding[k]; delete holding[k];
   if (h?.voice?.sustain) endHeld(h);           // Gate: lifting the finger stops it
   draw();
@@ -544,7 +565,7 @@ let chainEdit = false, chainFresh = false;
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   const m = b.dataset.mode;
   S.mode = S.mode === m ? 'play' : m;
-  if (S.mode !== 'fx') for (const f of [...activeFx]) releaseFx(f);
+  if (S.mode !== 'fx' && !S.fxLatch) for (const f of [...activeFx]) releaseFx(f);
   if (S.mode !== 'pattern' && chainEdit) setChainEdit(false);
   if (copying && S.mode !== copying) copying = null;
   draw();
@@ -804,7 +825,7 @@ const ACTIONS = {
   beat: { name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
   beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
   clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
-  ...Object.fromEntries(FX.map(([n], i) => [`fx${i}`, { name: `FX: ${n}`, label: () => n, fx: i, on: () => activeFx.has(i) }])),
+  ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
 const customs = [...document.querySelectorAll('button.custom')];
@@ -812,15 +833,25 @@ customs.forEach((b, i) => {
   const act = () => ACTIONS[S.custom[i]] || ACTIONS[DEFAULT_CUSTOM[i]];
   b.addEventListener('pointerdown', ev => {
     const a = act(); if (a.fx == null) return;
-    ev.preventDefault(); capture(b, ev); ctx.resume(); engageFx(a.fx); b.classList.add('held'); draw();
+    ev.preventDefault(); capture(b, ev); ctx.resume();
+    if (S.fxLatch && activeFx.has(a.fx)) releaseFx(a.fx); else engageFx(a.fx);
+    b.classList.add('held'); draw();
   });
-  const up = () => { const a = act(); if (a.fx != null && activeFx.has(a.fx)) { releaseFx(a.fx); b.classList.remove('held'); draw(); } };
+  const up = () => {
+    const a = act(); b.classList.remove('held');
+    if (a.fx != null && !S.fxLatch && activeFx.has(a.fx)) { releaseFx(a.fx); draw(); }
+  };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('click', () => { const a = act(); if (a.fx == null) { ctx.resume(); a.tap(); draw(); } });
 });
 for (let i = 0; i < 4; i++) {
   const sel = $('cb' + i);
-  for (const [id, a] of Object.entries(ACTIONS)) sel.add(new Option(a.name, id));
+  for (const [id, a] of Object.entries(ACTIONS)) if (!a.fx) sel.add(new Option(a.name, id));
+  for (const [g, ids] of FX_GROUPS) {
+    const og = document.createElement('optgroup'); og.label = 'Effect: ' + g;
+    for (const id of ids) og.appendChild(new Option(FX[id][0], 'fx:' + id));
+    sel.appendChild(og);
+  }
   sel.addEventListener('change', () => { S.custom[i] = sel.value; persist(); draw(); });
 }
 function drawCustom() {
@@ -838,6 +869,24 @@ for (const s of Object.keys(SCALES)) $('scale').add(new Option(s[0].toUpperCase(
 ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'].forEach((n, i) => $('root').add(new Option(n, i)));
 $('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); });
 document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { checkpoint(); S.bpm = +b.dataset.bpm; dirty(); draw(); }));
+for (let k = 0; k < 16; k++) {
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<label for="fxs${k}">Key ${k + 1}</label><select id="fxs${k}"></select><span></span>`;
+  const sel = row.querySelector('select');
+  for (const [g, ids] of FX_GROUPS) {
+    const og = document.createElement('optgroup'); og.label = g;
+    for (const id of ids) og.appendChild(new Option(FX[id][0], id));
+    sel.appendChild(og);
+  }
+  sel.addEventListener('change', () => {
+    const old = S.fxSlots[k]; if (activeFx.has(old)) releaseFx(old);
+    S.fxSlots[k] = sel.value; persist(); draw();
+  });
+  $('fxSlots').appendChild(row);
+}
+$('fxLatch').addEventListener('change', () => { S.fxLatch = $('fxLatch').checked; persist(); });
+$('fxReset').addEventListener('click', () => { S.fxSlots = [...DEFAULT_SLOTS]; persist(); draw(); });
+function drawFxSlots() { S.fxSlots.forEach((id, k) => { $('fxs' + k).value = id; }); $('fxLatch').checked = S.fxLatch; }
 $('quantGrid').addEventListener('change', () => { S.quantGrid = +$('quantGrid').value; persist(); draw(); });
 
 // FX panel (on the screen in FX mode): which tracks the FX keys hit, and how
@@ -873,7 +922,7 @@ function drawFxPanel() {
   if (!on) return;
   $('fxAimBtn').textContent = 'Tracks: ' + (S.fxTarget === 'all' ? 'All' : S.fxTarget.map(i => i + 1).join(', ')) + ' ▾';
   const k = lastFx;
-  $('fxName').textContent = k == null ? 'Hold a key' : FX[k][0];
+  $('fxName').textContent = k == null ? (S.fxLatch ? 'Tap a key' : 'Hold a key') : FX[k][0];
   $('fxAmt').disabled = k == null || !hasAmount(k);
   if (k != null && hasAmount(k)) { $('fxAmt').value = S.fxAmt[k]; $('oFxAmt').textContent = Math.round(S.fxAmt[k] * 100) + '%'; }
   else $('oFxAmt').textContent = k == null ? '' : '—';
@@ -902,6 +951,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === b.dataset.tab));
   if (b.dataset.tab === 'tLog') drawLog();
   if (b.dataset.tab === 'tBeat') drawKitSel();
+  if (b.dataset.tab === 'tEffects') drawFxSlots();
 }));
 // Copy and Paste: the pattern you're on, steps and saved effects.
 let clipboard = null;
@@ -1047,7 +1097,7 @@ function keyLabel(k) {
   switch (S.mode) {
     case 'sound': return S.slots[k]?.name || '';
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
-    case 'fx': return FX[k][0];
+    case 'fx': return FX[S.fxSlots[k]][0];
     case 'play': if (S.write && !playing) {
       const f = fxIdx(S.fx[S.pat][k]), ns = S.patterns[S.pat][k].map(n => n.s + 1).join(' ');
       return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
@@ -1085,7 +1135,7 @@ function draw() {
     switch (S.mode) {
       case 'sound': cur = k === S.cur; break;
       case 'pattern': cur = k === S.pat; lit = S.chain.includes(k) && (playing ? k === headPat : true); some = S.patterns[k].some(s => s.length); break;
-      case 'fx': lit = activeFx.has(k); break;
+      case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
       default: lit = steps.some(n => n.s === S.cur); some = !lit && steps.length > 0;
     }
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
@@ -1469,8 +1519,13 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
+    // Effects used to be saved by key number; now by name.
+    const name = e => (typeof e === 'number' ? DEFAULT_SLOTS[e] : e && typeof e.f === 'number' ? { ...e, f: DEFAULT_SLOTS[e.f] } : e);
+    S.fx = S.fx.map(row => row.map(name));
+    if (Array.isArray(S.fxAmt)) S.fxAmt = Object.fromEntries(S.fxAmt.map((v, i) => [DEFAULT_SLOTS[i], v]));
+    S.custom = S.custom.map(c => (/^fx\d+$/.test(c) ? 'fx:' + DEFAULT_SLOTS[+c.slice(2)] : c));
   }
   else demo();
   setVolume(); syncPanel(); draw();
