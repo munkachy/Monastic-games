@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022y';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022z';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -176,8 +176,10 @@ const LIBRARY = {
   drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
   ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
 };
-const DEFAULT = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir',
-  'acoustic', 'kit808', 'kit909', 'percussion', 'blips', 'lasers', 'glitch', 'coins'];
+// Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
+const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
+  'acoustic', 'boombap', 'kit808', 'kit909', 'tr808', 'electro', 'percussion', 'shakers'];
+const PART = ['Bass', 'Sub', 'Chords', 'Lead', 'Vox/Keys', 'Pad', 'Pluck/Arp', 'Stab/FX', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums'];
 // The first version saved sounds by number, in this order.
 const OLD_ORDER = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir',
   'kit808', 'kit909', 'hits', 'blips', 'lasers', 'glitch', 'coins', 'robots'];
@@ -233,7 +235,7 @@ const S = {
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
   patKeys: new Array(16).fill(null),
   oct: new Array(16).fill(0),          // each sound's octave for the keys you play (−2 to +2); saved with what you record   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
-  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], wview: 'perc', pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -570,7 +572,7 @@ const keyEls = [];
 const down = new Set();
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
-  b.innerHTML = `<q class="wash"></q><u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
+  b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
   b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); press(k); });
   const up = () => release(k);
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
@@ -588,7 +590,8 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); break;   // a taste: never left looping
+      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist();   // a taste: never left looping
+      S.wview = isDrum(k) ? 'perc' : 'inst'; break;      // Write shows the hits of the kind of sound chosen
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -1624,7 +1627,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022z'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1717,7 +1720,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022z'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2076,10 +2079,11 @@ const cv = $('wave'), g = cv.getContext('2d');
 function keyLabel(k) {
   const sl = S.slots[S.cur]; if (!sl) return '';
   switch (S.mode) {
-    case 'sound': return S.slots[k]?.name || '';
+    case 'sound': return k < 8 ? `${PART[k]} · ${S.slots[k]?.name || ''}` : S.slots[k]?.name || '';
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[S.fxSlots[k]][0];
-    case 'play': if (S.write && !playing) {
+    case 'play': if (S.write && !inView(S.cur)) return '';    // a drum in the Instruments view, or the other way round
+    if (S.write && !playing) {
       // the colours show which sounds are on the step; the words, what the current sound plays there
       // (a syllable, "Kick") and any effect
       const st = S.patterns[S.pat][k], f = fxIdx(S.fx[S.pat][k]);
@@ -2109,23 +2113,52 @@ function setLook(look) {
 try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}
 $('look').value = classic() ? 'classic' : 'dark';
 $('look').addEventListener('change', e => setLook(e.target.value));
-// A step's colours. The beat (drum kits) is the background: stripes in the
-// kit's colour (two kits: both colours by turns). The instruments are blocks
-// on top: one fills it; 2-4 split it side by side; 5 or more, a grid of blocks
-// (each block dark and see-through, with a neon edge: the CSS for .key.steps).
-function stepFill(el, all) {
-  const drums = all.filter(isDrum), sounds = all.filter(s => !isDrum(s));
-  const n = sounds.length, sig = drums.join(',') + '|' + sounds.join(',') + '|' + S.cur;
+document.querySelectorAll('[data-wv]').forEach(b => b.addEventListener('click', () => {
+  S.wview = b.dataset.wv; persist(); draw();
+  status(S.wview === 'perc' ? 'Percussion: the steps show the drum hits, each part in its colour (kick red, snare orange, hats yellow…).'
+    : 'Instruments: the steps show the instruments, each in its sound\'s colour (bass green, sub purple, chords teal…).');
+}));
+// A drum hit's part, by its name: its colour is that part's (a kick is always red).
+const HIT_PARTS = ['kick', 'snare', 'clap', 'hat', 'open', 'tom', 'perc', 'cym'];
+const HIT_NAME = { kick: 'Kick', snare: 'Snare', clap: 'Clap', hat: 'Hats', open: 'Open hat', tom: 'Toms', perc: 'Percussion', cym: 'Cymbals' };
+function hitPart(name = '') {
+  const n = name.toLowerCase();
+  if (/open hat|loose hat/.test(n)) return 'open';
+  if (/kick|bass drum/.test(n)) return 'kick';
+  if (/clap/.test(n)) return 'clap';
+  if (/snare|ghost|rim|cross|stick|flam/.test(n)) return 'snare';
+  if (/hat/.test(n)) return 'hat';
+  if (/tom/.test(n)) return 'tom';
+  if (/crash|ride|cymbal/.test(n)) return 'cym';
+  return 'perc';
+}
+// A step's colours, in the view chosen. Percussion: a block for each drum part hit there
+// (kick, snare, hats...), in that order. Instruments: a block for each instrument on it, in
+// sound order. One fills the step; 2-4 split it side by side; 5 or more make a grid. Each
+// block is dark and see-through, with a neon edge (the CSS for .key.steps).
+const inView = si => (S.wview === 'perc') === isDrum(si);
+function stepItems(notes) {
+  const mine = n => n.s === S.cur;
+  if (S.wview === 'perc') {
+    const parts = new Map();
+    for (const n of notes) if (isDrum(n.s)) {
+      const p = hitPart(S.slots[n.s]?.slices?.[n.k]?.name);
+      parts.set(p, parts.get(p) || mine(n));
+    }
+    return HIT_PARTS.filter(p => parts.has(p)).map(p => ({ id: p, color: `var(--c-${p})`, me: parts.get(p) }));
+  }
+  return [...new Set(notes.filter(n => !isDrum(n.s)).map(n => n.s))].sort((a, b) => a - b)
+    .map(s => ({ id: s, color: soundVar(s), me: s === S.cur }));
+}
+function stepFill(el, items) {
+  const n = items.length, sig = S.wview + '|' + items.map(x => x.id + (x.me ? '*' : '')).join(',');
   if (el.dataset.fill === sig) return;
   el.dataset.fill = sig;
-  el.classList.toggle('beat', drums.length > 0); el.classList.toggle('inst', n > 0);
-  el.style.setProperty('--wash', `repeating-linear-gradient(135deg, ${drums.map((d, i) =>
-    `${soundVar(d)} ${i * 14}px ${i * 14 + 5}px, transparent ${i * 14 + 5}px ${(i + 1) * 14}px`).join(', ')})`);
   const [c, r] = n <= 4 ? [n, 1] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 4];
   const u = el.querySelector('u');
   u.style.gridTemplateColumns = `repeat(${c}, 1fr)`; u.style.gridTemplateRows = `repeat(${r}, 1fr)`;
   u.classList.toggle('many', n > 4);
-  u.innerHTML = sounds.map(s => `<s style="--c:${soundVar(s)}"${s === S.cur && n > 1 ? ' class="me"' : ''}></s>`).join('');
+  u.innerHTML = items.map(x => `<s style="--c:${x.color}"${x.me && n > 1 ? ' class="me"' : ''}></s>`).join('');
 }
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
@@ -2152,6 +2185,8 @@ function draw() {
   if (!$('loops').hidden) drawLoops();
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
   $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
+  $('wview').hidden = !(S.mode === 'play' && S.write);
+  document.querySelectorAll('[data-wv]').forEach(b => b.classList.toggle('on', b.dataset.wv === S.wview));
   for (let k = 0; k < 16; k++) {
     const el = keyEls[k], steps = S.patterns[S.pat][k];
     let lit = false, some = false, cur = false;
@@ -2159,16 +2194,16 @@ function draw() {
       case 'sound': cur = k === S.cur; break;
       case 'pattern': cur = k === S.pat; lit = S.chain.includes(k) && (playing ? k === headPat : true); some = S.patterns[k].some(s => s.length); break;
       case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
-      default: lit = steps.some(n => n.s === S.cur); some = !lit && steps.length > 0;
+      default: lit = steps.some(n => n.s === S.cur) && (!S.write || inView(S.cur)); some = !lit && steps.length > 0;
     }
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
     if (tint) el.style.setProperty('--c', soundVar(S.mode === 'sound' ? k : S.cur));
     el.classList.toggle('tint', tint); el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('steps', steps_);
     if (steps_) {
-      const on = [...new Set(steps.map(n => n.s))].sort((a, b) => a - b);
+      const on = stepItems(steps);
       stepFill(el, on); el.classList.toggle('full', on.length > 0); some = false;
-    } else if (el.dataset.fill) { el.dataset.fill = ''; el.querySelector('u').innerHTML = ''; el.classList.remove('full', 'beat', 'inst'); }
+    } else if (el.dataset.fill) { el.dataset.fill = ''; el.querySelector('u').innerHTML = ''; el.classList.remove('full'); }
     el.classList.toggle('fxon', S.mode === 'fx' && lit);
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
@@ -2609,8 +2644,9 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid', 'wview']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
+  S.grid.quant ??= 16; S.grid.fade ??= 0;
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
     // Effects used to be saved by key number; now by name.
@@ -2633,23 +2669,27 @@ function demo() {
   S.cur = 8; putBeat(STYLES.boombap, 8, false);
   const P = S.patterns[0], put = (s, k, steps) => steps.forEach(i => P[i].push({ s, k }));
   put(0, 0, [0, 7]); put(0, 2, [10]); put(0, 4, [11]);
-  put(11, 0, [3]); put(11, 2, [14]);
+  put(14, 0, [3]); put(14, 2, [14]);
 }
 
 // ---------------------------------------------------------------------------
-// The Loops tab: a grid like Remixlive's. Eight columns (channels), in the
-// colours of sounds 1-8, with up to six cells each. A tap starts a cell on the
-// next bar, in time and key (the loop engine: each loop's own bpm and bars,
-// stretched to the tempo and key by stretchLoop). One cell plays in a column:
-// tapping another switches on the bar, tapping the playing one stops it on the
-// bar. A long press (or ✎ Edit) sets a cell to Loop, One shot or Gate and
-// chooses its sound. Each column has a volume and a mute: a gain of its own,
-// into the effects, so the FX reach the loops too. Tempo, key, Play and the
-// FX are shared with the Pads tab, and Stop stops everything.
+// The Loops tab: a grid like Remixlive's. Eight columns (channels) in their
+// parts' colours, with up to six cells each. A tap starts a cell on the next
+// quantize point (a bar, at first), in time and key (the loop engine: each
+// loop's own bpm and bars, stretched to the tempo and key by stretchLoop). One
+// cell plays in a column: tapping another switches on that point, tapping the
+// playing one stops it there. Hold a cell (or ✎ Edit) for its settings: Loop,
+// One shot or Gate, its own volume, whether it follows the key, and its sound.
+// ⚙ holds the settings for all the loops: quantize, fades, Stop all loops.
+// Each column has a volume and a mute: a gain of its own, into the effects,
+// so the FX reach the loops too. Tempo, key, Play and the FX are shared with
+// the Pads tab, and Stop stops everything.
 // ---------------------------------------------------------------------------
 const CHANNELS = ['Kick', 'Snare', 'Tops', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox/Keys'];
+const CHANNEL_COLOR = ['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'].map(p => `var(--c-${p})`);
 const ROWS = 6;
-const MODE_LABEL = { loop: 'Loop', oneshot: 'One shot', gate: 'Gate' };
+const QUANTS = [[0, 'Off'], [4, '1 beat'], [16, '1 bar'], [32, '2 bars'], [64, '4 bars']];
+const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar']];
 // A first set from the loops already in the app, until a set is made for the grid.
 function defaultGrid() {
   const c = (lib, k, mode = 'loop') => ({ lib, k, mode });
@@ -2659,22 +2699,24 @@ function defaultGrid() {
   [6, 7, 8, 9].forEach((k, r) => { cells[2][r] = c('drumloops', k); });
   cells[2][4] = c('ambience', 0); cells[2][5] = c('ambience', 1);
   [0, 3, 5, 12, 13, 14].forEach((k, r) => { cells[7][r] = c('hype', k, 'oneshot'); });
-  return { cells, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false) };
+  return { cells, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0 };
 }
 S.grid = defaultGrid();
 let view = 'pads', lEdit = false;
-// What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its bar), gate (held).
+// What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its point), gate (held).
 let gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
+const follows = cell => cell.follow ?? cell.keyOf != null;
 // A cell as a one-slice sound that playNote can play.
 const cellSlots = new Map();
 function cellSlot(cell) {
-  const id = `${cell.lib}:${cell.k}:${cell.mode}:${cell.keyOf ?? ''}`;
+  const keyOf = follows(cell) ? cell.keyOf ?? null : null;
+  const id = `${cell.lib}:${cell.k}:${cell.mode}:${keyOf ?? ''}`;
   if (!cellSlots.has(id)) cellSlots.set(id, slotOf({ lib: cell.lib }).then(slot => {
     const x = slot?.slices?.[cell.k]; if (!x) return null;
     cell.name ||= x.name;
     const buf = x.buf || slot.buf;
     return { kind: 'chop', name: x.name, buf, slices: [{ ...x, buf, start: 0, len: 1 }],
-      params: { ...defParams(), keyOf: cell.keyOf ?? null, trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
+      params: { ...defParams(), vol: 1, keyOf, trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
   }).catch(() => null));
   return cellSlots.get(id);
 }
@@ -2697,47 +2739,68 @@ async function warmGrid() {
 }
 let gridWarmTimer = 0;
 const warmGridSoon = () => { clearTimeout(gridWarmTimer); gridWarmTimer = setTimeout(warmGrid, 300); };
+// Where the beat is now, in ticks (fractions too), and the next quantize point.
+const beatPos = () => (playing ? Math.max(0, tick - (nextT - ctx.currentTime) / stepDur()) : 0);
+const gridNext = (q = S.grid.quant) => (q ? nextBar(q) : { when: ctx.currentTime, j: beatPos() });
+const fadeLen = () => (S.grid.fade === 'q' ? 0.03 : (S.grid.fade || 0) * stepDur());
 // Start cell r of column c at { when, j } (j: the tick, so the loop's phase follows the bar count).
-function launch(c, r, slot, at) {
+// Each cell sounds through a gain of its own: its volume, and the fades.
+function launch(c, r, slot, at, fade = true) {
   const cell = S.grid.cells[c][r], x = slot.slices[0], key = keyAt(at.when), bars = x.bars || 1;
-  const phase = x.bpm ? ((at.j / 16) % bars) / bars : 0;
+  const phase = x.bpm ? ((((at.j / 16) % bars) + bars) % bars) / bars : 0;
+  const level = cell.vol ?? 1, g = ctx.createGain(), f = fade ? fadeLen() : 0;
+  g.connect(colGain(c));
+  if (f > 0) { g.gain.setValueAtTime(0, at.when); g.gain.linearRampToValueAtTime(level, at.when + f); } else g.gain.value = level;
   let voice = null;
   try {
-    voice = playNote(eng, slot, -1, 0, at.when, { scale: key.scale, bpm: S.bpm, root: key.root, hold: cell.mode !== 'oneshot', phase, dest: colGain(c) });
+    voice = playNote(eng, slot, -1, 0, at.when, { scale: key.scale, bpm: S.bpm, root: key.root, hold: cell.mode !== 'oneshot', phase, dest: g });
   } catch (e) { soundError(e); }
-  return voice && { r, voice, at: at.when, j: at.j, synced: !!x.bpm, bars, len: x.e - x.s };
+  if (!voice) { g.disconnect(); return null; }
+  const h = { r, voice, g, level, at: at.when, j: at.j, synced: !!x.bpm, bars, len: x.e - x.s };
+  if (voice.end !== Infinity) unplugAt(h, voice.end);
+  return h;
 }
-const stopAt = (h, b) => { if (!h) return; h.voice?.stop(b.when); h.stopAt = b.when; h.stopJ = b.j; };
+const unplugAt = (h, when) => setTimeout(() => { try { h.g.disconnect(); } catch (e) {} }, Math.max(0, when - ctx.currentTime) * 1000 + 400);
+// Stop on a point, fading out from there if fades are on; or at once.
+function stopAt(h, b, fade = true) {
+  if (!h) return;
+  const f = fade ? fadeLen() : 0;
+  if (f > 0) { h.g.gain.cancelScheduledValues(b.when); h.g.gain.setValueAtTime(h.level, b.when); h.g.gain.linearRampToValueAtTime(0, b.when + f); }
+  h.voice.stop(b.when + f); h.stopAt = b.when; h.stopJ = b.j;
+  unplugAt(h, b.when + f);
+}
+const kill = h => { if (h) { h.voice.stop(ctx.currentTime); unplugAt(h, ctx.currentTime); } };
 async function tapCell(c, r) {
   const col = gcol[c], cell = S.grid.cells[c][r];
   if (!cell) { openCellMenu(c, r); return; }
   ctx.resume();
   if (col.next?.r === r) {                     // waiting: take it back; what was playing carries on
-    col.next.voice?.stop(ctx.currentTime); col.next = null;
+    kill(col.next); col.next = null;
     if (col.cur?.stopAt != null) {
       const cs = await cellSlot(S.grid.cells[c][col.cur.r]);
-      if (cs) { col.next = launch(c, col.cur.r, cs, { when: col.cur.stopAt, j: col.cur.stopJ }); }
+      if (cs) col.next = launch(c, col.cur.r, cs, { when: Math.max(ctx.currentTime, col.cur.stopAt), j: col.cur.stopJ }, false);
     }
     drawLoops(); return;
   }
-  if (col.cur?.r === r && col.cur.stopAt == null && !col.next) {    // playing: it stops on the bar
-    stopAt(col.cur, playing ? nextBar() : { when: ctx.currentTime, j: 0 });
+  if (col.cur?.r === r && col.cur.stopAt == null && !col.next) {    // playing: it stops on the point
+    stopAt(col.cur, playing ? gridNext() : { when: ctx.currentTime, j: 0 });
     drawLoops(); return;
   }
   const slot = await cellSlot(cell);
   if (!slot) { status('That cell\'s sound could not be loaded.'); return; }
   if (slot.slices[0].bpm) await stretchFor(slot);
+  const was = playing;
   if (!playing) start();
-  const b = nextBar(), v = launch(c, r, slot, b);
+  const b = was ? gridNext() : nextBar(), v = launch(c, r, slot, b);
   if (!v) return;
-  if (col.next) col.next.voice?.stop(ctx.currentTime);
+  if (col.next) kill(col.next);
   if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b);
-  if (col.gate) { col.gate.voice?.stop(b.when); col.gate = null; }
+  if (col.gate) { kill(col.gate); col.gate = null; }
   col.next = v;
-  if (verbose) log('loops', `column ${c + 1} cell ${r + 1} from bar ${b.j / 16 + 1}`);
+  if (verbose) log('loops', `column ${c + 1} cell ${r + 1} from tick ${b.j.toFixed(1)}`);
   drawLoops();
 }
-// Gate: it sounds from the next beat while the finger is down, in step with the bar.
+// Gate: it sounds while the finger is down, from the next beat (or at once, quantize off), in step with the bar.
 async function gateDown(c, r) {
   const col = gcol[c], cell = S.grid.cells[c][r];
   ctx.resume();
@@ -2745,37 +2808,49 @@ async function gateDown(c, r) {
   const slot = await cellSlot(cell); if (!slot || col.gateToken !== token) return;
   if (slot.slices[0].bpm) await stretchFor(slot);
   if (col.gateToken !== token) return;
+  const was = playing;
   if (!playing) start();
-  const b = nextBar(4), v = launch(c, r, slot, b); if (!v) return;
-  if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b);
-  if (col.next) { col.next.voice?.stop(ctx.currentTime); col.next = null; }
+  const b = !was ? nextBar() : S.grid.quant ? nextBar(4) : gridNext(0), v = launch(c, r, slot, b, false); if (!v) return;
+  if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b, false);
+  if (col.next) { kill(col.next); col.next = null; }
   col.gate = v; drawLoops();
 }
 function gateUp(c) {
   const col = gcol[c]; col.gateToken = null;
-  if (col.gate) { col.gate.voice?.stop(ctx.currentTime); col.gate = null; drawLoops(); }
+  if (col.gate) { kill(col.gate); col.gate = null; drawLoops(); }
 }
 // Stop everything in the grid (Stop, and when the sound engine is rebuilt).
 function stopGrid(rebuilt = false) {
-  for (const col of gcol) for (const h of [col.cur, col.next, col.gate]) if (h && !rebuilt) h.voice?.stop(ctx.currentTime);
+  for (const col of gcol) for (const h of [col.cur, col.next, col.gate]) if (h && !rebuilt) kill(h);
   gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
   drawLoops();
 }
-// Relaunch the loops playing at { when, j }: after a key change (only the
-// cells that follow the key) or a tempo change (every loop in time).
+// ⚙ Stop all loops: on the next quantize point; the Pads beat plays on.
+function stopAllLoops() {
+  const b = playing ? gridNext() : { when: ctx.currentTime, j: 0 };
+  for (const col of gcol) {
+    if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b);
+    if (col.next) { kill(col.next); col.next = null; }
+    if (col.gate) { kill(col.gate); col.gate = null; }
+  }
+  drawLoops();
+}
+// Relaunch the loops playing at { when, j }, seamlessly: after a key change (the cells
+// that follow the key), a tempo change (every loop in time), or a cell's settings changing.
 async function relaunchGrid(b, which) {
   for (let c = 0; c < 8; c++) {
     const col = gcol[c], h = col.cur;
-    if (!h || h.stopAt != null || col.next || !h.voice || h.voice.end !== Infinity) continue;
+    if (!h || h.stopAt != null || col.next || h.voice.end !== Infinity) continue;
     const cell = S.grid.cells[c][h.r]; if (!cell || !which(cell, h)) continue;
     const slot = await cellSlot(cell); if (!slot) continue;
-    const v = launch(c, h.r, slot, b); if (!v) continue;
-    stopAt(h, b); col.next = v;
+    if (slot.slices[0].bpm) await stretchFor(slot);
+    const v = launch(c, h.r, slot, b, false); if (!v) continue;
+    stopAt(h, b, false); col.next = v;
   }
 }
 // The scheduler, at the top of each bar: a key change booked for this bar.
 function gridAtBar(k) {
-  if (k?.at != null && gcol.some(col => col.cur)) relaunchGrid({ when: k.at, j: tick }, cell => cell.keyOf != null);
+  if (k?.at != null && gcol.some(col => col.cur)) relaunchGrid({ when: k.at, j: tick }, cell => follows(cell));
 }
 let gridTempoTimer = 0;
 function gridTempo() {
@@ -2787,7 +2862,7 @@ function gridTempo() {
     if (playing) relaunchGrid(nextBar(), (cell, h) => h.synced);
   }, 400);
 }
-// Every frame: cells starting and stopping on their bar, and the rings.
+// Every frame: cells starting and stopping on their point, and the rings.
 function tickGrid(now) {
   let changed = false;
   for (const col of gcol) {
@@ -2796,7 +2871,7 @@ function tickGrid(now) {
   }
   if (changed) drawLoops();
   if (view !== 'loops') return;
-  const pos = playing ? (tick - (nextT - now) / stepDur()) / 16 : 0;   // bars since the beat began
+  const pos = beatPos() / 16;           // bars since the beat began
   for (let c = 0; c < 8; c++) {
     const col = gcol[c];
     for (const h of [col.cur, col.gate]) {
@@ -2810,12 +2885,24 @@ function tickGrid(now) {
   }
 }
 
+// A volume bar you drag: it reads the finger along its own length, whichever way the grid is turned.
+function fader(el, set) {
+  const at = ev => {
+    const rc = el.getBoundingClientRect(), turned = rc.height > rc.width;     // the grid turned a quarter turn
+    const v = (turned ? (ev.clientY - rc.top) / rc.height : (ev.clientX - rc.left) / rc.width);
+    set(Math.round(Math.min(1, Math.max(0, v)) * 100) / 100);
+  };
+  el.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(el, ev); el.dragging = true; at(ev); });
+  el.addEventListener('pointermove', ev => { if (el.dragging) at(ev); });
+  for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, () => { el.dragging = false; });
+}
+
 // The grid on screen
 const cellEls = [];
 function buildLoops() {
   const grid = $('lgrid');
   for (let c = 0; c < 8; c++) {
-    const col = document.createElement('div'); col.className = 'lcol'; col.style.setProperty('--c', soundVar(c));
+    const col = document.createElement('div'); col.className = 'lcol'; col.style.setProperty('--c', CHANNEL_COLOR[c]);
     const head = document.createElement('div'); head.className = 'lhead'; head.textContent = CHANNELS[c]; col.appendChild(head);
     cellEls[c] = [];
     for (let r = 0; r < ROWS; r++) {
@@ -2843,21 +2930,13 @@ function buildLoops() {
       cellEls[c].push(el); col.appendChild(b);
     }
     const foot = document.createElement('div'); foot.className = 'lfoot';
-    const fader = document.createElement('div'); fader.className = 'lfader'; fader.innerHTML = '<i></i>';
-    fader.setAttribute('aria-label', `${CHANNELS[c]} volume`);
+    const fd = document.createElement('div'); fd.className = 'lfader'; fd.innerHTML = '<i></i>';
+    fd.setAttribute('aria-label', `${CHANNELS[c]} volume`);
     const mute = document.createElement('button'); mute.className = 'lmute'; mute.textContent = 'M'; mute.title = `Mute ${CHANNELS[c]}`;
-    // The fader reads the finger along its own length, whichever way the grid is turned.
-    const setVol = ev => {
-      const rc = fader.getBoundingClientRect(), turned = rc.height > rc.width;
-      const v = turned ? (ev.clientY - rc.top) / rc.height : (ev.clientX - rc.left) / rc.width;
-      S.grid.vol[c] = Math.round(Math.min(1, Math.max(0, v)) * 100) / 100; setColGain(c); drawLoops(); persist();
-    };
-    fader.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(fader, ev); fader.dragging = true; setVol(ev); });
-    fader.addEventListener('pointermove', ev => { if (fader.dragging) setVol(ev); });
-    for (const t of ['pointerup', 'pointercancel']) fader.addEventListener(t, () => { fader.dragging = false; });
+    fader(fd, v => { S.grid.vol[c] = v; setColGain(c); drawLoops(); persist(); });
     mute.addEventListener('click', () => { S.grid.mute[c] = !S.grid.mute[c]; setColGain(c); drawLoops(); persist(); });
-    foot.append(fader, mute); col.appendChild(foot);
-    cellEls[c].col = col; cellEls[c].fader = fader.firstChild; cellEls[c].mute = mute;
+    foot.append(fd, mute); col.appendChild(foot);
+    cellEls[c].col = col; cellEls[c].fader = fd.firstChild; cellEls[c].mute = mute;
     grid.appendChild(col);
   }
 }
@@ -2873,7 +2952,7 @@ function drawLoops() {
       el.b.classList.toggle('queued', col.next?.r === r);
       el.b.classList.toggle('stopping', col.cur?.r === r && col.cur.stopAt != null && col.next?.r !== r);
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
-      el.badge.textContent = cell?.mode === 'oneshot' ? '1×' : cell?.mode === 'gate' ? 'G' : '';
+      el.badge.textContent = (cell?.mode === 'oneshot' ? '1×' : cell?.mode === 'gate' ? 'G' : '') + (cell && follows(cell) ? ' ♪' : '');
       if (!on && !(col.cur?.r === r)) el.ring.style.strokeDashoffset = '100';
     }
     cellEls[c].fader.style.width = Math.round(S.grid.vol[c] * 100) + '%';
@@ -2884,6 +2963,7 @@ function drawLoops() {
   $('lBpm').textContent = `${S.bpm} BPM`;
   $('lKey').textContent = $('keyBtn').textContent + ' ▸';
   $('lEdit').classList.toggle('on', lEdit);
+  $('lSet').classList.toggle('on', !$('lsets').hidden);
 }
 // Names for cells that have none yet (the first set, or an old save).
 async function nameCells() {
@@ -2902,23 +2982,65 @@ const nudgeBpm = d => { S.bpm = Math.max(60, Math.min(240, S.bpm + d)); dirty();
 $('lSlower').addEventListener('click', () => nudgeBpm(-1));
 $('lFaster').addEventListener('click', () => nudgeBpm(1));
 $('lKey').addEventListener('click', () => { nextKey(); drawLoops(); });
-$('lEdit').addEventListener('click', () => { lEdit = !lEdit; status(lEdit ? 'Edit: tap a cell to set it up. Tap ✎ Edit again to play.' : ''); drawLoops(); });
+$('lEdit').addEventListener('click', () => { lEdit = !lEdit; status(lEdit ? 'Edit: tap a cell for its settings. Tap ✎ Edit again to play.' : ''); drawLoops(); });
 
-// The cell menu: how it plays, and its sound (any loop or pack, one sound of it).
+// ⚙ The settings for all the loops.
+function choices(box, list, now, pick) {
+  box.textContent = '';
+  for (const [v, label] of list) {
+    const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', v === now);
+    b.addEventListener('click', () => pick(v)); box.appendChild(b);
+  }
+}
+function drawSets() {
+  choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
+  choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
+}
+$('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
+$('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
+$('lsStop').addEventListener('click', () => { stopAllLoops(); status(playing ? 'Every loop stops on the next point; the Pads beat plays on.' : ''); });
+
+// A cell's settings: how it plays, its volume, the key, and its sound (any loop or pack, one sound of it).
 const CELL_PACKS = [['Loops', ['drumloops', 'breaks', 'ambience']],
   ['Kits', ['boombap', 'tr808', 'electro', 'drumtraks', 'acoustic', 'percussion', 'shakers']],
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
-let menuCell = null, menuPack = null;
-function openCellMenu(c, r) { menuCell = { c, r }; menuPack = null; $('lmenu').hidden = false; drawCellMenu(); }
+let menuCell = null, menuPack = null, choosing = false;
+function openCellMenu(c, r) {
+  menuCell = { c, r }; menuPack = null; choosing = !S.grid.cells[c][r];
+  $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
+}
 function closeCellMenu() { $('lmenu').hidden = true; menuCell = null; drawLoops(); }
+// A cell's settings changed while it plays: it carries on, changed, from the next bar.
+function retake(c, r) {
+  const h = gcol[c].cur;
+  if (playing && h?.r === r && h.stopAt == null) relaunchGrid(nextBar(), (cell, hh) => hh === h);
+}
+const NOTE_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 async function drawCellMenu() {
   if (!menuCell) return;
   const { c, r } = menuCell, cell = S.grid.cells[c][r];
   $('lmTitle').textContent = `${CHANNELS[c]} · cell ${r + 1}${cell ? ': ' + (cell.name || '…') : ': empty'}`;
-  $('lmenu').style.setProperty('--c', soundVar(c));
+  $('lmenu').style.setProperty('--c', CHANNEL_COLOR[c]);
   document.querySelectorAll('[data-lmode]').forEach(b => { b.classList.toggle('on', cell?.mode === b.dataset.lmode); b.disabled = !cell; });
   $('lmEmpty').disabled = !cell;
+  $('lmSets').hidden = !cell || choosing;
+  $('lmPick').hidden = !choosing;
+  if (cell) {
+    $('lmVolBar').firstChild.style.width = Math.round((cell.vol ?? 1) * 100) + '%';
+    $('lmVolOut').textContent = Math.round((cell.vol ?? 1) * 100);
+    choices($('lmKey'), [[false, 'Off'], [true, 'On']], follows(cell), async v => {
+      if (v && cell.keyOf == null) {          // find its key by listening, once
+        const slot = await slotOf({ lib: cell.lib }), x = slot.slices[cell.k], buf = x.buf || slot.buf;
+        const k = findKey(buf, x.s, x.e); cell.keyOf = k.root;
+        status(`${cell.name} sounds ${k.sure > 0.6 ? 'clearly' : k.sure > 0.3 ? 'probably' : 'maybe'} in ${NOTE_NAMES[k.root]}${k.minor ? ' minor' : ''}. It now follows the key.`);
+      }
+      cell.follow = v; persist(); retake(c, r); drawCellMenu(); drawLoops();
+    });
+    $('lmKeyOf').textContent = follows(cell) && cell.keyOf != null ? `Its key: ${NOTE_NAMES[cell.keyOf]}` : 'Plays as recorded';
+    $('lmSound').textContent = `Sound: ${cell.name || '…'} ▸ Change`;
+  }
+  if (!choosing) return;
   const crumbs = $('lmCrumbs'), list = $('lmList'); crumbs.textContent = ''; list.textContent = '';
   const btn = (text, small, fn, sel) => {
     const b = document.createElement('button'); b.textContent = text;
@@ -2938,27 +3060,36 @@ async function drawCellMenu() {
   slot.slices.forEach((x, k) => btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
     playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
     const was = S.grid.cells[c][r];
-    S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' ? 'loop' : 'oneshot') };
-    if (gcol[c].cur?.r === r || gcol[c].next?.r === r) { stopAt(gcol[c].cur, { when: ctx.currentTime, j: 0 }); gcol[c].next?.voice?.stop(ctx.currentTime); gcol[c].next = null; }
-    persist(); warmGridSoon(); drawCellMenu(); drawLoops();
+    if (gcol[c].cur?.r === r) stopAt(gcol[c].cur, { when: ctx.currentTime, j: 0 }, false);
+    if (gcol[c].next?.r === r) { kill(gcol[c].next); gcol[c].next = null; }
+    S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' ? 'loop' : 'oneshot'), vol: was?.vol ?? 1 };
+    choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
   }, cell?.lib === pack && cell.k === k));
 }
 document.querySelectorAll('[data-lmode]').forEach(b => b.addEventListener('click', () => {
   const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
   cell.mode = b.dataset.lmode; persist(); drawCellMenu(); drawLoops();
 }));
+fader($('lmVolBar'), v => {
+  const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
+  cell.vol = v; persist();
+  const h = gcol[menuCell.c].cur;
+  if (h?.r === menuCell.r && h.stopAt == null) { h.level = v; h.g.gain.setTargetAtTime(v, ctx.currentTime, 0.02); }
+  drawCellMenu();
+});
+$('lmSound').addEventListener('click', () => { choosing = true; drawCellMenu(); });
 $('lmEmpty').addEventListener('click', () => {
   const { c, r } = menuCell; const col = gcol[c];
-  if (col.cur?.r === r) stopAt(col.cur, { when: ctx.currentTime, j: 0 });
-  if (col.next?.r === r) { col.next.voice?.stop(ctx.currentTime); col.next = null; }
-  S.grid.cells[c][r] = null; persist(); drawCellMenu(); drawLoops();
+  if (col.cur?.r === r) stopAt(col.cur, { when: ctx.currentTime, j: 0 }, false);
+  if (col.next?.r === r) { kill(col.next); col.next = null; }
+  S.grid.cells[c][r] = null; choosing = true; persist(); drawCellMenu(); drawLoops();
 });
 $('lmClose').addEventListener('click', closeCellMenu);
 buildLoops();
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
-  grid: () => gcol.map((col, c) => ({ c, cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced },
+  grid: () => gcol.map((col, c) => ({ c, cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
-  gains: () => S.grid.vol.map((v, c) => +colGain(c).gain.value.toFixed(2)), now: () => ctx.currentTime });
+  gains: () => S.grid.vol.map((v, c) => +colGain(c).gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid });
 
 draw();
 load().then(() => status('Ready. Press ▶ Play, or tap the keys.'));
