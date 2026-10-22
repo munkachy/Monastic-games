@@ -146,8 +146,12 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
-- **16 punch-in effects:** loops, rolls, half time, scramble, pitch dive,
-  octaves, reverse, unison, bitcrush, filters and echo.
+- **16 punch-in effects:** loops, rolls, scratch, half time, scramble,
+  pitch dive, octaves, reverse, chorus, bitcrush, low pass, reverb and
+  ping-pong, each with an amount; the FX keys can be aimed at chosen tracks.
+- **Quantize** (Settings): off, 1/16, 1/8, a beat, half a bar or a bar, for
+  what you hear while the beat plays and for what is recorded. Exports are
+  stereo.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits and
   Packs, by family), sound settings, beat and tempo, voice, help and a log.
