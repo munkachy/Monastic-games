@@ -9,7 +9,7 @@
 <style>
   :root {
     --body: #d9d4c7; --body-dark: #bdb6a4; --ink: #1b1a17; --lcd: #9fb18c; --lcd-ink: #1f2a17;
-    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #ff8a3d; --dim: #8a8475; --head: #1f7ae0;
+    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #1f7ae0; --dim: #8a8475; --head: #ff6a1a;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: #1b1a17; color: var(--ink);
@@ -103,11 +103,12 @@
     justify-content: space-between; font: inherit; color: var(--ink); overflow: hidden; }
   .key b { font-size: 15px; }
   .key span { font-size: 9.5px; line-height: 1.15; color: #555; overflow: hidden; max-height: 3.5em; word-break: break-word; }
-  .key i { position: absolute; top: 8px; right: 8px; width: 9px; height: 9px; border-radius: 50%; background: #c9c3b3; }
+  .key i { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: #111; }
   .key.lit i { background: var(--lit); box-shadow: 0 0 8px var(--lit); }
-  .key.some i { background: #e6b98f; }
+  .key.some i { background: #7fb0ec; }
   .key.cur { outline: 3px solid var(--accent); outline-offset: -3px; }
-  /* The step now playing: blue, so it never looks like a lit (orange) step. */
+  /* A step with this sound on it: blue (other sounds only: pale blue); empty: black.
+     The step now playing: orange, so it never looks like a lit step. */
   .key.head { box-shadow: inset 0 0 0 3px var(--head), 0 4px 0 var(--body-dark); }
   .key.head i { background: var(--head); box-shadow: 0 0 8px var(--head); }
   .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--body-dark); background: var(--key-down); }
@@ -171,7 +172,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022l</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022m</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -292,7 +293,7 @@
   <div class="panel" id="tBeat">
     <div class="row"><label for="kitSel">Drum kit</label><select id="kitSel"></select><span></span></div>
     <div class="row"><label for="style">Drum beat</label><select id="style"></select><span></span></div>
-    <div class="btns" style="margin:0 0 10px"><button id="putBeat">Put this beat in</button><button id="genBeat" class="go">🎲 Make a new one</button></div>
+    <div class="btns" style="margin:0 0 10px"><button id="hearBeat">▶ Hear it</button><button id="putBeat">Put this beat in</button><button id="genBeat" class="go">🎲 Make a new one</button></div>
     <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
     <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
     <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
@@ -419,6 +420,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022l"></script>
+<script type="module" src="app.js?v=20261022m"></script>
 </body>
 </html>
