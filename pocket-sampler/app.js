@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022f';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022g';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -79,6 +79,7 @@ function onAudioState() {
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
 window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
+  step: (p, k) => S.patterns[p][k],
   loops: () => [...eng.voices].filter(v => v.end === Infinity).length,
   key: () => ({ root: S.root, scale: S.scale, next: keyNext && { ...keyNext }, patKeys: [...S.patKeys], playing, time: ctx.currentTime, bar: 16 * stepDur() }) };   // for testing the restart from the browser console
 addEventListener('pointerdown', () => wake('tap'), true);
@@ -187,12 +188,14 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 // The first version's 16 effects, in key order (old saved patterns used these numbers).
 const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 'scramble', 'dive',
   'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
-const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat'];    // the four small buttons, at first
+const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat',      // the four small buttons, at first
+  'octdown', 'octup', 'key', 'nextkey'];                            // and the row under the keys
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  patKeys: new Array(16).fill(null),   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
+  patKeys: new Array(16).fill(null),
+  oct: new Array(16).fill(0),          // each sound's octave for the keys you play (−2 to +2); saved with what you record   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
   custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
@@ -318,7 +321,7 @@ function playTick(e, t, when, live) {
       // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
       const hold = isHeld(n.s, n.lock), len = (n.d || 1) * stepDur() / rr, m = modsFor(n.s, list);
       for (let i = 0; i < rr; i++) {
-        const v = noteOn(e, n.s, n.k, at + i * stepDur() / rr, m, n.lock, hold, live ? null : renderKeys?.[Math.floor(from / 16) % renderKeys.length]);
+        const v = noteOn(e, n.s, n.k, at + i * stepDur() / rr, m, withOct(n.s, n.lock, n.oc), hold, live ? null : renderKeys?.[Math.floor(from / 16) % renderKeys.length]);
         if (hold) v?.stop(at + i * stepDur() / rr + len);
       }
     }
@@ -604,10 +607,21 @@ function snap() {
 // Gate (until the pad is let go) or Loop (until it is tapped again). A loop
 // keeps going when the sound is switched to One shot or Gate, and those play
 // over it; only a tap in Loop mode stops it.
+// Octave: Oct − / Oct + move the keys you play on the current sound by an
+// octave; a note recorded then keeps its octave (n.oc).
+const octOf = si => S.oct?.[si] || 0;
+const ocOf = si => (octOf(si) ? { oc: octOf(si) } : {});
+const withOct = (si, lock, oc) => (oc ? { ...lock, pitch: (lock?.pitch ?? S.slots[si]?.params.pitch ?? 0) + 12 * oc } : lock);
+function shiftOct(d) {
+  const o = Math.max(-2, Math.min(2, octOf(S.cur) + d));
+  if (o === octOf(S.cur)) { status(`Sound ${S.cur + 1} is already ${o > 0 ? 'two octaves up' : 'two octaves down'}: that's as far as it goes.`); return; }
+  S.oct[S.cur] = o; persist(); draw();
+  status(`Sound ${S.cur + 1}: ${o === 0 ? 'back to its own octave' : `${Math.abs(o)} octave${Math.abs(o) > 1 ? 's' : ''} ${o > 0 ? 'up' : 'down'}`}.`);
+}
 function playHeld(si, key, pad, when = ctx.currentTime) {
   const id = `${si}:${key}`, inLoop = S.slots[si]?.params.trig === 'loop';
   if (inLoop && looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
-  const h = { voice: noteOn(eng, si, key, when, undefined, null, true), at: when };
+  const h = { voice: noteOn(eng, si, key, when, undefined, withOct(si, null, octOf(si)), true), at: when };
   if (inLoop && h.voice?.sustain) looping.set(id, h);
   else holding[pad] = h;
   return h;
@@ -618,7 +632,7 @@ function toggleStep(k) {
   const notes = S.patterns[S.pat][k];
   const mine = notes.filter(n => n.s === S.cur);
   if (mine.length) S.patterns[S.pat][k] = notes.filter(n => n.s !== S.cur);
-  else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); }
+  else { notes.push({ s: S.cur, k: S.lastKey[S.cur], ...ocOf(S.cur) }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime, null, withOct(S.cur, null, octOf(S.cur))); }
   dirty();
 }
 // Put what was just played into the pattern: with Quantize on, on the grid
@@ -631,8 +645,8 @@ function recordLive(k, j) {
     const jf = Math.max(0, tick - (nextT - now) / sd), j = Math.floor(jf);
     replaceFrom(j);
     const o = Math.round((jf - j) * 1000) / 1000, notes = S.patterns[patAt(j)][j % 16];
-    let note = notes.find(n => n.s === S.cur && n.k === k && Math.abs((n.o || 0) - o) < 0.1);
-    if (!note) notes.push(note = { s: S.cur, k, ...(o > 0.01 && { o }) });
+    let note = notes.find(n => n.s === S.cur && n.k === k && (n.oc || 0) === octOf(S.cur) && Math.abs((n.o || 0) - o) < 0.1);
+    if (!note) notes.push(note = { s: S.cur, k, ...(o > 0.01 && { o }), ...ocOf(S.cur) });
     take?.notes.add(note);
     if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
     dirty(); return note;
@@ -640,8 +654,8 @@ function recordLive(k, j) {
   replaceFrom(j);
   const p = patAt(j), step = j % 16;
   const notes = S.patterns[p][step];
-  let note = notes.find(n => n.s === S.cur && n.k === k);
-  if (!note) notes.push(note = { s: S.cur, k });
+  let note = notes.find(n => n.s === S.cur && n.k === k && (n.oc || 0) === octOf(S.cur));
+  if (!note) notes.push(note = { s: S.cur, k, ...ocOf(S.cur) });
   take?.notes.add(note);
   if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
   dirty();
@@ -1274,6 +1288,8 @@ const ACTIONS = {
   edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
   nextkey: { name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
+  octdown: { name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
+  octup: { name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
@@ -1293,7 +1309,7 @@ customs.forEach((b, i) => {
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('click', () => { const a = act(); if (a.fx == null) { ctx.resume(); a.tap(); draw(); } });
 });
-for (let i = 0; i < 4; i++) {
+for (let i = 0; i < customs.length; i++) {
   const sel = $('cb' + i);
   for (const [id, a] of Object.entries(ACTIONS)) if (!a.fx) sel.add(new Option(a.name, id));
   for (const [g, ids] of FX_GROUPS) {
@@ -1557,10 +1573,10 @@ function keyLabel(k) {
   if (sl.kind === 'chop') return sl.slices[k]?.name || '';
   if (sl.kind === 'sample') {            // a recording has no known pitch: show how far each key moves it
     if (sl.params.keyOf != null) return NOTE[(((S.root + keySemis(k, S.scale) + sl.params.pitch) % 12) + 12) % 12];
-    const d = keySemis(k, S.scale) - 12 + sl.params.pitch + toKey(S.root, 0);
+    const d = keySemis(k, S.scale) - 12 + sl.params.pitch + 12 * octOf(S.cur) + toKey(S.root, 0);
     return d === 0 ? 'original' : (d > 0 ? '+' : '−') + Math.abs(d);
   }
-  const m = (sl.kind === 'multi' ? sl.base : sl.synth.root) + keySemis(k, S.scale) + sl.params.pitch + S.root;
+  const m = (sl.kind === 'multi' ? sl.base : sl.synth.root) + keySemis(k, S.scale) + sl.params.pitch + 12 * octOf(S.cur) + S.root;
   return NOTE[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 }
 function draw() {
@@ -1578,7 +1594,7 @@ function draw() {
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
     fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
-  $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''}`;
+  $('lcdInfo').textContent = `${octOf(S.cur) ? `OCT${octOf(S.cur) > 0 ? '+' : ''}${octOf(S.cur)} ` : ''}${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''}`;
   const kb = $('keyBtn'), kn = k => `${(isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root]} ${SCALE_SHORT[k.scale] || k.scale.toUpperCase()}`;
   kb.textContent = keyNext ? `${kn(S)} → ${kn(keyNext)}` : kn(S); kb.classList.toggle('waiting', !!keyNext);
   kb.classList.toggle('saved', !!S.patKeys[S.pat]);
@@ -1989,13 +2005,14 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct']) if (saved[k] != null) S[k] = saved[k];
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
     // Effects used to be saved by key number; now by name.
     const name = e => (typeof e === 'number' ? DEFAULT_SLOTS[e] : e && typeof e.f === 'number' ? { ...e, f: DEFAULT_SLOTS[e.f] } : e);
     S.fx = S.fx.map(row => row.map(name));
     if (Array.isArray(S.fxAmt)) S.fxAmt = Object.fromEntries(S.fxAmt.map((v, i) => [DEFAULT_SLOTS[i], v]));
     S.custom = S.custom.map(c => (/^fx\d+$/.test(c) ? 'fx:' + DEFAULT_SLOTS[+c.slice(2)] : c));
+    while (S.custom.length < DEFAULT_CUSTOM_IDS.length) S.custom.push(DEFAULT_CUSTOM_IDS[S.custom.length]);   // saves from before the row under the keys
   }
   else demo();
   setVolume(); syncPanel(); draw();
