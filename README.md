@@ -193,7 +193,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   sub, vocals/keys), six cells each. A tap starts a cell on the next bar,
   in time and key; one cell plays per column, and another takes over on
   the bar; a ring shows each loop's progress. Hold a cell for Loop, One
-  shot or Gate, its own volume, following the key, and its sound; ⚙ sets
+  shot or Gate, its own volume, transpose (half steps), repeat (2 to 32
+  beats), time stretch on or off, following the key, an effect for its
+  whole column (any loop can skip it), its sound, and its wave, where you
+  drag to choose the part that plays; ⚙ sets
   the quantize (a beat to 4 bars, or off), fades, and Stop all loops. Each
   column has a volume and a mute. Tempo, key, Play and FX are shared with
   the Pads tab.
