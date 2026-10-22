@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022j';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1467,7 +1467,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1560,7 +1560,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1651,36 +1651,52 @@ function flowPlaces(syl, flow, rest, seed) {
 }
 // Lay the current rap sound's syllables out in a flow, from the pattern
 // you're on, carrying on into the next patterns (chained) if it needs them.
-function layRap(flow, rest, seed) {
+// A new flow for a rap already laid out starts where that one started (not
+// on whatever pattern is showing as the beat plays), and the old layout is
+// cleared from every pattern, so no syllable is left where it was.
+function layRap(flow, rest, seed, fresh = false) {
   const si = S.cur, sl = S.slots[si];
   if (sl?.kind !== 'chop' || !sl.slices.length || sl.slices[0].w == null) throw new Error('Make a rap first: this sound is not a rapped voice.');
+  const had = S.patterns.map((p, i) => (p.some(st => st.some(x => x.s === si)) ? i : -1)).filter(i => i >= 0);
+  const from = !fresh && had.length ? had[0] : S.pat;
   const places = flowPlaces(sl.slices, flow, rest, seed);
   const bars = Math.ceil((Math.floor(places.at(-1)) + 1) / 16);
-  if (S.pat + bars > 16) throw new Error(`That needs ${bars} patterns from pattern ${S.pat + 1}: start from an earlier pattern, or choose a quicker flow.`);
+  if (from + bars > 16) throw new Error(`That needs ${bars} patterns from pattern ${from + 1}: start from an earlier pattern, or choose a quicker flow.`);
   checkpoint();
-  // this sound's old notes were for the old rap: clear them where the rap goes and in the chain playing
-  for (const q of new Set([...Array.from({ length: bars }, (_, b) => S.pat + b), ...S.chain])) S.patterns[q] = S.patterns[q].map(st => st.filter(x => x.s !== si));
+  for (const q of had) S.patterns[q] = S.patterns[q].map(st => st.filter(x => x.s !== si));
   places.forEach((p, k) => {
     const j = Math.floor(p + 1e-6), o = Math.round((p - j) * 1000) / 1000;
-    S.patterns[S.pat + Math.floor(j / 16)][j % 16].push({ s: si, k, ...(o > 0.01 && { o }) });
+    S.patterns[from + Math.floor(j / 16)][j % 16].push({ s: si, k, ...(o > 0.01 && { o }) });
   });
-  if (bars > 1 && !playing) S.chain = Array.from({ length: bars }, (_, b) => S.pat + b);
+  // the chain: the rap's patterns, if the chain was the old rap's (or a single pattern)
+  const span = Array.from({ length: bars }, (_, b) => from + b), old = had.length ? Array.from({ length: had.at(-1) - had[0] + 1 }, (_, b) => had[0] + b) : [];
+  const wasRap = S.chain.length === 1 || (S.chain.length === old.length && S.chain.every((c, i) => c === old[i]));
+  if (wasRap && (S.chain.length !== span.length || S.chain[0] !== from)) {
+    if (playing) pendingChain = span; else { S.chain = span; S.pat = from; }
+  }
   dirty(); draw();
-  return bars;
+  return { bars, from };
 }
 let rapSeed = 1;
 async function rapIt() {
   const text = $('voxText').value.trim(), si = S.cur;
   const { buf, syl } = await voiceSyllables(text);
   const name = '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
-  checkpoint(); S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0; syncPanel();
-  const bars = layRap($('rapFlow').value, $('rapRest').checked, rapSeed);
+  // the old voice's notes go too (they were for other syllables), and the chain its rap made
+  checkpoint();
+  const had = S.patterns.map((p, i) => (p.some(st => st.some(x => x.s === si)) ? i : -1)).filter(i => i >= 0);
+  if (had.length > 1 && S.chain.length === had.at(-1) - had[0] + 1 && S.chain.every((c, i) => c === had[0] + i)) {
+    if (playing) pendingChain = [S.pat]; else S.chain = [S.pat];
+  }
+  S.patterns = S.patterns.map(p => p.map(st => st.filter(x => x.s !== si)));
+  S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0; syncPanel();
+  const { bars, from } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed, true);
   const n = Math.min(16, syl.length);
-  status(`${n} syllables on sound ${si + 1}, ${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, patterns ${S.pat + 1}–${S.pat + bars} (chained)` : ''}: `
+  status(`${n} syllables on sound ${si + 1}, ${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, patterns ${from + 1}–${from + bars} (chained)` : ''}: `
     + syl.slice(0, n).map(x => (x.stress === 2 ? x.name.toUpperCase() : x.name)).join(' · ') + (syl.length > 16 ? `. Only the first 16 of ${syl.length} fit on the keys.` : '.'));
 }
 function reflow(seed) {
-  const bars = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
+  const { bars } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
   status(`${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, over ${bars} bars` : ''}. 🎲 again for another, ↶ Undo to go back.`);
 }
 const busy = (btn, fn) => async () => {
@@ -1794,7 +1810,9 @@ function keyLabel(k) {
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[S.fxSlots[k]][0];
     case 'play': if (S.write && !playing) {
-      const f = fxIdx(S.fx[S.pat][k]), ns = S.patterns[S.pat][k].map(n => n.s + 1).join(' ');
+      // the current sound's notes show what they play (a syllable, "Kick"); the others, their sound's number
+      const name = n => (n.s === S.cur && sl.kind === 'chop' && sl.slices[n.k]?.name) || n.s + 1;
+      const f = fxIdx(S.fx[S.pat][k]), ns = S.patterns[S.pat][k].map(name).join(' ');
       return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
     } break;
   }
