@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022q';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022r';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -225,7 +225,7 @@ function patAt(t) { return S.chain[Math.floor(t / 16) % S.chain.length]; }
 
 function start() {
   if (playing) return;
-  ctx.resume(); stopPreview(); stopRapPreview();
+  ctx.resume(); stopPreview(); stopRapPreview(); warmLoops();
   playing = true; tick = 0; barPat = -1; followPlay = true; nextT = ctx.currentTime + 0.06;
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
 }
@@ -234,6 +234,7 @@ function stop() {
   if (keyNext) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }   // a key change still waiting lands now
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
   for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
+  for (const [id, h] of looping) if (isLoop(+id.split(':')[0])) { h.voice?.stop(ctx.currentTime); looping.delete(id); }   // loops stop with the beat
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
 }
@@ -344,7 +345,7 @@ function isDrum(si) {
   if (!drumMemo.has(sl)) drumMemo.set(sl, ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)));
   return drumMemo.get(sl);
 }
-function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null) {
+function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null, phase = 0) {
   const slot = S.slots[si]; if (!slot) return null;
   key ??= keyAt(when);
   m ??= modsFor(si, [...activeFx].map(k => [k, fxAim.get(k) || 'all']));
@@ -354,7 +355,7 @@ function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null)
   }
   try {
     return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, fx: !m.dry, lock,
-      scale: key.scale, bpm: S.bpm, root: key.root, hold });
+      scale: key.scale, bpm: S.bpm, root: key.root, hold, phase });
   } catch (err) { soundError(err); return null; }
 }
 const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot') !== 'oneshot';
@@ -392,12 +393,13 @@ function friends(k) {
 const keyAt = when => (keyNext?.at != null && when >= keyNext.at ? keyNext : S);
 const keyAhead = () => keyNext || S;          // the key that will be playing once any change waiting has landed
 function applyKey(k) {        // a change you made
-  checkpoint();
+  checkpoint(); warmSoon();
   S.root = k.root; S.scale = k.scale;
   if (k.save) S.patKeys[k.pat ?? S.pat] = { root: k.root, scale: k.scale };
   dirty(); draw(); drawWheel();
 }
 function quietKey(k) {        // a pattern starting in its own key: not a change to undo
+  warmSoon();
   S.root = k.root; S.scale = k.scale;
   if (committed) Object.assign(committed, { root: k.root, scale: k.scale });
   persist(); draw(); drawWheel();
@@ -646,10 +648,27 @@ function shiftOct(d) {
   S.oct[S.cur] = o; persist(); draw();
   status(`Sound ${S.cur + 1}: ${o === 0 ? 'back to its own octave' : `${Math.abs(o)} octave${Math.abs(o) > 1 ? 's' : ''} ${o > 0 ? 'up' : 'down'}`}.`);
 }
+// A loop (a sound with a tempo, from a song pack) keeps time with the beat:
+// while it plays, a tap starts the loop at the next bar line, from the point
+// it would have reached had it been playing all along, and a tap on a
+// running loop stops it at the next bar line.
+const isLoop = si => !!S.slots[si]?.bpm;
+function nextBar() {
+  const now = ctx.currentTime, sd = stepDur(), at = j => nextT - (tick - j) * sd;
+  let j = Math.ceil((tick - (nextT - now) / sd) / 16) * 16;
+  if (j >= 16 && now - at(j - 16) <= 0.03) j -= 16;
+  return { j, when: Math.max(now, at(j)) };
+}
 function playHeld(si, key, pad, when = ctx.currentTime) {
-  const id = `${si}:${key}`, inLoop = S.slots[si]?.params.trig === 'loop';
-  if (inLoop && looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
-  const h = { voice: noteOn(eng, si, key, when, undefined, withOct(si, null, octOf(si)), true), at: when };
+  const id = `${si}:${key}`, inLoop = S.slots[si]?.params.trig === 'loop', synced = playing && isLoop(si);
+  if (inLoop && looping.has(id)) {
+    const h = looping.get(id); looping.delete(id);
+    if (synced) h.voice?.stop(nextBar().when); else endHeld(h);
+    return false;
+  }
+  let phase = 0;
+  if (synced) { const b = nextBar(), bars = S.slots[si].slices[key]?.bars || 4; when = b.when; phase = ((b.j / 16) % bars) / bars; }
+  const h = { voice: noteOn(eng, si, key, when, undefined, withOct(si, null, octOf(si)), true, null, phase), at: when };
   if (inLoop && h.voice?.sustain) looping.set(id, h);
   else holding[pad] = h;
   return h;
@@ -952,6 +971,7 @@ const TREE = ['Sounds', [
   ['Packs', [
     ['Percussion', ['percussion']],
     ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']],
+    ['Songs', 'songs'],
     ['My packs', 'mine:pack'],
   ]],
   ['My Sounds', 'mine:all'],
@@ -964,13 +984,14 @@ const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
 // { from: chosen pack, k } one sound inside a pack.
 let bPath = [TREE], bSel = null, mine = [];
 const previews = new Map();
-const selName = c => c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
+const selName = c => c.song ? `${c.song.name} (${c.song.by})` : c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
 const selPack = c => (c.lib ? isPack(c.lib) : c.mine ? c.mine.type === 'pack' : false);
 async function refreshMine() { mine = db ? (await idbAll('mine')).sort((a, b) => b.created - a.created) : []; }
 function itemsOf(node) {
   const it = node[1];
   if (it === 'mine:all') return mine.map(m => ({ mine: m }));
   if (it === 'mine:pack') return mine.filter(m => m.type === 'pack').map(m => ({ mine: m }));
+  if (it === 'songs') return SONGS.map(x => ({ song: x }));
   if (node.contents) return node.contents;
   return it.map(x => (Array.isArray(x) ? x : { lib: x }));
 }
@@ -988,12 +1009,12 @@ function drawBrowser() {
     const b = document.createElement('button'), small = document.createElement('small');
     if (Array.isArray(it)) {
       b.textContent = '▸ ' + it[0];
-      const n = typeof it[1] === 'string' ? (it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
+      const n = typeof it[1] === 'string' ? (it[1] === 'songs' ? SONGS.length : it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
       small.textContent = n ? `${n}` : '';
       b.addEventListener('click', () => { bPath.push(it); bSel = null; drawBrowser(); });
     } else {
       b.textContent = selName(it).replace(/ \(from .*\)$/, '');
-      small.textContent = it.k != null ? `key ${it.k + 1}`
+      small.textContent = it.song ? it.song.about : it.k != null ? `key ${it.k + 1}`
         : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : 'my sound')
         : selPack(it) ? 'pack · 16 sounds' : 'instrument';
       b.classList.toggle('sel', !!bSel && same(bSel, it));
@@ -1009,13 +1030,13 @@ function drawBrowser() {
     tool('Make a pack', openPackMaker);
   }
   $('bLoad').disabled = !bSel;
-  $('bLoad').textContent = bSel ? `Load ${selName(bSel).replace(/ \(from .*\)$/, '')} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
+  $('bLoad').textContent = bSel?.song ? `Load the song (sounds 1–8, all patterns)` : bSel ? `Load ${selName(bSel).replace(/ \(from .*\)$/, '')} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
   // second button: open a pack, or rename / delete one of yours
   const more = $('bMore');
   more.hidden = !bSel || !(selPack(bSel) || bSel.mine);
   more.textContent = bSel && selPack(bSel) ? 'Open pack ▸' : 'Rename / delete';
 }
-const same = (a, b) => (a.lib && a.lib === b.lib) || (a.mine && b.mine && a.mine.id === b.mine.id) || (a.k != null && a.k === b.k && a.from === b.from);
+const same = (a, b) => (a.song && a.song === b.song) || (a.lib && a.lib === b.lib) || (a.mine && b.mine && a.mine.id === b.mine.id) || (a.k != null && a.k === b.k && a.from === b.from);
 const count = node => (Array.isArray(node[1]) ? node[1].reduce((n, it) => n + (Array.isArray(it) ? count(it) : 1), 0) : 0);
 // The sound a choice stands for, as a slot (built once and kept).
 async function slotOf(c) {
@@ -1024,8 +1045,50 @@ async function slotOf(c) {
   return sliceAlone(await slotOf(c.from), c.k, c.label);
 }
 async function preview(c) {
+  if (c.song) { status(`${c.song.name} by ${c.song.by}: ${c.song.about}. Load puts the whole song on sounds 1–8 and in the patterns.`); return; }
   const slot = await slotOf(c);
   if (bSel === c) playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : slot.kind === 'sample' ? 7 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+}
+// Song packs: one musician's song, from its stems (the separate parts, all
+// in time with each other), cut into 4-bar loops on sounds 1-8 (a sound per
+// part, a loop per key), with patterns that play the song bar by bar and a
+// chain in the song's own order. Built by tools/songpack.py.
+const SONGS = [
+  { id: 'goodday', name: 'Good Day', by: 'AlexBeroza', about: 'hip hop · 73 BPM · D♭ · 8 parts' },
+];
+// Get every loop stretched for the tempo and the keys in use, before it is needed.
+function warmLoops() {
+  const roots = new Set([S.root, ...S.patKeys.filter(Boolean).map(k => k.root)]), jobs = [];
+  for (const sl of S.slots) if (sl?.bpm) for (const x of sl.slices) for (const root of roots) {
+    const f = loopStretch(sl, sl.params, S.bpm, root);
+    if (Math.abs(f - 1) > 0.002) jobs.push(stretchLoop(sl.buf, x.s, x.e, f));
+  }
+  return Promise.all(jobs);
+}
+let warmTimer = 0;
+const warmSoon = () => { clearTimeout(warmTimer); warmTimer = setTimeout(warmLoops, 250); };
+async function loadSong(id) {
+  ctx.resume();
+  status('Loading the song (about 13 MB the first time)…');
+  try {
+    const P = await (await fetch(`sounds/songs/${id}.json`)).json();
+    const slots = await Promise.all(P.sounds.map(async so => ({
+      factory: null, kind: 'chop', contiguous: false, name: so.name, bpm: P.bpm, credit: P.credit,
+      buf: await decode(await (await fetch(`sounds/${so.file}`)).arrayBuffer()),      // not levelled: the parts keep their balance
+      params: { ...defParams(), trig: 'loop', vol: 0.9, keyOf: so.keyOf },
+      slices: so.loops.map(l => ({ s: l.s, e: l.e, name: l.name, bars: l.bars })),
+    })));
+    if (playing) stop();
+    checkpoint();
+    P.sounds.forEach((so, i) => { S.slots[so.slot] = slots[i]; S.lastKey[so.slot] = 0; S.oct[so.slot] = 0; });
+    // each note plays one bar of a loop, for the whole bar
+    S.patterns = Array.from({ length: 16 }, (_, p) => Array.from({ length: 16 }, (_, st) => st ? [] :
+      (P.patterns[p] || []).map(([s, k, b]) => { const bars = P.sounds[s].loops[k].bars; return { s, k, d: 16, lock: { start: b / bars, len: 1 / bars } }; })));
+    S.fx = Array.from({ length: 16 }, () => new Array(16).fill(null)); S.patKeys = new Array(16).fill(null);
+    S.chain = P.chain; S.pat = P.chain[0]; S.bpm = P.bpm; S.swing = 50; S.root = P.root; S.scale = P.scale; S.cur = 0;
+    syncPanel(); dirty(); draw(); warmLoops();
+    status(`${P.name} by ${P.by}: ${P.sections.map(([n, p]) => `${n} ${p + 1}–${p + 4}`).join(', ')}; chained as the song. ▶ Play. ↶ Undo brings back what you had.`);
+  } catch (e) { status('Could not load the song: ' + e.message); }
 }
 async function loadLibrary(id) {
   checkpoint();
@@ -1035,6 +1098,7 @@ async function loadLibrary(id) {
 }
 $('bLoad').addEventListener('click', async () => {
   if (!bSel) return;
+  if (bSel.song) { closeMenu(); await loadSong(bSel.song.id); return; }
   if (bSel.lib) await loadLibrary(bSel.lib);
   else {
     checkpoint();
@@ -1073,12 +1137,12 @@ function sliceAlone(slot, k, label) {
 function packSlot(sl) {
   const bufs = [], at = new Map();
   const ref = b => { if (!b) return null; if (!at.has(b)) { at.set(b, bufs.length); bufs.push({ rate: b.sampleRate, data: b.getChannelData(0).slice() }); } return at.get(b); };
-  return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous,
+  return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous, bpm: sl.bpm, credit: sl.credit,
     buf: ref(sl.buf), slices: sl.slices?.map(x => ({ ...x, buf: ref(x.buf) })), bufs };
 }
 function unpackSlot(m) {
   const it = m.item, B = it.bufs.map(b => { const a = ctx.createBuffer(1, b.data.length, b.rate); a.copyToChannel(b.data, 0); return a; });
-  return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base,
+  return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base, bpm: it.bpm, credit: it.credit,
     contiguous: it.contiguous, buf: it.buf != null ? B[it.buf] : null, slices: it.slices?.map(x => ({ ...x, buf: x.buf != null ? B[x.buf] : null })) };
 }
 async function saveMine(slot, name, type = 'sound') {
@@ -1370,8 +1434,8 @@ $('copySound').addEventListener('click', () => {
 // Beat panel
 for (const s of Object.keys(SCALES)) $('scale').add(new Option(s[0].toUpperCase() + s.slice(1), s));
 ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'].forEach((n, i) => $('root').add(new Option(n, i)));
-$('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); });
-document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { checkpoint(); S.bpm = +b.dataset.bpm; dirty(); draw(); }));
+$('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); warmSoon(); });
+document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { checkpoint(); S.bpm = +b.dataset.bpm; dirty(); draw(); warmSoon(); }));
 for (let k = 0; k < 16; k++) {
   const row = document.createElement('div'); row.className = 'row';
   row.innerHTML = `<label for="fxs${k}">Key ${k + 1}</label><select id="fxs${k}"></select><span></span>`;
@@ -1500,7 +1564,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022r'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1593,7 +1657,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022r'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1887,6 +1951,7 @@ async function renderLoop() {
   const e = new Engine(off, { live: false });
   let k = { root: S.root, scale: S.scale };     // as on Play: a pattern with a key of its own changes it, the others carry it on
   renderKeys = S.chain.map(p => (k = S.patKeys[p] || k));
+  await warmLoops();                // every loop stretched before the render starts
   for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false);
   renderKeys = null;
   const buf = await off.startRendering(), n = Math.round(len * SR);
@@ -2402,7 +2467,7 @@ function save() {
     };
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth,
       trims: sl.slices?.map(x => [x.start ?? 0, x.len ?? 1]) } : {
-      kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base,
+      kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base, bpm: sl.bpm, credit: sl.credit,
       slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
     const { mode, write, replace, ...rest } = S;
@@ -2423,7 +2488,7 @@ async function load() {
     const s = saved?.slots?.[i];
     try {
       if (s && s.factory == null) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base };
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }

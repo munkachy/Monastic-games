@@ -276,8 +276,75 @@ function tracking(ctx, made) {
     createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
 }
 
+// Time-stretching a loop (WSOLA: waveform-similarity overlap-add): short
+// windows read from the loop at a different pace and laid down overlapping,
+// each nudged to where its waveform best continues the last, so the length
+// changes and the pitch doesn't. Reading wraps round the loop and so does the
+// writing, so the stretched loop is seamless too. A little grainy on drums,
+// as stretched loops are. It runs in a worker, so playing never waits for it.
+function wsola(x, factor) {
+  const n = x.length, N = Math.round(n * factor), W = 2048, H = W / 2, tol = 384;
+  const win = new Float32Array(W).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / W));
+  const out = new Float32Array(N), norm = new Float32Array(N), at = i => x[((i % n) + n) % n];
+  let prev = 0;
+  for (let o = 0; o < N; o += H) {
+    let best = Math.round(o / factor);
+    if (o > 0) {
+      let bestScore = -Infinity; const nominal = best;
+      for (let d = -tol; d <= tol; d += 4) {
+        let sc = 0; for (let i = 0; i < H; i += 8) sc += at(nominal + d + i) * at(prev + H + i);
+        if (sc > bestScore) { bestScore = sc; best = nominal + d; }
+      }
+    }
+    for (let i = 0; i < W; i++) { const j = (o + i) % N; out[j] += at(best + i) * win[i]; norm[j] += win[i]; }
+    prev = best;
+  }
+  for (let i = 0; i < N; i++) if (norm[i] > 1e-3) out[i] /= norm[i];
+  return out;
+}
+let stretchWorker, jobSeq = 0;
+const jobs = new Map();
+function runWsola(x, factor) {
+  if (stretchWorker === undefined) {
+    try {
+      const src = `const wsola = ${wsola.toString()};\nonmessage = e => { const out = wsola(e.data.x, e.data.factor); postMessage({ id: e.data.id, out }, [out.buffer]); };`;
+      stretchWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      stretchWorker.onmessage = e => { jobs.get(e.data.id)?.(e.data.out); jobs.delete(e.data.id); };
+    } catch (e) { stretchWorker = null; }
+  }
+  if (!stretchWorker) return Promise.resolve(wsola(x, factor));
+  return new Promise(ok => { const id = ++jobSeq; jobs.set(id, ok); stretchWorker.postMessage({ id, x, factor }, [x.buffer]); });
+}
+// buf -> Map(key -> AudioBuffer, or a Promise of one while it is being made)
+const stretchCache = new WeakMap();
+const stretchKey = (s, e, f) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}`;
+export function stretchLoop(buf, s, e, factor) {
+  let m = stretchCache.get(buf); if (!m) stretchCache.set(buf, m = new Map());
+  const key = stretchKey(s, e, factor), had = m.get(key);
+  if (had) return had instanceof AudioBuffer ? Promise.resolve(had) : had;
+  const rate = buf.sampleRate, x = buf.getChannelData(0).slice(Math.round(s * rate), Math.round(e * rate));
+  const p = runWsola(x, factor).then(out => {
+    const b = new AudioBuffer({ length: out.length, numberOfChannels: 1, sampleRate: rate }); b.copyToChannel(out, 0);
+    m.set(key, b); return b;
+  });
+  if (m.size > 64) m.delete(m.keys().next().value);
+  m.set(key, p); return p;
+}
+// The stretched loop if it is ready (and if not, start making it).
+export function stretchedNow(buf, s, e, factor) {
+  const had = stretchCache.get(buf)?.get(stretchKey(s, e, factor));
+  if (had instanceof AudioBuffer) return had;
+  stretchLoop(buf, s, e, factor); return null;
+}
+// How much a loop is stretched: to the tempo playing, and to the key (stretched
+// by tempo x pitch, then sped up by the pitch, it keeps the beat in the new key).
+export const loopStretch = (slot, P, bpm, root) => {
+  const semis = P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0);
+  return (slot.bpm / bpm) * Math.pow(2, semis / 12);
+};
+
 export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = 0, fx = true, lock = null,
-  scale = 'minor', bpm = 120, root = 0, hold = false } = {}) {
+  scale = 'minor', bpm = 120, root = 0, hold = false, phase = 0 } = {}) {
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
@@ -313,7 +380,17 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       const sl = slot.slices[k]; if (!sl) return null;
       buf = sl.buf || slot.buf; s = sl.s; e = sl.e;
       // A chop plays as recorded, unless it is set to follow the song's key.
-      r = Math.pow(2, (P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0)) / 12) * rate;
+      const semis = P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0);
+      r = Math.pow(2, semis / 12) * rate;
+      // A loop (a sound made at a known tempo) is stretched to the tempo and key playing; until
+      // that is ready, it is sped up or slowed to keep the beat (the pitch moves for a moment).
+      if (slot.bpm) {
+        const f = loopStretch(slot, P, bpm, root);
+        if (Math.abs(f - 1) > 0.002) {
+          const sb = stretchedNow(buf, s, e, f);
+          if (sb) { buf = sb; s = 0; e = sb.duration; } else r = rate * bpm / slot.bpm;
+        }
+      }
       start = lock?.start ?? sl.start ?? 0; len = lock?.len ?? sl.len ?? 1;   // trim is per slice
     } else {
       buf = slot.buf; s = 0; e = buf.duration;
@@ -335,7 +412,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
         src.playbackRate.setValueCurveAtTime(c, t + delay, real);
       }
       src.connect(env);
-      if (lp) { src.loop = true; src.loopStart = lp[0]; src.loopEnd = lp[1]; src.start(t + delay, Math.max(0, s)); }
+      if (lp) { src.loop = true; src.loopStart = lp[0]; src.loopEnd = lp[1]; src.start(t + delay, Math.max(0, s) + phase * (lp[1] - lp[0])); }
       else src.start(t + delay, Math.max(0, s), dur);
       voice.rates.push(src.playbackRate); voice.nodes.push(src);
     };

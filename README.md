@@ -191,6 +191,12 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **My Sounds:** save any sound or edited clip, import WAV, MP3 or a screen
   recording's sound (video files), rename and delete, and gather sounds into
   packs. Any pack, built-in or yours, can be opened to load one sound alone.
+- **Songs:** a whole song from one musician's stems, cut into 4-bar loops
+  (a part on each of sounds 1–8), with patterns and a chain that play it
+  in its own order. Loops come in on the next bar in step with the beat,
+  stop with it, and are time-stretched to the tempo and key. The first is
+  "Good Day" by AlexBeroza with a vocal by DonnieOzone
+  ([ccMixter](https://ccmixter.org/files/AlexBeroza/36122), CC BY 3.0).
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
 - **One shot / Gate / Loop** per sound: the whole sound, only while held, or
