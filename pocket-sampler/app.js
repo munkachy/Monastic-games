@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022u';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022v';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -566,7 +566,7 @@ const keyEls = [];
 const down = new Set();
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
-  b.innerHTML = `<b>${k + 1}</b><span></span><i></i>`;
+  b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
   b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); press(k); });
   const up = () => release(k);
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
@@ -1317,16 +1317,16 @@ function drawEd() {
   if (edCv.width !== W || edCv.height !== H) { edCv.width = W; edCv.height = H; }
   eg.clearRect(0, 0, W, H);
   const x = ed.buf.getChannelData(0), r = ed.buf.sampleRate, [v0, v1] = ed.view;
-  if (ed.sel) { eg.fillStyle = '#1f2a1735'; eg.fillRect(edX(ed.sel[0]), 0, edX(ed.sel[1]) - edX(ed.sel[0]), H); }
-  eg.fillStyle = '#1f2a17';
+  eg.fillStyle = cssVar('--lcd-ink');
+  if (ed.sel) { eg.globalAlpha = 0.2; eg.fillRect(edX(ed.sel[0]), 0, edX(ed.sel[1]) - edX(ed.sel[0]), H); eg.globalAlpha = 1; }
   for (let px = 0; px < W; px++) {
     const a = Math.floor((v0 + (v1 - v0) * px / W) * r), b = Math.max(a + 1, Math.floor((v0 + (v1 - v0) * (px + 1) / W) * r));
     let lo = 0, hi = 0; for (let i = a; i < b; i += Math.max(1, ((b - a) / 40) | 0)) { const v = x[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
     eg.fillRect(px, H / 2 - hi * H * 0.48, 1, Math.max(1, (hi - lo) * H * 0.48));
   }
   eg.font = `${10 * dpr}px ui-monospace, monospace`;
-  [0, ...ed.cuts].forEach((c, i) => { eg.fillStyle = '#c21b1b'; eg.fillRect(edX(c), 0, Math.max(1, dpr), H); eg.fillText(String(i + 1), edX(c) + 2 * dpr, 11 * dpr); });
-  eg.fillStyle = '#1f7ae0'; eg.fillRect(edX(ed.cur), 0, 2 * dpr, H);
+  [0, ...ed.cuts].forEach((c, i) => { eg.fillStyle = classic() ? '#c21b1b' : '#ff4d5e'; eg.fillRect(edX(c), 0, Math.max(1, dpr), H); eg.fillText(String(i + 1), edX(c) + 2 * dpr, 11 * dpr); });
+  eg.fillStyle = classic() ? '#1f7ae0' : '#4da3ff'; eg.fillRect(edX(ed.cur), 0, 2 * dpr, H);
   const sel = ed.sel ? `${ed.sel[0].toFixed(2)}–${ed.sel[1].toFixed(2)} s selected` : `point at ${ed.cur.toFixed(2)} s`;
   $('edInfo').textContent = `${ed.buf.duration.toFixed(2)} s · ${sel} · ${ed.cuts.length + 1} piece${ed.cuts.length ? 's' : ''}`;
   $('edPut').textContent = `Put ${ed.sel ? 'selection' : 'it'} on sound`;
@@ -1620,7 +1620,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022u'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022v'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1713,7 +1713,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022u'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022v'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2076,10 +2076,10 @@ function keyLabel(k) {
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[S.fxSlots[k]][0];
     case 'play': if (S.write && !playing) {
-      // the current sound's notes show what they play (a syllable, "Kick"); the others, their sound's number
-      const name = n => (n.s === S.cur && sl.kind === 'chop' && sl.slices[n.k]?.name) || n.s + 1;
+      // the colours show which sounds are on the step; the words, what the current sound plays there
+      // (a syllable, "Kick") and any effect
       const st = S.patterns[S.pat][k], f = fxIdx(S.fx[S.pat][k]);
-      const ns = [...st.filter(n => n.s === S.cur), ...st.filter(n => n.s !== S.cur)].map(name).join(' ');   // this sound's first
+      const ns = sl.kind === 'chop' ? st.filter(n => n.s === S.cur).map(n => sl.slices[n.k]?.name).filter(Boolean).join(' ') : '';
       return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
     } break;
   }
@@ -2093,6 +2093,28 @@ function keyLabel(k) {
   const m = (sl.kind === 'multi' ? sl.base : sl.synth.root) + keySemis(k, S.scale) + sl.params.pitch + 12 * octOf(S.cur) + S.root;
   return NOTE[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 }
+// The 16 sound colours are tokens in index.html (--s1 … --s16); the canvases read them from there.
+const soundVar = s => `var(--s${s + 1})`;
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const classic = () => document.documentElement.classList.contains('classic');
+function setLook(look) {
+  document.documentElement.classList.toggle('classic', look === 'classic');
+  try { localStorage.setItem('pocketLook', look); } catch (e) {}
+  $('look').value = look; lastSeen = []; draw(); drawWheel(); if (!$('editor').hidden) drawEd();
+}
+try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}
+$('look').value = classic() ? 'classic' : 'dark';
+$('look').addEventListener('change', e => setLook(e.target.value));
+// A step's colours: one sound fills it; 2-4 split it side by side; 5 or more, a grid of blocks.
+function stepFill(el, sounds) {
+  const n = sounds.length, sig = sounds.join(',') + '|' + S.cur;
+  if (el.dataset.fill === sig) return;
+  el.dataset.fill = sig;
+  const [c, r] = n <= 4 ? [n, 1] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 4];
+  const u = el.firstChild;
+  u.style.gridTemplateColumns = `repeat(${c}, 1fr)`; u.style.gridTemplateRows = `repeat(${r}, 1fr)`;
+  u.innerHTML = sounds.map(s => `<s style="background:${soundVar(s)}"${s === S.cur && n > 1 ? ' class="me"' : ''}></s>`).join('');
+}
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   $('write').classList.toggle('on', S.write);
@@ -2101,6 +2123,7 @@ function draw() {
   $('write').classList.toggle('replace', S.replace);
   $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
+  $('screen').style.setProperty('--c', soundVar(S.cur));
   $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
   // in a chain: the pattern on screen, and where the chain is (bar n of all of them)
   const cpos = playing && headTick >= 0 ? (Math.floor(headTick / 16) % S.chain.length) + 1 : 0;
@@ -2125,6 +2148,15 @@ function draw() {
       case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
       default: lit = steps.some(n => n.s === S.cur); some = !lit && steps.length > 0;
     }
+    // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
+    const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
+    if (tint) el.style.setProperty('--c', soundVar(S.mode === 'sound' ? k : S.cur));
+    el.classList.toggle('tint', tint); el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('steps', steps_);
+    if (steps_) {
+      const on = [...new Set(steps.map(n => n.s))].sort((a, b) => a - b);
+      stepFill(el, on); el.classList.toggle('full', on.length > 0); some = false;
+    } else if (el.dataset.fill) { el.dataset.fill = ''; el.firstChild.innerHTML = ''; el.classList.remove('full'); }
+    el.classList.toggle('fxon', S.mode === 'fx' && lit);
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
     const loops = S.mode === 'sound' ? [...looping.keys()].some(id => id.startsWith(k + ':')) : looping.has(`${S.cur}:${k}`);
@@ -2140,7 +2172,7 @@ function drawWave() {
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   g.clearRect(0, 0, W, H);
-  const ink = '#1f2a17', sl = S.slots[S.cur];
+  const ink = classic() ? cssVar('--lcd-ink') : cssVar(`--s${S.cur + 1}`), sl = S.slots[S.cur];
   g.fillStyle = ink; g.strokeStyle = ink;
   if (!sl) return;
   const view = waveView();
@@ -2164,7 +2196,7 @@ function drawWave() {
     const lk = S.lastKey[S.cur];
     view.marks.forEach((m, k) => {
       const X = (m.s - a) / (b - a) * W, X2 = (m.e - a) / (b - a) * W;
-      if (k === lk) { g.fillStyle = '#1f2a1730'; g.fillRect(X, 0, X2 - X, H); g.fillStyle = ink; }
+      if (k === lk) { g.globalAlpha = 0.2; g.fillRect(X, 0, X2 - X, H); g.globalAlpha = 1; }
       g.fillRect(X, 0, Math.max(1, dpr), H);
       g.font = `${9 * dpr}px ui-monospace, monospace`; g.fillText(String(k + 1), X + 2 * dpr, 9 * dpr);
     });
@@ -2224,7 +2256,7 @@ function frame() {
   if (changed) { draw(); drawWheel(); }
   // Redraw the screen only when what it shows has changed (or the scope is
   // moving), so the phone has its time free to answer the keys.
-  const sl = S.slots[S.cur], seen = [sl, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
+  const sl = S.slots[S.cur], seen = [sl, S.cur, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
   const scopeLive = sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5);
   if (drag != null || scopeLive || seen.some((v, i) => v !== lastSeen[i])) { drawWave(); lastSeen = seen; }
   requestAnimationFrame(frame);
