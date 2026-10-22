@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022k';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022l';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1423,6 +1423,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
   if (b.dataset.tab === 'tLog') drawLog();
   if (b.dataset.tab === 'tBeat') drawKitSel();
   if (b.dataset.tab === 'tEffects') drawFxSlots();
+  if (b.dataset.tab === 'tVoice') openPsalter();
 }));
 // Copy and Paste: the pattern you're on, steps and saved effects.
 let clipboard = null;
@@ -1467,7 +1468,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022l'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1560,7 +1561,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022l'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1699,6 +1700,77 @@ function reflow(seed) {
   const { bars } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
   status(`${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, over ${bars} bars` : ''}. 🎲 again for another, ↶ Undo to go back.`);
 }
+// Psalms for the voice. The Douay comes from Selah (public domain, built
+// in); a Grail file (a Selah pack, the same one Selah and While You Have
+// the Light take) can be added, and is kept in this browser on this device
+// only: it is never sent anywhere or put in the app.
+const PSALTERS = { douay: null, grail: null };
+async function psalterOf(id) {
+  if (PSALTERS[id]) return PSALTERS[id];
+  if (id === 'douay') {
+    const t = await (await fetch('../selah/douay.js')).text();
+    return (PSALTERS.douay = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1)));
+  }
+  const t = db && await idbGet('state', 'psalter');
+  return (PSALTERS.grail = t ? JSON.parse(t) : null);
+}
+const verseText = vs => vs.lines.map(l => l.replace(/[*†‡]/g, '').replace(/\s+/g, ' ').trim()).join('\n');
+const firstWords = (t, n = 5) => { const w = t.split(/\s+/); return w.slice(0, n).join(' ') + (w.length > n ? '…' : ''); };
+async function drawPsalter(keep = true, fill = true) {
+  const g = await psalterOf('grail');
+  $('psSrc').options[1].disabled = !g; $('psSrc').options[1].text = g ? `${g.displayName || 'Grail'} (yours)` : 'Grail: import your file';
+  if (!g && $('psSrc').value === 'grail') $('psSrc').value = 'douay';
+  const P = await psalterOf($('psSrc').value), was = keep ? +$('psNum').value : 0;
+  $('psNum').length = 0;
+  for (const ps of P.psalms) $('psNum').add(new Option(`${ps.n}: ${firstWords(verseText(ps.verses.find(v => !v.title) || ps.verses[0]), 4)}`, ps.n));
+  if (was && P.psalms.some(p => p.n === was)) $('psNum').value = was;
+  $('psNote').textContent = `${P.name || P.displayName}, ${P.numbering === 'hebrew' ? 'numbered as in the Hebrew (and the breviary)' : 'in the Vulgate numbering'}.`;
+  drawVerses(fill);
+}
+function drawVerses(fill = true) {
+  const P = PSALTERS[$('psSrc').value], ps = P?.psalms.find(p => p.n === +$('psNum').value); if (!ps) return;
+  for (const id of ['psFrom', 'psTo']) {
+    const sel = $(id); sel.length = 0;
+    ps.verses.forEach((v, i) => sel.add(new Option(`${v.v}${v.title ? ' (title)' : ''}: ${firstWords(verseText(v))}`, i)));
+  }
+  const first = Math.max(0, ps.verses.findIndex(v => !v.title));
+  $('psFrom').value = first; $('psTo').value = first; if (fill) pickVerses();
+}
+// The verses chosen go into the words box, a line each half-verse: a new line is a breath in the rap.
+function pickVerses() {
+  const P = PSALTERS[$('psSrc').value], ps = P?.psalms.find(p => p.n === +$('psNum').value); if (!ps) return;
+  let a = +$('psFrom').value, b = +$('psTo').value; if (b < a) { b = a; $('psTo').value = a; }
+  const text = ps.verses.slice(a, b + 1).map(verseText).join('\n');
+  $('voxText').value = text;
+  const n = text.split(/\s+/).reduce((c, w) => c + Math.max(1, spell(w).length), 0);
+  $('psCount').textContent = `About ${n} syllables${n > 16 ? `: 16 fit on one sound's keys, so a rap keeps the first 16` : ''}.`;
+}
+$('psSrc').addEventListener('change', () => drawPsalter(false));
+$('psNum').addEventListener('change', () => drawVerses());
+$('psFrom').addEventListener('change', () => { $('psTo').value = $('psFrom').value; pickVerses(); });
+$('psTo').addEventListener('change', pickVerses);
+$('psRand').addEventListener('click', async () => {
+  const P = await psalterOf($('psSrc').value), ps = P.psalms[(Math.random() * P.psalms.length) | 0];
+  $('psNum').value = ps.n; drawVerses();
+  const vs = ps.verses.map((v, i) => (v.title ? -1 : i)).filter(i => i >= 0), i = vs[(Math.random() * vs.length) | 0];
+  $('psFrom').value = i; $('psTo').value = i; pickVerses();
+});
+$('psImport').addEventListener('click', () => { $('psFile').value = ''; $('psFile').click(); });
+$('psFile').addEventListener('change', async () => {
+  const f = $('psFile').files[0]; if (!f) return;
+  try {
+    const t = await f.text(), j = JSON.parse(t);
+    if (j?.selahPack !== 1 || !Array.isArray(j.psalms) || !j.psalms.every(p => Number.isInteger(p?.n) && Array.isArray(p.verses) && p.verses.every(v => Array.isArray(v?.lines))))
+      throw new Error('not a psalter pack');
+    if (!db) throw new Error('this browser has no storage to keep it in');
+    await idbPut('state', t, 'psalter'); PSALTERS.grail = j;
+    $('psSrc').value = 'grail'; await drawPsalter(false);
+    status(`${j.name || j.displayName}: ${j.psalms.length} psalms, kept on this device only.`);
+  } catch (e) { status(`Could not use that file (${e.message}). It should be a psalter pack file, the kind Selah takes.`); }
+});
+let psalterReady = false;
+function openPsalter() { if (!psalterReady) { psalterReady = true; drawPsalter(false, false).catch(e => status('Could not load the psalms: ' + e.message)); } }
+
 const busy = (btn, fn) => async () => {
   btn.disabled = true; ctx.resume();
   try { await fn(); } catch (e) { status(e.message); console.error(e); }
