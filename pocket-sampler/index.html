@@ -204,6 +204,82 @@
   .fnbot button { padding: 11px 0; }
   .fn button.menu { background: var(--accent); color: #fff; }
 
+  /* the Pads / Loops tabs */
+  .vtabs { display: flex; gap: 6px; }
+  .vtabs button { flex: 1; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; border: 0;
+    border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--muted); }
+  .vtabs button.on { background: var(--ink); color: var(--body); }
+  .device > .vtabs { margin: 0 0 8px; }
+
+  /* The Loops tab: always laid out sideways. Held upright, the grid is turned a
+     quarter turn, so it reads the right way up with the phone held sideways. */
+  #loops { position: fixed; inset: 0; z-index: 8; background: var(--bg); overflow: hidden; }
+  #loops[hidden] { display: none; }
+  .lview { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: 6px;
+    padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    color: var(--ink); }
+  @media (orientation: portrait) {
+    .lview { width: 100vh; width: 100dvh; height: 100vw; transform-origin: 0 0; transform: translateX(100vw) rotate(90deg);
+      padding: 8px max(10px, env(safe-area-inset-bottom)) 8px max(10px, env(safe-area-inset-top)); }
+  }
+  .lbar { display: flex; gap: 6px; align-items: center; flex: none; min-width: 0; }
+  .lbar .vtabs { flex: none; }
+  .lbar .vtabs button { flex: none; padding: 7px 12px; }
+  .lbar > button, .ltempo button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border: 0;
+    border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); white-space: nowrap; }
+  .lbar > button.on { background: var(--accent); color: #fff; }
+  .ltempo { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .ltempo button { padding: 7px 9px; }
+  #lStatus { flex: 1; min-width: 0; font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lgrid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .lcol { display: grid; grid-template-rows: auto repeat(6, minmax(0, 1fr)) auto; gap: 4px; min-height: 0; min-width: 0; }
+  .lhead { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c); text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lcell { position: relative; min-height: 0; min-width: 0; border-radius: 8px; background: var(--key); border: 0; padding: 0 5px; display: flex;
+    align-items: center; gap: 4px; font: inherit; color: var(--key-dim); text-align: left; overflow: hidden; touch-action: none;
+    box-shadow: inset 0 0 0 1px #ffffff12; }
+  .lcell::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: 0; pointer-events: none; }
+  .lcell.filled { color: var(--key-ink); box-shadow: inset 0 0 0 1.5px var(--c); }
+  .lcell.filled::before { opacity: .22; }
+  .lcell.playing { box-shadow: inset 0 0 0 2px var(--c), 0 0 10px var(--c); }
+  .lcell.playing::before { opacity: .5; }
+  .lcell.queued, .lcell.stopping { animation: lwait .5s steps(2, start) infinite; }
+  @keyframes lwait { to { box-shadow: inset 0 0 0 2px #fff; } }
+  .lcell svg { position: relative; flex: none; width: 22px; height: 22px; transform: rotate(-90deg); }
+  .lcell:not(.filled) svg { visibility: hidden; }
+  .lcell .rbg { fill: none; stroke: #ffffff22; stroke-width: 3; }
+  .lcell .rfg { fill: none; stroke: var(--c); stroke-width: 3; stroke-dasharray: 100; stroke-dashoffset: 100; stroke-linecap: round; }
+  .lcell.playing .rfg { stroke: #fff; }
+  .lcell:not(.playing):not(.stopping) .rfg { visibility: hidden; }
+  .lcell span { position: relative; font-size: 10px; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; word-break: break-word; }
+  .lcell em { position: absolute; right: 4px; top: 2px; font-size: 8px; font-style: normal; font-weight: 700; color: var(--c); }
+  .lcell.playing em { color: #fff; }
+  .lfoot { display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; }
+  .lfader { position: relative; height: 22px; border-radius: 6px; background: var(--key); box-shadow: inset 0 0 0 1px #ffffff1c; overflow: hidden; touch-action: none; }
+  .lfader i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); opacity: .55; }
+  .lmute { font: inherit; font-size: 10px; font-weight: 700; border: 0; border-radius: 6px; width: 24px; height: 22px; padding: 0; background: var(--btn); color: var(--muted); }
+  .lmute.on { background: #c21b1b; color: #fff; }
+  .lcol.muted .lcell { opacity: .45; }
+  .lmenu { position: absolute; inset: 8% 10%; z-index: 2; background: var(--panel); border-radius: 12px; box-shadow: 0 0 0 1.5px var(--c), 0 10px 40px #000c;
+    display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; min-height: 0; }
+  .lmenu[hidden] { display: none; }
+  .lmhead { display: flex; align-items: center; gap: 8px; }
+  .lmhead b { flex: 1; font-size: 12px; letter-spacing: .06em; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lmhead button, .lmodes button { font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
+  .lmodes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .lmodes button.on { background: var(--accent); color: #fff; }
+  .lmodes button:disabled { opacity: .4; }
+  .lmodes .grow { flex: 1; }
+  #lmCrumbs { font-size: 11px; display: flex; gap: 4px; align-items: center; }
+  #lmCrumbs button { font: inherit; font-size: 11px; font-weight: 700; border: 0; background: none; color: var(--accent); padding: 2px; }
+  .lmlist { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 5px; align-content: start;
+    -webkit-overflow-scrolling: touch; }
+  .lmlist button { font: inherit; font-size: 12px; text-align: left; border: 1px solid var(--field-line); border-radius: 7px; background: var(--field);
+    color: var(--field-ink); padding: 7px 9px; display: flex; flex-direction: column; gap: 1px; }
+  .lmlist button small { color: var(--muted); font-size: 10px; }
+  .lmlist button.sel { border-color: var(--c); box-shadow: inset 0 0 0 1.5px var(--c); }
+
   /* the Menu: everything to set up before playing, over the keys */
   #menu { position: fixed; inset: 0; z-index: 9; background: #000b; display: flex; justify-content: center; padding: 8px; }
   #menu[hidden] { display: none; }
@@ -229,7 +305,8 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022w</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022x</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -275,6 +352,25 @@
   <p class="note" id="status"></p>
 </div>
 
+<div id="loops" hidden>
+ <div class="lview" id="lview">
+  <div class="lbar">
+    <div class="vtabs"><button data-view="pads">Pads</button><button data-view="loops" class="on">Loops</button></div>
+    <button id="lPlay">▶ Play</button>
+    <div class="ltempo"><button id="lSlower" aria-label="Slower">−</button><span id="lBpm">120 BPM</span><button id="lFaster" aria-label="Faster">+</button></div>
+    <button id="lKey" title="The next key (on the next bar)">C MIN ▸</button>
+    <button id="lEdit" title="Tap cells to set them up">✎ Edit</button>
+    <span id="lStatus"></span>
+  </div>
+  <div class="lgrid" id="lgrid"></div>
+  <div class="lmenu" id="lmenu" hidden>
+    <div class="lmhead"><b id="lmTitle"></b><button id="lmClose">✕ Done</button></div>
+    <div class="lmodes"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="grow"></span><button id="lmEmpty">Empty this cell</button></div>
+    <div id="lmCrumbs"></div>
+    <div class="lmlist" id="lmList"></div>
+  </div>
+ </div>
+</div>
 <div id="menu" hidden>
  <div class="sheet">
   <div class="menubar"><b>Menu</b><button id="menuClose">✕ Close</button></div>
@@ -418,6 +514,7 @@
     <p><b>Loops</b> (Menu › Sounds › Loops): drum loops, breakbeats, vinyl and ambience, one loop per key, in Loop mode. While the beat plays, a loop comes in at the next bar, in step, and follows the tempo and key; it stops at the next bar when tapped again, and every loop stops with the beat. <b>Songs</b> (Packs › Songs): songs written for the app from its own sounds, ready to play, chained.</p>
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
+    <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns, in the colours of sounds 1–8 (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) to set it to Loop, One shot or Gate (only while held, from the next beat) and to choose its sound from the loops and packs. Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. The grid starts with the app's own drum loops, breaks, vinyl and hype words; a set made for it comes next.</p>
     <p><b>Colours:</b> each of the 16 sounds has its own colour (1–8 red, orange, yellow, green, teal, pink, purple, blue; 9–16 lime, cyan, magenta, amber, indigo, coral, mint, lavender). In Sound mode each pad shows its sound's colour; in Play the keys take the current sound's colour. With <b>Write</b> on, each step is filled with the colours of the sounds on it, in sound order: one fills it, two to four split it side by side, five or more make a small grid. The step with the current sound has a white light, and its block a white edge; the step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
@@ -488,6 +585,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022w"></script>
+<script type="module" src="app.js?v=20261022x"></script>
 </body>
 </html>

@@ -185,6 +185,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   colour, Play tints the keys in the current sound's, and in Write each
   step is filled with the colours of the sounds on it: split side by side
   for two to four, a small grid of blocks for five or more.
+- **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
+  sideways (turned a quarter turn when the phone is upright). Eight
+  columns in the colours of sounds 1–8 (kick, snare, tops, bass, chords,
+  lead, sub, vocals/keys), six cells each. A tap starts a cell on the next
+  bar, in time and key; one cell plays per column, and another takes over
+  on the bar; a ring shows each loop's progress. Hold a cell for Loop, One
+  shot or Gate and to choose its sound; each column has a volume and a
+  mute. Tempo, key, Play and FX are shared with the Pads tab.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
   and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
