@@ -148,6 +148,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   places steps when stopped and records live when playing.
 - **16 punch-in effects:** loops, rolls, half time, scramble, pitch dive,
   octaves, reverse, unison, bitcrush, filters and echo.
+- **One screen for playing:** the keys and the playing buttons fit without
+  scrolling; **☰ Menu** opens over them with a sound browser (Hits and
+  Packs, by family), sound settings, beat and tempo, voice, help and a log.
+  Four small buttons are yours to set: mute drums, export, roll, new beat,
+  clear, or any effect held while you hold the button.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
 - **One shot / Gate / Loop** per sound: the whole sound, only while held, or

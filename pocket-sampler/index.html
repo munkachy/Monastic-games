@@ -14,11 +14,12 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: #1b1a17; color: var(--ink);
     font: 14px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  body { min-height: 100vh; display: flex; justify-content: center; padding: 12px 12px 40px; }
-  .device { width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 14px;
+  body { min-height: 100vh; display: flex; justify-content: center; padding: 8px 8px 16px; }
+  .device { width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 10px 12px 12px;
     box-shadow: inset 0 -4px 0 var(--body-dark), 0 10px 40px #000a; }
   .brand { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: .12em;
-    text-transform: uppercase; margin: 0 2px 8px; }
+    text-transform: uppercase; margin: 0 2px 6px; white-space: nowrap; gap: 8px; }
+  .brand span { opacity: .6; font-size: 9px; }
   .brand b { font-size: 13px; letter-spacing: .2em; }
   .brand a { color: var(--ink); }
 
@@ -28,12 +29,12 @@
   .lcdtop, .lcdbot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .lcdtop span:first-child { overflow: hidden; text-overflow: ellipsis; }
   .lcdbot { font-weight: 400; font-size: 11px; opacity: .85; }
-  canvas#wave { width: 100%; height: 92px; display: block; margin: 4px 0; }
+  canvas#wave { width: 100%; height: 64px; display: block; margin: 3px 0; }
 
   /* function buttons */
-  .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 12px 0 10px; }
+  .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 9px 0 9px; }
   .fn button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    border: 0; border-radius: 7px; padding: 10px 2px; background: var(--ink); color: var(--body);
+    border: 0; border-radius: 7px; padding: 9px 2px; background: var(--ink); color: var(--body);
     box-shadow: 0 3px 0 #000; touch-action: manipulation; }
   .fn button.on { background: var(--accent); color: #fff; }
   .fn button.on.replace { background: #c21b1b; }
@@ -51,8 +52,8 @@
   #rec.held { background: #c21b1b; color: #fff; }
 
   /* keys */
-  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; touch-action: none; user-select: none; -webkit-user-select: none; }
-  .key { position: relative; aspect-ratio: 1; border-radius: 10px; background: var(--key); border: 0; padding: 6px;
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .key { position: relative; aspect-ratio: 1.12; border-radius: 10px; background: var(--key); border: 0; padding: 6px;
     box-shadow: 0 4px 0 var(--body-dark), 0 5px 4px #0003; text-align: left; display: flex; flex-direction: column;
     justify-content: space-between; font: inherit; color: var(--ink); overflow: hidden; }
   .key b { font-size: 15px; }
@@ -92,12 +93,35 @@
   .help p { margin: 6px 0; font-size: 12.5px; }
   .help b { color: var(--accent); }
   .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
-  #status { min-height: 1.3em; }
+  #status { min-height: 1.3em; margin: 8px 2px 0; }
+  .fn button.menu { background: var(--accent); color: #fff; }
+
+  /* the Menu: everything to set up before playing, over the keys */
+  #menu { position: fixed; inset: 0; z-index: 9; background: #000b; display: flex; justify-content: center; padding: 8px; }
+  #menu[hidden] { display: none; }
+  #menu .sheet { max-width: 440px; display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; height: 100%; }
+  .menubar { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; }
+  .menubar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 8px 12px; background: var(--ink); color: var(--body); }
+  #menu .tabs { flex-wrap: wrap; margin: 0; padding: 0 10px; gap: 4px; }
+  #menu .tabs button { flex: 1 0 22%; border-radius: 7px; padding: 8px 0; }
+  .menubody { overflow: auto; flex: 1; padding: 8px 10px 16px; -webkit-overflow-scrolling: touch; }
+  .menubody .panel { border-radius: 10px; }
+
+  /* sound browser */
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; margin-bottom: 8px; }
+  .crumbs button { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); padding: 4px 2px; font-weight: 700; }
+  .blist { display: grid; gap: 6px; }
+  .blist button { font: inherit; font-size: 13px; text-align: left; border: 1px solid #c9c3b3; border-radius: 8px; background: #fff;
+    padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; color: var(--ink); }
+  .blist button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .blist small { color: #777; font-size: 11px; white-space: nowrap; }
+  .bfoot { position: sticky; bottom: -16px; background: #ece8dc; padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  .bfoot button { flex: 1; }
 </style>
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261021c</span><a href="../">◂ Monastic Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022a</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -115,23 +139,45 @@
     <button id="trigBtn" title="How a key plays: One shot, Gate or Loop">1 Shot</button>
     <div class="pair"><button id="copy" title="Copy this pattern">Copy</button><button id="paste" title="Paste into this pattern" disabled>Paste</button></div>
     <div class="pair"><button id="undo" disabled title="Undo">↶ Undo</button><button id="redo" disabled title="Redo">↷ Redo</button></div>
-    <button id="exportBtn" title="Save the loop as a WAV">⬆ Export</button>
-    <div class="pair"><button id="beatsBtn">Beats</button><button id="muteBeat" title="Silence the drums in the beat and the export">Mute</button></div>
-    <div class="pair"><button id="dice" title="A new random sound on the last key played">🎲 Roll</button><button id="beatBtn" title="A new drum beat in the chosen style">🎲 Beat</button></div>
+    <button id="menuBtn" class="menu">☰ Menu</button>
+    <div class="pair"><button class="custom" data-slot="0"></button><button class="custom" data-slot="1"></button></div>
+    <div class="pair"><button class="custom" data-slot="2"></button><button class="custom" data-slot="3"></button></div>
   </div>
 
   <div class="keys" id="keys"></div>
 
+  <p class="note" id="status"></p>
+</div>
+
+<div id="menu" hidden>
+ <div class="sheet">
+  <div class="menubar"><b>Menu</b><button id="menuClose">✕ Close</button></div>
   <div class="tabs">
-    <button data-tab="tSound" class="on">Sound</button>
+    <button data-tab="tBrowse" class="on">Sounds</button>
+    <button data-tab="tSound">Settings</button>
     <button data-tab="tBeat">Beat</button>
     <button data-tab="tVoice">Voice</button>
+    <button data-tab="tButtons">Buttons</button>
     <button data-tab="tHelp">Help</button>
     <button data-tab="tLog">Log</button>
   </div>
+  <div class="menubody">
 
-  <div class="panel on" id="tSound">
-    <div class="row"><label for="library">Load sound</label><select id="library"></select><span></span></div>
+  <div class="panel on" id="tBrowse">
+    <div class="crumbs" id="crumbs"></div>
+    <div class="blist" id="blist"></div>
+    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button></div>
+  </div>
+
+  <div class="panel" id="tButtons">
+    <p class="note" style="margin-top:0">The four small buttons beside ☰ Menu are yours: choose what each one does. Effects work while you hold the button.</p>
+    <div class="row"><label for="cb0">Button 1</label><select id="cb0"></select><span></span></div>
+    <div class="row"><label for="cb1">Button 2</label><select id="cb1"></select><span></span></div>
+    <div class="row"><label for="cb2">Button 3</label><select id="cb2"></select><span></span></div>
+    <div class="row"><label for="cb3">Button 4</label><select id="cb3"></select><span></span></div>
+  </div>
+
+  <div class="panel" id="tSound">
     <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="1" step="0.01"><output id="oVol"></output></div>
     <div class="row"><label for="pPitch">Pitch</label><input type="range" id="pPitch" min="-24" max="24" step="1"><output id="oPitch"></output></div>
     <div class="row"><label for="pFilter">Filter</label><input type="range" id="pFilter" min="-1" max="1" step="0.01"><output id="oFilter"></output></div>
@@ -184,9 +230,10 @@
     <div class="row"><label for="voxPitch">Pitch</label><input type="range" id="voxPitch" min="0" max="99" step="1" value="40"><output id="oVoxPitch"></output></div>
     <div class="row"><label for="voxRange">Tone variation</label><input type="range" id="voxRange" min="0" max="99" step="1" value="0"><output id="oVoxRange"></output></div>
     <div class="row"><label for="voxSpeed">Speed</label><input type="range" id="voxSpeed" min="80" max="320" step="5" value="150"><output id="oVoxSpeed"></output></div>
+    <div class="row"><label for="voxGap">Word gap</label><input type="range" id="voxGap" min="0" max="60" step="1" value="0"><output id="oVoxGap"></output></div>
     <div class="row"><label for="voxVowel">Vowel length</label><input type="range" id="voxVowel" min="1" max="3" step="0.05" value="1.5"><output id="oVoxVowel"></output></div>
     <div class="btns"><button id="voxMake" class="go">Make voice → this sound</button><button id="voxHear">Hear it</button></div>
-    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
+    <p class="note">Tone variation at 0 is a dead flat robot monotone. Word gap puts silence between the words, so each lands on its own key when chopped. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
   </div>
 
   <div class="panel" id="tLog">
@@ -197,10 +244,12 @@
   </div>
 
   <div class="panel help" id="tHelp">
+    <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
+    <p><b>The four small buttons</b> beside Menu are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, or any FX, held while you hold the button.</p>
+    <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
-    <p><b>Copy / Paste</b> copy the pattern you're on and paste it over another: Pattern + 1, Copy, Pattern + 2, Paste.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
     <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
@@ -213,9 +262,10 @@
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
     <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code.</p>
   </div>
-  <p class="note" id="status"></p>
+  </div>
+ </div>
 </div>
- <div id="exportBox" class="overlay" hidden>
+<div id="exportBox" class="overlay" hidden>
   <div class="sheet">
     <b>Export loop</b>
     <input type="text" id="expName" aria-label="File name" autocomplete="off">
@@ -224,6 +274,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261021c"></script>
+<script type="module" src="app.js?v=20261022a"></script>
 </body>
 </html>

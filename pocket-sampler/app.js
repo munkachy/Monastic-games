@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261021c';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022a';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -77,7 +77,7 @@ function onAudioState() {
   log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
-window.pocketDebug = { rebuildAudio };   // for testing the restart from the browser console
+window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY) };   // for testing the restart from the browser console
 addEventListener('pointerdown', () => wake('tap'), true);
 addEventListener('keydown', () => wake('key'), true);
 document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
@@ -181,11 +181,12 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
+const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat'];    // the four small buttons, at first
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -599,7 +600,6 @@ $('file').addEventListener('change', async () => {
 });
 
 // 🎲 Roll: a new random sound on the last key played (chops) or the whole sound (melodic).
-$('dice').addEventListener('click', () => { ctx.resume(); roll(false); });
 $('rollAll').addEventListener('click', () => { ctx.resume(); roll(true); });
 function roll(all) {
   checkpoint();
@@ -688,29 +688,119 @@ function syncPanel() {
     : 'Key 8 plays it at its own pitch; the others go up and down the scale.');
 }
 for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slice(1), f));
-const GROUPS = [
-  ['Bass', ['bass808', 'subsine', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass']],
-  ['Keys', ['piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'vibes', 'marimba', 'kalimba', 'harp', 'bells', 'glock']],
-  ['Synth', ['supersaw', 'strings', 'pad', 'brass', 'choir', 'fmbell', 'glass', 'chip', 'pluck']],
-  ['Drum kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal', 'percussion']],
-  ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']]];
-$('library').add(new Option('Choose…', ''));
-for (const [g, ids] of GROUPS) {
-  const og = document.createElement('optgroup'); og.label = g;
-  for (const id of ids) og.appendChild(new Option(LIBRARY[id].name, id));
-  $('library').appendChild(og);
+// ---------------------------------------------------------------------------
+// The sound browser (Menu › Sounds). Hits are instruments (one sound played
+// up and down the keys) and single sounds; Packs put a different sound on
+// each key (drum kits, sound-effect banks). Tap a sound to hear it, then Load
+// puts it on the current key.
+// ---------------------------------------------------------------------------
+const TREE = ['Sounds', [
+  ['Hits', [
+    ['Bass', ['bass808', 'subsine', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass']],
+    ['Keys', ['piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ']],
+    ['Bells and mallets', ['bells', 'vibes', 'marimba', 'glock', 'kalimba']],
+    ['Strings', ['harp']],
+    ['Synth', ['supersaw', 'strings', 'pad', 'brass', 'choir', 'fmbell', 'glass', 'chip', 'pluck']],
+  ]],
+  ['Loops', []],
+  ['Packs', [
+    ['Drum kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
+    ['Drum machines', ['kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']],
+    ['Percussion', ['percussion']],
+    ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']],
+  ]],
+  ['My Sounds', []],
+]];
+const EMPTY = { Loops: 'Loops come in a later build: drum loops and more, stretched to your tempo and key.',
+  'My Sounds': 'Your own sounds (saved recordings, voices, imports, packs you make) come in the next build.' };
+const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
+let bPath = [TREE], bSel = null;
+const previews = new Map();
+function drawBrowser() {
+  const crumbs = $('crumbs'); crumbs.textContent = '';
+  bPath.forEach((node, i) => {
+    if (i) crumbs.append(' › ');
+    const b = document.createElement('button'); b.textContent = node[0];
+    b.addEventListener('click', () => { bPath = bPath.slice(0, i + 1); bSel = null; drawBrowser(); });
+    crumbs.appendChild(b);
+  });
+  const [name, items] = bPath[bPath.length - 1], list = $('blist'); list.textContent = '';
+  if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = EMPTY[name] || 'Nothing here yet.'; list.appendChild(p); }
+  for (const it of items) {
+    const b = document.createElement('button'), small = document.createElement('small');
+    if (Array.isArray(it)) {
+      const n = count(it); b.textContent = '▸ ' + it[0]; small.textContent = n ? `${n}` : '';
+      b.addEventListener('click', () => { bPath.push(it); bSel = null; drawBrowser(); });
+    } else {
+      b.textContent = LIBRARY[it].name; small.textContent = isPack(it) ? 'pack · 16 sounds' : 'instrument';
+      b.classList.toggle('sel', bSel === it);
+      b.addEventListener('click', () => { bSel = it; drawBrowser(); preview(it); });
+    }
+    b.appendChild(small); list.appendChild(b);
+  }
+  $('bLoad').disabled = !bSel;
+  $('bLoad').textContent = bSel ? `Load ${LIBRARY[bSel].name} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
 }
-$('library').addEventListener('change', async () => {
-  const id = $('library').value; $('library').value = ''; if (!id) return;
+const count = node => node[1].reduce((n, it) => n + (Array.isArray(it) ? count(it) : 1), 0);
+async function preview(id) {
+  if (!previews.has(id)) previews.set(id, factorySlot(id));
+  const slot = await previews.get(id);
+  if (bSel === id) playNote(eng, slot, -1, isPack(id) ? 0 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+}
+async function loadLibrary(id) {
   checkpoint();
   S.slots[S.cur] = await factorySlot(id); S.lastKey[S.cur] = 0;
-  syncPanel(); dirty(); draw(); noteOn(eng, S.cur, 0, ctx.currentTime + 0.01);
+  syncPanel(); dirty(); draw();
   status(`${LIBRARY[id].name} → sound ${S.cur + 1}.`);
+}
+$('bLoad').addEventListener('click', async () => { if (!bSel) return; await loadLibrary(bSel); closeMenu(); noteOn(eng, S.cur, 0, ctx.currentTime + 0.01); });
+
+// The Menu: over the keys, so nothing on the playing screen has to scroll.
+function openMenu(tab) {
+  $('menu').hidden = false;
+  if (tab) document.querySelector(`[data-tab="${tab}"]`).click();
+  drawBrowser();
+}
+function closeMenu() { $('menu').hidden = true; draw(); }
+$('menuBtn').addEventListener('click', () => openMenu());
+$('menuClose').addEventListener('click', closeMenu);
+
+// ---------------------------------------------------------------------------
+// Custom buttons: four small buttons whose job you choose (Menu › Buttons).
+// An effect works while the button is held, like an FX key.
+// ---------------------------------------------------------------------------
+const ACTIONS = {
+  mute: { name: 'Mute drums', label: () => 'Mute', on: () => !!S.muteBeat, tap: () => toggleMute() },
+  export: { name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
+  roll: { name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
+  beat: { name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
+  beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
+  clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
+  ...Object.fromEntries(FX.map(([n], i) => [`fx${i}`, { name: `FX: ${n}`, label: () => n, fx: i, on: () => activeFx.has(i) }])),
+};
+const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
+const customs = [...document.querySelectorAll('button.custom')];
+customs.forEach((b, i) => {
+  const act = () => ACTIONS[S.custom[i]] || ACTIONS[DEFAULT_CUSTOM[i]];
+  b.addEventListener('pointerdown', ev => {
+    const a = act(); if (a.fx == null) return;
+    ev.preventDefault(); capture(b, ev); ctx.resume(); engageFx(a.fx); b.classList.add('held'); draw();
+  });
+  const up = () => { const a = act(); if (a.fx != null && activeFx.has(a.fx)) { releaseFx(a.fx); b.classList.remove('held'); draw(); } };
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('click', () => { const a = act(); if (a.fx == null) { ctx.resume(); a.tap(); draw(); } });
 });
-$('beatsBtn').addEventListener('click', () => {
-  document.querySelector('[data-tab="tBeat"]').click();
-  $('tBeat').scrollIntoView({ behavior: 'smooth', block: 'center' });
-});
+for (let i = 0; i < 4; i++) {
+  const sel = $('cb' + i);
+  for (const [id, a] of Object.entries(ACTIONS)) sel.add(new Option(a.name, id));
+  sel.addEventListener('change', () => { S.custom[i] = sel.value; persist(); draw(); });
+}
+function drawCustom() {
+  customs.forEach((b, i) => {
+    const id = ACTIONS[S.custom[i]] ? S.custom[i] : DEFAULT_CUSTOM[i], a = ACTIONS[id];
+    b.textContent = a.label(); b.classList.toggle('on', !!a.on?.()); $('cb' + i).value = id;
+  });
+}
 $('copySound').addEventListener('click', () => {
   copying = 'sound'; S.mode = 'sound'; draw(); status(`Tap the sound to copy sound ${S.cur + 1} onto.`);
 });
@@ -747,12 +837,22 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
 }));
 // Copy and Paste: the pattern you're on, steps and saved effects.
 let clipboard = null;
+let soundClip = null;
 $('copy').addEventListener('click', () => {
+  if (S.mode === 'sound') {
+    soundClip = S.cur; draw();
+    status(`Sound ${S.cur + 1} (${S.slots[S.cur].name}) copied. Choose another sound and press Paste.`); return;
+  }
   clipboard = { from: S.pat, steps: S.patterns[S.pat].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } }))), fx: [...S.fx[S.pat]] };
   $('paste').disabled = false;
   status(`Pattern ${S.pat + 1} copied. Choose another pattern and press Paste.`);
 });
 $('paste').addEventListener('click', () => {
+  if (S.mode === 'sound') {
+    if (soundClip == null) { status('Copy a sound first.'); return; }
+    if (soundClip === S.cur) { status('Choose a different sound to paste onto.'); return; }
+    copySound(soundClip, S.cur); draw(); return;
+  }
   if (!clipboard) { status('Copy a pattern first.'); return; }
   checkpoint();
   S.patterns[S.pat] = clipboard.steps.map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })));
@@ -770,7 +870,7 @@ const VARIANTS = [['', 'Default'], ['m3', 'Male 3'], ['m7', 'Male 7'], ['f2', 'F
   ['croak', 'Croak'], ['Demonic', 'Demonic'], ['Storm', 'Storm'], ['Tweaky', 'Tweaky'], ['grandpa', 'Grandpa'], ['announcer', 'Announcer']];
 for (const [v, l] of VARIANTS) $('voxVariant').add(new Option(l, v));
 $('voxVariant').value = 'robosoft';
-const voxOut = [['voxPitch', v => v], ['voxRange', v => v == 0 ? 'flat' : v], ['voxSpeed', v => v], ['voxVowel', v => Math.round(v * 100) + '%']];
+const voxOut = [['voxPitch', v => v], ['voxRange', v => v == 0 ? 'flat' : v], ['voxSpeed', v => v], ['voxVowel', v => Math.round(v * 100) + '%'], ['voxGap', v => v * 10 + ' ms']];
 for (const [id, fmt] of voxOut) {
   const show = () => $('o' + id[0].toUpperCase() + id.slice(1)).textContent = fmt(+$(id).value);
   $(id).addEventListener('input', show); show();
@@ -781,7 +881,7 @@ async function makeVoice() {
   if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
-    pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: 0 });
+    pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: +$('voxGap').value });
   v = vox.stretchVowels(v, +$('voxVowel').value);
   const b = ctx.createBuffer(1, v.samples.length, v.rate); b.copyToChannel(Float32Array.from(v.samples), 0);
   return prepare(ctx, b);
@@ -837,7 +937,6 @@ function openExport() {
   }, err => { $('expInfo').textContent = 'Could not make the loop: ' + err.message; log('error', 'export: ' + err.message); });
 }
 const exportFile = () => new File([exported.data], safeName($('expName').value) + '.wav', { type: 'audio/wav' });
-$('exportBtn').addEventListener('click', openExport);
 $('export').addEventListener('click', openExport);
 $('expCancel').addEventListener('click', () => { $('exportBox').hidden = true; });
 $('expShare').addEventListener('click', () => {
@@ -851,10 +950,10 @@ $('expDownload').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   $('exportBox').hidden = true; status(`Saved ${f.name}.`);
 });
-$('muteBeat').addEventListener('click', () => {
+function toggleMute() {
   S.muteBeat = !S.muteBeat; persist(); draw();
   status(S.muteBeat ? 'Drums muted: the beat and the export leave them out.' : 'Drums back on.');
-});
+}
 function wav(x, rate) {
   const v = new DataView(new ArrayBuffer(44 + x.length * 2));
   const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
@@ -893,7 +992,8 @@ function keyLabel(k) {
 function draw() {
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
   $('write').classList.toggle('on', S.write);
-  $('muteBeat').classList.toggle('on', !!S.muteBeat);
+  drawCustom();
+  $('paste').disabled = !(S.mode === 'sound' ? soundClip : clipboard);
   $('write').classList.toggle('replace', S.replace);
   $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
@@ -1205,7 +1305,6 @@ const genBeat = () => {
   if (putBeat(st, drumSlot(), true, makeBeat(st))) status(`A new ${st.name.toLowerCase()} beat in pattern ${S.pat + 1}. Again for another; ↶ Undo for the last one.`);
 };
 $('genBeat').addEventListener('click', genBeat);
-$('beatBtn').addEventListener('click', genBeat);
 
 // ---------------------------------------------------------------------------
 // Saving: IndexedDB. Factory sounds are saved by number; recorded and rolled
@@ -1277,7 +1376,7 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'muteBeat', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
   else demo();
   setVolume(); syncPanel(); draw();
   committed = snapshot();
