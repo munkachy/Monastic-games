@@ -3,9 +3,10 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022d';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022e';
 
 const $ = id => document.getElementById(id);
+const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
 // The audio engine. It can be thrown away and built again (rebuildAudio) if
 // the phone leaves it stuck; recorded sound lives in AudioBuffers, which don't
@@ -77,7 +78,8 @@ function onAudioState() {
   log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
-window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration) };   // for testing the restart from the browser console
+window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
+  key: () => ({ root: S.root, scale: S.scale, next: keyNext && { ...keyNext }, patKeys: [...S.patKeys], playing, time: ctx.currentTime, bar: 16 * stepDur() }) };   // for testing the restart from the browser console
 addEventListener('pointerdown', () => wake('tap'), true);
 addEventListener('keydown', () => wake('key'), true);
 document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
@@ -189,6 +191,7 @@ const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
+  patKeys: new Array(16).fill(null),   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
   custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
@@ -197,7 +200,9 @@ const stepDur = () => 60 / S.bpm / 4;
 // Sequencer: a look-ahead scheduler (setTimeout wakes it often; it books
 // every step that falls in the next 120 ms on the audio clock).
 // ---------------------------------------------------------------------------
-let playing = false, tick = 0, nextT = 0, timer = 0, pendingChain = null;
+let playing = false, tick = 0, nextT = 0, timer = 0, pendingChain = null, barPat = -1;
+let keyNext = null;       // a key change waiting for the next bar: { root, scale, save, at (once booked), pat, auto }
+let renderKeys = null;    // while exporting, the key of each bar of the chain
 const uiQueue = [];           // [{ t, tick, step, pat }] for the lights
 const liveSkip = new Set();   // notes recorded live just before their step comes round
 let headTick = -1, headStep = -1, headPat = -1;
@@ -207,11 +212,12 @@ function patAt(t) { return S.chain[Math.floor(t / 16) % S.chain.length]; }
 function start() {
   if (playing) return;
   ctx.resume();
-  playing = true; tick = 0; nextT = ctx.currentTime + 0.06;
+  playing = true; tick = 0; barPat = -1; nextT = ctx.currentTime + 0.06;
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
 }
 function stop() {
   playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1; take = null;
+  if (keyNext) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }   // a key change still waiting lands now
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
   for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
@@ -225,6 +231,12 @@ function schedule() {
   while (nextT < ctx.currentTime + 0.12) {
     if (tick % 16 === 0 && pendingChain) {      // a new pattern starts at the top of the bar
       S.chain = pendingChain; pendingChain = null; tick = 0;
+    }
+    if (tick % 16 === 0) {      // the top of a bar: a key change waiting for it, or the key saved in the pattern starting
+      const p = patAt(tick);
+      if (keyNext && keyNext.at == null) Object.assign(keyNext, { at: nextT, pat: p });
+      else if (!keyNext && p !== barPat && S.patKeys[p] && !sameKey(S.patKeys[p], S)) keyNext = { ...S.patKeys[p], at: nextT, pat: p, auto: true };
+      barPat = p;
     }
     const sw = tick % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0;
     try { playTick(eng, tick, nextT + sw, true); } catch (e) { soundError(e); }   // one bad note never stops the beat
@@ -305,7 +317,7 @@ function playTick(e, t, when, live) {
       // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
       const hold = isHeld(n.s, n.lock), len = (n.d || 1) * stepDur() / rr, m = modsFor(n.s, list);
       for (let i = 0; i < rr; i++) {
-        const v = noteOn(e, n.s, n.k, at + i * stepDur() / rr, m, n.lock, hold);
+        const v = noteOn(e, n.s, n.k, at + i * stepDur() / rr, m, n.lock, hold, live ? null : renderKeys?.[Math.floor(from / 16) % renderKeys.length]);
         if (hold) v?.stop(at + i * stepDur() / rr + len);
       }
     }
@@ -318,8 +330,9 @@ function isDrum(si) {
   if (!drumMemo.has(sl)) drumMemo.set(sl, ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)));
   return drumMemo.get(sl);
 }
-function noteOn(e, si, k, when, m = null, lock = null, hold = false) {
+function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null) {
   const slot = S.slots[si]; if (!slot) return null;
+  key ??= keyAt(when);
   m ??= modsFor(si, [...activeFx].map(k => [k, fxAim.get(k) || 'all']));
   if (e === eng) {
     lastNoteAt = Math.max(lastNoteAt, when);
@@ -327,10 +340,122 @@ function noteOn(e, si, k, when, m = null, lock = null, hold = false) {
   }
   try {
     return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, fx: !m.dry, lock,
-      scale: S.scale, bpm: S.bpm, root: S.root, hold });
+      scale: key.scale, bpm: S.bpm, root: key.root, hold });
   } catch (err) { soundError(err); return null; }
 }
 const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot') !== 'oneshot';
+
+// ---------------------------------------------------------------------------
+// The key. The wheel (tap the key on the screen) sets it; while the beat
+// plays, a change waits for the top of the next bar. With Write on, the new
+// key is saved in the pattern, which then always plays in it; with Write
+// off, the key changes for now and the patterns keep the keys saved in them.
+// A pattern with no key of its own plays in whatever key is set.
+// ---------------------------------------------------------------------------
+const MINORISH = new Set(['minor', 'dorian', 'phrygian', 'pentatonic', 'blues']);
+const isMinor = sc => MINORISH.has(sc);
+const sameKey = (a, b) => a.root === b.root && a.scale === b.scale;
+const FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];      // around the wheel, as the circle of fifths goes
+const MAJ_NAME = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+const MIN_NAME = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'B♭', 'B'];
+const SCALE_SHORT = { minor: 'MIN', major: 'MAJ', dorian: 'DOR', phrygian: 'PHR', pentatonic: 'PENT', blues: 'BLUES', chromatic: 'CHROM' };
+const keyName = k => (isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root] + (isMinor(k.scale) ? 'm' : '');
+const keyWords = k => `${(isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root]} ${k.scale}`;
+// Where a key sits on the wheel: the ring (minor inside) and the spoke.
+const spokeOf = k => FIFTHS.indexOf(isMinor(k.scale) ? (k.root + 3) % 12 : k.root);
+const atSpoke = (i, minor, like) => {
+  const r = FIFTHS[((i % 12) + 12) % 12];
+  // keep the scale's flavour (dorian stays dorian) when the ring stays the same
+  const scale = minor ? (isMinor(like.scale) ? like.scale : 'minor') : (isMinor(like.scale) ? 'major' : like.scale);
+  return { root: minor ? (r + 9) % 12 : r, scale };
+};
+// The keys that sit well with k: a step either way round the circle, and
+// its relative major or minor (the same notes).
+function friends(k) {
+  const i = spokeOf(k), m = isMinor(k.scale);
+  return [atSpoke(i + 1, m, k), atSpoke(i - 1, m, k), atSpoke(i, !m, k)];
+}
+const keyAt = when => (keyNext?.at != null && when >= keyNext.at ? keyNext : S);
+const keyAhead = () => keyNext || S;          // the key that will be playing once any change waiting has landed
+function applyKey(k) {        // a change you made
+  checkpoint();
+  S.root = k.root; S.scale = k.scale;
+  if (k.save) S.patKeys[k.pat ?? S.pat] = { root: k.root, scale: k.scale };
+  dirty(); draw(); drawWheel();
+}
+function quietKey(k) {        // a pattern starting in its own key: not a change to undo
+  S.root = k.root; S.scale = k.scale;
+  if (committed) Object.assign(committed, { root: k.root, scale: k.scale });
+  persist(); draw(); drawWheel();
+}
+function setKey(k) {
+  k = { root: k.root, scale: k.scale, save: S.write };
+  if (!playing) { applyKey(k); status(`Key: ${keyWords(k)}.${k.save ? ` Saved in pattern ${S.pat + 1}.` : ''}`); return; }
+  if (keyNext?.at != null) { const was = keyNext; keyNext = null; was.auto ? quietKey(was) : applyKey(was); }   // already booked: let it land
+  keyNext = sameKey(k, S) && !k.save ? null : k;
+  status(keyNext ? `${keyWords(k)} from the next bar${k.save ? `, saved in the pattern playing then` : ''}.` : `Staying in ${keyWords(S)}.`);
+  draw(); drawWheel();
+}
+let nextTurn = 0;         // the centre button: up a fifth, then across to the relative key, and so on
+function nextKey() {
+  const k = keyAhead(), i = spokeOf(k), m = isMinor(k.scale);
+  setKey(nextTurn++ % 2 ? atSpoke(i, !m, k) : atSpoke(i + 1, m, k));
+}
+function randomKey() { const f = friends(keyAhead()); setKey(f[(Math.random() * f.length) | 0]); }
+
+// The wheel, over the keys, so Play and Write stay in reach.
+const SVGNS = 'http://www.w3.org/2000/svg';
+function arc(r0, r1, a0, a1) {
+  const p = (r, a) => `${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`;
+  return `M${p(r1, a0)} A${r1} ${r1} 0 0 1 ${p(r1, a1)} L${p(r0, a1)} A${r0} ${r0} 0 0 0 ${p(r0, a0)} Z`;
+}
+function buildWheel() {
+  const svg = $('wheelSvg');
+  for (const minor of [false, true]) for (let i = 0; i < 12; i++) {
+    const a0 = (i * 30 - 105) * Math.PI / 180, a1 = a0 + Math.PI / 6, [r0, r1] = minor ? [62, 104] : [104, 148];
+    const g = document.createElementNS(SVGNS, 'g'); g.classList.add('seg'); g.dataset.spoke = i; g.dataset.minor = minor ? 1 : 0;
+    const path = document.createElementNS(SVGNS, 'path'); path.setAttribute('d', arc(r0, r1, a0, a1));
+    const tx = document.createElementNS(SVGNS, 'text'), am = (a0 + a1) / 2, rm = (r0 + r1) / 2;
+    tx.setAttribute('x', (rm * Math.cos(am)).toFixed(1)); tx.setAttribute('y', (rm * Math.sin(am) + 5).toFixed(1));
+    g.append(path, tx); svg.append(g);
+    g.addEventListener('click', () => { ctx.resume(); setKey(atSpoke(i, minor, keyAhead())); });
+  }
+}
+function drawWheel() {
+  if ($('wheel').hidden) return;
+  const now = S, next = keyAhead(), fr = friends(next);
+  for (const g of document.querySelectorAll('#wheelSvg .seg')) {
+    const k = atSpoke(+g.dataset.spoke, g.dataset.minor === '1', next);
+    g.querySelector('text').textContent = keyName(k);
+    g.classList.toggle('now', sameKey(k, now) || (k.root === now.root && isMinor(k.scale) === isMinor(now.scale)));
+    g.classList.toggle('next', !!keyNext && k.root === next.root && isMinor(k.scale) === isMinor(next.scale));
+    g.classList.toggle('friend', fr.some(f => sameKey(f, k)));
+  }
+  const n = keyAhead(), i = spokeOf(n), m = isMinor(n.scale);
+  $('wheelNextTo').textContent = keyName(nextTurn % 2 ? atSpoke(i, !m, n) : atSpoke(i + 1, m, n));
+  const pk = S.patKeys[S.pat];
+  $('wheelNote').textContent = (S.write
+    ? `Write is on: the key you choose is saved in the pattern${playing ? ' that plays from the next bar' : ` (pattern ${S.pat + 1})`}.`
+    : 'Write is off: the key changes for now; patterns keep any key saved in them.')
+    + (pk ? ` Pattern ${S.pat + 1} is saved in ${keyWords(pk)}.` : ` Pattern ${S.pat + 1} has no key of its own.`)
+    + (keyNext ? ` ${keyWords(keyNext)} comes in at the next bar.` : '');
+  $('wheelForget').hidden = !pk;
+}
+function openWheel() {
+  const w = $('wheel'), keys = $('keys'), dev = keys.parentElement;
+  w.hidden = false;
+  w.style.top = keys.offsetTop + 'px';
+  w.style.minHeight = (dev.clientHeight - keys.offsetTop - 8) + 'px';
+  drawWheel();
+}
+buildWheel();
+$('keyBtn').addEventListener('click', () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)));
+$('wheelClose').addEventListener('click', () => { $('wheel').hidden = true; });
+$('wheelNext').addEventListener('click', () => { ctx.resume(); nextKey(); });
+$('wheelRand').addEventListener('click', () => { ctx.resume(); randomKey(); });
+$('wheelForget').addEventListener('click', () => {
+  checkpoint(); S.patKeys[S.pat] = null; dirty(); drawWheel(); status(`Pattern ${S.pat + 1} now plays in whatever key is set.`);
+});
 
 // ---------------------------------------------------------------------------
 // Effects: hold a key in FX mode. With Write on while playing, the effect is
@@ -420,7 +545,7 @@ function press(k) {
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
-      else { S.pat = k; if (playing) pendingChain = [k]; else S.chain = [k]; persist(); break; }
+      else { S.pat = k; if (playing) pendingChain = [k]; else { S.chain = [k]; if (S.patKeys[k]) quietKey(S.patKeys[k]); } persist(); break; }
       dirty(); break;
     case 'fx': {
       const id = S.fxSlots[k];
@@ -553,7 +678,7 @@ function copySound(from, to) {
 function copyPattern(from, to) {
   checkpoint();
   S.patterns[to] = S.patterns[from].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })));
-  S.fx[to] = [...S.fx[from]];
+  S.fx[to] = [...S.fx[from]]; S.patKeys[to] = S.patKeys[from];
   copying = null; S.pat = to; if (!playing) S.chain = [to];
   status(`Pattern ${from + 1} copied to ${to + 1}.`); dirty();
 }
@@ -710,6 +835,23 @@ $('trigBtn').addEventListener('click', () => {
   $('pTrig').value = t; $('pTrig').dispatchEvent(new Event('change'));
   status(`Sound ${S.cur + 1} plays as ${{ oneshot: 'One shot: the whole sound', gate: 'Gate: only while held', loop: 'Loop: tap on, tap again off' }[t]}.`);
 });
+for (let r = 0; r < 12; r++) $('pKeyOf').add(new Option(`${NOTE[r]}: follows the song's key`, r));
+$('pKeyOf').addEventListener('change', () => {
+  const v = $('pKeyOf').value, sl = S.slots[S.cur]; checkpoint();
+  sl.params.keyOf = v === '' ? null : +v; dirty(); draw();
+  if (v !== '') status(`Sound ${S.cur + 1} is in ${NOTE[+v]}: in ${NOTE[S.root]} it moves ${shiftWords(toKey(S.root, +v))}.`);
+});
+const shiftWords = d => (d === 0 ? 'not at all' : `${Math.abs(d)} semitone${Math.abs(d) > 1 ? 's' : ''} ${d > 0 ? 'up' : 'down'}`);
+$('findKey').addEventListener('click', () => {
+  const sl = S.slots[S.cur]; if (!sl) return;
+  const sh = sl.kind === 'chop' && sl.slices[S.lastKey[S.cur]]?.buf ? sl.slices[S.lastKey[S.cur]] : null;
+  const buf = sh ? sh.buf : sl.buf; if (!buf) return;
+  const k = findKey(buf, sh ? sh.s : 0, sh ? sh.e : buf.duration);
+  checkpoint(); sl.params.keyOf = k.root; dirty(); syncPanel(); draw();
+  const sure = k.sure > 0.6 ? 'clearly' : k.sure > 0.3 ? 'probably' : 'maybe (hard to tell: check by ear)';
+  status(`Sound ${S.cur + 1} sounds ${sure} in ${keyWords({ root: k.root, scale: k.minor ? 'minor' : 'major' })}. It now follows the song's key: in ${NOTE[S.root]} it moves ${shiftWords(toKey(S.root, k.root))}.`);
+  log('key', `sound ${S.cur + 1}: ${NOTE[k.root]}${k.minor ? 'm' : ''}, sure ${k.sure.toFixed(2)}`);
+});
 $('pTrig').addEventListener('change', () => {
   checkpoint(); S.slots[S.cur].params.trig = $('pTrig').value; syncPanel();
   for (const [id, h] of looping) if (id.startsWith(S.cur + ':')) { h.voice.stop(ctx.currentTime); looping.delete(id); }
@@ -729,6 +871,9 @@ function syncPanel() {
   $('pChoke').checked = !!sl.params.choke; $('pTrig').value = sl.params.trig || 'oneshot';
   $('trigBtn').textContent = TRIG_LABEL[$('pTrig').value]; $('trigBtn').classList.toggle('on', $('pTrig').value !== 'oneshot');
   $('startRow').style.display = sl.kind === 'synth' ? 'none' : '';
+  // Instruments and synths know their notes; a recording follows the key only if you say what key it is in.
+  $('keyOfRow').style.display = sl.kind === 'sample' || sl.kind === 'chop' ? '' : 'none';
+  $('pKeyOf').value = sl.params.keyOf ?? '';
   const wob = sl.synth?.type === 'wobble';
   $('wobRow').style.display = wob ? '' : 'none';
   if (wob) { $('pWob').value = sl.synth.rate; $('oWob').textContent = WOBBLE_RATES[sl.synth.rate][1]; }
@@ -1123,6 +1268,8 @@ const ACTIONS = {
   beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
   clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
   edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
+  key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
+  nextkey: { name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
@@ -1228,11 +1375,11 @@ function drawFxPanel() {
 $('swing').addEventListener('input', () => { S.swing = +$('swing').value; dirty(); draw(); });
 $('vol').addEventListener('input', () => { S.vol = +$('vol').value; setVolume(); dirty(); draw(); });
 function setVolume() { eng.vol = S.vol; eng.master.gain.setTargetAtTime(S.vol, ctx.currentTime, 0.02); }
-$('scale').addEventListener('change', () => { S.scale = $('scale').value; dirty(); draw(); });
-$('root').addEventListener('change', () => { S.root = +$('root').value; dirty(); draw(); });
+$('scale').addEventListener('change', () => setKey({ root: keyAhead().root, scale: $('scale').value }));
+$('root').addEventListener('change', () => setKey({ root: +$('root').value, scale: keyAhead().scale }));
 $('clearPat').addEventListener('click', () => {
   checkpoint();
-  S.patterns[S.pat] = Array.from({ length: 16 }, () => []); S.fx[S.pat] = new Array(16).fill(null);
+  S.patterns[S.pat] = Array.from({ length: 16 }, () => []); S.fx[S.pat] = new Array(16).fill(null); S.patKeys[S.pat] = null;
   dirty(); draw(); status(`Pattern ${S.pat + 1} cleared.`);
 });
 $('clearFx').addEventListener('click', () => { checkpoint(); S.fx[S.pat] = new Array(16).fill(null); dirty(); draw(); status(`Effects taken out of pattern ${S.pat + 1}.`); });
@@ -1259,7 +1406,7 @@ $('copy').addEventListener('click', () => {
     soundClip = S.cur; draw();
     status(`Sound ${S.cur + 1} (${S.slots[S.cur].name}) copied. Choose another sound and press Paste.`); return;
   }
-  clipboard = { from: S.pat, steps: S.patterns[S.pat].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } }))), fx: [...S.fx[S.pat]] };
+  clipboard = { from: S.pat, steps: S.patterns[S.pat].map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } }))), fx: [...S.fx[S.pat]], key: S.patKeys[S.pat] };
   $('paste').disabled = false;
   status(`Pattern ${S.pat + 1} copied. Choose another pattern and press Paste.`);
 });
@@ -1272,7 +1419,7 @@ $('paste').addEventListener('click', () => {
   if (!clipboard) { status('Copy a pattern first.'); return; }
   checkpoint();
   S.patterns[S.pat] = clipboard.steps.map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })));
-  S.fx[S.pat] = [...clipboard.fx];
+  S.fx[S.pat] = [...clipboard.fx]; S.patKeys[S.pat] = clipboard.key || null;
   dirty(); draw(); status(`Pattern ${clipboard.from + 1} pasted into pattern ${S.pat + 1}. ↶ Undo takes it back.`);
 });
 // Long presses should never bring up the browser's copy menu.
@@ -1329,7 +1476,10 @@ async function renderLoop() {
   const ticks = 16 * S.chain.length, len = ticks * stepDur(), tail = 2.5;
   const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR);       // stereo, for ping-pong and chorus
   const e = new Engine(off, { live: false });
+  let k = { root: S.root, scale: S.scale };     // as on Play: a pattern with a key of its own changes it, the others carry it on
+  renderKeys = S.chain.map(p => (k = S.patKeys[p] || k));
   for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false);
+  renderKeys = null;
   const buf = await off.startRendering(), n = Math.round(len * SR);
   const chs = [0, 1].map(c => {
     const x = buf.getChannelData(c);
@@ -1389,7 +1539,6 @@ function wav(chs, rate) {
 // Screen and lights
 // ---------------------------------------------------------------------------
 const cv = $('wave'), g = cv.getContext('2d');
-const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 function keyLabel(k) {
   const sl = S.slots[S.cur]; if (!sl) return '';
   switch (S.mode) {
@@ -1403,7 +1552,8 @@ function keyLabel(k) {
   }
   if (sl.kind === 'chop') return sl.slices[k]?.name || '';
   if (sl.kind === 'sample') {            // a recording has no known pitch: show how far each key moves it
-    const d = keySemis(k, S.scale) - 12 + sl.params.pitch + S.root;
+    if (sl.params.keyOf != null) return NOTE[(((S.root + keySemis(k, S.scale) + sl.params.pitch) % 12) + 12) % 12];
+    const d = keySemis(k, S.scale) - 12 + sl.params.pitch + toKey(S.root, 0);
     return d === 0 ? 'original' : (d > 0 ? '+' : '−') + Math.abs(d);
   }
   const m = (sl.kind === 'multi' ? sl.base : sl.synth.root) + keySemis(k, S.scale) + sl.params.pitch + S.root;
@@ -1424,7 +1574,10 @@ function draw() {
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
     fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
-  $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''} ${S.scale.toUpperCase().slice(0, 5)}`;
+  $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''}`;
+  const kb = $('keyBtn'), kn = k => `${(isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root]} ${SCALE_SHORT[k.scale] || k.scale.toUpperCase()}`;
+  kb.textContent = keyNext ? `${kn(S)} → ${kn(keyNext)}` : kn(S); kb.classList.toggle('waiting', !!keyNext);
+  kb.classList.toggle('saved', !!S.patKeys[S.pat]);
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
   $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
   for (let k = 0; k < 16; k++) {
@@ -1529,8 +1682,9 @@ function frame() {
     headTick = q.tick; headStep = q.step; headPat = q.pat;
     if (S.mode !== 'pattern' && !chainEdit && q.pat !== S.pat && S.chain.length > 1) { S.pat = q.pat; changed = true; }
   }
+  if (keyNext?.at != null && now >= keyNext.at) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }
   if (flash && performance.now() > flash.until) { flash = null; changed = true; }
-  if (changed) draw();
+  if (changed) { draw(); drawWheel(); }
   // Redraw the screen only when what it shows has changed (or the scope is
   // moving), so the phone has its time free to answer the keys.
   const sl = S.slots[S.cur], seen = [sl, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
@@ -1567,7 +1721,7 @@ const undoStack = [], redoStack = [];
 const cloneSlot = sl => sl && { ...sl, params: { ...sl.params }, synth: sl.synth && { ...sl.synth }, slices: sl.slices?.map(x => ({ ...x })) };
 function snapshot(src = S) {
   return { slots: src.slots.map(cloneSlot), patterns: src.patterns.map(p => p.map(st => st.map(n => ({ ...n, lock: n.lock && { ...n.lock } })))),
-    fx: src.fx.map(f => [...f]), chain: [...src.chain], pat: src.pat, cur: src.cur, lastKey: [...src.lastKey],
+    fx: src.fx.map(f => [...f]), patKeys: [...(src.patKeys || new Array(16).fill(null))], chain: [...src.chain], pat: src.pat, cur: src.cur, lastKey: [...src.lastKey],
     bpm: src.bpm, swing: src.swing, scale: src.scale, root: src.root, vol: src.vol };
 }
 function noteChange() {
@@ -1831,7 +1985,7 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
     // Effects used to be saved by key number; now by name.
     const name = e => (typeof e === 'number' ? DEFAULT_SLOTS[e] : e && typeof e.f === 'number' ? { ...e, f: DEFAULT_SLOTS[e.f] } : e);

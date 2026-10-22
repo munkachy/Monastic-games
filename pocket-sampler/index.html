@@ -15,7 +15,7 @@
   html, body { margin: 0; background: #1b1a17; color: var(--ink);
     font: 14px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   body { min-height: 100vh; display: flex; justify-content: center; padding: 8px 8px 16px; }
-  .device { width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 10px 12px 12px;
+  .device { position: relative; width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 10px 12px 12px;
     box-shadow: inset 0 -4px 0 var(--body-dark), 0 10px 40px #000a; }
   .brand { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: .12em;
     text-transform: uppercase; margin: 0 2px 6px; white-space: nowrap; gap: 8px; }
@@ -63,6 +63,38 @@
   input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   .fn button:active, .fn button.held { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
   #rec.held { background: #c21b1b; color: #fff; }
+
+  /* the key on the screen, and the key wheel over the keys */
+  .lcdbot { align-items: center; }
+  #keyBtn { font: inherit; font-size: 11px; font-weight: 700; color: var(--lcd-ink); background: transparent; border: 1.5px solid var(--lcd-ink);
+    border-radius: 4px; padding: 0 6px; line-height: 16px; white-space: nowrap; }
+  #keyBtn.saved { background: #1f2a1726; }
+  #keyBtn.waiting { animation: blink .5s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  #wheel { position: absolute; left: 8px; right: 8px; z-index: 5; background: var(--body); border-radius: 12px; padding: 6px 4px 8px;
+    box-shadow: 0 0 0 2px var(--ink), 0 8px 24px #0006; }
+  #wheel[hidden] { display: none; }
+  .wheelbar { display: flex; gap: 6px; align-items: center; padding: 0 6px; }
+  .wheelbar b { flex: 1; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  .wheelbar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--ink); color: var(--body); }
+  .wheelbar button[hidden] { display: none; }
+  .wheelwrap { position: relative; width: min(100%, 330px); margin: 0 auto; aspect-ratio: 1; }
+  #wheelSvg { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  #wheelSvg .seg path { fill: var(--key); stroke: var(--body); stroke-width: 2.5; }
+  #wheelSvg .seg[data-minor="1"] path { fill: #d6d0c1; }
+  #wheelSvg .seg text { font: 700 14px ui-monospace, Menlo, monospace; text-anchor: middle; fill: var(--ink); pointer-events: none; }
+  #wheelSvg .seg[data-minor="1"] text { font-size: 12px; }
+  #wheelSvg .seg.friend path { fill: #f6c79f; }
+  #wheelSvg .seg.now path { fill: var(--accent); }
+  #wheelSvg .seg.now text { fill: #fff; }
+  #wheelSvg .seg.next path { stroke: var(--head); stroke-width: 5; }
+  #wheelNext { position: absolute; left: 50%; top: 50%; width: 36%; height: 36%; transform: translate(-50%, -50%); border-radius: 50%;
+    border: 0; background: var(--ink); color: var(--body); font: inherit; font-weight: 700; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 #000; }
+  #wheelNext:active { transform: translate(-50%, calc(-50% + 2px)); box-shadow: 0 1px 0 #000; }
+  #wheelNext small { font-size: 10px; letter-spacing: .12em; opacity: .7; }
+  #wheelNext span { font-size: 18px; }
+  #wheel .note { margin: 4px 8px 0; }
 
   /* keys */
   .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -134,7 +166,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022d</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022e</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -143,7 +175,7 @@
       <button id="fxAimBtn">Tracks: All ▾</button>
       <div class="fxamt"><span id="fxName">Hold a key for an effect</span><input type="range" id="fxAmt" min="0" max="1" step="0.01" aria-label="Effect amount"><output id="oFxAmt"></output></div>
     </div>
-    <div class="lcdbot"><span id="lcdMode">PLAY</span><span id="lcdInfo">120 BPM</span></div>
+    <div class="lcdbot"><span id="lcdMode">PLAY</span><button id="keyBtn" title="The key: tap for the key wheel">C MIN</button><span id="lcdInfo">120 BPM</span></div>
   </div>
 
   <div class="fn">
@@ -162,6 +194,14 @@
   </div>
 
   <div class="keys" id="keys"></div>
+  <div id="wheel" hidden>
+    <div class="wheelbar"><b>Key</b><button id="wheelRand" title="A key that sits well with this one">🎲</button><button id="wheelForget">Forget pattern key</button><button id="wheelClose">✕</button></div>
+    <div class="wheelwrap">
+      <svg id="wheelSvg" viewBox="-150 -150 300 300" aria-label="Key wheel"></svg>
+      <button id="wheelNext"><small>NEXT</small><span id="wheelNextTo"></span></button>
+    </div>
+    <p class="note" id="wheelNote"></p>
+  </div>
 
   <p class="note" id="status"></p>
 </div>
@@ -217,6 +257,8 @@
     <p class="note" style="margin:-2px 0 6px">While the beat plays, what you play lands on the next point of this grid (a tap just after one plays at once), both what you hear and what Write records. All sounds.</p>
     <div class="row"><label for="pTrig">Play as</label>
       <select id="pTrig"><option value="oneshot">One shot: the whole sound</option><option value="gate">Gate: only while held</option><option value="loop">Loop: tap on, tap again off</option></select><span></span></div>
+    <div class="row" id="keyOfRow"><label for="pKeyOf">Its key</label>
+      <select id="pKeyOf"><option value="">Plays as recorded</option></select><button id="findKey" title="Find its key by listening">🔍</button></div>
     <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
     <div class="row"><label for="recSrc">Rec from</label>
       <select id="recSrc"><option value="mic">Microphone</option><option value="beat">The beat (resample)</option></select><span></span></div>
@@ -289,6 +331,8 @@
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
     <p><b>My Sounds</b> (Menu › Sounds): your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
+    <p><b>Key</b>: tap the key on the screen (C MIN) for the key wheel, over the keys. Majors are round the outside, minors inside, in circle-of-fifths order; the shaded keys sit well with the one you're in. Tap any key, or the <b>Next</b> button in the middle (up a fifth, then across to the relative key, by turns); 🎲 picks one of the shaded ones. While the beat plays, the change waits for the top of the next bar (the key blinks until then). <b>With Write on</b>, the key is saved in the pattern, and that pattern always plays in it (the key box is shaded); <b>with Write off</b>, the key changes for now and patterns keep their saved keys. "Forget pattern key" takes it out.</p>
+    <p><b>Its key</b> (Settings, for recordings and imports): say what key a sound is in, or tap 🔍 to have it found by listening, and it moves to the song's key (never more than six semitones). Left on "Plays as recorded", drums and other recordings stay as they are.</p>
     <p><b>Trim:</b> Start and Length cut the sound down. On 9–16 they trim only the slice you played last.</p>
     <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played ("Roll all 16" in the Sound tab fills a whole kit). <b>🎲 Beat</b>: a new drum beat in the style chosen in the Beat tab.</p>
     <p><b>1 Shot / Gate / Loop</b> (the button next to Rec) switches how the current sound's keys play; it is the same as "Play as" in the Sound tab.</p>
@@ -347,6 +391,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022d"></script>
+<script type="module" src="app.js?v=20261022e"></script>
 </body>
 </html>
