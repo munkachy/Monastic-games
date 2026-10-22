@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022a';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022b';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -186,7 +186,7 @@ const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
-  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quant: true, write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: new Array(16).fill(0.6), write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -239,15 +239,18 @@ function soundError(e) {
 }
 
 // The effect on tick t: the one held now, or else the one saved on that step.
+// A saved effect is its number (all tracks) or { f: number, t: [sounds] }.
+const fxIdx = e => (e == null ? null : typeof e === 'number' ? e : e.f);
+const fxTo = e => (typeof e === 'number' ? 'all' : new Set(e.t));
 const savedFx = t => S.fx[patAt(t)][t % 16];
 // Which tick of the pattern to play, and how many times (rolls).
 function mapTick(t, held) {
   let f = held ? seqFx : null, anchor = f?.anchor;
   if (!held) {
-    const i = savedFx(t);
+    const i = fxIdx(savedFx(t));
     if (i != null && FX[i][1].seq) {
       f = FX[i][1]; anchor = t;                // a saved loop starts where its run of steps starts
-      while (anchor > 0 && t - anchor < 16 && savedFx(anchor - 1) === i) anchor--;
+      while (anchor > 0 && t - anchor < 16 && fxIdx(savedFx(anchor - 1)) === i) anchor--;
       if (f.seq === 'half') anchor++;
     }
   }
@@ -264,34 +267,44 @@ function mapTick(t, held) {
 function playTick(e, t, when, live) {
   const held = live && activeFx.size > 0;
   if (live && take && (!S.write || !S.replace || t - take.last >= 16)) take = null;
-  // Write is on and an effect is held: save it on this step.
-  if (held && S.write) { S.fx[patAt(t)][t % 16] = lastFx; dirty(); }
-  const fxs = held ? [...activeFx] : savedFx(t) != null ? [savedFx(t)] : [];
-  // Saved audio effects (crush, filter, echo) switch on and off on the beat.
+  // Write is on and an effect is held: save it (with its tracks) on this step.
+  if (held && S.write) { const to = fxAim.get(lastFx); S.fx[patAt(t)][t % 16] = to === 'all' ? lastFx : { f: lastFx, t: [...to] }; dirty(); }
+  // The effects on this step, each with the tracks it is aimed at.
+  const sv = savedFx(t);
+  const list = held ? [...activeFx].map(k => [k, fxAim.get(k) || 'all']) : sv != null ? [[fxIdx(sv), fxTo(sv)]] : [];
+  // Saved audio effects (crush, filter, reverb...) switch on and off on the beat.
   if (!held) {
-    const want = fxs.length && FX[fxs[0]][1].audio || null;
+    const k = list.length && FX[list[0][0]][1].audio ? list[0][0] : null, want = k != null ? FX[k][1].audio : null;
     if (want !== e.recAudio) {
       if (e.recAudio) e.setFx(e.recAudio, false, stepDur(), when);
-      if (want) e.setFx(want, true, stepDur(), when);
+      if (want) e.setFx(want, true, stepDur(), when, S.fxAmt[k]);
       e.recAudio = want;
     }
   }
+  // A timing effect (loop, roll, half time, scramble) aimed at some tracks
+  // plays them from the mapped step; the others carry on as written.
+  const seqK = held ? seqFx?.k : list.length && FX[list[0][0]][1].seq ? list[0][0] : null;
+  const seqTo = seqK == null ? 'all' : (held ? fxAim.get(seqK) : list[0][1]) || 'all';
   const [src, r] = mapTick(t, held);
-  const p = patAt(src ?? t), step = (src ?? t) % 16;
-  if (live) uiQueue.push({ t: when, tick: t, step, pat: p });
-  if (src == null) return;
-  const m = modsOf(fxs);
-  for (const n of S.patterns[p][step]) {
-    if (S.muteBeat && isDrum(n.s)) continue;
-    if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
-    if (live && take?.si === n.s && !take.notes.has(n)) continue;     // Replace: the old line is silent
-    // A note played off the grid keeps its own place, swing or not.
-    const at = n.o ? when - (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0) + n.o * stepDur() : when;
-    // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
-    const hold = isHeld(n.s, n.lock), len = (n.d || 1) * stepDur() / r;
-    for (let i = 0; i < r; i++) {
-      const v = noteOn(e, n.s, n.k, at + i * stepDur() / r, m, n.lock, hold);
-      if (hold) v?.stop(at + i * stepDur() / r + len);
+  const groups = seqTo === 'all' ? [[src, r, () => true]]
+    : [[src, r, si => seqTo.has(si)], [t, 1, si => !seqTo.has(si)]];
+  const shown = seqTo === 'all' ? src ?? t : t;
+  if (live) uiQueue.push({ t: when, tick: t, step: shown % 16, pat: patAt(shown) });
+  for (const [from, rr, mine] of groups) {
+    if (from == null) continue;
+    for (const n of S.patterns[patAt(from)][from % 16]) {
+      if (!mine(n.s)) continue;
+      if (S.muteBeat && isDrum(n.s)) continue;
+      if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
+      if (live && take?.si === n.s && !take.notes.has(n)) continue;     // Replace: the old line is silent
+      // A note played off the grid keeps its own place, swing or not.
+      const at = n.o ? when - (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0) + n.o * stepDur() : when;
+      // Gate and Loop sounds play for the note's length: d steps (1 if it has none).
+      const hold = isHeld(n.s, n.lock), len = (n.d || 1) * stepDur() / rr, m = modsFor(n.s, list);
+      for (let i = 0; i < rr; i++) {
+        const v = noteOn(e, n.s, n.k, at + i * stepDur() / rr, m, n.lock, hold);
+        if (hold) v?.stop(at + i * stepDur() / rr + len);
+      }
     }
   }
 }
@@ -302,14 +315,15 @@ function isDrum(si) {
   if (!drumMemo.has(sl)) drumMemo.set(sl, ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)));
   return drumMemo.get(sl);
 }
-function noteOn(e, si, k, when, m = modsOf([...activeFx]), lock = null, hold = false) {
+function noteOn(e, si, k, when, m = null, lock = null, hold = false) {
   const slot = S.slots[si]; if (!slot) return null;
+  m ??= modsFor(si, [...activeFx].map(k => [k, fxAim.get(k) || 'all']));
   if (e === eng) {
     lastNoteAt = Math.max(lastNoteAt, when);
     if (verbose) log('note', `sound ${si + 1} key ${k + 1}${hold ? ' held' : ''}: starts in ${((when - ctx.currentTime) * 1000).toFixed(0)} ms, ${eng.voices.size} sounding, audio ${ctx.state}`);
   }
   try {
-    return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, lock,
+    return playNote(e, slot, si, k, when, { rate: m.rate, reverse: m.reverse, unison: m.unison, scratch: m.scratch, dive: m.dive, fx: !m.dry, lock,
       scale: S.scale, bpm: S.bpm, root: S.root, hold });
   } catch (err) { soundError(err); return null; }
 }
@@ -322,34 +336,41 @@ const isHeld = (si, lock) => (lock?.trig || S.slots[si]?.params.trig || 'oneshot
 const FX = [
   ['Loop 1/4', { seq: 'loop', L: 4 }], ['Loop 1/8', { seq: 'loop', L: 2 }], ['Loop 1/16', { seq: 'loop', L: 1 }], ['Roll 1/32', { seq: 'loop', L: 1, r: 2 }],
   ['Scratch', { mod: 'scratch', f: 6 }], ['Half time', { seq: 'half' }], ['Scramble', { seq: 'glitch' }], ['Pitch dive', { mod: 'dive' }],
-  ['Octave up', { mod: 'up' }], ['Octave down', { mod: 'down' }], ['Reverse', { mod: 'reverse' }], ['Unison', { mod: 'unison' }],
-  ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['Scratch fast', { mod: 'scratch', f: 15 }], ['Echo', { audio: 'echo' }],
+  ['Octave up', { mod: 'up' }], ['Octave down', { mod: 'down' }], ['Reverse', { mod: 'reverse' }], ['Chorus', { audio: 'chorus' }],
+  ['Crush', { audio: 'crush' }], ['Low pass', { audio: 'lowpass' }], ['Reverb', { audio: 'reverb' }], ['Ping-pong', { audio: 'pingpong' }],
 ];
+const hasAmount = k => !!FX[k][1].audio || FX[k][1].mod === 'dive';
 const activeFx = new Set();
+const fxAim = new Map();     // held effect -> the tracks it is aimed at: 'all' or a Set of sounds
 let seqFx = null, lastFx = null;
-function engageFx(k) {
-  const f = FX[k][1]; activeFx.add(k); lastFx = k; ctx.resume();
+// aim: from an FX key, the tracks chosen in the FX panel; from a custom button, all.
+function engageFx(k, aim = 'all') {
+  const f = FX[k][1]; activeFx.add(k); fxAim.set(k, aim); lastFx = k; ctx.resume();
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   if (f.seq) {
     const at = headTick >= 0 ? headTick : tick;
     const L = f.L || 16;
     seqFx = { ...f, k, anchor: f.seq === 'loop' ? at - (at % L) : at + 1 };
   }
-  if (f.audio) eng.setFx(f.audio, true, stepDur());
+  if (f.audio) eng.setFx(f.audio, true, stepDur(), ctx.currentTime, S.fxAmt[k]);
 }
 function releaseFx(k) {
-  const f = FX[k][1]; activeFx.delete(k);
+  const f = FX[k][1]; activeFx.delete(k); fxAim.delete(k);
   if (f.seq && seqFx?.k === k) seqFx = null;
   if (f.audio) eng.setFx(f.audio, false, stepDur());
 }
-function modsOf(list) {
+// How the effects in `list` ([effect, tracks] pairs) change one note of sound si:
+// only the ones aimed at it count; an audio effect aimed elsewhere sends it
+// past the effects (dry).
+function modsFor(si, list) {
   const m = { rate: 1 };
-  for (const k of list) {
+  for (const [k, to] of list) {
     const f = FX[k][1];
+    if (to !== 'all' && !to.has(si)) { if (f.audio) m.dry = true; continue; }
     if (f.mod === 'up') m.rate *= 2; if (f.mod === 'down') m.rate /= 2;
     if (f.mod === 'reverse') m.reverse = true; if (f.mod === 'unison') m.unison = true;
     if (f.mod === 'scratch') m.scratch = f.f;
-    if (f.mod === 'dive') m.dive = true;
+    if (f.mod === 'dive') m.dive = S.fxAmt[k];
   }
   return m;
 }
@@ -385,10 +406,10 @@ function press(k) {
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
       else { S.pat = k; if (playing) pendingChain = [k]; else S.chain = [k]; persist(); break; }
       dirty(); break;
-    case 'fx': engageFx(k); break;
+    case 'fx': engageFx(k, S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget)); break;
     default:
       if (!S.write) trigger(k);
-      else if (playing) { const h = trigger(k); if (h) h.note = recordLive(k); }
+      else if (playing) { const h = trigger(k); if (h) h.note = recordLive(k, h.tick); }
       else toggleStep(k);
   }
   draw();
@@ -403,10 +424,10 @@ function release(k) {
 // Stop a held or looping note; if it was recorded live, keep how long it
 // sounded, in steps, as the note's length.
 function endHeld(h) {
-  h.voice.stop(ctx.currentTime);
+  h.voice?.stop(Math.max(ctx.currentTime, h.at + 0.02));     // a quantized note may not have started yet
   if (!h.note) return;
   const d = (ctx.currentTime - h.at) / stepDur();
-  h.note.d = S.quant ? Math.max(1, Math.round(d)) : Math.max(0.1, Math.round(d * 100) / 100);
+  h.note.d = S.quantGrid ? Math.max(1, Math.round(d)) : Math.max(0.1, Math.round(d * 100) / 100);
   dirty();
 }
 const holding = {};          // key -> { voice, at, note } while a finger is on it (Gate)
@@ -416,14 +437,28 @@ function trigger(k) {
   S.lastKey[S.cur] = k;
   flash = { k, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  return playHeld(S.cur, k, k);
+  const sn = snap(), h = playHeld(S.cur, k, k, sn?.when);
+  if (h && sn) h.tick = sn.j;
+  return h;
+}
+// Quantize: while the beat plays, a tap sounds on the next point of the grid
+// (every quantGrid steps), unless it came at most 30 ms after one: then it
+// plays at once, counted on that point. Returns the tick and the time.
+function snap() {
+  const g = +S.quantGrid; if (!playing || !g) return null;
+  const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
+  const at = j => nextT - (tick - j) * sd + (j % 2 ? sw : 0);
+  let prev = Math.floor((tick - (nextT - now) / sd) / g) * g;
+  while (prev > 0 && at(prev) > now) prev -= g;
+  if (now - at(prev) <= 0.03) return { j: Math.max(0, prev), when: now };
+  return { j: prev + g, when: at(prev + g) };
 }
 // Play key `key` of sound `si` from the pad under the finger, as One shot,
 // Gate (until the pad is let go) or Loop (until it is tapped again).
-function playHeld(si, key, pad) {
+function playHeld(si, key, pad, when = ctx.currentTime) {
   const id = `${si}:${key}`;
   if (looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
-  const h = { voice: noteOn(eng, si, key, ctx.currentTime, undefined, null, true), at: ctx.currentTime };
+  const h = { voice: noteOn(eng, si, key, when, undefined, null, true), at: when };
   if (S.slots[si]?.params.trig === 'loop' && h.voice?.sustain) looping.set(id, h);
   else holding[pad] = h;
   return h;
@@ -437,12 +472,13 @@ function toggleStep(k) {
   else { notes.push({ s: S.cur, k: S.lastKey[S.cur] }); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); }
   dirty();
 }
-// Put what was just played on the nearest step (swing included). With
-// Quantize off it goes on the step before, with `o`: how far past that step
-// (0-1 of a step, swing ignored) it was played, so it plays back just so.
-function recordLive(k) {
-  const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
-  if (!S.quant) {
+// Put what was just played into the pattern: with Quantize on, on the grid
+// point it sounded on (tick j, from snap()). With Quantize off it goes on the
+// step before, with `o`: how far past that step (0-1 of a step, swing
+// ignored) it was played, so it plays back just so.
+function recordLive(k, j) {
+  const now = ctx.currentTime, sd = stepDur();
+  if (!S.quantGrid || j == null) {
     const jf = Math.max(0, tick - (nextT - now) / sd), j = Math.floor(jf);
     replaceFrom(j);
     const o = Math.round((jf - j) * 1000) / 1000, notes = S.patterns[patAt(j)][j % 16];
@@ -451,12 +487,6 @@ function recordLive(k) {
     take?.notes.add(note);
     if (j >= tick) liveSkip.add(`${j}:${S.cur}:${k}`);
     dirty(); return note;
-  }
-  let j = Math.max(0, Math.round(tick - (nextT - now) / sd)), best = Infinity;
-  for (const c of [j - 1, j, j + 1]) {
-    if (c < 0) continue;
-    const d = Math.abs(nextT - (tick - c) * sd + (c % 2 ? sw : 0) - now);
-    if (d < best) { best = d; j = c; }
   }
   replaceFrom(j);
   const p = patAt(j), step = j % 16;
@@ -704,8 +734,6 @@ const TREE = ['Sounds', [
   ]],
   ['Loops', []],
   ['Packs', [
-    ['Drum kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
-    ['Drum machines', ['kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']],
     ['Percussion', ['percussion']],
     ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']],
   ]],
@@ -810,7 +838,46 @@ for (const s of Object.keys(SCALES)) $('scale').add(new Option(s[0].toUpperCase(
 ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'].forEach((n, i) => $('root').add(new Option(n, i)));
 $('bpm').addEventListener('input', () => { S.bpm = +$('bpm').value; dirty(); draw(); });
 document.querySelectorAll('[data-bpm]').forEach(b => b.addEventListener('click', () => { checkpoint(); S.bpm = +b.dataset.bpm; dirty(); draw(); }));
-$('quant').addEventListener('change', () => { S.quant = $('quant').checked; persist(); draw(); });
+$('quantGrid').addEventListener('change', () => { S.quantGrid = +$('quantGrid').value; persist(); draw(); });
+
+// FX panel (on the screen in FX mode): which tracks the FX keys hit, and how
+// much of the last effect touched.
+$('fxAmt').addEventListener('input', () => {
+  if (lastFx == null) return;
+  const v = +$('fxAmt').value; S.fxAmt[lastFx] = v; $('oFxAmt').textContent = Math.round(v * 100) + '%';
+  const f = FX[lastFx][1];
+  if (f.audio && activeFx.has(lastFx)) eng.setFx(f.audio, true, stepDur(), ctx.currentTime, v);
+  persist();
+});
+$('fxAimBtn').addEventListener('click', () => {
+  const list = $('aimList'); list.textContent = '';
+  S.slots.forEach((sl, i) => {
+    const l = document.createElement('label'); l.className = 'check';
+    l.innerHTML = `<input type="checkbox" value="${i}"> ${i + 1} ${sl?.name || ''}`;
+    l.querySelector('input').checked = S.fxTarget !== 'all' && S.fxTarget.includes(i);
+    list.appendChild(l);
+  });
+  $('aimAll').checked = S.fxTarget === 'all';
+  $('aimBox').hidden = false;
+});
+$('aimAll').addEventListener('change', () => { if ($('aimAll').checked) $('aimList').querySelectorAll('input').forEach(c => { c.checked = false; }); });
+$('aimList').addEventListener('change', () => { $('aimAll').checked = !$('aimList').querySelector('input:checked'); });
+$('aimDone').addEventListener('click', () => {
+  const picked = [...$('aimList').querySelectorAll('input:checked')].map(c => +c.value);
+  S.fxTarget = picked.length ? picked : 'all';
+  $('aimBox').hidden = true; persist(); draw();
+});
+function drawFxPanel() {
+  const on = S.mode === 'fx';
+  $('wave').hidden = on; $('fxPanel').hidden = !on;
+  if (!on) return;
+  $('fxAimBtn').textContent = 'Tracks: ' + (S.fxTarget === 'all' ? 'All' : S.fxTarget.map(i => i + 1).join(', ')) + ' ▾';
+  const k = lastFx;
+  $('fxName').textContent = k == null ? 'Hold a key' : FX[k][0];
+  $('fxAmt').disabled = k == null || !hasAmount(k);
+  if (k != null && hasAmount(k)) { $('fxAmt').value = S.fxAmt[k]; $('oFxAmt').textContent = Math.round(S.fxAmt[k] * 100) + '%'; }
+  else $('oFxAmt').textContent = k == null ? '' : '—';
+}
 $('swing').addEventListener('input', () => { S.swing = +$('swing').value; dirty(); draw(); });
 $('vol').addEventListener('input', () => { S.vol = +$('vol').value; setVolume(); dirty(); draw(); });
 function setVolume() { eng.vol = S.vol; eng.master.gain.setTargetAtTime(S.vol, ctx.currentTime, 0.02); }
@@ -834,6 +901,7 @@ document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click',
   document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === b.dataset.tab));
   if (b.dataset.tab === 'tLog') drawLog();
+  if (b.dataset.tab === 'tBeat') drawKitSel();
 }));
 // Copy and Paste: the pattern you're on, steps and saved effects.
 let clipboard = null;
@@ -911,15 +979,18 @@ $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
 // straight from the tap (an iPhone allows that only right after one).
 async function renderLoop() {
   const ticks = 16 * S.chain.length, len = ticks * stepDur(), tail = 2.5;
-  const off = new OfflineAudioContext(1, Math.ceil((len + tail) * SR), SR);
+  const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR);       // stereo, for ping-pong and chorus
   const e = new Engine(off, { live: false });
   for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false);
-  const buf = await off.startRendering(), x = buf.getChannelData(0), n = Math.round(len * SR);
-  for (let i = n; i < x.length; i++) x[i % n] += x[i];
-  const loop = x.subarray(0, n);
-  let top = 0; for (const v of loop) top = Math.max(top, Math.abs(v));
-  if (top > 0.98) for (let i = 0; i < n; i++) loop[i] *= 0.98 / top;
-  return { data: wav(loop, SR), len };
+  const buf = await off.startRendering(), n = Math.round(len * SR);
+  const chs = [0, 1].map(c => {
+    const x = buf.getChannelData(c);
+    for (let i = n; i < x.length; i++) x[i % n] += x[i];
+    return x.subarray(0, n);
+  });
+  let top = 0; for (const x of chs) for (const v of x) top = Math.max(top, Math.abs(v));
+  if (top > 0.98) for (const x of chs) for (let i = 0; i < n; i++) x[i] *= 0.98 / top;
+  return { data: wav(chs, SR), len };
 }
 let exported = null;
 const safeName = s => s.replace(/[^\w\- .]+/g, '').replace(/\.wav$/i, '').trim() || 'pocket loop';
@@ -954,14 +1025,15 @@ function toggleMute() {
   S.muteBeat = !S.muteBeat; persist(); draw();
   status(S.muteBeat ? 'Drums muted: the beat and the export leave them out.' : 'Drums back on.');
 }
-function wav(x, rate) {
-  const v = new DataView(new ArrayBuffer(44 + x.length * 2));
+// 16-bit WAV, one channel per array in chs, interleaved.
+function wav(chs, rate) {
+  const C = chs.length, n = chs[0].length, v = new DataView(new ArrayBuffer(44 + n * C * 2));
   const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  str(0, 'RIFF'); v.setUint32(4, 36 + x.length * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true);
-  v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  str(36, 'data'); v.setUint32(40, x.length * 2, true);
-  for (let i = 0; i < x.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, x[i])) * 32767, true);
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * C * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, C, true); v.setUint32(24, rate, true);
+  v.setUint32(28, rate * C * 2, true); v.setUint16(32, C * 2, true); v.setUint16(34, 16, true);
+  str(36, 'data'); v.setUint32(40, n * C * 2, true);
+  for (let i = 0, o = 44; i < n; i++) for (let c = 0; c < C; c++, o += 2) v.setInt16(o, Math.max(-1, Math.min(1, chs[c][i])) * 32767, true);
   return v.buffer;
 }
 
@@ -977,7 +1049,7 @@ function keyLabel(k) {
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[k][0];
     case 'play': if (S.write && !playing) {
-      const f = S.fx[S.pat][k], ns = S.patterns[S.pat][k].map(n => n.s + 1).join(' ');
+      const f = fxIdx(S.fx[S.pat][k]), ns = S.patterns[S.pat][k].map(n => n.s + 1).join(' ');
       return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
     } break;
   }
@@ -1000,13 +1072,13 @@ function draw() {
   $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
   $('lcdPat').textContent = S.chain.length > 1 ? `CHAIN ${S.chain.map(p => p + 1).join('·')}` : `PAT ${S.pat + 1}`;
   $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
-    play: S.write ? (playing ? (S.replace ? 'WRITE: LIVE, REPLACE' : S.quant ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
+    play: S.write ? (playing ? (S.replace ? 'WRITE: LIVE, REPLACE' : S.quantGrid ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
     fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
   $('lcdInfo').textContent = `${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''} ${S.scale.toUpperCase().slice(0, 5)}`;
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
-  $('scale').value = S.scale; $('root').value = S.root; $('quant').checked = S.quant;
+  $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
   for (let k = 0; k < 16; k++) {
     const el = keyEls[k], steps = S.patterns[S.pat][k];
     let lit = false, some = false, cur = false;
@@ -1306,6 +1378,27 @@ const genBeat = () => {
 };
 $('genBeat').addEventListener('click', genBeat);
 
+// Drum kit (Beat tab): the kit the beats play on, swapped on its own key
+// (the kit on the keys, or sound 9 if there is none).
+const KITS_MENU = [['Recorded kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
+  ['Drum machines', ['kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
+for (const [g, ids] of KITS_MENU) {
+  const og = document.createElement('optgroup'); og.label = g;
+  for (const id of ids) og.appendChild(new Option(LIBRARY[id].name, id));
+  $('kitSel').appendChild(og);
+}
+$('kitSel').addEventListener('change', async () => {
+  const id = $('kitSel').value, si = drumSlot() >= 0 ? drumSlot() : 8;
+  checkpoint();
+  S.slots[si] = await factorySlot(id); S.lastKey[si] = 0;
+  syncPanel(); dirty(); draw(); noteOn(eng, si, 0, ctx.currentTime + 0.01);
+  status(`${LIBRARY[id].name} on sound ${si + 1}: the beats play on it.`);
+});
+function drawKitSel() {
+  const si = drumSlot(), f = si >= 0 ? S.slots[si]?.factory : null;
+  $('kitSel').value = KITS_MENU.some(([, ids]) => ids.includes(f)) ? f : '';
+}
+
 // ---------------------------------------------------------------------------
 // Saving: IndexedDB. Factory sounds are saved by number; recorded and rolled
 // sound is saved as raw samples, each buffer once, under its own id.
@@ -1376,7 +1469,9 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quant', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k]; }
+  if (saved) { for (const k of ['patterns', 'fx', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'muteBeat', 'custom', 'cur', 'lastKey']) if (saved[k] != null) S[k] = saved[k];
+    if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
+  }
   else demo();
   setVolume(); syncPanel(); draw();
   committed = snapshot();

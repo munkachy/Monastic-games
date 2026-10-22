@@ -30,6 +30,14 @@
   .lcdtop span:first-child { overflow: hidden; text-overflow: ellipsis; }
   .lcdbot { font-weight: 400; font-size: 11px; opacity: .85; }
   canvas#wave { width: 100%; height: 64px; display: block; margin: 3px 0; }
+  #fxPanel { height: 64px; margin: 3px 0; display: flex; flex-direction: column; justify-content: space-between; }
+  #fxPanel[hidden] { display: none; }
+  #fxAimBtn { font: inherit; font-size: 12px; font-weight: 700; text-align: left; border: 2px solid var(--lcd-ink); border-radius: 5px;
+    background: transparent; color: var(--lcd-ink); padding: 4px 8px; }
+  .fxamt { display: grid; grid-template-columns: 1fr 1.4fr 38px; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; }
+  .fxamt input { accent-color: var(--lcd-ink); }
+  .fxamt output { text-align: right; }
+  .aims { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; max-height: 50vh; overflow: auto; }
 
   /* function buttons */
   .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 9px 0 9px; }
@@ -121,11 +129,15 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022a</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022b</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
     <canvas id="wave"></canvas>
+    <div id="fxPanel" hidden>
+      <button id="fxAimBtn">Tracks: All ▾</button>
+      <div class="fxamt"><span id="fxName">Hold a key for an effect</span><input type="range" id="fxAmt" min="0" max="1" step="0.01" aria-label="Effect amount"><output id="oFxAmt"></output></div>
+    </div>
     <div class="lcdbot"><span id="lcdMode">PLAY</span><span id="lcdInfo">120 BPM</span></div>
   </div>
 
@@ -185,6 +197,9 @@
     <div class="row" id="startRow"><label for="pStart">Start</label><input type="range" id="pStart" min="0" max="0.95" step="0.01"><output id="oStart"></output></div>
     <div class="row"><label for="pLen">Length</label><input type="range" id="pLen" min="0.02" max="1" step="0.01"><output id="oLen"></output></div>
     <div class="row" id="wobRow"><label for="pWob">Wobble</label><input type="range" id="pWob" min="0" max="4" step="1"><output id="oWob"></output></div>
+    <div class="row"><label for="quantGrid">Quantize</label>
+      <select id="quantGrid"><option value="0">Off: exactly as played</option><option value="1">1/16</option><option value="2">1/8</option><option value="4">1/4: a beat</option><option value="8">1/2 bar</option><option value="16">1 bar</option></select><span></span></div>
+    <p class="note" style="margin:-2px 0 6px">While the beat plays, what you play lands on the next point of this grid (a tap just after one plays at once), both what you hear and what Write records. All sounds.</p>
     <div class="row"><label for="pTrig">Play as</label>
       <select id="pTrig"><option value="oneshot">One shot: the whole sound</option><option value="gate">Gate: only while held</option><option value="loop">Loop: tap on, tap again off</option></select><span></span></div>
     <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
@@ -202,12 +217,12 @@
   </div>
 
   <div class="panel" id="tBeat">
+    <div class="row"><label for="kitSel">Drum kit</label><select id="kitSel"></select><span></span></div>
     <div class="row"><label for="style">Drum beat</label><select id="style"></select><span></span></div>
     <div class="btns" style="margin:0 0 10px"><button id="putBeat">Put this beat in</button><button id="genBeat" class="go">🎲 Make a new one</button></div>
     <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
     <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
     <div class="row"><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
-    <label class="check"><input type="checkbox" id="quant" checked> Quantize: notes played live snap to the nearest step</label>
     <div class="row"><label for="vol">Volume</label><input type="range" id="vol" min="0" max="1" step="0.01"><output id="oVol2"></output></div>
     <div class="row"><label for="scale">Scale</label>
       <select id="scale"></select><span></span></div>
@@ -251,7 +266,7 @@
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
-    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, unison, crush, low pass and echo. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
+    <p><b>FX</b>: hold a key to punch an effect in; let go and it's gone. Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
@@ -265,6 +280,15 @@
   </div>
  </div>
 </div>
+<div id="aimBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Effects on which tracks?</b>
+    <label class="check"><input type="checkbox" id="aimAll"> All tracks</label>
+    <div class="aims" id="aimList"></div>
+    <div class="btns"><button id="aimDone" class="go">Done</button></div>
+    <p class="note">FX keys hit only these sounds; the others play on untouched. Effects on your custom buttons always hit everything.</p>
+  </div>
+</div>
 <div id="exportBox" class="overlay" hidden>
   <div class="sheet">
     <b>Export loop</b>
@@ -274,6 +298,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022a"></script>
+<script type="module" src="app.js?v=20261022b"></script>
 </body>
 </html>

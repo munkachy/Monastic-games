@@ -2,7 +2,8 @@
 //
 // Everything here works on any BaseAudioContext, so the same code plays live
 // (AudioContext) and renders the WAV export (OfflineAudioContext).
-//   - Engine: the master chain and the punch-in effects (crush, filters, echo).
+//   - Engine: the master chain and the punch-in effects (crush, filter,
+//     reverb, chorus, ping-pong), in stereo.
 //   - playNote(): one note of one sound: a synth, a pitched sample, or one
 //     slice of a chopped sample.
 //   - makeKit(): the 808 and 909 kits, drawn from oscillators and noise.
@@ -49,6 +50,15 @@ class Crush extends AudioWorkletProcessor {
 }
 registerProcessor('crush', Crush);`;
 
+// A hall to convolve with: stereo noise, each side its own, dying away.
+function hall(ctx, seconds) {
+  const n = Math.round(ctx.sampleRate * seconds), b = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = b.getChannelData(c);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3) * 0.5;
+  }
+  return b;
+}
 const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
   const v = (i / 1024 - 1) * 2, a = Math.abs(v);
   return Math.sign(v) * (a < 0.7 ? a : 0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3));
@@ -58,7 +68,9 @@ export class Engine {
   // live: true for the speaker (adds the crusher and a tap for resampling).
   constructor(ctx, { live = true } = {}) {
     this.ctx = ctx; this.live = live;
-    this.bus = ctx.createGain();
+    // Two ways in: `bus` runs through the effects, `dry` skips them (sounds
+    // that an effect aimed at other tracks should leave alone).
+    this.bus = ctx.createGain(); this.dry = ctx.createGain();
     this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 20000; this.lp.Q.value = 6;
     this.hp = ctx.createBiquadFilter(); this.hp.type = 'highpass'; this.hp.frequency.value = 10; this.hp.Q.value = 4;
     this.delay = ctx.createDelay(2); this.fb = ctx.createGain(); this.fb.gain.value = 0.45;
@@ -71,9 +83,30 @@ export class Engine {
     this.comp.connect(this.limit);
     this.vol = 0.9; this.master = ctx.createGain(); this.master.gain.value = this.vol;
     this.bus.connect(this.lp); this.lp.connect(this.hp);
-    this.hp.connect(this.comp); this.hp.connect(this.send);
+    this.hp.connect(this.comp); this.hp.connect(this.send); this.dry.connect(this.comp);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
     this.limit.connect(this.master); this.master.connect(ctx.destination);
+    // Reverb: a convolver with a made-up hall (stereo noise that dies away).
+    this.revSend = ctx.createGain(); this.revSend.gain.value = 0;
+    this.reverb = ctx.createConvolver(); this.reverb.buffer = hall(ctx, 2.6);
+    this.hp.connect(this.revSend); this.revSend.connect(this.reverb); this.reverb.connect(this.comp);
+    // Chorus: two short delays, wobbled slowly and out of step, one per ear.
+    this.chSend = ctx.createGain(); this.chSend.gain.value = 0;
+    const merge = ctx.createChannelMerger(2);
+    [[0.27, 0.014], [0.37, 0.019]].forEach(([rate, base], ch) => {
+      const d = ctx.createDelay(0.05), lfo = ctx.createOscillator(), depth = ctx.createGain();
+      d.delayTime.value = base; lfo.frequency.value = rate; depth.gain.value = 0.004;
+      lfo.connect(depth); depth.connect(d.delayTime); lfo.start();
+      this.chSend.connect(d); d.connect(merge, 0, ch);
+    });
+    this.hp.connect(this.chSend); merge.connect(this.comp);
+    // Ping-pong: an echo that bounces from the left ear to the right and back.
+    this.ppSend = ctx.createGain(); this.ppSend.gain.value = 0;
+    this.ppL = ctx.createDelay(2); this.ppR = ctx.createDelay(2); this.ppFb = ctx.createGain(); this.ppFb.gain.value = 0.45;
+    const pm = ctx.createChannelMerger(2);
+    this.hp.connect(this.ppSend); this.ppSend.connect(this.ppL);
+    this.ppL.connect(pm, 0, 0); this.ppL.connect(this.ppR); this.ppR.connect(pm, 0, 1);
+    this.ppR.connect(this.ppFb); this.ppFb.connect(this.ppL); pm.connect(this.comp);
     this.voices = new Set();       // sounding voices
     this.choke = new Map();        // slot -> its last voice
   }
@@ -93,14 +126,14 @@ export class Engine {
   }
 
   // Punch-in effects, switched on or off at time `at` (now, for a held key;
-  // on the beat, for effects saved in a pattern).
-  setFx(name, on, stepDur, at = this.ctx.currentTime) {
+  // on the beat, for effects saved in a pattern). amt (0-1): how much.
+  setFx(name, on, stepDur, at = this.ctx.currentTime, amt = 0.6) {
     const t = Math.max(at, this.ctx.currentTime), p = (param, v, s = 0.04) => { param.cancelScheduledValues(t); param.setTargetAtTime(v, t, s); };
     switch (name) {
       case 'crush':
         if (!this.crush) break;
         this.crushOn = on;
-        this.crush.parameters.get('bits').setValueAtTime(on ? 4 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 10 : 1, t);
+        this.crush.parameters.get('bits').setValueAtTime(on ? 15 - amt * 12 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 1 + amt * 16 : 1, t);
         if (on && !this.crushIn) {          // at 16 bits it passes the sound unchanged until t
           this.bus.connect(this.crush); this.crush.connect(this.lp); this.bus.disconnect(this.lp); this.crushIn = true;
         } else if (!on && this.crushIn) {
@@ -110,11 +143,17 @@ export class Engine {
           }, (t - this.ctx.currentTime) * 1000 + 60);
         }
         break;
-      case 'lowpass': p(this.lp.frequency, on ? 420 : 20000, on ? 0.12 : 0.05); break;
+      case 'lowpass': p(this.lp.frequency, on ? 5000 * Math.pow(0.025, amt) : 20000, on ? 0.12 : 0.05); break;
       case 'highpass': p(this.hp.frequency, on ? 1600 : 10, on ? 0.12 : 0.05); break;
       case 'echo':
         this.delay.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t);
-        p(this.send.gain, on ? 0.7 : 0, 0.02); break;
+        p(this.send.gain, on ? amt : 0, 0.02); break;
+      case 'reverb': p(this.revSend.gain, on ? amt * 1.3 : 0, 0.03); break;
+      case 'chorus': p(this.chSend.gain, on ? amt * 1.1 : 0, 0.03); break;
+      case 'pingpong':
+        this.ppL.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t); this.ppR.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t);
+        this.ppFb.gain.setValueAtTime(0.25 + amt * 0.45, t);
+        p(this.ppSend.gain, on ? 0.4 + amt * 0.6 : 0, 0.02); break;
     }
   }
 }
@@ -151,7 +190,7 @@ function tracking(ctx, made) {
     createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
 }
 
-export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = false, lock = null,
+export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = 0, fx = true, lock = null,
   scale = 'minor', bpm = 120, root = 0, hold = false } = {}) {
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
@@ -165,7 +204,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     f.Q.value = 0.7 + P.res * 14;
     f.connect(out); dest = f;
   }
-  out.connect(eng.bus);
+  out.connect(fx ? eng.bus : eng.dry);
   const voice = { rates: [], nodes: [], end: t, stop: null, sustain };
   const env = ctx.createGain(); env.connect(dest);
 
@@ -243,8 +282,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     voice.end = when + 0.015;
     if (eng.live) setTimeout(free, (when - ctx.currentTime) * 1000 + 80);
   };
-  // Pitch dive: the note slides down two octaves as it plays.
-  if (dive && !scratch) for (const r of voice.rates) r.setTargetAtTime(r.value * 0.25, t + 0.02, 0.2);
+  // Pitch dive: the note slides down as it plays, up to three octaves.
+  if (dive && !scratch) for (const r of voice.rates) r.setTargetAtTime(r.value * Math.pow(2, -3 * dive), t + 0.02, 0.2);
   eng.voices.add(voice);
   if (eng.live && voice.end < Infinity) setTimeout(free, Math.max(0, (voice.end - ctx.currentTime) * 1000) + 60);
   if (P.choke) eng.choke.set(si, voice);
