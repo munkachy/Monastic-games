@@ -26,6 +26,65 @@ export function keySemis(k, scale) {
   return s[k % s.length] + 12 * Math.floor(k / s.length);
 }
 const hz = midi => 440 * Math.pow(2, (midi - 69) / 12);
+// How far to move a recording in key `from` to the key `root`: the nearest
+// way, at most six semitones down or five up, so it never squeaks or growls.
+export const toKey = (root, from) => ((((root - from) % 12) + 18) % 12) - 6;
+
+// ---------------------------------------------------------------------------
+// Finding a recording's key: how much of each of the 12 notes it holds
+// (summed over short slices of it, 55 Hz to 2 kHz), compared with how much
+// each note matters in every major and minor key (Krumhansl and Kessler's
+// key profiles). Gives { root, minor, sure } (sure: 0 to 1).
+// ---------------------------------------------------------------------------
+const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+const MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const k = i + j, l = k + len / 2, tr = re[l] * cr - im[l] * ci, ti = re[l] * ci + im[l] * cr;
+        re[l] = re[k] - tr; im[l] = im[k] - ti; re[k] += tr; im[k] += ti;
+        [cr, ci] = [cr * wr - ci * wi, cr * wi + ci * wr];
+      }
+    }
+  }
+}
+export function chroma(buf, a = 0, b = buf.duration) {
+  const x = buf.getChannelData(0), sr = buf.sampleRate, N = 4096, hop = 2048;
+  const i0 = Math.floor(a * sr), i1 = Math.min(x.length, Math.floor(b * sr));
+  const step = Math.max(hop, Math.floor((i1 - i0 - N) / 400));   // at most about 400 slices
+  const c = new Float64Array(12), win = new Float64Array(N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const re = new Float64Array(N), im = new Float64Array(N);
+  const lo = Math.ceil(55 * N / sr), hi = Math.min(N / 2, Math.floor(2000 * N / sr));
+  const pc = new Int8Array(hi + 1);
+  for (let k = lo; k <= hi; k++) pc[k] = ((Math.round(12 * Math.log2(k * sr / N / 440)) + 69) % 12 + 12) % 12;
+  for (let s = i0; s + N <= i1 || s === i0; s += step) {
+    for (let i = 0; i < N; i++) { re[i] = (x[s + i] || 0) * win[i]; im[i] = 0; }
+    fft(re, im);
+    for (let k = lo; k <= hi; k++) c[pc[k]] += Math.sqrt(re[k] * re[k] + im[k] * im[k]);
+    if (s + N > i1) break;
+  }
+  return c;
+}
+export function findKey(buf, a, b) {
+  const c = chroma(buf, a, b), corr = (p, r) => {
+    const mx = c.reduce((s, v) => s + v, 0) / 12, mp = p.reduce((s, v) => s + v, 0) / 12;
+    let num = 0, dx = 0, dp = 0;
+    for (let i = 0; i < 12; i++) { const u = c[(i + r) % 12] - mx, v = p[i] - mp; num += u * v; dx += u * u; dp += v * v; }
+    return num / Math.sqrt(dx * dp || 1);
+  };
+  const all = [];
+  for (let r = 0; r < 12; r++) all.push({ root: r, minor: false, v: corr(MAJ, r) }, { root: r, minor: true, v: corr(MIN, r) });
+  all.sort((p, q) => q.v - p.v);
+  return { root: all[0].root, minor: all[0].minor, sure: Math.max(0, Math.min(1, (all[0].v - all[1].v) * 5 + all[0].v * 0.5)) };
+}
 
 // ---------------------------------------------------------------------------
 // Bit crusher as an AudioWorklet: fewer bits and a held sample rate.
@@ -253,11 +312,12 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     } else if (slot.kind === 'chop') {
       const sl = slot.slices[k]; if (!sl) return null;
       buf = sl.buf || slot.buf; s = sl.s; e = sl.e;
-      r = Math.pow(2, P.pitch / 12) * rate;
+      // A chop plays as recorded, unless it is set to follow the song's key.
+      r = Math.pow(2, (P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0)) / 12) * rate;
       start = lock?.start ?? sl.start ?? 0; len = lock?.len ?? sl.len ?? 1;   // trim is per slice
     } else {
       buf = slot.buf; s = 0; e = buf.duration;
-      r = Math.pow(2, (keySemis(k, scale) - 12 + P.pitch + root) / 12) * rate;
+      r = Math.pow(2, (keySemis(k, scale) - 12 + P.pitch + toKey(root, P.keyOf ?? 0)) / 12) * rate;
       start = P.start || 0; len = P.len;
     }
     if (!buf) return null;

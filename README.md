@@ -146,6 +146,13 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
+- **Key wheel:** tap the key on the screen. Majors and minors in
+  circle-of-fifths order, the keys that sit well with yours shaded, and
+  **Next** in the middle (up a fifth, then to the relative key). While the
+  beat plays, a change lands on the next bar. With Write on it is saved in
+  the pattern, so a chain can change key as it plays. A recording or import
+  can be told its key (or have it found by listening) and then follows the
+  song's key.
 - **Effects on the keys:** in FX mode each key is an effect that stays on
   until it is tapped again (or only while held, if latching is off). The
   Effects menu picks the 16 from 26: loops, rolls, scratch, half time,
