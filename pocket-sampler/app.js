@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022o';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022p';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -225,16 +225,14 @@ function patAt(t) { return S.chain[Math.floor(t / 16) % S.chain.length]; }
 
 function start() {
   if (playing) return;
-  ctx.resume(); stopPreview();
+  ctx.resume(); stopPreview(); stopRapPreview();
   playing = true; tick = 0; barPat = -1; nextT = ctx.currentTime + 0.06;
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
-  $('rapHear').textContent = '■ Stop';
 }
 function stop() {
   playing = false; clearTimeout(timer); uiQueue.length = 0; headStep = -1; headTick = -1; take = null;
   if (keyNext) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }   // a key change still waiting lands now
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
-  $('rapHear').textContent = '▶ Hear the rap';
   for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
@@ -1315,7 +1313,7 @@ const ACTIONS = {
   voice: { name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
   rap: { name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
   newflow: { name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
-  hearrap: { name: 'Hear the rap (play it from its start)', label: () => (playing ? '■ Stop' : '▶ Rap'), on: () => playing, tap: () => hearRap() },
+  hearrap: { name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
   octdown: { name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
   octup: { name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
@@ -1490,7 +1488,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022p'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1583,7 +1581,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022p'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1730,14 +1728,33 @@ async function rapIt() {
   status(`${n} syllables on sound ${si + 1}, ${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, patterns ${from + 1}–${from + bars} (chained)` : ''}: `
     + syl.slice(0, n).map(x => (x.stress === 2 ? x.name.toUpperCase() : x.name)).join(' · ') + (syl.length > MAX_SYL ? `. Only the first ${MAX_SYL} of ${syl.length} fit.` : '.'));
 }
-// ▶ Hear the rap: play from the rap's first pattern (with the beat), or stop.
+// ▶ Hear the rap: the rap alone, just as it falls on the beat (same tempo,
+// swing and places), with nothing else playing. Tap again to stop.
+let rapPv = null;
+function stopRapPreview() {
+  if (!rapPv) return;
+  clearTimeout(rapPv.timer); for (const v of rapPv.voices) v?.stop?.(ctx.currentTime);
+  rapPv = null; drawRapHear();
+}
+function drawRapHear() { $('rapHear').textContent = rapPv ? '■ Stop' : '▶ Hear the rap'; drawCustom(); }
 function hearRap() {
-  if (playing) { stop(); return; }
+  if (rapPv) { stopRapPreview(); return; }
   const si = isRap(S.cur) ? S.cur : S.slots.findIndex((_, i) => isRap(i) && S.patterns.some(p => p.some(st => st.some(n => n.s === i))));
   const pats = si < 0 ? [] : S.patterns.map((p, i) => (p.some(st => st.some(n => n.s === si)) ? i : -1)).filter(i => i >= 0);
   if (!pats.length) { status('Make a rap first: 🎤 Rap it on the beat.'); return; }
-  if (S.chain[0] !== pats[0]) S.chain = Array.from({ length: pats.at(-1) - pats[0] + 1 }, (_, b) => pats[0] + b);
-  S.pat = pats[0]; S.cur = si; syncPanel(); start(); draw();
+  if (playing) stop();
+  ctx.resume(); stopPreview();
+  const t0 = ctx.currentTime + 0.08, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd, voices = [];
+  for (let b = 0; b <= pats.at(-1) - pats[0]; b++) S.patterns[pats[0] + b].forEach((st, j) => {
+    for (const n of st) if (n.s === si) {
+      const at = t0 + (b * 16 + j) * sd + (n.o ? n.o * sd : j % 2 ? sw : 0);
+      voices.push(noteOn(eng, si, n.k, at, null, withOct(si, n.lock, n.oc)));
+    }
+  });
+  const len = (pats.at(-1) - pats[0] + 1) * 16 * sd;
+  rapPv = { voices, timer: setTimeout(() => { rapPv = null; drawRapHear(); }, (len + 0.6) * 1000) };
+  drawRapHear();
+  status(`The rap on its own: ${pats.length > 1 ? `${pats.at(-1) - pats[0] + 1} bars` : 'one bar'} at ${S.bpm} BPM, as it falls on the beat.`);
 }
 function reflow(seed) {
   const { bars } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
