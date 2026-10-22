@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022l';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022m';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -218,7 +218,7 @@ function patAt(t) { return S.chain[Math.floor(t / 16) % S.chain.length]; }
 
 function start() {
   if (playing) return;
-  ctx.resume();
+  ctx.resume(); stopPreview();
   playing = true; tick = 0; barPat = -1; nextT = ctx.currentTime + 0.06;
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
 }
@@ -560,10 +560,12 @@ function press(k) {
       else engageFx(id, S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget));
       break;
     }
-    default:
-      if (!S.write) trigger(k);
-      else if (playing) { const h = trigger(k); if (h) h.note = recordLive(k, h.tick); }
-      else toggleStep(k);
+    default: {
+      if (S.write && !playing) { toggleStep(k); break; }
+      const key = padKey(k); if (key == null) break;     // a rap's pad with no syllable on its step
+      const h = trigger(key, k);
+      if (S.write && h) h.note = recordLive(key, h.tick);
+    }
   }
   draw();
 }
@@ -586,11 +588,20 @@ function endHeld(h) {
 const holding = {};          // key -> { voice, at, note } while a finger is on it (Gate)
 const looping = new Map();   // "sound:key" -> the same, for a Loop running until it's tapped again
 // Play a key of the current sound. Returns false when the tap only stopped a loop.
-function trigger(k) {
+// A rapped voice's pads follow the pattern: pad k shows, lights for and plays
+// the syllable on step k of the pattern on screen, so words, lights and
+// sound agree. Any other sound's pads are its keys.
+const isRap = si => S.slots[si]?.slices?.[0]?.w != null;
+const padsFollow = () => isRap(S.cur) && S.patterns[S.pat].some(st => st.some(n => n.s === S.cur));
+function padKey(k) {
+  if (!padsFollow()) return k;
+  return S.patterns[S.pat][k].find(n => n.s === S.cur)?.k ?? null;
+}
+function trigger(k, pad = k) {
   S.lastKey[S.cur] = k;
-  flash = { k, until: performance.now() + 160 };
+  flash = { k: pad, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  const sn = snap(), h = playHeld(S.cur, k, k, sn?.when);
+  const sn = snap(), h = playHeld(S.cur, k, pad, sn?.when);
   if (h && sn) h.tick = sn.j;
   return h;
 }
@@ -1275,6 +1286,7 @@ function openMenu(tab) {
 }
 function closeMenu() { $('menu').hidden = true; draw(); }
 $('menuBtn').addEventListener('click', () => openMenu());
+$('menuClose').addEventListener('click', stopPreview);
 $('menuClose').addEventListener('click', closeMenu);
 
 // ---------------------------------------------------------------------------
@@ -1468,7 +1480,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022m'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1561,7 +1573,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022m'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1587,10 +1599,13 @@ async function voiceSyllables(text, cut = $('rapCut').value) {
   return { buf, syl: found.map((f, i) => ({ s: f.s, e: f.e, ...all[i], ph: undefined, name: names[i] })) };
 }
 // The voice as a chop: one syllable per key. Each slice keeps its word,
-// stress and punctuation, so a new flow can be laid out without speaking again.
+// stress and punctuation, so a new flow can be laid out without speaking
+// again. A rap may hold more syllables than there are keys; the pattern
+// plays them all.
+const MAX_SYL = 64;
 function voiceChop(name, buf, syl) {
   return { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), choke: true }, buf,
-    slices: syl.slice(0, 16).map(x => ({ s: x.s, e: x.e, name: x.name, w: x.w, stress: x.stress, first: x.first, punct: x.punct })) };
+    slices: syl.slice(0, MAX_SYL).map(x => ({ s: x.s, e: x.e, name: x.name, w: x.w, stress: x.stress, first: x.first, punct: x.punct })) };
 }
 
 // Flows: how the syllables sit on the beat. Each flow is made of cells, a
@@ -1679,8 +1694,17 @@ function layRap(flow, rest, seed, fresh = false) {
   return { bars, from };
 }
 let rapSeed = 1;
+// Where a rap goes: the sound it went on before, else the current sound if
+// nothing uses it, else the last free sound (16 down to 1). Never the drum kit.
+function rapSlot() {
+  if (isRap(S.cur)) return S.cur;
+  const used = si => isDrum(si) || S.patterns.some(p => p.some(st => st.some(n => n.s === si)));
+  if (!used(S.cur)) return S.cur;
+  for (let si = 15; si >= 0; si--) if (!used(si)) return si;
+  throw new Error('Every sound is in use. Choose a sound to rap on (it will be replaced) and its notes cleared, or clear one first.');
+}
 async function rapIt() {
-  const text = $('voxText').value.trim(), si = S.cur;
+  const text = $('voxText').value.trim(), si = rapSlot();
   const { buf, syl } = await voiceSyllables(text);
   const name = '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
   // the old voice's notes go too (they were for other syllables), and the chain its rap made
@@ -1690,11 +1714,11 @@ async function rapIt() {
     if (playing) pendingChain = [S.pat]; else S.chain = [S.pat];
   }
   S.patterns = S.patterns.map(p => p.map(st => st.filter(x => x.s !== si)));
-  S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0; syncPanel();
+  S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0; S.cur = si; syncPanel();
   const { bars, from } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed, true);
-  const n = Math.min(16, syl.length);
+  const n = Math.min(MAX_SYL, syl.length);
   status(`${n} syllables on sound ${si + 1}, ${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, patterns ${from + 1}–${from + bars} (chained)` : ''}: `
-    + syl.slice(0, n).map(x => (x.stress === 2 ? x.name.toUpperCase() : x.name)).join(' · ') + (syl.length > 16 ? `. Only the first 16 of ${syl.length} fit on the keys.` : '.'));
+    + syl.slice(0, n).map(x => (x.stress === 2 ? x.name.toUpperCase() : x.name)).join(' · ') + (syl.length > MAX_SYL ? `. Only the first ${MAX_SYL} of ${syl.length} fit.` : '.'));
 }
 function reflow(seed) {
   const { bars } = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
@@ -1743,7 +1767,7 @@ function pickVerses() {
   const text = ps.verses.slice(a, b + 1).map(verseText).join('\n');
   $('voxText').value = text;
   const n = text.split(/\s+/).reduce((c, w) => c + Math.max(1, spell(w).length), 0);
-  $('psCount').textContent = `About ${n} syllables${n > 16 ? `: 16 fit on one sound's keys, so a rap keeps the first 16` : ''}.`;
+  $('psCount').textContent = `About ${n} syllables${n > MAX_SYL ? `: a rap keeps the first ${MAX_SYL}` : n > 16 ? ` (a rap plays them all; the 16 pads show each pattern's)` : ''}.`;
 }
 $('psSrc').addEventListener('change', () => drawPsalter(false));
 $('psNum').addEventListener('change', () => drawVerses());
@@ -1781,8 +1805,8 @@ $('voxMake').addEventListener('click', busy($('voxMake'), async () => {
   if (S.cur < 8) { assignBuffer(S.cur, await makeVoice(), name); return; }
   // on 9–16: one syllable per key
   const { buf, syl } = await voiceSyllables(t);
-  checkpoint(); S.slots[S.cur] = voiceChop(name, buf, syl); S.lastKey[S.cur] = 0; syncPanel(); dirty(); draw();
-  status(`${name} → sound ${S.cur + 1}, ${Math.min(16, syl.length)} syllables on keys: ${syl.slice(0, 16).map(x => x.name).join(' · ')}`);
+  checkpoint(); S.slots[S.cur] = voiceChop(name, buf, syl.slice(0, 16)); S.lastKey[S.cur] = 0; syncPanel(); dirty(); draw();
+  status(`${name} → sound ${S.cur + 1}, ${Math.min(16, syl.length)} syllables on keys: ${syl.slice(0, 16).map(x => x.name).join(' · ')}${syl.length > 16 ? ` (the first 16 of ${syl.length})` : ''}`);
   noteOn(eng, S.cur, 0, ctx.currentTime + 0.02);
 }));
 $('rapIt').addEventListener('click', busy($('rapIt'), rapIt));
@@ -1884,10 +1908,12 @@ function keyLabel(k) {
     case 'play': if (S.write && !playing) {
       // the current sound's notes show what they play (a syllable, "Kick"); the others, their sound's number
       const name = n => (n.s === S.cur && sl.kind === 'chop' && sl.slices[n.k]?.name) || n.s + 1;
-      const f = fxIdx(S.fx[S.pat][k]), ns = S.patterns[S.pat][k].map(name).join(' ');
+      const st = S.patterns[S.pat][k], f = fxIdx(S.fx[S.pat][k]);
+      const ns = [...st.filter(n => n.s === S.cur), ...st.filter(n => n.s !== S.cur)].map(name).join(' ');   // this sound's first
       return (ns + (f != null ? ' ' + FX[f][0] : '')).trim();
     } break;
   }
+  if (padsFollow()) return S.patterns[S.pat][k].filter(n => n.s === S.cur).map(n => sl.slices[n.k]?.name).join(' ');
   if (sl.kind === 'chop') return sl.slices[k]?.name || '';
   if (sl.kind === 'sample') {            // a recording has no known pitch: show how far each key moves it
     if (sl.params.keyOf != null) return NOTE[(((S.root + keySemis(k, S.scale) + sl.params.pitch) % 12) + 12) % 12];
@@ -2161,8 +2187,15 @@ function findHit(role, ds, ps, vol = 1, depth = 0) {
 function putBeat(style, ds = drumSlot(), setTempo = true, parts = style.parts) {
   checkpoint();
   if (ds < 0) { status('No drum kit loaded. Load the Acoustic Kit or 808 Kit on a key first.'); return false; }
-  const ps = percSlot(), P = S.patterns[S.pat];
-  for (let i = 0; i < 16; i++) P[i] = P[i].filter(n => n.s !== ds && n.s !== ps);
+  const ps = percSlot(), P = S.patterns[S.pat], beat = beatSteps(parts, ds, ps);
+  for (let i = 0; i < 16; i++) P[i] = [...P[i].filter(n => n.s !== ds && n.s !== ps), ...beat[i]];
+  if (setTempo) { S.bpm = style.bpm; S.swing = style.swing; }
+  dirty(); draw();
+  return true;
+}
+// A beat's notes, step by step, on kit ds (and hand drums ps).
+function beatSteps(parts, ds, ps) {
+  const P = Array.from({ length: 16 }, () => []);
   for (const [role, line] of Object.entries(parts)) {
     const hit = findHit(role, ds, ps); if (!hit) continue;
     for (let i = 0; i < 16; i++) if (line[i] === 'x' && !P[i].some(n => n.s === hit.s && n.k === hit.k)) P[i].push({ s: hit.s, k: hit.k, ...(hit.lock && { lock: hit.lock }) });
@@ -2171,10 +2204,40 @@ function putBeat(style, ds = drumSlot(), setTempo = true, parts = style.parts) {
   const hat = findHit('hat', ds, ps), open = findHit('open', ds, ps);
   if (hat && open && (hat.s !== open.s || hat.k !== open.k))
     for (let i = 0; i < 16; i++) if (P[i].some(n => n.s === open.s && n.k === open.k)) P[i] = P[i].filter(n => !(n.s === hat.s && n.k === hat.k));
-  if (setTempo) { S.bpm = style.bpm; S.swing = style.swing; }
-  dirty(); draw();
-  return true;
+  return P;
 }
+// ▶ Hear it: the beat chosen, on the kit chosen, at its own tempo, looping
+// until tapped again, without touching the pattern.
+let beatPv = null;
+function stopPreview() {
+  if (!beatPv) return;
+  clearTimeout(beatPv.timer); beatPv = null;
+  $('hearBeat').textContent = '▶ Hear it'; $('hearBeat').classList.remove('go');
+}
+function hearBeat() {
+  stopPreview();
+  const st = STYLES[$('style').value], ds = drumSlot();
+  if (ds < 0) { status('No drum kit loaded: choose one above first.'); return; }
+  if (playing) stop();
+  ctx.resume();
+  const steps = beatSteps(st.parts, ds, percSlot()), sd = 60 / st.bpm / 4, sw = (2 * st.swing / 100 - 1) * sd;
+  const pv = beatPv = { t: ctx.currentTime + 0.05, i: 0 };
+  const run = () => {
+    if (beatPv !== pv) return;
+    while (pv.t < ctx.currentTime + 0.12) {
+      const at = pv.t + (pv.i % 2 ? sw : 0);
+      for (const n of steps[pv.i % 16]) noteOn(eng, n.s, n.k, at, null, n.lock);
+      pv.t += sd; pv.i++;
+    }
+    pv.timer = setTimeout(run, 25);
+  };
+  run();
+  $('hearBeat').textContent = '■ Stop'; $('hearBeat').classList.add('go');
+  status(`Hearing ${st.name} at ${st.bpm} BPM on ${S.slots[ds].name}. "Put this beat in" puts it in pattern ${S.pat + 1}.`);
+}
+$('hearBeat').addEventListener('click', () => (beatPv ? stopPreview() : hearBeat()));
+$('style').addEventListener('change', () => { if (beatPv) hearBeat(); });
+
 // A new beat in a style: its pattern, varied. Extra kicks fall where they
 // groove (the "and" and "a" of a beat), ghost notes sit around the backbeat,
 // the hats change their walk, and now and then there is a fill or a crash.
@@ -2231,7 +2294,8 @@ $('kitSel').addEventListener('change', async () => {
   const id = $('kitSel').value, si = drumSlot() >= 0 ? drumSlot() : 8;
   checkpoint();
   S.slots[si] = await factorySlot(id); S.lastKey[si] = 0;
-  syncPanel(); dirty(); draw(); noteOn(eng, si, 0, ctx.currentTime + 0.01);
+  syncPanel(); dirty(); draw();
+  if (beatPv) hearBeat(); else noteOn(eng, si, 0, ctx.currentTime + 0.01);
   status(`${LIBRARY[id].name} on sound ${si + 1}: the beats play on it.`);
 });
 function drawKitSel() {
