@@ -344,7 +344,7 @@ export const loopStretch = (slot, P, bpm, root) => {
 };
 
 export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = 0, fx = true, lock = null,
-  scale = 'minor', bpm = 120, root = 0, hold = false, phase = 0 } = {}) {
+  scale = 'minor', bpm = 120, root = 0, hold = false, phase = 0, dest: into = null } = {}) {
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
@@ -357,7 +357,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     f.Q.value = 0.7 + P.res * 14;
     f.connect(out); dest = f;
   }
-  out.connect(fx ? eng.bus : eng.dry);
+  out.connect(into || (fx ? eng.bus : eng.dry));       // into: a Loops column's own volume
   const voice = { rates: [], nodes: [], end: t, stop: null, sustain };
   const env = ctx.createGain(); env.connect(dest);
 
