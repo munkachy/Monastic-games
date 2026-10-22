@@ -373,7 +373,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
   if (dive && !scratch) for (const r of voice.rates) r.setTargetAtTime(r.value * Math.pow(2, -3 * dive), t + 0.02, 0.2);
   eng.voices.add(voice);
   if (eng.live && voice.end < Infinity) setTimeout(free, Math.max(0, (voice.end - ctx.currentTime) * 1000) + 60);
-  if (P.choke) eng.choke.set(si, voice);
+  if (P.choke && !loop) eng.choke.set(si, voice);     // a running loop is never cut off by the next hit
   return voice;
 }
 

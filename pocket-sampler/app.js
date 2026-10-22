@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022e';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -79,6 +79,7 @@ function onAudioState() {
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
 window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
+  loops: () => [...eng.voices].filter(v => v.end === Infinity).length,
   key: () => ({ root: S.root, scale: S.scale, next: keyNext && { ...keyNext }, patKeys: [...S.patKeys], playing, time: ctx.currentTime, bar: 16 * stepDur() }) };   // for testing the restart from the browser console
 addEventListener('pointerdown', () => wake('tap'), true);
 addEventListener('keydown', () => wake('key'), true);
@@ -600,12 +601,14 @@ function snap() {
   return { j: prev + g, when: at(prev + g) };
 }
 // Play key `key` of sound `si` from the pad under the finger, as One shot,
-// Gate (until the pad is let go) or Loop (until it is tapped again).
+// Gate (until the pad is let go) or Loop (until it is tapped again). A loop
+// keeps going when the sound is switched to One shot or Gate, and those play
+// over it; only a tap in Loop mode stops it.
 function playHeld(si, key, pad, when = ctx.currentTime) {
-  const id = `${si}:${key}`;
-  if (looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
+  const id = `${si}:${key}`, inLoop = S.slots[si]?.params.trig === 'loop';
+  if (inLoop && looping.has(id)) { endHeld(looping.get(id)); looping.delete(id); return false; }
   const h = { voice: noteOn(eng, si, key, when, undefined, null, true), at: when };
-  if (S.slots[si]?.params.trig === 'loop' && h.voice?.sustain) looping.set(id, h);
+  if (inLoop && h.voice?.sustain) looping.set(id, h);
   else holding[pad] = h;
   return h;
 }
@@ -833,7 +836,9 @@ const TRIGS = ['oneshot', 'gate', 'loop'], TRIG_LABEL = { oneshot: '1 Shot', gat
 $('trigBtn').addEventListener('click', () => {
   const t = TRIGS[(TRIGS.indexOf(S.slots[S.cur].params.trig || 'oneshot') + 1) % 3];
   $('pTrig').value = t; $('pTrig').dispatchEvent(new Event('change'));
-  status(`Sound ${S.cur + 1} plays as ${{ oneshot: 'One shot: the whole sound', gate: 'Gate: only while held', loop: 'Loop: tap on, tap again off' }[t]}.`);
+  const running = [...looping.keys()].some(id => id.startsWith(S.cur + ':'));
+  status(`Sound ${S.cur + 1} plays as ${{ oneshot: 'One shot: the whole sound', gate: 'Gate: only while held', loop: 'Loop: tap on, tap again off' }[t]}.`
+    + (running ? (t === 'loop' ? ' Tap a looping key to stop it.' : ' The loops keep going: play over them, and come back to Loop to stop them.') : ''));
 });
 for (let r = 0; r < 12; r++) $('pKeyOf').add(new Option(`${NOTE[r]}: follows the song's key`, r));
 $('pKeyOf').addEventListener('change', () => {
@@ -854,7 +859,6 @@ $('findKey').addEventListener('click', () => {
 });
 $('pTrig').addEventListener('change', () => {
   checkpoint(); S.slots[S.cur].params.trig = $('pTrig').value; syncPanel();
-  for (const [id, h] of looping) if (id.startsWith(S.cur + ':')) { h.voice.stop(ctx.currentTime); looping.delete(id); }
   dirty(); draw();
 });
 $('pWob').addEventListener('input', () => {
