@@ -50,6 +50,24 @@ class Crush extends AudioWorkletProcessor {
 }
 registerProcessor('crush', Crush);`;
 
+// Distortion curves. x runs -1..1; amt (0-1) is how hard.
+const curves = new Map();
+function distortion(type, amt) {
+  const key = type + Math.round(amt * 20);
+  if (curves.has(key)) return curves.get(key);
+  const c = new Float32Array(2048);
+  for (let i = 0; i < c.length; i++) {
+    const x = i / 1023.5 - 1;
+    switch (type) {
+      case 'overdrive': { const k = 1 + amt * 9; c[i] = Math.tanh(k * x) / Math.tanh(k); break; }          // warm, soft clip
+      case 'fuzz': { const y = x * (2 + amt * 30); c[i] = Math.max(-0.8, Math.min(0.5, y)) / 0.65; break; }   // hard and lopsided
+      case 'wavefold': c[i] = Math.sin(x * (1 + amt * 7) * Math.PI / 2); break;                                // folds back: metallic
+      case 'tape': { const k = 1 + amt * 3; c[i] = 0.85 * Math.tanh(k * x) / Math.tanh(k) + 0.15 * x; break; } // gentle, rounded
+    }
+  }
+  curves.set(key, c);
+  return c;
+}
 // A hall to convolve with: stereo noise, each side its own, dying away.
 function hall(ctx, seconds) {
   const n = Math.round(ctx.sampleRate * seconds), b = ctx.createBuffer(2, n, ctx.sampleRate);
@@ -82,7 +100,10 @@ export class Engine {
     this.limit = ctx.createWaveShaper(); this.limit.curve = LIMIT_CURVE;
     this.comp.connect(this.limit);
     this.vol = 0.9; this.master = ctx.createGain(); this.master.gain.value = this.vol;
-    this.bus.connect(this.lp); this.lp.connect(this.hp);
+    // Distortion: a waveshaper that passes the sound unchanged (no curve)
+    // until Overdrive, Fuzz, Wavefold or Tape is on.
+    this.drv = ctx.createWaveShaper(); this.drvOut = ctx.createGain();
+    this.bus.connect(this.drv); this.drv.connect(this.drvOut); this.drvOut.connect(this.lp); this.lp.connect(this.hp);
     this.hp.connect(this.comp); this.hp.connect(this.send); this.dry.connect(this.comp);
     this.send.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.comp);
     this.limit.connect(this.master); this.master.connect(ctx.destination);
@@ -135,16 +156,22 @@ export class Engine {
         this.crushOn = on;
         this.crush.parameters.get('bits').setValueAtTime(on ? 15 - amt * 12 : 16, t); this.crush.parameters.get('hold').setValueAtTime(on ? 1 + amt * 16 : 1, t);
         if (on && !this.crushIn) {          // at 16 bits it passes the sound unchanged until t
-          this.bus.connect(this.crush); this.crush.connect(this.lp); this.bus.disconnect(this.lp); this.crushIn = true;
+          this.drvOut.connect(this.crush); this.crush.connect(this.lp); this.drvOut.disconnect(this.lp); this.crushIn = true;
         } else if (!on && this.crushIn) {
           setTimeout(() => {
             if (this.crushOn || !this.crushIn) return;
-            this.bus.connect(this.lp); this.bus.disconnect(this.crush); this.crush.disconnect(); this.crushIn = false;
+            this.drvOut.connect(this.lp); this.drvOut.disconnect(this.crush); this.crush.disconnect(); this.crushIn = false;
           }, (t - this.ctx.currentTime) * 1000 + 60);
         }
         break;
       case 'lowpass': p(this.lp.frequency, on ? 5000 * Math.pow(0.025, amt) : 20000, on ? 0.12 : 0.05); break;
-      case 'highpass': p(this.hp.frequency, on ? 1600 : 10, on ? 0.12 : 0.05); break;
+      case 'highpass': p(this.hp.frequency, on ? 150 * Math.pow(25, amt) : 10, on ? 0.12 : 0.05); break;
+      case 'overdrive': case 'fuzz': case 'wavefold': case 'tape':
+        // The curve can't be timed on the audio clock, so it changes now
+        // (for an effect saved in a pattern, up to 0.1 s early).
+        this.drv.curve = on ? distortion(name, amt) : null;
+        p(this.drvOut.gain, on ? { overdrive: 0.8, fuzz: 0.55, wavefold: 0.75, tape: 0.9 }[name] : 1, 0.01);
+        break;
       case 'echo':
         this.delay.delayTime.setValueAtTime(Math.min(1.9, stepDur * 3), t);
         p(this.send.gain, on ? amt : 0, 0.02); break;
