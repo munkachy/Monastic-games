@@ -166,8 +166,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
   and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
-  Four small buttons are yours to set: mute drums, export, roll, new beat,
-  clear, or any effect held while you hold the button.
+  Eight blue buttons are yours to set, four beside the Menu and four under
+  the keys: mute drums, export, roll, new beat, clear, the key wheel, next
+  key, octave down and up (for the keys you play on the current sound,
+  kept in what you record), or any effect.
 - **Editor (✂ Edit this sound):** see the waveform, drag to select, hear
   the selection, then crop to it or cut it out; place cut points by hand or
   let it find each hit, and put the pieces one per key on any sound. The

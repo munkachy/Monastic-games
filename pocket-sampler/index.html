@@ -139,6 +139,11 @@
   .help b { color: var(--accent); }
   .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
   #status { min-height: 1.3em; margin: 8px 2px 0; }
+  /* your own buttons: blue, so they stand apart from the fixed ones */
+  .fn button.custom { background: #22546a; color: #e4eff3; box-shadow: 0 3px 0 #0d2833; }
+  .fn button.custom.on { background: var(--accent); color: #fff; }
+  .fnbot { margin: 10px 0 0; }
+  .fnbot button { padding: 11px 2px; }
   .fn button.menu { background: var(--accent); color: #fff; }
 
   /* the Menu: everything to set up before playing, over the keys */
@@ -166,7 +171,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022f</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022g</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -194,6 +199,10 @@
   </div>
 
   <div class="keys" id="keys"></div>
+  <div class="fn fnbot">
+    <button class="custom" data-slot="4"></button><button class="custom" data-slot="5"></button>
+    <button class="custom" data-slot="6"></button><button class="custom" data-slot="7"></button>
+  </div>
   <div id="wheel" hidden>
     <div class="wheelbar"><b>Key</b><button id="wheelRand" title="A key that sits well with this one">🎲</button><button id="wheelForget">Forget pattern key</button><button id="wheelClose">✕</button></div>
     <div class="wheelwrap">
@@ -237,11 +246,16 @@
   </div>
 
   <div class="panel" id="tButtons">
-    <p class="note" style="margin-top:0">The four small buttons beside ☰ Menu are yours: choose what each one does. Effects work while you hold the button.</p>
+    <p class="note" style="margin-top:0">The four small buttons beside ☰ Menu and the four under the keys (the blue ones) are yours: choose what each one does. Effects work while you hold the button.</p>
     <div class="row"><label for="cb0">Button 1</label><select id="cb0"></select><span></span></div>
     <div class="row"><label for="cb1">Button 2</label><select id="cb1"></select><span></span></div>
     <div class="row"><label for="cb2">Button 3</label><select id="cb2"></select><span></span></div>
     <div class="row"><label for="cb3">Button 4</label><select id="cb3"></select><span></span></div>
+    <p class="note">The row under the keys:</p>
+    <div class="row"><label for="cb4">Bottom 1</label><select id="cb4"></select><span></span></div>
+    <div class="row"><label for="cb5">Bottom 2</label><select id="cb5"></select><span></span></div>
+    <div class="row"><label for="cb6">Bottom 3</label><select id="cb6"></select><span></span></div>
+    <div class="row"><label for="cb7">Bottom 4</label><select id="cb7"></select><span></span></div>
   </div>
 
   <div class="panel" id="tSound">
@@ -319,7 +333,7 @@
 
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
-    <p><b>The four small buttons</b> beside Menu are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, or any FX, held while you hold the button.</p>
+    <p><b>The blue buttons</b>, four beside Menu and four under the keys, are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
@@ -391,6 +405,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022f"></script>
+<script type="module" src="app.js?v=20261022g"></script>
 </body>
 </html>
