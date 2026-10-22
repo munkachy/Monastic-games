@@ -171,7 +171,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022k</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022l</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -313,6 +313,14 @@
   </div>
 
   <div class="panel" id="tVoice">
+    <div class="row"><label for="psSrc">Psalter</label>
+      <select id="psSrc"><option value="douay">Douay-Rheims (built in)</option><option value="grail" disabled>Grail: import your file</option></select>
+      <button id="psImport" title="Import your Grail file (a psalter pack)">⬆</button></div>
+    <div class="row"><label for="psNum">Psalm</label><select id="psNum"></select><button id="psRand" title="A random verse">🎲</button></div>
+    <div class="row"><label for="psFrom">Verse</label><select id="psFrom"></select><span></span></div>
+    <div class="row"><label for="psTo">To verse</label><select id="psTo"></select><span></span></div>
+    <p class="note" id="psCount" style="margin:0 0 4px"></p>
+    <input type="file" id="psFile" accept=".json,application/json" hidden>
     <textarea id="voxText" aria-label="Words to speak">In the beginning was the Word</textarea>
     <div class="row"><label for="voxVariant">Voice</label><select id="voxVariant"></select><span></span></div>
     <div class="row"><label for="voxPitch">Pitch</label><input type="range" id="voxPitch" min="0" max="99" step="1" value="40"><output id="oVoxPitch"></output></div>
@@ -326,7 +334,8 @@
     <div class="row"><label for="rapFlow">Flow</label><select id="rapFlow"></select><span></span></div>
     <label class="check"><input type="checkbox" id="rapRest"> A rest between words</label>
     <div class="btns"><button id="rapIt" class="go">🎤 Rap it on the beat</button><button id="rapNew">🎲 New flow</button></div>
-    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. <b>Rap it on the beat</b> puts one syllable on each key of this sound and writes them into the pattern in the flow you choose, carrying on into the next patterns (chained) if they don't fit in one bar. Stressed syllables (shown in capitals) are put on the beat; a comma rests to the next beat and a full stop or new line to the next half bar (old school: the next bar). Change the flow, or tap <b>🎲 New flow</b>, and the same rap is laid out again without speaking it again. <b>Cut</b>: Natural speaks the line as a whole and cuts it at the quiet dips; Robot-precise speaks each syllable on its own, so every cut is clean but it sounds more clipped. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
+    <p class="note" id="psNote"></p>
+    <p class="note">Pick a psalm and verse and its words go into the box, a line for each half-verse (each new line is a breath in the rap); or type your own. ⬆ adds your Grail file (the psalter pack Selah takes); it stays in this browser on this device and is never sent anywhere. Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. <b>Rap it on the beat</b> puts one syllable on each key of this sound and writes them into the pattern in the flow you choose, carrying on into the next patterns (chained) if they don't fit in one bar. Stressed syllables (shown in capitals) are put on the beat; a comma rests to the next beat and a full stop or new line to the next half bar (old school: the next bar). Change the flow, or tap <b>🎲 New flow</b>, and the same rap is laid out again without speaking it again. <b>Cut</b>: Natural speaks the line as a whole and cuts it at the quiet dips; Robot-precise speaks each syllable on its own, so every cut is clean but it sounds more clipped. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
   </div>
 
   <div class="panel" id="tLog">
@@ -410,6 +419,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022k"></script>
+<script type="module" src="app.js?v=20261022l"></script>
 </body>
 </html>

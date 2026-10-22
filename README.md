@@ -152,6 +152,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   on the beat (off it, for syncopated) and a breath at commas and full
   stops, chaining on into the next patterns when it needs more bars.
   **🎲 New flow** lays the same rap out in another flow.
+- **Psalms for the voice:** pick a psalm and a verse (or a run of verses)
+  from the built-in Douay-Rheims, or from your own Grail file (the psalter
+  pack Selah takes, kept in the browser on your device and never sent
+  anywhere), and its words go into the voice box, a line per half-verse.
 - **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
