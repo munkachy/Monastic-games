@@ -142,6 +142,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   screen to move the cuts. It can also resample the beat that's playing.
 - **Voice:** type words and Vox Machina's eSpeak engine says them onto the
   current sound, with tone variation (0 = flat monotone) and vowel length.
+  On 9–16 it is cut into syllables, one per key, named on the keys.
+  **🎤 Rap it on the beat** puts the syllables on the keys and writes them
+  into the pattern in 1/16, 1/8 or 1/4 notes (with a rest between words if
+  you like), chaining on into the next patterns when it needs more bars.
 - **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**

@@ -171,7 +171,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022g</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022h</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -321,7 +321,11 @@
     <div class="row"><label for="voxGap">Word gap</label><input type="range" id="voxGap" min="0" max="60" step="1" value="0"><output id="oVoxGap"></output></div>
     <div class="row"><label for="voxVowel">Vowel length</label><input type="range" id="voxVowel" min="1" max="3" step="0.05" value="1.5"><output id="oVoxVowel"></output></div>
     <div class="btns"><button id="voxMake" class="go">Make voice → this sound</button><button id="voxHear">Hear it</button></div>
-    <p class="note">Tone variation at 0 is a dead flat robot monotone. Word gap puts silence between the words, so each lands on its own key when chopped. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
+    <div class="row"><label for="rapGrid">Rhythm</label>
+      <select id="rapGrid"><option value="1">1/16: quick</option><option value="2" selected>1/8</option><option value="4">1/4: one a beat</option></select><span></span></div>
+    <label class="check"><input type="checkbox" id="rapRest"> A rest between words</label>
+    <div class="btns"><button id="rapIt" class="go">🎤 Rap it on the beat</button></div>
+    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. <b>Rap it on the beat</b> puts one syllable on each key of this sound and writes them into the pattern in the rhythm you choose, carrying on into the next patterns (chained) if they don't fit in one bar. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
   </div>
 
   <div class="panel" id="tLog">
@@ -405,6 +409,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022g"></script>
+<script type="module" src="app.js?v=20261022h"></script>
 </body>
 </html>

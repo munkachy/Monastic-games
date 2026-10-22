@@ -751,6 +751,53 @@ export function normalize(buf, peak = 0.9) {
 // first always at 0. Loudness is measured in 10 ms frames; an onset is a jump
 // in loudness well above the local average. The strongest are kept, and if
 // there are too few, the longest pieces are cut in half until there are `max`.
+// Syllables of a spoken phrase. The voice is spoken with a long pause
+// between words, so each word is a sound with silence round it; `counts`
+// says how many syllables each word should have (from its spelling). A word
+// is split at the quietest dips between its vowels, where the consonants
+// are. Returns [{ s, e, w }] in seconds (w: which word), or null when the
+// words found don't match the words typed.
+export function syllables(buf, counts) {
+  const x = buf.getChannelData(0), rate = buf.sampleRate, F = Math.round(rate * 0.01), n = Math.floor(x.length / F);
+  const e = new Float32Array(n);
+  for (let f = 0; f < n; f++) { let s = 0; for (let i = f * F; i < (f + 1) * F; i++) s += x[i] * x[i]; e[f] = Math.sqrt(s / F); }
+  const peak = e.reduce((a, b) => Math.max(a, b), 0) || 1, quiet = peak * 0.02;
+  // words: sounding stretches split by at least 150 ms of quiet
+  const words = []; let a = -1, lastLoud = -99;
+  for (let f = 0; f < n; f++) {
+    if (e[f] > quiet) { if (a < 0 || f - lastLoud > 15) { if (a >= 0) words.push([a, lastLoud + 1]); a = f; } lastLoud = f; }
+  }
+  if (a >= 0) words.push([a, lastLoud + 1]);
+  if (words.length !== counts.length) return null;
+  // a smoothed loudness, to find the dips between vowels
+  const sm = new Float32Array(n);
+  for (let f = 0; f < n; f++) { let s = 0, c = 0; for (let j = Math.max(0, f - 2); j <= Math.min(n - 1, f + 2); j++) { s += e[j]; c++; } sm[f] = s / c; }
+  const out = [];
+  words.forEach(([w0, w1], wi) => {
+    const want = Math.max(1, counts[wi]), cuts = [];
+    const dips = [];
+    for (let f = w0 + 5; f < w1 - 5; f++) if (sm[f] < sm[f - 1] && sm[f] <= sm[f + 1]) {
+      // how deep: the lower of the loudest points either side, over the dip
+      let l = 0, r = 0; for (let j = w0; j < f; j++) l = Math.max(l, sm[j]); for (let j = f + 1; j < w1; j++) r = Math.max(r, sm[j]);
+      dips.push([f, Math.min(l, r) / (sm[f] + 1e-4)]);
+    }
+    dips.sort((p, q) => q[1] - p[1]);
+    for (const [f, d] of dips) {
+      if (cuts.length >= want - 1 || d < 1.25) break;
+      if ([w0, w1, ...cuts].every(c => Math.abs(c - f) >= 7)) cuts.push(f);
+    }
+    while (cuts.length < want - 1) {        // too few dips: halve the longest piece
+      const pts = [w0, ...cuts.sort((p, q) => p - q), w1]; let bi = 0;
+      for (let i = 1; i < pts.length - 1; i++) if (pts[i + 1] - pts[i] > pts[bi + 1] - pts[bi]) bi = i;
+      cuts.push(Math.round((pts[bi] + pts[bi + 1]) / 2));
+    }
+    const pts = [w0, ...cuts.sort((p, q) => p - q), w1];
+    for (let i = 0; i < pts.length - 1; i++)
+      out.push({ s: Math.max(0, pts[i] - (i ? 0 : 1)) * F / rate, e: Math.min(n, pts[i + 1] + (i === pts.length - 2 ? 2 : 0)) * F / rate, w: wi });
+  });
+  return out;
+}
+
 export function onsets(buf, max = 16) {
   const x = buf.getChannelData(0), rate = buf.sampleRate, F = Math.round(rate * 0.01);
   const n = Math.floor(x.length / F), e = new Float32Array(n), flux = new Float32Array(n);
