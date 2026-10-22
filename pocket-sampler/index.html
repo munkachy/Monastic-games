@@ -37,6 +37,11 @@
   .fxamt { display: grid; grid-template-columns: 1fr 1.4fr 38px; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; }
   .fxamt input { accent-color: var(--lcd-ink); }
   .fxamt output { text-align: right; }
+  #editor { position: fixed; inset: 0; z-index: 11; background: #000b; display: flex; justify-content: center; padding: 8px; }
+  #editor[hidden] { display: none; }
+  #editor .sheet { max-width: 440px; display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; height: 100%; }
+  .edbody { overflow: auto; flex: 1; padding: 4px 12px 16px; }
+  #edWave { width: 100%; height: 170px; display: block; background: var(--lcd); border-radius: 6px; touch-action: none; }
   .aims { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; max-height: 50vh; overflow: auto; }
 
   /* function buttons */
@@ -129,7 +134,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022c</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022d</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -179,7 +184,9 @@
   <div class="panel on" id="tBrowse">
     <div class="crumbs" id="crumbs"></div>
     <div class="blist" id="blist"></div>
-    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button></div>
+    <div class="btns" id="bTools" style="margin:0 0 8px"></div>
+    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button><button id="bMore" hidden></button></div>
+    <input type="file" id="importFile" accept="audio/*,video/*" hidden>
   </div>
 
   <div class="panel" id="tEffects">
@@ -219,6 +226,8 @@
       <label class="file">Load file…<input type="file" id="file" accept="audio/*"></label>
       <button id="rollAll">🎲 Roll all 16</button>
       <button id="copySound">Copy sound to…</button>
+      <button id="editSound" class="go">✂ Edit this sound</button>
+      <button id="saveMine">★ Save to My Sounds</button>
       <button id="reset">Reset sound</button>
     </div>
     <p class="note" id="soundNote"></p>
@@ -278,6 +287,8 @@
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
+    <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
+    <p><b>My Sounds</b> (Menu › Sounds): your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
     <p><b>Trim:</b> Start and Length cut the sound down. On 9–16 they trim only the slice you played last.</p>
     <p><b>🎲 Roll</b>: a brand-new video-game sound on the last key you played ("Roll all 16" in the Sound tab fills a whole kit). <b>🎲 Beat</b>: a new drum beat in the style chosen in the Beat tab.</p>
     <p><b>1 Shot / Gate / Loop</b> (the button next to Rec) switches how the current sound's keys play; it is the same as "Play as" in the Sound tab.</p>
@@ -287,6 +298,36 @@
   </div>
   </div>
  </div>
+</div>
+<div id="editor" hidden>
+ <div class="sheet">
+  <div class="menubar"><b id="edTitle">Editor</b><button id="edClose">✕ Close</button></div>
+  <div class="edbody">
+    <canvas id="edWave"></canvas>
+    <p class="note" id="edInfo"></p>
+    <div class="btns">
+      <button id="edPlay" class="go">▶ Play</button><button id="edStop">■</button>
+      <button id="edZoom">Zoom in</button><button id="edAll">Show all</button><button id="edUndo">↶</button>
+    </div>
+    <div class="btns">
+      <button id="edCrop">Crop</button><button id="edCut">Cut</button>
+      <button id="edAddCut">+ Cut point</button><button id="edDelCut">− Cut point</button>
+      <button id="edAuto">Auto-chop</button><button id="edClearCuts">No cut points</button>
+    </div>
+    <div class="row"><label for="edTarget">Put on</label><select id="edTarget"></select><span></span></div>
+    <div class="btns"><button id="edPut" class="go">Put on sound</button><button id="edSave">★ Save to My Sounds</button></div>
+    <p class="note">Drag across the wave to select (it plays as you drag). Tap to set a point and hear from there. Crop keeps the selection; Cut takes it out. Cut points are where the keys split on sounds 9–16. With a selection, Put and Save use just that part.</p>
+  </div>
+ </div>
+</div>
+<div id="packBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Make a pack</b>
+    <input type="text" id="packName" aria-label="Pack name" value="My pack" autocomplete="off">
+    <p class="note">Choose up to 16 of your sounds; each goes on its own key, in this order.</p>
+    <div class="aims" id="packList"></div>
+    <div class="btns"><button id="packMake" class="go">Make it</button><button id="packCancel">Cancel</button></div>
+  </div>
 </div>
 <div id="aimBox" class="overlay" hidden>
   <div class="sheet">
@@ -306,6 +347,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022c"></script>
+<script type="module" src="app.js?v=20261022d"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022c';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022d';
 
 const $ = id => document.getElementById(id);
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
@@ -77,7 +77,7 @@ function onAudioState() {
   log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
-window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY) };   // for testing the restart from the browser console
+window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration) };   // for testing the restart from the browser console
 addEventListener('pointerdown', () => wake('tap'), true);
 addEventListener('keydown', () => wake('key'), true);
 document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
@@ -757,14 +757,28 @@ const TREE = ['Sounds', [
   ['Packs', [
     ['Percussion', ['percussion']],
     ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']],
+    ['My packs', 'mine:pack'],
   ]],
-  ['My Sounds', []],
+  ['My Sounds', 'mine:all'],
 ]];
 const EMPTY = { Loops: 'Loops come in a later build: drum loops and more, stretched to your tempo and key.',
-  'My Sounds': 'Your own sounds (saved recordings, voices, imports, packs you make) come in the next build.' };
+  'My Sounds': 'Nothing saved yet. ★ Save to My Sounds (in Settings or the editor) keeps a sound here; ⬆ Import brings in a file.',
+  'My packs': 'No packs yet. In My Sounds, Make a pack puts up to 16 of your sounds together.' };
 const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
-let bPath = [TREE], bSel = null;
+// What can be chosen in the browser: { lib: id } a built-in sound, { mine: record } one of yours,
+// { from: chosen pack, k } one sound inside a pack.
+let bPath = [TREE], bSel = null, mine = [];
 const previews = new Map();
+const selName = c => c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
+const selPack = c => (c.lib ? isPack(c.lib) : c.mine ? c.mine.type === 'pack' : false);
+async function refreshMine() { mine = db ? (await idbAll('mine')).sort((a, b) => b.created - a.created) : []; }
+function itemsOf(node) {
+  const it = node[1];
+  if (it === 'mine:all') return mine.map(m => ({ mine: m }));
+  if (it === 'mine:pack') return mine.filter(m => m.type === 'pack').map(m => ({ mine: m }));
+  if (node.contents) return node.contents;
+  return it.map(x => (Array.isArray(x) ? x : { lib: x }));
+}
 function drawBrowser() {
   const crumbs = $('crumbs'); crumbs.textContent = '';
   bPath.forEach((node, i) => {
@@ -773,28 +787,50 @@ function drawBrowser() {
     b.addEventListener('click', () => { bPath = bPath.slice(0, i + 1); bSel = null; drawBrowser(); });
     crumbs.appendChild(b);
   });
-  const [name, items] = bPath[bPath.length - 1], list = $('blist'); list.textContent = '';
-  if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = EMPTY[name] || 'Nothing here yet.'; list.appendChild(p); }
+  const node = bPath[bPath.length - 1], items = itemsOf(node), list = $('blist'); list.textContent = '';
+  if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = EMPTY[node[0]] || 'Nothing here yet.'; list.appendChild(p); }
   for (const it of items) {
     const b = document.createElement('button'), small = document.createElement('small');
     if (Array.isArray(it)) {
-      const n = count(it); b.textContent = '▸ ' + it[0]; small.textContent = n ? `${n}` : '';
+      b.textContent = '▸ ' + it[0];
+      const n = typeof it[1] === 'string' ? (it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
+      small.textContent = n ? `${n}` : '';
       b.addEventListener('click', () => { bPath.push(it); bSel = null; drawBrowser(); });
     } else {
-      b.textContent = LIBRARY[it].name; small.textContent = isPack(it) ? 'pack · 16 sounds' : 'instrument';
-      b.classList.toggle('sel', bSel === it);
+      b.textContent = selName(it).replace(/ \(from .*\)$/, '');
+      small.textContent = it.k != null ? `key ${it.k + 1}`
+        : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : 'my sound')
+        : selPack(it) ? 'pack · 16 sounds' : 'instrument';
+      b.classList.toggle('sel', !!bSel && same(bSel, it));
       b.addEventListener('click', () => { bSel = it; drawBrowser(); preview(it); });
     }
     b.appendChild(small); list.appendChild(b);
   }
+  // tools for the place you're in
+  const tools = $('bTools'); tools.textContent = '';
+  const tool = (label, fn, go) => { const b = document.createElement('button'); b.textContent = label; if (go) b.className = 'go'; b.addEventListener('click', fn); tools.appendChild(b); };
+  if (node[1] === 'mine:all') {
+    tool('⬆ Import a file', () => $('importFile').click(), true);
+    tool('Make a pack', openPackMaker);
+  }
   $('bLoad').disabled = !bSel;
-  $('bLoad').textContent = bSel ? `Load ${LIBRARY[bSel].name} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
+  $('bLoad').textContent = bSel ? `Load ${selName(bSel).replace(/ \(from .*\)$/, '')} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
+  // second button: open a pack, or rename / delete one of yours
+  const more = $('bMore');
+  more.hidden = !bSel || !(selPack(bSel) || bSel.mine);
+  more.textContent = bSel && selPack(bSel) ? 'Open pack ▸' : 'Rename / delete';
 }
-const count = node => node[1].reduce((n, it) => n + (Array.isArray(it) ? count(it) : 1), 0);
-async function preview(id) {
-  if (!previews.has(id)) previews.set(id, factorySlot(id));
-  const slot = await previews.get(id);
-  if (bSel === id) playNote(eng, slot, -1, isPack(id) ? 0 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+const same = (a, b) => (a.lib && a.lib === b.lib) || (a.mine && b.mine && a.mine.id === b.mine.id) || (a.k != null && a.k === b.k && a.from === b.from);
+const count = node => (Array.isArray(node[1]) ? node[1].reduce((n, it) => n + (Array.isArray(it) ? count(it) : 1), 0) : 0);
+// The sound a choice stands for, as a slot (built once and kept).
+async function slotOf(c) {
+  if (c.lib) { if (!previews.has(c.lib)) previews.set(c.lib, factorySlot(c.lib)); return previews.get(c.lib); }
+  if (c.mine) return unpackSlot(c.mine);
+  return sliceAlone(await slotOf(c.from), c.k, c.label);
+}
+async function preview(c) {
+  const slot = await slotOf(c);
+  if (bSel === c) playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : slot.kind === 'sample' ? 7 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
 }
 async function loadLibrary(id) {
   checkpoint();
@@ -802,13 +838,274 @@ async function loadLibrary(id) {
   syncPanel(); dirty(); draw();
   status(`${LIBRARY[id].name} → sound ${S.cur + 1}.`);
 }
-$('bLoad').addEventListener('click', async () => { if (!bSel) return; await loadLibrary(bSel); closeMenu(); noteOn(eng, S.cur, 0, ctx.currentTime + 0.01); });
+$('bLoad').addEventListener('click', async () => {
+  if (!bSel) return;
+  if (bSel.lib) await loadLibrary(bSel.lib);
+  else {
+    checkpoint();
+    S.slots[S.cur] = await slotOf(bSel); S.lastKey[S.cur] = S.cur < 8 && S.slots[S.cur].kind === 'sample' ? 7 : 0;
+    syncPanel(); dirty(); draw(); status(`${S.slots[S.cur].name} → sound ${S.cur + 1}.`);
+  }
+  closeMenu(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.01);
+});
+$('bMore').addEventListener('click', async () => {
+  if (!bSel) return;
+  if (selPack(bSel)) {               // open the pack: its 16 sounds, each loadable alone
+    const from = bSel, slot = await slotOf(from);
+    const node = [selName(from), []];
+    node.contents = slot.slices.map((sl, k) => sl && { from, k, label: sl.name || `sound ${k + 1}` }).filter(Boolean);
+    bPath.push(node); bSel = null; drawBrowser(); return;
+  }
+  const m = bSel.mine, name = prompt(`Rename "${m.name}" (leave empty to delete it):`, m.name);
+  if (name === null) return;
+  if (!name.trim()) { if (confirm(`Delete "${m.name}" from My Sounds?`)) { await idbDel('mine', m.id); status(`"${m.name}" deleted.`); } }
+  else { m.name = name.trim(); m.item.name = m.name; await idbPut('mine', m, m.id); }
+  bSel = null; await refreshMine(); drawBrowser();
+});
+
+// One sound of a pack, on its own: its slice copied into a sound of its own.
+function sliceAlone(slot, k, label) {
+  const sl = slot.slices[k], src = sl.buf || slot.buf, r = src.sampleRate;
+  const a = Math.round(sl.s * r), b = Math.max(a + 1, Math.round(sl.e * r));
+  const buf = ctx.createBuffer(1, b - a, r); buf.copyToChannel(src.getChannelData(0).subarray(a, b), 0);
+  return { factory: null, kind: 'sample', name: label, params: { ...defParams(), choke: true }, buf };
+}
+
+// ---------------------------------------------------------------------------
+// My Sounds. A sound is stored whole: its settings and its audio (one or more
+// buffers, as raw samples), so it loads anywhere, in any project.
+// ---------------------------------------------------------------------------
+function packSlot(sl) {
+  const bufs = [], at = new Map();
+  const ref = b => { if (!b) return null; if (!at.has(b)) { at.set(b, bufs.length); bufs.push({ rate: b.sampleRate, data: b.getChannelData(0).slice() }); } return at.get(b); };
+  return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous,
+    buf: ref(sl.buf), slices: sl.slices?.map(x => ({ ...x, buf: ref(x.buf) })), bufs };
+}
+function unpackSlot(m) {
+  const it = m.item, B = it.bufs.map(b => { const a = ctx.createBuffer(1, b.data.length, b.rate); a.copyToChannel(b.data, 0); return a; });
+  return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base,
+    contiguous: it.contiguous, buf: it.buf != null ? B[it.buf] : null, slices: it.slices?.map(x => ({ ...x, buf: x.buf != null ? B[x.buf] : null })) };
+}
+async function saveMine(slot, name, type = 'sound') {
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  name = prompt('Name it:', name);
+  if (!name || !name.trim()) return;
+  const id = 'm' + Date.now().toString(36);
+  await idbPut('mine', { id, name: name.trim(), type, created: Date.now(), item: packSlot(slot) }, id);
+  await refreshMine(); status(`"${name.trim()}" saved to My Sounds.`);
+}
+$('saveMine').addEventListener('click', () => saveMine(S.slots[S.cur], S.slots[S.cur].name));
+
+// Import: WAV, MP3, or the sound of a video (a screen recording); it opens in the editor.
+$('importFile').addEventListener('change', async () => {
+  const f = $('importFile').files[0]; $('importFile').value = ''; if (!f) return;
+  status(`Reading ${f.name}…`);
+  try {
+    let raw;
+    try { raw = await decode(await f.arrayBuffer()); }
+    catch (e) { log('import', `decode failed (${e.message || e}); playing it through to capture the sound`); raw = await captureMedia(f); }
+    const buf = prepare(ctx, raw, { trim: true, peak: 0.9 });
+    closeMenu(); openEditor(buf, [], f.name.replace(/\.[^.]+$/, ''));
+    status(`${f.name}: ${buf.duration.toFixed(1)} s. Crop it, then put it on a sound or save it.`);
+  } catch (e) { status(`Could not read the sound in ${f.name}. ${/video/.test(f.type) ? 'This video’s sound may be in a format the browser can’t open.' : ''}`); log('error', 'import: ' + e.message); }
+});
+
+// The backup route for a file the decoder can't open (some videos): play it,
+// silently, through a <video> element and capture its sound as it plays.
+// It takes as long as the clip.
+function captureMedia(f) {
+  return new Promise((ok, bad) => {
+    const v = document.createElement('video'), url = URL.createObjectURL(f);
+    v.playsInline = true; v.preload = 'auto'; v.src = url;
+    const src = ctx.createMediaElementSource(v), sp = ctx.createScriptProcessor(4096, 1, 1), mute = ctx.createGain();
+    mute.gain.value = 0; src.connect(sp); sp.connect(mute); mute.connect(ctx.destination);
+    const chunks = [];
+    sp.onaudioprocess = e => { if (!v.paused) chunks.push(e.inputBuffer.getChannelData(0).slice()); };
+    const done = err => {
+      sp.disconnect(); src.disconnect(); mute.disconnect(); URL.revokeObjectURL(url); clearInterval(tk);
+      if (err || !chunks.length) return bad(err || new Error('no sound in it'));
+      const n = chunks.reduce((a, c) => a + c.length, 0), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+      let o = 0; for (const c of chunks) { d.set(c, o); o += c.length; }
+      ok(b);
+    };
+    const tk = setInterval(() => status(`Reading the sound of ${f.name}: ${v.currentTime.toFixed(0)} of ${(v.duration || 0).toFixed(0)} s…`), 500);
+    v.addEventListener('ended', () => done());
+    v.addEventListener('error', () => done(new Error('the browser cannot play this file')));
+    ctx.resume(); v.play().catch(done);
+  });
+}
+
+// Make a pack: up to 16 of your sounds, one per key.
+function openPackMaker() {
+  const sounds = mine.filter(m => m.type === 'sound'), list = $('packList'); list.textContent = '';
+  if (!sounds.length) { status('Save some sounds to My Sounds first.'); return; }
+  for (const m of sounds) {
+    const l = document.createElement('label'); l.className = 'check';
+    l.innerHTML = '<input type="checkbox"> '; l.append(m.name); l.querySelector('input').value = m.id;
+    list.appendChild(l);
+  }
+  $('packBox').hidden = false;
+}
+$('packList').addEventListener('change', e => {
+  if ($('packList').querySelectorAll('input:checked').length > 16) { e.target.checked = false; status('A pack holds 16 sounds.'); }
+});
+$('packCancel').addEventListener('click', () => { $('packBox').hidden = true; });
+$('packMake').addEventListener('click', async () => {
+  const ids = [...$('packList').querySelectorAll('input:checked')].map(c => c.value);
+  if (!ids.length) { status('Choose at least one sound.'); return; }
+  const slices = [];
+  for (const id of ids) {
+    const m = mine.find(x => x.id === id), sl = unpackSlot(m);
+    const buf = sl.buf || sl.slices?.find(x => x?.buf)?.buf;
+    if (buf) slices.push({ buf, s: 0, e: buf.duration, name: m.name });
+  }
+  const name = $('packName').value.trim() || 'My pack', id = 'm' + Date.now().toString(36);
+  const pack = { factory: null, kind: 'chop', name, params: defParams(), slices };
+  await idbPut('mine', { id, name, type: 'pack', created: Date.now(), item: packSlot(pack) }, id);
+  $('packBox').hidden = true; await refreshMine(); drawBrowser();
+  status(`Pack "${name}" made: ${slices.length} sounds. It's in My Sounds and Packs › My packs.`);
+});
+
+// ---------------------------------------------------------------------------
+// The editor. Works on one buffer: select (drag), crop, cut, cut points
+// (where the keys split on sounds 9–16), then put it on a sound or save it.
+// ---------------------------------------------------------------------------
+const ed = { buf: null, cuts: [], sel: null, cur: 0, view: [0, 1], name: '', hist: [], src: null };
+const edCv = $('edWave'), eg = edCv.getContext('2d');
+for (let i = 0; i < 16; i++) $('edTarget').add(new Option(`Sound ${i + 1}`, i));
+function openEditor(buf, cuts, name) {
+  Object.assign(ed, { buf, cuts: [...cuts].filter(c => c > 0.001).sort((a, b) => a - b), sel: null, cur: 0, view: [0, buf.duration], name, hist: [] });
+  $('edTarget').value = S.cur; $('edTitle').textContent = '✂ ' + name;
+  $('editor').hidden = false; drawEd();
+}
+// The sound to edit from the current key: its own recording if it has one;
+// otherwise (instruments, kits, synths) the last note played, recorded.
+async function editCurrent() {
+  const sl = S.slots[S.cur]; if (!sl) return;
+  if (sl.kind === 'sample') return openEditor(sl.buf, [], sl.name);
+  if (sl.kind === 'chop' && sl.buf && sl.slices.every(x => !x.buf)) return openEditor(sl.buf, sl.slices.map(x => x.s), sl.name);
+  status('Recording the last note played…');
+  const buf = await renderNote(S.cur, S.lastKey[S.cur]);
+  status(''); openEditor(buf, [], `${sl.name} key ${S.lastKey[S.cur] + 1}`);
+}
+async function renderNote(si, k) {
+  const off = new OfflineAudioContext(1, SR * 4, SR), e = new Engine(off, { live: false });
+  playNote(e, S.slots[si], si, k, 0.01, { scale: S.scale, bpm: S.bpm, root: S.root });
+  return prepare(ctx, await off.startRendering(), { trim: true, peak: 0.9 });
+}
+$('editSound').addEventListener('click', () => { closeMenu(); editCurrent(); });
+$('edClose').addEventListener('click', () => { edStop(); $('editor').hidden = true; });
+const edX = t => (t - ed.view[0]) / (ed.view[1] - ed.view[0]) * edCv.width;
+const edT = x => ed.view[0] + x / edCv.clientWidth * (ed.view[1] - ed.view[0]);
+function drawEd() {
+  const dpr = devicePixelRatio || 1, W = edCv.clientWidth * dpr, H = edCv.clientHeight * dpr;
+  if (edCv.width !== W || edCv.height !== H) { edCv.width = W; edCv.height = H; }
+  eg.clearRect(0, 0, W, H);
+  const x = ed.buf.getChannelData(0), r = ed.buf.sampleRate, [v0, v1] = ed.view;
+  if (ed.sel) { eg.fillStyle = '#1f2a1735'; eg.fillRect(edX(ed.sel[0]), 0, edX(ed.sel[1]) - edX(ed.sel[0]), H); }
+  eg.fillStyle = '#1f2a17';
+  for (let px = 0; px < W; px++) {
+    const a = Math.floor((v0 + (v1 - v0) * px / W) * r), b = Math.max(a + 1, Math.floor((v0 + (v1 - v0) * (px + 1) / W) * r));
+    let lo = 0, hi = 0; for (let i = a; i < b; i += Math.max(1, ((b - a) / 40) | 0)) { const v = x[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
+    eg.fillRect(px, H / 2 - hi * H * 0.48, 1, Math.max(1, (hi - lo) * H * 0.48));
+  }
+  eg.font = `${10 * dpr}px ui-monospace, monospace`;
+  [0, ...ed.cuts].forEach((c, i) => { eg.fillStyle = '#c21b1b'; eg.fillRect(edX(c), 0, Math.max(1, dpr), H); eg.fillText(String(i + 1), edX(c) + 2 * dpr, 11 * dpr); });
+  eg.fillStyle = '#1f7ae0'; eg.fillRect(edX(ed.cur), 0, 2 * dpr, H);
+  const sel = ed.sel ? `${ed.sel[0].toFixed(2)}–${ed.sel[1].toFixed(2)} s selected` : `point at ${ed.cur.toFixed(2)} s`;
+  $('edInfo').textContent = `${ed.buf.duration.toFixed(2)} s · ${sel} · ${ed.cuts.length + 1} piece${ed.cuts.length ? 's' : ''}`;
+  $('edPut').textContent = `Put ${ed.sel ? 'selection' : 'it'} on sound`;
+}
+let edDrag = null;
+edCv.addEventListener('pointerdown', ev => { capture(edCv, ev); edDrag = { x: ev.offsetX, t: edT(ev.offsetX) }; });
+edCv.addEventListener('pointermove', ev => {
+  if (!edDrag || Math.abs(ev.offsetX - edDrag.x) < 5) return;
+  const t = Math.max(0, Math.min(ed.buf.duration, edT(ev.offsetX)));
+  ed.sel = [Math.min(edDrag.t, t), Math.max(edDrag.t, t)]; drawEd();
+  edPlay(t, 0.12);                                         // hear where you are
+});
+edCv.addEventListener('pointerup', ev => {
+  if (edDrag && Math.abs(ev.offsetX - edDrag.x) < 5) { ed.sel = null; ed.cur = Math.max(0, edT(ev.offsetX)); edPlay(ed.cur, 0.6); drawEd(); }
+  edDrag = null;
+});
+let edSrc = null;
+function edStop() { try { edSrc?.stop(); } catch (e) {} edSrc = null; }
+function edPlay(from, dur) {
+  edStop(); ctx.resume();
+  const s = ctx.createBufferSource(); s.buffer = ed.buf; s.connect(eng.dry); s.start(ctx.currentTime, Math.max(0, from), dur); edSrc = s;
+}
+$('edPlay').addEventListener('click', () => ed.sel ? edPlay(ed.sel[0], ed.sel[1] - ed.sel[0]) : edPlay(ed.cur, ed.buf.duration - ed.cur));
+$('edStop').addEventListener('click', edStop);
+$('edZoom').addEventListener('click', () => {
+  const [v0, v1] = ed.view, w = (v1 - v0) / 3;
+  ed.view = ed.sel ? [ed.sel[0], ed.sel[1]] : [Math.max(0, ed.cur - w / 2), Math.min(ed.buf.duration, ed.cur + w / 2)];
+  if (ed.view[1] - ed.view[0] < 0.02) ed.view[1] = ed.view[0] + 0.02;
+  drawEd();
+});
+$('edAll').addEventListener('click', () => { ed.view = [0, ed.buf.duration]; drawEd(); });
+const edKeep = () => { ed.hist.push({ buf: ed.buf, cuts: [...ed.cuts] }); if (ed.hist.length > 30) ed.hist.shift(); };
+$('edUndo').addEventListener('click', () => { const h = ed.hist.pop(); if (!h) return; Object.assign(ed, h, { sel: null, view: [0, h.buf.duration] }); drawEd(); });
+// A new buffer from pieces [a, b) of the old one (seconds), with a 3 ms fade at each join.
+function joinOf(parts) {
+  const x = ed.buf.getChannelData(0), r = ed.buf.sampleRate, F = Math.round(r * 0.003);
+  const segs = parts.map(([a, b]) => x.subarray(Math.round(a * r), Math.round(b * r)));
+  const out = ctx.createBuffer(1, Math.max(1, segs.reduce((n, s) => n + s.length, 0)), r), y = out.getChannelData(0);
+  let o = 0;
+  for (const s of segs) { y.set(s, o); for (let i = 0; i < Math.min(F, s.length); i++) { y[o + i] *= i / F; y[o + s.length - 1 - i] *= i / F; } o += s.length; }
+  return out;
+}
+$('edCrop').addEventListener('click', () => {
+  if (!ed.sel) { status('Select a part first: drag across the wave.'); return; }
+  const [a, b] = ed.sel; edKeep();
+  ed.buf = joinOf([[a, b]]); ed.cuts = ed.cuts.filter(c => c > a && c < b).map(c => c - a);
+  Object.assign(ed, { sel: null, cur: 0, view: [0, ed.buf.duration] }); drawEd();
+});
+$('edCut').addEventListener('click', () => {
+  if (!ed.sel) { status('Select the part to cut out first.'); return; }
+  const [a, b] = ed.sel; edKeep();
+  ed.buf = joinOf([[0, a], [b, ed.buf.duration]]); ed.cuts = ed.cuts.filter(c => c < a || c > b).map(c => (c > b ? c - (b - a) : c));
+  Object.assign(ed, { sel: null, cur: a, view: [0, ed.buf.duration] }); drawEd();
+});
+$('edAddCut').addEventListener('click', () => {
+  const t = ed.sel ? ed.sel[0] : ed.cur;
+  if (t < 0.005 || ed.cuts.some(c => Math.abs(c - t) < 0.005)) return;
+  if (ed.cuts.length >= 15) { status('16 pieces at most: one per key.'); return; }
+  edKeep(); ed.cuts = [...ed.cuts, t].sort((a, b) => a - b); drawEd();
+});
+$('edDelCut').addEventListener('click', () => {
+  if (!ed.cuts.length) return;
+  const t = ed.sel ? ed.sel[0] : ed.cur, i = ed.cuts.reduce((bi, c, j) => (Math.abs(c - t) < Math.abs(ed.cuts[bi] - t) ? j : bi), 0);
+  edKeep(); ed.cuts = ed.cuts.filter((_, j) => j !== i); drawEd();
+});
+$('edAuto').addEventListener('click', () => { edKeep(); ed.cuts = onsets(ed.buf, 16).slice(1); drawEd(); });
+$('edClearCuts').addEventListener('click', () => { edKeep(); ed.cuts = []; drawEd(); });
+// What Put and Save use: the selection, or all of it, with its cut points.
+function edResult() {
+  if (!ed.sel) return { buf: ed.buf, cuts: ed.cuts };
+  const [a, b] = ed.sel;
+  return { buf: joinOf([[a, b]]), cuts: ed.cuts.filter(c => c > a && c < b).map(c => c - a) };
+}
+function slotFromEd(si, name) {
+  const { buf, cuts } = edResult();
+  if (si < 8 && !cuts.length) return { factory: null, kind: 'sample', name, params: { ...defParams(), choke: true }, buf };
+  const st = [0, ...cuts];
+  return { factory: null, kind: 'chop', contiguous: true, name, params: { ...defParams(), choke: true }, buf,
+    slices: st.map((s, k) => ({ s, e: st[k + 1] ?? buf.duration, name: `piece ${k + 1}` })) };
+}
+$('edPut').addEventListener('click', () => {
+  const si = +$('edTarget').value; checkpoint();
+  S.slots[si] = slotFromEd(si, ed.name); S.lastKey[si] = S.slots[si].kind === 'sample' ? 7 : 0;
+  S.cur = si; syncPanel(); dirty(); draw();
+  status(`On sound ${si + 1}${S.slots[si].kind === 'chop' ? `, ${S.slots[si].slices.length} pieces on keys 1–${S.slots[si].slices.length}` : ''}.`);
+  noteOn(eng, si, S.lastKey[si], ctx.currentTime + 0.01);
+});
+$('edSave').addEventListener('click', () => saveMine(slotFromEd(+$('edTarget').value, ed.name), ed.name));
 
 // The Menu: over the keys, so nothing on the playing screen has to scroll.
 function openMenu(tab) {
   $('menu').hidden = false;
   if (tab) document.querySelector(`[data-tab="${tab}"]`).click();
-  drawBrowser();
+  drawBrowser(); refreshMine().then(drawBrowser);
 }
 function closeMenu() { $('menu').hidden = true; draw(); }
 $('menuBtn').addEventListener('click', () => openMenu());
@@ -825,6 +1122,7 @@ const ACTIONS = {
   beat: { name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
   beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
   clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
+  edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
@@ -924,7 +1222,7 @@ function drawFxPanel() {
   const k = lastFx;
   $('fxName').textContent = k == null ? (S.fxLatch ? 'Tap a key' : 'Hold a key') : FX[k][0];
   $('fxAmt').disabled = k == null || !hasAmount(k);
-  if (k != null && hasAmount(k)) { $('fxAmt').value = S.fxAmt[k]; $('oFxAmt').textContent = Math.round(S.fxAmt[k] * 100) + '%'; }
+  if (k != null && hasAmount(k)) { $('fxAmt').value = amtOf(k); $('oFxAmt').textContent = Math.round(amtOf(k) * 100) + '%'; }
   else $('oFxAmt').textContent = k == null ? '' : '—';
 }
 $('swing').addEventListener('input', () => { S.swing = +$('swing').value; dirty(); draw(); });
@@ -1457,8 +1755,10 @@ let db = null, saveTimer = 0;
 function openDb() {
   return new Promise(ok => {
     try {
-      const r = indexedDB.open('pocket-sampler', 1);
-      r.onupgradeneeded = () => { r.result.createObjectStore('state'); r.result.createObjectStore('bufs'); };
+      const r = indexedDB.open('pocket-sampler', 2);
+      r.onupgradeneeded = () => {          // v2 adds 'mine': My Sounds
+        for (const st of ['state', 'bufs', 'mine']) if (!r.result.objectStoreNames.contains(st)) r.result.createObjectStore(st);
+      };
       r.onsuccess = () => ok(r.result); r.onerror = () => ok(null);
     } catch (e) { ok(null); }
   });
@@ -1469,6 +1769,18 @@ const idbGet = (store, key) => new Promise(ok => {
 });
 function persist() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
 function dirty() { persist(); noteChange(); }
+// My Sounds: each one stored whole, its sound included, under its own id.
+const idbAll = store => new Promise(ok => {
+  try { const r = db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => ok(r.result || []); r.onerror = () => ok([]); }
+  catch (e) { ok([]); }
+});
+const idbPut = (store, val, key) => new Promise((ok, bad) => {
+  try { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(val, key); tx.oncomplete = () => ok(); tx.onerror = () => bad(tx.error); }
+  catch (e) { bad(e); }
+});
+const idbDel = (store, key) => new Promise(ok => {
+  try { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete = ok; tx.onerror = ok; } catch (e) { ok(); }
+});
 function flushSave() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = 0; save(); } }
 let bufSeq = 0;
 const stored = new Set();     // buffer ids written to IndexedDB
