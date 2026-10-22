@@ -130,7 +130,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
     organ, Renaissance organ, vibraphone, marimba, kalimba, harp, tubular bells
     and glockenspiel, all recorded, each key playing the nearest recording.
   - **Synth:** supersaw, strings, warm pad, brass, choir, FM bell, glass keys.
-  - **Drum kits:** three recorded acoustic kits (jazz, a big 1980s kit, a
+  - **Drum kits** (chosen in the Beat menu): three recorded acoustic kits (jazz, a big 1980s kit, a
     brush kit), a lo-fi kit, hand percussion, and 808, 909, CR-78, 606 and
     minimal kits drawn in code.
 - **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
@@ -146,17 +146,28 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit, jump, blip, glitch) on the last key played, or a whole kit of them.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
-- **16 punch-in effects:** loops, rolls, scratch, half time, scramble,
-  pitch dive, octaves, reverse, chorus, bitcrush, low pass, reverb and
-  ping-pong, each with an amount; the FX keys can be aimed at chosen tracks.
+- **Effects on the keys:** in FX mode each key is an effect that stays on
+  until it is tapped again (or only while held, if latching is off). The
+  Effects menu picks the 16 from 26: loops, rolls, scratch, half time,
+  scramble, pitch dive, octaves, reverse, unison, reverb, echo, ping-pong,
+  chorus, low and high pass, bitcrush, and four distortions (overdrive,
+  fuzz, wavefold, tape). Each has an amount on a slider, can be aimed at
+  chosen tracks, and can be written into the pattern.
 - **Quantize** (Settings): off, 1/16, 1/8, a beat, half a bar or a bar, for
   what you hear while the beat plays and for what is recorded. Exports are
   stereo.
 - **One screen for playing:** the keys and the playing buttons fit without
-  scrolling; **☰ Menu** opens over them with a sound browser (Hits and
-  Packs, by family), sound settings, beat and tempo, voice, help and a log.
+  scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
+  and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
   Four small buttons are yours to set: mute drums, export, roll, new beat,
   clear, or any effect held while you hold the button.
+- **Editor (✂ Edit this sound):** see the waveform, drag to select, hear
+  the selection, then crop to it or cut it out; place cut points by hand or
+  let it find each hit, and put the pieces one per key on any sound. The
+  robot voice can be chopped into words this way.
+- **My Sounds:** save any sound or edited clip, import WAV, MP3 or a screen
+  recording's sound (video files), rename and delete, and gather sounds into
+  packs. Any pack, built-in or yours, can be opened to load one sound alone.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
 - **One shot / Gate / Loop** per sound: the whole sound, only while held, or
