@@ -3236,6 +3236,11 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch }; },
+  peak: (ms = 800) => new Promise(ok => {      // the loudest the master output got, over ms
+    const d = new Float32Array(scope.fftSize); let m = 0;
+    const id = setInterval(() => { scope.getFloatTimeDomainData(d); for (const v of d) m = Math.max(m, Math.abs(v)); }, 15);
+    setTimeout(() => { clearInterval(id); ok(+m.toFixed(3)); }, ms);
+  }),
   colFx: c => { const k = eng.cols?.[c]; return k && { type: k.type, ins: k.ins?.constructor.name, send: !!k.send }; } });
 
 draw();
