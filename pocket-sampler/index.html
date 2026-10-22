@@ -4,19 +4,42 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1b1a17">
+<meta name="theme-color" content="#000000">
+<script>try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}</script>
 <title>Pocket Sampler</title>
 <style>
+  /* The 16 sound colours: 1-8 Remixlive's, 9-16 eight more in the same style. Defined here only;
+     app.js reads them from here. */
   :root {
-    --body: #d9d4c7; --body-dark: #bdb6a4; --ink: #1b1a17; --lcd: #9fb18c; --lcd-ink: #1f2a17;
-    --key: #ece8dc; --key-down: #fff; --accent: #e8572a; --lit: #1f7ae0; --dim: #8a8475; --head: #ff6a1a;
+    --s1: #ff3b4e; --s2: #ff8a1f; --s3: #ffd60a; --s4: #2fd35b; --s5: #14c8b4; --s6: #ff5fa8; --s7: #a45cff; --s8: #2f7dff;
+    --s9: #b2ea1e; --s10: #22d6f2; --s11: #e443f5; --s12: #ffb31a; --s13: #6366ff; --s14: #ff7b69; --s15: #7cf2c3; --s16: #cbb0ff;
+  }
+  /* The dark look (the default), like Remixlive. */
+  :root {
+    --bg: #000; --body: #0e0e11; --body-dark: #000; --edge: #26262d; --ink: #ececf1; --muted: #a3a3ad;
+    --btn: #25252c; --btn-ink: #ececf1; --btn-sh: #000;
+    --lcd: #050507; --lcd-ink: #e9e9ef; --lcd-shade: #ffffff22; --lcd-mode: #ffb340; --lcd-line: #2a2a31;
+    --key: #1c1c22; --key-2: #2a2a32; --key-sh: #000; --key-ink: #f4f4f7; --key-dim: #b3b3bd; --lamp: #000; --friend: #6b3b17;
+    --panel: #151519; --tab: #26262d; --field: #0b0b0e; --field-ink: #ececf1; --field-line: #3b3b45;
+    --custom: #163c55; --custom-ink: #cfe9ff; --custom-sh: #071722;
+    --key-down: #fff; --accent: #ff6a1a; --lit: #fff; --dim: #8a8475; --head: #ff7a1a;
+  }
+  /* The classic look: the beige PO-33 body (Menu › Buttons). */
+  :root.classic {
+    --bg: #1b1a17; --body: #d9d4c7; --body-dark: #bdb6a4; --edge: #bdb6a4; --ink: #1b1a17; --muted: #555;
+    --btn: #1b1a17; --btn-ink: #d9d4c7; --btn-sh: #000;
+    --lcd: #9fb18c; --lcd-ink: #1f2a17; --lcd-shade: #1f2a1726; --lcd-mode: #1f2a17; --lcd-line: transparent;
+    --key: #ece8dc; --key-2: #d6d0c1; --key-sh: #bdb6a4; --key-ink: #1b1a17; --key-dim: #555; --lamp: #111; --friend: #f6c79f;
+    --panel: #ece8dc; --tab: #bdb6a4; --field: #fff; --field-ink: #1b1a17; --field-line: #b7b09e;
+    --custom: #22546a; --custom-ink: #e4eff3; --custom-sh: #0d2833;
+    --key-down: #fff; --accent: #e8572a; --lit: #1f7ae0; --head: #ff6a1a;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: #1b1a17; color: var(--ink);
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
     font: 14px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   body { min-height: 100vh; display: flex; justify-content: center; padding: 8px 8px 16px; }
   .device { position: relative; width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 10px 12px 12px;
-    box-shadow: inset 0 -4px 0 var(--body-dark), 0 10px 40px #000a; }
+    box-shadow: inset 0 -4px 0 var(--body-dark), 0 0 0 1px var(--edge), 0 10px 40px #000a; }
   .brand { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: .12em;
     text-transform: uppercase; margin: 0 2px 6px; white-space: nowrap; gap: 8px; }
   .brand span { opacity: .6; font-size: 9px; }
@@ -25,7 +48,10 @@
 
   /* LCD */
   .screen { background: var(--lcd); border-radius: 6px; padding: 6px 8px; box-shadow: inset 0 2px 6px #0005;
-    color: var(--lcd-ink); user-select: none; touch-action: none; }
+    color: var(--lcd-ink); user-select: none; touch-action: none; border: 1px solid var(--lcd-line); }
+  #lcdSound { color: var(--c, var(--lcd-ink)); }
+  #lcdMode { color: var(--lcd-mode); }
+  :root.classic #lcdSound { color: var(--lcd-ink); }
   .lcdtop, .lcdbot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .lcdtop span:first-child { overflow: hidden; text-overflow: ellipsis; }
   .lcdbot { font-weight: 400; font-size: 11px; opacity: .85; }
@@ -47,8 +73,8 @@
   /* function buttons */
   .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 9px 0 9px; }
   .fn button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    border: 0; border-radius: 7px; padding: 9px 2px; background: var(--ink); color: var(--body);
-    box-shadow: 0 3px 0 #000; touch-action: manipulation; }
+    border: 0; border-radius: 7px; padding: 9px 2px; background: var(--btn); color: var(--btn-ink);
+    box-shadow: 0 3px 0 var(--btn-sh); touch-action: manipulation; }
   .fn button.on { background: var(--accent); color: #fff; }
   .fn button.on.replace { background: #c21b1b; }
   .fn button:disabled { opacity: .45; }
@@ -56,7 +82,7 @@
   .fn .pair button { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: .02em; }
   .overlay { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
   .overlay[hidden] { display: none; }
-  .sheet { background: #ece8dc; border-radius: 12px; padding: 16px; width: 100%; max-width: 400px; display: grid; gap: 8px; }
+  .sheet { background: var(--panel); color: var(--ink); border-radius: 12px; padding: 16px; width: 100%; max-width: 400px; display: grid; gap: 8px; }
   .sheet b { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
   /* Holding a key or button should play, not start selecting or copying text. */
   body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -68,28 +94,28 @@
   .lcdbot { align-items: center; }
   #keyBtn { font: inherit; font-size: 11px; font-weight: 700; color: var(--lcd-ink); background: transparent; border: 1.5px solid var(--lcd-ink);
     border-radius: 4px; padding: 0 6px; line-height: 16px; white-space: nowrap; }
-  #keyBtn.saved { background: #1f2a1726; }
+  #keyBtn.saved { background: var(--lcd-shade); }
   #keyBtn.waiting { animation: blink .5s steps(2, start) infinite; }
   @keyframes blink { to { visibility: hidden; } }
   #wheel { position: absolute; left: 8px; right: 8px; z-index: 5; background: var(--body); border-radius: 12px; padding: 6px 4px 8px;
-    box-shadow: 0 0 0 2px var(--ink), 0 8px 24px #0006; }
+    box-shadow: 0 0 0 2px var(--edge), 0 8px 24px #0009; }
   #wheel[hidden] { display: none; }
   .wheelbar { display: flex; gap: 6px; align-items: center; padding: 0 6px; }
   .wheelbar b { flex: 1; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
-  .wheelbar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--ink); color: var(--body); }
+  .wheelbar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
   .wheelbar button[hidden] { display: none; }
   .wheelwrap { position: relative; width: min(100%, 330px); margin: 0 auto; aspect-ratio: 1; }
   #wheelSvg { width: 100%; height: 100%; display: block; touch-action: manipulation; }
   #wheelSvg .seg path { fill: var(--key); stroke: var(--body); stroke-width: 2.5; }
-  #wheelSvg .seg[data-minor="1"] path { fill: #d6d0c1; }
-  #wheelSvg .seg text { font: 700 14px ui-monospace, Menlo, monospace; text-anchor: middle; fill: var(--ink); pointer-events: none; }
+  #wheelSvg .seg[data-minor="1"] path { fill: var(--key-2); }
+  #wheelSvg .seg text { font: 700 14px ui-monospace, Menlo, monospace; text-anchor: middle; fill: var(--key-ink); pointer-events: none; }
   #wheelSvg .seg[data-minor="1"] text { font-size: 12px; }
-  #wheelSvg .seg.friend path { fill: #f6c79f; }
+  #wheelSvg .seg.friend path { fill: var(--friend); }
   #wheelSvg .seg.now path { fill: var(--accent); }
   #wheelSvg .seg.now text { fill: #fff; }
   #wheelSvg .seg.next path { stroke: var(--head); stroke-width: 5; }
   #wheelNext { position: absolute; left: 50%; top: 50%; width: 36%; height: 36%; transform: translate(-50%, -50%); border-radius: 50%;
-    border: 0; background: var(--ink); color: var(--body); font: inherit; font-weight: 700; display: flex; flex-direction: column;
+    border: 0; background: var(--btn); color: var(--btn-ink); font: inherit; font-weight: 700; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 #000; }
   #wheelNext:active { transform: translate(-50%, calc(-50% + 2px)); box-shadow: 0 1px 0 #000; }
   #wheelNext small { font-size: 10px; letter-spacing: .12em; opacity: .7; }
@@ -99,41 +125,65 @@
   /* keys */
   .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
   .key { position: relative; aspect-ratio: 1.12; border-radius: 10px; background: var(--key); border: 0; padding: 6px;
-    box-shadow: 0 4px 0 var(--body-dark), 0 5px 4px #0003; text-align: left; display: flex; flex-direction: column;
-    justify-content: space-between; font: inherit; color: var(--ink); overflow: hidden; }
+    box-shadow: 0 4px 0 var(--key-sh), 0 5px 4px #0003; text-align: left; display: flex; flex-direction: column;
+    justify-content: space-between; font: inherit; color: var(--key-ink); overflow: hidden; }
   .key b { font-size: 15px; }
-  .key span { font-size: 9.5px; line-height: 1.15; color: #555; overflow: hidden; max-height: 3.5em; word-break: break-word; }
-  .key i { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: #111; }
-  .key.lit i { background: var(--lit); box-shadow: 0 0 8px var(--lit); }
+  .key span { font-size: 9.5px; line-height: 1.15; color: var(--key-dim); overflow: hidden; max-height: 3.5em; word-break: break-word; }
+  .key b, .key span, .key i { position: relative; z-index: 1; }
+  .key i { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--lamp); }
+  .key.lit i { background: var(--lit); box-shadow: 0 0 0 2px #000, 0 0 8px var(--lit); }
   .key.some i { background: #7fb0ec; }
-  .key.cur { outline: 3px solid var(--accent); outline-offset: -3px; }
-  /* A step with this sound on it: blue (other sounds only: pale blue); empty: black.
-     The step now playing: orange, so it never looks like a lit step. */
-  .key.head { box-shadow: inset 0 0 0 3px var(--head), 0 4px 0 var(--body-dark); }
-  .key.head i { background: var(--head); box-shadow: 0 0 8px var(--head); }
-  .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--body-dark); background: var(--key-down); }
-  .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; }
+  /* The colour on a key: a sound's colour (u.fill), dim on the keys you play, full on a step. */
+  .key u.fill { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: none; pointer-events: none; }
+  .key.tint u.fill { display: block; background: var(--c); opacity: .3; }
+  .key.tint.pad u.fill { opacity: .42; }
+  .key.tint { box-shadow: inset 0 0 0 2px var(--c), 0 4px 0 var(--key-sh); }
+  .key.tint b { color: var(--c); }
+  :root.classic .key.tint b { color: var(--key-ink); }
+  .key.tint.down u.fill { opacity: .75; }
+  .key.tint.cur u.fill { opacity: 1; }
+  .key.steps.full u.fill { display: grid; gap: 2px; background: #000; }
+  .key.steps u.fill s { display: block; }
+  .key.steps u.fill s.me { box-shadow: inset 0 0 0 2px #000, inset 0 0 0 4px #fff; }
+  .key.cur { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .key.tint.cur { outline-color: var(--key-ink); }
+  /* Text over a colour: white, with a dark edge so it reads on yellow as on blue. */
+  .key.steps.full b, .key.steps.full span, .key.tint.cur b, .key.tint.cur span, .key.tint.down b, .key.tint.down span {
+    color: #fff; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 1px #000; }
+  .key.steps.full span:not(:empty) { align-self: flex-start; background: #000b; border-radius: 4px; padding: 1px 4px; text-shadow: none; }
+  /* The step now playing: an orange ring, inside and out, so it shows over any colour. */
+  .key.head { outline: 3px solid var(--head); outline-offset: 2px; }
+  .key.head::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 2; pointer-events: none;
+    box-shadow: inset 0 0 0 3px var(--head), inset 0 0 0 5px #000; }
+  .key.head i { background: var(--head); box-shadow: 0 0 0 2px #000, 0 0 8px var(--head); }
+  .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--key-sh); background: var(--key-down); }
+  :root:not(.classic) .key.down { background: #3a3a44; }
+  .key.tint.down { box-shadow: inset 0 0 0 2px var(--c), 0 1px 0 var(--key-sh); }
+  .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; z-index: 1; }
+  .key.fxon u.fill { display: block; background: var(--accent); opacity: .55; }
 
   /* panels */
   .tabs { display: flex; gap: 6px; margin: 14px 0 0; }
   .tabs button { flex: 1; font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border: 0;
-    background: var(--body-dark); border-radius: 7px 7px 0 0; padding: 8px 0; color: var(--ink); }
-  .tabs button.on { background: #ece8dc; font-weight: 700; }
-  .panel { background: #ece8dc; border-radius: 0 0 10px 10px; padding: 10px 12px 12px; display: none; }
+    background: var(--tab); border-radius: 7px 7px 0 0; padding: 8px 0; color: var(--ink); }
+  .tabs button.on { background: var(--accent); color: #fff; font-weight: 700; }
+  :root.classic .tabs button.on { background: var(--panel); color: var(--ink); }
+  .panel { background: var(--panel); border-radius: 0 0 10px 10px; padding: 10px 12px 12px; display: none; }
   .panel.on { display: block; }
   .row { display: grid; grid-template-columns: 92px 1fr 46px; gap: 8px; align-items: center; margin: 6px 0; }
   .row label { font-size: 12px; }
   .row output { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
   input[type=range] { width: 100%; accent-color: var(--accent); }
-  select, textarea, input[type=text] { font: inherit; font-size: 14px; width: 100%; border: 1px solid #b7b09e; border-radius: 6px;
-    background: #fff; padding: 6px; color: var(--ink); }
+  select, textarea, input[type=text] { font: inherit; font-size: 14px; width: 100%; border: 1px solid var(--field-line); border-radius: 6px;
+    background: var(--field); padding: 6px; color: var(--field-ink); }
   textarea { min-height: 60px; resize: vertical; }
   .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .btns button, .btns label.file { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 8px 10px;
-    background: var(--ink); color: var(--body); }
+    background: var(--btn); color: var(--btn-ink); }
+  :root:not(.classic) .btns button, :root:not(.classic) .btns label.file { box-shadow: inset 0 0 0 1px #3a3a44; }
   .btns button.go { background: var(--accent); color: #fff; font-weight: 700; }
   .btns label.file input { display: none; }
-  .note { font-size: 11.5px; color: #555; margin: 8px 0 0; }
+  .note { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
   #logView { font-size: 10px; line-height: 1.35; background: #1b1a17; color: #c8e6b0; padding: 8px; border-radius: 6px;
     height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; -webkit-user-select: text; user-select: text; }
   .help p { margin: 6px 0; font-size: 12.5px; }
@@ -141,7 +191,8 @@
   .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
   #status { min-height: 1.3em; margin: 8px 2px 0; }
   /* your own buttons: blue, so they stand apart from the fixed ones */
-  .fn button.custom { background: #22546a; color: #e4eff3; box-shadow: 0 3px 0 #0d2833; }
+  .fn button.custom { background: var(--custom); color: var(--custom-ink); box-shadow: 0 3px 0 var(--custom-sh); }
+  :root:not(.classic) .fn button.custom { box-shadow: inset 0 0 0 1px #2c6a92, 0 3px 0 var(--custom-sh); }
   .fn button.custom.on { background: var(--accent); color: #fff; }
   .fnbot { margin: 10px 0 0; }
   .fnbot button { padding: 11px 0; }
@@ -152,7 +203,7 @@
   #menu[hidden] { display: none; }
   #menu .sheet { max-width: 440px; display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; height: 100%; }
   .menubar { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; }
-  .menubar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 8px 12px; background: var(--ink); color: var(--body); }
+  .menubar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 8px 12px; background: var(--btn); color: var(--btn-ink); }
   #menu .tabs { flex-wrap: wrap; margin: 0; padding: 0 10px; gap: 4px; }
   #menu .tabs button { flex: 1 0 22%; border-radius: 7px; padding: 8px 0; }
   .menubody { overflow: auto; flex: 1; padding: 8px 10px 16px; -webkit-overflow-scrolling: touch; }
@@ -162,17 +213,17 @@
   .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; margin-bottom: 8px; }
   .crumbs button { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); padding: 4px 2px; font-weight: 700; }
   .blist { display: grid; gap: 6px; }
-  .blist button { font: inherit; font-size: 13px; text-align: left; border: 1px solid #c9c3b3; border-radius: 8px; background: #fff;
-    padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; color: var(--ink); }
+  .blist button { font: inherit; font-size: 13px; text-align: left; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field);
+    padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; color: var(--field-ink); }
   .blist button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
-  .blist small { color: #777; font-size: 11px; white-space: nowrap; }
-  .bfoot { position: sticky; bottom: -16px; background: #ece8dc; padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  .blist small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .bfoot { position: sticky; bottom: -16px; background: var(--panel); padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
   .bfoot button { flex: 1; }
 </style>
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022u</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022v</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -250,6 +301,7 @@
 
   <div class="panel" id="tButtons">
     <p class="note" style="margin-top:0">The four small buttons beside ☰ Menu and the eight under the keys (the blue ones) are yours: choose what each one does. Effects work while you hold the button.</p>
+    <div class="row"><label for="look">Look</label><select id="look"><option value="dark">Dark</option><option value="classic">Classic: the beige PO-33</option></select><span></span></div>
     <div class="row"><label for="cb0">Button 1</label><select id="cb0"></select><span></span></div>
     <div class="row"><label for="cb1">Button 2</label><select id="cb1"></select><span></span></div>
     <div class="row"><label for="cb2">Button 3</label><select id="cb2"></select><span></span></div>
@@ -360,6 +412,7 @@
     <p><b>Loops</b> (Menu › Sounds › Loops): drum loops, breakbeats, vinyl and ambience, one loop per key, in Loop mode. While the beat plays, a loop comes in at the next bar, in step, and follows the tempo and key; it stops at the next bar when tapped again, and every loop stops with the beat. <b>Songs</b> (Packs › Songs): songs written for the app from its own sounds, ready to play, chained.</p>
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
+    <p><b>Colours:</b> each of the 16 sounds has its own colour (1–8 red, orange, yellow, green, teal, pink, purple, blue; 9–16 lime, cyan, magenta, amber, indigo, coral, mint, lavender). In Sound mode each pad shows its sound's colour; in Play the keys take the current sound's colour. With <b>Write</b> on, each step is filled with the colours of the sounds on it, in sound order: one fills it, two to four split it side by side, five or more make a small grid. The step with the current sound has a white light, and its block a white edge; the step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
     <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
@@ -429,6 +482,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022u"></script>
+<script type="module" src="app.js?v=20261022v"></script>
 </body>
 </html>

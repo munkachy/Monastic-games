@@ -36,7 +36,7 @@ body = body.replace(link, '<button id="ccOpen" type="button">💬 Claude</button
 extra = r"""
 <style>
   #ccOpen { font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .06em; border: 0; border-radius: 6px; padding: 4px 8px;
-    background: #22546a; color: #e4eff3; text-transform: none; }
+    background: var(--custom); color: var(--custom-ink); text-transform: none; }
   #ccBox textarea { min-height: 90px; }
   #ccShot { max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 6px; border: 1px solid #b7b09e; justify-self: start; }
 </style>

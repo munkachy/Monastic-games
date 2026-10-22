@@ -177,6 +177,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Quantize** (Settings): off, 1/16, 1/8, a beat, half a bar or a bar, for
   what you hear while the beat plays and for what is recorded. Exports are
   stereo.
+- **Dark look and sound colours:** a near-black body and display, like
+  Remixlive (the beige PO-33 look stays as Menu › Buttons › Look). Each of
+  the 16 sounds has a fixed colour (1–8 Remixlive's red, orange, yellow,
+  green, teal, pink, purple and blue; 9–16 lime, cyan, magenta, amber,
+  indigo, coral, mint and lavender). Sound mode shows each pad in its
+  colour, Play tints the keys in the current sound's, and in Write each
+  step is filled with the colours of the sounds on it: split side by side
+  for two to four, a small grid of blocks for five or more.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
   and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
