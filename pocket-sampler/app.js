@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022t';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022u';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -137,6 +137,18 @@ const LIBRARY = {
   vibes: { name: 'Vibraphone', multi: 'vibes', base: 60 }, marimba: { name: 'Marimba', multi: 'marimba', base: 60 },
   kalimba: { name: 'Kalimba', multi: 'kalimba', base: 60 }, bells: { name: 'Tubular Bells', multi: 'bells', base: 60 },
   harp: { name: 'Harp', multi: 'harp', base: 48 }, glock: { name: 'Glockenspiel', multi: 'glock', base: 72 },
+  // Build 4: strings, guitars, horns, voices (sampled), and guitars and a steel pan modelled where no free recordings were
+  violin: { name: 'Violin', multi: 'violin', base: 60 }, viola: { name: 'Viola', multi: 'viola', base: 48 },
+  cello: { name: 'Cello', multi: 'cello', base: 36 }, contrabass: { name: 'Double Bass', multi: 'contrabass', base: 36 },
+  pizz: { name: 'Pizzicato Cello', multi: 'pizz', base: 36 },
+  gretsch: { name: 'Gretsch Guitar', multi: 'gretsch', base: 48 }, hofner: { name: 'Hofner Guitar', multi: 'hofner', base: 48 },
+  emily: { name: 'Electric Guitar', multi: 'emily', base: 48 }, nylon: { name: 'Nylon Guitar', multi: 'nylon', base: 48 },
+  steelgtr: { name: 'Acoustic Guitar', multi: 'steelgtr', base: 48 }, twelve: { name: '12-String Guitar', multi: 'twelve', base: 48 },
+  rhodes: { name: 'Rhodes', multi: 'rhodes', base: 48 }, celeste: { name: 'Celeste', multi: 'celeste', base: 72 },
+  trumpet: { name: 'Trumpet Stab', multi: 'trumpet', base: 60 }, trombone: { name: 'Trombone Stab', multi: 'trombone', base: 48 },
+  tenorsax: { name: 'Tenor Sax', multi: 'tenorsax', base: 48 },
+  choirmen: { name: 'Choir (men)', multi: 'choirmen', base: 48 }, choirwomen: { name: 'Choir (women)', multi: 'choirwomen', base: 60 },
+  xylophone: { name: 'Xylophone', multi: 'xylophone', base: 72 }, steeldrum: { name: 'Steel Drum', multi: 'steeldrum', base: 60 },
   supersaw: { name: 'Supersaw', synth: { type: 'supersaw', root: 60, cutoff: 6000, res: 1, hold: true }, len: 0.3 },
   strings: { name: 'Strings', synth: { type: 'strings', root: 48, cutoff: 2600, attack: 0.25, hold: true }, len: 0.6 },
   pad: { name: 'Warm Pad', synth: { type: 'strings', root: 48, cutoff: 1100, attack: 0.6, hold: true }, len: 0.9 },
@@ -150,6 +162,19 @@ const LIBRARY = {
   kitcr78: { name: 'CR-78 Kit', kit: 'cr78' }, kit606: { name: '606 Kit', kit: '606' }, kitminimal: { name: 'Minimal Kit', kit: 'minimal' },
   hits: { name: '8-bit Hits', bank: 'hits' }, blips: { name: 'Blips', bank: 'blips' }, lasers: { name: 'Lasers', bank: 'lasers' },
   glitch: { name: 'Glitch', bank: 'glitch' }, coins: { name: 'Coins', bank: 'coins' }, robots: { name: 'Robots', bank: 'robots' },
+  // Build 4 packs: 16 hits each (some fewer)
+  tr808: { name: 'TR-808 (sampled)', bank: 'tr808' }, electro: { name: 'Electro Kit', bank: 'electro' },
+  drumtraks: { name: 'Drumtraks Kit', bank: 'drumtraks' }, boombap: { name: 'Boom Bap Kit', bank: 'boombap' },
+  bells2: { name: 'Bells', bank: 'bells2' }, shakers: { name: 'Tambourine & Shakers', bank: 'shakers' },
+  hype: { name: 'Hype Words (robot)', bank: 'hype' }, robotvox: { name: 'Robot Voices', bank: 'robotvox' }, vocchops: { name: 'Vocal Chops', bank: 'vocchops' },
+  nature: { name: 'Nature', bank: 'nature' }, airwater: { name: 'Air & Water', bank: 'airwater' },
+  arcade: { name: 'Arcade FX', bank: 'arcade' }, machines: { name: 'Machines', bank: 'machines' },
+  noisefx: { name: 'Noise & Risers', bank: 'noisefx' }, sirens: { name: 'Sirens', bank: 'sirens' },
+  stabs: { name: 'Synth Stabs', bank: 'stabs' }, basshits: { name: 'Bass Hits', bank: 'basshits' },
+  pads: { name: 'Pads', bank: 'pads' }, funkhorns: { name: 'Funk Horns', bank: 'funkhorns' },
+  // loops: each key a loop, in Loop mode; drum loops and breaks keep time with the beat
+  drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
+  ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
 };
 const DEFAULT = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir',
   'acoustic', 'kit808', 'kit909', 'percussion', 'blips', 'lasers', 'glitch', 'coins'];
@@ -172,7 +197,9 @@ async function factorySlot(id) {
     const B = banks[F.bank];
     B.buf ||= await decode(await (await fetch(`sounds/${F.bank}.wav`)).arrayBuffer());
     const r = B.rate || 22050;
-    Object.assign(slot, { kind: 'chop', buf: B.buf, slices: B.slices.map(([a, b], k) => ({ s: a / r, e: b / r, name: shortName(B.from[k]) })) });
+    Object.assign(slot, { kind: 'chop', buf: B.buf, slices: B.slices.map(([a, b], k) => ({ s: a / r, e: b / r, name: shortName(B.from[k]),
+      ...(B.loops?.[k] && { bpm: B.loops[k][0], bars: B.loops[k][1] }) })) });
+    if (B.loops) slot.params.trig = 'loop';          // a pack of loops: each key loops until tapped again
   }
   return slot;
 }
@@ -652,7 +679,7 @@ function shiftOct(d) {
 // while it plays, a tap starts the loop at the next bar line, from the point
 // it would have reached had it been playing all along, and a tap on a
 // running loop stops it at the next bar line.
-const isLoop = si => !!S.slots[si]?.bpm;
+const isLoop = si => !!(S.slots[si]?.bpm || S.slots[si]?.slices?.some(x => x.bpm));
 function nextBar() {
   const now = ctx.currentTime, sd = stepDur(), at = j => nextT - (tick - j) * sd;
   let j = Math.ceil((tick - (nextT - now) / sd) / 16) * 16;
@@ -961,15 +988,26 @@ for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slic
 // ---------------------------------------------------------------------------
 const TREE = ['Sounds', [
   ['Hits', [
-    ['Bass', ['bass808', 'subsine', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass']],
-    ['Keys', ['piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ']],
-    ['Bells and mallets', ['bells', 'vibes', 'marimba', 'glock', 'kalimba']],
-    ['Strings', ['harp']],
+    ['Bass', ['bass808', 'subsine', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass']],
+    ['Keys', ['piano', 'upright', 'rhodes', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste']],
+    ['Guitars', ['gretsch', 'hofner', 'emily', 'nylon', 'steelgtr', 'twelve']],
+    ['Strings', ['violin', 'viola', 'cello', 'contrabass', 'pizz', 'harp']],
+    ['Brass and wind', ['trumpet', 'trombone', 'tenorsax']],
+    ['Voices', ['choirmen', 'choirwomen', 'choir']],
+    ['Bells and mallets', ['bells', 'vibes', 'marimba', 'xylophone', 'glock', 'kalimba', 'steeldrum']],
     ['Synth', ['supersaw', 'strings', 'pad', 'brass', 'choir', 'fmbell', 'glass', 'chip', 'pluck']],
   ]],
-  ['Loops', []],
+  ['Loops', [
+    ['Drum loops', ['drumloops']],
+    ['Breakbeats', ['breaks']],
+    ['Vinyl and ambience', ['ambience']],
+  ]],
   ['Packs', [
-    ['Percussion', ['percussion']],
+    ['Percussion', ['percussion', 'bells2', 'shakers']],
+    ['Vocals', ['hype', 'robotvox', 'vocchops']],
+    ['Ambient', ['nature', 'airwater']],
+    ['FX', ['arcade', 'machines', 'noisefx', 'sirens']],
+    ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
     ['Video game', ['hits', 'blips', 'lasers', 'glitch', 'coins', 'robots']],
     ['Songs', 'songs'],
     ['My packs', 'mine:pack'],
@@ -1016,7 +1054,7 @@ function drawBrowser() {
       b.textContent = selName(it).replace(/ \(from .*\)$/, '');
       small.textContent = it.song ? it.song.about : it.k != null ? `key ${it.k + 1}`
         : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : 'my sound')
-        : selPack(it) ? 'pack · 16 sounds' : 'instrument';
+        : selPack(it) ? 'pack' : 'instrument';
       b.classList.toggle('sel', !!bSel && same(bSel, it));
       b.addEventListener('click', () => { bSel = it; drawBrowser(); preview(it); });
     }
@@ -1049,20 +1087,6 @@ async function preview(c) {
   const slot = await slotOf(c);
   if (bSel === c) playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : slot.kind === 'sample' ? 7 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
 }
-// Song packs: a whole song, its sounds on sounds 1-8 (loops, a loop per key),
-// with patterns that play it bar by bar and a chain in the song's order.
-const SONGS = [];
-// Get every loop stretched for the tempo and the keys in use, before it is needed.
-function warmLoops() {
-  const roots = new Set([S.root, ...S.patKeys.filter(Boolean).map(k => k.root)]), jobs = [];
-  for (const sl of S.slots) if (sl?.bpm) for (const x of sl.slices) for (const root of roots) {
-    const f = loopStretch(sl, sl.params, S.bpm, root);
-    if (Math.abs(f - 1) > 0.002) jobs.push(stretchLoop(sl.buf, x.s, x.e, f));
-  }
-  return Promise.all(jobs);
-}
-let warmTimer = 0;
-const warmSoon = () => { clearTimeout(warmTimer); warmTimer = setTimeout(warmLoops, 250); };
 // Clear in Sound mode: the sound comes off its key (silent, "empty") and its
 // notes out of every pattern. ↶ Undo puts it back.
 function clearSlot(si) {
@@ -1073,28 +1097,51 @@ function clearSlot(si) {
   syncPanel(); dirty(); draw();
   status(`Sound ${si + 1} cleared: empty, and out of the patterns. Load a sound onto it from Menu › Sounds. ↶ Undo brings it back.`);
 }
+// Get every loop stretched for the tempo and the keys in use, before it is needed.
+function warmLoops() {
+  const roots = new Set([S.root, ...S.patKeys.filter(Boolean).map(k => k.root)]), jobs = [];
+  for (const sl of S.slots) if (sl?.slices) for (const x of sl.slices) if (x.bpm || sl.bpm) for (const root of roots) {
+    const f = loopStretch({ bpm: x.bpm || sl.bpm }, sl.params, S.bpm, root);
+    if (Math.abs(f - 1) > 0.002) jobs.push(stretchLoop(x.buf || sl.buf, x.s, x.e, f));
+  }
+  return Promise.all(jobs);
+}
+let warmTimer = 0;
+const warmSoon = () => { clearTimeout(warmTimer); warmTimer = setTimeout(warmLoops, 250); };
+// Songs: written for the app (tools/songs.py) from its own sounds: which
+// sound goes on which key, and the notes, one pattern a bar, chained in order.
+const SONGS = [
+  { id: 'electroboombap', name: 'Electro Boom Bap', by: 'Claude', about: '8 bars · 92 BPM · F minor' },
+];
 async function loadSong(id) {
   ctx.resume();
-  status('Loading the song (about 13 MB the first time)…');
+  status('Loading the song…');
   try {
     const P = await (await fetch(`sounds/songs/${id}.json`)).json();
-    const slots = await Promise.all(P.sounds.map(async so => ({
-      factory: null, kind: 'chop', contiguous: false, name: so.name, bpm: P.bpm, credit: P.credit,
-      buf: await decode(await (await fetch(`sounds/${so.file}`)).arrayBuffer()),      // not levelled: the parts keep their balance
-      params: { ...defParams(), trig: 'loop', vol: 0.9, keyOf: so.keyOf },
-      slices: so.loops.map(l => ({ s: l.s, e: l.e, name: l.name, bars: l.bars })),
-    })));
+    const slots = await Promise.all(P.sounds.map(async so => {
+      const sl = await factorySlot(so.factory);
+      if (so.vol != null) sl.params.vol = so.vol;
+      if (so.trig) sl.params.trig = so.trig;
+      return sl;
+    }));
     if (playing) stop();
     checkpoint();
     P.sounds.forEach((so, i) => { S.slots[so.slot] = slots[i]; S.lastKey[so.slot] = 0; S.oct[so.slot] = 0; });
-    // each note plays one bar of a loop, for the whole bar
-    S.patterns = Array.from({ length: 16 }, (_, p) => Array.from({ length: 16 }, (_, st) => st ? [] :
-      (P.patterns[p] || []).map(([s, k, b]) => { const bars = P.sounds[s].loops[k].bars; return { s, k, d: 16, lock: { start: b / bars, len: 1 / bars } }; })));
+    const vol = new Map(P.sounds.map((so, i) => [so.slot, slots[i].params.vol]));
+    S.patterns = Array.from({ length: 16 }, (_, p) => {
+      const bar = Array.from({ length: 16 }, () => []);
+      for (const [st, s, k, x = {}] of P.patterns[p] || []) {
+        const lock = x.vol != null || x.pitch != null ? { ...(x.vol != null && { vol: vol.get(s) * x.vol }), ...(x.pitch != null && { pitch: x.pitch }) } : undefined;
+        bar[st].push({ s, k, ...(x.d && { d: x.d }), ...(x.oc && { oc: x.oc }), ...(lock && { lock }) });
+      }
+      return bar;
+    });
     S.fx = Array.from({ length: 16 }, () => new Array(16).fill(null)); S.patKeys = new Array(16).fill(null);
-    S.chain = P.chain; S.pat = P.chain[0]; S.bpm = P.bpm; S.swing = 50; S.root = P.root; S.scale = P.scale; S.cur = 0;
+    S.chain = P.chain; S.pat = P.chain[0]; S.bpm = P.bpm; S.swing = P.swing ?? 50; S.root = P.root; S.scale = P.scale;
+    S.cur = P.sounds[0].slot;
     syncPanel(); dirty(); draw(); warmLoops();
-    status(`${P.name} by ${P.by}: ${P.sections.map(([n, p]) => `${n} ${p + 1}–${p + 4}`).join(', ')}; chained as the song. ▶ Play. ↶ Undo brings back what you had.`);
-  } catch (e) { status('Could not load the song: ' + e.message); }
+    status(`${P.name} (${P.about}): ${P.sounds.length} sounds, ${P.patterns.length} bars chained. ▶ Play. ↶ Undo brings back what you had.`);
+  } catch (e) { status('Could not load the song: ' + e.message); console.error(e); }
 }
 async function loadLibrary(id) {
   checkpoint();
@@ -1133,6 +1180,9 @@ function sliceAlone(slot, k, label) {
   const sl = slot.slices[k], src = sl.buf || slot.buf, r = src.sampleRate;
   const a = Math.round(sl.s * r), b = Math.max(a + 1, Math.round(sl.e * r));
   const buf = ctx.createBuffer(1, b - a, r); buf.copyToChannel(src.getChannelData(0).subarray(a, b), 0);
+  if (slot.params.trig === 'loop' || sl.bpm)       // a loop stays a loop: on key 1, keeping its tempo
+    return { factory: null, kind: 'chop', contiguous: false, name: label, params: { ...defParams(), trig: 'loop' }, buf,
+      slices: [{ s: 0, e: buf.duration, name: label, ...(sl.bpm && { bpm: sl.bpm, bars: sl.bars }) }] };
   return { factory: null, kind: 'sample', name: label, params: { ...defParams(), choke: true }, buf };
 }
 
@@ -1570,7 +1620,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022u'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1663,7 +1713,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022u'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2406,8 +2456,8 @@ $('genBeat').addEventListener('click', genBeat);
 
 // Drum kit (Beat tab): the kit the beats play on, swapped on its own key
 // (the kit on the keys, or sound 9 if there is none).
-const KITS_MENU = [['Recorded kits', ['acoustic', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
-  ['Drum machines', ['kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
+const KITS_MENU = [['Recorded kits', ['acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
+  ['Drum machines', ['tr808', 'electro', 'drumtraks', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
 for (const [g, ids] of KITS_MENU) {
   const og = document.createElement('optgroup'); og.label = g;
   for (const id of ids) og.appendChild(new Option(LIBRARY[id].name, id));

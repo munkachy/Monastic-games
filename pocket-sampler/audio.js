@@ -382,13 +382,14 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       // A chop plays as recorded, unless it is set to follow the song's key.
       const semis = P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0);
       r = Math.pow(2, semis / 12) * rate;
-      // A loop (a sound made at a known tempo) is stretched to the tempo and key playing; until
-      // that is ready, it is sped up or slowed to keep the beat (the pitch moves for a moment).
-      if (slot.bpm) {
-        const f = loopStretch(slot, P, bpm, root);
+      // A loop (made at a known tempo: the loop's own, or its sound's) is stretched to the tempo and
+      // key playing; until that is ready, it is sped up or slowed to keep the beat (the pitch moves a moment).
+      const lb = sl.bpm || slot.bpm;
+      if (lb) {
+        const f = loopStretch({ bpm: lb }, P, bpm, root);
         if (Math.abs(f - 1) > 0.002) {
           const sb = stretchedNow(buf, s, e, f);
-          if (sb) { buf = sb; s = 0; e = sb.duration; } else r = rate * bpm / slot.bpm;
+          if (sb) { buf = sb; s = 0; e = sb.duration; } else r = rate * bpm / lb;
         }
       }
       start = lock?.start ?? sl.start ?? 0; len = lock?.len ?? sl.len ?? 1;   // trim is per slice
