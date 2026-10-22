@@ -142,9 +142,15 @@
   :root.classic .key.tint b { color: var(--key-ink); }
   .key.tint.down u.fill { opacity: .75; }
   .key.tint.cur u.fill { opacity: 1; }
-  .key.steps.full u.fill { display: grid; gap: 2px; background: #000; }
-  .key.steps u.fill s { display: block; }
-  .key.steps u.fill s.me { box-shadow: inset 0 0 0 2px #000, inset 0 0 0 4px #fff; }
+  /* A step: each sound on it a dark, see-through block of its colour with a neon edge, as on the pads. */
+  .key.steps.full u.fill { display: grid; gap: 3px; }
+  .key.steps u.fill s { position: relative; display: block; border-radius: 6px; box-shadow: inset 0 0 0 2px var(--c); }
+  .key.steps u.fill s:only-child { border-radius: inherit; }
+  .key.steps u.fill.many s { border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--c); }
+  .key.steps u.fill s::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .3; }
+  /* the current sound's block: brighter, and glowing */
+  .key.steps u.fill s.me { box-shadow: inset 0 0 0 2px var(--c), inset 0 0 10px var(--c); }
+  .key.steps u.fill s.me::before { opacity: .5; }
   .key.cur { outline: 3px solid var(--accent); outline-offset: 2px; }
   .key.tint.cur { outline-color: var(--key-ink); }
   /* Text over a colour: white, with a dark edge so it reads on yellow as on blue. */
@@ -223,7 +229,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022v</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022w</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -482,6 +488,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022v"></script>
+<script type="module" src="app.js?v=20261022w"></script>
 </body>
 </html>
