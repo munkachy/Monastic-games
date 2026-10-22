@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022m';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022n';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -80,6 +80,13 @@ function onAudioState() {
 }
 window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
   step: (p, k) => S.patterns[p][k],
+  // what a bug report needs: the log, and the state in short (no audio)
+  report: () => ({ build: document.querySelector('.brand span')?.textContent, log: LOG.slice(-600).join('\n'),
+    state: { cur: S.cur, pat: S.pat, chain: S.chain, mode: S.mode, write: S.write, replace: S.replace, bpm: S.bpm, swing: S.swing, scale: S.scale, root: S.root,
+      playing, slots: S.slots.map((sl, i) => sl && { i: i + 1, name: sl.name, kind: sl.kind, factory: sl.factory, params: sl.params, slices: sl.slices?.length,
+        names: sl.slices?.slice(0, 64).map(x => x.name) }),
+      patterns: S.patterns.map(p => p.map(st => st.map(n => `${n.s + 1}:${n.k + 1}${n.oc ? 'o' + n.oc : ''}${n.o ? '~' + n.o : ''}`).join(' '))),
+      patKeys: S.patKeys, oct: S.oct, fx: S.fx, custom: S.custom } }),
   spell, syl: async (t, cut) => { const { buf, syl } = await voiceSyllables(t, cut); return { dur: buf.duration, syl: syl.map(x => [x.name, +x.s.toFixed(3), +x.e.toFixed(3), x.stress, x.punct]) }; },
   places: (n, flow, seed) => { const syl = Array.from({ length: n }, (_, i) => ({ first: i % 3 === 0, stress: i % 3 === 1 ? 2 : 0, punct: i === 5 ? '.' : '' })); return flowPlaces(syl, flow, false, seed); },
   slot: () => { const sl = S.slots[S.cur]; return { kind: sl.kind, slices: sl.slices?.map(x => x.name) }; },
@@ -1480,7 +1487,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022n'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1573,7 +1580,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022n'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
