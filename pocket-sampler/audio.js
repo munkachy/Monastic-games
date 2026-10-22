@@ -111,7 +111,7 @@ registerProcessor('crush', Crush);`;
 
 // Distortion curves. x runs -1..1; amt (0-1) is how hard.
 const curves = new Map();
-function distortion(type, amt) {
+export function distortion(type, amt) {
   const key = type + Math.round(amt * 20);
   if (curves.has(key)) return curves.get(key);
   const c = new Float32Array(2048);
@@ -385,7 +385,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       // A loop (made at a known tempo: the loop's own, or its sound's) is stretched to the tempo and
       // key playing; until that is ready, it is sped up or slowed to keep the beat (the pitch moves a moment).
       const lb = sl.bpm || slot.bpm;
-      if (lb) {
+      if (lb && P.nostretch) r = Math.pow(2, semis / 12) * rate * bpm / lb;    // time stretch off: sped up or slowed like a record, pitch and all
+      else if (lb) {
         const f = loopStretch({ bpm: lb }, P, bpm, root);
         if (Math.abs(f - 1) > 0.002) {
           const sb = stretchedNow(buf, s, e, f);
