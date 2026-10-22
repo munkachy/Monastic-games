@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022p';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022q';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -199,7 +199,7 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 'scramble', 'dive',
   'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
 const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat',      // the four small buttons, at first
-  'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'voice'];   // and the eight under the keys
+  'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain'];   // and the eight under the keys
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
@@ -226,7 +226,7 @@ function patAt(t) { return S.chain[Math.floor(t / 16) % S.chain.length]; }
 function start() {
   if (playing) return;
   ctx.resume(); stopPreview(); stopRapPreview();
-  playing = true; tick = 0; barPat = -1; nextT = ctx.currentTime + 0.06;
+  playing = true; tick = 0; barPat = -1; followPlay = true; nextT = ctx.currentTime + 0.06;
   schedule(); $('play').classList.add('on'); $('play').textContent = '■ Stop';
 }
 function stop() {
@@ -559,6 +559,13 @@ function press(k) {
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
+      // In a chain, choosing a pattern only shows it (to look or write): the chain plays on, and the
+      // screen stays on your pattern until you choose the one playing. Alone, it switches at the next bar.
+      else if (S.chain.length > 1) {
+        S.pat = k; followPlay = !playing || k === headPat;
+        status(playing && !followPlay ? `Showing pattern ${k + 1}; the chain plays on. Choose the pattern playing to follow it again.` : '');
+        persist(); break;
+      }
       else { S.pat = k; if (playing) pendingChain = [k]; else { S.chain = [k]; if (S.patKeys[k]) quietKey(S.patKeys[k]); } persist(); break; }
       dirty(); break;
     case 'fx': {
@@ -724,7 +731,7 @@ function copyPattern(from, to) {
 // ---------------------------------------------------------------------------
 // Function buttons
 // ---------------------------------------------------------------------------
-let chainEdit = false, chainFresh = false;
+let chainEdit = false, chainFresh = false, followPlay = true;
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   const m = b.dataset.mode;
   S.mode = S.mode === m ? 'play' : m;
@@ -742,11 +749,15 @@ $('write').addEventListener('click', () => {
 $('play').addEventListener('click', () => playing ? stop() : start());
 $('chainBtn').addEventListener('click', () => setChainEdit(!chainEdit));
 function setChainEdit(on) {
-  chainEdit = on; chainFresh = on;
+  const none = !on && chainFresh;      // ending without having chosen any pattern
+  chainEdit = on; chainFresh = on || none;
   $('chainBtn').classList.toggle('go', on);
   $('chainBtn').textContent = on ? 'Done chaining' : 'Chain patterns';
-  if (on) { S.mode = 'pattern'; status('Tap patterns in the order they should play. The same one can go in more than once.'); }
-  else status(S.chain.length > 1 ? `Chain: ${S.chain.map(p => p + 1).join(' → ')}` : '');
+  if (on) { S.mode = 'pattern'; status('Tap patterns in the order they should play (the same one can go in more than once), then Chain again. Chain again without tapping any: unchain.'); }
+  else if (chainFresh) {           // ended without choosing any: unchain, to the pattern on screen
+    chainFresh = false; checkpoint(); S.chain = [S.pat]; if (playing) pendingChain = [S.pat]; dirty();
+    status(`Unchained: pattern ${S.pat + 1} on its own.`);
+  } else status(S.chain.length > 1 ? `Chain: ${S.chain.map(p => p + 1).join(' → ')}` : '');
   draw();
 }
 
@@ -1308,6 +1319,7 @@ const ACTIONS = {
   beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
   clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
   edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
+  chain: { name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
   key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
   nextkey: { name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
   voice: { name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
@@ -1488,7 +1500,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022q'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1581,7 +1593,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022q'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2081,7 +2093,7 @@ function frame() {
     const q = uiQueue.shift();
     if (q.step !== headStep || q.pat !== headPat) changed = true;
     headTick = q.tick; headStep = q.step; headPat = q.pat;
-    if (S.mode !== 'pattern' && !chainEdit && q.pat !== S.pat && S.chain.length > 1) { S.pat = q.pat; changed = true; }
+    if (followPlay && !chainEdit && q.pat !== S.pat && S.chain.length > 1) { S.pat = q.pat; changed = true; }
   }
   if (keyNext?.at != null && now >= keyNext.at) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }
   if (flash && performance.now() > flash.until) { flash = null; changed = true; }
@@ -2432,6 +2444,8 @@ async function load() {
     if (Array.isArray(S.fxAmt)) S.fxAmt = Object.fromEntries(S.fxAmt.map((v, i) => [DEFAULT_SLOTS[i], v]));
     S.custom = S.custom.map(c => (/^fx\d+$/.test(c) ? 'fx:' + DEFAULT_SLOTS[+c.slice(2)] : c));
     while (S.custom.length < DEFAULT_CUSTOM_IDS.length) S.custom.push(DEFAULT_CUSTOM_IDS[S.custom.length]);   // saves from before the row under the keys
+    if (!saved.chainButton && S.custom[11] === 'voice') S.custom[11] = 'chain';    // the Chain button took Voice's place, once
+    S.chainButton = true;
   }
   else demo();
   setVolume(); syncPanel(); draw();
