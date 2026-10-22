@@ -171,7 +171,7 @@
 </head>
 <body>
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022h</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261022i</span><a href="../" title="Monastic Games">◂ Games</a></div>
 
   <div class="screen" id="screen">
     <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat">PAT 1</span></div>
@@ -321,11 +321,12 @@
     <div class="row"><label for="voxGap">Word gap</label><input type="range" id="voxGap" min="0" max="60" step="1" value="0"><output id="oVoxGap"></output></div>
     <div class="row"><label for="voxVowel">Vowel length</label><input type="range" id="voxVowel" min="1" max="3" step="0.05" value="1.5"><output id="oVoxVowel"></output></div>
     <div class="btns"><button id="voxMake" class="go">Make voice → this sound</button><button id="voxHear">Hear it</button></div>
-    <div class="row"><label for="rapGrid">Rhythm</label>
-      <select id="rapGrid"><option value="1">1/16: quick</option><option value="2" selected>1/8</option><option value="4">1/4: one a beat</option></select><span></span></div>
+    <div class="row"><label for="rapCut">Cut</label>
+      <select id="rapCut"><option value="natural">Natural: spoken as a line</option><option value="robot">Robot-precise: each syllable alone</option></select><span></span></div>
+    <div class="row"><label for="rapFlow">Flow</label><select id="rapFlow"></select><span></span></div>
     <label class="check"><input type="checkbox" id="rapRest"> A rest between words</label>
-    <div class="btns"><button id="rapIt" class="go">🎤 Rap it on the beat</button></div>
-    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. <b>Rap it on the beat</b> puts one syllable on each key of this sound and writes them into the pattern in the rhythm you choose, carrying on into the next patterns (chained) if they don't fit in one bar. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
+    <div class="btns"><button id="rapIt" class="go">🎤 Rap it on the beat</button><button id="rapNew">🎲 New flow</button></div>
+    <p class="note">Tone variation at 0 is a dead flat robot monotone. On sounds 1–8 the voice plays up the scale; on 9–16 it is chopped, one syllable per key. <b>Rap it on the beat</b> puts one syllable on each key of this sound and writes them into the pattern in the flow you choose, carrying on into the next patterns (chained) if they don't fit in one bar. Stressed syllables (shown in capitals) are put on the beat; a comma rests to the next beat and a full stop or new line to the next half bar (old school: the next bar). Change the flow, or tap <b>🎲 New flow</b>, and the same rap is laid out again without speaking it again. <b>Cut</b>: Natural speaks the line as a whole and cuts it at the quiet dips; Robot-precise speaks each syllable on its own, so every cut is clean but it sounds more clipped. The voice engine is eSpeak NG from Vox Machina (about 18 MB the first time). Synthetic voice; no human voice recordings used.</p>
   </div>
 
   <div class="panel" id="tLog">
@@ -337,7 +338,7 @@
 
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
-    <p><b>The blue buttons</b>, four beside Menu and four under the keys, are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
+    <p><b>The blue buttons</b>, four beside Menu and four under the keys, are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, <b>🤖 Voice</b> (opens the Voice page), <b>🎤 Rap</b> (raps the words typed there onto the current sound), <b>🎲 Flow</b> (a new flow for that rap), or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
@@ -409,6 +410,6 @@
     <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
   </div>
 </div>
-<script type="module" src="app.js?v=20261022h"></script>
+<script type="module" src="app.js?v=20261022i"></script>
 </body>
 </html>

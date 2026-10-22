@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022h';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022i';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -80,7 +80,8 @@ function onAudioState() {
 }
 window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
   step: (p, k) => S.patterns[p][k],
-  spell, syl: async t => { const { buf, syl } = await voiceSyllables(t); return { dur: buf.duration, syl: syl.map(x => [x.name, +x.s.toFixed(3), +x.e.toFixed(3)]) }; },
+  spell, syl: async (t, cut) => { const { buf, syl } = await voiceSyllables(t, cut); return { dur: buf.duration, syl: syl.map(x => [x.name, +x.s.toFixed(3), +x.e.toFixed(3), x.stress, x.punct]) }; },
+  places: (n, flow, seed) => { const syl = Array.from({ length: n }, (_, i) => ({ first: i % 3 === 0, stress: i % 3 === 1 ? 2 : 0, punct: i === 5 ? '.' : '' })); return flowPlaces(syl, flow, false, seed); },
   slot: () => { const sl = S.slots[S.cur]; return { kind: sl.kind, slices: sl.slices?.map(x => x.name) }; },
   loops: () => [...eng.voices].filter(v => v.end === Infinity).length,
   key: () => ({ root: S.root, scale: S.scale, next: keyNext && { ...keyNext }, patKeys: [...S.patKeys], playing, time: ctx.currentTime, bar: 16 * stepDur() }) };   // for testing the restart from the browser console
@@ -1290,6 +1291,9 @@ const ACTIONS = {
   edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
   nextkey: { name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
+  voice: { name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
+  rap: { name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
+  newflow: { name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
   octdown: { name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
   octup: { name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
@@ -1503,50 +1507,181 @@ function spell(word) {
   parts.push(w.slice(from));
   return parts.filter(Boolean);
 }
-// Speak the phrase and find its syllables: [{ s, e, name, w }] and the buffer.
-async function voiceSyllables(text) {
-  const words = text.split(/\s+/).map(t => ({ t, parts: spell(t) })).filter(x => x.parts.length || /\d/.test(x.t));
-  const counts = words.map(x => Math.max(1, x.parts.length));
-  // with a long pause between words, each word is easy to find
-  let buf = await makeVoice(text, Math.max(30, +$('voxGap').value)), syl = syllables(buf, counts);
-  if (!syl) {           // the words found don't match (a number said as two words, say): speak them one at a time
-    const pieces = [];
-    for (const [i, x] of words.entries()) { status(`Speaking word ${i + 1} of ${words.length}…`); pieces.push(await makeVoice(x.t, 0)); }
-    const r = pieces[0].sampleRate, gap = Math.round(r * 0.3), len = pieces.reduce((a, b) => a + b.length + gap, 0);
-    buf = ctx.createBuffer(1, len, r); let o = 0;
-    for (const b of pieces) { buf.getChannelData(0).set(b.getChannelData(0), o); o += b.length + gap; }
-    syl = syllables(buf, counts);
-  }
-  if (!syl) throw new Error('Could not find the words in the voice. Try fewer words, or spell numbers out.');
-  syl.forEach(x => { x.name = words[x.w].parts[syl.filter(y => y.w === x.w).indexOf(x)] || words[x.w].t; });
-  return { buf, syl };
+// Phonetics. eSpeak says how it will pronounce each word ("b_I_g_'I_n_I_N"):
+// every vowel sound is a syllable, and ' or , marks a stressed one. The
+// consonants between two vowels go with the second, as many as can start
+// an English syllable (be|gin, mon|ster, a|stride).
+const PH_VOWEL = t => /^[aeiouAEIOUV03@]/.test(t);
+const ONSETS = new Set(['pl', 'pr', 'bl', 'br', 'tr', 'dr', 'kl', 'kr', 'gl', 'gr', 'fl', 'fr', 'Tr', 'Sr', 'sp', 'st', 'sk', 'sm', 'sn', 'sl', 'sw',
+  'tw', 'kw', 'dw', 'pj', 'bj', 'kj', 'mj', 'fj', 'hj', 'spr', 'str', 'skr', 'spl', 'skw']);
+function phSyllables(word) {
+  const toks = word.split('_').filter(t => t && !/^[:|!_]+$/.test(t)), bare = toks.map(t => t.replace(/[',]/g, ''));
+  const vi = bare.map((t, i) => (PH_VOWEL(t) ? i : -1)).filter(i => i >= 0), out = [];
+  let from = 0;
+  vi.forEach((v, n) => {
+    let to = toks.length;
+    if (n < vi.length - 1) {
+      const cons = bare.slice(v + 1, vi[n + 1]);
+      let take = cons.length ? 1 : 0;
+      for (let k = Math.min(3, cons.length); k >= 2; k--) if (ONSETS.has(cons.slice(-k).join(''))) { take = k; break; }
+      to = vi[n + 1] - take;
+    }
+    const raw = toks.slice(from, to).join('');
+    out.push({ ph: bare.slice(from, to), stress: raw.includes("'") ? 2 : raw.includes(',') ? 1 : 0 });
+    from = to;
+  });
+  return out;
 }
-// The voice as a chop: one syllable per key.
+// The words typed, each with its syllables (from eSpeak) and the punctuation
+// after it. Each word is looked up on its own, so the count is exact; the
+// stress comes from the whole line, where little words like "the" go unstressed.
+async function phonetics(text) {
+  const words = text.replace(/([^\s.!?,;:])[ \t]*\n/g, '$1.\n').split(/\s+/).filter(t => /[\p{L}\p{N}]/u.test(t))
+    .map(t => ({ t, punct: /[.!?;:]["”’)]*$/.test(t) ? '.' : /,["”’)]*$/.test(t) ? ',' : '', syl: [] }));
+  const clean = t => t.replace(/[^\p{L}\p{N}'’-]/gu, '');
+  const lines = (await vox.phonemes(words.map(w => clean(w.t)).join(', '))).split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === words.length) lines.forEach((l, i) => { words[i].syl = l.split(' ').flatMap(phSyllables); });
+  else words.forEach(w => { w.syl = spell(w.t).map(() => ({ ph: null, stress: 0 })); });     // fall back on the spelling
+  const sent = (await vox.phonemes(text)).split(/\s+/).filter(Boolean).flatMap(phSyllables);
+  if (sent.length === words.reduce((n, w) => n + w.syl.length, 0)) { let i = 0; for (const w of words) for (const y of w.syl) y.stress = sent[i++].stress; }
+  return words;
+}
+// Names for the keys: the spelling cut into as many pieces as eSpeak hears.
+function nameParts(t, n) {
+  const w = t.replace(/[^\p{L}\p{N}']/gu, '').toLowerCase(), sp = spell(w);
+  if (n <= 1) return [w];
+  if (sp.length === n) return sp;
+  if (/\d/.test(w)) return [w, ...Array(n - 1).fill('·')];
+  return Array.from({ length: n }, (_, i) => w.slice(Math.round(i * w.length / n), Math.round((i + 1) * w.length / n)));
+}
+// Speak the phrase and find its syllables. Natural: the line is spoken as a
+// whole (a pause between words) and each word is cut at its quietest dips.
+// Robot-precise: each syllable is spoken on its own, from its phonemes, so
+// every cut falls in silence. Returns the buffer and [{ s, e, name, w,
+// stress, first, punct }].
+async function voiceSyllables(text, cut = $('rapCut').value) {
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js'); }
+  status('Listening for the syllables…');
+  const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
+  const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
+  let buf = null, found = null;
+  if (cut === 'robot' && all.every(y => y.ph)) {
+    const said = all.map(y => { const v = y.ph.findIndex(PH_VOWEL), m = ['', ',', "'"][y.stress]; return [...y.ph.slice(0, v), m + y.ph[v], ...y.ph.slice(v + 1)].join(''); });
+    buf = await makeVoice(`[[${said.join(' ')}]]`, 20);
+    found = syllables(buf, all.map(() => 1));
+  }
+  if (!found) {
+    buf = await makeVoice(text, Math.max(30, +$('voxGap').value)); found = syllables(buf, counts);
+    if (!found) {           // the words found don't match: speak them one at a time
+      const pieces = [];
+      for (const [i, w] of words.entries()) { status(`Speaking word ${i + 1} of ${words.length}…`); pieces.push(await makeVoice(w.t, 0)); }
+      const r = pieces[0].sampleRate, gap = Math.round(r * 0.3), len = pieces.reduce((a, b) => a + b.length + gap, 0);
+      buf = ctx.createBuffer(1, len, r); let o = 0;
+      for (const b of pieces) { buf.getChannelData(0).set(b.getChannelData(0), o); o += b.length + gap; }
+      found = syllables(buf, counts);
+    }
+  }
+  if (!found || found.length !== all.length) throw new Error('Could not find the syllables in the voice. Try fewer words, or spell numbers out.');
+  const names = words.flatMap(w => nameParts(w.t, Math.max(1, w.syl.length)));
+  return { buf, syl: found.map((f, i) => ({ s: f.s, e: f.e, ...all[i], ph: undefined, name: names[i] })) };
+}
+// The voice as a chop: one syllable per key. Each slice keeps its word,
+// stress and punctuation, so a new flow can be laid out without speaking again.
 function voiceChop(name, buf, syl) {
   return { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), choke: true }, buf,
-    slices: syl.slice(0, 16).map(x => ({ s: x.s, e: x.e, name: x.name })) };
+    slices: syl.slice(0, 16).map(x => ({ s: x.s, e: x.e, name: x.name, w: x.w, stress: x.stress, first: x.first, punct: x.punct })) };
 }
-// Rap it: the syllables, one per key, written into the pattern on the beat,
-// one every `grid` steps (a rest between words if asked), running on into the
-// next patterns, and chained, if it doesn't fit in one bar.
-async function rapIt() {
-  const text = $('voxText').value.trim(), si = S.cur, grid = +$('rapGrid').value, rest = $('rapRest').checked;
-  const { buf, syl } = await voiceSyllables(text);
-  const n = Math.min(16, syl.length), places = [];
-  let pos = 0;
-  for (let i = 0; i < n; i++) { if (i && rest && syl[i].w !== syl[i - 1].w) pos += grid; places.push(pos); pos += grid; }
-  const bars = Math.ceil((places.at(-1) + 1) / 16);
-  if (S.pat + bars > 16) throw new Error(`That needs ${bars} patterns from pattern ${S.pat + 1}: start from an earlier pattern, or use a quicker rhythm.`);
+
+// Flows: how the syllables sit on the beat. Each flow is made of cells, a
+// beat (4 steps of 1/16) or so long, cut into syllable lengths; `strong` says
+// where stressed syllables should land (on the beat, on any 1/8, or off the
+// beat), resting a little before a word to get them there; `line` is where a
+// new sentence starts (the next beat, half bar or bar); `behind` drags every
+// syllable a little late, for a lazy feel.
+const T3 = 4 / 3, S6 = 2 / 3;
+const FLOWS = {
+  steady8: ['Steady 1/8', { cells: [[2]], line: 4 }],
+  steady16: ['Steady 1/16', { cells: [[1]], line: 4 }],
+  steady4: ['Steady 1/4: one a beat', { cells: [[4]], line: 4 }],
+  oldschool: ['Old school: on the beat, a bar a line', { cells: [[2]], strong: 4, line: 16 }],
+  boombap: ['Boom bap', { cells: [[2, 2], [2, 1, 1], [1, 1, 2], [3, 1]], strong: 2, line: 8 }],
+  laidback: ['Laid back: lazy, behind the beat', { cells: [[3, 1], [2, 2], [4]], strong: 4, behind: 0.22, line: 8 }],
+  triplet: ['Triplet', { cells: [[T3, T3, T3]], strong: 4, line: 4 }],
+  syncopated: ['Syncopated: off the beat', { cells: [[3, 3, 2], [1, 2, 1], [3, 1]], strong: 'off', line: 4 }],
+  chopper: ['Chopper: double time', { cells: [[1, 1, 1, 1], [S6, S6, S6, S6, S6, S6], [1, 1, 2]], line: 4 }],
+  mix: ['Mixed: a different feel each beat', { mix: true, strong: 2, line: 8 }],
+};
+for (const [id, [n]] of Object.entries(FLOWS)) $('rapFlow').add(new Option(n, id));
+$('rapFlow').value = 'boombap';
+const MIX_CELLS = [...new Set(Object.values(FLOWS).filter(([, f]) => f.cells?.length > 1).flatMap(([, f]) => f.cells))];
+// Where each syllable goes, in steps from the start (fractions for triplets
+// and laid-back): the same flow and seed always give the same places.
+function flowPlaces(syl, flow, rest, seed) {
+  const F = FLOWS[flow]?.[1] || FLOWS.steady8[1], cells = F.mix ? MIX_CELLS : F.cells, eps = 0.01;
+  const rnd = st => { st.r = (st.r + 0x6D2B79F5) | 0; let x = Math.imul(st.r ^ (st.r >>> 15), 1 | st.r); x ^= x + Math.imul(x ^ (x >>> 7), 61 | x); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  const pick = st => cells[(rnd(st) * cells.length) | 0];
+  let st = { t: 0, r: seed | 0 }; st.cell = pick(st); st.ci = 0;
+  const next = q => { const p = q.t; q.t += q.cell[q.ci++]; if (q.ci === q.cell.length) { q.cell = pick(q); q.ci = 0; } return p; };
+  const restTo = x => { if (st.t < x - eps) { st.t = x; st.cell = pick(st); st.ci = 0; } };
+  const near = (a, b) => Math.abs(a - b) < eps;
+  const strong = p => { const m = ((p % 4) + 4) % 4, on = near(m, 0) || near(m, 4);
+    return F.strong === 4 ? on : F.strong === 2 ? near(m % 2, 0) || near(m % 2, 2) : F.strong === 'off' ? !on : true; };
+  const places = [];
+  for (let i = 0; i < syl.length; i++) {
+    const y = syl[i];
+    if (y.first) {
+      // A breath: a full stop goes on to the next line (in quick flows, at least an 1/8 later), a comma to the next beat.
+      const pp = syl[i - 1]?.punct;
+      if (pp === '.') restTo(Math.ceil((st.t + (F.line >= 8 ? 0 : 2) - eps) / F.line) * F.line);
+      else if (pp === ',') restTo(Math.ceil((st.t + 1 - eps) / 4) * 4);
+      else if (rest && i > 0) next(st);
+      // land the word's stressed syllable on a strong place: rest up to two places before the word
+      let j = 0; while (i + j < syl.length && (j === 0 || !syl[i + j].first)) { if (syl[i + j].stress === 2) break; j++; }
+      if (F.strong && i + j < syl.length && syl[i + j].stress === 2 && (j === 0 || !syl[i + j].first)) {
+        for (let k = 0; k <= 2; k++) {
+          const q = { ...st }; for (let n = 0; n < k; n++) next(q);
+          let p = 0; for (let n = 0; n <= j; n++) p = next(q);
+          if (strong(p)) { for (let n = 0; n < k; n++) next(st); break; }
+        }
+      }
+    }
+    places.push(next(st) + (F.behind || 0));
+  }
+  return places;
+}
+// Lay the current rap sound's syllables out in a flow, from the pattern
+// you're on, carrying on into the next patterns (chained) if it needs them.
+function layRap(flow, rest, seed) {
+  const si = S.cur, sl = S.slots[si];
+  if (sl?.kind !== 'chop' || !sl.slices.length || sl.slices[0].w == null) throw new Error('Make a rap first: this sound is not a rapped voice.');
+  const places = flowPlaces(sl.slices, flow, rest, seed);
+  const bars = Math.ceil((Math.floor(places.at(-1)) + 1) / 16);
+  if (S.pat + bars > 16) throw new Error(`That needs ${bars} patterns from pattern ${S.pat + 1}: start from an earlier pattern, or choose a quicker flow.`);
   checkpoint();
-  const name = '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
-  S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0;
-  // this sound's old notes were for the old sound: clear them where the rap goes and in the chain playing
+  // this sound's old notes were for the old rap: clear them where the rap goes and in the chain playing
   for (const q of new Set([...Array.from({ length: bars }, (_, b) => S.pat + b), ...S.chain])) S.patterns[q] = S.patterns[q].map(st => st.filter(x => x.s !== si));
-  places.forEach((p, k) => S.patterns[S.pat + Math.floor(p / 16)][p % 16].push({ s: si, k }));
+  places.forEach((p, k) => {
+    const j = Math.floor(p + 1e-6), o = Math.round((p - j) * 1000) / 1000;
+    S.patterns[S.pat + Math.floor(j / 16)][j % 16].push({ s: si, k, ...(o > 0.01 && { o }) });
+  });
   if (bars > 1 && !playing) S.chain = Array.from({ length: bars }, (_, b) => S.pat + b);
-  syncPanel(); dirty(); draw();
-  status(`${n} syllables on sound ${si + 1}, on the beat${bars > 1 ? ` across patterns ${S.pat + 1}–${S.pat + bars} (chained)` : ''}: ${syl.slice(0, n).map(x => x.name).join(' · ')}`
-    + (syl.length > 16 ? `. Only the first 16 of ${syl.length} fit on the keys.` : '.'));
+  dirty(); draw();
+  return bars;
+}
+let rapSeed = 1;
+async function rapIt() {
+  const text = $('voxText').value.trim(), si = S.cur;
+  const { buf, syl } = await voiceSyllables(text);
+  const name = '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
+  checkpoint(); S.slots[si] = voiceChop(name, buf, syl); S.lastKey[si] = 0; syncPanel();
+  const bars = layRap($('rapFlow').value, $('rapRest').checked, rapSeed);
+  const n = Math.min(16, syl.length);
+  status(`${n} syllables on sound ${si + 1}, ${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, patterns ${S.pat + 1}–${S.pat + bars} (chained)` : ''}: `
+    + syl.slice(0, n).map(x => (x.stress === 2 ? x.name.toUpperCase() : x.name)).join(' · ') + (syl.length > 16 ? `. Only the first 16 of ${syl.length} fit on the keys.` : '.'));
+}
+function reflow(seed) {
+  const bars = layRap($('rapFlow').value, $('rapRest').checked, rapSeed = seed);
+  status(`${FLOWS[$('rapFlow').value][0].split(':')[0]}${bars > 1 ? `, over ${bars} bars` : ''}. 🎲 again for another, ↶ Undo to go back.`);
 }
 const busy = (btn, fn) => async () => {
   btn.disabled = true; ctx.resume();
@@ -1563,6 +1698,15 @@ $('voxMake').addEventListener('click', busy($('voxMake'), async () => {
   noteOn(eng, S.cur, 0, ctx.currentTime + 0.02);
 }));
 $('rapIt').addEventListener('click', busy($('rapIt'), rapIt));
+// 🎲 New flow: another flow (never the steady ones, nor the one you're on), laid out afresh.
+$('rapNew').addEventListener('click', () => {
+  const pool = Object.keys(FLOWS).filter(f => !f.startsWith('steady') && f !== $('rapFlow').value);
+  $('rapFlow').value = pool[(Math.random() * pool.length) | 0];
+  try { reflow((Math.random() * 2 ** 31) | 0); } catch (e) { status(e.message); }
+});
+for (const id of ['rapFlow', 'rapRest']) $(id).addEventListener('change', () => {     // a rap already on this sound takes the new flow at once
+  if (S.slots[S.cur]?.slices?.[0]?.w != null) try { reflow(rapSeed); } catch (e) { status(e.message); }
+});
 $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
   const b = await makeVoice(), src = ctx.createBufferSource(); src.buffer = b; src.connect(eng.bus); src.start();
   status('');
