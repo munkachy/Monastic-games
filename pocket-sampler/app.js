@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022s';
+import { Engine, playNote, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022t';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -234,7 +234,7 @@ function stop() {
   if (keyNext) { const k = keyNext; keyNext = null; k.auto ? quietKey(k) : applyKey(k); }   // a key change still waiting lands now
   $('play').classList.remove('on'); $('play').textContent = '▶ Play';
   for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
-  for (const [id, h] of looping) if (isLoop(+id.split(':')[0])) { h.voice?.stop(ctx.currentTime); looping.delete(id); }   // loops stop with the beat
+  for (const [id, h] of looping) { h.voice?.stop(ctx.currentTime); looping.delete(id); }   // every loop stops with the beat
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   draw();
 }
@@ -557,7 +557,7 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k); syncPanel(); persist(); break;
+      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); break;   // a taste: never left looping
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -659,8 +659,8 @@ function nextBar() {
   if (j >= 16 && now - at(j - 16) <= 0.03) j -= 16;
   return { j, when: Math.max(now, at(j)) };
 }
-function playHeld(si, key, pad, when = ctx.currentTime) {
-  const id = `${si}:${key}`, inLoop = S.slots[si]?.params.trig === 'loop', synced = playing && isLoop(si);
+function playHeld(si, key, pad, when = ctx.currentTime, taste = false) {
+  const id = `${si}:${key}`, inLoop = !taste && S.slots[si]?.params.trig === 'loop', synced = !taste && playing && isLoop(si);
   if (inLoop && looping.has(id)) {
     const h = looping.get(id); looping.delete(id);
     if (synced) h.voice?.stop(nextBar().when); else endHeld(h);
@@ -1063,6 +1063,16 @@ function warmLoops() {
 }
 let warmTimer = 0;
 const warmSoon = () => { clearTimeout(warmTimer); warmTimer = setTimeout(warmLoops, 250); };
+// Clear in Sound mode: the sound comes off its key (silent, "empty") and its
+// notes out of every pattern. ↶ Undo puts it back.
+function clearSlot(si) {
+  checkpoint();
+  for (const [id, h] of looping) if (+id.split(':')[0] === si) { h.voice?.stop(ctx.currentTime); looping.delete(id); }
+  S.slots[si] = { factory: null, kind: 'chop', name: 'Empty', params: defParams(), slices: [] };
+  S.patterns = S.patterns.map(p => p.map(st => st.filter(n => n.s !== si)));
+  syncPanel(); dirty(); draw();
+  status(`Sound ${si + 1} cleared: empty, and out of the patterns. Load a sound onto it from Menu › Sounds. ↶ Undo brings it back.`);
+}
 async function loadSong(id) {
   ctx.resume();
   status('Loading the song (about 13 MB the first time)…');
@@ -1377,7 +1387,7 @@ const ACTIONS = {
   roll: { name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
   beat: { name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
   beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
-  clear: { name: 'Clear pattern', label: () => 'Clear', tap: () => $('clearPat').click() },
+  clear: { name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
   edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   chain: { name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
   key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
@@ -1560,7 +1570,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022t'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1653,7 +1663,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022t'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2089,7 +2099,7 @@ function drawWave() {
     g.lineWidth = 2 * dpr; g.beginPath();
     for (let i = 0; i < d.length; i++) { const x = i / d.length * W, y = H / 2 - d[i] * H * 0.45; i ? g.lineTo(x, y) : g.moveTo(x, y); }
     g.stroke();
-    g.font = `${10 * dpr}px ui-monospace, monospace`; g.fillText('SYNTH · ' + sl.synth.type.toUpperCase(), 4 * dpr, 12 * dpr);
+    g.font = `${10 * dpr}px ui-monospace, monospace`; g.fillText(sl.synth ? 'SYNTH · ' + sl.synth.type.toUpperCase() : 'EMPTY: LOAD A SOUND (MENU › SOUNDS)', 4 * dpr, 12 * dpr);
     return;
   }
   const { buf, a, b } = view, x = buf.getChannelData(0), sr = buf.sampleRate;
@@ -2121,6 +2131,7 @@ function waveView() {
     const z = sl.zones.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
     return { buf: sl.buf, a: z.s, b: z.e };
   }
+  if (!sl.slices?.length) return null;          // an empty sound: nothing to draw
   const lk = S.lastKey[S.cur], one = sl.buf && sl.slices.every(s => !s.buf);
   if (one) return { buf: sl.buf, a: 0, b: sl.buf.duration, marks: sl.slices };
   const s = sl.slices[lk]; const buf = s.buf || sl.buf;
@@ -2482,10 +2493,13 @@ async function load() {
     const r = await idbGet('bufs', id); if (!r) return null;
     const b = ctx.createBuffer(1, r.data.length, r.rate); b.copyToChannel(r.data, 0); b.id = id; stored.add(id); return b;
   };
+  const gone = new Set();
   for (let i = 0; i < 16; i++) {
     const s = saved?.slots?.[i];
     try {
-      if (s && s.factory == null) {
+      const withdrawn = /Good Day/.test(s?.credit || '');     // the song pack taken out: its sounds go, the usual ones come back
+      if (withdrawn) gone.add(i);
+      if (s && s.factory == null && !withdrawn) {
         const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
@@ -2500,6 +2514,7 @@ async function load() {
     if (i === S.cur) { syncPanel(); draw(); }
   }
   if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct']) if (saved[k] != null) S[k] = saved[k];
+  if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
     // Effects used to be saved by key number; now by name.
     const name = e => (typeof e === 'number' ? DEFAULT_SLOTS[e] : e && typeof e.f === 'number' ? { ...e, f: DEFAULT_SLOTS[e.f] } : e);
