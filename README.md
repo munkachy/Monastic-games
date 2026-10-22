@@ -177,23 +177,26 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Quantize** (Settings): off, 1/16, 1/8, a beat, half a bar or a bar, for
   what you hear while the beat plays and for what is recorded. Exports are
   stereo.
-- **Dark look and sound colours:** a near-black body and display, like
-  Remixlive (the beige PO-33 look stays as Menu › Buttons › Look). Each of
-  the 16 sounds has a fixed colour (1–8 Remixlive's red, orange, yellow,
-  green, teal, pink, purple and blue; 9–16 lime, cyan, magenta, amber,
-  indigo, coral, mint and lavender). Sound mode shows each pad in its
-  colour, Play tints the keys in the current sound's, and in Write the
-  beat is the background (stripes in the drum kit's colour) and the
-  instruments are blocks on top: split side by side for two to four, a
-  small grid of blocks for five or more.
+- **Dark look and colours by part:** a near-black body and display, like
+  Remixlive (the beige PO-33 look stays as Menu › Buttons › Look). Colours
+  go by part, the same in the Pads and the Loops: kick red, snare orange,
+  hats yellow, bass green, chords teal, lead pink, sub purple, vox/keys
+  blue. Sounds 1–8 are instruments, one part each (bass, sub, chords,
+  lead, vox/keys, pad, pluck/arp, stab/FX), each starting with a sound for
+  its part; 9–16 are drum kits and percussion. In Write, **🥁 Percussion**
+  shows each step's drum hits by part, and **🎹 Instruments** its
+  instruments: split side by side for two to four, a small grid for five
+  or more.
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
   sideways (turned a quarter turn when the phone is upright). Eight
-  columns in the colours of sounds 1–8 (kick, snare, tops, bass, chords,
-  lead, sub, vocals/keys), six cells each. A tap starts a cell on the next
-  bar, in time and key; one cell plays per column, and another takes over
-  on the bar; a ring shows each loop's progress. Hold a cell for Loop, One
-  shot or Gate and to choose its sound; each column has a volume and a
-  mute. Tempo, key, Play and FX are shared with the Pads tab.
+  columns in their parts' colours (kick, snare, tops, bass, chords, lead,
+  sub, vocals/keys), six cells each. A tap starts a cell on the next bar,
+  in time and key; one cell plays per column, and another takes over on
+  the bar; a ring shows each loop's progress. Hold a cell for Loop, One
+  shot or Gate, its own volume, following the key, and its sound; ⚙ sets
+  the quantize (a beat to 4 bars, or off), fades, and Stop all loops. Each
+  column has a volume and a mute. Tempo, key, Play and FX are shared with
+  the Pads tab.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
   and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
