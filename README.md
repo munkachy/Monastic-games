@@ -191,6 +191,22 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **My Sounds:** save any sound or edited clip, import WAV, MP3 or a screen
   recording's sound (video files), rename and delete, and gather sounds into
   packs. Any pack, built-in or yours, can be opened to load one sound alone.
+- **More sounds (Build 4):** violin, viola, cello, double bass and
+  pizzicato, men's and women's choirs and celeste (Sonatina Symphonic
+  Orchestra); trumpet and trombone stabs (VSCO 2 CE); Gretsch, Hofner and
+  Epiphone electric guitars (Karoryfer); a Rhodes (jRhodes3d by Jeff Learman,
+  CC BY-NC); tenor sax and xylophone (VCSL); nylon, acoustic and 12-string
+  guitars and a steel drum modelled in code. Packs of 16: a sampled TR-808,
+  electro, Drumtraks and boom bap kits, bells, tambourines and shakers, robot
+  hype words, Speak & Spell and vocal chops, nature, air and water (with a
+  respirator), arcade FX, machines, noise and risers, sirens, synth stabs,
+  bass hits, pads and funk horns (TidalCycles' Dirt-Samples, the TR-808
+  recorded by Michael Fischer, VCSL, and some made in code).
+- **Loops:** 14 drum loops played on these kits, breakbeats (the Amen and
+  others), and vinyl crackle and ambience; each key a loop that comes in on
+  the next bar in step, follows the tempo and key, and stops with the beat.
+- **Songs:** written for the app from its own sounds; the first is an
+  8-bar electro boom bap in F minor (`pocket-sampler/tools/songs.py`).
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.
   Everything is saved on the phone between visits.
 - **One shot / Gate / Loop** per sound: the whole sound, only while held, or

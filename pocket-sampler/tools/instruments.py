@@ -7,6 +7,12 @@
 #   vcsl/       https://github.com/sgossner/VCSL (Versilian Community Sample Library)
 #   meatbass/   https://github.com/sfzinstruments/karoryfer.meatbass (Karoryfer Samples)
 #   growlybass/ https://github.com/sfzinstruments/karoryfer.growlybass (Karoryfer Samples)
+#   sso/        https://github.com/peastman/sso (Sonatina Symphonic Orchestra, CC Sampling Plus 1.0;
+#               its celeste is CC0)
+#   vsco/       https://github.com/sgossner/VSCO-2-CE (VSCO 2 Community Edition, CC0)
+#   bgg/        https://github.com/sfzinstruments/karoryfer.black-and-green-guitars (Karoryfer, CC0)
+#   emily/      https://github.com/sfzinstruments/karoryfer.emilyguitar (Karoryfer, CC0)
+#   rhodes/     https://github.com/sfzinstruments/jlearman.jRhodes3d (Jeff Learman; samples CC BY-NC 4.0)
 # Clone each with --filter=blob:none --no-checkout; this script checks out only
 # the files it uses. Needs git, ffmpeg and numpy.
 #
@@ -41,6 +47,23 @@ INSTRUMENTS = {
   'glock': ('Glockenspiel', 'vcsl', 'Idiophones/Struck Idiophones/Glockenspiel/', r'glock_medium_.*_01\.wav$', 60, 108, 5, 1.6, False),
   'uprightbass': ('Upright Bass', 'meatbass', 'Samples/pizz/', r'_vl3_rr1\.wav$', 24, 60, 4, 1.6, False),
   'elecbass': ('Electric Bass', 'growlybass', 'sustain/', r'_f_rr1\.wav$', 24, 60, 4, 1.8, True),
+  # Build 4: strings, guitars, horns, choirs and more
+  'violin': ('Violin', 'sso', 'Sonatina Symphonic Orchestra/Samples/Violin/', r'/violin-[a-g]#?\d\.(wav|flac)$', 55, 100, 3, 2.4, True),
+  'viola': ('Viola', 'sso', 'Sonatina Symphonic Orchestra/Samples/Viola/', r'/viola-sus-', 48, 88, 3, 2.4, True),
+  'cello': ('Cello', 'sso', 'Sonatina Symphonic Orchestra/Samples/Cello/', r'/cello-[a-g]#?\d\.(wav|flac)$', 36, 76, 3, 2.4, True),
+  'contrabass': ('Double Bass', 'sso', 'Sonatina Symphonic Orchestra/Samples/Bass/', r'/bass-sus-', 28, 60, 4, 2.4, True),
+  'pizz': ('Pizzicato Cello', 'sso', 'Sonatina Symphonic Orchestra/Samples/Cello/', r'/cello-piz-rr1-', 36, 76, 4, 1.2, False),
+  'choirmen': ('Choir (men)', 'sso', 'Sonatina Symphonic Orchestra/Samples/Chorus/', r'/chorus-male-', 40, 70, 3, 2.6, True),
+  'choirwomen': ('Choir (women)', 'sso', 'Sonatina Symphonic Orchestra/Samples/Chorus/', r'/chorus-female-', 60, 88, 3, 2.6, True),
+  'celeste': ('Celeste', 'sso', 'Sonatina Symphonic Orchestra/Samples/Celeste/', r'/celeste-[a-g]#?\d-hard', 60, 108, 5, 1.6, False),
+  'gretsch': ('Gretsch Guitar', 'bgg', 'Samples/green/ord/', r'_f_rr1\.wav$', 40, 84, 3, 2.2, False),
+  'hofner': ('Hofner Guitar', 'bgg', 'Samples/black/ord/', r'_f_rr1\.wav$', 40, 84, 3, 2.2, False),
+  'emily': ('Electric Guitar', 'emily', 'notes/', r'_f_rr1\.wav$', 40, 84, 3, 2.0, False),
+  'rhodes': ('Rhodes', 'rhodes', 'jRhodes3d-mono/', r'_[23]\.flac$', 36, 96, 4, 2.6, False),
+  'trumpet': ('Trumpet Stab', 'vsco', 'Brass/Trumpet/stac/', r'_v2_rr1\.wav$', 52, 84, 3, 0.8, False),
+  'trombone': ('Trombone Stab', 'vsco', 'Brass/Tenor Trombone/stac/', r'_v2_rr1\.wav$', 40, 72, 3, 0.8, False),
+  'tenorsax': ('Tenor Sax', 'vcsl', 'Aerophones/Reed Aerophones/Tenor Saxophone/', r'_vl3_rr1\.wav$', 44, 80, 4, 2.0, True),
+  'xylophone': ('Xylophone', 'vcsl', 'Idiophones/Struck Idiophones/Xylophone/', r'_ff_01_far\.wav$', 60, 108, 5, 1.0, False),
 }
 
 def files_of(repo):
@@ -76,7 +99,7 @@ def pitch(x):
         y0, y1, y2 = ac[lag - 1], ac[lag], ac[lag + 1]; d = 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2 or 1); lag += d
     return 69 + 12 * np.log2(RATE / lag / 440)
 
-NOTE = re.compile(r'(?:^|_)([A-Ga-g])(#|b)?(-?\d)(?=_|\.|$)')
+NOTE = re.compile(r'(?:^|[_-])([A-Ga-g])(#|b)?(-?\d)(?=[_.-]|$)')
 def named(path):           # "C#4", "eb1", "A0": MIDI note, C4 = 60
     m = NOTE.search(os.path.basename(path))
     if not m: return None
