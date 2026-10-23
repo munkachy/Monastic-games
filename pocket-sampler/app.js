@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023q';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023r';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1802,7 +1802,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023r'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1895,7 +1895,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023r'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3658,22 +3658,35 @@ function buildLoops() {
     const head = document.createElement('div'); head.className = 'lhead'; head.textContent = CHANNELS[c]; col.appendChild(head);
     cellEls[c] = []; cellEls[c].head = head;
     for (let r = 0; r < ROWS; r++) {
-      const b = document.createElement('button'); b.className = 'lcell';
+      const b = document.createElement('button'); b.className = 'lcell'; b.dataset.c = c; b.dataset.r = r;
       b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="rbg"/><circle cx="12" cy="12" r="9.5" class="rfg" pathLength="100"/></svg><span></span><em></em>';
       const el = { b, ring: b.querySelector('.rfg'), name: b.querySelector('span'), badge: b.querySelector('em') };
       let timer = 0, long = false;
       b.addEventListener('pointerdown', ev => {
         ev.preventDefault(); capture(b, ev); long = false;
         const cell = S.grid.cells[c][r];
-        if (lEdit) return;
+        if (lEdit) { cellDrag = cell ? { c, r, x: ev.clientX, y: ev.clientY, moved: false, to: null } : null; return; }
         if (cell?.mode === 'gate') { gateDown(c, r); return; }
         timer = setTimeout(() => { long = true; openCellMenu(c, r); }, 500);
+      });
+      b.addEventListener('pointermove', ev => {
+        if (!lEdit || !cellDrag || cellDrag.c !== c || cellDrag.r !== r) return;
+        if (!cellDrag.moved && Math.hypot(ev.clientX - cellDrag.x, ev.clientY - cellDrag.y) < 10) return;
+        cellDrag.moved = true;
+        const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.lcell');
+        cellDrag.to = t && !(+t.dataset.c === c && +t.dataset.r === r) ? { c: +t.dataset.c, r: +t.dataset.r } : null;
+        drawDrag();
       });
       const up = ev => {
         clearTimeout(timer);
         const cell = S.grid.cells[c][r];
+        if (lEdit) {
+          const d = cellDrag; cellDrag = null; drawDrag();
+          if (ev.type !== 'pointerup') return;
+          if (d?.moved) { if (d.to) moveCell(c, r, d.to.c, d.to.r); return; }
+          openCellMenu(c, r); return;
+        }
         if (ev.type !== 'pointerup') { if (cell?.mode === 'gate') gateUp(c); return; }
-        if (lEdit) { openCellMenu(c, r); return; }
         if (cell?.mode === 'gate') { gateUp(c); return; }
         if (!long) tapCell(c, r);
       };
@@ -3692,10 +3705,35 @@ function buildLoops() {
     grid.appendChild(col);
   }
 }
+// Edit: drag a cell to another place. Onto an empty cell it moves; onto a full one the two swap.
+// In its own column a playing loop plays on from its new place; moved to another column it stops.
+let cellDrag = null;
+function drawDrag() {
+  for (let c = 0; c < 8; c++) for (let r = 0; r < ROWS; r++) {
+    const b = cellEls[c][r].b;
+    b.classList.toggle('dragging', !!cellDrag?.moved && cellDrag.c === c && cellDrag.r === r);
+    b.classList.toggle('droptarget', !!cellDrag?.to && cellDrag.to.c === c && cellDrag.to.r === r);
+  }
+}
+function moveCell(c, r, tc, tr) {
+  const G = S.grid.cells, a = G[c][r], b = G[tc][tr];
+  if (c === tc) {
+    for (const k of ['cur', 'next', 'gate']) { const h = gcol[c][k]; if (h) h.r = h.r === r ? tr : h.r === tr ? r : h.r; }
+  } else for (const [cc, rr] of [[c, r], [tc, tr]]) {
+    const col = gcol[cc];
+    for (const k of ['cur', 'next', 'gate']) if (col[k]?.r === rr) { kill(col[k]); col[k] = null; }
+  }
+  G[tc][tr] = a; G[c][r] = b || null;
+  persist(); drawLoops();
+  status(`${a.name || 'The loop'} moved to ${CHANNELS[tc]}, cell ${tr + 1}${b ? `; ${b.name || 'the loop there'} went to ${CHANNELS[c]}, cell ${r + 1}` : ''}.`);
+}
 function drawLoops() {
   if (!cellEls.length) return;
+  $('lgrid').classList.toggle('editing', lEdit);
   for (let c = 0; c < 8; c++) {
     const col = gcol[c];
+    // editing: every column a shade of one colour (amber), so the grid looks plainly different
+    cellEls[c].col.style.setProperty('--c', lEdit ? `hsl(38 95% ${44 + c * 5}%)` : CHANNEL_COLOR[c]);
     for (let r = 0; r < ROWS; r++) {
       const cell = S.grid.cells[c][r], el = cellEls[c][r];
       const on = col.cur?.r === r && col.cur.stopAt == null || col.gate?.r === r;
@@ -3736,7 +3774,7 @@ const nudgeBpm = d => { S.bpm = Math.max(60, Math.min(240, S.bpm + d)); dirty();
 $('lSlower').addEventListener('click', () => nudgeBpm(-1));
 $('lFaster').addEventListener('click', () => nudgeBpm(1));
 $('lKey').addEventListener('click', () => { nextKey(); drawLoops(); });
-$('lEdit').addEventListener('click', () => { lEdit = !lEdit; status(lEdit ? 'Edit: tap a cell for its settings. Tap ✎ Edit again to play.' : ''); drawLoops(); });
+$('lEdit').addEventListener('click', () => { lEdit = !lEdit; cellDrag = null; status(lEdit ? 'Edit: tap a cell for its settings, or drag it to move it (onto a full cell, the two swap). Tap ✎ Edit again to play.' : ''); drawLoops(); });
 
 // ⚙ The settings for all the loops.
 function choices(box, list, now, pick) {
