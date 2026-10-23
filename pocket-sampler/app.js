@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zg';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zh';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1940,7 +1940,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zg'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zh'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2033,7 +2033,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zg'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zh'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3595,7 +3595,8 @@ const lane = (c, r) => gcol[c * ROWS + (S.grid.multi ? r : 0)];
 const colLanes = c => gcol.slice(c * ROWS, c * ROWS + ROWS);
 const cellHandles = (c, r) => colLanes(c).flatMap(l => [l.cur, l.next, l.gate]).filter(h => h?.r === r);
 // Every loop follows the key, unless turned off; the drum columns (Kick, Snare, Tops) never do.
-const drumCell = cell => { const c = S.grid.cells.findIndex(col => col.includes(cell)); return c >= 0 && c < 3; };
+// a drum: a cell in Kick, Snare or Tops, or a drum sound (a kit's hit, a beat) in any column
+const drumCell = cell => { const c = S.grid.cells.findIndex(col => col.includes(cell)); return (c >= 0 && c < 3) || !!(cell.lib && drumLib(cell.lib)) || (!!cell.mine && mine.find(m => m.id === cell.mine)?.folder === 'Beats'); };
 const follows = cell => !drumCell(cell) && (cell.follow ?? true);
 // A cell as a one-slice sound that playNote can play: the part of its sound
 // selected in the wave, cut to its repeat length (in beats), transposed.
@@ -4117,7 +4118,31 @@ const CELL_PACKS = [['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks',
   ['Kits', ['boombap', 'tr808', 'electro', 'drumtraks', 'acoustic', 'percussion', 'shakers']],
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
-let menuCell = null, menuPack = null, menuFolder = null, choosing = false;
+let menuCell = null, menuPack = null, menuFolder = null, menuSet = null, choosing = false;
+// Packs (below the folders): a set or a kit or a pack, all its sounds, under a heading for each colour.
+// The Electro Boom Bap set is its six packs; a kit is its kicks (red), snares and claps (orange), and
+// hats, cymbals and percussion (yellow); any other pack is one colour. Its sounds are in the folders too.
+const folderFor = id => TREE[1].find(f => Array.isArray(f[1]) && f[1].includes(id));
+const SET_PACKS = { 'set:ebb': ['Electro Boom Bap', EBB] };
+function packList() {
+  const seen = new Set(EBB), out = Object.keys(SET_PACKS);
+  for (const f of TREE[1]) if (Array.isArray(f[1])) for (const id of f[1]) if (LIBRARY[id] && isPack(id) && !seen.has(id) && !toDelete().has(id)) { seen.add(id); out.push(id); }
+  return out;
+}
+const HIT_GROUP = { kick: ['Kicks', 'var(--c-kick)'], snare: ['Snares and claps', 'var(--c-snare)'], clap: ['Snares and claps', 'var(--c-snare)'] };
+async function packGroups(id) {
+  const groups = [], add = (label, colour, lib, slot, ks) => { if (ks.length) groups.push({ label, colour, lib, slot, ks }); };
+  for (const lib of SET_PACKS[id]?.[1] || [id]) {
+    const slot = await slotOf({ lib }), f = folderFor(lib), ks = slot.slices.map((_, k) => k).filter(k => !toDelete().has(`${lib}#${k}`));
+    if (DRUM_BANKS.includes(lib) || LIBRARY[lib].kit || isKitLib(lib)) {       // a kit: by part
+      const by = new Map();
+      for (const k of ks) { const g = HIT_GROUP[hitPart(slot.slices[k].name)] || ['Hats, cymbals and percussion', 'var(--c-hat)']; if (!by.has(g[0])) by.set(g[0], [g[1], []]); by.get(g[0])[1].push(k); }
+      const order = ['Kicks', 'Snares and claps', 'Hats, cymbals and percussion'];
+      for (const [label, [colour, list]] of [...by].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))) add(label, colour, lib, slot, list);
+    } else add(SET_PACKS[id] ? `${f?.[0].replace(/ \(.*\)$/, '') || ''} · ${LIBRARY[lib].name}` : f?.[0].replace(/ \(.*\)$/, '') || LIBRARY[lib].name, f?.[2] || 'var(--accent)', lib, slot, ks);
+  }
+  return groups;
+}
 // The sounds for a cell, in the browser's colour folders (Beats red, Bass green...); the folder for the
 // column comes first, but anything can go anywhere. Instruments play on the Pads (⟳ Loop brings them here).
 const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub and color', 'Vox and keys'];
@@ -4165,7 +4190,7 @@ function folderSounds(f) {          // what a cell can take from a folder: your 
     ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
 }
 function openCellMenu(c, r) {
-  menuCell = { c, r }; menuPack = null; menuFolder = null; choosing = !S.grid.cells[c][r];
+  menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r];
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
 }
 function closeCellMenu() { $('lmenu').hidden = true; menuCell = null; drawLoops(); }
@@ -4250,7 +4275,25 @@ async function drawCellMenu() {
     const was = S.grid.cells[c][r], hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
     put({ lib, k, name: x.name, mode: was?.mode || (x.bpm || lib === 'ambience' || hit ? 'loop' : 'oneshot'), ...(beats && { beats }) });
   };
-  crumb('Sounds', () => { menuPack = menuFolder = null; drawCellMenu(); });
+  crumb('Sounds', () => { menuPack = menuFolder = menuSet = null; drawCellMenu(); });
+  if (menuSet) {             // a pack, its sounds by colour
+    crumb(SET_PACKS[menuSet]?.[0] || LIBRARY[menuSet].name, () => drawCellMenu());
+    const wait = document.createElement('p'); wait.className = 'note lmnote'; wait.textContent = 'Loading…'; list.appendChild(wait);
+    const which = menuSet, groups = await packGroups(which);
+    if (menuSet !== which || !menuCell) return;
+    wait.remove();
+    for (const g of groups) {
+      const h = document.createElement('h4'); h.className = 'lmhead4'; h.textContent = g.label; h.style.setProperty('--f', g.colour); list.appendChild(h);
+      for (const k of g.ks) {
+        const x = g.slot.slices[k];
+        btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
+          playNote(eng, g.slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
+          putHit(g.lib, k, x);
+        }, cell?.lib === g.lib && cell.k === k, g.colour);
+      }
+    }
+    return;
+  }
   const F = menuFolder && cellFolders().find(f => f[0] === menuFolder), fc = F?.[2];
   if (!F) {             // the colour folders, the column's own first
     const fs = cellFolders(), own = fs.find(f => f[0] === COL_FOLDER[c]);
@@ -4261,6 +4304,15 @@ async function drawCellMenu() {
       const what = typeof f[1] === 'string' ? `${n} hits` : `${n - mineN} pack${n - mineN === 1 ? '' : 's'}${mineN ? ` + ${mineN} of your loops` : ''}`;
       btn('▸ ' + f[0].replace(/ \(.*\)$/, ''), `${what}${f === own ? ' · this column' : ''}`,
         () => { menuFolder = f[0]; menuPack = null; drawCellMenu(); }, cell && f === own, f[2] || 'var(--accent)', 'folder');
+    }
+    const h = document.createElement('h4'); h.className = 'lmhead4'; h.textContent = 'Packs'; list.appendChild(h);
+    if (!banks) await bankList();
+    if (!menuCell || menuFolder || menuSet) return;
+    for (const id of packList()) {
+      const set = SET_PACKS[id], f = !set && folderFor(id), kit = !set && (DRUM_BANKS.includes(id) || LIBRARY[id].kit || isKitLib(id));
+      const n = set ? set[1].reduce((a, b) => a + (banks[LIBRARY[b].bank || b]?.from?.length || 0), 0) : banks[LIBRARY[id].bank || id]?.from?.length || 0;
+      btn(set ? set[0] : LIBRARY[id].name, `${n} sounds · ${set ? 'a set, all colours' : kit ? 'a kit, by part' : f?.[0].replace(/ \(.*\)$/, '') || ''}`,
+        () => { menuSet = id; drawCellMenu(); }, false, set ? 'var(--accent)' : kit ? 'var(--c-kit)' : f?.[2] || 'var(--accent)');
     }
     return;
   }
@@ -4312,7 +4364,7 @@ fader($('lmVolBar'), v => {
   drawCellMenu();
 });
 $('lmSound').addEventListener('click', () => { choosing = true; drawCellMenu(); });
-// The cell's settings in three tabs: Settings, Wave, EQ & Effect.
+// The cell's settings in two tabs: Settings (with the wave first) and EQ & Effect.
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
   lPane = b.dataset.lpane;
