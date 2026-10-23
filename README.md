@@ -207,6 +207,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   engine (`pocket-sampler/tools/bake_sounds.js`) and played back as WAVs,
   which is far easier on a phone than making each note as it plays. **☆ Favorite** and
   **★ Save to My Sounds** under Load in the sound browser.
+- **⟳ Make a loop:** the pattern, or a chain as one long loop, into the
+  library: name it, choose its folder (Bass, Chords...) and whether the
+  drums play; it shows in that folder, in My Sounds and in the Loops.
+- **Repeat** in the Loops, as note values: 1/32, 1/16, 1/8, 1/4, 1/2, then bars.
 - **Multi in the Loops:** the cells of one column play together.
 - **🗑 Review the library** (Menu › Sounds): hear every sound, tick the ones
   to go, and send the list to Claude (a GitHub issue, or copied for a chat)
