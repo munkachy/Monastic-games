@@ -203,7 +203,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   plays per column, and another takes over on the bar; a ring shows each
   loop's progress. Hold a cell for Loop, One shot or Gate, its own volume,
   its own quantize (or the default for all), an EQ (three bands, with its
-  curve), transpose (half steps), repeat (2 to 32 beats: a short sound
+  curve), transpose (half steps), repeat (every 1 to 32 beats: a short sound
   waits for the beat), time stretch on or off,
   following the key (on for every loop), an effect for its whole column
   (any loop can skip it), its sound, and its wave, where you drag to
