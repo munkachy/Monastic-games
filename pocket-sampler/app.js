@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023d';
+import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023e';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -240,7 +240,8 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 'scramble', 'dive',
   'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
 const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat',      // the four small buttons, at first
-  'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain'];   // and the eight under the keys
+  'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',      // and the eight under the keys
+  'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // and eight more, sideways
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
@@ -598,8 +599,13 @@ const down = new Set();
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
   b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i><em class="tag"></em>`;
-  b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); press(k); });
-  const up = () => release(k);
+  let hold = 0;
+  b.addEventListener('pointerdown', ev => {
+    ev.preventDefault(); capture(b, ev); press(k);
+    clearTimeout(hold);
+    if (S.mode === 'sound' && !copying) hold = setTimeout(() => { if (S.cur === k) openSoundSheet(k); }, 550);   // hold: the sound's own menu
+  });
+  const up = () => { clearTimeout(hold); release(k); };
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   $('keys').appendChild(b); keyEls.push(b);
@@ -1741,7 +1747,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023e'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1834,7 +1840,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023e'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3346,11 +3352,20 @@ document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click
 // playing cell at once.
 let eqProbe = null;
 function drawEq(cell) {
-  const cv = $('lmEq'), dpr = devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
+  eqCurve($('lmEq'), cell.eq, cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][menuCell.c]}`));
+  EQ_BANDS.forEach(([, , k]) => {
+    const v = cell.eq?.[k] || 0;
+    $('lmEq' + k).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%';
+    $('lmEq' + k + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB';
+  });
+}
+// An EQ's curve (eq: { lo, mid, hi } in dB), drawn from the filters' own response.
+function eqCurve(cv, eq, colr) {
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
   if (!W || !H) return;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   eqProbe ||= makeEq({});
-  EQ_BANDS.forEach(([, , k], i) => { eqProbe[i].gain.value = cell.eq?.[k] || 0; });
+  EQ_BANDS.forEach(([, , k], i) => { eqProbe[i].gain.value = eq?.[k] || 0; });
   const g2 = cv.getContext('2d'), N = 120, fr = new Float32Array(N), mag = new Float32Array(N), ph = new Float32Array(N), tot = new Float32Array(N).fill(0);
   for (let i = 0; i < N; i++) fr[i] = 30 * Math.pow(16000 / 30, i / (N - 1));
   for (const b of eqProbe) { b.getFrequencyResponse(fr, mag, ph); for (let i = 0; i < N; i++) tot[i] += 20 * Math.log10(mag[i] || 1e-6); }
@@ -3359,18 +3374,62 @@ function drawEq(cell) {
   g2.fillStyle = '#ffffff22';
   for (const f of [100, 1000, 10000]) g2.fillRect(Math.log(f / 30) / Math.log(16000 / 30) * W, 0, dpr, H);
   g2.fillRect(0, y(0), W, dpr);
-  const colr = cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][menuCell.c]}`);
   g2.strokeStyle = colr; g2.lineWidth = 2 * dpr; g2.beginPath();
   for (let i = 0; i < N; i++) { const X = i / (N - 1) * W; i ? g2.lineTo(X, y(tot[i])) : g2.moveTo(X, y(tot[i])); }
   g2.stroke();
   g2.fillStyle = '#ffffff88'; g2.font = `${9 * dpr}px ui-monospace, monospace`;
   [['100', 100], ['1k', 1000], ['10k', 10000]].forEach(([t, f]) => g2.fillText(t, Math.log(f / 30) / Math.log(16000 / 30) * W + 3 * dpr, H - 3 * dpr));
-  EQ_BANDS.forEach(([, , k]) => {
-    const v = cell.eq?.[k] || 0;
-    $('lmEq' + k).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%';
-    $('lmEq' + k + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB';
-  });
 }
+
+// A sound's own menu: hold its pad in Sound mode (an instrument, or a kit). Its volume, pitch
+// and how it plays; its EQ and an effect of its own, on every note of it (audio.js: P.eq, P.fx).
+const SOUND_FX = [['none', 'None'], ['reverb', 'Reverb'], ['echo', 'Echo'], ['pingpong', 'Ping-pong'], ['chorus', 'Chorus'],
+  ['overdrive', 'Drive'], ['fuzz', 'Fuzz'], ['tape', 'Tape']];
+let snSi = null;
+function openSoundSheet(si) {
+  if (!S.slots[si]) return;
+  snSi = si; $('sndBox').hidden = false; drawSoundSheet();
+}
+function drawSoundSheet() {
+  if (snSi == null) return;
+  const si = snSi, sl = S.slots[si], P = sl.params, colr = drumSide(si) ? 'var(--c-kit)' : soundVar(si);
+  $('sndBox').querySelector('.sheet').style.setProperty('--c', colr);
+  $('snTitle').textContent = `${si + 1} · ${drumSide(si) ? 'Kit' : PART[si]} · ${sl.name} · ${slotTag(sl)}`;
+  $('snVol').firstChild.style.width = Math.round(P.vol * 100) + '%'; $('snVolOut').textContent = Math.round(P.vol * 100);
+  $('snPitch').textContent = P.pitch === 0 ? '0' : (P.pitch > 0 ? '+' : '−') + Math.abs(P.pitch);
+  choices($('snTrig'), [['oneshot', 'One shot'], ['gate', 'Gate'], ['loop', 'Loop']], P.trig, v => { checkpoint(); P.trig = v; syncPanel(); dirty(); drawSoundSheet(); });
+  $('snNote').textContent = drumSide(si) ? 'A kit: the EQ and the effect go on every hit of it.' : 'Pitch moves every key of it. More settings: filter, length, its key, choke.';
+  eqCurve($('snEq'), P.eq, cssVar(drumSide(si) ? '--c-kit' : `--s${si + 1}`));
+  EQ_BANDS.forEach(([, , k]) => {
+    const v = P.eq?.[k] || 0;
+    $('snEq' + k).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%';
+    $('snEq' + k + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB';
+  });
+  const fx = P.fx || { type: 'none', amt: 0.5 };
+  choices($('snFx'), SOUND_FX, fx.type, v => { checkpoint(); P.fx = v === 'none' ? undefined : { type: v, amt: fx.amt ?? 0.5 }; dirty(); drawSoundSheet(); taste(); });
+  $('snFxAmt').firstChild.style.width = Math.round((fx.amt ?? 0.5) * 100) + '%';
+  $('snFxOut').textContent = fx.type === 'none' ? '' : Math.round((fx.amt ?? 0.5) * 100) + '%';
+}
+const taste = () => { if (snSi != null) noteOn(eng, snSi, S.lastKey[snSi] || 0, ctx.currentTime + 0.01); };
+fader($('snVol'), v => { if (snSi == null) return; S.slots[snSi].params.vol = v; syncPanel(); dirty(); drawSoundSheet(); });
+EQ_BANDS.forEach(([, , k]) => fader($('snEq' + k), v => {
+  if (snSi == null) return; const P = S.slots[snSi].params;
+  P.eq = { ...P.eq, [k]: Math.round((v - 0.5) * 24) }; dirty(); drawSoundSheet();
+}));
+for (const t of ['pointerup', 'pointercancel']) ['snEqlo', 'snEqmid', 'snEqhi', 'snFxAmt'].forEach(id => $(id).addEventListener(t, taste));
+fader($('snFxAmt'), v => { if (snSi == null) return; const P = S.slots[snSi].params; if (!P.fx) return; P.fx = { ...P.fx, amt: v }; dirty(); drawSoundSheet(); });
+$('snEqFlat').addEventListener('click', () => { if (snSi == null) return; S.slots[snSi].params.eq = undefined; dirty(); drawSoundSheet(); taste(); });
+const snPitch = d => { if (snSi == null) return; const P = S.slots[snSi].params; checkpoint(); P.pitch = d ? Math.max(-24, Math.min(24, P.pitch + d)) : 0; syncPanel(); dirty(); drawSoundSheet(); taste(); };
+$('snDown').addEventListener('click', () => snPitch(-1)); $('snUp').addEventListener('click', () => snPitch(1)); $('snZero').addEventListener('click', () => snPitch(0));
+$('snClose').addEventListener('click', () => { $('sndBox').hidden = true; snSi = null; draw(); });
+$('snChange').addEventListener('click', () => { $('sndBox').hidden = true; snSi = null; openMenu('tBrowse'); });
+$('snEdit').addEventListener('click', () => { $('sndBox').hidden = true; snSi = null; editCurrent(); });
+$('snMore').addEventListener('click', () => { $('sndBox').hidden = true; snSi = null; openMenu('tSound'); });
+document.querySelectorAll('[data-snpane]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-snpane]').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('[data-snp]').forEach(x => { x.hidden = x.dataset.snp !== b.dataset.snpane; });
+  drawSoundSheet();
+}));
 EQ_BANDS.forEach(([, , k], i) => fader($('lmEq' + k), v => {
   const cell = menuCellNow(); if (!cell) return;
   const db = Math.round((v - 0.5) * 24);

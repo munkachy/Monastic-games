@@ -229,15 +229,23 @@
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
   :root.turned .device { padding: 6px max(10px, env(safe-area-inset-bottom)) 6px max(10px, env(safe-area-inset-top)); }
   :root.sidepads .device > * { grid-column: 1; min-width: 0; }
-  :root.sidepads .brand { margin-bottom: 4px; }
-  :root.sidepads .device > .vtabs { margin-bottom: 6px; }
-  :root.sidepads .vtabs button { padding: 5px 10px; }
-  :root.sidepads canvas#wave, :root.sidepads #fxPanel { height: 46px; }
-  :root.sidepads .fn { gap: 5px; margin: 6px 0; }
-  :root.sidepads .fn button { padding: 7px 2px; }
-  :root.sidepads .fnbot { margin: 0; }
-  :root.sidepads .fnbot button { padding: 7px 0; }
-  :root.sidepads #status { grid-column: 1; margin: 4px 2px 0; font-size: 10.5px; overflow: hidden; }
+  :root.sidepads .brand { margin: 0; font-size: 10px; }
+  :root.sidepads .brand b { font-size: 11px; }
+  :root.sidepads .device > .vtabs { margin: 0; }
+  :root.sidepads .vtabs button { padding: 4px 10px; }
+  :root.sidepads .screen { padding: 4px 8px; }
+  :root.sidepads canvas#wave { height: 34px; }
+  :root.sidepads #fxPanel { height: 40px; }
+  /* sideways: every button full size (the pairs come apart), and eight more of yours; the rows share
+     the height left under the screen */
+  .fnmore { display: none; }
+  :root.sidepads .fnmore { display: grid; }
+  :root.sidepads .device { grid-template-rows: auto auto auto minmax(0, 4fr) minmax(0, 2fr) minmax(0, 2fr) auto; row-gap: 5px; }
+  :root.sidepads .fn { gap: 5px; margin: 0; grid-auto-rows: minmax(0, 1fr); min-height: 0; }
+  :root.sidepads .fn .pair { display: contents; }
+  :root.sidepads .fn button, :root.sidepads .fn .pair button { padding: 0 2px; min-height: 0; font-size: 10.5px; letter-spacing: .04em; box-shadow: 0 2px 0 var(--btn-sh); }
+  :root.sidepads .fn button.custom { box-shadow: inset 0 0 0 1px #2c6a92, 0 2px 0 var(--custom-sh); }
+  :root.sidepads #status { grid-column: 1; margin: 0 2px; font-size: 10px; line-height: 1.25; height: 2.5em; overflow: hidden; }
   :root.sidepads .keys { grid-column: 2; grid-row: 1 / -1; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
   :root.sidepads .key { aspect-ratio: auto; min-height: 0; padding: 5px 6px; }
   :root.sidepads .key b { font-size: 13px; }
@@ -387,6 +395,18 @@
   .blist small { color: var(--muted); font-size: 11px; white-space: nowrap; }
   .bfoot { position: sticky; bottom: -16px; background: var(--panel); padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
   .bfoot { flex-wrap: wrap; }
+  /* a sound's own menu: hold a pad in Sound mode */
+  .sndsheet { max-width: 680px !important; --c: var(--accent); max-height: 100%; overflow: auto; }
+  .sndsheet .lmhead b { color: var(--c); }
+  .snpane { display: flex; flex-direction: column; gap: 7px; }
+  .snpane.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; align-content: start; }
+  .snpane[hidden] { display: none; }
+  .sndsheet .lrow { gap: 8px; font-size: 11px; }
+  .sndsheet .lrow > span { width: 64px; }
+  .sndsheet .lmodes button { padding: 6px 9px; font-size: 11px; }
+  .sndsheet .lrow output { width: 52px; text-align: right; font-size: 11px; }
+  #snEq { width: 100%; height: 70px; border-radius: 7px; display: block; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  :root:not(.sidepads) .snpane.two { grid-template-columns: 1fr; }
   .bfoot button { flex: 1; }
   .bfoot2 { flex: 1 0 100%; display: flex; gap: 6px; }
   .bfoot2 button.on { box-shadow: inset 0 0 0 1.5px var(--c-hat); color: var(--c-hat); }
@@ -401,7 +421,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023d</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023e</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -435,6 +455,12 @@
     <div class="pair"><button class="custom" data-slot="6"></button><button class="custom" data-slot="7"></button></div>
     <div class="pair"><button class="custom" data-slot="8"></button><button class="custom" data-slot="9"></button></div>
     <div class="pair"><button class="custom" data-slot="10"></button><button class="custom" data-slot="11"></button></div>
+  </div>
+  <div class="fn fnmore">      <!-- eight more of your buttons, when the Pads are sideways -->
+    <div class="pair"><button class="custom" data-slot="12"></button><button class="custom" data-slot="13"></button></div>
+    <div class="pair"><button class="custom" data-slot="14"></button><button class="custom" data-slot="15"></button></div>
+    <div class="pair"><button class="custom" data-slot="16"></button><button class="custom" data-slot="17"></button></div>
+    <div class="pair"><button class="custom" data-slot="18"></button><button class="custom" data-slot="19"></button></div>
   </div>
   <div id="wheel" hidden>
     <div class="wheelbar"><b>Key</b><button id="wheelRand" title="A key that sits well with this one">🎲</button><button id="wheelForget">Forget pattern key</button><button id="wheelClose">✕</button></div>
@@ -570,6 +596,15 @@
     <div class="row"><label for="cb9">Bottom 6</label><select id="cb9"></select><span></span></div>
     <div class="row"><label for="cb10">Bottom 7</label><select id="cb10"></select><span></span></div>
     <div class="row"><label for="cb11">Bottom 8</label><select id="cb11"></select><span></span></div>
+    <p class="note">Eight more, when the Pads are sideways:</p>
+    <div class="row"><label for="cb12">Side 1</label><select id="cb12"></select><span></span></div>
+    <div class="row"><label for="cb13">Side 2</label><select id="cb13"></select><span></span></div>
+    <div class="row"><label for="cb14">Side 3</label><select id="cb14"></select><span></span></div>
+    <div class="row"><label for="cb15">Side 4</label><select id="cb15"></select><span></span></div>
+    <div class="row"><label for="cb16">Side 5</label><select id="cb16"></select><span></span></div>
+    <div class="row"><label for="cb17">Side 6</label><select id="cb17"></select><span></span></div>
+    <div class="row"><label for="cb18">Side 7</label><select id="cb18"></select><span></span></div>
+    <div class="row"><label for="cb19">Side 8</label><select id="cb19"></select><span></span></div>
   </div>
 
   <div class="panel" id="tSound">
@@ -661,7 +696,7 @@
 
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
-    <p><b>The blue buttons</b>, four beside Menu and eight under the keys, are yours to set (Menu › Buttons): Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, <b>🤖 Voice</b> (opens the Voice page), <b>🎤 Rap</b> (raps the words typed there onto the current sound), <b>🎲 Flow</b> (a new flow for that rap), or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
+    <p><b>The blue buttons</b> are yours to set (Menu › Buttons): with the Pads sideways, twenty of them, full size, on the left; upright, four beside Menu and eight under the keys. They do: Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, <b>🤖 Voice</b> (opens the Voice page), <b>🎤 Rap</b> (raps the words typed there onto the current sound), <b>🎲 Flow</b> (a new flow for that rap), or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
     <p><b>Chain</b> (a blue button, or Menu › Beat): tap it, tap patterns in the order they should play, tap it again. Tap it twice without choosing any to unchain. Choosing a pattern while chained only shows it: the chain plays on.</p>
     <p><b>Clear</b> (a blue button) clears the pattern; with <b>Sound</b> on, it clears the chosen sound instead: off its key, and out of the patterns. ↶ Undo brings either back. <b>■ Stop</b> also stops every loop that is running.</p>
     <p><b>Loops</b> (Menu › Sounds › Loops): drum loops, breakbeats, vinyl and ambience, one loop per key, in Loop mode. While the beat plays, a loop comes in at the next bar, in step, and follows the tempo and key; it stops at the next bar when tapped again, and every loop stops with the beat. <b>Songs</b> (Packs › Songs): songs written for the app from its own sounds, ready to play, chained.</p>
@@ -673,7 +708,7 @@
     <p><b>Write</b> shows the side of the sound chosen. With a <b>kit</b> chosen: that kit's hits, a block for each part hit on the step, in the hit's colour; a small light shows another kit plays there too. With an <b>instrument</b> chosen: the instruments, a block for each, in its colour (a small light: drums under it). One fills the step, two to four split it side by side, five or more make a small grid. The step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
     <p><b>The tags</b> say what a sound is: <b>SYN</b> synthesized as you play (the app's synths: filter, wobble and length really change it); <b>REC</b> a recording, a sample of a real instrument or machine (the TR-808 is the real analog drum machine, recorded); <b>GEN</b> made in code beforehand, then played as a recording (the 808 and 909 kits drawn in code, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); <b>MINE</b> yours. They are in Menu › Sounds, on the pads in Sound mode, on the screen and on the Loops cells.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
-    <p><b>Sound</b>: tap once for the <b>instruments</b> (🎹 Instr.: sounds 1–8 light up; tap one), again for the <b>drums</b> (🥁 Drums: the kits, 9–16; tap one, and its 16 hits are the keys, each in its colour), again to play. <b>Pattern</b> + key: choose one of 16 patterns.</p>
+    <p><b>Sound</b>: tap once for the <b>instruments</b> (🎹 Instr.: sounds 1–8 light up; tap one), again for the <b>drums</b> (🥁 Drums: the kits, 9–16; tap one, and its 16 hits are the keys, each in its colour), again to play. <b>Hold</b> a sound there (an instrument or a kit) for its own menu: its volume, pitch and how it plays, and its own <b>EQ</b> (low, middle, high, with its curve) and <b>effect</b> (reverb, echo, ping-pong, chorus, drive, fuzz or tape, with an amount), on every note of it, in the beat and in the export. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
     <p><b>FX</b>: tap a key to turn an effect on, tap again to turn it off (or hold, if you switch that in Menu › Effects, where you also choose the effect on each key, from 26: loops, rolls, scratch, pitch, reverb, echo, ping-pong, chorus, filters, crush, overdrive, fuzz, wavefold and tape saturation). Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
@@ -724,6 +759,37 @@
     <div class="btns"><button id="packMake" class="go">Make it</button><button id="packCancel">Cancel</button></div>
   </div>
 </div>
+<div id="sndBox" class="overlay" hidden>
+  <div class="sheet sndsheet">
+    <div class="lmhead"><b id="snTitle"></b><button id="snClose">✕ Done</button></div>
+    <div class="lmodes ltabs"><button data-snpane="snd" class="on">Sound</button><button data-snpane="eq">EQ &amp; Effect</button></div>
+    <div class="snpane two" data-snp="snd">
+      <div class="lcolumn">
+        <div class="lrow"><span>Volume</span><div class="lfader wide" id="snVol"><i></i></div><output id="snVolOut"></output></div>
+        <div class="lrow"><span>Pitch</span><div class="lmodes"><button id="snDown" aria-label="Down a half step">−</button><b id="snPitch" class="lval">0</b><button id="snUp" aria-label="Up a half step">+</button><button id="snZero">0</button></div><small>half steps</small></div>
+        <div class="lrow"><span>Play as</span><div class="lmodes" id="snTrig"></div></div>
+      </div>
+      <div class="lcolumn">
+        <div class="lmodes wrap"><button id="snChange">Change sound…</button><button id="snEdit">✂ Edit</button><button id="snMore">More settings…</button></div>
+        <p class="note" id="snNote"></p>
+      </div>
+    </div>
+    <div class="snpane two" data-snp="eq" hidden>
+      <div class="lcolumn">
+        <canvas id="snEq" aria-label="The EQ curve"></canvas>
+        <div class="lrow"><span>Low</span><div class="lfader wide eq" id="snEqlo"><i></i></div><output id="snEqloOut"></output></div>
+        <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="snEqmid"><i></i></div><output id="snEqmidOut"></output></div>
+        <div class="lrow"><span>High</span><div class="lfader wide eq" id="snEqhi"><i></i></div><output id="snEqhiOut"></output></div>
+        <div class="lrow"><span></span><div class="lmodes"><button id="snEqFlat">Flat</button></div><small>150 Hz · 1 kHz · 5 kHz</small></div>
+      </div>
+      <div class="lcolumn">
+        <div class="lrow"><span>Effect</span><div class="lmodes wrap" id="snFx"></div></div>
+        <div class="lrow"><span>Amount</span><div class="lfader wide" id="snFxAmt"><i></i></div><output id="snFxOut"></output></div>
+        <p class="note">On this sound only, always: every note of it, in the beat and in the export. (The FX keys are effects you punch in while playing.)</p>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="aimBox" class="overlay" hidden>
   <div class="sheet">
     <b>Effects on which tracks?</b>
@@ -743,6 +809,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023d"></script>
+<script type="module" src="app.js?v=20261023e"></script>
 </body>
 </html>
