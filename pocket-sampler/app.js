@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023y';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023z';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1181,26 +1181,28 @@ function drawReview() {
 }
 // 🔁: the sound looped, at the tempo playing: a loop with a tempo is stretched (drums beat sliced) just as
 // in the Loops, so it sounds here as it will there. Tap again (or another) to stop.
-let revLoopV = null, revLoopKey = null;
+let revLoopV = null, revLoopKey = null, revSeq = 0;
 function revLoopStop() { revLoopV?.stop?.(ctx.currentTime); revLoopV = revLoopKey = null; }
 async function revLoop(c, key) {
-  ctx.resume();
+  ctx.resume(); stopPv();
   const was = revLoopKey; revLoopStop();
   if (was === key) { drawReview(); status(''); return; }
-  const base = await slotOf(c); if (!base) return;
+  const n = ++revSeq, base = await slotOf(c); if (!base || n !== revSeq) return;      // a later tap wins
   const sl = { ...base, params: { ...base.params, trig: 'loop', vol: Math.max(base.params.vol, 0.5) } }, x = sl.slices?.[0];
   if (x?.bpm) await stretchFor(sl, [S.root]);
+  if (n !== revSeq) return;
+  stopPv(); revLoopStop();
   revLoopV = playNote(eng, sl, -1, sl.kind === 'chop' ? 0 : 7, ctx.currentTime + 0.02, { scale: S.scale, bpm: S.bpm, root: S.root, hold: true });
   revLoopKey = key; drawReview();
   status(x?.bpm ? `Looping at ${S.bpm} BPM, as in the Loops (it was made at ${Math.round(x.bpm)} BPM${sl.drumLoop ? '; drums are sliced to the tempo' : ''}). Tap again to stop.` : 'Looping it. Tap again to stop.');
 }
 async function revPlay(c) {
-  ctx.resume();
-  const slot = await slotOf(c); if (!slot) return;
-  playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : 7, ctx.currentTime + 0.01, { scale: S.scale, bpm: S.bpm, root: S.root });
+  ctx.resume(); stopPv(); if (revLoopV) { revLoopStop(); drawReview(); }
+  const n = ++revSeq, slot = await slotOf(c); if (!slot || n !== revSeq) return;      // a later tap wins
+  hearPv(slot, slot.kind === 'chop' ? 0 : 7);
 }
 const revText = () => 'Please delete these sounds from Pocket Sampler for good:\n\n' + [...toDelete()].map(k => `- ${k}: ${revName(k)}`).join('\n');
-$('revClose').addEventListener('click', () => { revLoopStop(); $('revBox').hidden = true; drawBrowser(); });
+$('revClose').addEventListener('click', () => { revLoopStop(); stopPv(); $('revBox').hidden = true; drawBrowser(); });
 $('revClear').addEventListener('click', () => { if (confirm('Untick every sound?')) { saveDelete(new Set()); drawReview(); drawBrowser(); } });
 $('revCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(revText()); status('The list is copied: paste it in your chat with Claude.'); }
@@ -1324,10 +1326,19 @@ async function slotOf(c) {
   if (c.mine) return unpackSlot(c.mine);
   return sliceAlone(await slotOf(c.from), c.k, c.label);
 }
+// One sound heard at a time in the browser and in Review the library: a new one stops the last at once.
+let pvVoice = null;
+function stopPv() { pvVoice?.stop?.(ctx.currentTime); pvVoice = null; }
+function hearPv(slot, k, opts = {}) {
+  stopPv(); if (revLoopV) { revLoopStop(); if (!$('revBox').hidden) drawReview(); }
+  pvVoice = playNote(eng, slot, -1, k, ctx.currentTime + 0.005, { scale: S.scale, bpm: S.bpm, root: S.root, ...opts });
+  return pvVoice;
+}
 async function preview(c) {
   if (c.song) { status(`${c.song.name} by ${c.song.by}: ${c.song.about}. Load puts the whole song on sounds 1–8 and in the patterns.`); return; }
+  stopPv();
   const slot = await slotOf(c);
-  if (bSel === c) playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : slot.kind === 'sample' ? 7 : 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+  if (bSel === c) hearPv(slot, slot.kind === 'chop' ? 0 : 7);
 }
 // Clear in Sound mode: the sound comes off its key (silent, "empty") and its
 // notes out of every pattern. ↶ Undo puts it back.
@@ -1893,7 +1904,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023z'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1986,7 +1997,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023z'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4322,6 +4333,12 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     return b64f((await off.startRendering()).getChannelData(0));
   },
   lib: id => LIBRARY[id],
+  // what comes out of the speakers for a while (raw float32 base64), for testing what plays
+  capture: secs => new Promise(ok => {
+    const n = Math.round(secs * ctx.sampleRate), out = new Float32Array(n); let at = 0;
+    const sp = ctx.createScriptProcessor(4096, 1, 1); eng.master.connect(sp); sp.connect(ctx.destination);
+    sp.onaudioprocess = e => { const d = e.inputBuffer.getChannelData(0); out.set(d.subarray(0, Math.min(d.length, n - at)), at); at += d.length; if (at >= n) { sp.disconnect(); eng.master.disconnect(sp); ok({ rate: ctx.sampleRate, b64: b64f(out) }); } };
+  }),
   // a loop stretched both ways, for comparing: [as recorded, stretched (WSOLA), beat sliced], raw float32 base64
   stretchTest: async (lib, k, bpm) => {
     const sl = await slotOf({ lib }), x = sl.slices[k], buf = x.buf || sl.buf, f = (x.bpm || sl.bpm) / bpm, r = buf.sampleRate;
