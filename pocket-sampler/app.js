@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zc';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zd';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1116,11 +1116,11 @@ const TREE = ['Sounds', [
   ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'basshits', 'ebbbass'], 'var(--c-bass)'],
   ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'ebbchords'], 'var(--c-chords)'],
   ['Lead', ['chip', 'supersaw', 'brass', 'trumpet', 'trombone', 'tenorsax', 'violin', 'viola', 'cello', 'gretsch', 'hofner', 'emily', 'ebblead'], 'var(--c-lead)'],
-  ['Sub', ['subsine', 'ebbsub'], 'var(--c-sub)'],
+  ['Sub and color', ['subsine', 'ebbsub', 'glitch', 'machines', 'hits', 'blips', 'lasers', 'coins', 'robots', 'arcade'], 'var(--c-sub)'],   // purple: subs, and the odd, glitchy accents (the video-game sounds)
   ['Vox and keys', ['choirmen', 'choirwomen', 'choir', 'hype', 'robotvox', 'vocchops', 'ebbvox'], 'var(--c-vox)'],
   ['Pads', ['pad', 'strings', 'pads'], 'var(--c-pad)'],
   ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell'], 'var(--c-pluck)'],
-  ['Stabs and FX', ['stabs', 'funkhorns', 'arcade', 'machines', 'noisefx', 'sirens', 'hits', 'blips', 'lasers', 'glitch', 'coins', 'robots'], 'var(--c-stab)'],
+  ['Stabs and FX', ['stabs', 'funkhorns', 'noisefx', 'sirens'], 'var(--c-stab)'],
   ['Ambience and vinyl', ['ambience', 'nature', 'airwater']],
   ['Songs', 'songs'],
   ['My Sounds', 'mine:all'],
@@ -1158,7 +1158,7 @@ function itemsOf(node) {
   if (it === 'favs') return favChoices();
   if (typeof it === 'string' && it.startsWith('hits:')) return hitItems(it.slice(5)).filter(c => !doomed(c));
   if (node.contents) return node.contents.filter(c => !doomed(c));
-  return [...mine.filter(m => m.type === 'loop' && m.folder === node[0]).map(m => ({ mine: m })),     // your loops first
+  return [...mine.filter(m => m.type === 'loop' && folderOf(m) === node[0]).map(m => ({ mine: m })),     // your loops first
     ...it.filter(x => Array.isArray(x) || (LIBRARY[x] && !toDelete().has(x))).map(x => (Array.isArray(x) ? x : { lib: x }))];
 }
 // Review the library: every built-in sound, to hear and tick for deleting. The ticks are kept on this
@@ -1938,7 +1938,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zc'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zd'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2031,7 +2031,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zc'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zd'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2578,8 +2578,8 @@ $('expDownload').addEventListener('click', () => {
 // ⟳ Make a loop: the pattern (or the chain, as one long loop) made into a loop and kept in the
 // library: in the folder chosen (Bass, Chords...), in My Sounds, and in the Loops (My loops). It
 // keeps its tempo and bars, so it plays in time at any tempo, on a pad or in a Loops cell.
-const LOOP_FOLDERS = ['Beats', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox and keys', 'Pads', 'Plucks, mallets and bells', 'Stabs and FX', 'Ambience and vinyl'];
-const PART_FOLDER = { Bass: 'Bass', Sub: 'Sub', Chords: 'Chords', Lead: 'Lead', 'Vox/Keys': 'Vox and keys', Pad: 'Pads', 'Pluck/Arp': 'Plucks, mallets and bells', 'Stab/FX': 'Stabs and FX' };
+const LOOP_FOLDERS = ['Beats', 'Bass', 'Chords', 'Lead', 'Sub and color', 'Vox and keys', 'Pads', 'Plucks, mallets and bells', 'Stabs and FX', 'Ambience and vinyl'];
+const PART_FOLDER = { Bass: 'Bass', Sub: 'Sub and color', Chords: 'Chords', Lead: 'Lead', 'Vox/Keys': 'Vox and keys', Pad: 'Pads', 'Pluck/Arp': 'Plucks, mallets and bells', 'Stab/FX': 'Stabs and FX' };
 for (const f of LOOP_FOLDERS) $('mkPart').add(new Option(f, f));
 let made = null, madePv = null;
 function chainSounds() { const u = new Set(); for (const p of S.chain) for (const st of S.patterns[p]) for (const n of st) u.add(n.s); return [...u]; }
@@ -3553,7 +3553,7 @@ function demo() {
 // so the FX reach the loops too. Tempo, key, Play and the FX are shared with
 // the Pads tab, and Stop stops everything.
 // ---------------------------------------------------------------------------
-const CHANNELS = ['Kick', 'Snare', 'Tops', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox/Keys'];
+const CHANNELS = ['Kick', 'Snare', 'Tops', 'Bass', 'Chords', 'Lead', 'Sub/Color', 'Vox/Keys'];
 const CHANNEL_COLOR = ['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'].map(p => `var(--c-${p})`);
 const ROWS = 6;
 // Quantize, in 16th notes (ticks): where a tap lands, from a 1/32 note to 4 bars, or Off (at once).
@@ -4091,7 +4091,7 @@ const CELL_PACKS = [['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks',
 let menuCell = null, menuPack = null, menuFolder = null, choosing = false;
 // The sounds for a cell, in the browser's colour folders (Beats red, Bass green...); the folder for the
 // column comes first, but anything can go anywhere. Instruments play on the Pads (⟳ Loop brings them here).
-const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox and keys'];
+const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub and color', 'Vox and keys'];
 const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.test(f[1]));
 // A sample's own tempo and key, shown where a cell's sound is chosen and on the grid. The key is found
 // by listening (once, one sound at a time, kept on this device); drums have none.
@@ -4129,9 +4129,10 @@ function cellMeta(cell, c) {               // "92 · F min" (a tempo only for dr
   }
   return [t ? Math.round(t) : '', want ? keyWord(keyMemo[id], c === 3 || c === 6 || LOW_LIBS.has(cell.lib)) : ''].filter(Boolean).join(' · ');
 }
+function folderOf(m) { return m.folder === 'Sub' ? 'Sub and color' : m.folder; }       // the purple folder was "Sub"
 function folderSounds(f) {          // what a cell can take from a folder: your loops, packs (a sound of them), single hits
   if (typeof f[1] === 'string') return hitItems(f[1].slice(5)).filter(c => !doomed(c)).map(c => ({ hit: c }));
-  return [...mine.filter(m => m.type === 'loop' && m.folder === f[0]).map(m => ({ mine: m })),
+  return [...mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).map(m => ({ mine: m })),
     ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
 }
 function openCellMenu(c, r) {
@@ -4227,7 +4228,7 @@ async function drawCellMenu() {
     for (const f of [own, ...fs.filter(x => x !== own)].filter(Boolean)) {
       const n = f[1] === 'hits:snare' || f[1] === 'hits:tops' ? (banks ? folderSounds(f).length : '') : folderSounds(f).length;
       if (n === 0) continue;
-      const mineN = Array.isArray(f[1]) ? mine.filter(m => m.type === 'loop' && m.folder === f[0]).length : 0;
+      const mineN = Array.isArray(f[1]) ? mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).length : 0;
       const what = typeof f[1] === 'string' ? `${n} hits` : `${n - mineN} pack${n - mineN === 1 ? '' : 's'}${mineN ? ` + ${mineN} of your loops` : ''}`;
       btn('▸ ' + f[0].replace(/ \(.*\)$/, ''), `${what}${f === own ? ' · this column' : ''}`,
         () => { menuFolder = f[0]; menuPack = null; drawCellMenu(); }, cell && f === own, f[2] || 'var(--accent)', 'folder');
@@ -4267,7 +4268,7 @@ async function drawCellMenu() {
       playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
       putHit(pack, k, x);
     }, cell?.lib === pack && cell.k === k, fc);
-    if (keys) sampleKey(`${pack}#${k}`, slot, k).then(kk => { if (b.isConnected && kk) b.querySelector('small').textContent = [tempo, 'in ' + keyWord(kk, LOW_LIBS.has(pack) || F?.[0] === 'Bass' || F?.[0] === 'Sub')].filter(Boolean).join(' · '); });
+    if (keys) sampleKey(`${pack}#${k}`, slot, k).then(kk => { if (b.isConnected && kk) b.querySelector('small').textContent = [tempo, 'in ' + keyWord(kk, LOW_LIBS.has(pack) || F?.[0] === 'Bass')].filter(Boolean).join(' · '); });
   });
 }
 document.querySelectorAll('[data-lmode]').forEach(b => b.addEventListener('click', () => {
