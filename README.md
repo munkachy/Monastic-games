@@ -211,6 +211,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   library: name it, choose its folder (Bass, Chords...) and whether the
   drums play; it shows in that folder, in My Sounds and in the Loops.
 - **Repeat** in the Loops, as note values: 1/32, 1/16, 1/8, 1/4, 1/2, then bars.
+- **Drum loops are beat sliced to the tempo**, not stretched: cut at every
+  hit (and every 16th with none), each hit put down at its new time as
+  recorded, so breaks like the Amen stay crisp at any tempo. 🔁 in Review
+  the library loops a sound at the tempo playing, as the Loops would.
 - **Multi in the Loops:** the cells of one column play together.
 - **🗑 Review the library** (Menu › Sounds): hear every sound, tick the ones
   to go, and send the list to Claude (a GitHub issue, or copied for a chat)
