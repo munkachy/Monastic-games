@@ -233,6 +233,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops:** 14 drum loops played on these kits, breakbeats (the Amen and
   others), and vinyl crackle and ambience; each key a loop that comes in on
   the next bar in step, follows the tempo and key, and stops with the beat.
+- **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 45 loops written
+  for the grid, with vinyl, Alleluia and Selah: F minor at 92 BPM, swung: kick, snare and tops on the
+  Boom Bap, TR-808 and electro kits; 808, electric, Reese and upright bass;
+  Rhodes, pad, choir and organ; Juno stabs, pluck, chip, trumpet and bells;
+  sub; the robot's words and the women's choir. The harmony is Fm7, D♭maj7,
+  B♭m7, Cm7 a bar each, so every loop fits every other, and the melodic
+  ones follow the key. Written as short songs and rendered by the app's own
+  export (`pocket-sampler/tools/loopset.py`, `render_loops.js`).
 - **Songs:** written for the app from its own sounds; the first is an
   8-bar electro boom bap in F minor (`pocket-sampler/tools/songs.py`).
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.

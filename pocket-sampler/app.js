@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023a';
+import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023b';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -181,7 +181,12 @@ const LIBRARY = {
   // loops: each key a loop, in Loop mode; drum loops and breaks keep time with the beat
   drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
   ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
+  // The Electro Boom Bap loop set (tools/loopset.py): F minor, 92 BPM; a bank for each Loops column
+  ebbkick: { name: 'EBB Kick', bank: 'ebbkick' }, ebbsnare: { name: 'EBB Snare', bank: 'ebbsnare' }, ebbtops: { name: 'EBB Tops', bank: 'ebbtops' },
+  ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
+  ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
 };
+const EBB = ['ebbkick', 'ebbsnare', 'ebbtops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
 const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
   'acoustic', 'boombap', 'kit808', 'kit909', 'tr808', 'electro', 'percussion', 'shakers'];
@@ -1027,6 +1032,7 @@ const TREE = ['Sounds', [
     ['Drum loops', ['drumloops']],
     ['Breakbeats', ['breaks']],
     ['Vinyl and ambience', ['ambience']],
+    ['Electro Boom Bap (F minor, 92)', EBB],
   ]],
   ['Packs', [
     ['Percussion', ['percussion', 'bells2', 'shakers']],
@@ -1139,11 +1145,11 @@ const warmSoon = () => { clearTimeout(warmTimer); warmTimer = setTimeout(warmLoo
 const SONGS = [
   { id: 'electroboombap', name: 'Electro Boom Bap', by: 'Claude', about: '8 bars · 92 BPM · F minor' },
 ];
-async function loadSong(id) {
+async function loadSong(id, given = null) {          // given: the song itself (the loop-set tool renders its loops so)
   ctx.resume();
   status('Loading the song…');
   try {
-    const P = await (await fetch(`sounds/songs/${id}.json`)).json();
+    const P = given || await (await fetch(`sounds/songs/${id}.json`)).json();
     const slots = await Promise.all(P.sounds.map(async so => {
       const sl = await factorySlot(so.factory);
       if (so.vol != null) sl.params.vol = so.vol;
@@ -1650,7 +1656,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023b'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1743,7 +1749,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023b'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2031,7 +2037,7 @@ $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
 // the end is folded back onto the start, so it loops without a click. The
 // loop is rendered as soon as the box opens, so ⬆ can open the share sheet
 // straight from the tap (an iPhone allows that only right after one).
-async function renderLoop() {
+async function renderLoop(raw = false) {          // raw: the mix as it is, mono, not levelled (for the loop-set tool)
   const ticks = 16 * S.chain.length, len = ticks * stepDur(), tail = 2.5;
   const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR);       // stereo, for ping-pong and chorus
   const e = new Engine(off, { live: false });
@@ -2046,6 +2052,7 @@ async function renderLoop() {
     for (let i = n; i < x.length; i++) x[i % n] += x[i];
     return x.subarray(0, n);
   });
+  if (raw) { const m = new Float32Array(n); for (let i = 0; i < n; i++) m[i] = (chs[0][i] + chs[1][i]) / 2; return m; }
   let top = 0; for (const x of chs) for (const v of x) top = Math.max(top, Math.abs(v));
   if (top > 0.98) for (const x of chs) for (let i = 0; i < n; i++) x[i] *= 0.98 / top;
   return { data: wav(chs, SR), len };
@@ -3078,15 +3085,34 @@ function choices(box, list, now, pick) {
   }
 }
 function drawSets() {
+  const box = $('lsSets'); box.textContent = '';
+  for (const st of SETS) {
+    const b = document.createElement('button'); b.innerHTML = `${st.name} <small>${st.about}</small>`;
+    b.addEventListener('click', () => loadSet(st.id)); box.appendChild(b);
+  }
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
 }
 $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
+// Sets: a whole grid at once, with the tempo and key it was made in.
+const SETS = [{ id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
+async function loadSet(id) {
+  status('Loading the set…');
+  try {
+    const set = id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json();
+    stopGrid();
+    S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null)));
+    if (set.bpm) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
+    if (set.root != null && !playing) { S.root = set.root; S.scale = set.scale || S.scale; }
+    persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
+    status(`${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
+  } catch (e) { status('Could not load the set: ' + e.message); }
+}
 $('lsStop').addEventListener('click', () => { stopAllLoops(); status(playing ? 'Every loop stops on the next point; the Pads beat plays on.' : ''); });
 
 // A cell's settings: how it plays, its volume, the key, and its sound (any loop or pack, one sound of it).
-const CELL_PACKS = [['Loops', ['drumloops', 'breaks', 'ambience']],
+const CELL_PACKS = [['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks', 'ambience']],
   ['Kits', ['boombap', 'tr808', 'electro', 'drumtraks', 'acoustic', 'percussion', 'shakers']],
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
@@ -3267,6 +3293,13 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch }; },
   eng: () => eng,
+  // the loop-set tool: load a song (as songs.py writes them) and render it as one seamless loop
+  renderSong: async P => {
+    S.muteBeat = false; await loadSong(null, P);
+    const m = await renderLoop(true), b = new Uint8Array(m.buffer); let str = '';
+    for (let i = 0; i < b.length; i += 0x8000) str += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return { b64: btoa(str), n: m.length, sr: SR };
+  },
   peak: (ms = 800) => new Promise(ok => {      // the loudest the master output got, over ms
     const d = new Float32Array(scope.fftSize); let m = 0;
     const id = setInterval(() => { scope.getFloatTimeDomainData(d); for (const v of d) m = Math.max(m, Math.abs(v)); }, 15);
