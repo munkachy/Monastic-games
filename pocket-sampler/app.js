@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zd';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023ze';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1938,7 +1938,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zd'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023ze'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2031,7 +2031,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zd'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023ze'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3889,6 +3889,7 @@ function buildLoops() {
       b.addEventListener('pointerdown', ev => {
         ev.preventDefault(); capture(b, ev); long = false;
         const cell = S.grid.cells[c][r];
+        if (clipMode) return;
         if (lEdit) { cellDrag = cell ? { c, r, x: ev.clientX, y: ev.clientY, moved: false, to: null } : null; return; }
         if (cell?.mode === 'gate') { gateDown(c, r); return; }
         timer = setTimeout(() => { long = true; openCellMenu(c, r); }, 500);
@@ -3904,6 +3905,7 @@ function buildLoops() {
       const up = ev => {
         clearTimeout(timer);
         const cell = S.grid.cells[c][r];
+        if (clipMode) { if (ev.type === 'pointerup') clipTap(c, r); return; }
         if (lEdit) {
           const d = cellDrag; cellDrag = null; drawDrag();
           if (ev.type !== 'pointerup') return;
@@ -3985,6 +3987,9 @@ function drawLoops() {
   $('lKey').textContent = $('keyBtn').textContent; $('lKey').classList.toggle('on', !$('wheel').hidden && $('wheel').classList.contains('inloops'));
   $('lEdit').classList.toggle('on', lEdit);
   $('lMulti').classList.toggle('on', !!S.grid.multi);
+  $('lCopy').classList.toggle('on', clipMode === 'copy'); $('lPaste').classList.toggle('on', clipMode === 'paste'); $('lPaste').disabled = !cellClip;
+  $('lgrid').classList.toggle('clipping', !!clipMode);
+  const lb = document.querySelector('.lbar'); lb.classList.remove('tight'); if (lb.scrollWidth > lb.clientWidth + 1) lb.classList.add('tight');
   $('lReset').hidden = !(S.grid.resume?.length || gcol.some(l => l.cur || l.next || l.gate));
   $('lSet').classList.toggle('on', !$('lsets').hidden);
 }
@@ -4024,6 +4029,28 @@ $('lSlower').addEventListener('click', () => nudgeBpm(-1));
 $('lFaster').addEventListener('click', () => nudgeBpm(1));
 $('lKey').addEventListener('click', () => { const open = !$('wheel').hidden && $('wheel').classList.contains('inloops'); open ? closeWheel() : openLoopWheel(); drawLoops(); });
 $('lNextKey').addEventListener('click', () => { ctx.resume(); nextKey(); drawLoops(); });
+// Copy, then a cell: it is kept, all its settings too. Paste, then cells: it goes in each (what played
+// there stops), until Paste is tapped again.
+let clipMode = null, cellClip = null;
+function setClip(mode) {
+  clipMode = clipMode === mode ? null : mode;
+  status(clipMode === 'copy' ? 'Copy: tap the cell to copy.' : clipMode === 'paste' ? `Paste: tap the cells to put “${cellClip.name || 'it'}” in. Tap Paste again when done.` : '');
+  drawLoops();
+}
+function clipTap(c, r) {
+  const cell = S.grid.cells[c][r];
+  if (clipMode === 'copy') {
+    if (!cell) { status('That cell is empty: tap one with a sound in it.'); return; }
+    cellClip = JSON.parse(JSON.stringify(cell)); clipMode = null;
+    status(`Copied “${cell.name || 'the cell'}”. Tap Paste, then the cells to put it in.`); drawLoops(); return;
+  }
+  for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
+  S.grid.cells[c][r] = JSON.parse(JSON.stringify(cellClip));
+  persist(); warmGridSoon(); drawLoops();
+  status(`“${cellClip.name || 'It'}” pasted in ${CHANNELS[c]}, cell ${r + 1}. More cells, or tap Paste again when done.`);
+}
+$('lCopy').addEventListener('click', () => setClip('copy'));
+$('lPaste').addEventListener('click', () => { if (cellClip) setClip('paste'); });
 // Multi: the cells of one column play together (each its own lane). Turned off, each column keeps
 // the cell started last; the others stop on the next point.
 function setMulti(on) {
