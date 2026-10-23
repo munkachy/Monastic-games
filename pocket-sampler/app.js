@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023s';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023t';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1119,10 +1119,76 @@ function itemsOf(node) {
   if (it === 'mine:pack') return mine.filter(m => m.type === 'pack').map(m => ({ mine: m }));
   if (it === 'songs') return SONGS.map(x => ({ song: x }));
   if (it === 'favs') return favChoices();
-  if (typeof it === 'string' && it.startsWith('hits:')) return hitItems(it.slice(5));
-  if (node.contents) return node.contents;
-  return it.filter(x => Array.isArray(x) || LIBRARY[x]).map(x => (Array.isArray(x) ? x : { lib: x }));
+  if (typeof it === 'string' && it.startsWith('hits:')) return hitItems(it.slice(5)).filter(c => !doomed(c));
+  if (node.contents) return node.contents.filter(c => !doomed(c));
+  return it.filter(x => Array.isArray(x) || (LIBRARY[x] && !toDelete().has(x))).map(x => (Array.isArray(x) ? x : { lib: x }));
 }
+// Review the library: every built-in sound, to hear and tick for deleting. The ticks are kept on this
+// device (pocketDelete: "id" for a whole sound, "id#k" for one sound of a pack) and leave the menus at
+// once; Send to Claude opens a GitHub issue listing them (or Copy the list, for a chat), and Claude
+// deletes them from the app for good.
+const toDelete = () => { try { return new Set(JSON.parse(localStorage.getItem('pocketDelete') || '[]')); } catch (e) { return new Set(); } };
+const saveDelete = set => { try { localStorage.setItem('pocketDelete', JSON.stringify([...set])); } catch (e) {} };
+const doomed = c => { const d = toDelete(); return !!(c.lib && d.has(c.lib)) || !!(c.from?.lib && (d.has(c.from.lib) || d.has(`${c.from.lib}#${c.k}`))); };
+const revOpen = new Set();
+async function openReview() {
+  await bankList();
+  $('revBox').hidden = false; drawReview();
+}
+function revName(key) {
+  const [id, k] = key.split('#');
+  return k == null ? `${LIBRARY[id]?.name || id}` : `${banks?.[LIBRARY[id]?.bank || id]?.from?.[+k] ? shortName(banks[LIBRARY[id].bank || id].from[+k]) : 'sound ' + (+k + 1)} (in ${LIBRARY[id]?.name || id})`;
+}
+function drawReview() {
+  const list = $('revList'), d = toDelete(), y = list.scrollTop; list.textContent = '';
+  const row = (key, name, small, play, sub, open) => {
+    const r = document.createElement('div'); r.className = 'revrow' + (sub ? ' sub' : ''); r.classList.toggle('marked', d.has(key));
+    const pb = document.createElement('button'); pb.textContent = '▶'; pb.setAttribute('aria-label', 'Play ' + name); pb.addEventListener('click', play);
+    const n = document.createElement('span'); n.className = 'rn'; n.textContent = name;
+    if (small) { const sm = document.createElement('small'); sm.textContent = ' ' + small; n.appendChild(sm); }
+    r.append(pb, n);
+    if (open) r.appendChild(open);
+    const l = document.createElement('label'), cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = d.has(key);
+    cb.addEventListener('change', () => { const dd = toDelete(); cb.checked ? dd.add(key) : dd.delete(key); saveDelete(dd); drawReview(); drawBrowser(); });
+    l.append(cb, 'Delete'); r.appendChild(l); list.appendChild(r);
+  };
+  const seen = new Set();
+  for (const f of TREE[1]) {
+    if (!Array.isArray(f[1])) continue;
+    const h = document.createElement('h4'); h.textContent = f[0]; if (f[2]) h.style.setProperty('--c', f[2]); list.appendChild(h);
+    for (const id of f[1]) {
+      if (!LIBRARY[id] || seen.has(id)) continue; seen.add(id);
+      const B = banks[LIBRARY[id].bank || id], pack = isPack(id) && B?.from;
+      let open = null;
+      if (pack) {
+        open = document.createElement('button'); open.textContent = revOpen.has(id) ? `▾ ${B.from.length}` : `▸ ${B.from.length}`;
+        open.addEventListener('click', () => { revOpen.has(id) ? revOpen.delete(id) : revOpen.add(id); drawReview(); });
+      }
+      row(id, LIBRARY[id].name, `${libTag(id)} · ${pack ? 'pack' : 'instrument'}`, () => revPlay({ lib: id }), false, open);
+      if (pack && revOpen.has(id) && !d.has(id)) B.from.forEach((nm, k) => row(`${id}#${k}`, shortName(nm), libTag(id, nm), () => revPlay({ from: { lib: id }, k, label: nm }), true));
+    }
+  }
+  list.scrollTop = y;
+  $('revCount').textContent = d.size ? `${d.size} ticked` : 'Nothing ticked';
+  for (const id of ['revSend', 'revCopy', 'revClear']) $(id).disabled = !d.size;
+}
+async function revPlay(c) {
+  ctx.resume();
+  const slot = await slotOf(c); if (!slot) return;
+  playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : 7, ctx.currentTime + 0.01, { scale: S.scale, bpm: S.bpm, root: S.root });
+}
+const revText = () => 'Please delete these sounds from Pocket Sampler for good:\n\n' + [...toDelete()].map(k => `- ${k}: ${revName(k)}`).join('\n');
+$('revClose').addEventListener('click', () => { $('revBox').hidden = true; drawBrowser(); });
+$('revClear').addEventListener('click', () => { if (confirm('Untick every sound?')) { saveDelete(new Set()); drawReview(); drawBrowser(); } });
+$('revCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(revText()); status('The list is copied: paste it in your chat with Claude.'); }
+  catch (e) { prompt('Copy this, and paste it in your chat with Claude:', revText()); }
+});
+$('revSend').addEventListener('click', () => {
+  const n = toDelete().size, url = 'https://github.com/munkachy/Monastic-games/issues/new?title=' + encodeURIComponent(`Pocket Sampler: delete ${n} sound${n > 1 ? 's' : ''}`) + '&body=' + encodeURIComponent(revText());
+  window.open(url, '_blank');
+  status('A GitHub issue opens with the list: tap Submit there, then tell Claude it is waiting.');
+});
 function drawBrowser() {
   const crumbs = $('crumbs'); crumbs.textContent = '';
   bPath.forEach((node, i) => {
@@ -1158,6 +1224,7 @@ function drawBrowser() {
   // tools for the place you're in
   const tools = $('bTools'); tools.textContent = '';
   const tool = (label, fn, go) => { const b = document.createElement('button'); b.textContent = label; if (go) b.className = 'go'; b.addEventListener('click', fn); tools.appendChild(b); };
+  if (node === TREE) tool('🗑 Review the library', openReview);
   if (node[1] === 'mine:all') {
     tool('⬆ Import a file', () => $('importFile').click(), true);
     tool('Make a pack', openPackMaker);
@@ -1802,7 +1869,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023t'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1895,7 +1962,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023t'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3385,7 +3452,15 @@ function newColFx() { return Array.from({ length: 8 }, () => ({ type: 'none', am
 S.grid = defaultGrid();
 let view = 'pads', lEdit = false, gridAgain = null;
 // What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its point), gate (held).
-let gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
+// What plays, in lanes: a lane plays one cell at a time (cur), with the one waiting to take over
+// (next) and a held Gate (gate). Each column is one lane; in Multi every cell is a lane of its own,
+// so the cells of one column can play together. gcol holds a lane for every cell (c * ROWS + r);
+// one column, not Multi, uses the first of its six.
+const newLanes = () => Array.from({ length: 8 * ROWS }, () => ({ cur: null, next: null, gate: null }));
+let gcol = newLanes();
+const lane = (c, r) => gcol[c * ROWS + (S.grid.multi ? r : 0)];
+const colLanes = c => gcol.slice(c * ROWS, c * ROWS + ROWS);
+const cellHandles = (c, r) => colLanes(c).flatMap(l => [l.cur, l.next, l.gate]).filter(h => h?.r === r);
 // Every loop follows the key, unless turned off; the drum columns (Kick, Snare, Tops) never do.
 const drumCell = cell => { const c = S.grid.cells.findIndex(col => col.includes(cell)); return c >= 0 && c < 3; };
 const follows = cell => !drumCell(cell) && (cell.follow ?? true);
@@ -3522,7 +3597,7 @@ function stopAt(h, b, fade = true) {
 }
 const kill = h => { if (h) { h.voice.stop(ctx.currentTime); unplugAt(h, ctx.currentTime); } };
 async function tapCell(c, r) {
-  const col = gcol[c], cell = S.grid.cells[c][r];
+  const col = lane(c, r), cell = S.grid.cells[c][r];
   if (!cell) { openCellMenu(c, r); return; }
   ctx.resume();
   if (cell.mode === 'oneshot') {      // a hit: on the next 16th (at once if stopped, or quantize off), again on every tap
@@ -3564,7 +3639,7 @@ async function tapCell(c, r) {
 }
 // Gate: it sounds while the finger is down, from the next beat (or at once, quantize off), in step with the bar.
 async function gateDown(c, r) {
-  const col = gcol[c], cell = S.grid.cells[c][r];
+  const col = lane(c, r), cell = S.grid.cells[c][r];
   ctx.resume();
   const token = col.gateToken = {};
   const slot = await cellSlot(cell); if (!slot || col.gateToken !== token) return;
@@ -3576,14 +3651,14 @@ async function gateDown(c, r) {
   if (col.next) { kill(col.next); col.next = null; }
   col.gate = v; drawLoops();
 }
-function gateUp(c) {
-  const col = gcol[c]; col.gateToken = null;
+function gateUp(c, r) {
+  const col = lane(c, r); col.gateToken = null;
   if (col.gate) { kill(col.gate); col.gate = null; drawLoops(); }
 }
 // Stop everything in the grid (Stop, and when the sound engine is rebuilt).
 function stopGrid(rebuilt = false) {
   for (const col of gcol) for (const h of [col.cur, col.next, col.gate]) if (h && !rebuilt) kill(h);
-  gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
+  gcol = newLanes();
   drawLoops();
 }
 // ⚙ Stop all loops: on the next quantize point; the Pads beat plays on.
@@ -3599,8 +3674,8 @@ function stopAllLoops() {
 // Relaunch the loops playing at { when, j }, seamlessly: after a key change (the cells
 // that follow the key), a tempo change (every loop in time), or a cell's settings changing.
 async function relaunchGrid(b, which) {
-  for (let c = 0; c < 8; c++) {
-    const col = gcol[c], h = col.cur;
+  for (const [i, col] of gcol.entries()) {
+    const c = Math.floor(i / ROWS), h = col.cur;
     if (!h || h.stopAt != null || col.next || h.voice.end !== Infinity) continue;
     const cell = S.grid.cells[c][h.r]; if (!cell || !which(cell, h)) continue;
     const slot = await cellSlot(cell); if (!slot) continue;
@@ -3634,8 +3709,8 @@ function tickGrid(now) {
   if (changed) drawLoops();
   if (view !== 'loops') return;
   const pos = beatPos() / 16;           // bars since the beat began
-  for (let c = 0; c < 8; c++) {
-    const col = gcol[c];
+  for (const [i, col] of gcol.entries()) {
+    const c = Math.floor(i / ROWS);
     for (const h of [col.cur, col.gate]) {
       if (!h || now < h.at) continue;
       let p;
@@ -3692,8 +3767,8 @@ function buildLoops() {
           if (d?.moved) { if (d.to) moveCell(c, r, d.to.c, d.to.r); return; }
           openCellMenu(c, r); return;
         }
-        if (ev.type !== 'pointerup') { if (cell?.mode === 'gate') gateUp(c); return; }
-        if (cell?.mode === 'gate') { gateUp(c); return; }
+        if (ev.type !== 'pointerup') { if (cell?.mode === 'gate') gateUp(c, r); return; }
+        if (cell?.mode === 'gate') { gateUp(c, r); return; }
         if (!long) tapCell(c, r);
       };
       b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up);
@@ -3723,10 +3798,13 @@ function drawDrag() {
 }
 function moveCell(c, r, tc, tr) {
   const G = S.grid.cells, a = G[c][r], b = G[tc][tr];
-  if (c === tc) {
-    for (const k of ['cur', 'next', 'gate']) { const h = gcol[c][k]; if (h) h.r = h.r === r ? tr : h.r === tr ? r : h.r; }
-  } else for (const [cc, rr] of [[c, r], [tc, tr]]) {
-    const col = gcol[cc];
+  if (c === tc && !S.grid.multi) {
+    for (const k of ['cur', 'next', 'gate']) { const h = lane(c, r)[k]; if (h) h.r = h.r === r ? tr : h.r === tr ? r : h.r; }
+  } else if (c === tc) {           // Multi: the two cells' lanes change places with them
+    const L = colLanes(c), A = gcol.indexOf(L[r]), B = gcol.indexOf(L[tr]);
+    [gcol[A], gcol[B]] = [gcol[B], gcol[A]];
+    for (const l of [gcol[A], gcol[B]]) for (const k of ['cur', 'next', 'gate']) if (l[k]) l[k].r = l[k].r === r ? tr : l[k].r === tr ? r : l[k].r;
+  } else for (const [cc, rr] of [[c, r], [tc, tr]]) for (const col of colLanes(cc)) {
     for (const k of ['cur', 'next', 'gate']) if (col[k]?.r === rr) { kill(col[k]); col[k] = null; }
   }
   G[tc][tr] = a; G[c][r] = b || null;
@@ -3737,19 +3815,19 @@ function drawLoops() {
   if (!cellEls.length) return;
   $('lgrid').classList.toggle('editing', lEdit);
   for (let c = 0; c < 8; c++) {
-    const col = gcol[c];
+    const L = colLanes(c), has = (k, r, f = () => true) => L.some(l => l[k]?.r === r && f(l[k], l));
     // editing: every column a shade of one colour (amber), so the grid looks plainly different
     cellEls[c].col.style.setProperty('--c', lEdit ? `hsl(38 95% ${44 + c * 5}%)` : CHANNEL_COLOR[c]);
     for (let r = 0; r < ROWS; r++) {
       const cell = S.grid.cells[c][r], el = cellEls[c][r];
-      const on = col.cur?.r === r && col.cur.stopAt == null || col.gate?.r === r;
+      const on = has('cur', r, h => h.stopAt == null) || has('gate', r);
       el.b.classList.toggle('filled', !!cell);
       el.b.classList.toggle('playing', !!on);
-      el.b.classList.toggle('queued', col.next?.r === r);
-      el.b.classList.toggle('stopping', col.cur?.r === r && col.cur.stopAt != null && col.next?.r !== r);
+      el.b.classList.toggle('queued', has('next', r));
+      el.b.classList.toggle('stopping', has('cur', r, (h, l) => h.stopAt != null && l.next?.r !== r));
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
       el.badge.textContent = cell ? [libTag(cell.lib, banks?.[LIBRARY[cell.lib]?.bank]?.from?.[cell.k] ?? cell.name), cell.mode === 'oneshot' ? '1×' : cell.mode === 'gate' ? 'G' : '', follows(cell) ? '♪' : ''].filter(Boolean).join(' ') : '';
-      if (!on && !(col.cur?.r === r)) el.ring.style.strokeDashoffset = '100';
+      if (!on && !has('cur', r)) el.ring.style.strokeDashoffset = '100';
     }
     const fx = S.grid.colFx[c];
     cellEls[c].head.textContent = CHANNELS[c] + (fx.type !== 'none' ? ' · ' + COL_FX.find(f => f[0] === fx.type)[1] : '');
@@ -3761,6 +3839,7 @@ function drawLoops() {
   $('lBpm').textContent = `${S.bpm} BPM`;
   $('lKey').textContent = $('keyBtn').textContent + ' ▸';
   $('lEdit').classList.toggle('on', lEdit);
+  $('lMulti').classList.toggle('on', !!S.grid.multi);
   $('lSet').classList.toggle('on', !$('lsets').hidden);
 }
 // Names for cells that have none yet (the first set, or an old save).
@@ -3780,6 +3859,27 @@ const nudgeBpm = d => { S.bpm = Math.max(60, Math.min(240, S.bpm + d)); dirty();
 $('lSlower').addEventListener('click', () => nudgeBpm(-1));
 $('lFaster').addEventListener('click', () => nudgeBpm(1));
 $('lKey').addEventListener('click', () => { nextKey(); drawLoops(); });
+// Multi: the cells of one column play together (each its own lane). Turned off, each column keeps
+// the cell started last; the others stop on the next point.
+function setMulti(on) {
+  if (!!S.grid.multi === on) return;
+  const old = gcol; gcol = newLanes(); S.grid.multi = on;
+  const b = playing ? gridNext() : { when: ctx.currentTime, j: 0 };
+  for (let c = 0; c < 8; c++) {
+    const L = old.slice(c * ROWS, c * ROWS + ROWS);
+    if (on) { for (const l of L) for (const k of ['cur', 'next', 'gate']) if (l[k]) lane(c, l[k].r)[k] = l[k]; }
+    else {
+      const all = L.flatMap(l => ['cur', 'next', 'gate'].map(k => l[k] && { k, h: l[k] })).filter(Boolean).sort((x, y) => x.h.at - y.h.at);
+      const keep = all.at(-1), to = lane(c, 0);
+      for (const x of all) if (x !== keep) { if (x.k === 'cur' && x.h.stopAt == null) stopAt(x.h, b); else if (x.k !== 'cur') kill(x.h); }
+      if (keep) to[keep.k] = keep.h;
+      for (const x of all) if (x !== keep && x.k === 'cur' && keep.k !== 'cur') to.cur ??= x.h;      // stopping on the point, until it does
+    }
+  }
+  persist(); drawLoops();
+  status(on ? 'Multi: the cells of a column play together. Tap a playing cell to stop it.' : 'One cell per column again: each column keeps the cell started last.');
+}
+$('lMulti').addEventListener('click', () => setMulti(!S.grid.multi));
 $('lEdit').addEventListener('click', () => { lEdit = !lEdit; cellDrag = null; status(lEdit ? 'Edit: tap a cell for its settings, or drag it to move it (onto a full cell, the two swap). Tap ✎ Edit again to play.' : ''); drawLoops(); });
 
 // ⚙ The settings for all the loops.
@@ -3833,7 +3933,7 @@ function closeCellMenu() { $('lmenu').hidden = true; menuCell = null; drawLoops(
 function changed(c, r) { persist(); retake(c, r); warmGridSoon(); drawCellMenu(); drawLoops(); }
 // A cell's settings changed while it plays: it carries on, changed, from the next bar.
 function retake(c, r) {
-  const h = gcol[c].cur;
+  const h = lane(c, r).cur;
   if (playing && h?.r === r && h.stopAt == null) relaunchGrid(nextBar(), (cell, hh) => hh === h);
 }
 const NOTE_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -3880,7 +3980,7 @@ async function drawCellMenu() {
     $('lmFxRow').hidden = $('lmSkipRow').hidden = fx.type === 'none';
     choices($('lmSkip'), [[false, 'Effect on'], [true, 'Skips it']], !!cell.fxOff, v => {
       cell.fxOff = v; persist();
-      for (const h of [gcol[c].cur, gcol[c].next, gcol[c].gate]) if (h?.r === r) { h.g.disconnect(); h.g.connect(colInput(c, cell)); }
+      for (const h of cellHandles(c, r)) { h.g.disconnect(); h.g.connect(colInput(c, cell)); }
       drawCellMenu();
     });
     if (x) drawCellWave(x, base, cell, c);
@@ -3896,17 +3996,16 @@ async function drawCellMenu() {
   const top = document.createElement('button'); top.textContent = 'Sounds'; top.addEventListener('click', () => { menuPack = null; drawCellMenu(); });
   crumbs.appendChild(top);
   if (!menuPack) {
-    for (const [group, ids] of CELL_PACKS) for (const id of ids) if (LIBRARY[id]) btn(LIBRARY[id].name, group, () => { menuPack = id; drawCellMenu(); }, cell?.lib === id);
+    for (const [group, ids] of CELL_PACKS) for (const id of ids) if (LIBRARY[id] && !toDelete().has(id)) btn(LIBRARY[id].name, group, () => { menuPack = id; drawCellMenu(); }, cell?.lib === id);
     return;
   }
   crumbs.append(' › ' + LIBRARY[menuPack].name);
   const pack = menuPack, slot = await slotOf({ lib: pack });
   if (menuPack !== pack || !menuCell) return;
-  slot.slices.forEach((x, k) => btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
+  slot.slices.forEach((x, k) => !toDelete().has(`${pack}#${k}`) && btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
     playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
     const was = S.grid.cells[c][r];
-    if (gcol[c].cur?.r === r) stopAt(gcol[c].cur, { when: ctx.currentTime, j: 0 }, false);
-    if (gcol[c].next?.r === r) { kill(gcol[c].next); gcol[c].next = null; }
+    { const l = lane(c, r); if (l.cur?.r === r) stopAt(l.cur, { when: ctx.currentTime, j: 0 }, false); if (l.next?.r === r) { kill(l.next); l.next = null; } }
     const hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
     S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' || hit ? 'loop' : 'oneshot'), vol: was?.vol ?? 1, ...(beats && { beats }) };
     choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
@@ -3919,7 +4018,7 @@ document.querySelectorAll('[data-lmode]').forEach(b => b.addEventListener('click
 fader($('lmVolBar'), v => {
   const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
   cell.vol = v; persist();
-  const h = gcol[menuCell.c].cur;
+  const h = lane(menuCell.c, menuCell.r).cur;
   if (h?.r === menuCell.r && h.stopAt == null) { h.level = v; h.g.gain.setTargetAtTime(v, ctx.currentTime, 0.02); }
   drawCellMenu();
 });
@@ -4018,13 +4117,13 @@ EQ_BANDS.forEach(([, , k], i) => fader($('lmEq' + k), v => {
   const cell = menuCellNow(); if (!cell) return;
   const db = Math.round((v - 0.5) * 24);
   cell.eq = { ...cell.eq, [k]: db }; persist();
-  for (const h of [gcol[menuCell.c].cur, gcol[menuCell.c].next, gcol[menuCell.c].gate]) if (h?.r === menuCell.r) h.eq[i].gain.setTargetAtTime(db, ctx.currentTime, 0.02);
+  for (const h of cellHandles(menuCell.c, menuCell.r)) h.eq[i].gain.setTargetAtTime(db, ctx.currentTime, 0.02);
   drawEq(cell);
 }));
 $('lmEqFlat').addEventListener('click', () => {
   const cell = menuCellNow(); if (!cell) return;
   cell.eq = undefined; persist();
-  for (const h of [gcol[menuCell.c].cur, gcol[menuCell.c].next, gcol[menuCell.c].gate]) if (h?.r === menuCell.r) h.eq.forEach(b => b.gain.setTargetAtTime(0, ctx.currentTime, 0.02));
+  for (const h of cellHandles(menuCell.c, menuCell.r)) h.eq.forEach(b => b.gain.setTargetAtTime(0, ctx.currentTime, 0.02));
   drawEq(cell);
 });
 const menuCellNow = () => menuCell && S.grid.cells[menuCell.c][menuCell.r];
@@ -4097,7 +4196,7 @@ $('lmHear').addEventListener('click', async () => {
 });
 $('lmWhole').addEventListener('click', () => { const cell = menuCellNow(); if (!cell) return; cell.from = 0; cell.to = 1; changed(menuCell.c, menuCell.r); });
 $('lmEmpty').addEventListener('click', () => {
-  const { c, r } = menuCell; const col = gcol[c];
+  const { c, r } = menuCell; const col = lane(c, r);
   if (col.cur?.r === r) stopAt(col.cur, { when: ctx.currentTime, j: 0 }, false);
   if (col.next?.r === r) { kill(col.next); col.next = null; }
   S.grid.cells[c][r] = null; choosing = true; persist(); drawCellMenu(); drawLoops();
@@ -4105,7 +4204,7 @@ $('lmEmpty').addEventListener('click', () => {
 $('lmClose').addEventListener('click', closeCellMenu);
 buildLoops();
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
-  grid: () => gcol.map((col, c) => ({ c, cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
+  grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch, keyOf: sl.params.keyOf }; },
