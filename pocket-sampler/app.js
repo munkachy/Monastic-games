@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023m';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023n';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -258,7 +258,7 @@ const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 
 // the voice, effects. Upright, the first four sit beside Copy and Undo and the next eight under the keys.
 const DEFAULT_CUSTOM_IDS = ['mute', 'beat', 'chain', 'beats',
   'octdown', 'octup', 'key', 'nextkey', 'roll', 'edit', 'clear', 'export',
-  'rap', 'newflow', 'hearrap', 'voice', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
+  'rap', 'newflow', 'hearrap', 'robot', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
 const OLD_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat', 'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',
   'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // before the rows had colours
 const S = {
@@ -627,6 +627,8 @@ function modsFor(si, list) {
 // ---------------------------------------------------------------------------
 const keyEls = [];
 const down = new Set();
+const roboEls = [];            // the Robot pads (made with the robot voice, below), over the keys in Robot mode
+let robotTarget = -1;          // the sound the Robot pads are on
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
   b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i><em class="tag"></em>`;
@@ -1619,6 +1621,7 @@ const ACTIONS = {
   newflow: { th: 'voice', name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
   hearrap: { th: 'voice', name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
   voice: { th: 'voice', name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
+  robot: { th: 'voice', name: 'Robot pads: type words on the pads', label: () => (S.mode === 'robot' ? '🤖 Done' : '🤖 Robot'), on: () => S.mode === 'robot', tap: () => toggleRobot() },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { th: 'fx', name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
@@ -1797,7 +1800,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023n'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1890,7 +1893,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023n'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2155,6 +2158,159 @@ $('voxMake').addEventListener('click', busy($('voxMake'), async () => {
   noteOn(eng, S.cur, 0, ctx.currentTime + 0.02);
 }));
 $('rapIt').addEventListener('click', busy($('rapIt'), rapIt));
+
+// ---------------------------------------------------------------------------
+// Robot pads (🤖 Robot): words typed on the pads, said by the robot voice (the Voice page's voice
+// and cut). A pad holds as many syllables as you say (at first, all of its word's); the rest spill
+// over onto the next pad, which takes as many as you say, and so on, up to a pad with a word of its
+// own (a word typed on a spilled pad takes its place). The pads are the keys of one sound, a chop,
+// so they play, record and export like any other, at the voice's own pitch. The words and counts
+// are kept in its params.robot: { pads: [{ t, n }], words: { text: [{ s, e, name }] } }, where t is
+// the word typed on the pad, n its syllables (null: all there are), and words the syllables of each
+// word in the sound. Each change makes a new object, so Undo puts it back.
+// ---------------------------------------------------------------------------
+function isRobot(si) { return !!S.slots[si]?.params?.robot; }
+function emptyRobot() { return { pads: Array.from({ length: 16 }, () => ({ t: null, n: null })), words: {} }; }
+const sylls = n => `${n} syllable${n === 1 ? '' : 's'}`;
+// Which syllables fall on which pad, and what doesn't fit.
+function robotLayout(R) {
+  const out = Array.from({ length: 16 }, () => ({ syl: [], spill: false, avail: 0 })), warn = [];
+  let queue = [], from = '';
+  for (let i = 0; i < 16; i++) {
+    const p = R.pads[i];
+    if (p.t) {
+      if (queue.length) warn.push(`${sylls(queue.length)} of “${from}” ${queue.length === 1 ? 'doesn’t' : 'don’t'} fit: pad ${i + 1} has a word of its own.`);
+      queue = [...(R.words[p.t] || [])]; from = p.t;
+    }
+    if (!queue.length) continue;
+    const avail = queue.length, n = Math.min(p.n ?? avail, avail);
+    out[i] = { syl: queue.splice(0, n), spill: !p.t, avail, from };
+  }
+  if (queue.length) warn.push(`${sylls(queue.length)} of “${from}” ${queue.length === 1 ? 'doesn’t' : 'don’t'} fit: there are no more pads.`);
+  return { out, warn };
+}
+// Where the pads go: the Robot sound already made, else a free sound (never a drum kit).
+function robotSlotChoice() {
+  if (isRobot(S.cur)) return S.cur;
+  const r = S.slots.findIndex((_, i) => isRobot(i));
+  return r >= 0 ? r : rapSlot();
+}
+const voiceNow = () => JSON.stringify(['voxVariant', 'voxPitch', 'voxRange', 'voxSpeed', 'voxVowel', 'voxGap', 'rapCut'].map(id => $(id).value));
+const spoken = new Map();         // a word as said in a voice: { buf, syl }, while the page is open
+function resampled(d, from, to) {
+  const n = Math.round(d.length * to / from), o = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i * from / to, j = Math.floor(x), f = x - j; o[i] = (d[j] || 0) * (1 - f) + (d[j + 1] || 0) * f; }
+  return o;
+}
+// The Robot sound for R: each word once (from the sound as it was, or said now), a little silence
+// between them, and a key for each pad, from its first syllable to its last.
+async function robotBuild(si, R) {
+  const old = S.slots[si], oldR = old?.params?.robot, parts = [];
+  for (const t of [...new Set(R.pads.map(p => p.t).filter(Boolean))]) {
+    if (oldR?.words[t] && old.buf) { const y = oldR.words[t]; parts.push([t, old.buf, y[0].s, y.at(-1).e, y]); continue; }
+    const key = t + voiceNow();
+    if (!spoken.has(key)) spoken.set(key, await voiceSyllables(t));
+    const { buf, syl } = spoken.get(key);
+    parts.push([t, buf, syl[0].s, syl.at(-1).e, syl.map(x => ({ s: x.s, e: x.e, name: x.name }))]);
+  }
+  const rate = parts[0]?.[1].sampleRate || 22050, gap = Math.round(rate * 0.06), words = {};
+  const segs = parts.map(([t, b, s, e, y]) => {
+    const a = Math.floor(s * b.sampleRate); let d = b.getChannelData(0).subarray(a, Math.ceil(e * b.sampleRate));
+    if (b.sampleRate !== rate) d = resampled(d, b.sampleRate, rate);
+    return [t, d, a / b.sampleRate, y];
+  });
+  const buf = ctx.createBuffer(1, gap + segs.reduce((n, x) => n + x[1].length + gap, 0), rate), ch = buf.getChannelData(0);
+  let o = gap;
+  for (const [t, d, s0, y] of segs) {
+    ch.set(d, o); const off = o / rate - s0;
+    words[t] = y.map(x => ({ ...x, s: x.s + off, e: x.e + off })); o += d.length + gap;
+  }
+  const R2 = { pads: R.pads, words }, { out, warn } = robotLayout(R2);
+  const slices = out.map(q => (q.syl.length ? { s: q.syl[0].s, e: q.syl.at(-1).e, name: q.syl.map(x => x.name).join('·') } : { s: 0, e: gap / rate / 2, name: '' }));
+  const params = { ...(isRobot(si) ? old.params : { ...defParams(), choke: true }), robot: R2 };
+  S.slots[si] = { factory: null, kind: 'chop', contiguous: false, name: 'Robot pads', params, buf, made: 'GEN', slices };
+  return { out, warn };
+}
+// A change to the pads (f gives the new R from the old), one at a time, in order.
+let robotQueue = Promise.resolve();
+function robotChange(f, k) {
+  robotQueue = robotQueue.then(async () => {
+    let si;
+    try { si = robotTarget >= 0 && isRobot(robotTarget) ? robotTarget : robotSlotChoice(); } catch (e) { status(e.message); drawRobot(); return; }
+    const was = S.slots[si], fresh = !isRobot(si);
+    try {
+      checkpoint();
+      const { out, warn } = await robotBuild(si, f(fresh ? emptyRobot() : was.params.robot));
+      robotTarget = si; S.cur = si; S.lastKey[si] = k; syncPanel(); dirty(); draw();
+      const q = out[k], said = q.syl.length ? `Pad ${k + 1}: ${q.syl.map(x => x.name).join('·')}${q.avail > q.syl.length ? ` (${sylls(q.avail - q.syl.length)} on to pad ${k + 2})` : ''}.` : '';
+      status(warn.length ? '⚠ ' + warn.join(' ') : fresh ? `Robot pads on sound ${si + 1}, in place of ${was?.name || 'nothing'}. ${said} ↶ Undo takes it back.` : said);
+      if (q.syl.length) noteOn(eng, si, k, ctx.currentTime + 0.02);       // hear the pad
+    } catch (e) { status(e.message); console.error(e); drawRobot(); }
+  });
+}
+const withPad = (R, k, pad) => ({ ...R, pads: R.pads.map((p, j) => (j === k ? pad(p) : p)) });
+function setWord(R, k, t) {
+  // a new word: all its syllables on its pad, and the pads it may spill onto start again
+  let pads = R.pads.map((p, j) => (j === k ? { t: t || null, n: null } : p));
+  for (let j = k + 1; j < 16 && !pads[j].t; j++) pads = pads.map((p, i) => (i === j ? { t: null, n: null } : p));
+  return { ...R, pads };
+}
+function stepCount(k, d) {
+  const si = robotTarget; if (!isRobot(si)) return;
+  const q = robotLayout(S.slots[si].params.robot).out[k]; if (!q.syl.length) return;
+  const n = Math.max(1, Math.min(q.avail, q.syl.length + d)); if (n === q.syl.length) return;
+  robotChange(R => withPad(R, k, p => ({ ...p, n: n === q.avail ? null : n })), k);
+}
+for (let k = 0; k < 16; k++) {
+  const d = document.createElement('div'); d.className = 'rpad';
+  d.title = 'Its syllables: − and +'; d.innerHTML = `<b>${k + 1}</b><input type="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Word on pad ${k + 1}">`
+    + `<span class="rsyl"></span><div class="rcnt"><button aria-label="Fewer syllables on pad ${k + 1}">−</button><output></output><button aria-label="More syllables on pad ${k + 1}">+</button></div>`;
+  const inp = d.querySelector('input'), [minus, plus] = d.querySelectorAll('button');
+  d.addEventListener('pointerdown', ev => {             // the pad itself (not its box or buttons) plays
+    if (ev.target.closest('input, button') || !isRobot(robotTarget)) return;
+    ev.preventDefault(); capture(d, ev); document.activeElement?.blur?.(); S.cur = robotTarget; press(k);
+  });
+  const up = () => release(k);
+  d.addEventListener('pointerup', up); d.addEventListener('pointercancel', up); d.addEventListener('lostpointercapture', up);
+  inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') inp.blur(); });
+  inp.addEventListener('change', () => {
+    const t = inp.value.trim().replace(/\s+/g, ' ');
+    const R = isRobot(robotTarget) ? S.slots[robotTarget].params.robot : emptyRobot();
+    if ((R.pads[k].t || '') === t) return;
+    robotChange(R => setWord(R, k, t), k);
+  });
+  minus.addEventListener('click', () => stepCount(k, -1)); plus.addEventListener('click', () => stepCount(k, 1));
+  $('robo').appendChild(d); roboEls.push(d);
+}
+function toggleRobot() {
+  if (S.mode === 'robot') { document.activeElement?.blur?.(); S.mode = 'play'; status(''); draw(); return; }
+  S.mode = 'robot'; if (chainEdit) setChainEdit(false); copying = null;
+  const r = isRobot(S.cur) ? S.cur : S.slots.findIndex((_, i) => isRobot(i));
+  robotTarget = r;
+  if (r >= 0) { S.cur = r; syncPanel(); status(`Robot pads on sound ${r + 1}. Type a word on a pad; − and + choose its syllables (the rest go on to the next pad). Tap a pad to hear it.`); }
+  else {
+    let si = -1; try { si = robotSlotChoice(); } catch (e) { status(e.message); }
+    if (si >= 0) status(`Type a word on a pad: it is said by the robot voice and cut into syllables, all on that pad at first; − and + choose how many (the rest go on to the next pad). The pads go on sound ${si + 1}, in place of ${S.slots[si]?.name || 'nothing'}.`);
+  }
+  draw();
+}
+function drawRobot() {
+  const on = S.mode === 'robot';
+  $('robo').hidden = !on; $('keys').hidden = on;
+  if (!on || !roboEls.length) return;
+  const R = isRobot(robotTarget) ? S.slots[robotTarget].params.robot : emptyRobot(), { out } = robotLayout(R);
+  roboEls.forEach((d, k) => {
+    const p = R.pads[k], q = out[k], inp = d.querySelector('input'), [minus, plus] = d.querySelectorAll('button');
+    if (document.activeElement !== inp) inp.value = p.t || '';
+    inp.placeholder = q.spill ? '' : 'word';
+    d.querySelector('.rsyl').textContent = q.syl.map(x => x.name).join('·');
+    d.querySelector('output').textContent = q.syl.length || '';
+    d.classList.toggle('spill', q.spill); d.classList.toggle('has', q.syl.length > 0);
+    minus.disabled = q.syl.length <= 1; plus.disabled = !q.syl.length || q.syl.length >= q.avail;
+    d.classList.toggle('down', down.has(k));
+    d.classList.toggle('head', playing && k === headStep);
+  });
+}
 $('rapHear').addEventListener('click', () => { ctx.resume(); hearRap(); });
 // 🎲 New flow: another flow (never the steady ones, nor the one you're on), laid out afresh.
 $('rapNew').addEventListener('click', () => {
@@ -2360,7 +2516,7 @@ function draw() {
   $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
     play: S.write ? (playing ? (S.replace ? 'WRITE: LIVE, REPLACE' : S.quantGrid ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
-    fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY' }[S.mode];
+    fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY', robot: 'ROBOT: TYPE ON THE PADS' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
   $('lcdInfo').textContent = `${octOf(S.cur) ? `OCT${octOf(S.cur) > 0 ? '+' : ''}${octOf(S.cur)} ` : ''}${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''}`;
   const kb = $('keyBtn'), kn = k => `${(isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root]} ${SCALE_SHORT[k.scale] || k.scale.toUpperCase()}`;
@@ -2403,6 +2559,7 @@ function draw() {
     el.querySelector('span').textContent = keyLabel(k);
     el.querySelector('em').textContent = S.mode === 'sound' && !away ? slotTag(S.slots[k]) : '';
   }
+  drawRobot();
 }
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
@@ -2432,7 +2589,9 @@ function drawWave() {
   }
   if (view.marks) {
     const lk = S.lastKey[S.cur];
+    const robo = !!sl.params.robot;
     view.marks.forEach((m, k) => {
+      if (robo && !sl.slices[k]?.name) return;          // a Robot pad with nothing on it
       const X = (m.s - a) / (b - a) * W, X2 = (m.e - a) / (b - a) * W;
       if (k === lk) { g.globalAlpha = 0.2; g.fillRect(X, 0, X2 - X, H); g.globalAlpha = 1; }
       g.fillRect(X, 0, Math.max(1, dpr), H);
@@ -3111,6 +3270,7 @@ async function load() {
     if (!saved.chainButton && S.custom[11] === 'voice') S.custom[11] = 'chain';    // the Chain button took Voice's place, once
     S.chainButton = true;
     if (S.custom.join() === OLD_CUSTOM_IDS.join()) S.custom = [...DEFAULT_CUSTOM_IDS];   // never changed: the new rows
+    if (S.custom[15] === 'voice' && S.custom.every((c, i) => i === 15 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[15] = 'robot';   // 🤖 Robot took Voice's place
   }
   else demo();
   setVolume(); syncPanel(); draw();
