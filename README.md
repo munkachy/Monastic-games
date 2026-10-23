@@ -199,8 +199,13 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   suggests it when it hears the sound breaking up; sounds only previewed
   are let go to save memory, on any device.
 - **Sideways:** twenty of your blue buttons, full size, on the left.
-- **Tags:** SYN (synthesized as you play), REC (a recording), GEN (made in
-  code beforehand), MINE (yours), on every sound. **☆ Favorite** and
+- **Tags:** REC (a recording), GEN (made in code beforehand and kept as a
+  recording), MINE (yours), on every sound.
+- **Everything made in code is played from a recording.** The synths (a
+  note every 6 half steps, with a held take that loops seamlessly) and the
+  808, 909, CR-78, 606 and Minimal kits are recorded once with the app's own
+  engine (`pocket-sampler/tools/bake_sounds.js`) and played back as WAVs,
+  which is far easier on a phone than making each note as it plays. **☆ Favorite** and
   **★ Save to My Sounds** under Load in the sound browser.
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
   sideways. Eight columns in their parts' colours (kick, snare, tops,

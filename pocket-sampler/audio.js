@@ -360,7 +360,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
-  const out = ctx.createGain(); out.gain.value = P.vol;
+  const out = ctx.createGain(); out.gain.value = P.vol * (slot.level || 1);     // level: a recording kept quieter than it plays
   let dest = out;
   if (Math.abs(P.filter) > 0.02) {   // filter: below 0 low-pass, above 0 high-pass
     const f = ctx.createBiquadFilter();
@@ -405,6 +405,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       const z = slot.zones.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
       buf = slot.buf; s = z.s; e = z.e; r = Math.pow(2, (midi - z.m) / 12) * rate;
       start = P.start || 0; len = P.len;
+      if (sustain && z.hs != null && !start) { s = z.hs; e = z.he; len = 1; }     // held: its held take
       if (z.ls != null && !start) zl = [z.ls, z.le];
     } else if (slot.kind === 'chop') {
       const sl = slot.slices[k]; if (!sl) return null;
@@ -435,7 +436,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     if (reverse) { const rb = reverseOf(ctx, buf); [s, e] = [buf.duration - s - dur, buf.duration - s]; buf = rb; zl = null; }
     // What loops: on Loop, the whole sound or slice; held on Gate, a sustained
     // instrument (organ, electric bass) rings on its seamless loop.
-    const lp = loop ? [Math.max(0, s), Math.max(0, s) + dur] : sustain && zl ? zl : null;
+    const lp = loop ? (slot.holdLoop && zl ? zl : [Math.max(0, s), Math.max(0, s) + dur]) : sustain && zl ? zl : null;   // a recorded synth on Loop rings on, as it did
     const go = (rr, delay) => {
       const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rr;
       if (scratch) {        // scratch: the speed swings back and forth, like a hand on the record
