@@ -294,7 +294,7 @@ EBB_LOOPS = {
     ]}
 LOOP_PARTS = [('kick', 'kloops', 'Kick loops'), ('snare', 'sloops', 'Snare loops'), ('tops', 'tloops', 'Tops loops')]
 VEL = {'x': 1.0, 'o': 0.6, '-': 0.3}
-CHOKE = {'Hat', 'Dusty hat', 'Open hat'}
+CHOKE = {'Hat', 'Dusty hat', 'Open hat', 'Tight hat'}
 # How loud each part's loops are (RMS): the Electro Boom Bap set's levels for its drum columns
 LOOP_RMS = {'kick': 0.105, 'snare': 0.0385, 'tops': 0.0175}
 
@@ -319,7 +319,57 @@ def render_loop(pattern, hits, bpm, swing, part):
     out *= min(LOOP_RMS[part] / max(1e-6, np.sqrt(np.mean(out ** 2))), 0.95 / np.abs(out).max())
     return out
 
-PACKS = {'ebb': ('EBB', [('kit', 'Kit', ebb_kit)], EBB_LOOPS, 92, 58)}
+# Vigils (vigils.py): G minor, 144 BPM, broken beats; soft deep kicks under crisp electronic snares,
+# shuffled hats, glassy ticks and a chime, for night electronica. The kicks sit on G and D.
+G1, D2 = 31, 38
+def vig_kit():
+    P = plaits
+    return [
+        ('Soft kick', lambda: lp(mix(P('kick', G1, 0.22, 0.36, 0.42, 0.8, 0.8), 0.25 * punch(G1, 0.2, 5)), 3500), 0.95),
+        ('Deep kick', lambda: mix(P('kick', G1, 0.22, 0.38, 0.6, 0.9, 1.2), 0.35 * punch(G1, 0.15, 3)), 0.95),
+        ('Click kick', lambda: P('kick', D2, 0.5, 0.75, 0.3, 0.9, 0.6, 'aux'), 0.95),
+        ('Thump kick', lambda: sat(mix(P('kick', G1, 0.3, 0.45, 0.4, 0.9, 0.8, 'aux'), 0.5 * punch(G1, 0.5, 4)), 1.2), 0.95),
+        ('Broken snare', lambda: lp(P('snare', 62, 0.62, 0.62, 0.42, 0.95, 0.7, 'aux'), 10000), 0.95),
+        ('Snap snare', lambda: lp(sat(P('snare', 67, 0.4, 0.5, 0.3, 0.95, 0.5), 0.8), 8000), 0.95),
+        ('Clap', lambda: clap_of(bp(P('snare', 62, 1.0, 0.55, 0.95, 0.9, 0.7, 'aux'), 700, 4000), hands=3, gap=0.009, tail=0.32, seed=40), 0.9),
+        ('Rimshot', lambda: mix(shaped(P('modal', 74, 0.3, 0.7, 0.15, 0.9, 0.3), 0.1) * 2.5, 0.7 * lp(P('snare', 62, 0.45, 0.5, 0.2, 0.9, 0.3, 'aux'), 7000)), 0.85),
+        ('Ghost snare', lambda: lp(P('snare', 62, 0.55, 0.4, 0.3, 0.6, 0.4, 'aux'), 6000), 0.35),
+        ('Hat', lambda: P('hat', 62, 0.45, 0.65, 0.2, 0.8, 0.35), 0.6),
+        ('Tight hat', lambda: P('hat', 66, 0.35, 0.75, 0.1, 0.8, 0.2, 'aux'), 0.55),
+        ('Open hat', lambda: P('hat', 62, 0.45, 0.6, 0.6, 0.8, 1.0), 0.5),
+        ('Shaker', lambda: beads((3600, 7200), (10, 7), objects=70, shake=0.025, secs=0.11, lift=0.015, rattle=0.04, seed=41), 0.55),
+        ('Glass tick', lambda: shaped(P('modal', 96, 0.8, 0.9, 0.2, 0.8, 0.3), 0.06), 0.5),
+        ('Chime', lambda: shaped(P('modal', 86, 0.7, 0.65, 0.55, 0.8, 1.6), 1.2), 0.45),   # D, the fifth
+        ('Ride', lambda: P('hat', 58, 0.7, 0.55, 0.8, 0.8, 2.2), 0.45),
+    ]
+VIG_LOOPS = {
+    'kick': [
+        ('Two-step kick', [('Deep kick', 'x.........x.....', 'x.........x..x..')]),
+        ('Broken kick', [('Thump kick', 'x..x......x.....', 'x......x.x......')]),
+        ('Four on the floor', [('Soft kick', 'x...x...x...x...', 'x...x...x...x...')]),
+        ('Half time kick', [('Deep kick', 'x...............', 'x.........x.....')]),
+        ('Rolling kick', [('Click kick', 'x..x..x...x..x..', 'x..x..x...x.....')]),
+        ('Sparse thump', [('Thump kick', 'x...............', '..........x.....')]),
+    ],
+    'snare': [
+        ('Backbeat', [('Broken snare', '....x.......x...', '....x.......x...')]),
+        ('Half time snare', [('Snap snare', '........x.......', '........x.......')]),
+        ('Two-step snare', [('Broken snare', '....x.......x...', '....x.......x...'), ('Ghost snare', '.......x.....x..', '......x..x.....x')]),
+        ('Clap and rim', [('Clap', '....x.......x...', '....x.......x...'), ('Rimshot', '.......o...o....', '..o....o......o.')]),
+        ('Rim shuffle', [('Rimshot', '...o..x..o...x..', '...o..x..o..x.o.')]),
+        ('Ghost rolls', [('Broken snare', '....x.......x...', '....x.......x...'), ('Ghost snare', '.x.x...x.x.x..x.', '..x..x.x.x..x.xx')]),
+    ],
+    'tops': [
+        ('Shuffled hats', [('Hat', 'x.o.x.o.x.o.x.o.', 'x.o.x.o.x.o.x.oo')]),
+        ('Garage hats', [('Open hat', '..x...x...x...x.', '..x...x...x...x.'), ('Tight hat', 'o...o...o...o...', 'o...o...o...o..o')]),
+        ('Glass ticks', [('Glass tick', 'x-o-x-o-x-o-x-o-', 'x-o-x-o-x-oox-o-')]),
+        ('Shaker', [('Shaker', 'x-o-x-o-x-o-x-o-', 'x-o-x-o-x-o-x-oo')]),
+        ('Ride', [('Ride', 'o.-.o.-.o.-.o.-.', 'o.-.o.-.o.-.o.-.')]),
+        ('Chimes', [('Chime', '..o.....x.....o.', '......o...x.....')]),
+    ]}
+
+PACKS = {'ebb': ('EBB', [('kit', 'Kit', ebb_kit)], EBB_LOOPS, 92, 58),
+         'vig': ('Vigils', [('kit', 'Kit', vig_kit)], VIG_LOOPS, 144, 54)}
 def loop_cells(pack):            # the set's Kick, Snare and Tops columns: the loops, in order
     _, _, loops, _, _ = PACKS[pack]
     return [[{'lib': f'{pack}{bid}', 'k': k, 'mode': 'loop', 'name': name} for k, (name, _) in enumerate(loops[part])] for part, bid, _ in LOOP_PARTS]
@@ -427,7 +477,7 @@ def draw(rows, path, title):
 def preview(path, x):            # a WAV to listen to (a loop twice over)
     w = wave.open(path, 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE)
     w.writeframes((np.clip(x, -1, 1) * 32767).round().astype('<i2').tobytes()); w.close()
-pack_set = lambda pack: {'ebb': 'electroboombap'}[pack]
+pack_set = lambda pack: {'ebb': 'electroboombap', 'vig': 'vigils'}[pack]
 def write_bank(sounds, bid, name, hits, loops=None, gap=int(0.02 * RATE)):
     data, slices, names = [], [], []
     for h in hits:

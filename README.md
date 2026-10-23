@@ -225,6 +225,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
   Zenodo datasets; CC BY 4.0, credited in Help), made ready by
   `pocket-sampler/tools/reverbs.py`.
+- **Vigils loop set** (Loops › ⚙ › Sets): night electronica in G minor at
+  144 BPM, broken beats, inspired by Remixlive's "Breakpoint Electro" and
+  borrowing nothing from it: its own Plaits kit and kick, snare and tops
+  loops; bass, pads, the abbey organ and choir, celestial arpeggios and a
+  howling lead, sub and rain; and words of the Rule of St Benedict in
+  pairs (A little rule… / …for beginners), robot cells whose words can be
+  changed. It brings its own column effects and the Aachen chapel's reverb
+  (`pocket-sampler/tools/vigils.py`).
 - **Drum lab** (`pocket-sampler/tools/drumlab.py`): drum hits made with
   Mutable Instruments Plaits' drum engines (MIT), shaped (old-sampler grit,
   saturation, layers, tuned to the key) and measured against every hit of
