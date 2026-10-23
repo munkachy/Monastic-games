@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023k';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023l';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1589,7 +1589,8 @@ $('menuClose').addEventListener('click', closeMenu);
 const THEMES = [['rhythm', 'Rhythm (red)'], ['pitch', 'Pitch and key (purple)'], ['sound', 'The sound (amber)'], ['voice', 'Voice (blue)']];
 const ACTIONS = {
   mute: { th: 'rhythm', name: 'Mute drums', label: () => 'Mute', on: () => !!S.muteBeat, tap: () => toggleMute() },
-  beat: { th: 'rhythm', name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
+  beat: { th: 'rhythm', name: 'Vary the beat (the same beat, a small change)', label: () => '🎲 Vary', tap: () => varyBeat() },
+  newbeat: { th: 'rhythm', name: 'New beat (in the style chosen on the Rhythm page)', label: () => '🎲 New', tap: () => genBeat() },
   chain: { th: 'rhythm', name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
   beats: { th: 'rhythm', name: 'Rhythm (open the Rhythm page: kit, beat, bass)', label: () => 'Rhythm', tap: () => openMenu('tBeat') },
   octdown: { th: 'pitch', name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
@@ -1782,7 +1783,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023l'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1875,7 +1876,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023l'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2768,6 +2769,98 @@ const genBeat = () => {
   if (putBeat(st, drumSlot(), true, makeBeat(st))) status(`A new ${st.name.toLowerCase()} beat in pattern ${S.pat + 1}. Again for another; ↶ Undo for the last one.`);
 };
 $('genBeat').addEventListener('click', genBeat);
+
+// 🎲 Vary (the button): the beat already in the pattern, with one or two small changes a drummer might
+// make: a kick pushed onto an off-beat or played early, ghost notes on the snare, an open hat, a quick
+// double on the hat, a pickup or a little fill at the end of the bar, a hit left out for space, the
+// hat played with accents. Each press starts again from the same beat, so it gives another take on
+// it and never drifts away; a beat changed by hand (or a new one put in) becomes the one varied.
+let varied = null;
+const stepName = i => (i % 4 ? `the "${['e', 'and', 'a'][i % 4 - 1]}" of ${((i / 4) | 0) + 1}` : `beat ${i / 4 + 1}`);
+function variation(B, ds, ps) {
+  const r = Math.random, pick = a => a[(r() * a.length) | 0];
+  const part = n => hitPart(S.slots[n.s]?.slices?.[n.k]?.name);
+  const has = (i, p) => B[i].some(n => part(n) === p);
+  const add = (i, role, vol = 1) => {
+    const h = findHit(role, ds, ps, vol); if (!h || B[i].some(n => n.s === h.s && n.k === h.k)) return false;
+    B[i].push({ s: h.s, k: h.k, ...(h.lock && { lock: h.lock }) }); return true;
+  };
+  const drop = (i, p) => { const j = B[i].findIndex(n => part(n) === p); return j < 0 ? null : B[i].splice(j, 1)[0]; };
+  const back = [4, 12].some(i => has(i, 'clap')) && ![4, 12].some(i => has(i, 'snare')) ? 'clap' : 'snare';
+  const hats = B.filter((st, i) => has(i, 'hat')).length;
+  const moves = [
+    [3, () => {                 // a kick on an off-beat, where kicks groove
+      const c = [10, 7, 3, 14, 11, 6].filter(i => !has(i, 'kick') && !has(i, back));
+      if (!c.length) return null; const i = pick(c.slice(0, 4));
+      return add(i, 'kick', 0.85) && `an extra kick on ${stepName(i)}`;
+    }],
+    [2, () => {                 // a kick played a 16th early (not the one on beat 1 or 3)
+      const c = []; for (let i = 1; i < 16; i++) if (i % 8 && has(i, 'kick') && !has(i - 1, 'kick') && !has(i - 1, back)) c.push(i);
+      if (!c.length) return null; const i = pick(c); B[i - 1].push(drop(i, 'kick'));
+      return `a kick pushed early, onto ${stepName(i - 1)}`;
+    }],
+    [3, () => {                 // ghost notes around the backbeat
+      const c = [3, 5, 11, 13, 7, 15, 9].filter(i => !has(i, back) && !has(i, 'snare') && !has(i, 'kick'));
+      let k = 0; const want = 1 + ((r() * 2) | 0);
+      while (k < want && c.length) if (add(c.splice((r() * Math.min(4, c.length)) | 0, 1)[0], 'ghost', 0.85)) k++;
+      return k ? (k > 1 ? 'ghost notes on the snare' : 'a ghost note on the snare') : null;
+    }],
+    [2, () => {                 // an open hat on an off-beat
+      if (!hats) return null;
+      const c = [14, 6].filter(i => !has(i, 'open')); if (!c.length) return null;
+      const i = pick(c); drop(i, 'hat');
+      if (!add(i, 'open', 0.8)) return null; drop(i + 1, 'hat');
+      return `an open hat on ${stepName(i)}`;
+    }],
+    [2, () => {                 // a quick double on the hat
+      if (hats < 4) return null;
+      const c = [15, 7, 13, 11].filter(i => !has(i, 'hat') && !has(i, 'open') && has(i - 1, 'hat')); if (!c.length) return null;
+      const i = pick(c); return add(i, 'hat', 0.55) && `a quick double on the hi-hat at ${stepName(i - 1)}`;
+    }],
+    [1.5, () => {               // a pickup or a little fill into the next bar
+      const fills = [[[15, back, 0.7]], [[14, back, 0.55], [15, back, 0.8]], [[14, 'tom', 0.8], [15, 'tom', 0.9]], [[13, back, 0.5], [14, 'tom', 0.75], [15, 'tom', 0.9]]];
+      const f = pick(fills); let k = 0;
+      for (const [i, role, v] of f) { drop(i, 'hat'); if (add(i, role, v)) k++; }
+      return k ? (f.length > 1 ? 'a little fill at the end of the bar' : 'a snare pickup into the next bar') : null;
+    }],
+    [1.5, () => {               // a hit left out, for space
+      const c = []; for (let i = 1; i < 16; i++) if (i % 8 && has(i, 'kick')) c.push(i);
+      if (c.length < 2) return null; const i = pick(c); drop(i, 'kick');
+      return `the kick on ${stepName(i)} left out, for space`;
+    }],
+    [1, () => {                 // the hat with accents: the beats louder, the off-beats softer
+      if (hats < 6 || B.some((st, i) => st.some(n => part(n) === 'hat' && n.lock))) return null;
+      for (let i = 0; i < 16; i++) for (const n of B[i]) if (part(n) === 'hat' && i % 4) n.lock = { vol: S.slots[n.s].params.vol * (i % 2 ? 0.5 : 0.75) };
+      return 'the hi-hat played with accents';
+    }],
+  ];
+  const said = [], want = r() < 0.55 ? 1 : 2, left = [...moves];
+  while (said.length < want && left.length) {
+    let t = r() * left.reduce((a, [w]) => a + w, 0), j = 0;
+    while ((t -= left[j][0]) > 0) j++;
+    const got = left.splice(j, 1)[0][1](); if (got) said.push(got);
+  }
+  return [B, said];
+}
+function varyBeat() {
+  ctx.resume(); checkpoint();
+  const P = S.patterns[S.pat], count = si => P.reduce((a, st) => a + st.filter(n => n.s === si).length, 0);
+  const kits = S.slots.map((sl, i) => i).filter(i => hasRole(S.slots[i], 'kick')).sort((a, b) => count(b) - count(a));
+  const ds = kits.length ? kits[0] : -1, ps = percSlot();
+  if (ds < 0 || !count(ds)) { genBeat(); return; }     // no beat here yet: a new one to start from
+  const mine = n => n.s === ds || (ps >= 0 && n.s === ps);
+  const take = () => JSON.stringify(P.map(st => st.filter(mine)));
+  const now = take(), base = varied && varied.pat === S.pat && varied.last === now ? varied.base : now;
+  let out, said;
+  for (let tries = 0; tries < 12; tries++) {
+    [out, said] = variation(JSON.parse(base), ds, ps);
+    const o = JSON.stringify(out); if (said.length && o !== base && o !== now) break;
+  }
+  for (let i = 0; i < 16; i++) P[i] = [...P[i].filter(n => !mine(n)), ...out[i]];
+  varied = { pat: S.pat, base, last: take() };
+  dirty(); draw();
+  status(`The same beat, varied: ${said.join(', and ')}. Again for another take on it; ↶ Undo takes it back.`);
+}
 
 // Drum kit (Beat tab): the kit the beats play on, swapped on its own key
 // (the kit on the keys, or sound 9 if there is none).
