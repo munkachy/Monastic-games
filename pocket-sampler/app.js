@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zk';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zl';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1979,7 +1979,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zk'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zl'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2072,7 +2072,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zk'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zl'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4231,7 +4231,7 @@ function folderSounds(f) {          // what a cell can take from a folder: your 
     ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
 }
 // A robot voice in a cell (the Hype Words, the robot's words in Electro Boom Bap, or words typed in
-// here): 🤖 Words, to type what it says and choose its voice. Said once and kept as a recording (one
+// here): at the top of its Settings, what it says and its voice, and 🔄 Update. Said once and kept as a recording (one
 // of My Sounds, with its words and voice), the cell's other settings kept.
 const isRobotCell = cell => !!cell && (!!cell.robot || cell.lib === 'hype' || (cell.lib === 'ebbvox' && cell.k < 2));
 const LW = [['lwPitch', 'pitch', v => v], ['lwRange', 'range', v => (v == 0 ? 'flat' : v)], ['lwSpeed', 'speed', v => v], ['lwGap', 'gap', v => v * 10 + ' ms'], ['lwVowel', 'vowel', v => Math.round(v * 100) + '%']];
@@ -4259,12 +4259,14 @@ async function sayWords() {
     await idbPut('mine', { id, name: text, type: 'sound', folder: 'Vox and keys', robot: { text, voice: V }, created: Date.now(), item: packSlot(slot) }, id);
     await refreshMine();
     if (old && mine.find(m => m.id === old)?.robot && !S.grid.cells.flat().some(x => x && x !== cell && x.mine === old)) { await idbDel('mine', old); await refreshMine(); }   // the words it said before, no longer used
-    for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
     const { lib, k, keyOf, from, to, ...keep } = cell || {};
     S.grid.cells[c][r] = { ...keep, mode: keep.mode || 'oneshot', mine: id, k: 0, name: text, robot: { text, voice: V }, ...(keep.mode === 'loop' && !keep.beats && { beats: 4 }) };
     lwFor = S.grid.cells[c][r]; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
-    const sl = await cellBase(S.grid.cells[c][r]); if (sl) playNote(eng, sl, -1, 0, ctx.currentTime + 0.02, { bpm: S.bpm, root: S.root, scale: S.scale });
-    status(`The robot says “${text}”, in ${CHANNELS[c]}, cell ${r + 1}.`);
+    // playing as a loop: it changes on the next bar; else it is heard once, now
+    const going = playing && colLanes(c).some(l => l.cur?.r === r && l.cur.stopAt == null && l.cur.voice.end === Infinity);
+    if (going) retake(c, r);
+    else { const sl = await cellBase(S.grid.cells[c][r]); if (sl) playNote(eng, sl, -1, 0, ctx.currentTime + 0.02, { bpm: S.bpm, root: S.root, scale: S.scale }); }
+    status(`The robot says “${text}”, in ${CHANNELS[c]}, cell ${r + 1}${going ? ', from the next bar' : ''}.`);
   } catch (e) { status(e.message); console.error(e); }
   $('lwSay').disabled = false;
 }
@@ -4290,10 +4292,9 @@ async function drawCellMenu() {
   $('lmenu').style.setProperty('--c', CHANNEL_COLOR[c]);
   document.querySelectorAll('[data-lmode]').forEach(b => { b.classList.toggle('on', cell?.mode === b.dataset.lmode); b.disabled = !cell; });
   $('lmEmpty').disabled = !cell;
-  // 🤖 Words, for a robot voice
-  const robo = isRobotCell(cell), wt = document.querySelector('[data-lpane=words]');
-  wt.hidden = !robo;
-  if (!robo && lPane === 'words') document.querySelector('[data-lpane=set]').click();
+  // a robot voice: its words and voice, at the top of Settings
+  const robo = isRobotCell(cell);
+  $('lwBox').hidden = !robo;
   if (robo) fillWords(cell);
   $('lmSets').hidden = !cell || choosing;
   $('lmPick').hidden = !choosing;
@@ -4389,7 +4390,7 @@ async function drawCellMenu() {
       choosing = false; lwFor = null;
       const V = { ...defaultVoice(), variant: 'robosoft' };
       $('lwText').value = 'Check it'; $('lwVariant').value = V.variant; for (const [id, key] of LW) $(id).value = V[key]; lwShow();
-      sayWords().then(() => { document.querySelector('[data-lpane=words]').click(); $('lwText').select(); });
+      sayWords().then(() => { document.querySelector('[data-lpane=set]').click(); $('lwText').select(); });
     }, false, 'var(--c-vox)', 'folder');
     const fs = cellFolders(), own = fs.find(f => f[0] === COL_FOLDER[c]);
     for (const f of [own, ...fs.filter(x => x !== own)].filter(Boolean)) {
