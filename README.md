@@ -225,6 +225,15 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
   Zenodo datasets; CC BY 4.0, credited in Help), made ready by
   `pocket-sampler/tools/reverbs.py`.
+- **Drum lab** (`pocket-sampler/tools/drumlab.py`): drum hits made with
+  Mutable Instruments Plaits' drum engines (MIT), shaped (old-sampler grit,
+  saturation, layers, tuned to the key) and measured against every hit of
+  the recorded kits (attack, decay, brightness, pitch, noisiness), with a
+  picture of each beside the closest real one; then each pack's kit, and
+  its kick, snare and tops loops.
+- **Per-loop fade, robot words, reverb in the Loops:** hold a cell for its
+  own fade in and out; for a robot voice, 🤖 Words (type what it says,
+  choose the voice); EQ & Effect chooses the reverb space for the song.
 - **Packs when choosing a cell's sound:** below the colour folders, the sets
   made for the looper (Electro Boom Bap), its sounds under a heading for each colour. The wave editor
   is on the cell's Settings tab.
@@ -240,8 +249,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   dragged to another place (onto a full cell, the two swap).
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
   sideways. Eight columns in their parts' colours (kick, snare, tops,
-  bass, chords, lead, sub, vocals/keys), six cells each: whole beats in
-  the red Kick column, single hits in Snare and Tops. A tap starts a cell
+  bass, chords, lead, sub, vocals/keys), six cells each: drum loops a part
+  each in Kick, Snare and Tops (or whole beats in Kick). A tap starts a cell
   on the next bar, in time and key (a hit starts as a loop that plays it
   every 4 beats; as a One shot, on the next 16th); one cell
   plays per column, and another takes over on the bar; a ring shows each
@@ -318,11 +327,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   kits, Bass (green), Chords (teal), Lead (pink), Sub and color (purple: subs, glitchy
   accents and the video-game sounds), Vox and
   keys (blue), Pads, Plucks, Stabs and FX.
-- **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 33 loops written
+- **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 45 loops written
   for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
-  BPM, swung. Whole beats in the red Kick column (hip hop played by
-  drummers, from the Groove MIDI Dataset); single snare and top hits
-  in Snare and Tops (each a loop that plays it every 4 beats); 808, electric, Reese and
+  BPM, swung. Its own kit (16 hits made with Mutable Instruments Plaits'
+  drum engines, MIT) and kick, snare and tops loops of it, a part each, so
+  any three go together (`pocket-sampler/tools/drumlab.py`); 808, electric, Reese and
   upright bass; Rhodes, pad, choir and organ; Juno stabs, pluck, chip,
   trumpet and bells; sub; the robot's words and the women's choir. The
   harmony is Fm7, D♭maj7, B♭m7, Cm7 a bar each, so every loop fits every

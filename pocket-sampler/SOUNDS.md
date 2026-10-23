@@ -28,7 +28,7 @@ Selling: **Yes** = the license allows commercial use (with the credit asked for)
 
 | What | Source | License | Credit | Selling |
 |---|---|---|---|---|
-| Human Grooves, Beats played by drummers, the Electro Boom Bap beats | Groove MIDI Dataset (Gillick, Roberts, Engel, Eck, Bamman; Magenta 2019) | CC BY 4.0 | the authors | Yes |
+| Human Grooves, Beats played by drummers | Groove MIDI Dataset (Gillick, Roberts, Engel, Eck, Bamman; Magenta 2019) | CC BY 4.0 | the authors | Yes |
 | Basslines played by bassists | FiloBass (Xavier Riley and Simon Dixon, Queen Mary University of London, ISMIR 2023) | MIT | the authors, and the MIT notice | Yes |
 
 ## Reverbs (recordings of real spaces)
@@ -46,6 +46,7 @@ Selling: **Yes** = the license allows commercial use (with the credit asked for)
 | What | How | Selling |
 |---|---|---|
 | The synths; the 808, 909, CR-78, 606 and Minimal kits; rolled sounds; nylon, acoustic and 12-string guitars, steel drum, vinyl, rain, risers, sirens, respirator | made in code (audio.js, tools/synthinst.py, tools/bake_sounds.js) and kept as recordings | Yes (the app's own) |
+| The Electro Boom Bap kit (16 hits) and its kick, snare and tops loops | made in Claude's drum lab (tools/drumlab.py) with Mutable Instruments Plaits' drum engines, by Emilie Gillet (github.com/pichenettes/eurorack, with stmlib; MIT License, so the notice is kept with the code that uses it: tools/plaits_hit.cc builds against a checkout, nothing of Plaits is in this repo), shaped in the lab; the shaker from Perry Cook's PhISEM model, written in the lab | Yes (the app's own; Plaits' MIT license allows commercial use, with its notice) |
 | Drum loops; the Electro Boom Bap loops | written for the app, played by the app on the sounds above (tools/loopset.py, tools/render_loops.js) | as the sounds they are played on: the parts on Dirt-Samples sounds, the Rhodes or Sonatina carry those sounds' limits |
 | Hype words, the robot voice, Robot pads, raps | spoken by eSpeak NG through Vox Machina | the sounds: Yes. The engine: eSpeak NG is GPL-3, so a sold app that includes it must give its users the source code under the GPL, or use another voice |
 

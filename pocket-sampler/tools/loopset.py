@@ -6,8 +6,8 @@
 # the notes, bar by bar) from the app's own sounds. Then:
 #   songs: writes the loops to render, for render_loops.js, which plays each in
 #          the app and renders it with the app's own export (one seamless loop);
-#   pack:  packs the rendered loops into banks, one per column (ebbkick ...
-#          ebbvox, mono, slices in banks.json, each with its tempo and bars), and
+#   pack:  packs the rendered loops into banks, one per column (ebbbass ...
+#          ebbvox; the drum columns come from drumlab.py, mono, slices in banks.json, each with its tempo and bars), and
 #          writes sounds/sets/electroboombap.json: the 8 x 6 grid.
 # The harmonic loops are four bars, a chord a bar (Fm7, Dbmaj7, Bbm7, Cm7), so any
 # of them fit together and with the drums; they follow the key (keyOf F).
@@ -66,21 +66,9 @@ hats8 = [(s, 1.0 if s % 4 == 0 else 0.75) for s in range(0, 16, 2)]
 LOOPS = {}       # id -> (column, name, song, mode, follows the key)
 def loop(col, lid, name, sng, mode='loop', key=False): LOOPS[lid] = (col, name, sng, mode, key)
 
-# --- Beats (the red Kick column): played by people. Six hip-hop grooves near 92 BPM from the
-# Groove MIDI Dataset (see grooves.py; the folder in GROOVE_DIR), each the steadiest two bars of
-# a performance, every hit at the drummer's own timing and loudness, on the app's kits.
-# (The Snare and Tops columns hold single hits, straight from the kits: see GRID.)
+# --- Drums (Kick, Snare, Tops): kick loops, snare loops and tops loops, a part each, made in
+# drumlab.py from the set's own kit (Plaits' drum engines); it bakes them and puts them in the set.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from grooves import groove_song, pick, BOOMBAP
-TR808 = {'kick': (1,), 'snare': (5, 45, 3), 'rim': (6,), 'xstick': (6,), 'hat': (7,), 'pedal': (7,), 'open': (8,),
-         'hitom': (12,), 'lotom': (13,), 'ride': (9,), 'bell': (10,), 'crash': (9,)}
-ELECTRO = {'kick': (0,), 'snare': (2, 45, 3), 'rim': (13,), 'xstick': (13,), 'hat': (6,), 'pedal': (7,), 'open': (5,),
-           'hitom': (13,), 'lotom': (14,), 'ride': (9,), 'bell': (9,), 'crash': (8,)}
-G = os.environ.get('GROOVE_DIR', '')
-for n, (kit, slot, factory, kitname) in enumerate([(BOOMBAP, K, 'boombap', 'boom bap'), (BOOMBAP, K, 'boombap', 'boom bap'), (BOOMBAP, K, 'boombap', 'boom bap'),
-                                                  (BOOMBAP, K, 'boombap', 'boom bap'), (TR808, T, 'tr808', '808'), (ELECTRO, E, 'electro', 'electro')]):
-    path, b, r = pick(G, 'hiphop', BPM, n)
-    loop(0, f'k{n + 1}', f'Hip hop {b}, {kitname}' + (f' {n + 1}' if kitname == 'boom bap' else ''), groove_song(path, b, kit, slot, factory))
 # --- Bass (808, electric, Reese, upright) ------------------------------------------------
 B = 0
 def bassline(steps, extra=None, held=None):
@@ -153,18 +141,15 @@ loop(7, 'v4', "Women's choir", harmonic([(V, 'choirwomen', 0.35, 'gate')], chord
 # The grid: per column, its six cells in order. A loop rendered here, or a sound the app
 # already has ({lib, k}) played as is.
 def hit(lib, k, name, vol=0.6): return {'lib': lib, 'k': k, 'mode': 'oneshot', 'name': name, 'vol': vol}
-GRID = [['k1', 'k2', 'k3', 'k4', 'k5', 'k6'],
-        [hit('boombap', BB['snare'], 'Snare'), hit('boombap', BB['snare2'], 'Snare 2'), hit('boombap', BB['ghost'], 'Ghost snare'),
-         hit('tr808', TR['clap'], '808 clap'), hit('boombap', BB['rim'], 'Rimshot'), hit('boombap', BB['brush'], 'Brush snare')],
-        [hit('boombap', BB['hat'], 'Hat', 0.5), hit('boombap', BB['open'], 'Open hat', 0.5), hit('tr808', TR['hat'], '808 hat', 0.5),
-         hit('tr808', TR['cowbell'], 'Cowbell', 0.5), hit('shakers', SH['shaker'], 'Shaker', 0.5), hit('boombap', BB['crash'], 'Crash', 0.45)],
+from drumlab import loop_cells
+GRID = [*loop_cells('ebb'),
         ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'], ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
         ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'], ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'],
         ['v1', 'v2', 'v4', {'lib': 'ambience', 'k': 1, 'mode': 'loop', 'name': 'Vinyl'},
          {'lib': 'hype', 'k': HY['alleluia'], 'mode': 'oneshot', 'name': 'Alleluia'},
          {'lib': 'hype', 'k': HY['selah'], 'mode': 'oneshot', 'name': 'Selah'}]]
-BANKS = ['ebbbeats', None, None, 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox']        # Snare, Tops: hits from the kits
-NAMES = ['EBB Beats', None, None, 'EBB Bass', 'EBB Chords', 'EBB Lead', 'EBB Sub', 'EBB Vox & Keys']
+BANKS = [None, None, None, 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox']        # Kick, Snare, Tops: from drumlab.py
+NAMES = [None, None, None, 'EBB Bass', 'EBB Chords', 'EBB Lead', 'EBB Sub', 'EBB Vox & Keys']
 RATES = [32000, 32000, 32000, 22050, 24000, 32000, 16000, 24000]     # what each needs: the sub, little above 1 kHz
 # How loud each column's loops are (RMS): the cells in a column take turns, so they are levelled
 # to the same loudness, and the columns to a mix that sits together with every fader at 80.

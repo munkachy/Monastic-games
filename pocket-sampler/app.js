@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zj';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zk';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -197,13 +197,17 @@ const LIBRARY = {
   drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
   grooves: { name: 'Human Grooves', bank: 'grooves' },       // played by drummers (the Groove MIDI Dataset, tools/grooves.py), on the acoustic kit
   ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
-  // The Electro Boom Bap loop set (tools/loopset.py): F minor, 92 BPM; a bank for each Loops column
-  ebbbeats: { name: 'EBB Beats', bank: 'ebbbeats' },
+  // The Electro Boom Bap loop set (tools/loopset.py): F minor, 92 BPM; a bank for each Loops column.
+  // Its drums (tools/drumlab.py): a kit made with Mutable Instruments Plaits' drum engines, and
+  // kick, snare and tops loops of it, a part each, so any three go together.
+  ebbkloops: { name: 'EBB Kick loops', bank: 'ebbkloops' }, ebbsloops: { name: 'EBB Snare loops', bank: 'ebbsloops' },
+  ebbtloops: { name: 'EBB Tops loops', bank: 'ebbtloops' }, ebbkit: { name: 'EBB Kit', bank: 'ebbkit' },
   ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
   ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
 };
-const BEAT_PACKS = new Set(['ebbbeats', 'grooves', 'drumloops', 'breaks']);     // whole beats (the Beats folder)
-const EBB = ['ebbbeats', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
+// drum loops, beat sliced to the tempo: whole beats (the Beats folder), and the parts of one (kicks, snares, tops)
+const BEAT_PACKS = new Set(['ebbkloops', 'ebbsloops', 'ebbtloops', 'grooves', 'drumloops', 'breaks']);
+const EBB = ['ebbkloops', 'ebbsloops', 'ebbtloops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox', 'ebbkit'];
 // The reverb: a real space, recorded (tools/reverbs.py), for every effect that rings (the FX keys,
 // a sound's own effect, a Loops column's): [id, name, about, credit]. Chosen in Menu › Effects.
 const SPACES = [
@@ -222,15 +226,19 @@ async function loadSpace(id = spaceNow()) {
     eng?.setSpace();
   } catch (e) { log('error', 'reverb: ' + e.message); }
 }
-for (const [id, name, about] of SPACES) $('spaceSel').add(new Option(`${name}: ${about}`, id));
-$('spaceSel').value = spaceNow();
+for (const [id, name, about] of SPACES) { $('spaceSel').add(new Option(`${name}: ${about}`, id)); $('lmSpace').add(new Option(name, id)); }
+$('spaceSel').value = $('lmSpace').value = spaceNow();
 const spaceCredit = () => { const x = SPACES.find(x => x[0] === $('spaceSel').value); $('spaceNote').textContent = `A recording of a real space: ${x[1]}. Recorded by ${x[3]}. Every reverb uses it: the FX keys, a sound's own effect, a Loops column's.`; };
 spaceCredit();
-$('spaceSel').addEventListener('change', async () => {
-  try { localStorage.setItem('pocketSpace', $('spaceSel').value); } catch (e) {}
-  spaceCredit(); await loadSpace($('spaceSel').value);
-  status(`Reverb: ${SPACES.find(x => x[0] === $('spaceSel').value)[1]}.`);
-});
+// the same choice in Menu › Effects and in a Loops cell's EQ & Effect: one reverb for the whole song
+async function chooseSpace(id) {
+  try { localStorage.setItem('pocketSpace', id); } catch (e) {}
+  $('spaceSel').value = $('lmSpace').value = id;
+  spaceCredit(); await loadSpace(id);
+  status(`Reverb: ${SPACES.find(x => x[0] === id)[1]}, for every reverb in the song.`);
+}
+$('spaceSel').addEventListener('change', () => chooseSpace($('spaceSel').value));
+$('lmSpace').addEventListener('change', () => chooseSpace($('lmSpace').value));
 loadSpace();
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
 const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
@@ -1136,12 +1144,12 @@ for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slic
 // The browser is in folders by part, in the parts' colours (the Loops columns' and the pads'):
 // [name, contents, colour]. Contents: sound ids, folders, or a list made when opened
 // ('hits:snare': every snare and clap of the kits, one by one).
-const DRUM_BANKS = ['acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks', 'percussion', 'shakers'];
+const DRUM_BANKS = ['ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks', 'percussion', 'shakers'];
 const TREE = ['Sounds', [
-  ['Beats', ['ebbbeats', 'grooves', 'drumloops', 'breaks'], 'var(--c-kick)'],
+  ['Beats', ['ebbkloops', 'grooves', 'drumloops', 'breaks'], 'var(--c-kick)'],
   ['Snares and claps', 'hits:snare', 'var(--c-snare)'],
   ['Tops (hats, cymbals, percussion)', 'hits:tops', 'var(--c-hat)'],
-  ['Drum kits', ['acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks',
+  ['Drum kits', ['ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks',
     'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal', 'percussion', 'shakers', 'bells2'], 'var(--c-kit)'],
   ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'basshits', 'ebbbass'], 'var(--c-bass)'],
   ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'ebbchords'], 'var(--c-chords)'],
@@ -1157,11 +1165,14 @@ const TREE = ['Sounds', [
   ['My packs', 'mine:pack'],
   ['★ Favorites', 'favs'],
 ]];
-// Every snare and clap (or every hat, cymbal and percussion hit) of the recorded kits, one by one.
+// Every snare and clap (or every hat, cymbal and percussion hit) of the recorded kits, one by one,
+// after the loops of that part (a pack's snare loops, its tops loops).
+const PART_LOOPS = { snare: ['ebbsloops'], tops: ['ebbtloops'] };
 function hitItems(which) {
   if (!banks) { bankList().then(() => drawBrowser()); return []; }
   const want = which === 'snare' ? ['snare', 'clap'] : ['hat', 'open', 'cym', 'perc'];
   const out = [];
+  for (const id of PART_LOOPS[which] || []) (banks[id]?.from || []).forEach((name, k) => out.push({ from: { lib: id }, k, label: `${name} · ${LIBRARY[id].name}` }));
   for (const id of DRUM_BANKS) (banks[id]?.from || []).forEach((name, k) => {
     if (want.includes(hitPart(name))) out.push({ from: { lib: id }, k, label: `${name} · ${LIBRARY[id].name}` });
   });
@@ -1968,7 +1979,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zj'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zk'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2061,7 +2072,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zj'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zk'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3316,7 +3327,7 @@ function varyBeat() {
 // Drum kit (Beat tab): the kit the beats play on, swapped on its own key
 // (the kit on the keys, or sound 9 if there is none).
 const KITS_MENU = [['Recorded kits', ['acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
-  ['Drum machines', ['tr808', 'electro', 'drumtraks', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
+  ['Drum machines', ['ebbkit', 'tr808', 'electro', 'drumtraks', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
 for (const [g, ids] of KITS_MENU) {
   const og = document.createElement('optgroup'); og.label = g;
   for (const id of ids) og.appendChild(new Option(LIBRARY[id].name, id));
@@ -3539,7 +3550,7 @@ async function load() {
   if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
-  for (const x of S.grid.cells.flat()) if (x?.lib === 'ebbbeats' && !/^Hip hop/.test(x.name || '')) { delete x.name; delete x.keyOf; }   // the beats are new: played by people
+  if (S.grid.cells.flat().some(x => x?.lib === 'ebbbeats')) gridAgain = 'electroboombap';      // its beats became kick, snare and tops loops
   S.grid.quant ??= 16; S.grid.fade ??= 0; if (S.grid.colFx?.length !== 8) S.grid.colFx = newColFx();
   if (!S.grid.hits4) { hitsRepeat(S.grid.cells); S.grid.hits4 = true; }      // the hits become 4-beat loops, once
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
@@ -3605,9 +3616,9 @@ function defaultGrid() {
   hitsRepeat(cells);
   return { cells, hits4: true, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0, colFx: newColFx() };
 }
-// The single hits in Snare and Tops start as a loop that plays the hit again every 4 beats (a bar),
+// The single hits in Kick, Snare and Tops start as a loop that plays the hit again every 4 beats (a bar),
 // so they need no setting up; any of them can be set to One shot or another repeat.
-const HIT_COLS = new Set([1, 2]);
+const HIT_COLS = new Set([0, 1, 2]);
 function hitsRepeat(cells) { for (const c of HIT_COLS) for (const x of cells[c]) if (x && x.mode === 'oneshot' && !x.beats) { x.mode = 'loop'; x.beats = 4; } }
 function newColFx() { return Array.from({ length: 8 }, () => ({ type: 'none', amt: 0.5 })); }
 S.grid = defaultGrid();
@@ -3729,14 +3740,16 @@ const beatPos = () => (playing ? Math.max(0, tick - (nextT - ctx.currentTime) / 
 const gridNext = (q = S.grid.quant) => (q ? nextBar(q) : { when: ctx.currentTime, j: beatPos() });
 // When a cell's tap lands: its own quantize, or the default for all the loops (⚙).
 const quantOf = cell => cell.quant ?? S.grid.quant;
-const fadeLen = () => (S.grid.fade === 'q' ? 0.03 : (S.grid.fade || 0) * stepDur());
+// The fade in and out: a cell's own (a shaker fading in, a kick not at all), or the one for all the loops (⚙).
+const fadeOf = cell => cell?.fade ?? S.grid.fade;
+const fadeLen = cell => { const f = fadeOf(cell); return f === 'q' ? 0.03 : (f || 0) * stepDur(); };
 // Start cell r of column c at { when, j } (j: the tick, so the loop's phase follows the bar count).
 // Each cell sounds through a gain of its own: its volume, and the fades.
 function launch(c, r, slot, at, fade = true) {
   const cell = S.grid.cells[c][r], x = slot.slices[0], key = keyAt(at.when), bars = x.bars || 1;
   // where in its loop it starts: counted from j0, the tick it was started from its beginning (0: lined up with the bar)
   const j0 = at.j0 ?? 0, phase = x.bpm ? (((((at.j - j0) / 16) % bars) + bars) % bars) / bars : 0;
-  const level = cell.vol ?? 1, g = ctx.createGain(), f = fade ? fadeLen() : 0;
+  const level = cell.vol ?? 1, g = ctx.createGain(), f = fade ? fadeLen(cell) : 0;
   g.connect(colInput(c, cell));
   const eq = makeEq(cell); eq[2].connect(g);
   if (f > 0) { g.gain.setValueAtTime(0, at.when); g.gain.linearRampToValueAtTime(level, at.when + f); } else g.gain.value = level;
@@ -3745,7 +3758,7 @@ function launch(c, r, slot, at, fade = true) {
     voice = playNote(eng, slot, -1, 0, at.when, { scale: key.scale, bpm: S.bpm, root: key.root, hold: cell.mode !== 'oneshot', phase, dest: eq[0] });
   } catch (e) { soundError(e); }
   if (!voice) { for (const n of [g, ...eq]) n.disconnect(); return null; }
-  const h = { r, voice, g, eq, level, at: at.when, j: at.j, j0, synced: !!x.bpm, bars, len: x.e - x.s };
+  const h = { r, voice, g, eq, level, at: at.when, j: at.j, j0, synced: !!x.bpm, bars, len: x.e - x.s, cell };
   if (voice.end !== Infinity) unplugAt(h, voice.end);
   return h;
 }
@@ -3760,7 +3773,7 @@ function makeEq(cell, c = ctx) {
 // Stop on a point, fading out from there if fades are on; or at once.
 function stopAt(h, b, fade = true) {
   if (!h) return;
-  const f = fade ? fadeLen() : 0;
+  const f = fade ? fadeLen(h.cell) : 0;
   if (f > 0) { h.g.gain.cancelScheduledValues(b.when); h.g.gain.setValueAtTime(h.level, b.when); h.g.gain.linearRampToValueAtTime(0, b.when + f); }
   h.voice.stop(b.when + f); h.stopAt = b.when; h.stopJ = b.j;
   unplugAt(h, b.when + f);
@@ -4137,7 +4150,7 @@ async function loadSet(id, quiet = false) {          // quiet: the set again, af
     if (set.bpm && !quiet) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
     if (set.root != null && !playing && !quiet) { S.root = set.root; S.scale = set.scale || S.scale; }
     persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
-    status(quiet ? `The ${set.name} set is new: whole beats in Kick, single hits in Snare and Tops.`
+    status(quiet ? `The ${set.name} set has new drums: kick, snare and tops loops, any of them together, made of its own kit.`
       : `${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
   } catch (e) { status('Could not load the set: ' + e.message); }
 }
@@ -4152,7 +4165,7 @@ let menuCell = null, menuPack = null, menuFolder = null, menuSet = null, choosin
 // Packs (below the folders): a set made for the looper, all its sounds, under a heading for each colour.
 // The Electro Boom Bap set is its six packs; a kit is its kicks (red), snares and claps (orange), and
 // hats, cymbals and percussion (yellow); any other pack is one colour. Its sounds are in the folders too.
-const folderFor = id => TREE[1].find(f => Array.isArray(f[1]) && f[1].includes(id));
+const folderFor = id => TREE[1].find(f => (Array.isArray(f[1]) ? f[1].includes(id) : f[1] === 'hits:' + Object.keys(PART_LOOPS).find(k => PART_LOOPS[k].includes(id))));
 const SET_PACKS = { 'set:ebb': ['Electro Boom Bap', EBB] };
 // Only the sets made for the looper (every loop in one fits every other): for now, Electro Boom Bap.
 // Every other pack is still in the colour folders, and in Menu › Sounds for the Pads.
@@ -4217,6 +4230,46 @@ function folderSounds(f) {          // what a cell can take from a folder: your 
   return [...mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).map(m => ({ mine: m })),
     ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
 }
+// A robot voice in a cell (the Hype Words, the robot's words in Electro Boom Bap, or words typed in
+// here): 🤖 Words, to type what it says and choose its voice. Said once and kept as a recording (one
+// of My Sounds, with its words and voice), the cell's other settings kept.
+const isRobotCell = cell => !!cell && (!!cell.robot || cell.lib === 'hype' || (cell.lib === 'ebbvox' && cell.k < 2));
+const LW = [['lwPitch', 'pitch', v => v], ['lwRange', 'range', v => (v == 0 ? 'flat' : v)], ['lwSpeed', 'speed', v => v], ['lwGap', 'gap', v => v * 10 + ' ms'], ['lwVowel', 'vowel', v => Math.round(v * 100) + '%']];
+for (const [v, l] of VARIANTS) $('lwVariant').add(new Option(l, v));
+const lwShow = () => { for (const [id, , fmt] of LW) $('o' + id[0].toUpperCase() + id.slice(1)).textContent = fmt(+$(id).value); };
+for (const [id] of LW) $(id).addEventListener('input', lwShow);
+let lwFor = null;           // the cell the words box was filled for
+function fillWords(cell) {
+  if (lwFor === cell) return; lwFor = cell;
+  const R = cell.robot || { text: cell.name || '', voice: null }, V = R.voice || { ...defaultVoice(), variant: 'robosoft' };
+  $('lwText').value = R.text; $('lwVariant').value = V.variant;
+  for (const [id, key] of LW) $(id).value = V[key];
+  lwShow();
+}
+async function sayWords() {
+  if (!menuCell) return;
+  const { c, r } = menuCell, cell = S.grid.cells[c][r], text = $('lwText').value.trim();
+  if (!text) { status('Type what the robot should say first.'); return; }
+  const V = { variant: $('lwVariant').value, cut: 'natural' }; for (const [id, key] of LW) V[key] = +$(id).value;
+  $('lwSay').disabled = true;
+  try {
+    const buf = await makeVoice(text, V.gap, V.pitch, V);
+    const slot = { factory: null, kind: 'chop', contiguous: false, name: text, params: { ...defParams(), choke: true }, buf, made: 'GEN', slices: [{ s: 0, e: buf.duration, name: text }] };
+    const id = 'm' + Date.now().toString(36), old = cell?.mine;
+    await idbPut('mine', { id, name: text, type: 'sound', folder: 'Vox and keys', robot: { text, voice: V }, created: Date.now(), item: packSlot(slot) }, id);
+    await refreshMine();
+    if (old && mine.find(m => m.id === old)?.robot && !S.grid.cells.flat().some(x => x && x !== cell && x.mine === old)) { await idbDel('mine', old); await refreshMine(); }   // the words it said before, no longer used
+    for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
+    const { lib, k, keyOf, from, to, ...keep } = cell || {};
+    S.grid.cells[c][r] = { ...keep, mode: keep.mode || 'oneshot', mine: id, k: 0, name: text, robot: { text, voice: V }, ...(keep.mode === 'loop' && !keep.beats && { beats: 4 }) };
+    lwFor = S.grid.cells[c][r]; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
+    const sl = await cellBase(S.grid.cells[c][r]); if (sl) playNote(eng, sl, -1, 0, ctx.currentTime + 0.02, { bpm: S.bpm, root: S.root, scale: S.scale });
+    status(`The robot says “${text}”, in ${CHANNELS[c]}, cell ${r + 1}.`);
+  } catch (e) { status(e.message); console.error(e); }
+  $('lwSay').disabled = false;
+}
+$('lwSay').addEventListener('click', sayWords);
+$('lwText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sayWords(); } });
 function openCellMenu(c, r) {
   menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r];
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
@@ -4237,6 +4290,11 @@ async function drawCellMenu() {
   $('lmenu').style.setProperty('--c', CHANNEL_COLOR[c]);
   document.querySelectorAll('[data-lmode]').forEach(b => { b.classList.toggle('on', cell?.mode === b.dataset.lmode); b.disabled = !cell; });
   $('lmEmpty').disabled = !cell;
+  // 🤖 Words, for a robot voice
+  const robo = isRobotCell(cell), wt = document.querySelector('[data-lpane=words]');
+  wt.hidden = !robo;
+  if (!robo && lPane === 'words') document.querySelector('[data-lpane=set]').click();
+  if (robo) fillWords(cell);
   $('lmSets').hidden = !cell || choosing;
   $('lmPick').hidden = !choosing;
   if (cell) {
@@ -4259,6 +4317,9 @@ async function drawCellMenu() {
     const qname = QUANTS.find(q => q[0] === S.grid.quant)?.[1] || '';
     choices($('lmQuant'), [['all', `As all (${qname})`], ...QUANTS], cell.quant ?? 'all', v => { cell.quant = v === 'all' ? undefined : v; persist(); drawCellMenu(); });
     $('lmQuant').querySelectorAll('button').forEach(b => { b.disabled = cell.mode === 'gate'; });
+    const fname = FADES.find(f => f[0] === S.grid.fade)?.[1] || 'Off';
+    choices($('lmFade'), [['all', `As all (${fname})`], ...FADES], cell.fade ?? 'all', v => { cell.fade = v === 'all' ? undefined : v; persist(); drawCellMenu(); });
+    $('lmFade').querySelectorAll('button').forEach(b => { b.disabled = cell.mode === 'oneshot'; });
     $('lmQuantNote').textContent = cell.mode === 'gate' ? 'Gate plays free: at once, no quantize' : cell.mode === 'oneshot' && cell.quant == null ? 'a hit: the next 16th' : '';
     drawEq(cell);
     const base = await cellBase(cell), x = base?.slices?.[cell.k];
@@ -4300,7 +4361,7 @@ async function drawCellMenu() {
     choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
   };
   const putHit = (lib, k, x) => {
-    const was = S.grid.cells[c][r], hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
+    const was = S.grid.cells[c][r], hit = HIT_COLS.has(c) && !x.bpm, beats = x.bpm ? 0 : was ? was.beats : hit ? 4 : 0;   // a loop plays whole
     put({ lib, k, name: x.name, mode: was?.mode || (x.bpm || lib === 'ambience' || hit ? 'loop' : 'oneshot'), ...(beats && { beats }) });
   };
   crumb('Sounds', () => { menuPack = menuFolder = menuSet = null; drawCellMenu(); });
@@ -4324,6 +4385,12 @@ async function drawCellMenu() {
   }
   const F = menuFolder && cellFolders().find(f => f[0] === menuFolder), fc = F?.[2];
   if (!F) {             // the colour folders, the column's own first
+    btn('🤖 Robot words', 'type what it says, choose the voice', () => {
+      choosing = false; lwFor = null;
+      const V = { ...defaultVoice(), variant: 'robosoft' };
+      $('lwText').value = 'Check it'; $('lwVariant').value = V.variant; for (const [id, key] of LW) $(id).value = V[key]; lwShow();
+      sayWords().then(() => { document.querySelector('[data-lpane=words]').click(); $('lwText').select(); });
+    }, false, 'var(--c-vox)', 'folder');
     const fs = cellFolders(), own = fs.find(f => f[0] === COL_FOLDER[c]);
     for (const f of [own, ...fs.filter(x => x !== own)].filter(Boolean)) {
       const n = f[1] === 'hits:snare' || f[1] === 'hits:tops' ? (banks ? folderSounds(f).length : '') : folderSounds(f).length;
@@ -4575,6 +4642,7 @@ buildLoops();
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
   grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
+  openCellMenu: (c, r) => openCellMenu(c, r),
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch, keyOf: sl.params.keyOf }; },
   // drums and the key: is sound si a drum, and a fingerprint of one note of it as rendered (the same in every key, for a drum)
