@@ -224,6 +224,18 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Cathedrals, the St. Nicholas Chapel of Aachen Cathedral, a church in
   Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
   Zenodo datasets; CC BY 4.0, credited in Help).
+- **⏺ Loop rec:** record over the beat or the Loops straight into a loop,
+  as notes (fixable as patterns first) or as sound (the pads alone, or
+  everything, like a looper pedal); it starts on the next bar and goes in
+  the Loops and the library.
+- **Design** (Menu › Design): drum hits (kick, snare, clap, hats, tom,
+  percussion, shaker: models with knobs) and synths (two waves, filter,
+  envelopes, vibrato, unison), made once into recordings, into kits and
+  My Sounds.
+- **Sets and pack files:** save the Loops grid as a set; share it (or your
+  sounds) as one pack file, to open on any device.
+- **☁ Send to the library:** a pack and notes on it (what, who, source,
+  license) go to the library; ☁ Shared shows it on every device.
 - **Vigils loop set** (Loops › ⚙ › Sets): night electronica in G minor at
   144 BPM, broken beats, inspired by Remixlive's "Breakpoint Electro" and
   borrowing nothing from it: its own Plaits kit and kick, snare and tops

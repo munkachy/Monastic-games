@@ -166,6 +166,8 @@ export class Engine {
     // Two ways in: `bus` runs through the effects, `dry` skips them (sounds
     // that an effect aimed at other tracks should leave alone).
     this.bus = ctx.createGain(); this.dry = ctx.createGain();
+    // the pads' own way in (not the Loops grid's), so ⏺ Loop rec can record the pads alone
+    this.padsWet = ctx.createGain(); this.padsWet.connect(this.bus); this.padsDry = ctx.createGain(); this.padsDry.connect(this.dry);
     this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 20000; this.lp.Q.value = 6;
     this.hp = ctx.createBiquadFilter(); this.hp.type = 'highpass'; this.hp.frequency.value = 10; this.hp.Q.value = 4;
     this.delay = ctx.createDelay(2); this.fb = ctx.createGain(); this.fb.gain.value = 0.45;
@@ -432,7 +434,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
   if (sfx === 'overdrive' || sfx === 'tape' || sfx === 'fuzz') {
     const ws = ctx.createWaveShaper(); ws.curve = distortion(sfx, amt); tail.connect(ws); tail = ws;
   }
-  tail.connect(into || (fx ? eng.bus : eng.dry));       // into: a Loops column's own volume
+  tail.connect(into || (fx ? eng.padsWet : eng.padsDry));       // into: a Loops column's own volume
   const sendTo = { reverb: eng.reverb, echo: eng.delay, pingpong: eng.ppL, chorus: eng.chSend }[sfx];
   if (sendTo) {                      // reverb, echoes, chorus: a send into the engine's own
     const sg = ctx.createGain(); sg.gain.value = amt * (sfx === 'reverb' ? 1.3 : 0.9); tail.connect(sg); sg.connect(sendTo);

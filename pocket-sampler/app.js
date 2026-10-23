@@ -3,7 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zn';
+import * as DZ from './design.js?v=20261023zo';
+const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zo';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -306,7 +308,7 @@ const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 
 // Your buttons, a row (sideways) for each kind of thing, in that kind's colour: rhythm, pitch and key, the sound,
 // the voice, effects. Upright, the first four sit beside Copy and Undo and the next eight under the keys.
 const DEFAULT_CUSTOM_IDS = ['mute', 'beat', 'chain', 'beats',
-  'octdown', 'octup', 'key', 'nextkey', 'makeloop', 'edit', 'clear', 'export',
+  'octdown', 'octup', 'key', 'nextkey', 'makeloop', 'edit', 'clear', 'looprec',
   'rap', 'newflow', 'hearrap', 'robot', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
 const OLD_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat', 'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',
   'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // before the rows had colours
@@ -766,6 +768,7 @@ function press(k) {
       const key = padKey(k); if (key == null) break;     // a rap's pad with no syllable on its step
       const h = trigger(key, k);
       if (S.write && h) h.note = recordLive(key, h.tick);
+      if (lrTake && h) lrNote(key, h);
     }
   }
   draw();
@@ -781,6 +784,7 @@ function release(k) {
 // sounded, in steps, as the note's length.
 function endHeld(h) {
   h.voice?.stop(Math.max(ctx.currentTime, h.at + 0.02));     // a quantized note may not have started yet
+  if (h.lr) h.lr.d = Math.max(0.25, (ctx.currentTime - h.at) / stepDur());   // ⏺ Loop rec: how long it was held
   if (!h.note) return;
   const d = (ctx.currentTime - h.at) / stepDur();
   h.note.d = S.quantGrid ? Math.max(1, Math.round(d)) : Math.max(0.1, Math.round(d * 100) / 100);
@@ -1175,6 +1179,7 @@ const TREE = ['Sounds', [
   ['Songs', 'songs'],
   ['My Sounds', 'mine:all'],
   ['My packs', 'mine:pack'],
+  ['☁ Shared', 'shared'],
   ['★ Favorites', 'favs'],
 ]];
 // Every snare and clap (or every hat, cymbal and percussion hit) of the recorded kits, one by one,
@@ -1205,7 +1210,7 @@ const selPack = c => (c.lib ? isPack(c.lib) : c.mine ? c.mine.type === 'pack' : 
 async function refreshMine() { mine = db ? (await idbAll('mine')).sort((a, b) => b.created - a.created) : []; }
 function itemsOf(node) {
   const it = node[1];
-  if (it === 'mine:all') return mine.map(m => ({ mine: m }));
+  if (it === 'mine:all') return mine.filter(m => m.item).map(m => ({ mine: m }));      // (your sets are in Loops › ⚙)
   if (it === 'mine:pack') return mine.filter(m => m.type === 'pack').map(m => ({ mine: m }));
   if (it === 'songs') return SONGS.map(x => ({ song: x }));
   if (it === 'favs') return favChoices();
@@ -1308,7 +1313,9 @@ function drawBrowser() {
     b.addEventListener('click', () => { bPath = bPath.slice(0, i + 1); bSel = null; drawBrowser(); });
     crumbs.appendChild(b);
   });
-  const node = bPath[bPath.length - 1], items = itemsOf(node), list = $('blist'); list.textContent = '';
+  const node = bPath[bPath.length - 1], list = $('blist'); list.textContent = '';
+  if (node[1] === 'shared') { drawShared(list); $('bTools').textContent = ''; $('bLoad').disabled = true; return; }
+  const items = itemsOf(node);
   if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = EMPTY[node[0]] || 'Nothing here yet.'; list.appendChild(p); }
   for (const it of items) {
     const b = document.createElement('button'), small = document.createElement('small');
@@ -1317,7 +1324,7 @@ function drawBrowser() {
       if (it[2]) { b.classList.add('folder'); b.style.setProperty('--c', it[2]); }
       const n = typeof it[1] === 'string' ? (it[1] === 'songs' ? SONGS.length : it[1] === 'favs' ? favChoices().length
         : it[1].startsWith('hits:') ? (banks ? hitItems(it[1].slice(5)).length : 0)
-        : it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
+        : it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : it[1] === 'shared' ? (shared ? shared.length : '') : mine.filter(m => m.item).length) : count(it);
       small.textContent = n ? `${n}` : '';
       b.addEventListener('click', () => { bPath.push(it); bSel = null; drawBrowser(); });
     } else {
@@ -1339,6 +1346,8 @@ function drawBrowser() {
   if (node[1] === 'mine:all') {
     tool('⬆ Import a file', () => $('importFile').click(), true);
     tool('Make a pack', openPackMaker);
+    tool('⬆ Share as a pack file', () => { const all = mine.filter(m => m.item); if (!all.length) { status('Nothing in My Sounds yet.'); return; } const name = prompt(`All ${all.length} of your sounds, in one pack file. Name it:`, 'My sounds'); if (name?.trim()) sharePack(packOf({ name: name.trim(), ids: all.map(m => m.id) })); });
+    tool('☁ Send to the library', () => openSend());
   }
   $('bLoad').disabled = !bSel;
   const isFav = bSel && favs().some(x => x.key === favKey(bSel));
@@ -1539,11 +1548,13 @@ function packSlot(sl) {
   const bufs = [], at = new Map();
   const ref = b => { if (!b) return null; if (!at.has(b)) { at.set(b, bufs.length); bufs.push({ rate: b.sampleRate, data: b.getChannelData(0).slice() }); } return at.get(b); };
   return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous, bpm: sl.bpm, credit: sl.credit, drumLoop: sl.drumLoop,
+    ...(sl.holdLoop && { holdLoop: true }), ...(sl.level && { level: sl.level }), ...(sl.made && { made: sl.made }),
     buf: ref(sl.buf), slices: sl.slices?.map(x => ({ ...x, buf: ref(x.buf) })), bufs };
 }
 function unpackSlot(m) {
   const it = m.item, B = it.bufs.map(b => { const a = ctx.createBuffer(1, b.data.length, b.rate); a.copyToChannel(b.data, 0); return a; });
   return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base, bpm: it.bpm, credit: it.credit,
+    ...(it.holdLoop && { holdLoop: true }), ...(it.level && { level: it.level }), ...(it.made && { made: it.made }),
     ...((it.drumLoop || m.folder === 'Beats') && { drumLoop: true }),
     contiguous: it.contiguous, buf: it.buf != null ? B[it.buf] : null, slices: it.slices?.map(x => ({ ...x, buf: x.buf != null ? B[x.buf] : null })) };
 }
@@ -1560,6 +1571,10 @@ $('saveMine').addEventListener('click', () => saveMine(S.slots[S.cur], S.slots[S
 // Import: WAV, MP3, or the sound of a video (a screen recording); it opens in the editor.
 $('importFile').addEventListener('change', async () => {
   const f = $('importFile').files[0]; $('importFile').value = ''; if (!f) return;
+  if (/\.json$/i.test(f.name) || f.type === 'application/json') {          // a pack file
+    try { await openPackFile(f); } catch (e) { status(`Could not open ${f.name}: ${e.message}`); log('error', 'pack: ' + e.message); }
+    return;
+  }
   status(`Reading ${f.name}…`);
   try {
     let raw;
@@ -1807,6 +1822,7 @@ const ACTIONS = {
   clear: { th: 'sound', name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
   makeloop: { th: 'sound', name: 'Make a loop (the pattern or chain, into the library)', label: () => '⟳ Loop', tap: () => openMakeLoop() },
   export: { th: 'sound', name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
+  looprec: { th: 'sound', name: 'Loop rec: record what you play over the beat, straight into a loop', label: () => lrLabel(), on: () => !!lrTake, tap: () => lrTap() },
   rap: { th: 'voice', name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
   newflow: { th: 'voice', name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
   hearrap: { th: 'voice', name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
@@ -1991,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zn'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zo'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2084,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zn'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zo'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3578,6 +3594,7 @@ async function load() {
     if (S.custom.join() === OLD_CUSTOM_IDS.join()) S.custom = [...DEFAULT_CUSTOM_IDS];   // never changed: the new rows
     if (S.custom[15] === 'voice' && S.custom.every((c, i) => i === 15 || c === DEFAULT_CUSTOM_IDS[i] || (i === 8 && c === 'roll'))) S.custom[15] = 'robot';   // 🤖 Robot took Voice's place
     if (S.custom[8] === 'roll' && S.custom.every((c, i) => i === 8 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[8] = 'makeloop';   // ⟳ Loop took Roll's place
+    if (S.custom[11] === 'export' && S.custom.every((c, i) => i === 11 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[11] = 'looprec';   // ⏺ Loop rec took Export's place (Export is in Menu › Rhythm)
   }
   else demo();
   setVolume(); syncPanel(); draw();
@@ -4146,6 +4163,17 @@ function drawSets() {
     const b = document.createElement('button'); b.innerHTML = `${st.name} <small>${st.about}</small>`;
     b.addEventListener('click', () => loadSet(st.id)); box.appendChild(b);
   }
+  const my = $('lsMine'); my.textContent = '';
+  const sets = mine.filter(m => m.type === 'set');
+  if (!sets.length) { const n = document.createElement('small'); n.textContent = 'none yet'; my.appendChild(n); }
+  for (const m of sets) {
+    const b = document.createElement('button'); b.innerHTML = `${m.name} <small>${m.set.bpm} BPM</small>`;
+    let held = null;
+    b.addEventListener('pointerdown', () => { held = setTimeout(() => { held = 'long'; mySetMenu(m); }, 550); });
+    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); loadSet(m.id, false, m.set); } held = null; });
+    b.addEventListener('pointerleave', () => { if (held !== 'long') clearTimeout(held); });
+    my.appendChild(b);
+  }
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
 }
@@ -4153,10 +4181,10 @@ $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets')
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
 // Sets: a whole grid at once, with the tempo and key it was made in.
 const SETS = [{ id: 'vigils', name: 'Vigils', about: 'G minor · 144 BPM · night electronica, words of the Rule' }, { id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
-async function loadSet(id, quiet = false) {          // quiet: the set again, after an update; tempo and key as they are
+async function loadSet(id, quiet = false, given = null) {          // quiet: the set again, after an update; tempo and key as they are. given: one of yours
   status('Loading the set…');
   try {
-    const set = id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json();
+    const set = given || (id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json());
     stopGrid();
     S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null))); hitsRepeat(S.grid.cells);
     // a set's column effects (Vigils: reverb on the pads and words, echoes on the lead), and its room
@@ -4655,10 +4683,487 @@ $('lmEmpty').addEventListener('click', () => {
 });
 $('lmClose').addEventListener('click', closeCellMenu);
 buildLoops();
+// ---------------------------------------------------------------------------
+// Sets and pack files. A set of yours: the grid (every cell and its settings, the column effects,
+// the tempo, key and reverb room), kept on this device. A pack file: one file (JSON) with a set
+// and/or sounds of yours in it, their recordings as 16-bit samples, to keep in Files or iCloud and
+// open on any device with Pocket Sampler; also what ☁ Send to the library uploads. Built-in sounds
+// are named, not copied: every copy of the app has them.
+// ---------------------------------------------------------------------------
+const gridSet = name => ({ name, bpm: S.bpm, root: S.root, scale: S.scale, space: spaceNow(), cells: S.grid.cells.map(col => col.map(c => (c ? { ...c } : null))),
+  fx: S.grid.colFx.map(f => ({ ...f })), quant: S.grid.quant, fade: S.grid.fade });
+$('lsSave').addEventListener('click', async () => {
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const name = prompt('Name the set:', `My set ${S.bpm} BPM`); if (!name?.trim()) return;
+  const id = 'm' + Date.now().toString(36);
+  await idbPut('mine', { id, name: name.trim(), type: 'set', created: Date.now(), set: gridSet(name.trim()) }, id);
+  await refreshMine(); drawSets(); status(`“${name.trim()}” is in My sets (Loops › ⚙).`);
+});
+function mySetMenu(m) {
+  const a = prompt(`“${m.name}”: type S to share it as a pack file, D to delete it, or a new name to rename it.`, 'S');
+  if (a == null) return;
+  if (/^s$/i.test(a.trim())) { sharePack(packOf({ name: m.name, set: m.set })); return; }
+  if (/^d$/i.test(a.trim())) { if (confirm(`Delete the set “${m.name}”? (Its sounds stay in My Sounds.)`)) idbDel('mine', m.id).then(refreshMine).then(drawSets); return; }
+  if (a.trim()) idbPut('mine', { ...m, name: a.trim(), set: { ...m.set, name: a.trim() } }, m.id).then(refreshMine).then(drawSets);
+}
+// 16-bit samples, as text (base64), and back
+function pcm16(f32) {
+  const v = new Int16Array(f32.length); for (let i = 0; i < f32.length; i++) v[i] = Math.max(-32767, Math.min(32767, Math.round(f32[i] * 32767)));
+  const b = new Uint8Array(v.buffer); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function unpcm16(b64) { const s = atob(b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); const v = new Int16Array(b.buffer), f = new Float32Array(v.length); for (let i = 0; i < v.length; i++) f[i] = v[i] / 32767; return f; }
+const recOut = m => ({ ...m, item: { ...m.item, bufs: m.item.bufs.map(b => ({ rate: b.rate, pcm16: pcm16(b.data) })) } });
+const recIn = m => ({ ...m, item: { ...m.item, bufs: m.item.bufs.map(b => ({ rate: b.rate, data: unpcm16(b.pcm16) })) } });
+// a pack: { name, set?, ids? } -> the file's contents. A set brings every sound of yours its cells use.
+function packOf({ name, set = null, ids = [] }) {
+  const want = new Set(ids);
+  for (const col of set?.cells || []) for (const c of col) if (c?.mine) want.add(c.mine);
+  const sounds = mine.filter(m => want.has(m.id) && m.item).map(recOut);
+  return { format: 'pocket-pack', version: 1, name, made: new Date().toISOString(), app: BUILD, ...(set && { set }), sounds };
+}
+const packFile = P => new File([JSON.stringify(P)], `${safeName(P.name)}.pocketpack.json`, { type: 'application/json' });
+async function sharePack(P) {
+  const f = packFile(P), mb = (f.size / 1e6).toFixed(1);
+  if (navigator.canShare?.({ files: [f] })) {
+    try { await navigator.share({ files: [f] }); status(`Shared ${f.name} (${mb} MB).`); return; }
+    catch (e) { if (e.name === 'AbortError') return; log('error', 'share: ' + e.message); }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  status(`Saved ${f.name} (${mb} MB): open it on another device with ⬇ Open a pack file.`);
+}
+$('lsShare').addEventListener('click', () => { const name = prompt('Name the pack:', `My pack ${S.bpm} BPM`); if (name?.trim()) sharePack(packOf({ name: name.trim(), set: gridSet(name.trim()) })); });
+$('lsOpen').addEventListener('click', () => $('importFile').click());
+// a pack file opened: its sounds into My Sounds (new ids, so nothing of yours is overwritten), its set into My sets
+async function importPack(P) {
+  if (P.format !== 'pocket-pack' || !Array.isArray(P.sounds)) throw new Error('not a Pocket Sampler pack file');
+  if (!db) throw new Error('saving needs this browser’s storage, which is not available here');
+  const map = new Map(), t = Date.now();
+  for (const [i, m] of P.sounds.entries()) {
+    const id = 'm' + (t + i).toString(36) + 'p'; map.set(m.id, id);
+    await idbPut('mine', { ...recIn(m), id, created: t + i, ...(P.from && { from: P.from }) }, id);
+  }
+  let setId = null;
+  if (P.set) {
+    const set = { ...P.set, cells: P.set.cells.map(col => col.map(c => (c?.mine ? { ...c, mine: map.get(c.mine) || c.mine } : c))) };
+    setId = 'm' + (t + P.sounds.length).toString(36) + 's';
+    await idbPut('mine', { id: setId, name: P.name, type: 'set', created: t, set }, setId);
+  }
+  await refreshMine(); drawBrowser(); drawSets();
+  return { sounds: P.sounds.length, set: setId && mine.find(m => m.id === setId) };
+}
+async function openPackFile(f) {
+  status(`Opening ${f.name}…`);
+  const P = JSON.parse(await f.text()), r = await importPack(P);
+  status(`“${P.name}”: ${r.sounds} sound${r.sounds === 1 ? '' : 's'} into My Sounds${r.set ? ', and its set into My sets (Loops › ⚙)' : ''}.`);
+  if (r.set && confirm(`Load the set “${P.name}” into the Loops now?`)) loadSet(r.set.id, false, r.set.set);
+}
+
+// ---------------------------------------------------------------------------
+// ☁ Send to the library: a pack (the grid, your sounds, one sound or a pack file) and notes on it
+// (what it is, who made it, where from and its license) go to the repository's library-inbox
+// branch by GitHub's API, with a token kept only in this browser. ☁ Shared (Menu › Sounds) lists
+// what has been sent (the inbox) and what Claude has filed in the library (sounds/shared), on every
+// device; tap one to add it to My Sounds. tools/inbox.py files the inbox: see CLAUDE.md.
+// ---------------------------------------------------------------------------
+const GH = { owner: 'munkachy', repo: 'Monastic-games', inbox: 'library-inbox' };
+const ghTok = () => { try { return localStorage.getItem('pocketGitHub') || ''; } catch (e) { return ''; } };
+async function gh(path, opts = {}, tok = ghTok()) {
+  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { ...opts,
+    headers: { Accept: 'application/vnd.github+json', ...(tok && { Authorization: `Bearer ${tok}` }), ...(opts.body && { 'Content-Type': 'application/json' }) } });
+  if (!r.ok) { const e = new Error(`GitHub: ${r.status} ${(await r.json().catch(() => ({}))).message || r.statusText}`); e.status = r.status; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+let sdFilePack = null;
+function openSend() {
+  const sel = $('sdOne'); sel.textContent = '';
+  for (const m of mine.filter(m => m.item)) sel.add(new Option(m.name, m.id));
+  $('sdName').value = `${new Date().toISOString().slice(0, 10)} ${S.bpm} BPM`; $('sdAbout').value = ''; $('sdSrc').value = '';
+  $('sdTokRow').hidden = !!ghTok(); $('sdForget').hidden = !ghTok(); sdFilePack = null; $('sdWhat').value = 'grid'; sdShow();
+  $('menu').hidden = true; $('sendBox').hidden = false;
+}
+function sdShow() { $('sdOneRow').hidden = $('sdWhat').value !== 'one'; $('sdSrcRow').hidden = $('sdWho').value === 'me'; }
+$('sdWhat').addEventListener('change', () => { sdShow(); if ($('sdWhat').value === 'file') $('sdFile').click(); if ($('sdWhat').value === 'one') $('sdName').value = $('sdOne').selectedOptions[0]?.text || ''; });
+$('sdOne').addEventListener('change', () => { $('sdName').value = $('sdOne').selectedOptions[0]?.text || ''; });
+$('sdWho').addEventListener('change', sdShow);
+$('sdFile').addEventListener('change', async () => {
+  const f = $('sdFile').files[0]; $('sdFile').value = ''; if (!f) return;
+  try { sdFilePack = JSON.parse(await f.text()); if (sdFilePack.format !== 'pocket-pack') throw new Error('not a Pocket Sampler pack file'); $('sdName').value = sdFilePack.name; $('sdInfo').textContent = `${f.name}: ${sdFilePack.sounds.length} sounds${sdFilePack.set ? ' and a set' : ''}.`; }
+  catch (e) { sdFilePack = null; status(`Could not read ${f.name}: ${e.message}`); }
+});
+$('sdCancel').addEventListener('click', () => { $('sendBox').hidden = true; });
+$('sdForget').addEventListener('click', () => { try { localStorage.removeItem('pocketGitHub'); } catch (e) {} $('sdTokRow').hidden = false; $('sdForget').hidden = true; status('The GitHub token is forgotten on this device.'); });
+const slug = s => s.toLowerCase().normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'pack';
+$('sdSend').addEventListener('click', async () => {
+  const name = $('sdName').value.trim(), what = $('sdWhat').value, who = $('sdWho').value, src = $('sdSrc').value.trim();
+  if (!name) { status('Give it a name first.'); return; }
+  if (who !== 'me' && !src) { status('Say where it is from and its license (or "unknown"): it goes in the list of every sound and its license.'); return; }
+  const tok = ghTok() || $('sdTok').value.trim();
+  if (!tok) { status('It needs your GitHub token (once on this device).'); return; }
+  const P = what === 'file' ? sdFilePack : what === 'grid' ? packOf({ name, set: gridSet(name) }) : what === 'all' ? packOf({ name, ids: mine.filter(m => m.item).map(m => m.id) }) : packOf({ name, ids: [$('sdOne').value] });
+  if (!P) { status('Choose the pack file first.'); return; }
+  if (!P.sounds.length && !P.set) { status('There is nothing of yours in it to send.'); return; }
+  const WHO = { me: 'made by Br. Augustine', recorded: 'recorded by Br. Augustine from another source', other: 'made by someone else' };
+  const sent = new Date().toISOString(), dir = `inbox/${sent.slice(0, 10)}-${slug(name)}-${Date.now().toString(36).slice(-4)}`;
+  const notes = { name, about: $('sdAbout').value.trim(), who, credit: WHO[who], source: who === 'me' ? '' : src, sent, app: BUILD,
+    device: /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'computer',
+    file: 'pack.pocketpack.json', sounds: P.sounds.map(m => ({ name: m.name, type: m.type, ...(m.folder && { folder: m.folder }) })), set: !!P.set, bpm: P.set?.bpm ?? null };
+  const md = `# ${name}\n\n${notes.about || '(no description)'}\n\n- Who: ${notes.credit}${notes.source ? `\n- From and license: ${notes.source}` : ''}\n- Sent: ${sent} from ${notes.device} (build ${BUILD})\n- In it: ${P.sounds.length} sound(s)${P.set ? ', and a Loops set' : ''}${notes.bpm ? ` at ${notes.bpm} BPM` : ''}\n${P.sounds.map(m => `  - ${m.name} (${m.type}${m.folder ? ', ' + m.folder : ''})`).join('\n')}\n`;
+  $('sdSend').disabled = true;
+  try {
+    status('Sending to the library…');
+    let head;
+    try { head = (await gh(`/git/ref/heads/${GH.inbox}`, {}, tok)).object.sha; }
+    catch (e) {
+      if (e.status !== 404) throw e;          // no inbox yet: made from the default branch
+      const repo = await gh('', {}, tok), base = (await gh(`/git/ref/heads/${repo.default_branch}`, {}, tok)).object.sha;
+      await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${GH.inbox}`, sha: base }) }, tok); head = base;
+    }
+    const tree = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha;
+    status(`Sending to the library… (${(JSON.stringify(P).length / 1e6).toFixed(1)} MB)`);
+    const blob = async text => (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: text, encoding: 'utf-8' }) }, tok)).sha;
+    const files = [[`${dir}/pack.pocketpack.json`, await blob(JSON.stringify({ ...P, from: { name, credit: notes.credit, source: notes.source } }))],
+      [`${dir}/notes.json`, await blob(JSON.stringify(notes, null, 1))], [`${dir}/notes.md`, await blob(md)]];
+    const t2 = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: tree, tree: files.map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha })) }) }, tok);
+    const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `Library inbox: ${name} (${notes.credit})`, tree: t2.sha, parents: [head] }) }, tok);
+    await gh(`/git/refs/heads/${GH.inbox}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
+    try { localStorage.setItem('pocketGitHub', tok); } catch (e) {}
+    $('sendBox').hidden = true; shared = null;
+    status(`“${name}” is in the library inbox: on every device in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed in the library with your notes.`);
+  } catch (e) {
+    status(`Could not send it: ${e.message}${e.status === 401 || e.status === 403 ? ' (check the token: Contents, read and write, on this repository)' : ''}`); log('error', 'send: ' + e.message);
+  } finally { $('sdSend').disabled = false; }
+});
+// ☁ Shared: what Claude has filed (sounds/shared/index.json, on the site) and what waits in the inbox
+let shared = null;
+async function sharedItems() {
+  if (shared) return shared;
+  const out = [];
+  try { for (const x of (await (await fetch('sounds/shared/index.json', { cache: 'no-cache' })).json()).items) out.push({ ...x, url: `sounds/shared/${x.file}`, filed: true }); } catch (e) {}
+  try {
+    const t = await gh(`/git/trees/${GH.inbox}?recursive=1`, {}, ghTok());
+    const dirs = [...new Set(t.tree.filter(x => /^inbox\/[^/]+\/notes\.json$/.test(x.path)).map(x => x.path.split('/')[1]))].sort().reverse();
+    const raw = p => `https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.inbox}/${p}`;
+    for (const d of dirs) {
+      try { const n = await (await fetch(raw(`inbox/${d}/notes.json`))).json(); out.push({ ...n, url: raw(`inbox/${d}/${n.file}`), filed: false }); } catch (e) {}
+    }
+  } catch (e) { if (e.status !== 404) log('error', 'shared: ' + e.message); }
+  return (shared = out);
+}
+// the ☁ Shared folder: each pack sent to the library, with its notes; tap to add it to My Sounds
+async function drawShared(list) {
+  const wait = document.createElement('p'); wait.className = 'note'; wait.textContent = 'Looking in the library…'; list.appendChild(wait);
+  const items = await sharedItems(); if (!list.isConnected || bPath.at(-1)[1] !== 'shared') return;
+  list.textContent = '';
+  if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Nothing shared yet. In My Sounds, ☁ Send to the library sends a pack (with your notes) here, for every device.'; list.appendChild(p); }
+  for (const x of items) {
+    const b = document.createElement('button'), small = document.createElement('small');
+    b.textContent = x.name;
+    small.textContent = `${x.filed ? 'in the library' : 'in the inbox'} · ${x.sounds?.length ?? '?'} sound${x.sounds?.length === 1 ? '' : 's'}${x.set ? ' + a set' : ''}${x.about ? ' · ' + x.about : ''} · ${x.credit || ''}`;
+    b.addEventListener('click', () => { if (confirm(`Add “${x.name}” to My Sounds${x.set ? ' (and its set to My sets)' : ''}?\n\n${x.about || ''}\n${x.credit || ''}${x.source ? '\nFrom: ' + x.source : ''}`)) addShared(x); });
+    b.appendChild(small); list.appendChild(b);
+  }
+  const again = document.createElement('button'); again.textContent = '↻ Look again'; again.addEventListener('click', () => { shared = null; drawBrowser(); }); list.appendChild(again);
+}
+async function addShared(x) {
+  status(`Getting “${x.name}”…`);
+  try {
+    const P = await (await fetch(x.url)).json(), r = await importPack(P);
+    status(`“${x.name}” is in My Sounds (${r.sounds} sound${r.sounds === 1 ? '' : 's'})${r.set ? ' and My sets (Loops › ⚙)' : ''}.`);
+  } catch (e) { status(`Could not get “${x.name}”: ${e.message}`); log('error', 'shared: ' + e.message); }
+}
+
+// ---------------------------------------------------------------------------
+// ⏺ Loop rec: what you play over the beat (or the Loops), straight into a loop. It starts on the
+// next bar (a bar to count in, if nothing was playing), records 1-8 bars and stops by itself.
+//   Notes: the pads' taps, as Quantize puts them, kept as notes; heard, kept (made once into a
+//   recording, by the export's engine) or opened as patterns to fix first.
+//   Sound: the sound itself, sample for sample in time with the beat (an AudioWorklet taps the
+//   mix): the pads alone (their own way into the mix, not the Loops grid's) or everything.
+// Kept, it is a loop like ⟳ Make a loop's (My Sounds, its folder, My loops), in the Loops in the
+// first empty cell of its column, playing on the next bar.
+// ---------------------------------------------------------------------------
+const LR_COLS = ['Guess from what I play', ...CHANNELS];
+const LR_FOLDER = ['Beats', 'Beats', 'Beats', 'Bass', 'Chords', 'Lead', 'Sub and color', 'Vox and keys'];
+const LR_PARTCOL = { Bass: 3, Sub: 6, Chords: 4, Lead: 5, 'Vox/Keys': 7, Pad: 4, 'Pluck/Arp': 5, 'Stab/FX': 6 };
+LR_COLS.forEach((n, i) => $('lrCol').add(new Option(n, i - 1)));
+let lrTake = null, lrMade = null, lrTimer = null, lrPv = null;
+const lrLabel = () => {
+  if (!lrTake) return '⏺ Loop';
+  const now = ctx.currentTime, bar = 16 * stepDur();
+  if (now < lrTake.t0) return `⏺ in ${Math.ceil((lrTake.t0 - now) / (bar / 4))}`;
+  return `⏺ ${Math.min(lrTake.bars, Math.floor((now - lrTake.t0) / bar) + 1)}/${lrTake.bars}`;
+};
+function lrTap() {
+  if (lrTake) { lrCancel('Loop rec stopped: nothing kept.'); return; }
+  try { const L = JSON.parse(localStorage.getItem('pocketLoopRec') || '{}'); if (L.mode) { $('lrMode').value = L.mode; $('lrBars').value = L.bars; $('lrWhat').value = L.what; $('lrCol').value = L.col; } } catch (e) {}
+  $('lrSet').hidden = false; $('lrAfter').hidden = true; $('lrWhatRow').hidden = $('lrMode').value !== 'sound'; $('lrBox').hidden = false;
+}
+$('lrMode').addEventListener('change', () => { $('lrWhatRow').hidden = $('lrMode').value !== 'sound'; });
+$('lrCancel').addEventListener('click', () => { $('lrBox').hidden = true; });
+function lrCancel(msg) {
+  clearTimeout(lrTimer); clearInterval(lrTake?.tick); lrTake?.node?.port.postMessage({ cancel: true }); lrTake = null; draw(); if (msg) status(msg);
+}
+// the recorder in the audio thread: it keeps the samples from t0 to t1 (by the audio clock) and sends them over
+const LR_WORKLET = `class LoopTap extends AudioWorkletProcessor {
+  constructor() { super(); this.on = false; this.port.onmessage = e => { const d = e.data; if (d.start != null) { this.s0 = Math.round(d.start * sampleRate); this.s1 = Math.round(d.end * sampleRate); this.on = true; } if (d.cancel) this.on = false; }; }
+  process(inputs) {
+    if (!this.on) return true;
+    const ch = inputs[0], L = ch[0]; if (!L) return true;
+    const R = ch[1] || L, f0 = currentFrame, a = Math.max(0, this.s0 - f0), b = Math.min(L.length, this.s1 - f0);
+    if (b > a) this.port.postMessage({ at: f0 + a - this.s0, L: L.slice(a, b), R: R.slice(a, b) });
+    if (f0 + L.length >= this.s1) { this.port.postMessage({ done: true }); this.on = false; }
+    return true;
+  }
+}
+registerProcessor('loop-tap', LoopTap);`;
+let lrModule = null;
+async function lrTapNode(what) {
+  lrModule ||= ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([LR_WORKLET], { type: 'application/javascript' })));
+  await lrModule;
+  const node = new AudioWorkletNode(ctx, 'loop-tap', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' });
+  const sink = ctx.createGain(); sink.gain.value = 0; node.connect(sink); sink.connect(ctx.destination);
+  const from = what === 'all' ? [eng.master] : [eng.padsWet, eng.padsDry];
+  for (const n of from) n.connect(node);
+  node.unplug = () => { for (const n of from) try { n.disconnect(node); } catch (e) {} try { node.disconnect(); sink.disconnect(); } catch (e) {} };
+  return node;
+}
+$('lrStart').addEventListener('click', async () => {
+  const mode = $('lrMode').value, bars = +$('lrBars').value, what = $('lrWhat').value, col = +$('lrCol').value;
+  try { localStorage.setItem('pocketLoopRec', JSON.stringify({ mode, bars, what, col })); } catch (e) {}
+  $('lrBox').hidden = true; ctx.resume();
+  let node = null;
+  if (mode === 'sound') {
+    if (!ctx.audioWorklet) { status('Recording the sound needs AudioWorklet, which this browser lacks: choose Notes instead.'); return; }
+    try { node = await lrTapNode(what); } catch (e) { status('Could not start the recorder: ' + e.message); log('error', 'loop rec: ' + e.message); return; }
+  }
+  // the next bar, or (if the beat isn't playing) the second bar after Play: one to count in
+  let b;
+  if (!playing) { start(); resumeLoops(); b = { j: 16, when: nextT + 16 * stepDur() }; }
+  else { b = nextBar(); if (b.when - ctx.currentTime < 0.25) b = { j: b.j + 16, when: b.when + 16 * stepDur() }; }
+  const t1 = b.when + bars * 16 * stepDur();
+  lrTake = { mode, bars, what, col, j0: b.j, t0: b.when, t1, bpm: S.bpm, swing: S.swing, key: { root: S.root, scale: S.scale }, notes: [], played: new Set(), node, chunks: [] };
+  if (node) {
+    const take = lrTake;
+    node.port.onmessage = e => { if (e.data.done) { node.unplug(); if (lrTake === take) lrDone(); } else take.chunks.push(e.data); };
+    node.port.postMessage({ start: b.when, end: t1 });
+  } else lrTimer = setTimeout(lrDone, (t1 - ctx.currentTime) * 1000 + 120);
+  lrTake.tick = setInterval(draw, 150);
+  status(`⏺ Loop rec: ${bars} bar${bars > 1 ? 's' : ''}, from the next bar${mode === 'sound' ? (what === 'all' ? ', everything you hear' : ', the pads') : ', the notes you play'}. Tap ⏺ again to stop.`);
+});
+// a tap while it records (notes mode keeps it; sound mode notes which sounds were played, for the column)
+function lrNote(key, h) {
+  const T = lrTake; T.played.add(S.cur);
+  if (T.mode !== 'notes') return;
+  const sd = stepDur(), N = T.bars * 16;
+  let pos = (h.at - T.t0) / sd, tk = h.tick != null && S.quantGrid ? h.tick - T.j0 : null;
+  if (pos < -0.5 || pos >= N) return;
+  pos = Math.max(0, pos); if (tk != null) tk = ((tk % N) + N) % N;
+  const n = { s: S.cur, k: key, oc: octOf(S.cur), pos, tk, hold: isHeld(S.cur) };
+  T.notes.push(n); if (n.hold) h.lr = n;
+}
+// the take's notes, made into a loop offline (the export's engine), tails folded back to the start
+async function lrRender(T) {
+  const sd = 60 / T.bpm / 4, len = T.bars * 16 * sd, tail = 2.5, sw = (2 * T.swing / 100 - 1) * sd;
+  const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR), e = new Engine(off, { live: false });
+  for (const n of T.notes) {
+    const at = n.tk != null ? n.tk * sd + (n.tk % 2 ? sw : 0) : n.pos * sd;
+    const v = noteOn(e, n.s, n.k, at, modsFor(n.s, []), withOct(n.s, null, n.oc), n.hold, T.key);
+    if (n.hold) v?.stop(at + (n.d ?? 1) * sd);
+  }
+  const buf = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
+  for (const c of [0, 1]) { const x = buf.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
+  return out;
+}
+// the captured sound, as one mono loop exactly its bars long: 5 ms fades at the seam, so it never clicks
+function lrJoin(T) {
+  const m = Math.round((T.t1 - T.t0) * ctx.sampleRate), out = new Float32Array(m);
+  for (const c of T.chunks) for (let i = 0; i < c.L.length; i++) { const j = c.at + i; if (j >= 0 && j < m) out[j] = (c.L[i] + c.R[i]) / 2; }
+  const X = Math.min(Math.round(0.005 * ctx.sampleRate), m >> 2);
+  for (let i = 0; i < X; i++) { const u = i / X; out[i] *= u; out[m - 1 - i] *= u; }
+  return out;
+}
+async function lrDone() {
+  const T = lrTake; clearInterval(T.tick); lrTake = null; draw();
+  if (T.mode === 'notes' && !T.notes.length) { status('Loop rec: no notes were played, so there is nothing to keep.'); return; }
+  status('Making the loop…');
+  let data;
+  try { data = T.mode === 'notes' ? await lrRender(T) : lrJoin(T); } catch (e) { status('Could not make the loop: ' + e.message); log('error', 'loop rec: ' + e.message); return; }
+  let top = 0; for (const v of data) top = Math.max(top, Math.abs(v));
+  if (top < 1e-4) { status('Loop rec: it was silent, so there is nothing to keep.'); return; }
+  if (top > 0.98) for (let i = 0; i < data.length; i++) data[i] *= 0.98 / top;
+  const rate = T.mode === 'notes' ? SR : ctx.sampleRate, buf = ctx.createBuffer(1, data.length, rate); buf.copyToChannel(data, 0);
+  const sounds = [...(T.mode === 'notes' ? new Set(T.notes.map(n => n.s)) : T.played)];
+  let col = T.col;
+  if (col < 0) col = sounds.length && sounds.every(isDrum) ? 0 : LR_PARTCOL[PART[sounds.find(si => !isDrum(si)) ?? -1]] ?? (T.what === 'all' ? 4 : 5);
+  lrMade = { T, buf, col };
+  const what = T.mode === 'notes' ? `${T.notes.length} note${T.notes.length > 1 ? 's' : ''}` : T.what === 'all' ? 'everything you heard' : 'the pads';
+  $('lrInfo').textContent = `${T.bars} bar${T.bars > 1 ? 's' : ''} at ${T.bpm} BPM: ${what}. Keep it and it goes in ${CHANNELS[col]} (and ${LR_FOLDER[col]} in the library).`;
+  $('lrName').value = `${sounds.length === 1 ? S.slots[sounds[0]]?.name || 'Take' : sounds.every(isDrum) ? 'Beat' : 'Take'} ${T.bpm} BPM`;
+  $('lrEdit').hidden = T.mode !== 'notes';
+  $('lrSet').hidden = true; $('lrAfter').hidden = false; $('lrBox').hidden = false;
+  status('The take is ready: hear it, keep it, or (notes) fix it as patterns.');
+}
+function lrStopPv() { try { lrPv?.stop(); } catch (e) {} lrPv = null; }
+$('lrHear').addEventListener('click', () => {
+  if (!lrMade) return; lrStopPv();
+  const s = ctx.createBufferSource(); s.buffer = lrMade.buf; s.connect(eng.bus); s.start(playing ? nextBar().when : ctx.currentTime + 0.02); lrPv = s;
+});
+$('lrDrop').addEventListener('click', () => { lrStopPv(); lrMade = null; $('lrBox').hidden = true; status('The take is thrown away.'); });
+$('lrKeep').addEventListener('click', async () => {
+  if (!lrMade) return; lrStopPv();
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const { T, buf, col } = lrMade, name = $('lrName').value.trim() || 'My take', folder = LR_FOLDER[col];
+  const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf, ...(col < 3 && { drumLoop: true }),
+    slices: [{ s: 0, e: buf.duration, name, bpm: T.bpm, bars: T.bars }] };
+  const id = 'm' + Date.now().toString(36);
+  await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot) }, id);
+  await refreshMine(); lrMade = null; $('lrBox').hidden = true; drawBrowser();
+  // the first empty cell of its column; if that is full, of the next column with room (a drum take stays a drum: it is in Beats)
+  let c = col, r = S.grid.cells[col].findIndex(x => !x);
+  for (let i = 1; r < 0 && i < 8; i++) { c = (col + i) % 8; r = S.grid.cells[c].findIndex(x => !x); }
+  if (r < 0) { status(`“${name}” is kept (Menu › Sounds › ${folder}, and My loops). The Loops grid is full: put it in a cell from there.`); return; }
+  S.grid.cells[c][r] = { mine: id, k: 0, name, mode: 'loop', ...(c >= 3 && { follow: false }) };
+  persist(); drawLoops(); warmGridSoon();
+  if (playing) tapCell(c, r);
+  status(`“${name}” is in the Loops (${CHANNELS[c]}, cell ${r + 1}${c !== col ? `: ${CHANNELS[col]} was full` : ''})${playing ? ', playing from the next bar' : ''}, and in the library (${folder}, My loops).`);
+});
+// ✎ Fix it as patterns: the notes into empty patterns, chained, to fix with the pads; then ⟳ Make a loop
+$('lrEdit').addEventListener('click', () => {
+  if (!lrMade) return; lrStopPv();
+  const T = lrMade.T, free = [];
+  for (let p = 0; p < 16 && free.length < T.bars; p++) if (S.patterns[p].every(st => !st.length)) free.push(p);
+  if (free.length < T.bars) { status(`It needs ${T.bars} empty patterns, and there are only ${free.length}: clear some first.`); return; }
+  checkpoint();
+  for (const n of T.notes) {
+    const j = n.tk != null ? n.tk : Math.floor(n.pos), o = n.tk != null ? 0 : Math.round((n.pos - j) * 1000) / 1000;
+    S.patterns[free[Math.floor(j / 16)]][j % 16].push({ s: n.s, k: n.k, ...(n.oc && { oc: n.oc }), ...(o > 0.01 && { o }), ...(n.hold && n.d && { d: S.quantGrid ? Math.max(1, Math.round(n.d)) : Math.round(n.d * 100) / 100 }) });
+  }
+  S.chain = free; S.pat = free[0]; lrMade = null; $('lrBox').hidden = true; dirty(); draw();
+  status(`The take is in pattern${free.length > 1 ? 's' : ''} ${free.map(p => p + 1).join(', ')}, chained. Fix any note, then ⟳ Make a loop to keep it.`);
+});
+
+// ---------------------------------------------------------------------------
+// Design (Menu › Design): drum hits and synths of your own (design.js), made once and kept as
+// recordings, in My Sounds and in kits of yours, like any sound.
+// ---------------------------------------------------------------------------
+const dz = { kind: 'kick', p: {}, seed: 1, sp: {} };
+const dzFmt = (k, v) => (k.key === 'kind' ? (v < 0.5 ? '808' : 'cymbal') : k.key === 'material' ? ['wood', 'metal', 'glass'][Math.round(v)]
+  : k.key === 'ftype' ? ['low', 'band', 'high'][Math.round(v)] : /^wave/.test(k.key) ? ['sine', 'tri', 'saw', 'square'][Math.round(v)]
+  : `${v >= 100 ? Math.round(v) : +(+v).toFixed(k.step < 0.01 ? 3 : k.step < 1 ? 2 : 0)}${k.unit && k.unit !== '×' ? ' ' + k.unit : k.unit}`);
+function dzKnobs(box, knobs, vals, changed) {
+  for (const k of knobs) {
+    const row = document.createElement('div'); row.className = 'row';
+    const id = 'dzk_' + k.key, lab = document.createElement('label'); lab.htmlFor = id; lab.textContent = k.label;
+    const r = document.createElement('input'); r.type = 'range'; r.id = id; r.min = k.lo; r.max = k.hi; r.step = k.step; r.value = vals[k.key];
+    const o = document.createElement('output'); o.textContent = dzFmt(k, vals[k.key]);
+    r.addEventListener('input', () => { vals[k.key] = +r.value; o.textContent = dzFmt(k, +r.value); changed?.(); });
+    row.append(lab, r, o); box.appendChild(row);
+  }
+}
+function dzDrawDrum() {
+  const D = DZ.DRUMS[dz.kind], box = $('dzKnobs'), pre = $('dzPresets'); box.textContent = ''; pre.textContent = '';
+  for (const [name, v] of Object.entries(D.presets)) {
+    const b = document.createElement('button'); b.textContent = name;
+    b.addEventListener('click', () => { dz.p = { ...v }; dz.name = name; dzDrawDrum(); dzHear(); }); pre.appendChild(b);
+  }
+  dzKnobs(box, D.knobs, dz.p);
+}
+function dzSetKind(kind) { dz.kind = kind; const [name, v] = Object.entries(DZ.DRUMS[kind].presets)[0]; dz.p = { ...v }; dz.name = name; dzDrawDrum(); }
+for (const [k, D] of Object.entries(DZ.DRUMS)) $('dzKind').add(new Option(D.name, k));
+$('dzKind').addEventListener('change', () => { dzSetKind($('dzKind').value); dzHear(); });
+// the hit as it is now, as a buffer
+function dzBuffer() { const x = DZ.renderDrum(dz.kind, dz.p, dz.seed), b = ctx.createBuffer(1, x.length, DZ.SR); b.copyToChannel(x, 0); return b; }
+let dzVoice = null;
+function dzPlay(b, at = ctx.currentTime + 0.01) { ctx.resume(); const s = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = 0.6; s.buffer = b; s.connect(g); g.connect(eng.bus); s.start(at); return s; }
+function dzHear() { try { dzVoice?.stop(); } catch (e) {} dzVoice = dzPlay(dzBuffer()); }
+$('dzHear').addEventListener('click', dzHear);
+$('dzDice').addEventListener('click', () => { dz.seed = (Math.random() * 1e9) | 0; dz.p = DZ.surprise(dz.kind, dz.seed); dz.name = 'Surprise'; dzDrawDrum(); dzHear(); });
+$('dzSeed').addEventListener('click', () => { dz.seed = (Math.random() * 1e9) | 0; dzHear(); });
+const dzHitName = () => `${dz.name && dz.name !== 'Surprise' ? dz.name + ' ' : 'My '}${DZ.DRUMS[dz.kind].name.toLowerCase()}`.replace(/^(\w)/, c => c.toUpperCase());
+// a hit as a sound: one slice, as a kit's
+const hitSlot = (b, name) => ({ factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), vol: 0.5 }, buf: b, made: 'MINE', slices: [{ s: 0, e: b.duration, name }] });
+function dzKits() {
+  const sel = $('dzKit'), was = sel.value; sel.textContent = '';
+  sel.add(new Option('New kit…', ''));
+  for (const m of mine.filter(m => m.type === 'pack')) sel.add(new Option(`${m.name} (${m.item.slices?.length || 0})`, m.id));
+  if ([...sel.options].some(o => o.value === was)) sel.value = was;
+}
+$('dzAdd').addEventListener('click', async () => {
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const name = prompt('Name the hit:', dzHitName()); if (!name?.trim()) return;
+  const b = dzBuffer(), id = $('dzKit').value;
+  let kit;
+  if (!id) {
+    const kn = prompt('Name the new kit:', 'My kit'); if (!kn?.trim()) return;
+    kit = { id: 'm' + Date.now().toString(36), name: kn.trim(), type: 'pack', created: Date.now(), slot: { factory: null, kind: 'chop', contiguous: false, name: kn.trim(), params: { ...defParams(), vol: 0.5 }, buf: null, slices: [] } };
+  } else {
+    const m = mine.find(x => x.id === id); kit = { ...m, slot: unpackSlot(m) };
+    if (kit.slot.slices.length >= 16) { status(`${m.name} is full: 16 sounds. Choose another kit, or New kit.`); return; }
+  }
+  kit.slot.slices.push({ s: 0, e: b.duration, name: name.trim(), buf: b });
+  const { slot, ...rec } = kit;
+  await idbPut('mine', { ...rec, item: packSlot(slot) }, rec.id); await refreshMine(); dzKits(); $('dzKit').value = rec.id;
+  status(`"${name.trim()}" is in ${rec.name} (${slot.slices.length} of 16). Load the kit on a drum sound (9–16), from Menu › Sounds › My packs.`);
+});
+$('dzSave').addEventListener('click', async () => { await saveMine(hitSlot(dzBuffer(), dzHitName()), dzHitName()); dzKits(); });
+// the synth
+for (const name of Object.keys(DZ.SYNTH_PRESETS)) $('dzSPreset').add(new Option(name, name));
+for (const [m, l] of DZ.REGISTERS) $('dzReg').add(new Option(l, m));
+function dzDrawSynth() {
+  const box = $('dzSKnobs'); box.textContent = '';
+  for (const [group, knobs] of DZ.SYNTH_KNOBS) { const h = document.createElement('div'); h.className = 'dzgroup'; h.textContent = group; box.appendChild(h); dzKnobs(box, knobs, dz.sp); }
+  $('dzReg').value = dz.sp.register;
+}
+function dzSetSynth(name) { dz.sp = { ...DZ.SYNTH_PRESETS[name] }; dz.sname = name; $('dzSPreset').value = name; dzDrawSynth(); }
+$('dzSPreset').addEventListener('change', () => { dzSetSynth($('dzSPreset').value); dzSHear(); });
+$('dzReg').addEventListener('change', () => { dz.sp.register = +$('dzReg').value; dzSHear(); });
+// ▶ Hear it: one note of it (the middle of its range), as an instrument of a single zone, tapped then held
+async function dzSHear() {
+  const p = { ...dz.sp }, one = await DZ.renderSynth({ ...p, _only: true }, () => {}).catch(e => { status(e.message); return null; });
+  if (!one) return;
+  const b = ctx.createBuffer(1, one.data.length, DZ.SR); b.copyToChannel(one.data, 0);
+  const z = one.zones[0], t = ctx.currentTime + 0.02;
+  const s1 = ctx.createBufferSource(); s1.buffer = b; const g = ctx.createGain(); g.gain.value = 0.7; s1.connect(g); g.connect(eng.bus); s1.start(t, z.s, z.e - z.s);
+  const s2 = ctx.createBufferSource(); s2.buffer = b; s2.loop = true; s2.loopStart = z.ls; s2.loopEnd = z.le; s2.connect(g);
+  const at2 = t + z.e - z.s + 0.15; s2.start(at2, z.hs); s2.stop(at2 + 2.2);
+}
+$('dzSHear').addEventListener('click', dzSHear);
+$('dzSDice').addEventListener('click', () => {
+  const names = Object.keys(DZ.SYNTH_PRESETS), base = DZ.SYNTH_PRESETS[names[(Math.random() * names.length) | 0]], p = { register: base.register };
+  for (const [, knobs] of DZ.SYNTH_KNOBS) for (const k of knobs) { const v = base[k.key] + (Math.random() - 0.5) * (k.hi - k.lo) * 0.35; p[k.key] = Math.min(k.hi, Math.max(k.lo, k.step >= 1 ? Math.round(v) : v)); }
+  dz.sp = p; dz.sname = 'Surprise'; dzDrawSynth(); dzSHear();
+});
+// the whole instrument, recorded: a slot like the app's recorded synths
+async function dzInstrument() {
+  status('Recording the instrument: a note every 6 half steps…');
+  const r = await DZ.renderSynth({ ...dz.sp }, f => status(`Recording the instrument… ${Math.round(f * 100)}%`));
+  const b = ctx.createBuffer(1, r.data.length, DZ.SR); b.copyToChannel(r.data, 0);
+  const name = `${dz.sname && dz.sname !== 'Surprise' ? dz.sname : 'My synth'}`;
+  return { factory: null, kind: 'multi', name, params: { ...defParams(), vol: 0.5, trig: 'gate' }, buf: b, base: r.base, zones: r.zones, holdLoop: true, made: 'MINE' };
+}
+$('dzSLoad').addEventListener('click', async () => {
+  const si = S.cur < 8 ? S.cur : 0, sl = await dzInstrument();
+  checkpoint(); S.slots[si] = sl; S.cur = si; S.lastKey[si] = 0; syncPanel(); dirty(); draw();
+  status(`${sl.name} → sound ${si + 1}: play it on the keys (Gate holds the notes). ★ Save keeps it in My Sounds.`);
+  noteOn(eng, si, 0, ctx.currentTime + 0.02);
+});
+$('dzSSave').addEventListener('click', async () => { const sl = await dzInstrument(); await saveMine(sl, sl.name); });
+document.querySelectorAll('[data-dz]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-dz]').forEach(x => x.classList.toggle('on', x === b));
+  $('dzDrum').hidden = b.dataset.dz !== 'drum'; $('dzSynth').hidden = b.dataset.dz !== 'synth';
+}));
+dzSetKind('kick'); dzSetSynth('Warm pad');
+document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => { dzKits(); $('dzSLoad').textContent = `Put on sound ${S.cur < 8 ? S.cur + 1 : 1}`; });
+
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
   grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   openCellMenu: (c, r) => openCellMenu(c, r),
+  press: k => press(k), release: k => release(k), lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
+    const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
+    for (let f = 0; f * F < x.length; f++) { let q = 0; for (let i = f * F; i < Math.min(x.length, (f + 1) * F); i++) q += x[i] * x[i]; e.push(Math.sqrt(q / F)); top = Math.max(top, e.at(-1)); }
+    return e.map((v, f) => (f > 0 && v > top * 0.05 && v > e[f - 1] * 2.5 ? +(f / 100).toFixed(2) : null)).filter(v => v != null); })() },
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch, keyOf: sl.params.keyOf }; },
   // drums and the key: is sound si a drum, and a fingerprint of one note of it as rendered (the same in every key, for a drum)
