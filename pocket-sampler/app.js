@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zb';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zc';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1938,7 +1938,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zb'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zc'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2031,7 +2031,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zb'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zc'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3883,8 +3883,8 @@ function buildLoops() {
     cellEls[c] = []; cellEls[c].head = head;
     for (let r = 0; r < ROWS; r++) {
       const b = document.createElement('button'); b.className = 'lcell'; b.dataset.c = c; b.dataset.r = r;
-      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="rbg"/><circle cx="12" cy="12" r="9.5" class="rfg" pathLength="100"/></svg><span></span><em></em>';
-      const el = { b, ring: b.querySelector('.rfg'), name: b.querySelector('span'), badge: b.querySelector('em') };
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="rbg"/><circle cx="12" cy="12" r="9.5" class="rfg" pathLength="100"/></svg><span></span><em></em><small class="lmeta"></small>';
+      const el = { b, ring: b.querySelector('.rfg'), name: b.querySelector('span'), badge: b.querySelector('em'), meta: b.querySelector('.lmeta') };
       let timer = 0, long = false;
       b.addEventListener('pointerdown', ev => {
         ev.preventDefault(); capture(b, ev); long = false;
@@ -3970,6 +3970,7 @@ function drawLoops() {
       el.b.classList.toggle('resume', !playing && !!S.grid.resume?.some(([cc, rr]) => cc === c && rr === r));
       el.b.classList.toggle('stopping', has('cur', r, (h, l) => h.stopAt != null && l.next?.r !== r));
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
+      el.meta.textContent = cell ? cellMeta(cell, c) : '';
       el.badge.textContent = cell ? [libTag(cell.lib, banks?.[LIBRARY[cell.lib]?.bank]?.from?.[cell.k] ?? cell.name), cell.mode === 'oneshot' ? '1×' : cell.mode === 'gate' ? 'G' : '', follows(cell) ? '♪' : ''].filter(Boolean).join(' ') : '';
       if (!on && !has('cur', r)) el.ring.style.strokeDashoffset = '100';
     }
@@ -4092,6 +4093,42 @@ let menuCell = null, menuPack = null, menuFolder = null, choosing = false;
 // column comes first, but anything can go anywhere. Instruments play on the Pads (⟳ Loop brings them here).
 const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox and keys'];
 const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.test(f[1]));
+// A sample's own tempo and key, shown where a cell's sound is chosen and on the grid. The key is found
+// by listening (once, one sound at a time, kept on this device); drums have none.
+const keyMemo = (() => { try { return JSON.parse(localStorage.getItem('pocketKeys') || '{}'); } catch (e) { return {}; } })();
+// unsure: found by listening to a bass or a sub, which play too few notes to tell major from minor
+const keyWord = (k, low) => (k ? `${(k.minor ? MIN_NAME : MAJ_NAME)[k.root]} ${k.minor ? 'min' : 'maj'}${!k.known && (k.sure < 0.35 || low) ? '?' : ''}` : '');
+const LOW_LIBS = new Set(['basshits', 'ebbbass', 'ebbsub']);
+// a pack whose key is known (banks.json "key": [root, scale]), as the Electro Boom Bap loops (F minor)
+const knownKey = lib => { const K = banks?.[LIBRARY[lib]?.bank || lib]?.key; return K ? { root: K[0], minor: K[1] !== 'major', sure: 1, known: true } : null; };
+const drumLib = lib => BEAT_PACKS.has(lib) || DRUM_BANKS.includes(lib) || isKitLib(lib) || !!LIBRARY[lib]?.kit;
+let keyQueue = Promise.resolve();
+function sampleKey(id, slot, k) {          // id: "lib#k", or "mine:" and its id
+  const known = id.includes('#') && knownKey(id.split('#')[0]);
+  if (known) return Promise.resolve(known);
+  if (keyMemo[id] !== undefined) return Promise.resolve(keyMemo[id]);
+  return (keyQueue = keyQueue.then(() => new Promise(ok => setTimeout(ok, 0))).then(() => {
+    if (keyMemo[id] === undefined) {
+      const x = slot?.slices?.[k]; if (!x) return null;
+      const r = findKey(x.buf || slot.buf, x.s, x.e);
+      keyMemo[id] = { root: r.root, minor: r.minor, sure: Math.round(r.sure * 100) / 100 };
+      try { localStorage.setItem('pocketKeys', JSON.stringify(keyMemo)); } catch (e) {}
+    }
+    return keyMemo[id];
+  }));
+}
+const tempoOf = cell => (cell.mine ? mine.find(m => m.id === cell.mine)?.item.slices?.[0]?.bpm : banks?.[LIBRARY[cell.lib]?.bank || cell.lib]?.loops?.[cell.k]?.[0]);
+const keyIdOf = cell => (cell.mine ? 'mine:' + cell.mine : `${cell.lib}#${cell.k}`);
+const keyWanted = (cell, c) => c >= 3 && !(cell.lib && drumLib(cell.lib)) && !(cell.mine && mine.find(m => m.id === cell.mine)?.folder === 'Beats');
+const keyAsked = new Set();
+function cellMeta(cell, c) {               // "92 · F min" (a tempo only for drums; the key once it is found)
+  const t = tempoOf(cell), id = keyIdOf(cell), want = keyWanted(cell, c), known = cell.lib && knownKey(cell.lib);
+  if (known && want) return [t ? Math.round(t) : '', keyWord(known)].filter(Boolean).join(' · ');
+  if (want && keyMemo[id] === undefined && !keyAsked.has(id)) {
+    keyAsked.add(id); cellBase(cell).then(sl => sl && sampleKey(id, sl, cell.mine ? 0 : cell.k)).then(() => drawLoops());
+  }
+  return [t ? Math.round(t) : '', want ? keyWord(keyMemo[id], c === 3 || c === 6 || LOW_LIBS.has(cell.lib)) : ''].filter(Boolean).join(' · ');
+}
 function folderSounds(f) {          // what a cell can take from a folder: your loops, packs (a sound of them), single hits
   if (typeof f[1] === 'string') return hitItems(f[1].slice(5)).filter(c => !doomed(c)).map(c => ({ hit: c }));
   return [...mine.filter(m => m.type === 'loop' && m.folder === f[0]).map(m => ({ mine: m })),
@@ -4201,7 +4238,11 @@ async function drawCellMenu() {
   if (!menuPack) {
     if (typeof F[1] === 'string' && !banks) { await bankList(); if (menuFolder === F[0]) drawCellMenu(); return; }
     for (const it of folderSounds(F)) {
-      if (it.mine) btn(it.mine.name, `my loop · ${(it.mine.item.slices?.[0]?.bars || 1) * 4} beats`, () => put({ mine: it.mine.id, k: 0, name: it.mine.name, mode: 'loop' }), cell?.mine === it.mine.id, fc);
+      if (it.mine) {
+        const x0 = it.mine.item.slices?.[0], tempo = `my loop · ${x0?.bpm ? Math.round(x0.bpm) + ' BPM · ' : ''}${(x0?.bars || 1) * 4} beats`;
+        const b = btn(it.mine.name, tempo, () => put({ mine: it.mine.id, k: 0, name: it.mine.name, mode: 'loop' }), cell?.mine === it.mine.id, fc);
+        if (it.mine.folder !== 'Beats') cellBase({ mine: it.mine.id }).then(sl => sl && sampleKey('mine:' + it.mine.id, sl, 0)).then(kk => { if (b.isConnected && kk) b.querySelector('small').textContent = `${tempo} · in ${keyWord(kk, it.mine.folder === 'Bass' || it.mine.folder === 'Sub')}`; });
+      }
       else if (it.pack) btn(LIBRARY[it.pack].name + ' ▸', `${libTag(it.pack)} · ${banks?.[LIBRARY[it.pack].bank || it.pack]?.from?.length || ''} sounds`, () => { menuPack = it.pack; drawCellMenu(); }, cell?.lib === it.pack, fc);
       else {
         const h = it.hit, x = { name: banks[h.from.lib].from[h.k], bpm: banks[h.from.lib].loops?.[h.k]?.[0] };
@@ -4218,10 +4259,16 @@ async function drawCellMenu() {
   const pack = menuPack, slot = await slotOf({ lib: pack });
   if (menuPack !== pack || !menuCell) return;
   wait.remove();
-  slot.slices.forEach((x, k) => !toDelete().has(`${pack}#${k}`) && btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
-    playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
-    putHit(pack, k, x);
-  }, cell?.lib === pack && cell.k === k, fc));
+  const keys = !drumLib(pack);
+  slot.slices.forEach((x, k) => {
+    if (toDelete().has(`${pack}#${k}`)) return;
+    const tempo = x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '';
+    const b = btn(x.name, tempo || (keys ? ' ' : ''), () => {
+      playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
+      putHit(pack, k, x);
+    }, cell?.lib === pack && cell.k === k, fc);
+    if (keys) sampleKey(`${pack}#${k}`, slot, k).then(kk => { if (b.isConnected && kk) b.querySelector('small').textContent = [tempo, 'in ' + keyWord(kk, LOW_LIBS.has(pack) || F?.[0] === 'Bass' || F?.[0] === 'Sub')].filter(Boolean).join(' · '); });
+  });
 }
 document.querySelectorAll('[data-lmode]').forEach(b => b.addEventListener('click', () => {
   const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
