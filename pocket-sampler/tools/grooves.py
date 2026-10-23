@@ -78,8 +78,46 @@ GROOVES = [('Hip hop', 'hiphop', 92, 0), ('Hip hop, slow', 'hiphop', 75, 0), ('F
            ('Jazz', 'jazz', 140, 0), ('Latin', 'latin', 110, 0), ('Afrobeat', 'afrobeat', 110, 0), ('Afro-Cuban', 'afrocuban', 100, 0),
            ('Reggae', 'reggae', 80, 0), ('New Orleans', 'neworleans', 100, 0), ('Blues shuffle', 'blues', 90, 0), ('Dance', 'dance', 120, 0)]
 
+# For the Beat menu's "Played by drummers": one bar each, as hits by part (the app finds each
+# part on whatever kit is chosen). A hit: [16th, part, velocity, how far off the 16th it fell].
+ROLE = {'kick': 'kick', 'snare': 'snare', 'rim': 'rim', 'xstick': 'rim', 'hat': 'hat', 'pedal': 'pedal', 'open': 'open',
+        'hitom': 'tom', 'lotom': 'tom', 'ride': 'ride', 'bell': 'ride', 'crash': 'crash'}
+BEATS = [('hiphop', 'Hip hop', 8), ('funk', 'Funk', 6), ('soul', 'Soul', 4), ('rock', 'Rock', 6), ('pop', 'Pop', 3), ('punk', 'Punk', 2),
+         ('jazz', 'Jazz', 4), ('latin', 'Latin', 4), ('afrobeat', 'Afrobeat', 3), ('afrocuban', 'Afro-Cuban', 2), ('reggae', 'Reggae', 3),
+         ('neworleans', 'New Orleans', 3), ('blues', 'Blues', 2), ('dance', 'Dance', 3), ('country', 'Country', 1), ('gospel', 'Gospel', 1),
+         ('highlife', 'Highlife', 1)]
+def one_bar(path):
+    hits = notes_of(path); w = steadiest(hits, 1); out = []
+    for t, part, vel in hits:
+        p = (t - w * 4) * 4
+        if p < -0.5 or p >= 15.5: continue
+        step = int(np.round(p)) % 16; o = round(p - np.round(p), 3)
+        if step == 0 and o < 0: o = 0.0
+        role = 'ghost' if part == 'snare' and vel < 45 else ROLE[part]
+        out.append([step, role, vel, o])
+    return sorted(out)
+
 if __name__ == '__main__':
-    if sys.argv[1] == 'songs':
+    if sys.argv[1] == 'beats':          # python3 grooves.py beats <groove folder> <sounds folder>
+        G, OUT = sys.argv[2], sys.argv[3]; beats = []
+        rows = [r for r in csv.DictReader(open(f'{G}/info.csv')) if r['beat_type'] == 'beat' and r['time_signature'] == '4-4' and float(r['duration']) > 8]
+        for style, name, n in BEATS:
+            # the ones that make a beat to loop: 60-200 BPM, a kick and a backbeat in the bar (jazz and
+            # the Latin styles keep time on the ride and the clave instead)
+            free = style in ('jazz', 'latin', 'afrocuban')
+            good = []
+            for r in sorted([r for r in rows if r['style'].split('/')[0] == style], key=lambda r: (int(r['bpm']), r['id'])):
+                if not 60 <= int(r['bpm']) <= 200: continue
+                hits = one_bar(f'{G}/{r["midi_filename"]}'); roles = {h[1] for h in hits}
+                if len(hits) < 6 or not (free or ('kick' in roles and roles & {'snare', 'rim'})): continue
+                good.append((r, hits))
+            for i in range(min(n, len(good))):                  # spread over their tempos
+                r, hits = good[round(i * (len(good) - 1) / max(1, n - 1))]
+                beats.append({'style': name, 'bpm': int(r['bpm']), 'by': r['drummer'].replace('drummer', 'drummer '), 'hits': hits})
+        json.dump({'from': 'Groove MIDI Dataset (Gillick, Roberts, Engel, Eck, Bamman; Magenta 2019; CC BY 4.0)', 'beats': beats},
+                  open(f'{OUT}/humanbeats.json', 'w'), separators=(',', ':'))
+        print(len(beats), 'beats:', ', '.join(sorted({f"{b['style']}" for b in beats})))
+    elif sys.argv[1] == 'songs':
         G = sys.argv[2]; out = []
         for name, style, bpm, n in GROOVES:
             path, b, r = pick(G, style, bpm, n)
