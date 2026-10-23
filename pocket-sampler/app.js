@@ -3,11 +3,17 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261022za';
+import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
 const capture = (el, ev) => { try { el.setPointerCapture(ev.pointerId); } catch (e) {} };
+// Where a finger is along an element's own width (0-1), whichever way the screen is turned
+// (held upright, the Pads and the Loops are turned a quarter turn: the width then runs down the glass).
+function along(el, ev) {
+  const rc = el.getBoundingClientRect(), w = el.offsetWidth, turned = Math.abs(rc.height - w) < Math.abs(rc.width - w);
+  return Math.min(1, Math.max(0, turned ? (ev.clientY - rc.top) / rc.height : (ev.clientX - rc.left) / rc.width));
+}
 // The audio engine. It can be thrown away and built again (rebuildAudio) if
 // the phone leaves it stuck; recorded sound lives in AudioBuffers, which don't
 // belong to any one engine, so nothing is lost.
@@ -534,8 +540,10 @@ const activeFx = new Set();
 const fxAim = new Map();     // held effect -> the tracks it is aimed at: 'all' or a Set of sounds
 let seqFx = null, lastFx = null;
 // aim: from an FX key, the tracks chosen in the FX panel; from a custom button, all.
+// The tracks the effects hit: those chosen in FX mode's Tracks (all, at first).
+const aimNow = () => (S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget));
 function engageFx(k, aim = 'all') {
-  const f = FX[k][1]; activeFx.add(k); fxAim.set(k, aim); lastFx = k; ctx.resume();
+  const f = FX[k][1]; activeFx.add(k); fxAim.set(k, aim); lastFx = k; ctx.resume(); routeLoops();
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
   if (f.seq) {
     const at = headTick >= 0 ? headTick : tick;
@@ -548,6 +556,17 @@ function releaseFx(k) {
   const f = FX[k][1]; activeFx.delete(k); fxAim.delete(k);
   if (f.seq && seqFx?.k === k) seqFx = null;
   if (f.audio) eng.setFx(f.audio, false, stepDur());
+  routeLoops();
+}
+// The Loops grid isn't one of the 16 sounds: while an effect aimed at chosen
+// tracks is on, the loops go past the Pads effects (their columns keep their own).
+function routeLoops() {
+  const aimed = [...activeFx].some(k => FX[k][1].audio && fxAim.get(k) !== 'all');
+  for (const k of eng.cols || []) if (k) {
+    const to = aimed ? eng.dry : eng.bus; if (k.to === to) continue;
+    for (const n of [k.out, k.dout]) { try { n.disconnect(k.to || eng.bus); } catch (e) {} n.connect(to); }
+    k.to = to;
+  }
 }
 // How the effects in `list` ([effect, tracks] pairs) change one note of sound si:
 // only the ones aimed at it count; an audio effect aimed elsewhere sends it
@@ -607,7 +626,7 @@ function press(k) {
     case 'fx': {
       const id = S.fxSlots[k];
       if (S.fxLatch && activeFx.has(id)) releaseFx(id);           // tap on, tap again off
-      else engageFx(id, S.fxTarget === 'all' ? 'all' : new Set(S.fxTarget));
+      else engageFx(id, aimNow());
       break;
     }
     default: {
@@ -1339,15 +1358,17 @@ function drawEd() {
   $('edPut').textContent = `Put ${ed.sel ? 'selection' : 'it'} on sound`;
 }
 let edDrag = null;
-edCv.addEventListener('pointerdown', ev => { capture(edCv, ev); edDrag = { x: ev.offsetX, t: edT(ev.offsetX) }; });
+edCv.addEventListener('pointerdown', ev => { capture(edCv, ev); const x = along(edCv, ev) * edCv.clientWidth; edDrag = { x, t: edT(x) }; });
 edCv.addEventListener('pointermove', ev => {
-  if (!edDrag || Math.abs(ev.offsetX - edDrag.x) < 5) return;
-  const t = Math.max(0, Math.min(ed.buf.duration, edT(ev.offsetX)));
+  const x = along(edCv, ev) * edCv.clientWidth;
+  if (!edDrag || Math.abs(x - edDrag.x) < 5) return;
+  const t = Math.max(0, Math.min(ed.buf.duration, edT(x)));
   ed.sel = [Math.min(edDrag.t, t), Math.max(edDrag.t, t)]; drawEd();
   edPlay(t, 0.12);                                         // hear where you are
 });
 edCv.addEventListener('pointerup', ev => {
-  if (edDrag && Math.abs(ev.offsetX - edDrag.x) < 5) { ed.sel = null; ed.cur = Math.max(0, edT(ev.offsetX)); edPlay(ed.cur, 0.6); drawEd(); }
+  const x = along(edCv, ev) * edCv.clientWidth;
+  if (edDrag && Math.abs(x - edDrag.x) < 5) { ed.sel = null; ed.cur = Math.max(0, edT(x)); edPlay(ed.cur, 0.6); drawEd(); }
   edDrag = null;
 });
 let edSrc = null;
@@ -1464,7 +1485,7 @@ customs.forEach((b, i) => {
   b.addEventListener('pointerdown', ev => {
     const a = act(); if (a.fx == null) return;
     ev.preventDefault(); capture(b, ev); ctx.resume();
-    if (S.fxLatch && activeFx.has(a.fx)) releaseFx(a.fx); else engageFx(a.fx);
+    if (S.fxLatch && activeFx.has(a.fx)) releaseFx(a.fx); else engageFx(a.fx, aimNow());
     b.classList.add('held'); draw();
   });
   const up = () => {
@@ -1544,6 +1565,8 @@ $('aimList').addEventListener('change', () => { $('aimAll').checked = !$('aimLis
 $('aimDone').addEventListener('click', () => {
   const picked = [...$('aimList').querySelectorAll('input:checked')].map(c => +c.value);
   S.fxTarget = picked.length ? picked : 'all';
+  for (const k of activeFx) fxAim.set(k, aimNow());       // the effects already on move to these tracks too
+  routeLoops();
   $('aimBox').hidden = true; persist(); draw();
 });
 function drawFxPanel() {
@@ -1627,7 +1650,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022za'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1720,7 +1743,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261022za'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2113,6 +2136,19 @@ function setLook(look) {
 try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}
 $('look').value = classic() ? 'classic' : 'dark';
 $('look').addEventListener('change', e => setLook(e.target.value));
+// The Pads sideways (the default), as the Loops; or upright. Sideways is turned a quarter turn
+// while the phone is upright, and lies as it is when the phone is really sideways.
+const padsWay = () => { try { return localStorage.getItem('pocketPads') || 'side'; } catch (e) { return 'side'; } };
+const tallQ = matchMedia('(orientation: portrait)');
+function layPads(first) {
+  const side = padsWay() !== 'upright', tall = tallQ.matches, R = document.documentElement;
+  R.classList.toggle('sidepads', side || !tall); R.classList.toggle('turned', side && tall);
+  $('padsWay').value = side ? 'side' : 'upright';
+  if (!first) { lastSeen = []; drawWheel(); }
+}
+tallQ.addEventListener?.('change', () => { layPads(); draw(); });
+$('padsWay').addEventListener('change', e => { try { localStorage.setItem('pocketPads', e.target.value); } catch (er) {} layPads(); draw(); });
+layPads(true);
 document.querySelectorAll('[data-wv]').forEach(b => b.addEventListener('click', () => {
   S.wview = b.dataset.wv; persist(); draw();
   status(S.wview === 'perc' ? 'Percussion: the steps show the drum hits, each part in its colour (kick red, snare orange, hats yellow…).'
@@ -2272,8 +2308,8 @@ let drag = null;
 cv.addEventListener('pointerdown', ev => {
   const v = waveView(); if (!v?.marks) return;
   ctx.resume(); capture(cv, ev);
-  const r = cv.getBoundingClientRect(), T = v.a + (ev.clientX - r.left) / r.width * (v.b - v.a);
-  const near = v.marks.findIndex((m, k) => k > 0 && Math.abs((m.s - T) / (v.b - v.a) * r.width) < 14);
+  const T = v.a + along(cv, ev) * (v.b - v.a);
+  const near = v.marks.findIndex((m, k) => k > 0 && Math.abs((m.s - T) / (v.b - v.a) * cv.offsetWidth) < 14);
   const sl = S.slots[S.cur];
   if (near > 0 && sl.contiguous) { drag = near; return; }
   const k = v.marks.findIndex(m => T >= m.s && T < m.e);
@@ -2281,8 +2317,8 @@ cv.addEventListener('pointerdown', ev => {
 });
 cv.addEventListener('pointermove', ev => {
   if (drag == null) return;
-  const v = waveView(), r = cv.getBoundingClientRect(), sl = S.slots[S.cur];
-  const T = v.a + (ev.clientX - r.left) / r.width * (v.b - v.a), m = sl.slices;
+  const v = waveView(), sl = S.slots[S.cur];
+  const T = v.a + along(cv, ev) * (v.b - v.a), m = sl.slices;
   const lo = m[drag - 1].s + 0.01, hi = (m[drag + 1]?.s ?? v.b) - 0.01;
   m[drag].s = Math.min(hi, Math.max(lo, T)); m[drag - 1].e = m[drag].s;
 });
@@ -2743,9 +2779,9 @@ function colChain(c) {
   eng.cols ||= [];
   if (!eng.cols[c]) {
     const k = { inp: ctx.createGain(), out: ctx.createGain(), dry: ctx.createGain(), dout: ctx.createGain(), ins: null, send: null, type: null };
-    k.out.connect(eng.bus); k.dry.connect(k.dout); k.dout.connect(eng.bus);
+    k.out.connect(eng.bus); k.dry.connect(k.dout); k.dout.connect(eng.bus); k.to = eng.bus;
     k.out.gain.value = k.dout.gain.value = colLevel(c);
-    eng.cols[c] = k; wireColFx(c);
+    eng.cols[c] = k; wireColFx(c); routeLoops();
   }
   return eng.cols[c];
 }
@@ -2938,11 +2974,7 @@ function tickGrid(now) {
 
 // A volume bar you drag: it reads the finger along its own length, whichever way the grid is turned.
 function fader(el, set) {
-  const at = ev => {
-    const rc = el.getBoundingClientRect(), turned = rc.height > rc.width;     // the grid turned a quarter turn
-    const v = (turned ? (ev.clientY - rc.top) / rc.height : (ev.clientX - rc.left) / rc.width);
-    set(Math.round(Math.min(1, Math.max(0, v)) * 100) / 100);
-  };
+  const at = ev => set(Math.round(along(el, ev) * 100) / 100);
   el.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(el, ev); el.dragging = true; at(ev); });
   el.addEventListener('pointermove', ev => { if (el.dragging) at(ev); });
   for (const t of ['pointerup', 'pointercancel']) el.addEventListener(t, () => { el.dragging = false; });
@@ -3189,19 +3221,17 @@ function drawCellWave(x, base, cell, c) {
 }
 {
   const cv = $('lmWave');
-  // The wave's own length, whichever way the grid is turned.
-  const along = ev => { const rc = cv.getBoundingClientRect(), turned = rc.height > rc.width; return Math.min(1, Math.max(0, turned ? (ev.clientY - rc.top) / rc.height : (ev.clientX - rc.left) / rc.width)); };
   let p0 = null, info = null;
   const snap = v => (info?.x.bpm ? Math.round(v * info.steps) / info.steps : v);
   cv.addEventListener('pointerdown', async ev => {
     const cell = menuCellNow(); if (!cell) return;
-    ev.preventDefault(); capture(cv, ev); p0 = along(ev);
+    ev.preventDefault(); capture(cv, ev); p0 = along(cv, ev);
     const base = await slotOf({ lib: cell.lib }), x = base.slices[cell.k];
     info = { base, x, cell, steps: x.bpm ? Math.round((x.e - x.s) / (15 / x.bpm)) : 0 };
   });
   cv.addEventListener('pointermove', ev => {
     if (p0 == null || !info) return;
-    const p = along(ev); if (Math.abs(p - p0) < 0.015) return;
+    const p = along(cv, ev); if (Math.abs(p - p0) < 0.015) return;
     waveSel = [snap(Math.min(p0, p)), snap(Math.max(p0, p))];
     drawCellWave(info.x, info.base, info.cell, menuCell.c);
   });
@@ -3236,6 +3266,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch }; },
+  eng: () => eng,
   peak: (ms = 800) => new Promise(ok => {      // the loudest the master output got, over ms
     const d = new Float32Array(scope.fftSize); let m = 0;
     const id = setInterval(() => { scope.getFloatTimeDomainData(d); for (const v of d) m = Math.max(m, Math.abs(v)); }, 15);

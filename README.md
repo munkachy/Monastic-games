@@ -200,6 +200,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   the quantize (a beat to 4 bars, or off), fades, and Stop all loops. Each
   column has a volume and a mute. Tempo, key, Play and FX are shared with
   the Pads tab.
+- **Sideways:** the Pads lie sideways like the Loops (screen and buttons
+  left, keys right), turned a quarter turn when the phone is upright;
+  Menu › Buttons › Pads › Upright brings back the tall layout. Effects
+  aimed at chosen tracks (FX › Tracks) hit only those, from the FX keys and
+  the blue buttons alike, the effects already on included.
 - **One screen for playing:** the keys and the playing buttons fit without
   scrolling; **☰ Menu** opens over them with a sound browser (Hits, Packs
   and My Sounds, by family), sound settings, beat and tempo, voice, help and a log.
