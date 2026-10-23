@@ -231,6 +231,12 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   howling lead, sub and rain; and words of the Rule of St Benedict in
   pairs (A little rule… / …for beginners), robot cells whose words can be
   changed. It brings its own column effects and the Aachen chapel's reverb.
+- **New sounds for Vigils:** eight instruments made with Plaits' engines
+  and kept as recordings: Vigil Strings, Night Swarm, Chant, Cloister Bass,
+  Howl, Lauds Pluck, Compline Bell and Night Glass.
+- **Old records:** real record noise in place of the made-up vinyl: the
+  run-in and run-out grooves of Edison's own discs and cylinders
+  (1888-1925, public domain), looped seamlessly.
 - **Drums made with Plaits:** each pack's kit is made with Mutable
   Instruments Plaits' drum engines (MIT), shaped and checked against the
   recorded kits, with kick, snare and tops loops of it.
@@ -297,7 +303,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   bass hits, pads and funk horns (TidalCycles' Dirt-Samples, the TR-808
   recorded by Michael Fischer, VCSL, and some made in code).
 - **Loops:** 14 drum loops played on these kits, breakbeats (the Amen and
-  others), and vinyl crackle and ambience; each key a loop that comes in on
+  others), old records (the hiss and crackle of Edison's discs and
+  cylinders, 1888-1925) and ambience; each key a loop that comes in on
   the next bar in step, follows the tempo and key, and stops with the beat.
 - **Human Grooves:** 16 beats played by drummers, a style each (hip hop,
   funk, soul, rock, pop, punk, jazz, Latin, Afrobeat, Afro-Cuban, reggae,
@@ -330,7 +337,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   accents and the video-game sounds), Vox and
   keys (blue), Pads, Plucks, Stabs and FX.
 - **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 45 loops written
-  for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
+  for the grid, with kit hits, an old record, Alleluia and Selah: F minor at 92
   BPM, swung. Its own kit (16 hits made with Mutable Instruments Plaits'
   drum engines, MIT) and kick, snare and tops loops of it, a part each, so
   any three go together; 808, electric, Reese and
