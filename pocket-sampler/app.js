@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023j';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -254,9 +254,13 @@ function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok
 // The first version's 16 effects, in key order (old saved patterns used these numbers).
 const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 'scramble', 'dive',
   'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
-const DEFAULT_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat',      // the four small buttons, at first
-  'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',      // and the eight under the keys
-  'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // and eight more, sideways
+// Your buttons, a row (sideways) for each kind of thing, in that kind's colour: rhythm, pitch and key, the sound,
+// the voice, effects. Upright, the first four sit beside Copy and Undo and the next eight under the keys.
+const DEFAULT_CUSTOM_IDS = ['mute', 'beat', 'chain', 'beats',
+  'octdown', 'octup', 'key', 'nextkey', 'roll', 'edit', 'clear', 'export',
+  'rap', 'newflow', 'hearrap', 'voice', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
+const OLD_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat', 'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',
+  'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // before the rows had colours
 const S = {
   slots: [], cur: 0, lastKey: new Array(16).fill(0), mode: 'play',
   patterns: Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => [])),
@@ -1582,24 +1586,25 @@ $('menuClose').addEventListener('click', closeMenu);
 // Custom buttons: four small buttons whose job you choose (Menu › Buttons).
 // An effect works while the button is held, like an FX key.
 // ---------------------------------------------------------------------------
+const THEMES = [['rhythm', 'Rhythm (red)'], ['pitch', 'Pitch and key (purple)'], ['sound', 'The sound (amber)'], ['voice', 'Voice (blue)']];
 const ACTIONS = {
-  mute: { name: 'Mute drums', label: () => 'Mute', on: () => !!S.muteBeat, tap: () => toggleMute() },
-  export: { name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
-  roll: { name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
-  beat: { name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
-  beats: { name: 'Beat settings', label: () => 'Beats', tap: () => openMenu('tBeat') },
-  clear: { name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
-  edit: { name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
-  chain: { name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
-  key: { name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
-  nextkey: { name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
-  voice: { name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
-  rap: { name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
-  newflow: { name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
-  hearrap: { name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
-  octdown: { name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
-  octup: { name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
-  ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
+  mute: { th: 'rhythm', name: 'Mute drums', label: () => 'Mute', on: () => !!S.muteBeat, tap: () => toggleMute() },
+  beat: { th: 'rhythm', name: 'New beat', label: () => '🎲 Beat', tap: () => genBeat() },
+  chain: { th: 'rhythm', name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
+  beats: { th: 'rhythm', name: 'Rhythm (open the Rhythm page: kit, beat, bass)', label: () => 'Rhythm', tap: () => openMenu('tBeat') },
+  octdown: { th: 'pitch', name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
+  octup: { th: 'pitch', name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
+  key: { th: 'pitch', name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
+  nextkey: { th: 'pitch', name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
+  roll: { th: 'sound', name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
+  edit: { th: 'sound', name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
+  clear: { th: 'sound', name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
+  export: { th: 'sound', name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
+  rap: { th: 'voice', name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
+  newflow: { th: 'voice', name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
+  hearrap: { th: 'voice', name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
+  voice: { th: 'voice', name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
+  ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { th: 'fx', name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
 const customs = [...document.querySelectorAll('button.custom')];
@@ -1620,9 +1625,13 @@ customs.forEach((b, i) => {
 });
 for (let i = 0; i < customs.length; i++) {
   const sel = $('cb' + i);
-  for (const [id, a] of Object.entries(ACTIONS)) if (!a.fx) sel.add(new Option(a.name, id));
+  for (const [th, label] of THEMES) {
+    const og = document.createElement('optgroup'); og.label = label;
+    for (const [id, a] of Object.entries(ACTIONS)) if (a.th === th) og.appendChild(new Option(a.name, id));
+    sel.appendChild(og);
+  }
   for (const [g, ids] of FX_GROUPS) {
-    const og = document.createElement('optgroup'); og.label = 'Effect: ' + g;
+    const og = document.createElement('optgroup'); og.label = 'Effect (pink): ' + g;
     for (const id of ids) og.appendChild(new Option(FX[id][0], 'fx:' + id));
     sel.appendChild(og);
   }
@@ -1631,7 +1640,7 @@ for (let i = 0; i < customs.length; i++) {
 function drawCustom() {
   customs.forEach((b, i) => {
     const id = ACTIONS[S.custom[i]] ? S.custom[i] : DEFAULT_CUSTOM[i], a = ACTIONS[id];
-    b.textContent = a.label(); b.classList.toggle('on', !!a.on?.()); $('cb' + i).value = id;
+    b.textContent = a.label(); b.dataset.th = a.th; b.classList.toggle('on', !!a.on?.()); $('cb' + i).value = id;
   });
 }
 $('copySound').addEventListener('click', () => {
@@ -1773,7 +1782,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1866,7 +1875,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2994,6 +3003,7 @@ async function load() {
     while (S.custom.length < DEFAULT_CUSTOM_IDS.length) S.custom.push(DEFAULT_CUSTOM_IDS[S.custom.length]);   // saves from before the row under the keys
     if (!saved.chainButton && S.custom[11] === 'voice') S.custom[11] = 'chain';    // the Chain button took Voice's place, once
     S.chainButton = true;
+    if (S.custom.join() === OLD_CUSTOM_IDS.join()) S.custom = [...DEFAULT_CUSTOM_IDS];   // never changed: the new rows
   }
   else demo();
   setVolume(); syncPanel(); draw();
