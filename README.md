@@ -224,6 +224,13 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Cathedrals, the St. Nicholas Chapel of Aachen Cathedral, a church in
   Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
   Zenodo datasets; CC BY 4.0, credited in Help).
+- **Vigils loop set** (Loops › ⚙ › Sets): night electronica in G minor at
+  144 BPM, broken beats, inspired by Remixlive's "Breakpoint Electro" and
+  borrowing nothing from it: its own Plaits kit and kick, snare and tops
+  loops; bass, pads, the abbey organ and choir, celestial arpeggios and a
+  howling lead, sub and rain; and words of the Rule of St Benedict in
+  pairs (A little rule… / …for beginners), robot cells whose words can be
+  changed. It brings its own column effects and the Aachen chapel's reverb.
 - **Drums made with Plaits:** each pack's kit is made with Mutable
   Instruments Plaits' drum engines (MIT), shaped and checked against the
   recorded kits, with kick, snare and tops loops of it.
