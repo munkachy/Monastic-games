@@ -304,6 +304,42 @@ function wsola(x, factor) {
   for (let i = 0; i < N; i++) if (norm[i] > 1e-3) out[i] /= norm[i];
   return out;
 }
+// Drum loops are stretched another way, as drum samplers do (beat slicing): each hit is found
+// (where the sound jumps up against the 1/8 second around it), and the loop is cut there and on
+// every 16th note with no hit found near it, so a soft hit is never left in its old place. Every
+// piece is put down at its new time, as it was recorded; slowed, a little silence follows each
+// piece, sped up, each is cut short (with a 6 ms fade). The hits stay crisp, where stretching
+// smears them into double hits. (Tried on the app's beats and breaks: the hits land where they
+// should far more often than stretched, at 92, 120 and 140 BPM.)
+function slicePoints(x, rate, bpm) {
+  const hop = Math.max(1, Math.round(rate * 0.004)), n = Math.floor(x.length / hop), en = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let a = 0; for (let j = Math.max(1, i * hop); j < (i + 1) * hop; j++) { const d = x[j] - x[j - 1]; a += d * d; } en[i] = Math.sqrt(a / hop); }
+  const W = Math.round(0.12 * rate / hop), G = Math.round(0.035 * rate / hop), pts = [0];
+  let last = 0, sum = 0;
+  for (let j = 0; j < Math.min(n, W); j++) sum += en[j];
+  for (let i = 0; i < n - 1; i++) {
+    if (i + W < n) sum += en[i + W];
+    if (i - W - 1 >= 0) sum -= en[i - W - 1];
+    if (i < 3) continue;
+    const m = sum / (Math.min(n, i + W + 1) - Math.max(0, i - W)), before = Math.max(en[i - 1], en[i - 2], en[i - 3]);
+    if (en[i] > before * 1.25 && en[i] > m * 0.4 && en[i] >= en[i + 1] * 0.8 && i - last >= G) { pts.push(Math.max(0, (i - 1) * hop)); last = i; }
+  }
+  if (bpm) {
+    const st = 60 / bpm / 4 * rate, near = 0.035 * rate;
+    for (let t = st; t < x.length - st / 4; t += st) if (!pts.some(p => Math.abs(p - t) < near)) pts.push(Math.round(t));
+    pts.sort((a, b) => a - b);
+  }
+  return pts;
+}
+function sliceStretch(x, rate, factor, bpm) {
+  const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N), fade = Math.round(0.006 * rate);
+  for (let k = 0; k < pts.length; k++) {
+    const a = pts[k], b = k + 1 < pts.length ? pts[k + 1] : x.length, o = Math.round(a * factor);
+    const room = (k + 1 < pts.length ? Math.round(b * factor) : N) - o, len = Math.min(b - a, room);
+    for (let i = 0; i < len && o + i < N; i++) out[o + i] += x[a + i] * (i > len - fade ? (len - i) / fade : 1);
+  }
+  return out;
+}
 let stretchWorker, jobSeq = 0;
 const jobs = new Map();
 function runWsola(x, factor) {
@@ -322,13 +358,13 @@ const stretchCache = new WeakMap();
 // Stretched copies take memory (a few MB each): only the latest so many are kept, of all the loops.
 const stretchOrder = [];
 export const stretchLimit = { n: 40 };
-const stretchKey = (s, e, f) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}`;
-export function stretchLoop(buf, s, e, factor) {
+const stretchKey = (s, e, f, drums) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}${drums ? ':d' : ''}`;
+export function stretchLoop(buf, s, e, factor, drums = 0) {     // drums: a drum loop's own tempo; it is beat sliced, not stretched
   let m = stretchCache.get(buf); if (!m) stretchCache.set(buf, m = new Map());
-  const key = stretchKey(s, e, factor), had = m.get(key);
+  const key = stretchKey(s, e, factor, drums), had = m.get(key);
   if (had) return had instanceof AudioBuffer ? Promise.resolve(had) : had;
   const rate = buf.sampleRate, x = buf.getChannelData(0).slice(Math.round(s * rate), Math.round(e * rate));
-  const p = runWsola(x, factor).then(out => {
+  const p = (drums ? Promise.resolve(sliceStretch(x, rate, factor, drums)) : runWsola(x, factor)).then(out => {
     const b = new AudioBuffer({ length: out.length, numberOfChannels: 1, sampleRate: rate }); b.copyToChannel(out, 0);
     m.set(key, b); return b;
   });
@@ -337,10 +373,10 @@ export function stretchLoop(buf, s, e, factor) {
   return p;
 }
 // The stretched loop if it is ready (and if not, start making it).
-export function stretchedNow(buf, s, e, factor) {
-  const had = stretchCache.get(buf)?.get(stretchKey(s, e, factor));
+export function stretchedNow(buf, s, e, factor, drums = 0) {
+  const had = stretchCache.get(buf)?.get(stretchKey(s, e, factor, drums));
   if (had instanceof AudioBuffer) return had;
-  stretchLoop(buf, s, e, factor); return null;
+  stretchLoop(buf, s, e, factor, drums); return null;
 }
 // How much a loop is stretched: to the tempo playing, and to the key (stretched
 // by tempo x pitch, then sped up by the pitch, it keeps the beat in the new key).
@@ -420,7 +456,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       else if (lb) {
         const f = loopStretch({ bpm: lb }, P, bpm, root);
         if (Math.abs(f - 1) > 0.002) {
-          const sb = stretchedNow(buf, s, e, f);
+          const sb = stretchedNow(buf, s, e, f, slot.drumLoop ? lb : 0);
           if (sb) { buf = sb; s = 0; e = sb.duration; } else r = rate * bpm / lb;
         }
       }

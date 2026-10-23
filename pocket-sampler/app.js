@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023x';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023y';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -202,6 +202,7 @@ const LIBRARY = {
   ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
   ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
 };
+const BEAT_PACKS = new Set(['ebbbeats', 'grooves', 'drumloops', 'breaks']);     // whole beats (the Beats folder)
 const EBB = ['ebbbeats', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
 const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
@@ -228,6 +229,7 @@ async function factorySlot(id) {
     Object.assign(slot, { kind: 'chop', buf: B.buf, slices: B.slices.map(([a, b], k) => ({ s: a / r, e: b / r, name: shortName(B.from[k]),
       ...(B.loops?.[k] && { bpm: B.loops[k][0], bars: B.loops[k][1] }) })) });
     if (B.loops) slot.params.trig = 'loop';          // a pack of loops: each key loops until tapped again
+    if (BEAT_PACKS.has(bank)) slot.drumLoop = true;   // drum loops: beat sliced to the tempo, not stretched
   }
   return slot;
 }
@@ -415,7 +417,7 @@ const DRUM_NAME = /kick|snare|clap|hat\b|hats\b|tom\b|toms\b|crash|ride|cymbal|r
 const drumSoundMemo = new WeakMap();
 function drumSound(sl) {
   if (!sl) return false;
-  if (!drumSoundMemo.has(sl)) drumSoundMemo.set(sl, !!sl.params?.drum
+  if (!drumSoundMemo.has(sl)) drumSoundMemo.set(sl, !!sl.params?.drum || !!sl.drumLoop
     || (sl.kind === 'chop' && ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)))
     || (sl.kind === 'sample' && DRUM_NAME.test(sl.name || '')));
   return drumSoundMemo.get(sl);
@@ -1143,9 +1145,12 @@ function revName(key) {
 }
 function drawReview() {
   const list = $('revList'), d = toDelete(), y = list.scrollTop; list.textContent = '';
-  const row = (key, name, small, play, sub, open) => {
+  const row = (key, name, small, play, sub, open, choice) => {
     const r = document.createElement('div'); r.className = 'revrow' + (sub ? ' sub' : ''); r.classList.toggle('marked', d.has(key));
     const pb = document.createElement('button'); pb.textContent = '▶'; pb.setAttribute('aria-label', 'Play ' + name); pb.addEventListener('click', play);
+    const lb = document.createElement('button'); lb.textContent = revLoopKey === key ? '■' : '🔁'; lb.title = 'Loop it, at the tempo playing';
+    lb.setAttribute('aria-label', 'Loop ' + name); lb.classList.toggle('on', revLoopKey === key); lb.addEventListener('click', () => revLoop(choice, key));
+    r.append(lb);
     const n = document.createElement('span'); n.className = 'rn'; n.textContent = name;
     if (small) { const sm = document.createElement('small'); sm.textContent = ' ' + small; n.appendChild(sm); }
     r.append(pb, n);
@@ -1166,13 +1171,28 @@ function drawReview() {
         open = document.createElement('button'); open.textContent = revOpen.has(id) ? `▾ ${B.from.length}` : `▸ ${B.from.length}`;
         open.addEventListener('click', () => { revOpen.has(id) ? revOpen.delete(id) : revOpen.add(id); drawReview(); });
       }
-      row(id, LIBRARY[id].name, `${libTag(id)} · ${pack ? 'pack' : 'instrument'}`, () => revPlay({ lib: id }), false, open);
-      if (pack && revOpen.has(id) && !d.has(id)) B.from.forEach((nm, k) => row(`${id}#${k}`, shortName(nm), libTag(id, nm), () => revPlay({ from: { lib: id }, k, label: nm }), true));
+      row(id, LIBRARY[id].name, `${libTag(id)} · ${pack ? 'pack' : 'instrument'}`, () => revPlay({ lib: id }), false, open, { lib: id });
+      if (pack && revOpen.has(id) && !d.has(id)) B.from.forEach((nm, k) => { const ch = { from: { lib: id }, k, label: nm }; row(`${id}#${k}`, shortName(nm), libTag(id, nm), () => revPlay(ch), true, null, ch); });
     }
   }
   list.scrollTop = y;
-  $('revCount').textContent = d.size ? `${d.size} ticked` : 'Nothing ticked';
+  $('revCount').textContent = (revLoopKey ? `🔁 ${revName(revLoopKey)}, at ${S.bpm} BPM · ` : '') + (d.size ? `${d.size} ticked` : 'Nothing ticked');
   for (const id of ['revSend', 'revCopy', 'revClear']) $(id).disabled = !d.size;
+}
+// 🔁: the sound looped, at the tempo playing: a loop with a tempo is stretched (drums beat sliced) just as
+// in the Loops, so it sounds here as it will there. Tap again (or another) to stop.
+let revLoopV = null, revLoopKey = null;
+function revLoopStop() { revLoopV?.stop?.(ctx.currentTime); revLoopV = revLoopKey = null; }
+async function revLoop(c, key) {
+  ctx.resume();
+  const was = revLoopKey; revLoopStop();
+  if (was === key) { drawReview(); status(''); return; }
+  const base = await slotOf(c); if (!base) return;
+  const sl = { ...base, params: { ...base.params, trig: 'loop', vol: Math.max(base.params.vol, 0.5) } }, x = sl.slices?.[0];
+  if (x?.bpm) await stretchFor(sl, [S.root]);
+  revLoopV = playNote(eng, sl, -1, sl.kind === 'chop' ? 0 : 7, ctx.currentTime + 0.02, { scale: S.scale, bpm: S.bpm, root: S.root, hold: true });
+  revLoopKey = key; drawReview();
+  status(x?.bpm ? `Looping at ${S.bpm} BPM, as in the Loops (it was made at ${Math.round(x.bpm)} BPM${sl.drumLoop ? '; drums are sliced to the tempo' : ''}). Tap again to stop.` : 'Looping it. Tap again to stop.');
 }
 async function revPlay(c) {
   ctx.resume();
@@ -1180,7 +1200,7 @@ async function revPlay(c) {
   playNote(eng, slot, -1, slot.kind === 'chop' ? 0 : 7, ctx.currentTime + 0.01, { scale: S.scale, bpm: S.bpm, root: S.root });
 }
 const revText = () => 'Please delete these sounds from Pocket Sampler for good:\n\n' + [...toDelete()].map(k => `- ${k}: ${revName(k)}`).join('\n');
-$('revClose').addEventListener('click', () => { $('revBox').hidden = true; drawBrowser(); });
+$('revClose').addEventListener('click', () => { revLoopStop(); $('revBox').hidden = true; drawBrowser(); });
 $('revClear').addEventListener('click', () => { if (confirm('Untick every sound?')) { saveDelete(new Set()); drawReview(); drawBrowser(); } });
 $('revCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(revText()); status('The list is copied: paste it in your chat with Claude.'); }
@@ -1324,7 +1344,7 @@ function warmLoops() {
   const roots = new Set([S.root, ...S.patKeys.filter(Boolean).map(k => k.root)]), jobs = [];
   for (const sl of S.slots) if (sl?.slices) for (const x of sl.slices) if (x.bpm || sl.bpm) for (const root of roots) {
     const f = loopStretch({ bpm: x.bpm || sl.bpm }, sl.params, S.bpm, root);
-    if (Math.abs(f - 1) > 0.002) jobs.push(stretchLoop(x.buf || sl.buf, x.s, x.e, f));
+    if (Math.abs(f - 1) > 0.002) jobs.push(stretchLoop(x.buf || sl.buf, x.s, x.e, f, sl.drumLoop ? x.bpm || sl.bpm : 0));
   }
   return Promise.all(jobs);
 }
@@ -1407,7 +1427,7 @@ function sliceAlone(slot, k, label) {
   const a = Math.round(sl.s * r), b = Math.max(a + 1, Math.round(sl.e * r));
   const buf = ctx.createBuffer(1, b - a, r); buf.copyToChannel(src.getChannelData(0).subarray(a, b), 0);
   if (slot.params.trig === 'loop' || sl.bpm)       // a loop stays a loop: on key 1, keeping its tempo
-    return { factory: null, kind: 'chop', contiguous: false, name: label, params: { ...defParams(), trig: 'loop' }, buf,
+    return { factory: null, kind: 'chop', contiguous: false, name: label, params: { ...defParams(), trig: 'loop' }, buf, ...(slot.drumLoop && { drumLoop: true }),
       slices: [{ s: 0, e: buf.duration, name: label, ...(sl.bpm && { bpm: sl.bpm, bars: sl.bars }) }] };
   const drum = ['kick', 'snare', 'hat', 'open', 'tom', 'conga', 'bongo', 'shaker', 'crash', 'ride'].some(r => hasRole(slot, r));
   return { factory: null, kind: 'sample', name: label, params: { ...defParams(), choke: true, ...(drum && { drum: true }) }, buf };
@@ -1420,12 +1440,13 @@ function sliceAlone(slot, k, label) {
 function packSlot(sl) {
   const bufs = [], at = new Map();
   const ref = b => { if (!b) return null; if (!at.has(b)) { at.set(b, bufs.length); bufs.push({ rate: b.sampleRate, data: b.getChannelData(0).slice() }); } return at.get(b); };
-  return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous, bpm: sl.bpm, credit: sl.credit,
+  return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous, bpm: sl.bpm, credit: sl.credit, drumLoop: sl.drumLoop,
     buf: ref(sl.buf), slices: sl.slices?.map(x => ({ ...x, buf: ref(x.buf) })), bufs };
 }
 function unpackSlot(m) {
   const it = m.item, B = it.bufs.map(b => { const a = ctx.createBuffer(1, b.data.length, b.rate); a.copyToChannel(b.data, 0); return a; });
   return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base, bpm: it.bpm, credit: it.credit,
+    ...((it.drumLoop || m.folder === 'Beats') && { drumLoop: true }),
     contiguous: it.contiguous, buf: it.buf != null ? B[it.buf] : null, slices: it.slices?.map(x => ({ ...x, buf: x.buf != null ? B[x.buf] : null })) };
 }
 async function saveMine(slot, name, type = 'sound') {
@@ -1872,7 +1893,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023y'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1965,7 +1986,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023y'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3398,7 +3419,7 @@ function save() {
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth,
       trims: sl.slices?.map(x => [x.start ?? 0, x.len ?? 1]) } : {
       kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base, bpm: sl.bpm, credit: sl.credit,
-      made: sl.made, slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
+      made: sl.made, drumLoop: sl.drumLoop, slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
     const { mode, write, replace, ...rest } = S;
     tx.objectStore('state').put({ ...rest, slots }, 'v1');
@@ -3421,7 +3442,7 @@ async function load() {
       const withdrawn = /Good Day/.test(s?.credit || '');     // the song pack taken out: its sounds go, the usual ones come back
       if (withdrawn) gone.add(i);
       if (s && s.factory == null && !withdrawn) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit, made: s.made };
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit, made: s.made, drumLoop: s.drumLoop };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }
@@ -3563,7 +3584,7 @@ function cellSlot(cell) {
       for (let i = 0; i < f; i++) d[m - 1 - i] *= i / f;              // a 4 ms fade where it is cut, so it never clicks
       one = { name: x.name, buf: out, s: 0, e: n / rate, bpm: x.bpm || S.bpm, bars: cell.beats / 4, start: 0, len: 1 };
     }
-    return { kind: 'chop', name: x.name, buf: one.buf, slices: [one],
+    return { kind: 'chop', name: x.name, buf: one.buf, slices: [one], drumLoop: !!slot.drumLoop || drumCell(cell),
       params: { ...defParams(), vol: 1, keyOf: ko, pitch: cell.pitch || 0, nostretch: cell.stretch === false,
         trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
   }).catch(() => null));
@@ -3618,7 +3639,7 @@ function stretchFor(slot, roots = [S.root, keyAhead().root]) {
   const x = slot.slices[0]; if (!x.bpm || slot.params.nostretch) return Promise.resolve();
   return Promise.all([...new Set(roots)].map(root => {
     const f = loopStretch({ bpm: x.bpm }, slot.params, S.bpm, root);
-    return Math.abs(f - 1) > 0.002 ? stretchLoop(x.buf, x.s, x.e, f) : null;
+    return Math.abs(f - 1) > 0.002 ? stretchLoop(x.buf || slot.buf, x.s, x.e, f, slot.drumLoop ? x.bpm : 0) : null;
   }));
 }
 async function warmGrid() {
@@ -4301,6 +4322,13 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     return b64f((await off.startRendering()).getChannelData(0));
   },
   lib: id => LIBRARY[id],
+  // a loop stretched both ways, for comparing: [as recorded, stretched (WSOLA), beat sliced], raw float32 base64
+  stretchTest: async (lib, k, bpm) => {
+    const sl = await slotOf({ lib }), x = sl.slices[k], buf = x.buf || sl.buf, f = (x.bpm || sl.bpm) / bpm, r = buf.sampleRate;
+    const o = buf.getChannelData(0).slice(Math.round(x.s * r), Math.round(x.e * r));
+    const [w, d] = [await stretchLoop(buf, x.s, x.e, f, 0), await stretchLoop(buf, x.s, x.e, f, x.bpm || sl.bpm)];
+    return { rate: r, bpm: x.bpm, name: x.name, f, bufs: [o, w.getChannelData(0), d.getChannelData(0)].map(b64f) };
+  },
   heldLevels: async (si, k, trig) => { const off = new OfflineAudioContext(1, SR * 4, SR), e = new Engine(off, { live: false }); const sl = { ...S.slots[si], params: { ...S.slots[si].params, trig } };
     const v = playNote(e, sl, si, k, 0, { scale: S.scale, bpm: S.bpm, root: 0, hold: true, dest: off.destination }); v.stop(3); const d = (await off.startRendering()).getChannelData(0);
     return [0.5, 1, 1.5, 2, 2.5, 2.9, 3.2].map(t => { let m = 0; for (let i = Math.round(t * SR); i < Math.round((t + 0.05) * SR); i++) m = Math.max(m, Math.abs(d[i])); return +m.toFixed(3); }); },
