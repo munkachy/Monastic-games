@@ -213,7 +213,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   sideways. Eight columns in their parts' colours (kick, snare, tops,
   bass, chords, lead, sub, vocals/keys), six cells each: whole beats in
   the red Kick column, single hits in Snare and Tops. A tap starts a cell
-  on the next bar, in time and key (a hit, on the next 16th); one cell
+  on the next bar, in time and key (a hit starts as a loop that plays it
+  every 4 beats; as a One shot, on the next 16th); one cell
   plays per column, and another takes over on the bar; a ring shows each
   loop's progress. Hold a cell for Loop, One shot or Gate, its own volume,
   its own quantize (or the default for all), an EQ (three bands, with its
@@ -291,7 +292,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
   BPM, swung. Whole beats in the red Kick column (hip hop played by
   drummers, from the Groove MIDI Dataset); single snare and top hits
-  in Snare and Tops (one-shots, on the next 16th); 808, electric, Reese and
+  in Snare and Tops (each a loop that plays it every 4 beats); 808, electric, Reese and
   upright bass; Rhodes, pad, choir and organ; Juno stabs, pluck, chip,
   trumpet and bells; sub; the robot's words and the women's choir. The
   harmony is Fm7, D♭maj7, B♭m7, Cm7 a bar each, so every loop fits every

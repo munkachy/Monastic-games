@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023r';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023s';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1802,7 +1802,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023s'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1895,7 +1895,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023s'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3316,6 +3316,7 @@ async function load() {
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
   for (const x of S.grid.cells.flat()) if (x?.lib === 'ebbbeats' && !/^Hip hop/.test(x.name || '')) { delete x.name; delete x.keyOf; }   // the beats are new: played by people
   S.grid.quant ??= 16; S.grid.fade ??= 0; if (S.grid.colFx?.length !== 8) S.grid.colFx = newColFx();
+  if (!S.grid.hits4) { hitsRepeat(S.grid.cells); S.grid.hits4 = true; }      // the hits become 4-beat loops, once
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
     // Effects used to be saved by key number; now by name.
@@ -3365,7 +3366,7 @@ const REPEATS = [[0, 'Whole'], [1, '1'], [2, '2'], [4, '4'], [6, '6'], [8, '8'],
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
   ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['tape', 'Tape']];
 // The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
-// and Tops columns hold single hits (a snare, a clap, a hat), played as one-shots.
+// and Tops columns hold single hits (a snare, a clap, a hat), each a loop that plays it again every 4 beats.
 function defaultGrid() {
   const c = (lib, k, mode = 'loop', vol) => ({ lib, k, mode, ...(vol && { vol }) }), hit = (lib, k, vol = 0.6) => c(lib, k, 'oneshot', vol);
   const cells = Array.from({ length: 8 }, () => new Array(ROWS).fill(null));
@@ -3373,8 +3374,13 @@ function defaultGrid() {
   cells[1] = [hit('boombap', 3), hit('boombap', 4), hit('boombap', 6), hit('tr808', 5), hit('boombap', 10), hit('boombap', 14)];
   cells[2] = [hit('boombap', 7, 0.5), hit('boombap', 8, 0.5), hit('tr808', 7, 0.5), hit('tr808', 10, 0.5), hit('shakers', 4, 0.5), hit('boombap', 15, 0.45)];
   cells[7] = [0, 3, 5, 12, 13, 14].map(k => c('hype', k, 'oneshot'));
-  return { cells, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0, colFx: newColFx() };
+  hitsRepeat(cells);
+  return { cells, hits4: true, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0, colFx: newColFx() };
 }
+// The single hits in Snare and Tops start as a loop that plays the hit again every 4 beats (a bar),
+// so they need no setting up; any of them can be set to One shot or another repeat.
+const HIT_COLS = new Set([1, 2]);
+function hitsRepeat(cells) { for (const c of HIT_COLS) for (const x of cells[c]) if (x && x.mode === 'oneshot' && !x.beats) { x.mode = 'loop'; x.beats = 4; } }
 function newColFx() { return Array.from({ length: 8 }, () => ({ type: 'none', amt: 0.5 })); }
 S.grid = defaultGrid();
 let view = 'pads', lEdit = false, gridAgain = null;
@@ -3802,7 +3808,7 @@ async function loadSet(id, quiet = false) {          // quiet: the set again, af
   try {
     const set = id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json();
     stopGrid();
-    S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null)));
+    S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null))); hitsRepeat(S.grid.cells);
     if (set.bpm && !quiet) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
     if (set.root != null && !playing && !quiet) { S.root = set.root; S.scale = set.scale || S.scale; }
     persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
@@ -3901,7 +3907,8 @@ async function drawCellMenu() {
     const was = S.grid.cells[c][r];
     if (gcol[c].cur?.r === r) stopAt(gcol[c].cur, { when: ctx.currentTime, j: 0 }, false);
     if (gcol[c].next?.r === r) { kill(gcol[c].next); gcol[c].next = null; }
-    S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' ? 'loop' : 'oneshot'), vol: was?.vol ?? 1 };
+    const hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
+    S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' || hit ? 'loop' : 'oneshot'), vol: was?.vol ?? 1, ...(beats && { beats }) };
     choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
   }, cell?.lib === pack && cell.k === k));
 }
