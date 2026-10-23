@@ -248,6 +248,10 @@
   /* the menus and the editor, sideways: as wide as they need, the full height */
   :root.sidepads #menu .sheet, :root.sidepads #editor .sheet { max-width: 640px; }
   :root.sidepads #edWave { height: 120px; }
+  :root.sidepads #menu .tabs button { flex: 1 0 11%; padding: 6px 0; }
+  :root.sidepads .blist { grid-template-columns: 1fr 1fr; }
+  :root.sidepads .blist button { padding: 8px 10px; }
+  :root.sidepads .blist > .note { grid-column: 1 / -1; }
   /* the Loops, when the whole app is already turned: they lie as they are inside it */
   :root.turned .lview { width: 100%; height: 100%; transform: none; padding: 6px max(10px, env(safe-area-inset-bottom)) 6px max(10px, env(safe-area-inset-top)); }
 
@@ -320,8 +324,12 @@
   .lrow output { width: 30px; text-align: right; font-size: 12px; }
   .lfader.wide { flex: 1; max-width: 320px; height: 26px; }
   #lmenu { inset: 6px 8px; }
-  .lsetbody.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; align-content: start; }
   .lpane { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .lpane.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; align-content: start; }
+  .lpane[hidden] { display: none; }
+  .lcolumn { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .ltabs button { padding: 6px 12px !important; }
+  [data-pane=wave] #lmWave { height: 130px; }
   .lnote { grid-column: 1 / -1; }
   #lmenu .lrow { gap: 8px; font-size: 11px; }
   #lmenu .lrow > span { width: 92px; }
@@ -331,6 +339,12 @@
   #lmenu .lrow small { min-width: 0; }
   #lsSets small { opacity: .7; font-weight: 400; margin-left: 4px; }
   .lval { min-width: 26px; text-align: center; font-size: 12px; }
+  #lmEq { width: 100%; height: 64px; border-radius: 7px; display: block; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  .lfader.eq::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #ffffff55; }
+  #lmenu .lrow output { width: 52px; }
+  .lmodes.wrap { flex-wrap: wrap; }
+  .lsub { color: var(--muted); font-size: 10.5px; margin: -4px 0 0 100px; }
+  .lsub:empty { display: none; }
   #lmWave { width: 100%; height: 84px; border-radius: 7px; display: block; touch-action: none; box-shadow: inset 0 0 0 1px #ffffff1c; }
   .lwide { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 7px; padding: 9px 12px; background: var(--btn); color: var(--btn-ink); }
   .lmhead { display: flex; align-items: center; gap: 8px; }
@@ -366,6 +380,9 @@
   .blist { display: grid; gap: 6px; }
   .blist button { font: inherit; font-size: 13px; text-align: left; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field);
     padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; color: var(--field-ink); }
+  /* a folder in its part's colour: dark and see-through, with a neon edge, like the pads */
+  .blist button.folder { position: relative; border-color: var(--c); box-shadow: inset 4px 0 0 var(--c); font-weight: 700; }
+  .blist button.folder::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .14; pointer-events: none; }
   .blist button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
   .blist small { color: var(--muted); font-size: 11px; white-space: nowrap; }
   .bfoot { position: sticky; bottom: -16px; background: var(--panel); padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
@@ -384,7 +401,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023c</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023d</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -446,23 +463,44 @@
   <div class="lmenu" id="lmenu" hidden>
     <div class="lmhead"><b id="lmTitle"></b><button id="lmClose">✕ Done</button></div>
     <div class="lmodes"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="grow"></span><button id="lmEmpty">Empty this cell</button></div>
-    <div id="lmSets" class="lsetbody two">
-      <div class="lpane">
-        <div class="lrow"><span>Volume</span><div class="lfader wide" id="lmVolBar"><i></i></div><output id="lmVolOut"></output></div>
-        <div class="lrow"><span>Transpose</span><div class="lmodes"><button id="lmDown" aria-label="Down a half step">−</button><b id="lmPitch" class="lval">0</b><button id="lmUp" aria-label="Up a half step">+</button><button id="lmZero">0</button></div><small>half steps</small></div>
-        <div class="lrow"><span>Repeat (beats)</span><div class="lmodes" id="lmRepeat"></div></div>
-        <div class="lrow"><span>Time stretch</span><div class="lmodes" id="lmStretch"></div><small id="lmStretchNote"></small></div>
-        <div class="lrow"><span>Follow the key</span><div class="lmodes" id="lmKey"></div><small id="lmKeyOf"></small></div>
+    <div id="lmSets" class="lsetbody">
+      <div class="lmodes ltabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="wave">Wave</button><button data-lpane="eq">EQ &amp; Effect</button></div>
+      <div class="lpane two" data-pane="set">
+        <div class="lcolumn">
+          <div class="lrow"><span>Volume</span><div class="lfader wide" id="lmVolBar"><i></i></div><output id="lmVolOut"></output></div>
+          <div class="lrow"><span>Transpose</span><div class="lmodes"><button id="lmDown" aria-label="Down a half step">−</button><b id="lmPitch" class="lval">0</b><button id="lmUp" aria-label="Up a half step">+</button><button id="lmZero">0</button></div><small>half steps</small></div>
+          <div class="lrow"><span>Repeat (beats)</span><div class="lmodes" id="lmRepeat"></div></div>
+          <div class="lrow"><span>Time stretch</span><div class="lmodes" id="lmStretch"></div><small id="lmStretchNote"></small></div>
+        </div>
+        <div class="lcolumn">
+          <div class="lrow"><span>Follow the key</span><div class="lmodes" id="lmKey"></div><small id="lmKeyOf"></small></div>
+          <div class="lrow"><span>Quantize</span><div class="lmodes wrap" id="lmQuant"></div></div>
+          <small class="lsub" id="lmQuantNote"></small>
+          <div class="lrow"><button id="lmSound" class="lwide"></button></div>
+        </div>
+        <p class="note lnote">Repeat: the sound plays again every so many beats (a short one waits for the beat; a long one is cut there). Time stretch off: it speeds up and slows down with the tempo, pitch and all, like a record. Quantize: when this loop's tap lands, or As all (the default for every loop, in ⚙); Gate always plays free, at once. Loop: round and round until tapped again; One shot: once; Gate: only while held (set a Gate cell up with ✎ Edit). Changes to a playing cell come in on the next bar.</p>
       </div>
-      <div class="lpane">
+      <div class="lpane" data-pane="wave" hidden>
         <canvas id="lmWave" aria-label="The wave: drag to choose the part that plays"></canvas>
         <div class="lrow"><div class="lmodes"><button id="lmHear">▶ Hear it</button><button id="lmWhole">Whole sound</button></div><small id="lmSel"></small></div>
-        <div class="lrow"><span>Effect</span><div class="lmodes" id="lmFx"></div></div>
-        <div class="lrow" id="lmFxRow"><span>Amount</span><div class="lfader wide" id="lmFxBar"><i></i></div><small id="lmFxCol"></small></div>
-        <div class="lrow" id="lmSkipRow"><span>This loop</span><div class="lmodes" id="lmSkip"></div></div>
-        <div class="lrow"><button id="lmSound" class="lwide"></button></div>
+        <p class="note">Drag across the wave to choose the part that plays (on a loop with a tempo it snaps to 16th notes); tap it to hear from there.</p>
       </div>
-      <p class="note lnote">Drag across the wave to choose the part that plays (tap it to hear from there). Repeat cuts a long sound after that many beats and repeats it. Time stretch off: the loop speeds up and slows down with the tempo, pitch and all, like a record. The effect goes on the whole column; set a loop to skip it. Loop: round and round until tapped again; One shot: once; Gate: only while held (set a Gate cell up with ✎ Edit). Changes to a playing cell come in on the next bar.</p>
+      <div class="lpane two" data-pane="eq" hidden>
+        <div class="lcolumn">
+          <canvas id="lmEq" aria-label="The EQ curve"></canvas>
+          <div class="lrow"><span>Low</span><div class="lfader wide eq" id="lmEqlo"><i></i></div><output id="lmEqloOut"></output></div>
+          <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="lmEqmid"><i></i></div><output id="lmEqmidOut"></output></div>
+          <div class="lrow"><span>High</span><div class="lfader wide eq" id="lmEqhi"><i></i></div><output id="lmEqhiOut"></output></div>
+          <div class="lrow"><span></span><div class="lmodes"><button id="lmEqFlat">Flat</button></div><small>150 Hz · 1 kHz · 5 kHz</small></div>
+        </div>
+        <div class="lcolumn">
+          <div class="lrow"><span>Effect</span><div class="lmodes wrap" id="lmFx"></div></div>
+          <div class="lrow" id="lmFxRow"><span>Amount</span><div class="lfader wide" id="lmFxBar"><i></i></div></div>
+          <small class="lsub" id="lmFxCol"></small>
+          <div class="lrow" id="lmSkipRow"><span>This loop</span><div class="lmodes" id="lmSkip"></div></div>
+        </div>
+        <p class="note lnote">EQ (this loop only): drag a bar right to raise that band, left to cut it, up to 12 dB; the curve shows what it does. Effect: on the whole column; any loop can skip it.</p>
+      </div>
     </div>
     <div id="lmPick" class="lsetbody">
       <div id="lmCrumbs"></div>
@@ -474,8 +512,8 @@
     <div class="lsetbody">
       <div class="lrow"><span>Sets</span><div class="lmodes" id="lsSets"></div></div>
       <p class="note">A set fills the whole grid at once, and sets the tempo and key it was made in. Every loop in it fits with every other.</p>
-      <div class="lrow"><span>Quantize</span><div class="lmodes" id="lsQuant"></div></div>
-      <p class="note">When a tap lands: a loop starts, switches and stops on the next beat, bar, 2 bars or 4 bars. Off: at once, still in time with the beat. For the Loops tab only (the Pads have their own, in Menu › Settings).</p>
+      <div class="lrow"><span>Quantize (all)</span><div class="lmodes" id="lsQuant"></div></div>
+      <p class="note">The default for every loop (each can have its own: hold it). When a tap lands: a loop starts, switches and stops on the next beat, bar, 2 bars or 4 bars. Off: at once, still in time with the beat. For the Loops tab only (the Pads have their own, in Menu › Settings).</p>
       <div class="lrow"><span>Fade in and out</span><div class="lmodes" id="lsFade"></div></div>
       <p class="note">Loops fade in as they start and out as they stop, over this long, instead of cutting in and out.</p>
       <div class="lrow"><button id="lsStop" class="lwide">■ Stop all loops</button></div>
@@ -630,7 +668,7 @@
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Sideways:</b> the Pads lie sideways, like the Loops: the screen and buttons on the left, the keys on the right. Held upright, the whole app is turned a quarter turn, so it reads the right way up with the phone held sideways (turn the phone to the left); if the phone really turns, it simply lies flat. Menu › Buttons › Pads › Upright brings back the tall layout.</p>
-    <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns in their parts' colours (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) for its settings: Loop, One shot or Gate (only while held); its own volume; <b>Transpose</b> in half steps; <b>Repeat</b> 2, 4, 6, 8, 16 or 32 beats (a longer sound is cut there and repeats); <b>Time stretch</b> on (it keeps its pitch at any tempo) or off (it speeds up and slows down with the tempo, like a record); Follow the key (on for every loop, ♪ on the cell; its key is found by listening, so turn it off for a drum loop that sounds wrong moved); an <b>Effect</b> (low pass, high pass, reverb, echo, ping-pong, drive or tape, with an amount) that goes on the whole column, which any loop can be set to skip; its sound, from the loops and packs; and its <b>wave</b>: drag across it to choose the part that plays (it snaps to 16th notes on a loop with a tempo), tap it to hear from there, ▶ Hear it plays the part chosen. <b>⚙</b> holds the settings for all the loops: <b>Quantize</b> (when a tap lands: the next beat, bar, 2 bars or 4 bars, or Off: at once, still in time), <b>Fade in and out</b>, and <b>Stop all loops</b> (on the next point, the Pads beat playing on). Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. <b>Whole beats go in Kick</b> (the red column); <b>Snare</b> and <b>Tops</b> hold single hits (a snare, a clap, a hat, a cowbell), which play on the next 16th note, and again on every tap (at once while stopped, without starting the beat). <b>Sets</b> (in ⚙) fill the whole grid at once, at the tempo and key they were made in. <b>Electro Boom Bap</b>: F minor, 92 BPM, swung; six beats on the Boom Bap, TR-808, electro kits and shakers; snare and top hits; 808, electric, Reese and upright bass; Rhodes, pad, choir and organ chords; Juno stabs, pluck, chip, trumpet and bell leads; sub bass; the robot's words, the women's choir, vinyl, Alleluia and Selah. Every loop in it fits every other: the harmony runs Fm7, D♭maj7, B♭m7, Cm7, a bar each. <b>The first set</b>: the app's drum loops and breaks, kit hits, and hype words. The set's loops are in Menu › Sounds › Loops too, for the pads.</p>
+    <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns in their parts' colours (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) for its settings, in three tabs (Settings, Wave, EQ &amp; Effect): Loop, One shot or Gate (only while held, and always free: at once, no quantize); its own <b>Quantize</b> (or As all: the default for every loop, in ⚙); its own volume; an <b>EQ</b> (low, middle and high, ±12 dB, with its curve); <b>Transpose</b> in half steps; <b>Repeat</b> 2, 4, 6, 8, 16 or 32 beats (the sound plays again every so many beats: a short one waits, silent, for the beat to come round; a longer one is cut there); <b>Time stretch</b> on (it keeps its pitch at any tempo) or off (it speeds up and slows down with the tempo, like a record); Follow the key (on for every loop, ♪ on the cell; its key is found by listening, so turn it off for a drum loop that sounds wrong moved); an <b>Effect</b> (low pass, high pass, reverb, echo, ping-pong, drive or tape, with an amount) that goes on the whole column, which any loop can be set to skip; its sound, from the loops and packs; and its <b>wave</b>: drag across it to choose the part that plays (it snaps to 16th notes on a loop with a tempo), tap it to hear from there, ▶ Hear it plays the part chosen. <b>⚙</b> holds the settings for all the loops: <b>Quantize</b> for all the loops (when a tap lands: the next beat, bar, 2 bars or 4 bars, or Off: at once, still in time; a loop can have its own), <b>Fade in and out</b>, and <b>Stop all loops</b> (on the next point, the Pads beat playing on). Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. <b>Whole beats go in Kick</b> (the red column); <b>Snare</b> and <b>Tops</b> hold single hits (a snare, a clap, a hat, a cowbell), which play on the next 16th note, and again on every tap (at once while stopped, without starting the beat). <b>Sets</b> (in ⚙) fill the whole grid at once, at the tempo and key they were made in. <b>Electro Boom Bap</b>: F minor, 92 BPM, swung; six hip-hop beats played by drummers, on the Boom Bap, TR-808 and electro kits; snare and top hits; 808, electric, Reese and upright bass; Rhodes, pad, choir and organ chords; Juno stabs, pluck, chip, trumpet and bell leads; sub bass; the robot's words, the women's choir, vinyl, Alleluia and Selah. Every loop in it fits every other: the harmony runs Fm7, D♭maj7, B♭m7, Cm7, a bar each. <b>The first set</b>: Human Grooves (beats played by drummers) and the Amen, kit hits, and hype words. The set's loops are in Menu › Sounds › Loops too, for the pads.</p>
     <p><b>Colours</b> go by part, the same everywhere, in the Pads and the Loops: a kick is always red, a snare orange, hi-hats yellow, a bass green. Sounds 1–8 are the <b>instruments</b>, one part each: 1 Bass (green), 2 Sub (purple), 3 Chords (teal), 4 Lead (pink), 5 Vox/Keys (blue), 6 Pad (indigo), 7 Pluck/Arp (lavender), 8 Stab/FX (magenta), each starting with a sound for its part. Sounds 9–16 are the <b>drums</b>: drum kits and percussion, silver in Sound mode. Inside a kit every hit has its own colour: kick red, snare orange, clap amber, hats yellow, open hat lime, toms coral, percussion mint, cymbals cyan. Kits and percussion load only onto the drums, and instruments only onto 1–8, so the two never mix.</p>
     <p><b>Write</b> shows the side of the sound chosen. With a <b>kit</b> chosen: that kit's hits, a block for each part hit on the step, in the hit's colour; a small light shows another kit plays there too. With an <b>instrument</b> chosen: the instruments, a block for each, in its colour (a small light: drums under it). One fills the step, two to four split it side by side, five or more make a small grid. The step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
     <p><b>The tags</b> say what a sound is: <b>SYN</b> synthesized as you play (the app's synths: filter, wobble and length really change it); <b>REC</b> a recording, a sample of a real instrument or machine (the TR-808 is the real analog drum machine, recorded); <b>GEN</b> made in code beforehand, then played as a recording (the 808 and 909 kits drawn in code, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); <b>MINE</b> yours. They are in Menu › Sounds, on the pads in Sound mode, on the screen and on the Loops cells.</p>
@@ -642,6 +680,7 @@
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). Switch the sound to One shot or Gate and its loops keep going, so you can play over them; come back to Loop and tap a looping key to stop it. In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
+    <p><b>Menu › Sounds</b> is in folders by part, in the parts' colours: <b>Beats</b> (red: whole beats: Human Grooves played by drummers, the Electro Boom Bap beats, drum loops, breakbeats), <b>Snares and claps</b> (orange: every one of the kits', one by one), <b>Tops</b> (yellow: hats, cymbals, percussion, one by one), <b>Drum kits</b>, <b>Bass</b> (green), <b>Chords</b> (teal), <b>Lead</b> (pink), <b>Sub</b> (purple), <b>Vox and keys</b> (blue), <b>Pads</b>, <b>Plucks, mallets and bells</b>, <b>Stabs and FX</b>, ambience, songs and yours.</p>
     <p><b>Favorites and My Sounds</b> (Menu › Sounds): choose any sound, then <b>☆ Favorite</b> (under Load) keeps it in ★ Favorites, and <b>★ Save to My Sounds</b> keeps a copy of your own. My Sounds: your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
     <p><b>Key</b>: tap the key on the screen (C MIN) for the key wheel, over the keys. Majors are round the outside, minors inside, in circle-of-fifths order; the shaded keys sit well with the one you're in. Tap any key, or the <b>Next</b> button in the middle (up a fifth, then across to the relative key, by turns); 🎲 picks one of the shaded ones. While the beat plays, the change waits for the top of the next bar (the key blinks until then). <b>With Write on</b>, the key is saved in the pattern, and that pattern always plays in it (the key box is shaded); <b>with Write off</b>, the key changes for now and patterns keep their saved keys. "Forget pattern key" takes it out.</p>
     <p><b>Its key</b> (Settings, for recordings and imports): say what key a sound is in, or tap 🔍 to have it found by listening, and it moves to the song's key (never more than six semitones). Left on "Plays as recorded", drums and other recordings stay as they are.</p>
@@ -650,7 +689,7 @@
     <p><b>1 Shot / Gate / Loop</b> (the button next to Rec) switches how the current sound's keys play; it is the same as "Play as" in the Sound tab.</p>
     <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
-    <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code. Violin, viola, cello, double bass, choirs and celeste: Sonatina Symphonic Orchestra (CC Sampling Plus 1.0; the celeste CC0). Trumpet and trombone: VSCO 2 Community Edition (CC0). Gretsch, Hofner and Epiphone guitars: Karoryfer Samples (CC0). Rhodes: jRhodes3d by Jeff Learman (CC BY-NC 4.0). Tenor sax, xylophone, bells, tambourines, shakers, siren whistles and ocean drum: VCSL (CC0). TR-808: recorded from the machine by Michael Fischer. Breakbeats (the Amen and others), electro and Drumtraks hits, synth stabs, bass hits, pads, horns, robot voices, nature, arcade and machine sounds: TidalCycles' Dirt-Samples. Drum loops: played by the app on these kits. Nylon, acoustic and 12-string guitars, steel drum, vinyl, rain, risers, sirens and the respirator: made in code. Hype words: spoken by Vox Machina's eSpeak voices. The Electro Boom Bap loops: written by Claude and played by the app on these sounds.</p>
+    <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The kits, basses and rolled sounds are made in code. Violin, viola, cello, double bass, choirs and celeste: Sonatina Symphonic Orchestra (CC Sampling Plus 1.0; the celeste CC0). Trumpet and trombone: VSCO 2 Community Edition (CC0). Gretsch, Hofner and Epiphone guitars: Karoryfer Samples (CC0). Rhodes: jRhodes3d by Jeff Learman (CC BY-NC 4.0). Tenor sax, xylophone, bells, tambourines, shakers, siren whistles and ocean drum: VCSL (CC0). TR-808: recorded from the machine by Michael Fischer. Breakbeats (the Amen and others), electro and Drumtraks hits, synth stabs, bass hits, pads, horns, robot voices, nature, arcade and machine sounds: TidalCycles' Dirt-Samples. Drum loops: played by the app on these kits. Nylon, acoustic and 12-string guitars, steel drum, vinyl, rain, risers, sirens and the respirator: made in code. Hype words: spoken by Vox Machina's eSpeak voices. The Electro Boom Bap loops: written by Claude and played by the app on these sounds. Human Grooves, and the Electro Boom Bap beats: drummers' own playing from the Groove MIDI Dataset (Jon Gillick, Adam Roberts, Jesse Engel, Douglas Eck and David Bamman, Magenta, 2019), CC BY 4.0, played by the app on its kits.</p>
   </div>
   </div>
  </div>
@@ -704,6 +743,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023c"></script>
+<script type="module" src="app.js?v=20261023d"></script>
 </body>
 </html>

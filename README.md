@@ -197,7 +197,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   on the next bar, in time and key (a hit, on the next 16th); one cell
   plays per column, and another takes over on the bar; a ring shows each
   loop's progress. Hold a cell for Loop, One shot or Gate, its own volume,
-  transpose (half steps), repeat (2 to 32 beats), time stretch on or off,
+  its own quantize (or the default for all), an EQ (three bands, with its
+  curve), transpose (half steps), repeat (2 to 32 beats: a short sound
+  waits for the beat), time stretch on or off,
   following the key (on for every loop), an effect for its whole column
   (any loop can skip it), its sound, and its wave, where you drag to
   choose the part that plays; ⚙ sets the quantize (a beat to 4 bars, or
@@ -236,9 +238,20 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops:** 14 drum loops played on these kits, breakbeats (the Amen and
   others), and vinyl crackle and ambience; each key a loop that comes in on
   the next bar in step, follows the tempo and key, and stops with the beat.
+- **Human Grooves:** 16 beats played by drummers, a style each (hip hop,
+  funk, soul, rock, pop, punk, jazz, Latin, Afrobeat, Afro-Cuban, reggae,
+  New Orleans, blues shuffle, dance), every hit at the drummer's own timing
+  and loudness, on the acoustic kit: two steady bars from performances in
+  the [Groove MIDI Dataset](https://magenta.tensorflow.org/datasets/groove)
+  (Gillick, Roberts, Engel, Eck and Bamman, Magenta, 2019; CC BY 4.0).
+- **Sounds by colour:** Menu › Sounds is in folders by part, in the parts'
+  colours: Beats (red), Snares and claps (orange), Tops (yellow), Drum
+  kits, Bass (green), Chords (teal), Lead (pink), Sub (purple), Vox and
+  keys (blue), Pads, Plucks, Stabs and FX.
 - **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 33 loops written
   for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
-  BPM, swung. Whole beats in the red Kick column; single snare and top hits
+  BPM, swung. Whole beats in the red Kick column (hip hop played by
+  drummers, from the Groove MIDI Dataset); single snare and top hits
   in Snare and Tops (one-shots, on the next 16th); 808, electric, Reese and
   upright bass; Rhodes, pad, choir and organ; Juno stabs, pluck, chip,
   trumpet and bells; sub; the robot's words and the women's choir. The
