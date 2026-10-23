@@ -136,17 +136,33 @@ function hall(ctx, seconds) {
   }
   return b;
 }
+// The reverb's space: a recording of a real room (tools/reverbs.py), chosen with setSpace; every
+// engine made after it (the exports too) rings in it, and the one playing is changed with
+// Engine.setSpace. Until one is loaded, the plain made-up hall. Light: a shorter tail, less work.
+export const space = { data: null, rate: 48000 };       // data: [left, right] as Float32Arrays
+export function setSpace(data, rate) { space.data = data; space.rate = rate; }
+function spaceBuffer(ctx, light) {
+  if (!space.data) return hall(ctx, light ? 1.3 : 2.6);
+  const f = ctx.sampleRate / space.rate, n = Math.min(Math.round(space.data[0].length * f), Math.round((light ? 1.6 : 6) * ctx.sampleRate));
+  const b = ctx.createBuffer(2, n, ctx.sampleRate), fade = Math.round(Math.min(n * 0.25, 0.4 * ctx.sampleRate));
+  for (let c = 0; c < 2; c++) {
+    const src = space.data[c], d = b.getChannelData(c);
+    for (let i = 0; i < n; i++) { const x = i / f, j = Math.floor(x), t = x - j; d[i] = ((src[j] || 0) * (1 - t) + (src[j + 1] || 0) * t) * (i > n - fade ? (n - i) / fade : 1); }
+  }
+  return b;            // the convolver evens out each space's loudness itself
+}
 const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
   const v = (i / 1024 - 1) * 2, a = Math.abs(v);
   return Math.sign(v) * (a < 0.7 ? a : 0.7 + 0.3 * Math.tanh((a - 0.7) / 0.3));
 });
 
 export class Engine {
+  setSpace() { this.reverb.buffer = spaceBuffer(this.ctx, this.light); }
   // live: true for the speaker (adds the crusher and a tap for resampling).
   // light: for older devices (a shorter reverb, fewer notes at once).
   constructor(ctx, { live = true, light = false } = {}) {
     this.maxVoices = light ? 24 : 64;
-    this.ctx = ctx; this.live = live;
+    this.ctx = ctx; this.live = live; this.light = light;
     // Two ways in: `bus` runs through the effects, `dry` skips them (sounds
     // that an effect aimed at other tracks should leave alone).
     this.bus = ctx.createGain(); this.dry = ctx.createGain();
@@ -170,7 +186,7 @@ export class Engine {
     this.limit.connect(this.master); this.master.connect(ctx.destination);
     // Reverb: a convolver with a made-up hall (stereo noise that dies away).
     this.revSend = ctx.createGain(); this.revSend.gain.value = 0;
-    this.reverb = ctx.createConvolver(); this.reverb.buffer = hall(ctx, light ? 1.3 : 2.6);   // its work grows with its length
+    this.reverb = ctx.createConvolver(); this.reverb.buffer = spaceBuffer(ctx, light);   // its work grows with its length
     this.hp.connect(this.revSend); this.revSend.connect(this.reverb); this.reverb.connect(this.comp);
     // Chorus: two short delays, wobbled slowly and out of step, one per ear.
     this.chSend = ctx.createGain(); this.chSend.gain.value = 0;

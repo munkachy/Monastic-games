@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zh';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zi';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -204,6 +204,34 @@ const LIBRARY = {
 };
 const BEAT_PACKS = new Set(['ebbbeats', 'grooves', 'drumloops', 'breaks']);     // whole beats (the Beats folder)
 const EBB = ['ebbbeats', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
+// The reverb: a real space, recorded (tools/reverbs.py), for every effect that rings (the FX keys,
+// a sound's own effect, a Loops column's): [id, name, about, credit]. Chosen in Menu › Effects.
+const SPACES = [
+  ['stalbans', 'Lady Chapel, St Albans Cathedral', 'a stone chapel, about 3 seconds', 'OpenAIR, University of York (CC BY 4.0)'],
+  ['ely', 'Lady Chapel, Ely Cathedral', 'a large stone chapel, long and soft', 'L. Alvarez-Morales, M. Lopez, A. Alvarez-Corbacho, P. Bustamante (Zenodo; CC BY 4.0, kept as CC BY-NC-SA 4.0)'],
+  ['aachen', 'St. Nicholas Chapel, Aachen Cathedral', 'a late-Gothic chapel, about 4½ seconds', 'M. Zerwas and S. Kayku (Zenodo; CC BY 4.0)'],
+  ['cremona', 'A church in Cremona', 'an Italian church, warm', 'R. Giampiccolo, S. Parrinelli, F. Antonacci, ChurchIR (Zenodo; CC BY 4.0)'],
+  ['stairwell', 'A stairwell', 'hard walls, bright and short', 'T. McKenzie, S. Schlecht, V. Pulkki, Aalto University (Zenodo; CC BY 4.0)'],
+  ['room', 'A meeting room', 'a small room, close', 'T. McKenzie, S. Schlecht, V. Pulkki, Aalto University (Zenodo; CC BY 4.0)'],
+];
+const spaceNow = () => { try { const v = localStorage.getItem('pocketSpace'); return SPACES.some(x => x[0] === v) ? v : 'stalbans'; } catch (e) { return 'stalbans'; } };
+async function loadSpace(id = spaceNow()) {
+  try {
+    const b = await decode(await (await fetch(`sounds/reverbs/${id}.wav`)).arrayBuffer());
+    setSpace([b.getChannelData(0), b.getChannelData(b.numberOfChannels > 1 ? 1 : 0)], b.sampleRate);
+    eng?.setSpace();
+  } catch (e) { log('error', 'reverb: ' + e.message); }
+}
+for (const [id, name, about] of SPACES) $('spaceSel').add(new Option(`${name}: ${about}`, id));
+$('spaceSel').value = spaceNow();
+const spaceCredit = () => { const x = SPACES.find(x => x[0] === $('spaceSel').value); $('spaceNote').textContent = `A recording of a real space: ${x[1]}. Recorded by ${x[3]}. Every reverb uses it: the FX keys, a sound's own effect, a Loops column's.`; };
+spaceCredit();
+$('spaceSel').addEventListener('change', async () => {
+  try { localStorage.setItem('pocketSpace', $('spaceSel').value); } catch (e) {}
+  spaceCredit(); await loadSpace($('spaceSel').value);
+  status(`Reverb: ${SPACES.find(x => x[0] === $('spaceSel').value)[1]}.`);
+});
+loadSpace();
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
 const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
   'acoustic', 'boombap', 'kit808', 'kit909', 'tr808', 'electro', 'percussion', 'shakers'];
@@ -1940,7 +1968,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zh'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zi'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2033,7 +2061,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zh'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zi'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4119,16 +4147,14 @@ const CELL_PACKS = [['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks',
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
 let menuCell = null, menuPack = null, menuFolder = null, menuSet = null, choosing = false;
-// Packs (below the folders): a set or a kit or a pack, all its sounds, under a heading for each colour.
+// Packs (below the folders): a set made for the looper, all its sounds, under a heading for each colour.
 // The Electro Boom Bap set is its six packs; a kit is its kicks (red), snares and claps (orange), and
 // hats, cymbals and percussion (yellow); any other pack is one colour. Its sounds are in the folders too.
 const folderFor = id => TREE[1].find(f => Array.isArray(f[1]) && f[1].includes(id));
 const SET_PACKS = { 'set:ebb': ['Electro Boom Bap', EBB] };
-function packList() {
-  const seen = new Set(EBB), out = Object.keys(SET_PACKS);
-  for (const f of TREE[1]) if (Array.isArray(f[1])) for (const id of f[1]) if (LIBRARY[id] && isPack(id) && !seen.has(id) && !toDelete().has(id)) { seen.add(id); out.push(id); }
-  return out;
-}
+// Only the sets made for the looper (every loop in one fits every other): for now, Electro Boom Bap.
+// Every other pack is still in the colour folders, and in Menu › Sounds for the Pads.
+function packList() { return Object.keys(SET_PACKS); }
 const HIT_GROUP = { kick: ['Kicks', 'var(--c-kick)'], snare: ['Snares and claps', 'var(--c-snare)'], clap: ['Snares and claps', 'var(--c-snare)'] };
 async function packGroups(id) {
   const groups = [], add = (label, colour, lib, slot, ks) => { if (ks.length) groups.push({ label, colour, lib, slot, ks }); };
@@ -4559,6 +4585,18 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     return b64f((await off.startRendering()).getChannelData(0));
   },
   lib: id => LIBRARY[id],
+  // a sound through each space in turn, for listening to them (raw stereo float32, base64)
+  spaceDemo: async (lib, k, secs) => {
+    const base = await slotOf({ lib }), out = [];
+    for (const [id] of SPACES) {
+      await loadSpace(id);
+      const off = new OfflineAudioContext(2, Math.ceil(secs * SR), SR), e = new Engine(off, { live: false });
+      const sl = { ...base, params: { ...base.params, vol: 0.5, fx: { type: 'reverb', amt: 0.7 } } };
+      playNote(e, sl, -1, k, 0.05, { scale: 'minor', bpm: 120, root: 0 });
+      const b = await off.startRendering(); out.push([b64f(b.getChannelData(0)), b64f(b.getChannelData(1))]);
+    }
+    await loadSpace(); return out;
+  },
   // what comes out of the speakers for a while (raw float32 base64), for testing what plays
   capture: secs => new Promise(ok => {
     const n = Math.round(secs * ctx.sampleRate), out = new Float32Array(n); let at = 0;

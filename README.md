@@ -219,8 +219,14 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   browser's colour folders, the column's own first; anything can go anywhere.
 - **Tempo and key on every cell** (and when choosing a sound): the tempo it
   was made at and its key, found by listening (kept on the device) or known.
-- **Packs when choosing a cell's sound:** below the colour folders, every set,
-  kit and pack, its sounds under a heading for each colour. The wave editor
+- **Real reverbs** (Menu › Effects): recordings of real spaces (impulse
+  responses) for every reverb: the Lady Chapels of St Albans and Ely
+  Cathedrals, the St. Nicholas Chapel of Aachen Cathedral, a church in
+  Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
+  Zenodo datasets; CC BY 4.0, credited in Help), made ready by
+  `pocket-sampler/tools/reverbs.py`.
+- **Packs when choosing a cell's sound:** below the colour folders, the sets
+  made for the looper (Electro Boom Bap), its sounds under a heading for each colour. The wave editor
   is on the cell's Settings tab.
 - **Copy and Paste in the Loops:** Copy, then a cell; Paste, then any cells.
 - **The Loops' top row:** the tempo opens common tempos (− and + fine-tune),
