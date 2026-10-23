@@ -215,6 +215,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit (and every 16th with none), each hit put down at its new time as
   recorded, so breaks like the Amen stay crisp at any tempo. 🔁 in Review
   the library loops a sound at the tempo playing, as the Loops would.
+- **A cell's sounds by colour:** choosing a sound for a Loops cell shows the
+  browser's colour folders, the column's own first; anything can go anywhere.
 - **Multi in the Loops:** the cells of one column play together.
 - **🗑 Review the library** (Menu › Sounds): hear every sound, tick the ones
   to go, and send the list to Claude (a GitHub issue, or copied for a chat)

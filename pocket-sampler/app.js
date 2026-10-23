@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023z';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023za';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1904,7 +1904,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023za'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1997,7 +1997,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023za'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4032,9 +4032,18 @@ const CELL_PACKS = [['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks',
   ['Kits', ['boombap', 'tr808', 'electro', 'drumtraks', 'acoustic', 'percussion', 'shakers']],
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
-let menuCell = null, menuPack = null, choosing = false;
+let menuCell = null, menuPack = null, menuFolder = null, choosing = false;
+// The sounds for a cell, in the browser's colour folders (Beats red, Bass green...); the folder for the
+// column comes first, but anything can go anywhere. Instruments play on the Pads (⟳ Loop brings them here).
+const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox and keys'];
+const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.test(f[1]));
+function folderSounds(f) {          // what a cell can take from a folder: your loops, packs (a sound of them), single hits
+  if (typeof f[1] === 'string') return hitItems(f[1].slice(5)).filter(c => !doomed(c)).map(c => ({ hit: c }));
+  return [...mine.filter(m => m.type === 'loop' && m.folder === f[0]).map(m => ({ mine: m })),
+    ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
+}
 function openCellMenu(c, r) {
-  menuCell = { c, r }; menuPack = null; choosing = !S.grid.cells[c][r];
+  menuCell = { c, r }; menuPack = null; menuFolder = null; choosing = !S.grid.cells[c][r];
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
 }
 function closeCellMenu() { $('lmenu').hidden = true; menuCell = null; drawLoops(); }
@@ -4096,35 +4105,68 @@ async function drawCellMenu() {
   }
   if (!choosing) return;
   const crumbs = $('lmCrumbs'), list = $('lmList'); crumbs.textContent = ''; list.textContent = '';
-  const btn = (text, small, fn, sel) => {
+  const btn = (text, small, fn, sel, colour, cls) => {
     const b = document.createElement('button'); b.textContent = text;
     if (small) { const s = document.createElement('small'); s.textContent = small; b.appendChild(s); }
     if (sel) b.classList.add('sel');
-    b.addEventListener('click', fn); list.appendChild(b);
+    if (colour) { b.style.setProperty('--f', colour); b.classList.add(cls || 'tint'); }
+    b.addEventListener('click', fn); list.appendChild(b); return b;
   };
-  const top = document.createElement('button'); top.textContent = 'Sounds'; top.addEventListener('click', () => { menuPack = null; drawCellMenu(); });
-  crumbs.appendChild(top);
-  if (!menuPack) {
-    for (const m of mine.filter(m => m.type === 'loop')) btn(m.name, `My loops · ${m.folder}`, () => {
-      const was = S.grid.cells[c][r];
-      { const l = lane(c, r); if (l.cur?.r === r) stopAt(l.cur, { when: ctx.currentTime, j: 0 }, false); if (l.next?.r === r) { kill(l.next); l.next = null; } }
-      S.grid.cells[c][r] = { mine: m.id, k: 0, name: m.name, mode: 'loop', vol: was?.vol ?? 1 };
-      choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
-    }, cell?.mine === m.id);
-    for (const [group, ids] of CELL_PACKS) for (const id of ids) if (LIBRARY[id] && !toDelete().has(id)) btn(LIBRARY[id].name, group, () => { menuPack = id; drawCellMenu(); }, cell?.lib === id);
-    return;
-  }
-  crumbs.append(' › ' + LIBRARY[menuPack].name);
-  const pack = menuPack, slot = await slotOf({ lib: pack });
-  if (menuPack !== pack || !menuCell) return;
-  slot.slices.forEach((x, k) => !toDelete().has(`${pack}#${k}`) && btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
-    playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
+  const crumb = (text, fn, colour) => {
+    const b = document.createElement('button'); b.textContent = text; b.addEventListener('click', fn);
+    if (colour) b.style.color = colour;
+    crumbs.appendChild(b);
+  };
+  // put a sound in the cell (what was playing there stops)
+  const put = x => {
     const was = S.grid.cells[c][r];
     { const l = lane(c, r); if (l.cur?.r === r) stopAt(l.cur, { when: ctx.currentTime, j: 0 }, false); if (l.next?.r === r) { kill(l.next); l.next = null; } }
-    const hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
-    S.grid.cells[c][r] = { lib: pack, k, name: x.name, mode: was?.mode || (x.bpm || pack === 'ambience' || hit ? 'loop' : 'oneshot'), vol: was?.vol ?? 1, ...(beats && { beats }) };
+    S.grid.cells[c][r] = { ...x, vol: was?.vol ?? 1 };
     choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
-  }, cell?.lib === pack && cell.k === k));
+  };
+  const putHit = (lib, k, x) => {
+    const was = S.grid.cells[c][r], hit = HIT_COLS.has(c) && !x.bpm, beats = was ? was.beats : hit ? 4 : 0;
+    put({ lib, k, name: x.name, mode: was?.mode || (x.bpm || lib === 'ambience' || hit ? 'loop' : 'oneshot'), ...(beats && { beats }) });
+  };
+  crumb('Sounds', () => { menuPack = menuFolder = null; drawCellMenu(); });
+  const F = menuFolder && cellFolders().find(f => f[0] === menuFolder), fc = F?.[2];
+  if (!F) {             // the colour folders, the column's own first
+    const fs = cellFolders(), own = fs.find(f => f[0] === COL_FOLDER[c]);
+    for (const f of [own, ...fs.filter(x => x !== own)].filter(Boolean)) {
+      const n = f[1] === 'hits:snare' || f[1] === 'hits:tops' ? (banks ? folderSounds(f).length : '') : folderSounds(f).length;
+      if (n === 0) continue;
+      const mineN = Array.isArray(f[1]) ? mine.filter(m => m.type === 'loop' && m.folder === f[0]).length : 0;
+      const what = typeof f[1] === 'string' ? `${n} hits` : `${n - mineN} pack${n - mineN === 1 ? '' : 's'}${mineN ? ` + ${mineN} of your loops` : ''}`;
+      btn('▸ ' + f[0].replace(/ \(.*\)$/, ''), `${what}${f === own ? ' · this column' : ''}`,
+        () => { menuFolder = f[0]; menuPack = null; drawCellMenu(); }, cell && f === own, f[2] || 'var(--accent)', 'folder');
+    }
+    return;
+  }
+  crumb(F[0].replace(/ \(.*\)$/, ''), () => { menuPack = null; drawCellMenu(); }, fc);
+  if (!menuPack) {
+    if (typeof F[1] === 'string' && !banks) { await bankList(); if (menuFolder === F[0]) drawCellMenu(); return; }
+    for (const it of folderSounds(F)) {
+      if (it.mine) btn(it.mine.name, `my loop · ${(it.mine.item.slices?.[0]?.bars || 1) * 4} beats`, () => put({ mine: it.mine.id, k: 0, name: it.mine.name, mode: 'loop' }), cell?.mine === it.mine.id, fc);
+      else if (it.pack) btn(LIBRARY[it.pack].name + ' ▸', `${libTag(it.pack)} · ${banks?.[LIBRARY[it.pack].bank || it.pack]?.from?.length || ''} sounds`, () => { menuPack = it.pack; drawCellMenu(); }, cell?.lib === it.pack, fc);
+      else {
+        const h = it.hit, x = { name: banks[h.from.lib].from[h.k], bpm: banks[h.from.lib].loops?.[h.k]?.[0] };
+        btn(h.label, '', async () => { const sl = await slotOf({ lib: h.from.lib }); playNote(eng, sl, -1, h.k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root }); putHit(h.from.lib, h.k, { ...x, name: shortName(x.name) }); },
+          cell?.lib === h.from.lib && cell.k === h.k, fc);
+      }
+    }
+    const inst = Array.isArray(F[1]) ? F[1].filter(id => LIBRARY[id] && !isPack(id)) : [];
+    if (inst.length) { const p = document.createElement('p'); p.className = 'note lmnote'; p.textContent = `${inst.map(id => LIBRARY[id].name).slice(0, 6).join(', ')}${inst.length > 6 ? '…' : ''}: instruments, played on the Pads. Record a pattern with one and ⟳ Loop it to put it here.`; list.appendChild(p); }
+    return;
+  }
+  crumb(LIBRARY[menuPack].name, () => drawCellMenu(), fc);
+  const wait = document.createElement('p'); wait.className = 'note lmnote'; wait.textContent = 'Loading…'; list.appendChild(wait);
+  const pack = menuPack, slot = await slotOf({ lib: pack });
+  if (menuPack !== pack || !menuCell) return;
+  wait.remove();
+  slot.slices.forEach((x, k) => !toDelete().has(`${pack}#${k}`) && btn(x.name, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
+    playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
+    putHit(pack, k, x);
+  }, cell?.lib === pack && cell.k === k, fc));
 }
 document.querySelectorAll('[data-lmode]').forEach(b => b.addEventListener('click', () => {
   const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
