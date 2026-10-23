@@ -66,28 +66,34 @@ hats8 = [(s, 1.0 if s % 4 == 0 else 0.75) for s in range(0, 16, 2)]
 LOOPS = {}       # id -> (column, name, song, mode, follows the key)
 def loop(col, lid, name, sng, mode='loop', key=False): LOOPS[lid] = (col, name, sng, mode, key)
 
-# --- Kick ------------------------------------------------------------------------------
-loop(0, 'k1', 'Boom bap kick', drums(BBK, {K: {BB['kick']: [0, 7, 10]}}))
-loop(0, 'k2', 'Kick bounce', drums(BBK, {K: {BB['kick']: [0, 7, 10]}}, {K: {BB['kick']: [0, 3, 10, (13, 0.7)]}}))
-loop(0, 'k3', '808 boom', drums(TRK, {T: {TR['boom']: [0, 10]}}, {T: {TR['boom']: [0, 3, 10]}}))
-loop(0, 'k4', 'Electro kick', drums(ELK + BBK, {E: {EL['kick']: [0, 6, 10]}, K: {BB['kick2']: [(0, 0.6)]}}))
-loop(0, 'k5', 'Half time kick', drums(BBK + TRK, {K: {BB['kick']: [0, 11]}, T: {TR['boom']: [(0, 0.6)]}}))
-loop(0, 'k6', 'Kick fill', drums(BBK, {K: {BB['kick']: [0, 7, 10, (12, 0.7), (13, 0.8), (14, 0.9), 15]}}))
-# --- Snare -----------------------------------------------------------------------------
-loop(1, 's1', 'Boom bap snare', drums(BBK, {K: {BB['snare']: [4, 12], BB['ghost']: [(15, 0.6)]}}))
-loop(1, 's2', 'Snare and ghosts', drums(BBK, {K: {BB['snare']: [4, 12], BB['ghost']: [(7, 0.5), (15, 0.6)]}},
-                                         {K: {BB['snare']: [4, 12], BB['ghost']: [(9, 0.5), (11, 0.4), (15, 0.6)]}}))
-loop(1, 's3', '808 clap', drums(BBK + TRK, {T: {TR['clap']: [4, 12]}, K: {BB['snare']: [(4, 0.5), (12, 0.5)]}}))
-loop(1, 's4', 'Rim knock', drums(BBK + TRK, {K: {BB['rim']: [4, 12]}, T: {TR['rim']: [(10, 0.6), (14, 0.4)]}}))
-loop(1, 's5', 'Half time snare', drums(BBK + TRK, {K: {BB['snare']: [8]}, T: {TR['clap']: [(8, 0.8)]}}))
-loop(1, 's6', 'Snare roll', drums(BBK, {K: {BB['snare']: [4, 12, (13, 0.5), (14, 0.7), (15, 0.9)], BB['ghost']: [(10, 0.5), (11, 0.5)]}}))
-# --- Tops ------------------------------------------------------------------------------
-loop(2, 't1', 'Hats 8ths', drums(BBK, {K: {BB['hat']: hats8}}))
-loop(2, 't2', 'Hats and open hat', drums(BBK, {K: {BB['hat']: hats8}}, {K: {BB['hat']: hats8[:-1], BB['open']: [14]}}))
-loop(2, 't3', '808 16th hats', drums(TRK, {T: {TR['hat']: [(s, 0.9 if s % 4 == 0 else 0.6 if s % 2 == 0 else 0.4) for s in range(16)]}}))
-loop(2, 't4', 'Electro cowbell', drums(TRK, {T: {TR['cowbell']: [(3, 0.7), (6, 0.7), (11, 0.7), (14, 0.7)], TR['maracas']: [(s, 0.5) for s in (2, 6, 10, 14)]}},
-                                        {T: {TR['cowbell']: [(3, 0.7), (6, 0.7), (11, 0.7)], TR['maracas']: [(s, 0.5) for s in (2, 6, 10, 14)]}}))
-loop(2, 't5', 'Shaker', drums([(S_, 'shakers', 0.6, None)], {S_: {SH['shaker']: [(s, 0.9 if s % 4 == 2 else 0.5) for s in range(16)], SH['tamb']: [(4, 0.6), (12, 0.6)]}}))
+# --- Beats (the red Kick column): whole beats, kick, snare and hats together ------------------
+# (the Snare and Tops columns hold single hits, straight from the kits: see GRID)
+def merge(*bars):                       # several {slot: {key: steps}} into one bar
+    out = {}
+    for b in bars:
+        for slot, keys in b.items():
+            for key, steps in keys.items(): out.setdefault(slot, {}).setdefault(key, []).extend(steps)
+    return out
+openbar = hats8[:-1]
+loop(0, 'k1', 'Boom bap beat', drums(BBK,
+    {K: {BB['kick']: [0, 7, 10], BB['snare']: [4, 12], BB['ghost']: [(15, 0.6)], BB['hat']: hats8}},
+    {K: {BB['kick']: [0, 3, 10, (13, 0.7)], BB['snare']: [4, 12], BB['ghost']: [(7, 0.5), (15, 0.6)], BB['hat']: openbar, BB['open']: [14]}}))
+loop(0, 'k2', 'Rim beat', drums(BBK + TRK,
+    {K: {BB['kick']: [0, 7, 10], BB['rim']: [4, 12], BB['hat']: hats8}, T: {TR['rim']: [(10, 0.6), (14, 0.4)]}}))
+h16 = [(st, 0.9 if st % 4 == 0 else 0.6 if st % 2 == 0 else 0.4) for st in range(16)]
+loop(0, 'k3', '808 beat', drums(TRK,
+    {T: {TR['boom']: [0, 10], TR['clap']: [4, 12], TR['hat']: h16}},
+    {T: {TR['boom']: [0, 3, 10], TR['clap']: [4, 12], TR['hat']: h16[:14], TR['open']: [14]}}))
+cow = [(3, 0.7), (6, 0.7), (11, 0.7), (14, 0.7)]; mar = [(st, 0.5) for st in (2, 6, 10, 14)]
+loop(0, 'k4', 'Electro beat', drums(ELK + BBK + TRK,
+    {E: {EL['kick']: [0, 6, 10]}, T: {TR['clap']: [4, 12], TR['cowbell']: cow, TR['maracas']: mar}, K: {BB['snare']: [(4, 0.5), (12, 0.5)]}},
+    {E: {EL['kick']: [0, 6, 10, 13]}, T: {TR['clap']: [4, 12], TR['cowbell']: cow[:3], TR['maracas']: mar}, K: {BB['snare']: [(4, 0.5), (12, 0.5)]}}))
+loop(0, 'k5', 'Half time beat', drums(BBK + TRK,
+    {K: {BB['kick']: [0, 11], BB['snare']: [8], BB['hat']: [(st, v * 0.8) for st, v in openbar], BB['open']: [(14, 0.7)]}, T: {TR['clap']: [(8, 0.8)]}}))
+shk = [(st, 0.9 if st % 4 == 2 else 0.5) for st in range(16)]
+loop(0, 'k6', 'Shaker beat', drums(BBK + [(S_, 'shakers', 0.6, None)],
+    {K: {BB['kick']: [0, 7, 10], BB['snare']: [4, 12]}, S_: {SH['shaker']: shk, SH['tamb']: [(4, 0.6), (12, 0.6)]}},
+    {K: {BB['kick']: [0, 3, 10], BB['snare']: [4, 12], BB['ghost']: [(15, 0.6)]}, S_: {SH['shaker']: shk, SH['tamb']: [(4, 0.6), (12, 0.6)]}}))
 # --- Bass (808, electric, Reese, upright) ------------------------------------------------
 B = 0
 def bassline(steps, extra=None, held=None):
@@ -155,26 +161,30 @@ V = 12
 HYK = [(V, 'hype', 0.8, None)]
 loop(7, 'v1', 'Check it, yeah', drums(HYK, {V: {HY['checkit']: [0], HY['uh']: [14]}}, {V: {HY['yeah']: [12]}}))
 loop(7, 'v2', 'One two, hit it', drums(HYK, {V: {HY['onetwo']: [0], HY['hitit']: [8]}}, {}))
-loop(7, 'v3', 'Say what, word', drums(HYK, {V: {HY['saywhat']: [12]}}, {V: {HY['word']: [4], HY['ho']: [(14, 0.7)]}}))
 loop(7, 'v4', "Women's choir", harmonic([(V, 'choirwomen', 0.35, 'gate')], chord_hits([(0, 1)], slot=V, up=0, d=16)), key=True)
 
 # The grid: per column, its six cells in order. A loop rendered here, or a sound the app
 # already has ({lib, k}) played as is.
-GRID = [['k1', 'k2', 'k3', 'k4', 'k5', 'k6'], ['s1', 's2', 's3', 's4', 's5', 's6'],
-        ['t1', 't2', 't3', 't4', 't5', {'lib': 'ambience', 'k': 1, 'mode': 'loop', 'name': 'Vinyl'}],
+def hit(lib, k, name, vol=0.6): return {'lib': lib, 'k': k, 'mode': 'oneshot', 'name': name, 'vol': vol}
+GRID = [['k1', 'k2', 'k3', 'k4', 'k5', 'k6'],
+        [hit('boombap', BB['snare'], 'Snare'), hit('boombap', BB['snare2'], 'Snare 2'), hit('boombap', BB['ghost'], 'Ghost snare'),
+         hit('tr808', TR['clap'], '808 clap'), hit('boombap', BB['rim'], 'Rimshot'), hit('boombap', BB['brush'], 'Brush snare')],
+        [hit('boombap', BB['hat'], 'Hat', 0.5), hit('boombap', BB['open'], 'Open hat', 0.5), hit('tr808', TR['hat'], '808 hat', 0.5),
+         hit('tr808', TR['cowbell'], 'Cowbell', 0.5), hit('shakers', SH['shaker'], 'Shaker', 0.5), hit('boombap', BB['crash'], 'Crash', 0.45)],
         ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'], ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
         ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'], ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'],
-        ['v1', 'v2', 'v3', 'v4', {'lib': 'hype', 'k': HY['alleluia'], 'mode': 'oneshot', 'name': 'Alleluia'},
+        ['v1', 'v2', 'v4', {'lib': 'ambience', 'k': 1, 'mode': 'loop', 'name': 'Vinyl'},
+         {'lib': 'hype', 'k': HY['alleluia'], 'mode': 'oneshot', 'name': 'Alleluia'},
          {'lib': 'hype', 'k': HY['selah'], 'mode': 'oneshot', 'name': 'Selah'}]]
-BANKS = ['ebbkick', 'ebbsnare', 'ebbtops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox']
-NAMES = ['EBB Kick', 'EBB Snare', 'EBB Tops', 'EBB Bass', 'EBB Chords', 'EBB Lead', 'EBB Sub', 'EBB Vox & Keys']
+BANKS = ['ebbbeats', None, None, 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox']        # Snare, Tops: hits from the kits
+NAMES = ['EBB Beats', None, None, 'EBB Bass', 'EBB Chords', 'EBB Lead', 'EBB Sub', 'EBB Vox & Keys']
 RATES = [32000, 32000, 32000, 22050, 24000, 32000, 16000, 24000]     # what each needs: the sub, little above 1 kHz
 # How loud each column's loops are (RMS): the cells in a column take turns, so they are levelled
 # to the same loudness, and the columns to a mix that sits together with every fader at 80.
 # Drums are sparse, so their RMS is low for their loudness; the sub is a sine, felt more than heard.
 # All of it at once (a cell in every column, faders at 80) peaks near 1.05, so the limiter
 # rounds off only the very tops.
-TARGET = [x * 0.7 for x in (0.13, 0.055, 0.025, 0.16, 0.13, 0.08, 0.16, 0.06)]
+TARGET = [x * 0.7 for x in (0.15, 0.055, 0.025, 0.16, 0.13, 0.08, 0.16, 0.06)]
 VOL = {}
 
 def bars_of(lid): return len(LOOPS[lid][2]['patterns'])
@@ -189,6 +199,7 @@ elif sys.argv[1] == 'pack':
     index = json.load(open(f'{OUT}/banks.json'))
     for c, (bank, name, rate) in enumerate(zip(BANKS, NAMES, RATES)):
         ids = [x for x in GRID[c] if isinstance(x, str)]
+        if not ids: continue
         data, slices, names, tempo = [], [], [], []
         for lid in ids:
             x = read(lid)
@@ -206,6 +217,9 @@ elif sys.argv[1] == 'pack':
         w = wave.open(f'{OUT}/{bank}.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm.tobytes()); w.close()
         index[bank] = {'name': name, 'rate': rate, 'slices': slices, 'from': names, 'loops': tempo}
         print(f'{bank:10} {len(slices)} loops, {len(data) / rate:5.1f} s at {rate} Hz, {os.path.getsize(f"{OUT}/{bank}.wav") / 1e6:.2f} MB')
+    for old in ('ebbkick', 'ebbsnare', 'ebbtops'):        # the first version's columns
+        index.pop(old, None)
+        if os.path.exists(f'{OUT}/{old}.wav'): os.remove(f'{OUT}/{old}.wav')
     json.dump(index, open(f'{OUT}/banks.json', 'w'), separators=(',', ':'))
     cells = []
     for c, col in enumerate(GRID):

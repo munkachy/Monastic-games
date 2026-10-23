@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023b';
+import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023c';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -182,11 +182,11 @@ const LIBRARY = {
   drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
   ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
   // The Electro Boom Bap loop set (tools/loopset.py): F minor, 92 BPM; a bank for each Loops column
-  ebbkick: { name: 'EBB Kick', bank: 'ebbkick' }, ebbsnare: { name: 'EBB Snare', bank: 'ebbsnare' }, ebbtops: { name: 'EBB Tops', bank: 'ebbtops' },
+  ebbbeats: { name: 'EBB Beats', bank: 'ebbbeats' },
   ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
   ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
 };
-const EBB = ['ebbkick', 'ebbsnare', 'ebbtops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
+const EBB = ['ebbbeats', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox'];
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
 const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
   'acoustic', 'boombap', 'kit808', 'kit909', 'tr808', 'electro', 'percussion', 'shakers'];
@@ -246,7 +246,7 @@ const S = {
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
   patKeys: new Array(16).fill(null),
   oct: new Array(16).fill(0),          // each sound's octave for the keys you play (−2 to +2); saved with what you record   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
-  custom: [...DEFAULT_CUSTOM_IDS], wview: 'perc', pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -596,7 +596,7 @@ const keyEls = [];
 const down = new Set();
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
-  b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i>`;
+  b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i><em class="tag"></em>`;
   b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); press(k); });
   const up = () => release(k);
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
@@ -614,8 +614,8 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist();   // a taste: never left looping
-      S.wview = isDrum(k) ? 'perc' : 'inst'; break;      // Write shows the hits of the kind of sound chosen
+      if (!copying && (k < 8) !== (soundPage === 'inst')) break;      // the other side's pads are dim
+      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); break;   // a taste: never left looping
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -809,9 +809,17 @@ function copyPattern(from, to) {
 // Function buttons
 // ---------------------------------------------------------------------------
 let chainEdit = false, chainFresh = false, followPlay = true;
+// Sound: tap once for the instruments (sounds 1-8), again for the drums (the kits, 9-16), again to play.
+let soundPage = 'inst';
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   const m = b.dataset.mode;
-  S.mode = S.mode === m ? 'play' : m;
+  if (m === 'sound' && !copying) {
+    if (S.mode !== 'sound') { S.mode = 'sound'; soundPage = 'inst'; }
+    else if (soundPage === 'inst') soundPage = 'perc';
+    else S.mode = 'play';
+    status(S.mode !== 'sound' ? '' : soundPage === 'inst' ? 'Instruments: tap a sound (1–8). Sound again for the drums.'
+      : 'Drums: tap a kit (9–16). Its hits are the 16 keys, each in its colour. Sound again to play.');
+  } else S.mode = S.mode === m ? 'play' : m;
   if (S.mode !== 'fx' && !S.fxLatch) for (const f of [...activeFx]) releaseFx(f);
   if (S.mode !== 'pattern' && chainEdit) setChainEdit(false);
   if (copying && S.mode !== copying) copying = null;
@@ -908,13 +916,13 @@ function roll(all) {
   const si = S.cur, fam = $('family').value;
   if (si < 8) {
     const b = blessMe(ctx, fam);
-    const slot = { factory: null, kind: 'sample', name: `Rolled ${b.family}`, params: defParams(), buf: b };
+    const slot = { factory: null, kind: 'sample', name: `Rolled ${b.family}`, params: defParams(), buf: b, made: 'GEN' };
     S.slots[si] = slot; S.lastKey[si] = 7;
     noteOn(eng, si, 7, ctx.currentTime + 0.01);
   } else {
     let slot = S.slots[si];
     if (all || slot.kind !== 'chop') {
-      slot = { factory: null, kind: 'chop', name: `Rolled ${fam || 'kit'}`, params: defParams(), slices: [] };
+      slot = { factory: null, kind: 'chop', name: `Rolled ${fam || 'kit'}`, params: defParams(), slices: [], made: 'GEN' };
       for (let k = 0; k < 16; k++) { const b = blessMe(ctx, fam); slot.slices.push({ buf: b, s: 0, e: b.duration, name: b.family }); }
       S.slots[si] = slot;
     } else {
@@ -1045,9 +1053,11 @@ const TREE = ['Sounds', [
     ['My packs', 'mine:pack'],
   ]],
   ['My Sounds', 'mine:all'],
+  ['★ Favorites', 'favs'],
 ]];
 const EMPTY = { Songs: 'No songs yet: the songs Claude builds for you will be here.', Loops: 'Loops come in a later build: drum loops and more, stretched to your tempo and key.',
   'My Sounds': 'Nothing saved yet. ★ Save to My Sounds (in Settings or the editor) keeps a sound here; ⬆ Import brings in a file.',
+  '★ Favorites': 'No favorites yet. Choose a sound, then ☆ Favorite (under Load) keeps it here.',
   'My packs': 'No packs yet. In My Sounds, Make a pack puts up to 16 of your sounds together.' };
 const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
 // What can be chosen in the browser: { lib: id } a built-in sound, { mine: record } one of yours,
@@ -1062,6 +1072,7 @@ function itemsOf(node) {
   if (it === 'mine:all') return mine.map(m => ({ mine: m }));
   if (it === 'mine:pack') return mine.filter(m => m.type === 'pack').map(m => ({ mine: m }));
   if (it === 'songs') return SONGS.map(x => ({ song: x }));
+  if (it === 'favs') return favChoices();
   if (node.contents) return node.contents;
   return it.map(x => (Array.isArray(x) ? x : { lib: x }));
 }
@@ -1079,14 +1090,17 @@ function drawBrowser() {
     const b = document.createElement('button'), small = document.createElement('small');
     if (Array.isArray(it)) {
       b.textContent = '▸ ' + it[0];
-      const n = typeof it[1] === 'string' ? (it[1] === 'songs' ? SONGS.length : it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
+      const n = typeof it[1] === 'string' ? (it[1] === 'songs' ? SONGS.length : it[1] === 'favs' ? favChoices().length
+        : it[1] === 'mine:pack' ? mine.filter(m => m.type === 'pack').length : mine.length) : count(it);
       small.textContent = n ? `${n}` : '';
       b.addEventListener('click', () => { bPath.push(it); bSel = null; drawBrowser(); });
     } else {
       b.textContent = selName(it).replace(/ \(from .*\)$/, '');
-      small.textContent = it.song ? it.song.about : it.k != null ? `key ${it.k + 1}`
+      const tag = choiceTag(it), fav = favKey(it) && favs().some(x => x.key === favKey(it));
+      small.textContent = (fav ? '★ ' : '') + (tag ? tag + ' · ' : '') + (it.song ? it.song.about : it.k != null ? `key ${it.k + 1}`
         : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : 'my sound')
-        : selPack(it) ? 'pack' : 'instrument';
+        : selPack(it) ? 'pack' : 'instrument');
+      small.title = tag.split(' + ').map(t => `${t}: ${TAG_ABOUT[t]}`).join('; ');
       b.classList.toggle('sel', !!bSel && same(bSel, it));
       b.addEventListener('click', () => { bSel = it; drawBrowser(); preview(it); });
     }
@@ -1100,11 +1114,69 @@ function drawBrowser() {
     tool('Make a pack', openPackMaker);
   }
   $('bLoad').disabled = !bSel;
+  const isFav = bSel && favs().some(x => x.key === favKey(bSel));
+  $('bFav').disabled = !bSel || !favKey(bSel); $('bFav').textContent = isFav ? '★ Favorite' : '☆ Favorite';
+  $('bFav').classList.toggle('on', !!isFav);
+  $('bSave').disabled = !bSel || !!bSel.song || !!bSel.mine;
   $('bLoad').textContent = bSel?.song ? `Load the song (sounds 1–8, all patterns)` : bSel ? `Load ${selName(bSel).replace(/ \(from .*\)$/, '')} onto sound ${S.cur + 1}` : `Choose a sound for sound ${S.cur + 1}`;
   // second button: open a pack, or rename / delete one of yours
   const more = $('bMore');
   more.hidden = !bSel || !(selPack(bSel) || bSel.mine);
   more.textContent = bSel && selPack(bSel) ? 'Open pack ▸' : 'Rename / delete';
+}
+// The two sides stay apart: drum kits and percussion only on the drum pads (9-16),
+// instruments only on 1-8. Anything else (vocals, FX, stabs, loops) goes on either.
+const isKitLib = id => KITS_MENU.some(([, ids]) => ids.includes(id)) || ['percussion', 'shakers', 'bells2'].includes(id);
+const isInstLib = id => !!(LIBRARY[id]?.synth || LIBRARY[id]?.multi);
+function sideRefuses(c) {
+  if (!c.lib) return '';
+  if (isKitLib(c.lib) && !drumSide(S.cur)) return `${LIBRARY[c.lib].name} is drums: they go on the drum pads. Sound, Sound again (🥁 Drums), tap a kit, then load it.`;
+  if (isInstLib(c.lib) && drumSide(S.cur)) return `${LIBRARY[c.lib].name} is an instrument: it goes on sounds 1–8. Sound (🎹 Instr.), tap one, then load it.`;
+  return '';
+}
+
+// What a sound is: SYN played by the synth as you play; REC a recording (a sample) of a real
+// instrument or machine; GEN made in code beforehand, then played as a recording (the 808 and 909
+// kits, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); MINE yours.
+const GEN_BANKS = new Set(['drumloops', 'hype', 'sirens', ...Object.keys(LIBRARY).filter(id => id.startsWith('ebb'))]);
+const GEN_MULTI = new Set(['nylon', 'steelgtr', 'twelve', 'steeldrum']);
+const GEN_SLICES = { ambience: ['Vinyl light', 'Vinyl dusty', 'Vinyl worn', 'Rain', 'Respirator'], airwater: ['Respirator', 'Respirator 2'],
+  noisefx: ['Riser', 'Short riser', 'Downlifter'] };
+const TAG_ABOUT = { SYN: 'synthesized as you play', REC: 'a recording', GEN: 'made in code', MINE: 'yours' };
+function libTag(id, name) {
+  const F = LIBRARY[id]; if (!F) return 'MINE';
+  if (F.synth) return 'SYN';
+  if (F.kit || GEN_BANKS.has(id) || GEN_MULTI.has(id)) return 'GEN';
+  if (name != null) return GEN_SLICES[id]?.includes(name) ? 'GEN' : 'REC';
+  return GEN_SLICES[id] ? 'REC + GEN' : 'REC';
+}
+const slotTag = sl => (!sl ? '' : sl.kind === 'synth' ? 'SYN' : sl.factory != null ? libTag(sl.factory) : sl.made || 'MINE');
+function choiceTag(c) {
+  if (c.song) return 'GEN';
+  if (c.lib) return libTag(c.lib);
+  if (c.mine) return 'MINE';
+  if (c.from?.lib) return libTag(c.from.lib, c.label);
+  return '';
+}
+
+// Favorites: built-in sounds (and single sounds of packs) you star, kept on this device.
+const favKey = c => (c.lib ? 'lib:' + c.lib : c.from?.lib ? `pack:${c.from.lib}:${c.k}` : c.mine ? 'mine:' + c.mine.id : null);
+const favs = () => { try { return JSON.parse(localStorage.getItem('pocketFavs') || '[]'); } catch (e) { return []; } };
+function toggleFav(c) {
+  const key = favKey(c); if (!key) return;
+  let f = favs(); const on = f.some(x => x.key === key);
+  f = on ? f.filter(x => x.key !== key) : [...f, { key, label: selName(c).replace(/ \(from .*\)$/, '') }];
+  try { localStorage.setItem('pocketFavs', JSON.stringify(f)); } catch (e) {}
+  status(on ? 'Taken out of Favorites.' : 'Added to Favorites (Menu › Sounds › ★ Favorites).');
+}
+function favChoices() {
+  return favs().map(({ key, label }) => {
+    const [t, a, b] = key.split(':');
+    if (t === 'lib' && LIBRARY[a]) return { lib: a };
+    if (t === 'pack' && LIBRARY[a]) return { from: { lib: a }, k: +b, label };
+    if (t === 'mine') { const m = mine.find(x => x.id === a); return m && { mine: m }; }
+    return null;
+  }).filter(Boolean);
 }
 const same = (a, b) => (a.song && a.song === b.song) || (a.lib && a.lib === b.lib) || (a.mine && b.mine && a.mine.id === b.mine.id) || (a.k != null && a.k === b.k && a.from === b.from);
 const count = node => (Array.isArray(node[1]) ? node[1].reduce((n, it) => n + (Array.isArray(it) ? count(it) : 1), 0) : 0);
@@ -1184,6 +1256,8 @@ async function loadLibrary(id) {
 $('bLoad').addEventListener('click', async () => {
   if (!bSel) return;
   if (bSel.song) { closeMenu(); await loadSong(bSel.song.id); return; }
+  const no = sideRefuses(bSel);
+  if (no) { status(no); return; }
   if (bSel.lib) await loadLibrary(bSel.lib);
   else {
     checkpoint();
@@ -1192,6 +1266,8 @@ $('bLoad').addEventListener('click', async () => {
   }
   closeMenu(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.01);
 });
+$('bFav').addEventListener('click', () => { if (bSel) { toggleFav(bSel); drawBrowser(); } });
+$('bSave').addEventListener('click', async () => { if (bSel && !bSel.song) { await saveMine(await slotOf(bSel), selName(bSel).replace(/ \(from .*\)$/, '')); drawBrowser(); } });
 $('bMore').addEventListener('click', async () => {
   if (!bSel) return;
   if (selPack(bSel)) {               // open the pack: its 16 sounds, each loadable alone
@@ -1656,7 +1732,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023c'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1749,7 +1825,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023c'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -1780,7 +1856,7 @@ async function voiceSyllables(text, cut = $('rapCut').value) {
 // plays them all.
 const MAX_SYL = 64;
 function voiceChop(name, buf, syl) {
-  return { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), choke: true }, buf,
+  return { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), choke: true }, buf, made: 'GEN',
     slices: syl.slice(0, MAX_SYL).map(x => ({ s: x.s, e: x.e, name: x.name, w: x.w, stress: x.stress, first: x.first, punct: x.punct })) };
 }
 
@@ -2109,11 +2185,11 @@ const cv = $('wave'), g = cv.getContext('2d');
 function keyLabel(k) {
   const sl = S.slots[S.cur]; if (!sl) return '';
   switch (S.mode) {
-    case 'sound': return k < 8 ? `${PART[k]} · ${S.slots[k]?.name || ''}` : S.slots[k]?.name || '';
+    case 'sound': if (!copying && (k < 8) !== (soundPage === 'inst')) return '';
+      return k < 8 ? `${PART[k]} · ${S.slots[k]?.name || ''}` : `Kit · ${S.slots[k]?.name || ''}`;
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[S.fxSlots[k]][0];
-    case 'play': if (S.write && !inView(S.cur)) return '';    // a drum in the Instruments view, or the other way round
-    if (S.write && !playing) {
+    case 'play': if (S.write && !playing) {
       // the colours show which sounds are on the step; the words, what the current sound plays there
       // (a syllable, "Kick") and any effect
       const st = S.patterns[S.pat][k], f = fxIdx(S.fx[S.pat][k]);
@@ -2156,11 +2232,6 @@ function layPads(first) {
 tallQ.addEventListener?.('change', () => { layPads(); draw(); });
 $('padsWay').addEventListener('change', e => { try { localStorage.setItem('pocketPads', e.target.value); } catch (er) {} layPads(); draw(); });
 layPads(true);
-document.querySelectorAll('[data-wv]').forEach(b => b.addEventListener('click', () => {
-  S.wview = b.dataset.wv; persist(); draw();
-  status(S.wview === 'perc' ? 'Percussion: the steps show the drum hits, each part in its colour (kick red, snare orange, hats yellow…).'
-    : 'Instruments: the steps show the instruments, each in its sound\'s colour (bass green, sub purple, chords teal…).');
-}));
 // A drum hit's part, by its name: its colour is that part's (a kick is always red).
 const HIT_PARTS = ['kick', 'snare', 'clap', 'hat', 'open', 'tom', 'perc', 'cym'];
 const HIT_NAME = { kick: 'Kick', snare: 'Snare', clap: 'Clap', hat: 'Hats', open: 'Open hat', tom: 'Toms', perc: 'Percussion', cym: 'Cymbals' };
@@ -2179,22 +2250,21 @@ function hitPart(name = '') {
 // (kick, snare, hats...), in that order. Instruments: a block for each instrument on it, in
 // sound order. One fills the step; 2-4 split it side by side; 5 or more make a grid. Each
 // block is dark and see-through, with a neon edge (the CSS for .key.steps).
-const inView = si => (S.wview === 'perc') === isDrum(si);
+// Which side Write shows: the drums when a kit (9-16) is the sound chosen, else the instruments.
+const drumSide = si => si >= 8;
+const wview = () => (drumSide(S.cur) ? 'perc' : 'inst');
+// A key's colour: an instrument's is its part's; a kit's keys are each their hit's (kick red, snare orange...).
+const keyColor = (si, k) => (drumSide(si) && S.slots[si]?.kind === 'chop' ? `var(--c-${hitPart(S.slots[si].slices[k]?.name)})` : soundVar(si));
 function stepItems(notes) {
-  const mine = n => n.s === S.cur;
-  if (S.wview === 'perc') {
-    const parts = new Map();
-    for (const n of notes) if (isDrum(n.s)) {
-      const p = hitPart(S.slots[n.s]?.slices?.[n.k]?.name);
-      parts.set(p, parts.get(p) || mine(n));
-    }
-    return HIT_PARTS.filter(p => parts.has(p)).map(p => ({ id: p, color: `var(--c-${p})`, me: parts.get(p) }));
+  if (wview() === 'perc') {          // the kit chosen only: a block for each part it hits there
+    const parts = new Set(notes.filter(n => n.s === S.cur).map(n => hitPart(S.slots[n.s]?.slices?.[n.k]?.name)));
+    return HIT_PARTS.filter(p => parts.has(p)).map(p => ({ id: p, color: `var(--c-${p})`, me: false }));
   }
-  return [...new Set(notes.filter(n => !isDrum(n.s)).map(n => n.s))].sort((a, b) => a - b)
+  return [...new Set(notes.filter(n => !drumSide(n.s)).map(n => n.s))].sort((a, b) => a - b)
     .map(s => ({ id: s, color: soundVar(s), me: s === S.cur }));
 }
 function stepFill(el, items) {
-  const n = items.length, sig = S.wview + '|' + items.map(x => x.id + (x.me ? '*' : '')).join(',');
+  const n = items.length, sig = wview() + '|' + items.map(x => x.id + (x.me ? '*' : '')).join(',');
   if (el.dataset.fill === sig) return;
   el.dataset.fill = sig;
   const [c, r] = n <= 4 ? [n, 1] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 4];
@@ -2212,7 +2282,7 @@ function draw() {
   $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
   $('screen').style.setProperty('--c', soundVar(S.cur));
-  $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}`;
+  $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}${sl ? ' · ' + slotTag(sl) : ''}`;
   // in a chain: the pattern on screen, and where the chain is (bar n of all of them)
   const cpos = playing && headTick >= 0 ? (Math.floor(headTick / 16) % S.chain.length) + 1 : 0;
   $('lcdPat').textContent = S.chain.length > 1 ? `PAT ${S.pat + 1} · ${cpos ? cpos + '/' : ''}${S.chain.length}⛓` : `PAT ${S.pat + 1}`;
@@ -2228,8 +2298,8 @@ function draw() {
   if (!$('loops').hidden) drawLoops();
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
   $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
-  $('wview').hidden = !(S.mode === 'play' && S.write);
-  document.querySelectorAll('[data-wv]').forEach(b => b.classList.toggle('on', b.dataset.wv === S.wview));
+  const sb = document.querySelector('[data-mode=sound]');
+  sb.textContent = S.mode !== 'sound' ? 'Sound' : soundPage === 'inst' ? '🎹 Instr.' : '🥁 Drums';
   for (let k = 0; k < 16; k++) {
     const el = keyEls[k], steps = S.patterns[S.pat][k];
     let lit = false, some = false, cur = false;
@@ -2237,12 +2307,17 @@ function draw() {
       case 'sound': cur = k === S.cur; break;
       case 'pattern': cur = k === S.pat; lit = S.chain.includes(k) && (playing ? k === headPat : true); some = S.patterns[k].some(s => s.length); break;
       case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
-      default: lit = steps.some(n => n.s === S.cur) && (!S.write || inView(S.cur)); some = !lit && steps.length > 0;
+      default: lit = steps.some(n => n.s === S.cur);
+        // the small light: other sounds on the step; in Write, drums not shown in the blocks (the other
+        // kits, with a kit chosen; any kit, with an instrument chosen), so a beat under them still shows
+        some = !lit && steps.some(n => (S.write ? drumSide(n.s) && n.s !== S.cur : true));
     }
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
-    if (tint) el.style.setProperty('--c', soundVar(S.mode === 'sound' ? k : S.cur));
-    el.classList.toggle('tint', tint); el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('steps', steps_);
+    const away = S.mode === 'sound' && !copying && (k < 8) !== (soundPage === 'inst');      // the other side, in Sound
+    if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : keyColor(S.cur, k));
+    el.classList.toggle('tint', tint && !away); el.classList.toggle('away', away);
+    el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('kitpad', S.mode === 'sound' && drumSide(k)); el.classList.toggle('steps', steps_);
     if (steps_) {
       const on = stepItems(steps);
       stepFill(el, on); el.classList.toggle('full', on.length > 0); some = false;
@@ -2255,6 +2330,7 @@ function draw() {
     const ci = S.mode === 'pattern' && S.chain.length > 1 ? S.chain.indexOf(k) : -1;
     el.classList.toggle('chain', ci >= 0); el.dataset.chain = ci >= 0 ? S.chain.map((p, i) => p === k ? i + 1 : null).filter(Boolean).join(',') : '';
     el.querySelector('span').textContent = keyLabel(k);
+    el.querySelector('em').textContent = S.mode === 'sound' && !away ? slotTag(S.slots[k]) : '';
   }
 }
 
@@ -2651,7 +2727,7 @@ function save() {
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth,
       trims: sl.slices?.map(x => [x.start ?? 0, x.len ?? 1]) } : {
       kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base, bpm: sl.bpm, credit: sl.credit,
-      slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
+      made: sl.made, slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
     const { mode, write, replace, ...rest } = S;
     tx.objectStore('state').put({ ...rest, slots }, 'v1');
@@ -2674,7 +2750,7 @@ async function load() {
       const withdrawn = /Good Day/.test(s?.credit || '');     // the song pack taken out: its sounds go, the usual ones come back
       if (withdrawn) gone.add(i);
       if (s && s.factory == null && !withdrawn) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit };
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit, made: s.made };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }
@@ -2687,8 +2763,9 @@ async function load() {
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
     if (i === S.cur) { syncPanel(); draw(); }
   }
-  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid', 'wview']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
+  if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
   S.grid.quant ??= 16; S.grid.fade ??= 0; if (S.grid.colFx?.length !== 8) S.grid.colFx = newColFx();
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
@@ -2736,23 +2813,23 @@ const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar']];
 const REPEATS = [[0, 'Whole'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [16, '16'], [32, '32']];      // beats
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
   ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['tape', 'Tape']];
-// A first set from the loops already in the app, until a set is made for the grid.
+// The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
+// and Tops columns hold single hits (a snare, a clap, a hat), played as one-shots.
 function defaultGrid() {
-  const c = (lib, k, mode = 'loop') => ({ lib, k, mode });
+  const c = (lib, k, mode = 'loop', vol) => ({ lib, k, mode, ...(vol && { vol }) }), hit = (lib, k, vol = 0.6) => c(lib, k, 'oneshot', vol);
   const cells = Array.from({ length: 8 }, () => new Array(ROWS).fill(null));
-  [0, 1, 2, 4, 11, 3].forEach((k, r) => { cells[0][r] = c('drumloops', k); });
-  [0, 1, 2, 3, 4, 5].forEach((k, r) => { cells[1][r] = c('breaks', k); });
-  [6, 7, 8, 9].forEach((k, r) => { cells[2][r] = c('drumloops', k); });
-  cells[2][4] = c('ambience', 0); cells[2][5] = c('ambience', 1);
-  [0, 3, 5, 12, 13, 14].forEach((k, r) => { cells[7][r] = c('hype', k, 'oneshot'); });
+  cells[0] = [c('drumloops', 0), c('drumloops', 1), c('drumloops', 2), c('drumloops', 4), c('drumloops', 11), c('breaks', 0)];
+  cells[1] = [hit('boombap', 3), hit('boombap', 4), hit('boombap', 6), hit('tr808', 5), hit('boombap', 10), hit('boombap', 14)];
+  cells[2] = [hit('boombap', 7, 0.5), hit('boombap', 8, 0.5), hit('tr808', 7, 0.5), hit('tr808', 10, 0.5), hit('shakers', 4, 0.5), hit('boombap', 15, 0.45)];
+  cells[7] = [0, 3, 5, 12, 13, 14].map(k => c('hype', k, 'oneshot'));
   return { cells, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0, colFx: newColFx() };
 }
 function newColFx() { return Array.from({ length: 8 }, () => ({ type: 'none', amt: 0.5 })); }
 S.grid = defaultGrid();
-let view = 'pads', lEdit = false;
+let view = 'pads', lEdit = false, gridAgain = null;
 // What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its point), gate (held).
 let gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
-const follows = cell => cell.follow ?? cell.keyOf != null;
+const follows = cell => cell.follow ?? true;          // every loop follows the key, unless turned off
 // A cell as a one-slice sound that playNote can play: the part of its sound
 // selected in the wave, cut to its repeat length (in beats), transposed.
 const cellSlots = new Map();
@@ -2765,12 +2842,14 @@ function cellSlot(cell) {
     const x = slot?.slices?.[cell.k]; if (!x) return null;
     cell.name ||= x.name;
     const buf = x.buf || slot.buf, whole = x.e - x.s, beat = 60 / (x.bpm || S.bpm);
+    let ko = keyOf;
+    if (follows(cell) && ko == null) { ko = cell.keyOf = findKey(buf, x.s, x.e).root; persist(); }     // its key, found by listening, once
     const s = x.s + whole * (cell.from || 0);
     let e = x.s + whole * (cell.to ?? 1);
     if (cell.beats) e = Math.min(e, s + cell.beats * beat);       // a long sound is cut there, and repeats
     const bars = x.bpm ? Math.max(1, Math.round((e - s) / beat * 4)) / 16 : undefined;      // in bars, to the 16th note
     return { kind: 'chop', name: x.name, buf, slices: [{ name: x.name, buf, s, e, bpm: x.bpm, bars, start: 0, len: 1 }],
-      params: { ...defParams(), vol: 1, keyOf, pitch: cell.pitch || 0, nostretch: cell.stretch === false,
+      params: { ...defParams(), vol: 1, keyOf: ko, pitch: cell.pitch || 0, nostretch: cell.stretch === false,
         trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
   }).catch(() => null));
   return cellSlots.get(id);
@@ -2867,6 +2946,16 @@ async function tapCell(c, r) {
   const col = gcol[c], cell = S.grid.cells[c][r];
   if (!cell) { openCellMenu(c, r); return; }
   ctx.resume();
+  if (cell.mode === 'oneshot') {      // a hit: on the next 16th (at once if stopped, or quantize off), again on every tap
+    const slot = await cellSlot(cell);
+    if (!slot) { status('That cell\'s sound could not be loaded.'); return; }
+    const b = playing && S.grid.quant ? nextBar(1) : { when: ctx.currentTime + 0.005, j: beatPos() }, v = launch(c, r, slot, b, false);
+    if (!v) return;
+    if (col.next) kill(col.next);
+    if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b, false);
+    if (col.gate) { kill(col.gate); col.gate = null; }
+    col.next = v; drawLoops(); return;
+  }
   if (col.next?.r === r) {                     // waiting: take it back; what was playing carries on
     kill(col.next); col.next = null;
     if (col.cur?.stopAt != null) {
@@ -3042,7 +3131,7 @@ function drawLoops() {
       el.b.classList.toggle('queued', col.next?.r === r);
       el.b.classList.toggle('stopping', col.cur?.r === r && col.cur.stopAt != null && col.next?.r !== r);
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
-      el.badge.textContent = (cell?.mode === 'oneshot' ? '1×' : cell?.mode === 'gate' ? 'G' : '') + (cell && follows(cell) ? ' ♪' : '');
+      el.badge.textContent = cell ? [libTag(cell.lib, banks?.[LIBRARY[cell.lib]?.bank]?.from?.[cell.k] ?? cell.name), cell.mode === 'oneshot' ? '1×' : cell.mode === 'gate' ? 'G' : '', follows(cell) ? '♪' : ''].filter(Boolean).join(' ') : '';
       if (!on && !(col.cur?.r === r)) el.ring.style.strokeDashoffset = '100';
     }
     const fx = S.grid.colFx[c];
@@ -3097,16 +3186,17 @@ $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets')
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
 // Sets: a whole grid at once, with the tempo and key it was made in.
 const SETS = [{ id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
-async function loadSet(id) {
+async function loadSet(id, quiet = false) {          // quiet: the set again, after an update; tempo and key as they are
   status('Loading the set…');
   try {
     const set = id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json();
     stopGrid();
     S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null)));
-    if (set.bpm) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
-    if (set.root != null && !playing) { S.root = set.root; S.scale = set.scale || S.scale; }
+    if (set.bpm && !quiet) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
+    if (set.root != null && !playing && !quiet) { S.root = set.root; S.scale = set.scale || S.scale; }
     persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
-    status(`${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
+    status(quiet ? `The ${set.name} set is new: whole beats in Kick, single hits in Snare and Tops.`
+      : `${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
   } catch (e) { status('Could not load the set: ' + e.message); }
 }
 $('lsStop').addEventListener('click', () => { stopAllLoops(); status(playing ? 'Every loop stops on the next point; the Pads beat plays on.' : ''); });
@@ -3308,5 +3398,5 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   colFx: c => { const k = eng.cols?.[c]; return k && { type: k.type, ins: k.ins?.constructor.name, send: !!k.send }; } });
 
 draw();
-load().then(() => status('Ready. Press ▶ Play, or tap the keys.'));
+load().then(() => { status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
 requestAnimationFrame(frame);
