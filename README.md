@@ -182,24 +182,27 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   go by part, the same in the Pads and the Loops: kick red, snare orange,
   hats yellow, bass green, chords teal, lead pink, sub purple, vox/keys
   blue. Sounds 1–8 are instruments, one part each (bass, sub, chords,
-  lead, vox/keys, pad, pluck/arp, stab/FX), each starting with a sound for
-  its part; 9–16 are drum kits and percussion. In Write, **🥁 Percussion**
-  shows each step's drum hits by part, and **🎹 Instruments** its
-  instruments: split side by side for two to four, a small grid for five
-  or more.
+  lead, vox/keys, pad, pluck/arp, stab/FX); 9–16 are drum kits and
+  percussion, and inside a kit every hit has its part's colour. **Sound**
+  cycles: instruments, then drums (pick one kit), then back to playing;
+  kits load only on the drums and instruments only on 1–8. Write shows the
+  side of the sound chosen: a kit's hits by colour, or the instruments.
+- **Tags:** SYN (synthesized as you play), REC (a recording), GEN (made in
+  code beforehand), MINE (yours), on every sound. **☆ Favorite** and
+  **★ Save to My Sounds** under Load in the sound browser.
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
-  sideways (turned a quarter turn when the phone is upright). Eight
-  columns in their parts' colours (kick, snare, tops, bass, chords, lead,
-  sub, vocals/keys), six cells each. A tap starts a cell on the next bar,
-  in time and key; one cell plays per column, and another takes over on
-  the bar; a ring shows each loop's progress. Hold a cell for Loop, One
-  shot or Gate, its own volume, transpose (half steps), repeat (2 to 32
-  beats), time stretch on or off, following the key, an effect for its
-  whole column (any loop can skip it), its sound, and its wave, where you
-  drag to choose the part that plays; ⚙ sets
-  the quantize (a beat to 4 bars, or off), fades, and Stop all loops. Each
-  column has a volume and a mute. Tempo, key, Play and FX are shared with
-  the Pads tab.
+  sideways. Eight columns in their parts' colours (kick, snare, tops,
+  bass, chords, lead, sub, vocals/keys), six cells each: whole beats in
+  the red Kick column, single hits in Snare and Tops. A tap starts a cell
+  on the next bar, in time and key (a hit, on the next 16th); one cell
+  plays per column, and another takes over on the bar; a ring shows each
+  loop's progress. Hold a cell for Loop, One shot or Gate, its own volume,
+  transpose (half steps), repeat (2 to 32 beats), time stretch on or off,
+  following the key (on for every loop), an effect for its whole column
+  (any loop can skip it), its sound, and its wave, where you drag to
+  choose the part that plays; ⚙ sets the quantize (a beat to 4 bars, or
+  off), fades, and Stop all loops. Each column has a volume and a mute.
+  Tempo, key, Play and FX are shared with the Pads tab.
 - **Sideways:** the Pads lie sideways like the Loops (screen and buttons
   left, keys right), turned a quarter turn when the phone is upright;
   Menu › Buttons › Pads › Upright brings back the tall layout. Effects
@@ -233,14 +236,15 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops:** 14 drum loops played on these kits, breakbeats (the Amen and
   others), and vinyl crackle and ambience; each key a loop that comes in on
   the next bar in step, follows the tempo and key, and stops with the beat.
-- **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 45 loops written
-  for the grid, with vinyl, Alleluia and Selah: F minor at 92 BPM, swung: kick, snare and tops on the
-  Boom Bap, TR-808 and electro kits; 808, electric, Reese and upright bass;
-  Rhodes, pad, choir and organ; Juno stabs, pluck, chip, trumpet and bells;
-  sub; the robot's words and the women's choir. The harmony is Fm7, D♭maj7,
-  B♭m7, Cm7 a bar each, so every loop fits every other, and the melodic
-  ones follow the key. Written as short songs and rendered by the app's own
-  export.
+- **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 33 loops written
+  for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
+  BPM, swung. Whole beats in the red Kick column; single snare and top hits
+  in Snare and Tops (one-shots, on the next 16th); 808, electric, Reese and
+  upright bass; Rhodes, pad, choir and organ; Juno stabs, pluck, chip,
+  trumpet and bells; sub; the robot's words and the women's choir. The
+  harmony is Fm7, D♭maj7, B♭m7, Cm7 a bar each, so every loop fits every
+  other; every loop follows the key. Written as short songs and rendered
+  by the app's own export.
 - **Songs:** written for the app from its own sounds; the first is an
   8-bar electro boom bap in F minor.
 - **Export** the pattern or chain as a seamless loop WAV for Remixlive.

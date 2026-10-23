@@ -19,6 +19,7 @@
     --c-open: #b2ea1e; --c-cym: #22d6f2; --c-stab: #e443f5; --c-clap: #ffb31a; --c-pad: #6366ff; --c-tom: #ff7b69; --c-perc: #7cf2c3; --c-pluck: #cbb0ff;
     /* the 16 sounds: 1-8 instruments, each its part's colour; 9-16 drums */
     --s1: var(--c-bass); --s2: var(--c-sub); --s3: var(--c-chords); --s4: var(--c-lead); --s5: var(--c-vox); --s6: var(--c-pad); --s7: var(--c-pluck); --s8: var(--c-stab);
+    --c-kit: #c9cbd6;          /* a kit, in Sound › Drums: silver, its hits have the colours */
     --s9: var(--c-kick); --s10: var(--c-snare); --s11: var(--c-hat); --s12: var(--c-open); --s13: var(--c-clap); --s14: var(--c-tom); --s15: var(--c-perc); --s16: var(--c-cym);
   }
   /* The dark look (the default), like Remixlive. */
@@ -173,6 +174,12 @@
   :root:not(.classic) .key.down { background: #3a3a44; }
   .key.tint.down { box-shadow: inset 0 0 0 2px var(--c), 0 1px 0 var(--key-sh); }
   .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; z-index: 1; }
+  /* Sound: the other side's pads (drums while choosing an instrument, and the other way round) are dim */
+  .key.away { opacity: .28; }
+  .key.away b { color: var(--key-dim); }
+  /* a kit's pad: silver, with a strip of its hits' colours along the bottom */
+  .key.kitpad::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 2px; z-index: 1;
+    background: linear-gradient(90deg, var(--c-kick) 0 20%, var(--c-snare) 20% 40%, var(--c-hat) 40% 60%, var(--c-clap) 60% 80%, var(--c-tom) 80%); }
   .key.fxon u.fill { display: block; background: var(--accent); opacity: .55; }
 
   /* panels */
@@ -211,13 +218,6 @@
   .fnbot button { padding: 11px 0; }
   .fn button.menu { background: var(--accent); color: #fff; }
 
-  /* Write: which hits the steps show, the drums or the instruments */
-  .wview { display: flex; gap: 6px; margin: 0 0 8px; }
-  .wview[hidden] { display: none; }
-  .wview button { flex: 1; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border: 0;
-    border-radius: 7px; padding: 8px 6px; background: var(--btn); color: var(--muted); }
-  .wview button.on { background: var(--ink); color: var(--body); }
-
   /* Sideways: the whole app is turned a quarter turn while the phone is upright (it reads the
      right way up with the phone held sideways), or lies as it is when the phone really is sideways.
      Then the Pads are two halves: the screen and buttons on the left, the keys on the right. */
@@ -238,10 +238,7 @@
   :root.sidepads .fnbot { margin: 0; }
   :root.sidepads .fnbot button { padding: 7px 0; }
   :root.sidepads #status { grid-column: 1; margin: 4px 2px 0; font-size: 10.5px; overflow: hidden; }
-  :root.sidepads .wview { grid-column: 2; grid-row: 1; margin: 0 0 6px; }
-  :root.sidepads .wview button { padding: 5px 6px; }
-  :root.sidepads .keys { grid-column: 2; grid-row: 2 / -1; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
-  :root.sidepads .wview[hidden] + .keys { grid-row: 1 / -1; }
+  :root.sidepads .keys { grid-column: 2; grid-row: 1 / -1; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
   :root.sidepads .key { aspect-ratio: auto; min-height: 0; padding: 5px 6px; }
   :root.sidepads .key b { font-size: 13px; }
   :root.sidepads #wheel { left: auto; right: 10px; top: 6px; bottom: 6px; width: 54%; display: flex; flex-direction: column; }
@@ -372,13 +369,22 @@
   .blist button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
   .blist small { color: var(--muted); font-size: 11px; white-space: nowrap; }
   .bfoot { position: sticky; bottom: -16px; background: var(--panel); padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  .bfoot { flex-wrap: wrap; }
   .bfoot button { flex: 1; }
+  .bfoot2 { flex: 1 0 100%; display: flex; gap: 6px; }
+  .bfoot2 button.on { box-shadow: inset 0 0 0 1.5px var(--c-hat); color: var(--c-hat); }
+  /* what a sound is: SYN, REC, GEN, MINE (on the keys in Sound mode) */
+  .key em.tag { position: absolute; top: 7px; right: 24px; z-index: 1; font: 700 8px/1 ui-monospace, Menlo, monospace; font-style: normal;
+    letter-spacing: .06em; color: var(--key-dim); border: 1px solid currentColor; border-radius: 3px; padding: 1px 3px; opacity: .85; }
+  .key em.tag:empty { display: none; }
+  .key.tint.cur em.tag { color: #000; }
+  .key.away.cur { outline: none; }
 </style>
 </head>
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023b</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023c</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -406,7 +412,6 @@
     <div class="pair"><button class="custom" data-slot="2"></button><button class="custom" data-slot="3"></button></div>
   </div>
 
-  <div class="wview" id="wview" hidden><button data-wv="perc">🥁 Percussion</button><button data-wv="inst">🎹 Instruments</button></div>
   <div class="keys" id="keys"></div>
   <div class="fn fnbot">
     <div class="pair"><button class="custom" data-slot="4"></button><button class="custom" data-slot="5"></button></div>
@@ -498,7 +503,8 @@
     <div class="crumbs" id="crumbs"></div>
     <div class="blist" id="blist"></div>
     <div class="btns" id="bTools" style="margin:0 0 8px"></div>
-    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button><button id="bMore" hidden></button></div>
+    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button><button id="bMore" hidden></button>
+      <div class="bfoot2"><button id="bFav" disabled>☆ Favorite</button><button id="bSave" disabled>★ Save to My Sounds</button></div></div>
     <input type="file" id="importFile" accept="audio/*,video/*" hidden>
   </div>
 
@@ -624,18 +630,19 @@
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
     <p><b>Beats:</b> pick a style in the Beat tab and put its beat into the current pattern, or press <b>🎲 Beat</b> for a new one in that style, as often as you like. It plays on the drum kit you have chosen (or the first kit on the keys), and replaces only the drums already there: your bass and other sounds stay. <b>↶ Undo</b> takes back any change, one at a time.</p>
     <p><b>Sideways:</b> the Pads lie sideways, like the Loops: the screen and buttons on the left, the keys on the right. Held upright, the whole app is turned a quarter turn, so it reads the right way up with the phone held sideways (turn the phone to the left); if the phone really turns, it simply lies flat. Menu › Buttons › Pads › Upright brings back the tall layout.</p>
-    <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns in their parts' colours (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) for its settings: Loop, One shot or Gate (only while held); its own volume; <b>Transpose</b> in half steps; <b>Repeat</b> 2, 4, 6, 8, 16 or 32 beats (a longer sound is cut there and repeats); <b>Time stretch</b> on (it keeps its pitch at any tempo) or off (it speeds up and slows down with the tempo, like a record); Follow the key (♪ on the cell; turned on, its key is found by listening); an <b>Effect</b> (low pass, high pass, reverb, echo, ping-pong, drive or tape, with an amount) that goes on the whole column, which any loop can be set to skip; its sound, from the loops and packs; and its <b>wave</b>: drag across it to choose the part that plays (it snaps to 16th notes on a loop with a tempo), tap it to hear from there, ▶ Hear it plays the part chosen. <b>⚙</b> holds the settings for all the loops: <b>Quantize</b> (when a tap lands: the next beat, bar, 2 bars or 4 bars, or Off: at once, still in time), <b>Fade in and out</b>, and <b>Stop all loops</b> (on the next point, the Pads beat playing on). Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. <b>Sets</b> (in ⚙) fill the whole grid at once, at the tempo and key they were made in. <b>Electro Boom Bap</b>: F minor, 92 BPM, swung; kick, snare and tops loops on the Boom Bap, TR-808 and electro kits; 808, electric, Reese and upright bass; Rhodes, pad, choir and organ chords; Juno stabs, pluck, chip, trumpet and bell leads; sub bass; the robot's words, the women's choir, Alleluia and Selah. Every loop in it fits every other: the harmony runs Fm7, D♭maj7, B♭m7, Cm7, a bar each, and the loops with ♪ follow the key. <b>The first set</b>: the app's drum loops, breaks, vinyl and hype words. The set's loops are in Menu › Sounds › Loops too, for the pads.</p>
-    <p><b>Colours</b> go by part, the same everywhere, in the Pads and the Loops: a kick is always red, a snare orange, hi-hats yellow, a bass green. Sounds 1–8 are instruments, one part each: 1 Bass (green), 2 Sub (purple), 3 Chords (teal), 4 Lead (pink), 5 Vox/Keys (blue), 6 Pad (indigo), 7 Pluck/Arp (lavender), 8 Stab/FX (magenta). Each starts with a sound for its part (an 808 bass on 1, a Rhodes on 3…); load anything you like on any of them. Sounds 9–16 are drum kits and percussion. In Sound mode each pad shows its colour; in Play the keys take the current sound's.</p>
-    <p><b>Write: 🥁 Percussion / 🎹 Instruments</b> (the two buttons over the keys while Write is on) choose what the steps show. <b>Percussion</b>: the drum hits, a block for each part hit on the step (kick red, snare orange, clap amber, hats yellow, open hat lime, toms coral, percussion mint, cymbals cyan). <b>Instruments</b>: a block for each instrument on the step, in its sound's colour. One fills the step, two to four split it side by side, five or more make a small grid. Choosing a sound switches to its view. The step with the current sound has a white light, and its block a glow; the step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
+    <p><b>Pads and Loops</b> (the two tabs at the top): Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns in their parts' colours (Kick, Snare, Tops, Bass, Chords, Lead, Sub, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is. <b>Hold</b> a cell (or use <b>✎ Edit</b>) for its settings: Loop, One shot or Gate (only while held); its own volume; <b>Transpose</b> in half steps; <b>Repeat</b> 2, 4, 6, 8, 16 or 32 beats (a longer sound is cut there and repeats); <b>Time stretch</b> on (it keeps its pitch at any tempo) or off (it speeds up and slows down with the tempo, like a record); Follow the key (on for every loop, ♪ on the cell; its key is found by listening, so turn it off for a drum loop that sounds wrong moved); an <b>Effect</b> (low pass, high pass, reverb, echo, ping-pong, drive or tape, with an amount) that goes on the whole column, which any loop can be set to skip; its sound, from the loops and packs; and its <b>wave</b>: drag across it to choose the part that plays (it snaps to 16th notes on a loop with a tempo), tap it to hear from there, ▶ Hear it plays the part chosen. <b>⚙</b> holds the settings for all the loops: <b>Quantize</b> (when a tap lands: the next beat, bar, 2 bars or 4 bars, or Off: at once, still in time), <b>Fade in and out</b>, and <b>Stop all loops</b> (on the next point, the Pads beat playing on). Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. <b>Whole beats go in Kick</b> (the red column); <b>Snare</b> and <b>Tops</b> hold single hits (a snare, a clap, a hat, a cowbell), which play on the next 16th note, and again on every tap (at once while stopped, without starting the beat). <b>Sets</b> (in ⚙) fill the whole grid at once, at the tempo and key they were made in. <b>Electro Boom Bap</b>: F minor, 92 BPM, swung; six beats on the Boom Bap, TR-808, electro kits and shakers; snare and top hits; 808, electric, Reese and upright bass; Rhodes, pad, choir and organ chords; Juno stabs, pluck, chip, trumpet and bell leads; sub bass; the robot's words, the women's choir, vinyl, Alleluia and Selah. Every loop in it fits every other: the harmony runs Fm7, D♭maj7, B♭m7, Cm7, a bar each. <b>The first set</b>: the app's drum loops and breaks, kit hits, and hype words. The set's loops are in Menu › Sounds › Loops too, for the pads.</p>
+    <p><b>Colours</b> go by part, the same everywhere, in the Pads and the Loops: a kick is always red, a snare orange, hi-hats yellow, a bass green. Sounds 1–8 are the <b>instruments</b>, one part each: 1 Bass (green), 2 Sub (purple), 3 Chords (teal), 4 Lead (pink), 5 Vox/Keys (blue), 6 Pad (indigo), 7 Pluck/Arp (lavender), 8 Stab/FX (magenta), each starting with a sound for its part. Sounds 9–16 are the <b>drums</b>: drum kits and percussion, silver in Sound mode. Inside a kit every hit has its own colour: kick red, snare orange, clap amber, hats yellow, open hat lime, toms coral, percussion mint, cymbals cyan. Kits and percussion load only onto the drums, and instruments only onto 1–8, so the two never mix.</p>
+    <p><b>Write</b> shows the side of the sound chosen. With a <b>kit</b> chosen: that kit's hits, a block for each part hit on the step, in the hit's colour; a small light shows another kit plays there too. With an <b>instrument</b> chosen: the instruments, a block for each, in its colour (a small light: drums under it). One fills the step, two to four split it side by side, five or more make a small grid. The step now playing has an orange ring. Menu › Buttons › Look brings back the classic beige look.</p>
+    <p><b>The tags</b> say what a sound is: <b>SYN</b> synthesized as you play (the app's synths: filter, wobble and length really change it); <b>REC</b> a recording, a sample of a real instrument or machine (the TR-808 is the real analog drum machine, recorded); <b>GEN</b> made in code beforehand, then played as a recording (the 808 and 909 kits drawn in code, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); <b>MINE</b> yours. They are in Menu › Sounds, on the pads in Sound mode, on the screen and on the Loops cells.</p>
     <p><b>Play:</b> tap the keys. Sounds 1–8 are melodic (the keys go up the scale). Sounds 9–16 are kits and chops (each key is one hit).</p>
-    <p><b>Sound</b> + key: choose a sound. <b>Pattern</b> + key: choose one of 16 patterns.</p>
+    <p><b>Sound</b>: tap once for the <b>instruments</b> (🎹 Instr.: sounds 1–8 light up; tap one), again for the <b>drums</b> (🥁 Drums: the kits, 9–16; tap one, and its 16 hits are the keys, each in its colour), again to play. <b>Pattern</b> + key: choose one of 16 patterns.</p>
     <p><b>Write</b>: tap once for Write, twice for <b>Replace</b>, three times for off. In Replace, playing over a part replaces it: from your first note, the sound's old notes go as the playhead passes and yours go in; if you don't play, nothing is deleted, and it stops replacing once a whole pattern passes without a note. With either on, stopped: the 16 keys are the 16 steps. Play a note first, then tap steps to place it; tap again to remove it. Playing: whatever you play is recorded into the beat, on the nearest step; turn Quantize off in the Beat tab to keep it exactly where you played it.</p>
     <p><b>FX</b>: tap a key to turn an effect on, tap again to turn it off (or hold, if you switch that in Menu › Effects, where you also choose the effect on each key, from 26: loops, rolls, scratch, pitch, reverb, echo, ping-pong, chorus, filters, crush, overdrive, fuzz, wavefold and tape saturation). Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
     <p><b>Locks:</b> with Write on while playing, moving a sound slider saves that setting on the step that is playing, for the current sound only, as the PO-33 does with its knobs.</p>
     <p><b>● Rec</b>: hold it and sing, speak, or beatbox into the phone. Let go and it lands on the current sound, chopped if it's 9–16. While holding Rec, tap a key to record into that sound instead. Set "Rec from" to the beat to resample what's playing.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). Switch the sound to One shot or Gate and its loops keep going, so you can play over them; come back to Loop and tap a looping key to stop it. In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
-    <p><b>My Sounds</b> (Menu › Sounds): your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
+    <p><b>Favorites and My Sounds</b> (Menu › Sounds): choose any sound, then <b>☆ Favorite</b> (under Load) keeps it in ★ Favorites, and <b>★ Save to My Sounds</b> keeps a copy of your own. My Sounds: your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
     <p><b>Key</b>: tap the key on the screen (C MIN) for the key wheel, over the keys. Majors are round the outside, minors inside, in circle-of-fifths order; the shaded keys sit well with the one you're in. Tap any key, or the <b>Next</b> button in the middle (up a fifth, then across to the relative key, by turns); 🎲 picks one of the shaded ones. While the beat plays, the change waits for the top of the next bar (the key blinks until then). <b>With Write on</b>, the key is saved in the pattern, and that pattern always plays in it (the key box is shaded); <b>with Write off</b>, the key changes for now and patterns keep their saved keys. "Forget pattern key" takes it out.</p>
     <p><b>Its key</b> (Settings, for recordings and imports): say what key a sound is in, or tap 🔍 to have it found by listening, and it moves to the song's key (never more than six semitones). Left on "Plays as recorded", drums and other recordings stay as they are.</p>
     <p><b>Trim:</b> Start and Length cut the sound down. On 9–16 they trim only the slice you played last.</p>
@@ -697,6 +704,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023b"></script>
+<script type="module" src="app.js?v=20261023c"></script>
 </body>
 </html>
