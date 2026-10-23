@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zi';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zj';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1968,7 +1968,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zi'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zj'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2061,7 +2061,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zi'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zj'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3891,7 +3891,8 @@ function tickGrid(now) {
       if (h.voice.end !== Infinity && h.stopAt == null) p = (now - h.at) / Math.max(0.01, h.voice.end - h.at);   // one shot
       else if (h.synced) p = (((pos - h.j0 / 16) % h.bars) + h.bars) % h.bars / h.bars;
       else p = ((now - h.at) / Math.max(0.01, h.len)) % 1;
-      cellEls[c][h.r].ring.style.strokeDashoffset = String(100 - 100 * Math.min(1, Math.max(0, p)));
+      const q = Math.min(1, Math.max(0, p)), el = cellEls[c][h.r];
+      el.ring.style.strokeDashoffset = String(100 - 100 * q); el.line.style.transform = `scaleX(${q})`;
     }
   }
 }
@@ -3914,8 +3915,8 @@ function buildLoops() {
     cellEls[c] = []; cellEls[c].head = head;
     for (let r = 0; r < ROWS; r++) {
       const b = document.createElement('button'); b.className = 'lcell'; b.dataset.c = c; b.dataset.r = r;
-      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="rbg"/><circle cx="12" cy="12" r="9.5" class="rfg" pathLength="100"/></svg><span></span><em></em><small class="lmeta"></small>';
-      const el = { b, ring: b.querySelector('.rfg'), name: b.querySelector('span'), badge: b.querySelector('em'), meta: b.querySelector('.lmeta') };
+      b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" class="rbg"/><circle cx="12" cy="12" r="9.5" class="rfg" pathLength="100"/></svg><i class="lline"><b></b></i><span></span><em></em><small class="lmeta"></small>';
+      const el = { b, ring: b.querySelector('.rfg'), line: b.querySelector('.lline b'), name: b.querySelector('span'), badge: b.querySelector('em'), meta: b.querySelector('.lmeta') };
       let timer = 0, long = false;
       b.addEventListener('pointerdown', ev => {
         ev.preventDefault(); capture(b, ev); long = false;
@@ -4005,7 +4006,8 @@ function drawLoops() {
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
       el.meta.textContent = cell ? cellMeta(cell, c) : '';
       el.badge.textContent = cell ? [libTag(cell.lib, banks?.[LIBRARY[cell.lib]?.bank]?.from?.[cell.k] ?? cell.name), cell.mode === 'oneshot' ? '1×' : cell.mode === 'gate' ? 'G' : '', follows(cell) ? '♪' : ''].filter(Boolean).join(' ') : '';
-      if (!on && !has('cur', r)) el.ring.style.strokeDashoffset = '100';
+      if (!on && !has('cur', r)) { el.ring.style.strokeDashoffset = '100'; el.line.style.transform = 'scaleX(0)'; }
+      el.b.classList.toggle('lineprog', !!cell && (cell.mode === 'oneshot' || cell.mode === 'gate'));      // played once or held: a straight line, not a ring
     }
     const fx = S.grid.colFx[c];
     cellEls[c].head.textContent = CHANNELS[c] + (fx.type !== 'none' ? ' · ' + COL_FX.find(f => f[0] === fx.type)[1] : '');
