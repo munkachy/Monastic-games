@@ -305,7 +305,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   plus simple lines the app generates (`pocket-sampler/tools/basslines.py`).
 - **Sounds by colour:** Menu › Sounds is in folders by part, in the parts'
   colours: Beats (red), Snares and claps (orange), Tops (yellow), Drum
-  kits, Bass (green), Chords (teal), Lead (pink), Sub (purple), Vox and
+  kits, Bass (green), Chords (teal), Lead (pink), Sub and color (purple: subs, glitchy
+  accents and the video-game sounds), Vox and
   keys (blue), Pads, Plucks, Stabs and FX.
 - **Electro Boom Bap loop set** (Loops › ⚙ › Sets): 33 loops written
   for the grid, with kit hits, vinyl, Alleluia and Selah: F minor at 92
