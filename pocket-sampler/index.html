@@ -217,6 +217,20 @@
   .fnbot { margin: 10px 0 0; }
   .fnbot button { padding: 11px 0; }
   .fn button.menu { background: var(--accent); color: #fff; }
+  /* buttons coloured by what they do: dark, tinted, with a bright edge (the colours as the Pads' parts where they
+     match: rhythm red like the kick, the voice blue like Vox) */
+  .fn button[data-th=play] { --th: #3ddc84; }
+  .fn button[data-th=edit] { --th: #aab3c2; }
+  .fn button[data-th=rhythm] { --th: #ff4d5e; }
+  .fn button[data-th=pitch] { --th: #b57bff; }
+  .fn button[data-th=sound] { --th: #ffc24d; }
+  .fn button[data-th=voice] { --th: #4da3ff; }
+  .fn button[data-th=fx] { --th: #ff5fc8; }
+  :root:not(.classic) .fn button[data-th]:not(.on) { background: color-mix(in srgb, var(--th) 15%, #121318);
+    color: color-mix(in srgb, var(--th) 72%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--th) 75%, transparent), 0 2px 0 #000; }
+  :root:not(.classic) .fn button[data-th].on { background: var(--th); color: #111; }
+  :root:not(.classic) .fn button[data-th=edit]:not(.on) { color: #d9dde4; }
+  :root:not(.classic) .fn button[data-th].on.replace { background: #c21b1b; color: #fff; }
 
   /* Sideways: the whole app is turned a quarter turn while the phone is upright (it reads the
      right way up with the phone held sideways), or lies as it is when the phone really is sideways.
@@ -421,7 +435,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023j</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023k</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -435,16 +449,17 @@
   </div>
 
   <div class="fn">
+    <!-- a row for each kind: what the keys do, playing and recording (green), editing (grey); then yours -->
     <button data-mode="sound">Sound</button>
     <button data-mode="pattern">Pattern</button>
-    <button id="write">Write</button>
     <button data-mode="fx">FX</button>
-    <button id="play">▶ Play</button>
-    <button id="rec">● Rec</button>
-    <button id="trigBtn" title="How a key plays: One shot, Gate or Loop">1 Shot</button>
-    <div class="pair"><button id="copy" title="Copy this pattern">Copy</button><button id="paste" title="Paste into this pattern" disabled>Paste</button></div>
-    <div class="pair"><button id="undo" disabled title="Undo">↶ Undo</button><button id="redo" disabled title="Redo">↷ Redo</button></div>
     <button id="menuBtn" class="menu">☰ Menu</button>
+    <button id="play" data-th="play">▶ Play</button>
+    <button id="rec" data-th="play">● Rec</button>
+    <button id="write" data-th="play">Write</button>
+    <button id="trigBtn" data-th="play" title="How a key plays: One shot, Gate or Loop">1 Shot</button>
+    <div class="pair"><button id="copy" data-th="edit" title="Copy this pattern">Copy</button><button id="paste" data-th="edit" title="Paste into this pattern" disabled>Paste</button></div>
+    <div class="pair"><button id="undo" data-th="edit" disabled title="Undo">↶ Undo</button><button id="redo" data-th="edit" disabled title="Redo">↷ Redo</button></div>
     <div class="pair"><button class="custom" data-slot="0"></button><button class="custom" data-slot="1"></button></div>
     <div class="pair"><button class="custom" data-slot="2"></button><button class="custom" data-slot="3"></button></div>
   </div>
@@ -580,33 +595,31 @@
   </div>
 
   <div class="panel" id="tButtons">
-    <p class="note" style="margin-top:0">The four small buttons beside ☰ Menu and the eight under the keys (the blue ones) are yours: choose what each one does. Effects work while you hold the button.</p>
+    <p class="note" style="margin-top:0">The coloured buttons from the fourth row down are yours: choose what each one does. Each kind of thing has its colour, and a button takes the colour of what you give it: rhythm red, pitch and key purple, the sound amber, the voice blue, effects pink (in the Dark look; Classic keeps them all blue). Effects work while you hold the button. With the Pads upright, the first four are the small ones beside Copy and Undo, and the next eight are under the keys; the last eight show only sideways.</p>
     <div class="row"><label for="engineWay">Sound engine</label><select id="engineWay"><option value="full">Full (newer phones and iPads)</option><option value="light">Light (older iPads: steadier sound)</option></select><span></span></div>
     <p class="note" style="margin:-2px 0 6px">If the sound crackles or breaks up, choose Light: it gives the device more time to make the sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, and has a shorter reverb. The page reloads to change it.</p>
     <div class="row"><label for="padsWay">Pads</label><select id="padsWay"><option value="side">Sideways, like the Loops</option><option value="upright">Upright</option></select><span></span></div>
     <div class="row"><label for="look">Look</label><select id="look"><option value="dark">Dark</option><option value="classic">Classic: the beige PO-33</option></select><span></span></div>
-    <div class="row"><label for="cb0">Button 1</label><select id="cb0"></select><span></span></div>
-    <div class="row"><label for="cb1">Button 2</label><select id="cb1"></select><span></span></div>
-    <div class="row"><label for="cb2">Button 3</label><select id="cb2"></select><span></span></div>
-    <div class="row"><label for="cb3">Button 4</label><select id="cb3"></select><span></span></div>
-    <p class="note">The row under the keys:</p>
-    <div class="row"><label for="cb4">Bottom 1</label><select id="cb4"></select><span></span></div>
-    <div class="row"><label for="cb5">Bottom 2</label><select id="cb5"></select><span></span></div>
-    <div class="row"><label for="cb6">Bottom 3</label><select id="cb6"></select><span></span></div>
-    <div class="row"><label for="cb7">Bottom 4</label><select id="cb7"></select><span></span></div>
-    <div class="row"><label for="cb8">Bottom 5</label><select id="cb8"></select><span></span></div>
-    <div class="row"><label for="cb9">Bottom 6</label><select id="cb9"></select><span></span></div>
-    <div class="row"><label for="cb10">Bottom 7</label><select id="cb10"></select><span></span></div>
-    <div class="row"><label for="cb11">Bottom 8</label><select id="cb11"></select><span></span></div>
-    <p class="note">Eight more, when the Pads are sideways:</p>
-    <div class="row"><label for="cb12">Side 1</label><select id="cb12"></select><span></span></div>
-    <div class="row"><label for="cb13">Side 2</label><select id="cb13"></select><span></span></div>
-    <div class="row"><label for="cb14">Side 3</label><select id="cb14"></select><span></span></div>
-    <div class="row"><label for="cb15">Side 4</label><select id="cb15"></select><span></span></div>
-    <div class="row"><label for="cb16">Side 5</label><select id="cb16"></select><span></span></div>
-    <div class="row"><label for="cb17">Side 6</label><select id="cb17"></select><span></span></div>
-    <div class="row"><label for="cb18">Side 7</label><select id="cb18"></select><span></span></div>
-    <div class="row"><label for="cb19">Side 8</label><select id="cb19"></select><span></span></div>
+    <div class="row"><label for="cb0">Row 4 · 1</label><select id="cb0"></select><span></span></div>
+    <div class="row"><label for="cb1">Row 4 · 2</label><select id="cb1"></select><span></span></div>
+    <div class="row"><label for="cb2">Row 4 · 3</label><select id="cb2"></select><span></span></div>
+    <div class="row"><label for="cb3">Row 4 · 4</label><select id="cb3"></select><span></span></div>
+    <div class="row"><label for="cb4">Row 5 · 1</label><select id="cb4"></select><span></span></div>
+    <div class="row"><label for="cb5">Row 5 · 2</label><select id="cb5"></select><span></span></div>
+    <div class="row"><label for="cb6">Row 5 · 3</label><select id="cb6"></select><span></span></div>
+    <div class="row"><label for="cb7">Row 5 · 4</label><select id="cb7"></select><span></span></div>
+    <div class="row"><label for="cb8">Row 6 · 1</label><select id="cb8"></select><span></span></div>
+    <div class="row"><label for="cb9">Row 6 · 2</label><select id="cb9"></select><span></span></div>
+    <div class="row"><label for="cb10">Row 6 · 3</label><select id="cb10"></select><span></span></div>
+    <div class="row"><label for="cb11">Row 6 · 4</label><select id="cb11"></select><span></span></div>
+    <div class="row"><label for="cb12">Row 7 · 1</label><select id="cb12"></select><span></span></div>
+    <div class="row"><label for="cb13">Row 7 · 2</label><select id="cb13"></select><span></span></div>
+    <div class="row"><label for="cb14">Row 7 · 3</label><select id="cb14"></select><span></span></div>
+    <div class="row"><label for="cb15">Row 7 · 4</label><select id="cb15"></select><span></span></div>
+    <div class="row"><label for="cb16">Row 8 · 1</label><select id="cb16"></select><span></span></div>
+    <div class="row"><label for="cb17">Row 8 · 2</label><select id="cb17"></select><span></span></div>
+    <div class="row"><label for="cb18">Row 8 · 3</label><select id="cb18"></select><span></span></div>
+    <div class="row"><label for="cb19">Row 8 · 4</label><select id="cb19"></select><span></span></div>
   </div>
 
   <div class="panel" id="tSound">
@@ -703,8 +716,8 @@
 
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
-    <p><b>The blue buttons</b> are yours to set (Menu › Buttons): with the Pads sideways, twenty of them, full size, on the left; upright, four beside Menu and eight under the keys. They do: Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, <b>🤖 Voice</b> (opens the Voice page), <b>🎤 Rap</b> (raps the words typed there onto the current sound), <b>🎲 Flow</b> (a new flow for that rap), or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
-    <p><b>Chain</b> (a blue button, or Menu › Rhythm): tap it, tap patterns in the order they should play, tap it again. Tap it twice without choosing any to unchain. Choosing a pattern while chained only shows it: the chain plays on.</p>
+    <p><b>The buttons</b> are in rows, a colour for each kind of thing. At the top: Sound, Pattern, FX and ☰ Menu (what the keys do); <b>green</b>, playing and recording (▶ Play, ● Rec, Write, 1 Shot); <b>grey</b>, Copy, Paste, Undo, Redo. The rest are yours to set (Menu › Buttons), and each takes the colour of what it does. At first: <b>red</b>, rhythm (Mute drums, 🎲 Beat, Chain, Rhythm: the Rhythm page); <b>purple</b>, pitch and key (Oct −, Oct +, Key, Key ▸); <b>amber</b>, the sound (🎲 Roll, ✂ Edit, Clear, ⬆ Export); <b>blue</b>, the voice (🎤 Rap, 🎲 Flow, ▶ Rap, 🤖 Voice); <b>pink</b>, effects (reverb, echo, low pass, crush). With the Pads sideways all twenty are on the left, full size; upright, four sit beside Copy and Undo and eight under the keys. They can do: Mute drums, Export, Roll, Beat, Clear, Key wheel, Next key, <b>Oct − / Oct +</b>, <b>🤖 Voice</b> (opens the Voice page), <b>🎤 Rap</b> (raps the words typed there onto the current sound), <b>🎲 Flow</b> (a new flow for that rap), or any FX. The octave buttons move the keys you play on the current sound up or down an octave (two at most; the screen shows OCT+1), and notes you record keep the octave they were played in.</p>
+    <p><b>Chain</b> (a red button, or Menu › Rhythm): tap it, tap patterns in the order they should play, tap it again. Tap it twice without choosing any to unchain. Choosing a pattern while chained only shows it: the chain plays on.</p>
     <p><b>Clear</b> (a blue button) clears the pattern; with <b>Sound</b> on, it clears the chosen sound instead: off its key, and out of the patterns. ↶ Undo brings either back. <b>■ Stop</b> also stops every loop that is running.</p>
     <p><b>Loops</b> (Menu › Sounds › Loops): drum loops, breakbeats, vinyl and ambience, one loop per key, in Loop mode. While the beat plays, a loop comes in at the next bar, in step, and follows the tempo and key; it stops at the next bar when tapped again, and every loop stops with the beat. <b>Songs</b> (Packs › Songs): songs written for the app from its own sounds, ready to play, chained.</p>
     <p><b>Copy / Paste</b> copy the pattern, or in Sound mode the sound: Sound + key 1, Copy, Sound + key 5, Paste.</p>
@@ -806,7 +819,7 @@
     <label class="check"><input type="checkbox" id="aimAll"> All tracks</label>
     <div class="aims" id="aimList"></div>
     <div class="btns"><button id="aimDone" class="go">Done</button></div>
-    <p class="note">The effects hit only these sounds, from the FX keys and the blue buttons alike, the ones already on too; the others play on untouched. While they are aimed at chosen sounds, the Loops grid plays on untouched too (its columns keep their own effects).</p>
+    <p class="note">The effects hit only these sounds, from the FX keys and the pink effect buttons alike, the ones already on too; the others play on untouched. While they are aimed at chosen sounds, the Loops grid plays on untouched too (its columns keep their own effects).</p>
   </div>
 </div>
 <div id="exportBox" class="overlay" hidden>
@@ -819,6 +832,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023j"></script>
+<script type="module" src="app.js?v=20261023k"></script>
 </body>
 </html>
