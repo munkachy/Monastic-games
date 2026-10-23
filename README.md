@@ -135,8 +135,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
     minimal kits drawn in code.
 - **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
   techno, Afro house, dembow, drum & bass, dubstep and jazz swing, on
-  whatever kit you've chosen; **🎲 Beat** makes a new one in that style
-  each time. **↶ Undo / ↷ Redo** for every change.
+  whatever kit you've chosen; **🎲 Make a new one** makes a new one in
+  that style each time, and the **🎲 Vary** button keeps the beat you
+  have and makes one or two small changes a drummer might (a pushed kick,
+  ghost notes, an open hat, a little fill), always from the same beat. **↶ Undo / ↷ Redo** for every change.
 - **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
   is chopped at each syllable or hit, one per key; drag the markers on the
   screen to move the cuts. It can also resample the beat that's playing.
