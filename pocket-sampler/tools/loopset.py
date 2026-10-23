@@ -66,34 +66,21 @@ hats8 = [(s, 1.0 if s % 4 == 0 else 0.75) for s in range(0, 16, 2)]
 LOOPS = {}       # id -> (column, name, song, mode, follows the key)
 def loop(col, lid, name, sng, mode='loop', key=False): LOOPS[lid] = (col, name, sng, mode, key)
 
-# --- Beats (the red Kick column): whole beats, kick, snare and hats together ------------------
-# (the Snare and Tops columns hold single hits, straight from the kits: see GRID)
-def merge(*bars):                       # several {slot: {key: steps}} into one bar
-    out = {}
-    for b in bars:
-        for slot, keys in b.items():
-            for key, steps in keys.items(): out.setdefault(slot, {}).setdefault(key, []).extend(steps)
-    return out
-openbar = hats8[:-1]
-loop(0, 'k1', 'Boom bap beat', drums(BBK,
-    {K: {BB['kick']: [0, 7, 10], BB['snare']: [4, 12], BB['ghost']: [(15, 0.6)], BB['hat']: hats8}},
-    {K: {BB['kick']: [0, 3, 10, (13, 0.7)], BB['snare']: [4, 12], BB['ghost']: [(7, 0.5), (15, 0.6)], BB['hat']: openbar, BB['open']: [14]}}))
-loop(0, 'k2', 'Rim beat', drums(BBK + TRK,
-    {K: {BB['kick']: [0, 7, 10], BB['rim']: [4, 12], BB['hat']: hats8}, T: {TR['rim']: [(10, 0.6), (14, 0.4)]}}))
-h16 = [(st, 0.9 if st % 4 == 0 else 0.6 if st % 2 == 0 else 0.4) for st in range(16)]
-loop(0, 'k3', '808 beat', drums(TRK,
-    {T: {TR['boom']: [0, 10], TR['clap']: [4, 12], TR['hat']: h16}},
-    {T: {TR['boom']: [0, 3, 10], TR['clap']: [4, 12], TR['hat']: h16[:14], TR['open']: [14]}}))
-cow = [(3, 0.7), (6, 0.7), (11, 0.7), (14, 0.7)]; mar = [(st, 0.5) for st in (2, 6, 10, 14)]
-loop(0, 'k4', 'Electro beat', drums(ELK + BBK + TRK,
-    {E: {EL['kick']: [0, 6, 10]}, T: {TR['clap']: [4, 12], TR['cowbell']: cow, TR['maracas']: mar}, K: {BB['snare']: [(4, 0.5), (12, 0.5)]}},
-    {E: {EL['kick']: [0, 6, 10, 13]}, T: {TR['clap']: [4, 12], TR['cowbell']: cow[:3], TR['maracas']: mar}, K: {BB['snare']: [(4, 0.5), (12, 0.5)]}}))
-loop(0, 'k5', 'Half time beat', drums(BBK + TRK,
-    {K: {BB['kick']: [0, 11], BB['snare']: [8], BB['hat']: [(st, v * 0.8) for st, v in openbar], BB['open']: [(14, 0.7)]}, T: {TR['clap']: [(8, 0.8)]}}))
-shk = [(st, 0.9 if st % 4 == 2 else 0.5) for st in range(16)]
-loop(0, 'k6', 'Shaker beat', drums(BBK + [(S_, 'shakers', 0.6, None)],
-    {K: {BB['kick']: [0, 7, 10], BB['snare']: [4, 12]}, S_: {SH['shaker']: shk, SH['tamb']: [(4, 0.6), (12, 0.6)]}},
-    {K: {BB['kick']: [0, 3, 10], BB['snare']: [4, 12], BB['ghost']: [(15, 0.6)]}, S_: {SH['shaker']: shk, SH['tamb']: [(4, 0.6), (12, 0.6)]}}))
+# --- Beats (the red Kick column): played by people. Six hip-hop grooves near 92 BPM from the
+# Groove MIDI Dataset (see grooves.py; the folder in GROOVE_DIR), each the steadiest two bars of
+# a performance, every hit at the drummer's own timing and loudness, on the app's kits.
+# (The Snare and Tops columns hold single hits, straight from the kits: see GRID.)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from grooves import groove_song, pick, BOOMBAP
+TR808 = {'kick': (1,), 'snare': (5, 45, 3), 'rim': (6,), 'xstick': (6,), 'hat': (7,), 'pedal': (7,), 'open': (8,),
+         'hitom': (12,), 'lotom': (13,), 'ride': (9,), 'bell': (10,), 'crash': (9,)}
+ELECTRO = {'kick': (0,), 'snare': (2, 45, 3), 'rim': (13,), 'xstick': (13,), 'hat': (6,), 'pedal': (7,), 'open': (5,),
+           'hitom': (13,), 'lotom': (14,), 'ride': (9,), 'bell': (9,), 'crash': (8,)}
+G = os.environ.get('GROOVE_DIR', '')
+for n, (kit, slot, factory, kitname) in enumerate([(BOOMBAP, K, 'boombap', 'boom bap'), (BOOMBAP, K, 'boombap', 'boom bap'), (BOOMBAP, K, 'boombap', 'boom bap'),
+                                                  (BOOMBAP, K, 'boombap', 'boom bap'), (TR808, T, 'tr808', '808'), (ELECTRO, E, 'electro', 'electro')]):
+    path, b, r = pick(G, 'hiphop', BPM, n)
+    loop(0, f'k{n + 1}', f'Hip hop {b}, {kitname}' + (f' {n + 1}' if kitname == 'boom bap' else ''), groove_song(path, b, kit, slot, factory))
 # --- Bass (808, electric, Reese, upright) ------------------------------------------------
 B = 0
 def bassline(steps, extra=None, held=None):
@@ -204,14 +191,15 @@ elif sys.argv[1] == 'pack':
         for lid in ids:
             x = read(lid)
             x = x * min(TARGET[c] / max(1e-6, float(np.sqrt(np.mean(x * x)))), 0.95 / float(np.max(np.abs(x))))
-            n = int(round(bars_of(lid) * BAR * rate))
+            bpm = LOOPS[lid][2]['bpm']                     # its own (a groove can be a little off 92)
+            n = int(round(bars_of(lid) * 240 / bpm * rate))
             # resampled as a loop: three copies round it, the middle one kept, so the seam stays seamless
             three = np.tile(x, 3).astype(np.float32).tobytes()
             y = np.frombuffer(subprocess.run(['ffmpeg', '-v', 'error', '-f', 'f32le', '-ar', '44100', '-ac', '1', '-i', '-', '-ar', str(rate),
                                               '-f', 'f32le', '-'], input=three, capture_output=True, check=True).stdout, np.float32)
             m = len(y) // 3; y = y[m:m + n]
             if len(y) < n: y = np.concatenate([y, np.zeros(n - len(y), np.float32)])
-            slices.append([len(data), len(data) + n]); names.append(LOOPS[lid][1]); tempo.append([BPM, bars_of(lid)])
+            slices.append([len(data), len(data) + n]); names.append(LOOPS[lid][1]); tempo.append([bpm, bars_of(lid)])
             data.extend(y.tolist())
         pcm = (np.clip(np.array(data), -1, 1) * 32767).astype('<i2')
         w = wave.open(f'{OUT}/{bank}.wav', 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm.tobytes()); w.close()
