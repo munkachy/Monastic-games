@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023v';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023w';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1872,7 +1872,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023v'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023w'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1965,7 +1965,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023v'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023w'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3637,7 +3637,8 @@ const fadeLen = () => (S.grid.fade === 'q' ? 0.03 : (S.grid.fade || 0) * stepDur
 // Each cell sounds through a gain of its own: its volume, and the fades.
 function launch(c, r, slot, at, fade = true) {
   const cell = S.grid.cells[c][r], x = slot.slices[0], key = keyAt(at.when), bars = x.bars || 1;
-  const phase = x.bpm ? ((((at.j / 16) % bars) + bars) % bars) / bars : 0;
+  // where in its loop it starts: counted from j0, the tick it was started from its beginning (0: lined up with the bar)
+  const j0 = at.j0 ?? 0, phase = x.bpm ? (((((at.j - j0) / 16) % bars) + bars) % bars) / bars : 0;
   const level = cell.vol ?? 1, g = ctx.createGain(), f = fade ? fadeLen() : 0;
   g.connect(colInput(c, cell));
   const eq = makeEq(cell); eq[2].connect(g);
@@ -3647,7 +3648,7 @@ function launch(c, r, slot, at, fade = true) {
     voice = playNote(eng, slot, -1, 0, at.when, { scale: key.scale, bpm: S.bpm, root: key.root, hold: cell.mode !== 'oneshot', phase, dest: eq[0] });
   } catch (e) { soundError(e); }
   if (!voice) { for (const n of [g, ...eq]) n.disconnect(); return null; }
-  const h = { r, voice, g, eq, level, at: at.when, j: at.j, synced: !!x.bpm, bars, len: x.e - x.s };
+  const h = { r, voice, g, eq, level, at: at.when, j: at.j, j0, synced: !!x.bpm, bars, len: x.e - x.s };
   if (voice.end !== Infinity) unplugAt(h, voice.end);
   return h;
 }
@@ -3687,7 +3688,7 @@ async function tapCell(c, r) {
     kill(col.next); col.next = null;
     if (col.cur?.stopAt != null) {
       const cs = await cellSlot(S.grid.cells[c][col.cur.r]);
-      if (cs) col.next = launch(c, col.cur.r, cs, { when: Math.max(ctx.currentTime, col.cur.stopAt), j: col.cur.stopJ }, false);
+      if (cs) col.next = launch(c, col.cur.r, cs, { when: Math.max(ctx.currentTime, col.cur.stopAt), j: col.cur.stopJ, j0: col.cur.j0 }, false);
     }
     drawLoops(); return;
   }
@@ -3700,7 +3701,11 @@ async function tapCell(c, r) {
   if (slot.slices[0].bpm) await stretchFor(slot);
   const was = playing;
   if (!playing) start();
-  const b = was ? gridNext(quantOf(cell)) : nextBar(), v = launch(c, r, slot, b);
+  // Quantize Off or under a bar: it starts from its beginning, as soon as tapped (on the next point), and
+  // repeats from there. A bar or more: it lines up with the bar, as the other loops.
+  const q = quantOf(cell), b = was ? gridNext(q) : nextBar();
+  if (was && q < 16) b.j0 = b.j;
+  const v = launch(c, r, slot, b);
   if (!v) return;
   if (col.next) kill(col.next);
   if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b);
@@ -3718,7 +3723,7 @@ async function gateDown(c, r) {
   if (slot.slices[0].bpm) await stretchFor(slot);
   if (col.gateToken !== token) return;
   // Gate plays free: no quantize, at once, from its start (and doesn't start the beat)
-  const b = { when: ctx.currentTime + 0.005, j: 0 }, v = launch(c, r, slot, b, false); if (!v) return;
+  const j = beatPos(), b = { when: ctx.currentTime + 0.005, j, j0: j }, v = launch(c, r, slot, b, false); if (!v) return;
   if (col.cur && col.cur.stopAt == null) stopAt(col.cur, b, false);
   if (col.next) { kill(col.next); col.next = null; }
   col.gate = v; drawLoops();
@@ -3752,7 +3757,7 @@ async function relaunchGrid(b, which) {
     const cell = S.grid.cells[c][h.r]; if (!cell || !which(cell, h)) continue;
     const slot = await cellSlot(cell); if (!slot) continue;
     if (slot.slices[0].bpm) await stretchFor(slot);
-    const v = launch(c, h.r, slot, b, false); if (!v) continue;
+    const v = launch(c, h.r, slot, { ...b, j0: h.j0 }, false); if (!v) continue;
     stopAt(h, b, false); col.next = v;
   }
 }
@@ -3787,7 +3792,7 @@ function tickGrid(now) {
       if (!h || now < h.at) continue;
       let p;
       if (h.voice.end !== Infinity && h.stopAt == null) p = (now - h.at) / Math.max(0.01, h.voice.end - h.at);   // one shot
-      else if (h.synced) p = ((pos % h.bars) + h.bars) % h.bars / h.bars;
+      else if (h.synced) p = (((pos - h.j0 / 16) % h.bars) + h.bars) % h.bars / h.bars;
       else p = ((now - h.at) / Math.max(0.01, h.len)) % 1;
       cellEls[c][h.r].ring.style.strokeDashoffset = String(100 - 100 * Math.min(1, Math.max(0, p)));
     }
