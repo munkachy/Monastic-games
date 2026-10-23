@@ -191,6 +191,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   kit) for its volume, pitch and how it plays, and its own EQ (three bands,
   with its curve) and effect (reverb, echo, ping-pong, chorus, drive, fuzz,
   tape), on every note of it, in the beat and in the export.
+- **Light sound engine** (Menu › Buttons › Sound engine), for older iPads
+  whose sound breaks up: a bigger audio buffer, 32 kHz inside, a shorter
+  reverb, fewer notes at once, loops made ready only when tapped. The app
+  suggests it when it hears the sound breaking up; sounds only previewed
+  are let go to save memory, on any device.
 - **Sideways:** twenty of your blue buttons, full size, on the left.
 - **Tags:** SYN (synthesized as you play), REC (a recording), GEN (made in
   code beforehand), MINE (yours), on every sound. **☆ Favorite** and

@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023f';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023g';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -18,9 +18,17 @@ function along(el, ev) {
 // the phone leaves it stuck; recorded sound lives in AudioBuffers, which don't
 // belong to any one engine, so nothing is lost.
 let ctx, eng, engReady, scope;
+// The Light engine, for older iPads: a bigger audio buffer (the phone has longer to make each
+// moment of sound, so it doesn't break up: a little more delay), a lower rate inside (less work
+// for every sound, a third less memory for them), a shorter reverb, fewer notes at once, loops
+// made ready only when tapped, and less drawing. Menu › Buttons › Sound engine.
+const LIGHT = (() => { try { return localStorage.getItem('pocketEngine') === 'light'; } catch (e) { return false; } })();
+stretchLimit.n = LIGHT ? 16 : 40;
 function makeAudio() {
-  ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-  eng = new Engine(ctx);
+  const AC = window.AudioContext || window.webkitAudioContext;
+  try { ctx = new AC(LIGHT ? { latencyHint: 'playback', sampleRate: 32000 } : { latencyHint: 'interactive' }); }
+  catch (e) { ctx = new AC({ latencyHint: LIGHT ? 'playback' : 'interactive' }); }
+  eng = new Engine(ctx, { light: LIGHT });
   engReady = eng.init();
   scope = ctx.createAnalyser(); scope.fftSize = 1024; eng.master.connect(scope);
   ctx.addEventListener?.('statechange', onAudioState);
@@ -102,11 +110,17 @@ addEventListener('pointerdown', () => wake('tap'), true);
 addEventListener('keydown', () => wake('key'), true);
 document.addEventListener('visibilitychange', () => { log('page', document.hidden ? 'hidden' : 'shown'); if (!document.hidden) wake('page shown'); });
 // Once a second: did the audio clock keep up with the real clock?
-let clockA = ctx.currentTime, clockW = performance.now(), outLat = -1, frozen = 0;
+let clockA = ctx.currentTime, clockW = performance.now(), outLat = -1, frozen = 0, glitches = [], lightSaid = false;
 setInterval(() => {
   const a = ctx.currentTime, w = performance.now(), dA = a - clockA, dW = (w - clockW) / 1000;
   if (ctx.state === 'running' && dW > 0.3) {
-    if (dA < dW - 0.03) log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+    if (dA < dW - 0.03) {
+      log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+      // the sound breaking up again and again while playing: say what can help, once
+      if (playing && !LIGHT) glitches.push(w);
+      while (glitches.length && w - glitches[0] > 30000) glitches.shift();
+      if (glitches.length >= 4 && !lightSaid) { lightSaid = true; status('The sound is breaking up: this device is working hard. Menu › Buttons › Sound engine › Light can help.'); }
+    }
     // "running" but the clock hasn't moved for two seconds: the engine is dead
     frozen = dA < 0.01 && !document.hidden ? frozen + 1 : 0;
     if (frozen === 2 && !stuck) { stuck = 'its clock stopped'; log('stuck', 'the audio clock has stopped; the next tap restarts the engine'); status('The sound is stuck. Tap a key to restart it.'); }
@@ -1547,7 +1561,17 @@ function openMenu(tab) {
   if (tab) document.querySelector(`[data-tab="${tab}"]`).click();
   drawBrowser(); refreshMine().then(drawBrowser);
 }
-function closeMenu() { $('menu').hidden = true; draw(); }
+function closeMenu() { $('menu').hidden = true; draw(); setTimeout(freeUnused, 500); }
+// Sounds only tried in the browser are let go (their audio, a few MB each, is freed), keeping
+// those on the pads and in the Loops grid.
+function freeUnused() {
+  previews.clear(); bSel = null;
+  if (!banks) return;
+  const used = new Set();
+  for (const sl of S.slots) if (sl) { used.add(sl.buf); for (const x of sl.slices || []) used.add(x.buf); }
+  const gridBanks = new Set(S.grid.cells.flat().filter(Boolean).map(c => LIBRARY[c.lib]?.bank || LIBRARY[c.lib]?.multi));
+  for (const [id, B] of Object.entries(banks)) if (B.buf && !used.has(B.buf) && !gridBanks.has(id)) delete B.buf;
+}
 $('menuBtn').addEventListener('click', () => openMenu());
 $('menuClose').addEventListener('click', stopPreview);
 $('menuClose').addEventListener('click', closeMenu);
@@ -1747,7 +1771,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023g'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1840,7 +1864,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023g'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2245,6 +2269,12 @@ function layPads(first) {
   if (!first) { lastSeen = []; drawWheel(); }
 }
 tallQ.addEventListener?.('change', () => { layPads(); draw(); });
+$('engineWay').value = LIGHT ? 'light' : 'full';
+$('engineWay').addEventListener('change', e => {
+  try { localStorage.setItem('pocketEngine', e.target.value); } catch (er) {}
+  if (playing) stop();
+  flushSave(); status('Changing the sound engine…'); setTimeout(() => location.reload(), 400);
+});
 $('padsWay').addEventListener('change', e => { try { localStorage.setItem('pocketPads', e.target.value); } catch (er) {} layPads(); draw(); });
 layPads(true);
 // A drum hit's part, by its name: its colour is that part's (a kick is always red).
@@ -2351,7 +2381,7 @@ function draw() {
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
 function drawWave() {
-  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
+  const dpr = LIGHT ? 1 : window.devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   g.clearRect(0, 0, W, H);
   const ink = classic() ? cssVar('--lcd-ink') : cssVar(`--s${S.cur + 1}`), sl = S.slots[S.cur];
@@ -2423,7 +2453,7 @@ cv.addEventListener('pointermove', ev => {
 const endDrag = () => { if (drag != null) { S.lastKey[S.cur] = drag; noteOn(eng, S.cur, drag, ctx.currentTime); drag = null; dirty(); } };
 cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
 
-let lastSeen = [], lastNoteAt = 0;
+let lastSeen = [], lastNoteAt = 0, frameN = 0;
 function frame() {
   const now = ctx.currentTime;
   let changed = false;
@@ -2440,7 +2470,7 @@ function frame() {
   // Redraw the screen only when what it shows has changed (or the scope is
   // moving), so the phone has its time free to answer the keys.
   const sl = S.slots[S.cur], seen = [sl, S.cur, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
-  const scopeLive = sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5);
+  const scopeLive = sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5) && (!LIGHT || (frameN++ & 3) === 0);   // Light: the scope a quarter as often
   if (drag != null || scopeLive || seen.some((v, i) => v !== lastSeen[i])) { drawWave(); lastSeen = seen; }
   requestAnimationFrame(frame);
 }
@@ -2932,6 +2962,7 @@ function stretchFor(slot, roots = [S.root, keyAhead().root]) {
   }));
 }
 async function warmGrid() {
+  if (LIGHT) return;            // Light: each loop is made ready when it is tapped, not all at once
   for (const col of S.grid.cells) for (const cell of col) if (cell) { const sl = await cellSlot(cell); if (sl) await stretchFor(sl); }
 }
 let gridWarmTimer = 0;
