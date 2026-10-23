@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023za';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zb';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -299,8 +299,29 @@ function stop() {
   for (const f of [...activeFx]) if (!S.fxLatch || FX[f][1].seq) releaseFx(f);
   for (const [id, h] of looping) { h.voice?.stop(ctx.currentTime); looping.delete(id); }   // every loop stops with the beat
   if (eng.recAudio) { eng.setFx(eng.recAudio, false, stepDur()); eng.recAudio = null; }
-  stopGrid();                 // and the Loops grid
+  rememberLoops(); stopGrid();                 // and the Loops grid (the loops playing are remembered for Play)
   draw();
+}
+// Stop remembers the loops playing (or waiting to start), and ▶ Play brings them back on the first bar.
+// ↺ Reset (on the Loops) forgets them. Hits played once and Gates are not kept.
+function rememberLoops() {
+  const keep = [];
+  for (const [i, l] of gcol.entries()) {
+    const c = Math.floor(i / ROWS), h = l.next || (l.cur?.stopAt == null ? l.cur : null), cell = h && S.grid.cells[c][h.r];
+    if (cell && cell.mode !== 'oneshot' && cell.mode !== 'gate') keep.push([c, h.r]);
+  }
+  if (keep.length || !S.grid.resume?.length) S.grid.resume = keep;
+  persist(); flushSave();          // kept at once, even if the app is closed right after
+}
+async function resumeLoops() {
+  const list = (S.grid.resume || []).filter(([c, r]) => S.grid.cells[c]?.[r]); if (!list.length || !playing) return;
+  S.grid.resume = [];
+  const slots = await Promise.all(list.map(([c, r]) => cellSlot(S.grid.cells[c][r])));
+  await Promise.all(slots.map(sl => sl?.slices[0].bpm ? stretchFor(sl) : null));
+  if (!playing) { S.grid.resume = list; return; }
+  const b = nextBar();
+  list.forEach(([c, r], i) => { if (!slots[i]) return; const v = launch(c, r, slots[i], b); if (v) { const l = lane(c, r); if (l.next) kill(l.next); l.next = v; } });
+  drawLoops();
 }
 let lateLogged = 0;
 function schedule() {
@@ -537,16 +558,29 @@ function drawWheel() {
     + (keyNext ? ` ${keyWords(keyNext)} comes in at the next bar.` : '');
   $('wheelForget').hidden = !pk;
 }
+// The wheel opens over the keys on the Pads, and over the grid on the Loops (it is moved there, and back).
+const wheelHome = { parent: null, next: null };
+function closeWheel() {
+  const w = $('wheel'); w.hidden = true;
+  if (wheelHome.parent && w.parentElement !== wheelHome.parent) { wheelHome.parent.insertBefore(w, wheelHome.next); w.classList.remove('inloops'); }
+}
+function openLoopWheel() {
+  const w = $('wheel');
+  if (!wheelHome.parent) { wheelHome.parent = w.parentElement; wheelHome.next = w.nextSibling; }
+  $('lview').appendChild(w); w.classList.add('inloops'); w.style.top = w.style.minHeight = '';
+  w.hidden = false; drawWheel();
+}
 function openWheel() {
   const w = $('wheel'), keys = $('keys'), dev = keys.parentElement;
+  if (w.classList.contains('inloops')) closeWheel();
   w.hidden = false;
   w.style.top = keys.offsetTop + 'px';
   w.style.minHeight = (dev.clientHeight - keys.offsetTop - 8) + 'px';
   drawWheel();
 }
 buildWheel();
-$('keyBtn').addEventListener('click', () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)));
-$('wheelClose').addEventListener('click', () => { $('wheel').hidden = true; });
+$('keyBtn').addEventListener('click', () => ($('wheel').hidden ? openWheel() : closeWheel()));
+$('wheelClose').addEventListener('click', closeWheel);
 $('wheelNext').addEventListener('click', () => { ctx.resume(); nextKey(); });
 $('wheelRand').addEventListener('click', () => { ctx.resume(); randomKey(); });
 $('wheelForget').addEventListener('click', () => {
@@ -875,7 +909,7 @@ $('write').addEventListener('click', () => {
   else S.write = S.replace = false;
   take = null; draw();
 });
-$('play').addEventListener('click', () => playing ? stop() : start());
+$('play').addEventListener('click', () => playing ? stop() : (start(), resumeLoops()));
 $('chainBtn').addEventListener('click', () => setChainEdit(!chainEdit));
 function setChainEdit(on) {
   const none = !on && chainFresh;      // ending without having chosen any pattern
@@ -1713,7 +1747,7 @@ const ACTIONS = {
   beats: { th: 'rhythm', name: 'Rhythm (open the Rhythm page: kit, beat, bass)', label: () => 'Rhythm', tap: () => openMenu('tBeat') },
   octdown: { th: 'pitch', name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
   octup: { th: 'pitch', name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
-  key: { th: 'pitch', name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : ($('wheel').hidden = true)) },
+  key: { th: 'pitch', name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : closeWheel()) },
   nextkey: { th: 'pitch', name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
   roll: { th: 'sound', name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
   edit: { th: 'sound', name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
@@ -1904,7 +1938,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023za'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zb'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1997,7 +2031,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023za'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zb'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2884,7 +2918,7 @@ function status(msg) {
 const KB = '1234qwerasdfzxcv';
 addEventListener('keydown', ev => {
   if (ev.target.matches('input, textarea, select') || ev.metaKey || ev.ctrlKey || ev.repeat) return;
-  if (ev.code === 'Space') { ev.preventDefault(); playing ? stop() : start(); return; }
+  if (ev.code === 'Space') { ev.preventDefault(); playing ? stop() : (start(), resumeLoops()); return; }
   const k = KB.indexOf(ev.key.toLowerCase()); if (k >= 0) press(k);
 });
 addEventListener('keyup', ev => { const k = KB.indexOf(ev.key.toLowerCase()); if (k >= 0) release(k); });
@@ -3933,6 +3967,7 @@ function drawLoops() {
       el.b.classList.toggle('filled', !!cell);
       el.b.classList.toggle('playing', !!on);
       el.b.classList.toggle('queued', has('next', r));
+      el.b.classList.toggle('resume', !playing && !!S.grid.resume?.some(([cc, rr]) => cc === c && rr === r));
       el.b.classList.toggle('stopping', has('cur', r, (h, l) => h.stopAt != null && l.next?.r !== r));
       el.name.textContent = cell ? cell.name || '…' : lEdit ? '+' : '';
       el.badge.textContent = cell ? [libTag(cell.lib, banks?.[LIBRARY[cell.lib]?.bank]?.from?.[cell.k] ?? cell.name), cell.mode === 'oneshot' ? '1×' : cell.mode === 'gate' ? 'G' : '', follows(cell) ? '♪' : ''].filter(Boolean).join(' ') : '';
@@ -3945,10 +3980,11 @@ function drawLoops() {
     cellEls[c].col.classList.toggle('muted', S.grid.mute[c]);
   }
   $('lPlay').textContent = playing ? '■ Stop' : '▶ Play'; $('lPlay').classList.toggle('on', playing);
-  $('lBpm').textContent = `${S.bpm} BPM`;
-  $('lKey').textContent = $('keyBtn').textContent + ' ▸';
+  fillTempos();
+  $('lKey').textContent = $('keyBtn').textContent; $('lKey').classList.toggle('on', !$('wheel').hidden && $('wheel').classList.contains('inloops'));
   $('lEdit').classList.toggle('on', lEdit);
   $('lMulti').classList.toggle('on', !!S.grid.multi);
+  $('lReset').hidden = !(S.grid.resume?.length || gcol.some(l => l.cur || l.next || l.gate));
   $('lSet').classList.toggle('on', !$('lsets').hidden);
 }
 // Names for cells that have none yet (the first set, or an old save).
@@ -3959,15 +3995,34 @@ async function nameCells() {
 function setView(v) {
   view = v;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  if ($('wheel').classList.contains('inloops')) closeWheel();
   $('loops').hidden = v !== 'loops';
   if (v === 'loops') { drawLoops(); nameCells(); warmGridSoon(); }
 }
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-$('lPlay').addEventListener('click', () => { ctx.resume(); playing ? stop() : start(); drawLoops(); });
+$('lPlay').addEventListener('click', () => { ctx.resume(); playing ? stop() : (start(), resumeLoops()); drawLoops(); });
+$('lReset').addEventListener('click', () => {
+  for (const col of gcol) for (const k of ['cur', 'next', 'gate']) if (col[k]) { kill(col[k]); col[k] = null; }
+  S.grid.resume = []; persist(); drawLoops(); status('Loops reset: none playing, and none to come back on Play.');
+});
+// The tempo on the Loops: tap it for common tempos, grouped with the styles they suit; − and + fine-tune.
+const TEMPOS = [['Slow: hip hop, lo-fi, reggae, R&B', [60, 65, 70, 75, 80, 85, 88, 90, 92, 95]],
+  ['Middle: pop, funk, soul, rock, house', [98, 100, 105, 110, 115, 118, 120, 122, 124, 126, 128]],
+  ['Fast: trap, techno, dubstep, drum & bass', [130, 135, 140, 145, 150, 160, 170, 174, 180]]];
+function fillTempos() {
+  const sel = $('lBpm'), all = TEMPOS.flatMap(([, ts]) => ts);
+  if (sel.dataset.bpm == S.bpm) return;
+  sel.textContent = '';
+  if (!all.includes(S.bpm)) sel.add(new Option(`${S.bpm} BPM`, S.bpm));
+  for (const [g, ts] of TEMPOS) { const og = document.createElement('optgroup'); og.label = g; for (const t of ts) og.appendChild(new Option(`${t} BPM`, t)); sel.appendChild(og); }
+  sel.value = S.bpm; sel.dataset.bpm = S.bpm;
+}
+$('lBpm').addEventListener('change', () => { checkpoint(); S.bpm = +$('lBpm').value; dirty(); draw(); warmSoon(); gridTempo(); drawLoops(); });
 const nudgeBpm = d => { S.bpm = Math.max(60, Math.min(240, S.bpm + d)); dirty(); draw(); warmSoon(); gridTempo(); drawLoops(); };
 $('lSlower').addEventListener('click', () => nudgeBpm(-1));
 $('lFaster').addEventListener('click', () => nudgeBpm(1));
-$('lKey').addEventListener('click', () => { nextKey(); drawLoops(); });
+$('lKey').addEventListener('click', () => { const open = !$('wheel').hidden && $('wheel').classList.contains('inloops'); open ? closeWheel() : openLoopWheel(); drawLoops(); });
+$('lNextKey').addEventListener('click', () => { ctx.resume(); nextKey(); drawLoops(); });
 // Multi: the cells of one column play together (each its own lane). Turned off, each column keeps
 // the cell started last; the others stop on the next point.
 function setMulti(on) {

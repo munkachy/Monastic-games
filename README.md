@@ -217,6 +217,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   the library loops a sound at the tempo playing, as the Loops would.
 - **A cell's sounds by colour:** choosing a sound for a Loops cell shows the
   browser's colour folders, the column's own first; anything can go anywhere.
+- **The Loops' top row:** the tempo opens common tempos (− and + fine-tune),
+  the key opens the key wheel (▸ the next key); Stop remembers the loops
+  playing and Play brings them back; ↺ Reset forgets them.
 - **Multi in the Loops:** the cells of one column play together.
 - **🗑 Review the library** (Menu › Sounds): hear every sound, tick the ones
   to go, and send the list to Claude (a GitHub issue, or copied for a chat)
