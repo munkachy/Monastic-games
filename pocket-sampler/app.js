@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023t';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023u';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -256,7 +256,7 @@ const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 
 // Your buttons, a row (sideways) for each kind of thing, in that kind's colour: rhythm, pitch and key, the sound,
 // the voice, effects. Upright, the first four sit beside Copy and Undo and the next eight under the keys.
 const DEFAULT_CUSTOM_IDS = ['mute', 'beat', 'chain', 'beats',
-  'octdown', 'octup', 'key', 'nextkey', 'roll', 'edit', 'clear', 'export',
+  'octdown', 'octup', 'key', 'nextkey', 'makeloop', 'edit', 'clear', 'export',
   'rap', 'newflow', 'hearrap', 'robot', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
 const OLD_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat', 'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',
   'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // before the rows had colours
@@ -387,7 +387,8 @@ function playTick(e, t, when, live) {
     if (from == null) continue;
     for (const n of S.patterns[patAt(from)][from % 16]) {
       if (!mine(n.s)) continue;
-      if (S.muteBeat && isDrum(n.s)) continue;
+      const only = renderOnly ?? (S.muteBeat ? 'nodrums' : 'all');
+      if ((only === 'nodrums' && isDrum(n.s)) || (only === 'drums' && !isDrum(n.s))) continue;
       if (live && liveSkip.delete(`${t}:${n.s}:${n.k}`)) continue;
       if (live && take?.si === n.s && !take.notes.has(n)) continue;     // Replace: the old line is silent
       // A note played off the grid keeps its own place, swing or not.
@@ -1121,7 +1122,8 @@ function itemsOf(node) {
   if (it === 'favs') return favChoices();
   if (typeof it === 'string' && it.startsWith('hits:')) return hitItems(it.slice(5)).filter(c => !doomed(c));
   if (node.contents) return node.contents.filter(c => !doomed(c));
-  return it.filter(x => Array.isArray(x) || (LIBRARY[x] && !toDelete().has(x))).map(x => (Array.isArray(x) ? x : { lib: x }));
+  return [...mine.filter(m => m.type === 'loop' && m.folder === node[0]).map(m => ({ mine: m })),     // your loops first
+    ...it.filter(x => Array.isArray(x) || (LIBRARY[x] && !toDelete().has(x))).map(x => (Array.isArray(x) ? x : { lib: x }))];
 }
 // Review the library: every built-in sound, to hear and tick for deleting. The ticks are kept on this
 // device (pocketDelete: "id" for a whole sound, "id#k" for one sound of a pack) and leave the menus at
@@ -1213,7 +1215,7 @@ function drawBrowser() {
       b.textContent = selName(it).replace(/ \(from .*\)$/, '');
       const tag = choiceTag(it), fav = favKey(it) && favs().some(x => x.key === favKey(it));
       small.textContent = (fav ? '★ ' : '') + (tag ? tag + ' · ' : '') + (it.song ? it.song.about : it.k != null ? `key ${it.k + 1}`
-        : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : 'my sound')
+        : it.mine ? (it.mine.type === 'pack' ? `pack · ${it.mine.item.slices?.length || 0} sounds` : it.mine.type === 'loop' ? `my loop · ${it.mine.folder}` : 'my sound')
         : selPack(it) ? 'pack' : 'instrument');
       small.title = tag.split(' + ').map(t => `${t}: ${TAG_ABOUT[t]}`).join('; ');
       b.classList.toggle('sel', !!bSel && same(bSel, it));
@@ -1684,6 +1686,7 @@ const ACTIONS = {
   roll: { th: 'sound', name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
   edit: { th: 'sound', name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   clear: { th: 'sound', name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
+  makeloop: { th: 'sound', name: 'Make a loop (the pattern or chain, into the library)', label: () => '⟳ Loop', tap: () => openMakeLoop() },
   export: { th: 'sound', name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
   rap: { th: 'voice', name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
   newflow: { th: 'voice', name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
@@ -1869,7 +1872,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023u'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1962,7 +1965,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023u'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2454,14 +2457,17 @@ $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
 // the end is folded back onto the start, so it loops without a click. The
 // loop is rendered as soon as the box opens, so ⬆ can open the share sheet
 // straight from the tap (an iPhone allows that only right after one).
-async function renderLoop(raw = false) {          // raw: the mix as it is, mono, not levelled (for the loop-set tool)
+let renderOnly = null;        // while a loop is made: 'all', 'nodrums' or 'drums' (else Mute decides)
+async function renderLoop(raw = false, only = null) {          // raw: the mix as it is, mono, not levelled (for the loop-set tool)
   const ticks = 16 * S.chain.length, len = ticks * stepDur(), tail = 2.5;
   const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR);       // stereo, for ping-pong and chorus
   const e = new Engine(off, { live: false });
   let k = { root: S.root, scale: S.scale };     // as on Play: a pattern with a key of its own changes it, the others carry it on
   renderKeys = S.chain.map(p => (k = S.patKeys[p] || k));
   await warmLoops();                // every loop stretched before the render starts
-  for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false);
+  renderOnly = only;
+  try { for (let t = 0; t < ticks; t++) playTick(e, t, t * stepDur() + (t % 2 ? (2 * S.swing / 100 - 1) * stepDur() : 0), false); }
+  finally { renderOnly = null; }
   renderKeys = null;
   const buf = await off.startRendering(), n = Math.round(len * SR);
   const chs = [0, 1].map(c => {
@@ -2472,7 +2478,7 @@ async function renderLoop(raw = false) {          // raw: the mix as it is, mono
   if (raw) { const m = new Float32Array(n); for (let i = 0; i < n; i++) m[i] = (chs[0][i] + chs[1][i]) / 2; return m; }
   let top = 0; for (const x of chs) for (const v of x) top = Math.max(top, Math.abs(v));
   if (top > 0.98) for (const x of chs) for (let i = 0; i < n; i++) x[i] *= 0.98 / top;
-  return { data: wav(chs, SR), len };
+  return { data: wav(chs, SR), len, chs, top };
 }
 let exported = null;
 const safeName = s => s.replace(/[^\w\- .]+/g, '').replace(/\.wav$/i, '').trim() || 'pocket loop';
@@ -2502,6 +2508,62 @@ $('expDownload').addEventListener('click', () => {
   const f = exportFile(), a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   $('exportBox').hidden = true; status(`Saved ${f.name}.`);
+});
+// ⟳ Make a loop: the pattern (or the chain, as one long loop) made into a loop and kept in the
+// library: in the folder chosen (Bass, Chords...), in My Sounds, and in the Loops (My loops). It
+// keeps its tempo and bars, so it plays in time at any tempo, on a pad or in a Loops cell.
+const LOOP_FOLDERS = ['Beats', 'Bass', 'Chords', 'Lead', 'Sub', 'Vox and keys', 'Pads', 'Plucks, mallets and bells', 'Stabs and FX', 'Ambience and vinyl'];
+const PART_FOLDER = { Bass: 'Bass', Sub: 'Sub', Chords: 'Chords', Lead: 'Lead', 'Vox/Keys': 'Vox and keys', Pad: 'Pads', 'Pluck/Arp': 'Plucks, mallets and bells', 'Stab/FX': 'Stabs and FX' };
+for (const f of LOOP_FOLDERS) $('mkPart').add(new Option(f, f));
+let made = null, madePv = null;
+function chainSounds() { const u = new Set(); for (const p of S.chain) for (const st of S.patterns[p]) for (const n of st) u.add(n.s); return [...u]; }
+function openMakeLoop() {
+  if (!chainSounds().length) { status('Nothing to make a loop of: the pattern is empty.'); return; }
+  const inst = chainSounds().filter(si => !isDrum(si)), drums = chainSounds().some(isDrum);
+  $('mkWhat').value = S.muteBeat ? 'nodrums' : 'all';
+  $('mkName').value = `${inst.length === 1 && !drums ? S.slots[inst[0]].name : drums && !inst.length ? 'Beat' : 'Loop'} ${S.bpm} BPM${S.chain.length > 1 ? `, ${S.chain.length} bars` : ''}`;
+  mkGuess(); $('mkBox').hidden = false; mkRender();
+}
+function mkGuess() {
+  const what = $('mkWhat').value, inst = chainSounds().filter(si => !isDrum(si));
+  $('mkPart').value = what === 'drums' || (what === 'all' && chainSounds().some(isDrum)) || !inst.length ? 'Beats'
+    : PART_FOLDER[PART[inst[0]]] && inst.every(si => PART[si] === PART[inst[0]]) ? PART_FOLDER[PART[inst[0]]] : 'Chords';
+}
+function mkRender() {
+  made = null; mkStop(); $('mkSave').disabled = $('mkHear').disabled = true;
+  $('mkInfo').textContent = 'Making the loop…';
+  const want = $('mkWhat').value;
+  renderLoop(false, want).then(r => {
+    if ($('mkWhat').value !== want) return;
+    if (r.top < 0.001) { $('mkInfo').textContent = 'That is silent: nothing plays in it. Choose another "What plays".'; return; }
+    made = r; $('mkSave').disabled = $('mkHear').disabled = false;
+    $('mkInfo').textContent = `${S.chain.length > 1 ? `Patterns ${S.chain.map(p => p + 1).join(', ')} as one loop` : `Pattern ${S.pat + 1}`}: ${S.chain.length * 4} beats at ${S.bpm} BPM, ${r.len.toFixed(2)} s.`;
+  }, err => { $('mkInfo').textContent = 'Could not make the loop: ' + err.message; });
+}
+function mkStop() { if (madePv) { try { madePv.stop(); } catch (e) {} madePv = null; } $('mkHear').textContent = '▶ Hear it'; }
+$('mkWhat').addEventListener('change', () => { mkGuess(); mkRender(); });
+$('mkHear').addEventListener('click', () => {
+  if (madePv) { mkStop(); return; }
+  if (!made) return;
+  if (playing) stop();
+  ctx.resume();
+  const b = ctx.createBuffer(2, made.chs[0].length, SR); made.chs.forEach((x, c) => b.copyToChannel(x, c));
+  const src = ctx.createBufferSource(); src.buffer = b; src.loop = true; const g = ctx.createGain(); g.gain.value = 0.5;
+  src.connect(g); g.connect(eng.bus); src.start(); madePv = src; $('mkHear').textContent = '■ Stop';
+});
+$('mkCancel').addEventListener('click', () => { mkStop(); $('mkBox').hidden = true; });
+$('mkSave').addEventListener('click', async () => {
+  if (!made) return;
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const name = $('mkName').value.trim() || 'My loop', folder = $('mkPart').value, n = made.chs[0].length;
+  const buf = ctx.createBuffer(1, n, SR), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (made.chs[0][i] + made.chs[1][i]) / 2;
+  const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf,
+    slices: [{ s: 0, e: n / SR, name, bpm: S.bpm, bars: S.chain.length }] };
+  const id = 'm' + Date.now().toString(36);
+  await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot) }, id);
+  await refreshMine(); mkStop(); $('mkBox').hidden = true; drawBrowser();
+  status(`“${name}” is in the library: Menu › Sounds › ${folder} (and My Sounds), and in the Loops (My loops). ${S.chain.length * 4} beats; it keeps time at any tempo.`);
 });
 function toggleMute() {
   S.muteBeat = !S.muteBeat; persist(); draw();
@@ -3395,7 +3457,8 @@ async function load() {
     if (!saved.chainButton && S.custom[11] === 'voice') S.custom[11] = 'chain';    // the Chain button took Voice's place, once
     S.chainButton = true;
     if (S.custom.join() === OLD_CUSTOM_IDS.join()) S.custom = [...DEFAULT_CUSTOM_IDS];   // never changed: the new rows
-    if (S.custom[15] === 'voice' && S.custom.every((c, i) => i === 15 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[15] = 'robot';   // 🤖 Robot took Voice's place
+    if (S.custom[15] === 'voice' && S.custom.every((c, i) => i === 15 || c === DEFAULT_CUSTOM_IDS[i] || (i === 8 && c === 'roll'))) S.custom[15] = 'robot';   // 🤖 Robot took Voice's place
+    if (S.custom[8] === 'roll' && S.custom.every((c, i) => i === 8 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[8] = 'makeloop';   // ⟳ Loop took Roll's place
   }
   else demo();
   setVolume(); syncPanel(); draw();
@@ -3429,7 +3492,8 @@ const CHANNEL_COLOR = ['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 
 const ROWS = 6;
 const QUANTS = [[0, 'Off'], [4, '1 beat'], [16, '1 bar'], [32, '2 bars'], [64, '4 bars']];
 const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar']];
-const REPEATS = [[0, 'Whole'], [1, '1'], [2, '2'], [4, '4'], [6, '6'], [8, '8'], [16, '16'], [32, '32']];      // beats
+// Repeat, in beats, shown as note values: 1/32 note (an eighth of a beat) up to 8 bars.
+const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars']];
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
   ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['tape', 'Tape']];
 // The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
@@ -3467,12 +3531,19 @@ const follows = cell => !drumCell(cell) && (cell.follow ?? true);
 // A cell as a one-slice sound that playNote can play: the part of its sound
 // selected in the wave, cut to its repeat length (in beats), transposed.
 const cellSlots = new Map();
+// A cell's sound: a built-in one ({ lib, k }), or one of your loops ({ mine: id, k: 0 }).
+const mineSlots = new Map();
+function cellBase(cell) {
+  if (!cell.mine) return slotOf({ lib: cell.lib });
+  if (!mineSlots.has(cell.mine)) { const m = mine.find(x => x.id === cell.mine); if (!m) return Promise.resolve(null); mineSlots.set(cell.mine, Promise.resolve(unpackSlot(m))); }
+  return mineSlots.get(cell.mine);
+}
 function cellSlot(cell) {
   const keyOf = follows(cell) ? cell.keyOf ?? null : null;
-  const id = JSON.stringify([cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, cell.stretch ?? true,
+  const id = JSON.stringify([cell.mine || cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, cell.stretch ?? true,
     cell.from || 0, cell.to ?? 1, cell.beats ? S.bpm : 0]);
   if (cellSlots.size > 300) cellSlots.clear();
-  if (!cellSlots.has(id)) cellSlots.set(id, slotOf({ lib: cell.lib }).then(slot => {
+  if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell).then(slot => {
     const x = slot?.slices?.[cell.k]; if (!x) return null;
     cell.name ||= x.name;
     const buf = x.buf || slot.buf, whole = x.e - x.s, beat = 60 / (x.bpm || S.bpm);
@@ -3952,7 +4023,7 @@ async function drawCellMenu() {
     $('lmKey').parentElement.style.display = drumCell(cell) ? 'none' : '';
     choices($('lmKey'), [[false, 'Off'], [true, 'On']], follows(cell), async v => {
       if (v && cell.keyOf == null) {          // find its key by listening, once
-        const slot = await slotOf({ lib: cell.lib }), x = slot.slices[cell.k], buf = x.buf || slot.buf;
+        const slot = await cellBase(cell), x = slot.slices[cell.k], buf = x.buf || slot.buf;
         const k = findKey(buf, x.s, x.e); cell.keyOf = k.root;
         status(`${cell.name} sounds ${k.sure > 0.6 ? 'clearly' : k.sure > 0.3 ? 'probably' : 'maybe'} in ${NOTE_NAMES[k.root]}${k.minor ? ' minor' : ''}. It now follows the key.`);
       }
@@ -3968,7 +4039,7 @@ async function drawCellMenu() {
     $('lmQuant').querySelectorAll('button').forEach(b => { b.disabled = cell.mode === 'gate'; });
     $('lmQuantNote').textContent = cell.mode === 'gate' ? 'Gate plays free: at once, no quantize' : cell.mode === 'oneshot' && cell.quant == null ? 'a hit: the next 16th' : '';
     drawEq(cell);
-    const base = await slotOf({ lib: cell.lib }), x = base?.slices?.[cell.k];
+    const base = await cellBase(cell), x = base?.slices?.[cell.k];
     if (!menuCell || S.grid.cells[c][r] !== cell) return;
     choices($('lmStretch'), [[true, 'On'], [false, 'Off']], cell.stretch ?? true, v => { cell.stretch = v; changed(c, r); });
     $('lmStretch').querySelectorAll('button').forEach(b => { b.disabled = !x?.bpm; });
@@ -3996,6 +4067,12 @@ async function drawCellMenu() {
   const top = document.createElement('button'); top.textContent = 'Sounds'; top.addEventListener('click', () => { menuPack = null; drawCellMenu(); });
   crumbs.appendChild(top);
   if (!menuPack) {
+    for (const m of mine.filter(m => m.type === 'loop')) btn(m.name, `My loops · ${m.folder}`, () => {
+      const was = S.grid.cells[c][r];
+      { const l = lane(c, r); if (l.cur?.r === r) stopAt(l.cur, { when: ctx.currentTime, j: 0 }, false); if (l.next?.r === r) { kill(l.next); l.next = null; } }
+      S.grid.cells[c][r] = { mine: m.id, k: 0, name: m.name, mode: 'loop', vol: was?.vol ?? 1 };
+      choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
+    }, cell?.mine === m.id);
     for (const [group, ids] of CELL_PACKS) for (const id of ids) if (LIBRARY[id] && !toDelete().has(id)) btn(LIBRARY[id].name, group, () => { menuPack = id; drawCellMenu(); }, cell?.lib === id);
     return;
   }
@@ -4168,7 +4245,7 @@ function drawCellWave(x, base, cell, c) {
   cv.addEventListener('pointerdown', async ev => {
     const cell = menuCellNow(); if (!cell) return;
     ev.preventDefault(); capture(cv, ev); p0 = along(cv, ev);
-    const base = await slotOf({ lib: cell.lib }), x = base.slices[cell.k];
+    const base = await cellBase(cell), x = base.slices[cell.k];
     info = { base, x, cell, steps: x.bpm ? Math.round((x.e - x.s) / (15 / x.bpm)) : 0 };
   });
   cv.addEventListener('pointermove', ev => {
