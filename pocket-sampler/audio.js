@@ -357,7 +357,25 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     f.Q.value = 0.7 + P.res * 14;
     f.connect(out); dest = f;
   }
-  out.connect(into || (fx ? eng.bus : eng.dry));       // into: a Loops column's own volume
+  // The sound's own EQ and effect (hold it in Sound mode): after its volume, before the mix.
+  let tail = out;
+  if (P.eq && (P.eq.lo || P.eq.mid || P.eq.hi)) for (const [type, f, k] of [['lowshelf', 150, 'lo'], ['peaking', 1000, 'mid'], ['highshelf', 5000, 'hi']]) {
+    if (!P.eq[k]) continue;
+    const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = 0.8; b.gain.value = P.eq[k];
+    tail.connect(b); tail = b;
+  }
+  const sfx = P.fx?.type, amt = P.fx?.amt ?? 0.5;
+  if (sfx === 'overdrive' || sfx === 'tape' || sfx === 'fuzz') {
+    const ws = ctx.createWaveShaper(); ws.curve = distortion(sfx, amt); tail.connect(ws); tail = ws;
+  }
+  tail.connect(into || (fx ? eng.bus : eng.dry));       // into: a Loops column's own volume
+  const sendTo = { reverb: eng.reverb, echo: eng.delay, pingpong: eng.ppL, chorus: eng.chSend }[sfx];
+  if (sendTo) {                      // reverb, echoes, chorus: a send into the engine's own
+    const sg = ctx.createGain(); sg.gain.value = amt * (sfx === 'reverb' ? 1.3 : 0.9); tail.connect(sg); sg.connect(sendTo);
+    const echo = Math.min(1.9, 45 / bpm);              // three 16ths, as the FX keys' echoes
+    if (sfx === 'echo') eng.delay.delayTime.setValueAtTime(echo, Math.max(t, eng.ctx.currentTime));
+    if (sfx === 'pingpong') for (const d of [eng.ppL, eng.ppR]) d.delayTime.setValueAtTime(echo, Math.max(t, eng.ctx.currentTime));
+  }
   const voice = { rates: [], nodes: [], end: t, stop: null, sustain };
   const env = ctx.createGain(); env.connect(dest);
 

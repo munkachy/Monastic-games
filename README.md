@@ -187,6 +187,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   cycles: instruments, then drums (pick one kit), then back to playing;
   kits load only on the drums and instruments only on 1–8. Write shows the
   side of the sound chosen: a kit's hits by colour, or the instruments.
+- **A sound's own menu:** hold a sound in Sound mode (an instrument or a
+  kit) for its volume, pitch and how it plays, and its own EQ (three bands,
+  with its curve) and effect (reverb, echo, ping-pong, chorus, drive, fuzz,
+  tape), on every note of it, in the beat and in the export.
+- **Sideways:** twenty of your blue buttons, full size, on the left.
 - **Tags:** SYN (synthesized as you play), REC (a recording), GEN (made in
   code beforehand), MINE (yours), on every sound. **☆ Favorite** and
   **★ Save to My Sounds** under Load in the sound browser.
