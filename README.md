@@ -207,6 +207,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   engine (`pocket-sampler/tools/bake_sounds.js`) and played back as WAVs,
   which is far easier on a phone than making each note as it plays. **☆ Favorite** and
   **★ Save to My Sounds** under Load in the sound browser.
+- **Multi in the Loops:** the cells of one column play together.
+- **🗑 Review the library** (Menu › Sounds): hear every sound, tick the ones
+  to go, and send the list to Claude (a GitHub issue, or copied for a chat)
+  to delete them for good; ticked sounds leave the menus at once.
 - **✎ Edit in the Loops:** the grid turns shades of amber, and a cell can be
   dragged to another place (onto a full cell, the two swap).
 - **Loops tab** (beside **Pads**): a grid like Remixlive's, laid out
