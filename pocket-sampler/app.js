@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023l';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023m';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -409,9 +409,21 @@ function isDrum(si) {
   if (!drumMemo.has(sl)) drumMemo.set(sl, ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)));
   return drumMemo.get(sl);
 }
+// Drums never change with the key: a kit, hand drums, a single drum hit, a drum loop. They play as
+// recorded, in any key, while the bass and everything else move.
+const DRUM_NAME = /kick|snare|clap|hat\b|hats\b|tom\b|toms\b|crash|ride|cymbal|rim|shaker|conga|bongo|tambourine|cowbell|clave|cabasa|guiro|percussion|drum loop|break|amen/i;
+const drumSoundMemo = new WeakMap();
+function drumSound(sl) {
+  if (!sl) return false;
+  if (!drumSoundMemo.has(sl)) drumSoundMemo.set(sl, !!sl.params?.drum
+    || (sl.kind === 'chop' && ['kick', 'snare', 'hat', 'conga'].some(r => hasRole(sl, r)))
+    || (sl.kind === 'sample' && DRUM_NAME.test(sl.name || '')));
+  return drumSoundMemo.get(sl);
+}
+const keyFor = (sl, key) => (drumSound(sl) ? { root: sl.params.keyOf ?? 0, scale: 'minor' } : key);
 function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null, phase = 0) {
   const slot = S.slots[si]; if (!slot) return null;
-  key ??= keyAt(when);
+  key = keyFor(slot, key ?? keyAt(when));
   m ??= modsFor(si, [...activeFx].map(k => [k, fxAim.get(k) || 'all']));
   if (e === eng) {
     lastNoteAt = Math.max(lastNoteAt, when);
@@ -1033,7 +1045,7 @@ function syncPanel() {
   $('trigBtn').textContent = TRIG_LABEL[$('pTrig').value]; $('trigBtn').classList.toggle('on', $('pTrig').value !== 'oneshot');
   $('startRow').style.display = sl.kind === 'synth' ? 'none' : '';
   // Instruments and synths know their notes; a recording follows the key only if you say what key it is in.
-  $('keyOfRow').style.display = sl.kind === 'sample' || sl.kind === 'chop' ? '' : 'none';
+  $('keyOfRow').style.display = (sl.kind === 'sample' || sl.kind === 'chop') && !drumSound(sl) ? '' : 'none';
   $('pKeyOf').value = sl.params.keyOf ?? '';
   const wob = sl.synth?.type === 'wobble';
   $('wobRow').style.display = wob ? '' : 'none';
@@ -1325,7 +1337,8 @@ function sliceAlone(slot, k, label) {
   if (slot.params.trig === 'loop' || sl.bpm)       // a loop stays a loop: on key 1, keeping its tempo
     return { factory: null, kind: 'chop', contiguous: false, name: label, params: { ...defParams(), trig: 'loop' }, buf,
       slices: [{ s: 0, e: buf.duration, name: label, ...(sl.bpm && { bpm: sl.bpm, bars: sl.bars }) }] };
-  return { factory: null, kind: 'sample', name: label, params: { ...defParams(), choke: true }, buf };
+  const drum = ['kick', 'snare', 'hat', 'open', 'tom', 'conga', 'bongo', 'shaker', 'crash', 'ride'].some(r => hasRole(slot, r));
+  return { factory: null, kind: 'sample', name: label, params: { ...defParams(), choke: true, ...(drum && { drum: true }) }, buf };
 }
 
 // ---------------------------------------------------------------------------
@@ -1447,7 +1460,8 @@ async function editCurrent() {
 }
 async function renderNote(si, k) {
   const off = new OfflineAudioContext(1, SR * 4, SR), e = new Engine(off, { live: false });
-  playNote(e, S.slots[si], si, k, 0.01, { scale: S.scale, bpm: S.bpm, root: S.root });
+  const key = keyFor(S.slots[si], { root: S.root, scale: S.scale });
+  playNote(e, S.slots[si], si, k, 0.01, { scale: key.scale, bpm: S.bpm, root: key.root });
   return prepare(ctx, await off.startRendering(), { trim: true, peak: 0.9 });
 }
 $('editSound').addEventListener('click', () => { closeMenu(); editCurrent(); });
@@ -1783,7 +1797,7 @@ for (const [id, fmt] of voxOut) {
 let vox = null;
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023m'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
@@ -1876,7 +1890,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023m'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3149,7 +3163,9 @@ S.grid = defaultGrid();
 let view = 'pads', lEdit = false, gridAgain = null;
 // What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its point), gate (held).
 let gcol = Array.from({ length: 8 }, () => ({ cur: null, next: null, gate: null }));
-const follows = cell => cell.follow ?? true;          // every loop follows the key, unless turned off
+// Every loop follows the key, unless turned off; the drum columns (Kick, Snare, Tops) never do.
+const drumCell = cell => { const c = S.grid.cells.findIndex(col => col.includes(cell)); return c >= 0 && c < 3; };
+const follows = cell => !drumCell(cell) && (cell.follow ?? true);
 // A cell as a one-slice sound that playNote can play: the part of its sound
 // selected in the wave, cut to its repeat length (in beats), transposed.
 const cellSlots = new Map();
@@ -3572,6 +3588,7 @@ async function drawCellMenu() {
   if (cell) {
     $('lmVolBar').firstChild.style.width = Math.round((cell.vol ?? 1) * 100) + '%';
     $('lmVolOut').textContent = Math.round((cell.vol ?? 1) * 100);
+    $('lmKey').parentElement.style.display = drumCell(cell) ? 'none' : '';
     choices($('lmKey'), [[false, 'Off'], [true, 'On']], follows(cell), async v => {
       if (v && cell.keyOf == null) {          // find its key by listening, once
         const slot = await slotOf({ lib: cell.lib }), x = slot.slices[cell.k], buf = x.buf || slot.buf;
@@ -3829,7 +3846,12 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   grid: () => gcol.map((col, c) => ({ c, cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   gains: () => S.grid.vol.map((v, c) => +colChain(c).out.gain.value.toFixed(2)), now: () => ctx.currentTime, cells: () => S.grid,
-  cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch }; },
+  cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch, keyOf: sl.params.keyOf }; },
+  // drums and the key: is sound si a drum, and a fingerprint of one note of it as rendered (the same in every key, for a drum)
+  drum: si => drumSound(S.slots[si]),
+  noteSum: async (si, k) => { const b = await renderNote(si, k), d = b.getChannelData(0); let z = 0; for (let i = 1; i < d.length; i++) if ((d[i - 1] < 0) !== (d[i] < 0)) z++; return { len: d.length, z }; },
+  alone: async (lib, k, si) => { const src = await slotOf({ lib }); S.slots[si] = sliceAlone(src, k, src.slices[k].name); draw(); return S.slots[si].name; },
+  setRoot: r => { S.root = r; draw(); },
   eng: () => eng,
   // the loop-set tool: load a song (as songs.py writes them) and render it as one seamless loop
   renderSong: async P => {
