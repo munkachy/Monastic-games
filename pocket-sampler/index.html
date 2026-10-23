@@ -537,7 +537,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zh</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zi</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -694,6 +694,8 @@
   </div>
 
   <div class="panel" id="tEffects">
+    <div class="row"><label for="spaceSel">Reverb</label><select id="spaceSel"></select><span></span></div>
+    <p class="note" id="spaceNote" style="margin:-2px 0 8px"></p>
     <label class="check"><input type="checkbox" id="fxLatch" checked> Tap an effect on, tap again to turn it off (off: on only while held)</label>
     <p class="note" style="margin:0 0 6px">Choose the effect on each FX key. Effects saved in a pattern are saved by name, so they stay the same when you move them.</p>
     <div id="fxSlots"></div>
@@ -857,7 +859,7 @@
     <p><b>1 Shot / Gate / Loop</b> (the button next to Rec) switches how the current sound's keys play; it is the same as "Play as" in the Sound tab.</p>
     <p>On the screen, tap the waveform to hear that slice; drag a marker to move where it is cut.</p>
     <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play.</p>
-    <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The synths, the 808, 909, CR-78, 606 and Minimal kits and the rolled sounds are made in code, and played from recordings of them (a note every few half steps, held notes on a seamless loop). Violin, viola, cello, double bass, choirs and celeste: Sonatina Symphonic Orchestra (CC Sampling Plus 1.0; the celeste CC0). Trumpet and trombone: VSCO 2 Community Edition (CC0). Gretsch, Hofner and Epiphone guitars: Karoryfer Samples (CC0). Rhodes: jRhodes3d by Jeff Learman (CC BY-NC 4.0). Tenor sax, xylophone, bells, tambourines, shakers, siren whistles and ocean drum: VCSL (CC0). TR-808: recorded from the machine by Michael Fischer. Breakbeats (the Amen and others), electro and Drumtraks hits, synth stabs, bass hits, pads, horns, robot voices, nature, arcade and machine sounds: TidalCycles' Dirt-Samples. Drum loops: played by the app on these kits. Nylon, acoustic and 12-string guitars, steel drum, vinyl, rain, risers, sirens and the respirator: made in code. Hype words: spoken by Vox Machina's eSpeak voices. The Electro Boom Bap loops: written by Claude and played by the app on these sounds. Human Grooves, and the Electro Boom Bap beats: drummers' own playing from the Groove MIDI Dataset (Jon Gillick, Adam Roberts, Jesse Engel, Douglas Eck and David Bamman, Magenta, 2019), CC BY 4.0, played by the app on its kits. Basslines played by bassists: the FiloBass dataset (Xavier Riley and Simon Dixon, Queen Mary University of London, 2023), MIT License.</p>
+    <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The synths, the 808, 909, CR-78, 606 and Minimal kits and the rolled sounds are made in code, and played from recordings of them (a note every few half steps, held notes on a seamless loop). Violin, viola, cello, double bass, choirs and celeste: Sonatina Symphonic Orchestra (CC Sampling Plus 1.0; the celeste CC0). Trumpet and trombone: VSCO 2 Community Edition (CC0). Gretsch, Hofner and Epiphone guitars: Karoryfer Samples (CC0). Rhodes: jRhodes3d by Jeff Learman (CC BY-NC 4.0). Tenor sax, xylophone, bells, tambourines, shakers, siren whistles and ocean drum: VCSL (CC0). TR-808: recorded from the machine by Michael Fischer. Breakbeats (the Amen and others), electro and Drumtraks hits, synth stabs, bass hits, pads, horns, robot voices, nature, arcade and machine sounds: TidalCycles' Dirt-Samples. Drum loops: played by the app on these kits. Nylon, acoustic and 12-string guitars, steel drum, vinyl, rain, risers, sirens and the respirator: made in code. Hype words: spoken by Vox Machina's eSpeak voices. The Electro Boom Bap loops: written by Claude and played by the app on these sounds. Human Grooves, and the Electro Boom Bap beats: drummers' own playing from the Groove MIDI Dataset (Jon Gillick, Adam Roberts, Jesse Engel, Douglas Eck and David Bamman, Magenta, 2019), CC BY 4.0, played by the app on its kits. The reverbs are recordings of real spaces (impulse responses): the Lady Chapel of St Albans Cathedral (OpenAIR, University of York, CC BY 4.0); the Lady Chapel of Ely Cathedral (L. Alvarez-Morales, M. Lopez, A. Alvarez-Corbacho and P. Bustamante, CC BY 4.0 / CC BY-NC-SA 4.0); the St. Nicholas Chapel of Aachen Cathedral (M. Zerwas and S. Kayku, CC BY 4.0); a church in Cremona (R. Giampiccolo, S. Parrinelli and F. Antonacci, ChurchIR, CC BY 4.0); a stairwell and a meeting room at Aalto University (T. McKenzie, S. Schlecht and V. Pulkki, CC BY 4.0); each trimmed, its direct sound taken out, made stereo and evened in level. Basslines played by bassists: the FiloBass dataset (Xavier Riley and Simon Dixon, Queen Mary University of London, 2023), MIT License.</p>
   </div>
   </div>
  </div>
@@ -976,6 +978,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023zh"></script>
+<script type="module" src="app.js?v=20261023zi"></script>
 </body>
 </html>
