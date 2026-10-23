@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zf';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zg';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -308,7 +308,7 @@ function rememberLoops() {
   const keep = [];
   for (const [i, l] of gcol.entries()) {
     const c = Math.floor(i / ROWS), h = l.next || (l.cur?.stopAt == null ? l.cur : null), cell = h && S.grid.cells[c][h.r];
-    if (cell && cell.mode !== 'oneshot' && cell.mode !== 'gate') keep.push([c, h.r]);
+    if (cell && cell.mode !== 'oneshot' && cell.mode !== 'gate') keep.push([c, h.r, h.j0 || 0]);     // j0: where it sat against the bar
   }
   if (keep.length || !S.grid.resume?.length) S.grid.resume = keep;
   persist(); flushSave();          // kept at once, even if the app is closed right after
@@ -320,7 +320,9 @@ async function resumeLoops() {
   await Promise.all(slots.map(sl => sl?.slices[0].bpm ? stretchFor(sl) : null));
   if (!playing) { S.grid.resume = list; return; }
   const b = nextBar();
-  list.forEach(([c, r], i) => { if (!slots[i]) return; const v = launch(c, r, slots[i], b); if (v) { const l = lane(c, r); if (l.next) kill(l.next); l.next = v; } });
+  // each comes back where it sat against the bar: a loop started off the beat picks up partway, so its
+  // own start falls just where it did (a loop lined up with the bar starts on the one)
+  list.forEach(([c, r, j0 = 0], i) => { if (!slots[i]) return; const v = launch(c, r, slots[i], { ...b, j0 }); if (v) { const l = lane(c, r); if (l.next) kill(l.next); l.next = v; } });
   drawLoops();
 }
 let lateLogged = 0;
@@ -1938,7 +1940,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zf'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zg'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2031,7 +2033,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zf'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zg'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
