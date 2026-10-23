@@ -143,7 +143,9 @@ const LIMIT_CURVE = new Float32Array(2049).map((_, i) => {
 
 export class Engine {
   // live: true for the speaker (adds the crusher and a tap for resampling).
-  constructor(ctx, { live = true } = {}) {
+  // light: for older devices (a shorter reverb, fewer notes at once).
+  constructor(ctx, { live = true, light = false } = {}) {
+    this.maxVoices = light ? 24 : 64;
     this.ctx = ctx; this.live = live;
     // Two ways in: `bus` runs through the effects, `dry` skips them (sounds
     // that an effect aimed at other tracks should leave alone).
@@ -168,7 +170,7 @@ export class Engine {
     this.limit.connect(this.master); this.master.connect(ctx.destination);
     // Reverb: a convolver with a made-up hall (stereo noise that dies away).
     this.revSend = ctx.createGain(); this.revSend.gain.value = 0;
-    this.reverb = ctx.createConvolver(); this.reverb.buffer = hall(ctx, 2.6);
+    this.reverb = ctx.createConvolver(); this.reverb.buffer = hall(ctx, light ? 1.3 : 2.6);   // its work grows with its length
     this.hp.connect(this.revSend); this.revSend.connect(this.reverb); this.reverb.connect(this.comp);
     // Chorus: two short delays, wobbled slowly and out of step, one per ear.
     this.chSend = ctx.createGain(); this.chSend.gain.value = 0;
@@ -317,6 +319,9 @@ function runWsola(x, factor) {
 }
 // buf -> Map(key -> AudioBuffer, or a Promise of one while it is being made)
 const stretchCache = new WeakMap();
+// Stretched copies take memory (a few MB each): only the latest so many are kept, of all the loops.
+const stretchOrder = [];
+export const stretchLimit = { n: 40 };
 const stretchKey = (s, e, f) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}`;
 export function stretchLoop(buf, s, e, factor) {
   let m = stretchCache.get(buf); if (!m) stretchCache.set(buf, m = new Map());
@@ -327,8 +332,9 @@ export function stretchLoop(buf, s, e, factor) {
     const b = new AudioBuffer({ length: out.length, numberOfChannels: 1, sampleRate: rate }); b.copyToChannel(out, 0);
     m.set(key, b); return b;
   });
-  if (m.size > 64) m.delete(m.keys().next().value);
-  m.set(key, p); return p;
+  m.set(key, p); stretchOrder.push([m, key]);
+  while (stretchOrder.length > stretchLimit.n) { const [mm, kk] = stretchOrder.shift(); mm.delete(kk); }
+  return p;
 }
 // The stretched loop if it is ready (and if not, start making it).
 export function stretchedNow(buf, s, e, factor) {
@@ -343,8 +349,14 @@ export const loopStretch = (slot, P, bpm, root) => {
   return (slot.bpm / bpm) * Math.pow(2, semis / 12);
 };
 
+// Too many notes at once (rolls, long tails): the oldest that will end on its own gives way.
+function makeRoom(eng) {
+  if (eng.voices.size < eng.maxVoices) return;
+  for (const v of eng.voices) if (v.end !== Infinity) { v.stop(eng.ctx.currentTime); eng.voices.delete(v); return; }
+}
 export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, unison = false, scratch = 0, dive = 0, fx = true, lock = null,
   scale = 'minor', bpm = 120, root = 0, hold = false, phase = 0, dest: into = null } = {}) {
+  if (eng.live) makeRoom(eng);      // live only: an export books every note at once, and keeps them all
   const made = [], ctx = tracking(eng.ctx, made), P = lock ? { ...slot.params, ...lock } : slot.params;
   const sustain = hold && (P.trig === 'gate' || P.trig === 'loop'), loop = sustain && P.trig === 'loop';
   if (P.choke && eng.choke.has(si)) eng.choke.get(si).stop(t);
