@@ -266,7 +266,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   key purple, the sound amber, the voice blue, effects pink.
 - **🤖 Robot pads:** type a word on a pad and the robot voice says it, cut
   into syllables; − and + choose how many stay on the pad, and the rest
-  spill over onto the next pad, which has its own count.
+  spill over onto the next pad, which has its own count. ⚙ on a pad gives
+  its word a voice of its own (voice, pitch, tone, speed, gap, vowel length,
+  cut), so one pattern can hold many voices.
 - **Bass and basslines** (Menu › Rhythm): a Bass list puts a bass sound on
   sound 1, and a Bassline list writes a bar of bass on it: 72 bars played
   by bassists (jazz walking lines, sorted by chord: minor, dominant 7th,
