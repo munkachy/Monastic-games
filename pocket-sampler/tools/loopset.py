@@ -145,7 +145,7 @@ from drumlab import loop_cells
 GRID = [*loop_cells('ebb'),
         ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'], ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
         ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'], ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'],
-        ['v1', 'v2', 'v4', {'lib': 'ambience', 'k': 1, 'mode': 'loop', 'name': 'Vinyl'},
+        ['v1', 'v2', 'v4', {'lib': 'ambience', 'k': 1, 'mode': 'loop', 'name': 'Old record'},
          {'lib': 'hype', 'k': HY['alleluia'], 'mode': 'oneshot', 'name': 'Alleluia'},
          {'lib': 'hype', 'k': HY['selah'], 'mode': 'oneshot', 'name': 'Selah'}]]
 BANKS = [None, None, None, 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox']        # Kick, Snare, Tops: from drumlab.py

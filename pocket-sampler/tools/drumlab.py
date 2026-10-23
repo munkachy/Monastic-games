@@ -201,16 +201,17 @@ def plaits_bin():
     if not os.path.exists(exe):
         import subprocess
         E = os.environ['EURORACK']
-        srcs = [f'{E}/plaits/dsp/engine/{e}_engine.cc' for e in ('bass_drum', 'snare_drum', 'hi_hat', 'modal', 'particle')] + \
-               [f'{E}/plaits/resources.cc', f'{E}/plaits/dsp/physical_modelling/modal_voice.cc', f'{E}/plaits/dsp/physical_modelling/resonator.cc',
-                f'{E}/stmlib/dsp/units.cc', f'{E}/stmlib/utils/random.cc']
+        import glob                    # every engine (but the six-op FM, which needs its patches loaded)
+        srcs = sorted({*glob.glob(f'{E}/plaits/dsp/engine/*.cc'), *glob.glob(f'{E}/plaits/dsp/engine2/*.cc'), *glob.glob(f'{E}/plaits/dsp/*/*.cc')} - {f'{E}/plaits/dsp/engine2/six_op_engine.cc'}) + \
+               [f'{E}/plaits/resources.cc', f'{E}/stmlib/dsp/units.cc', f'{E}/stmlib/utils/random.cc']
         subprocess.run(['g++', '-O2', '-std=c++11', '-DTEST', f'-I{E}', '-o', exe, f'{HERE}/plaits_hit.cc', *srcs], check=True)
     return exe
 
-def plaits(engine, note, harmonics=0.5, timbre=0.5, morph=0.5, accent=0.8, secs=1.0, out='out'):
+def plaits(engine, note, harmonics=0.5, timbre=0.5, morph=0.5, accent=0.8, secs=1.0, out='out', *moves):
+    # moves: vibrato (semitones, Hz), timbre swing, glide (semitones, s), for a held note (plaits_hit.cc)
     import subprocess
     from scipy.signal import resample_poly
-    raw = subprocess.run([plaits_bin(), engine, str(note), str(harmonics), str(timbre), str(morph), str(accent), str(secs)],
+    raw = subprocess.run([plaits_bin(), engine, str(note), str(harmonics), str(timbre), str(morph), str(accent), str(secs), *map(str, moves)],
                          capture_output=True, check=True).stdout
     pair = np.frombuffer(raw, np.float32).reshape(-1, 2).astype(float)
     x = pair[:, 0] if out == 'out' else pair[:, 1] if out == 'aux' else pair.mean(1)

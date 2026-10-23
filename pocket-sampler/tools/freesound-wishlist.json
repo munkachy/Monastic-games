@@ -1,203 +1,41 @@
 {
- "about": "What freesound_fetch.py downloads: each wish is a Freesound search; count is how many of the most-downloaded results to keep. Claude edits this list.",
+ "about": "What freesound_fetch.py downloads: each wish is a Freesound search; count is how many of the most-downloaded results to keep. Claude edits this list. Now: real vinyl record noise, CC0 only (free for any use), to go beside the Edison records.",
  "wishes": [
   {
-   "category": "guitar-electric",
-   "query": "electric guitar single note clean",
-   "filter": "duration:[0.1 TO 6]",
+   "category": "vinyl-crackle",
+   "query": "vinyl crackle",
+   "filter": "duration:[5 TO 90] license:\"Creative Commons 0\"",
    "count": 6
   },
   {
-   "category": "guitar-electric",
-   "query": "electric guitar power chord distorted",
-   "filter": "duration:[0.1 TO 6]",
+   "category": "vinyl-hiss",
+   "query": "vinyl hiss surface noise",
+   "filter": "duration:[5 TO 90] license:\"Creative Commons 0\"",
    "count": 4
   },
   {
-   "category": "guitar-nylon",
-   "query": "nylon spanish guitar pluck note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
+   "category": "vinyl-runout",
+   "query": "vinyl run out groove",
+   "filter": "duration:[3 TO 90] license:\"Creative Commons 0\"",
+   "count": 3
   },
   {
-   "category": "guitar-12string",
-   "query": "12 string guitar strum",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
+   "category": "vinyl-needle",
+   "query": "needle drop record",
+   "filter": "duration:[1 TO 30] license:\"Creative Commons 0\"",
+   "count": 3
   },
   {
-   "category": "guitar-acoustic",
-   "query": "acoustic guitar note pluck",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
+   "category": "vinyl-dust",
+   "query": "vinyl dust pops",
+   "filter": "duration:[3 TO 90] license:\"Creative Commons 0\"",
+   "count": 3
   },
   {
-   "category": "strings-violin",
-   "query": "violin single note sustain",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
-  },
-  {
-   "category": "strings-viola",
-   "query": "viola note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "strings-cello",
-   "query": "cello note sustained",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
-  },
-  {
-   "category": "strings-bass",
-   "query": "double bass pizzicato note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "bells-church",
-   "query": "church bell single strike",
-   "filter": "duration:[0.1 TO 10]",
-   "count": 5
-  },
-  {
-   "category": "bells-cowbell",
-   "query": "cowbell hit",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "steel-drum",
-   "query": "steel drum pan note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
-  },
-  {
-   "category": "vibraphone",
-   "query": "vibraphone note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "harp",
-   "query": "harp pluck note",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "tambourine",
-   "query": "tambourine hit shake",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 5
-  },
-  {
-   "category": "vocals-hiphop",
-   "query": "hip hop vocal shout yeah",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
-  },
-  {
-   "category": "vocals-techno",
-   "query": "techno vocal chop",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 5
-  },
-  {
-   "category": "vocals-funk",
-   "query": "funk vocal grunt shout",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 5
-  },
-  {
-   "category": "ambient-vinyl",
-   "query": "vinyl crackle loop",
-   "filter": "duration:[6 TO 60]",
-   "count": 6
-  },
-  {
-   "category": "ambient-nature",
-   "query": "birds forest ambience",
-   "filter": "duration:[6 TO 60]",
-   "count": 4
-  },
-  {
-   "category": "ambient-wind",
-   "query": "wind ambience",
-   "filter": "duration:[6 TO 60]",
-   "count": 4
-  },
-  {
-   "category": "ambient-vocoder",
-   "query": "vocoder glitch voice",
-   "filter": "duration:[0.1 TO 10]",
-   "count": 5
-  },
-  {
-   "category": "ambient-breathing",
-   "query": "respirator breathing mask",
-   "filter": "duration:[0.1 TO 15]",
-   "count": 4
-  },
-  {
-   "category": "fx-videogame",
-   "query": "8bit retro game sound effect",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 6
-  },
-  {
-   "category": "fx-noise",
-   "query": "white noise burst sweep",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 4
-  },
-  {
-   "category": "fx-riser",
-   "query": "riser build up sweep",
-   "filter": "duration:[0.1 TO 12]",
-   "count": 5
-  },
-  {
-   "category": "fx-machine",
-   "query": "machine mechanical clank",
-   "filter": "duration:[0.1 TO 6]",
-   "count": 5
-  },
-  {
-   "category": "fx-siren",
-   "query": "siren",
-   "filter": "duration:[0.1 TO 10]",
-   "count": 4
-  },
-  {
-   "category": "pads",
-   "query": "synth pad chord sustained",
-   "filter": "duration:[3 TO 20]",
-   "count": 6
-  },
-  {
-   "category": "loops-drums-boombap",
-   "query": "boom bap drum loop 90 bpm",
-   "filter": "duration:[1.5 TO 20] ac_loop:true",
-   "count": 5
-  },
-  {
-   "category": "loops-drums-breakbeat",
-   "query": "breakbeat drum loop",
-   "filter": "duration:[1.5 TO 20] ac_loop:true",
-   "count": 5
-  },
-  {
-   "category": "loops-drums-techno",
-   "query": "techno drum loop 128",
-   "filter": "duration:[1.5 TO 20] ac_loop:true",
-   "count": 5
-  },
-  {
-   "category": "loops-drums-funk",
-   "query": "funk drum loop",
-   "filter": "duration:[1.5 TO 20] ac_loop:true",
-   "count": 4
+   "category": "vinyl-stop",
+   "query": "record player stop turntable",
+   "filter": "duration:[1 TO 15] license:\"Creative Commons 0\"",
+   "count": 2
   }
  ]
 }

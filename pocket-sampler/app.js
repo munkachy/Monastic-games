@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zm';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zn';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -196,7 +196,7 @@ const LIBRARY = {
   // loops: each key a loop, in Loop mode; drum loops and breaks keep time with the beat
   drumloops: { name: 'Drum Loops', bank: 'drumloops' }, breaks: { name: 'Breakbeats', bank: 'breaks' },
   grooves: { name: 'Human Grooves', bank: 'grooves' },       // played by drummers (the Groove MIDI Dataset, tools/grooves.py), on the acoustic kit
-  ambience: { name: 'Vinyl & Ambience', bank: 'ambience' },
+  ambience: { name: 'Records & Ambience', bank: 'ambience' },      // old records (Edison's discs and cylinders, tools/records.py), rain, wind, the sea...
   // The Electro Boom Bap loop set (tools/loopset.py): F minor, 92 BPM; a bank for each Loops column.
   // Its drums (tools/drumlab.py): a kit made with Mutable Instruments Plaits' drum engines, and
   // kick, snare and tops loops of it, a part each, so any three go together.
@@ -208,6 +208,11 @@ const LIBRARY = {
   vigtloops: { name: 'Vigils Tops loops', bank: 'vigtloops' }, vigkit: { name: 'Vigils Kit', bank: 'vigkit' },
   vigbass: { name: 'Vigils Bass', bank: 'vigbass' }, vigchords: { name: 'Vigils Chords', bank: 'vigchords' }, viglead: { name: 'Vigils Lead', bank: 'viglead' },
   vigsub: { name: 'Vigils Sub', bank: 'vigsub' }, vigvox: { name: 'Vigils Vox', bank: 'vigvox' },
+  // Vigils' own instruments, made with Mutable Instruments Plaits' engines (tools/plaitsinst.py) and played from recordings
+  vigstrings: { name: 'Vigil Strings', multi: 'vigstrings', base: 48 }, vigswarm: { name: 'Night Swarm', multi: 'vigswarm', base: 48 },
+  vigchant: { name: 'Chant', multi: 'vigchant', base: 48 }, vigcloister: { name: 'Cloister Bass', multi: 'vigcloister', base: 36 },
+  vighowl: { name: 'Howl', multi: 'vighowl', base: 60 }, viglauds: { name: 'Lauds Pluck', multi: 'viglauds', base: 60 },
+  vigbell: { name: 'Compline Bell', multi: 'vigbell', base: 60 }, vigglass: { name: 'Night Glass', multi: 'vigglass', base: 60 },
   ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
   ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
 };
@@ -1158,13 +1163,13 @@ const TREE = ['Sounds', [
   ['Tops (hats, cymbals, percussion)', 'hits:tops', 'var(--c-hat)'],
   ['Drum kits', ['vigkit', 'ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks',
     'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal', 'percussion', 'shakers', 'bells2'], 'var(--c-kit)'],
-  ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'basshits', 'ebbbass', 'vigbass'], 'var(--c-bass)'],
-  ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'ebbchords', 'vigchords'], 'var(--c-chords)'],
-  ['Lead', ['chip', 'supersaw', 'brass', 'trumpet', 'trombone', 'tenorsax', 'violin', 'viola', 'cello', 'gretsch', 'hofner', 'emily', 'ebblead', 'viglead'], 'var(--c-lead)'],
+  ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'vigcloister', 'basshits', 'ebbbass', 'vigbass'], 'var(--c-bass)'],
+  ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'vigglass', 'ebbchords', 'vigchords'], 'var(--c-chords)'],
+  ['Lead', ['chip', 'supersaw', 'brass', 'trumpet', 'trombone', 'tenorsax', 'violin', 'viola', 'cello', 'gretsch', 'hofner', 'emily', 'vighowl', 'ebblead', 'viglead'], 'var(--c-lead)'],
   ['Sub and color', ['subsine', 'ebbsub', 'vigsub', 'glitch', 'machines', 'hits', 'blips', 'lasers', 'coins', 'robots', 'arcade'], 'var(--c-sub)'],   // purple: subs, and the odd, glitchy accents (the video-game sounds)
   ['Vox and keys', ['choirmen', 'choirwomen', 'choir', 'hype', 'robotvox', 'vocchops', 'ebbvox', 'vigvox'], 'var(--c-vox)'],
-  ['Pads', ['pad', 'strings', 'pads'], 'var(--c-pad)'],
-  ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell'], 'var(--c-pluck)'],
+  ['Pads', ['pad', 'strings', 'vigstrings', 'vigswarm', 'vigchant', 'pads'], 'var(--c-pad)'],
+  ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell', 'viglauds', 'vigbell'], 'var(--c-pluck)'],
   ['Stabs and FX', ['stabs', 'funkhorns', 'noisefx', 'sirens'], 'var(--c-stab)'],
   ['Ambience and vinyl', ['ambience', 'nature', 'airwater']],
   ['Songs', 'songs'],
@@ -1361,8 +1366,8 @@ function sideRefuses(c) {
 // instrument or machine; GEN made in code beforehand, then played as a recording (the 808 and 909
 // kits, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); MINE yours.
 const GEN_BANKS = new Set(['drumloops', 'grooves', 'hype', 'sirens', ...Object.keys(LIBRARY).filter(id => /^(ebb|vig)/.test(id))]);
-const GEN_MULTI = new Set(['nylon', 'steelgtr', 'twelve', 'steeldrum']);
-const GEN_SLICES = { ambience: ['Vinyl light', 'Vinyl dusty', 'Vinyl worn', 'Rain', 'Respirator'], airwater: ['Respirator', 'Respirator 2'],
+const GEN_MULTI = new Set(['nylon', 'steelgtr', 'twelve', 'steeldrum', 'vigstrings', 'vigswarm', 'vigchant', 'vigcloister', 'vighowl', 'viglauds', 'vigbell', 'vigglass']);
+const GEN_SLICES = { ambience: ['Rain', 'Respirator'], airwater: ['Respirator', 'Respirator 2'],
   noisefx: ['Riser', 'Short riser', 'Downlifter'] };
 const TAG_ABOUT = { SYN: 'synthesized as you play', REC: 'a recording', GEN: 'made in code', MINE: 'yours' };
 function libTag(id, name) {
@@ -1986,7 +1991,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zm'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zn'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2079,7 +2084,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zm'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zn'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));

@@ -4,7 +4,9 @@
 # the dark before dawn: deep, atmospheric electronica in the line of Rival Consoles and Max Cooper,
 # after Engineering Samples' "Breakpoint Electro" (Remixlive), which it is inspired by and borrows
 # nothing from. Broken two-step beats; deep analog bass; night pads, the abbey organ and the women's
-# choir; celestial arpeggios, bells and a howling lead; sub, rain and risers; and, in the Vox
+# choir; celestial arpeggios, bells and a howling lead; sub, rain and risers; most of it on Vigils'
+# own instruments, made with Plaits (plaitsinst.py: Vigil Strings, Night Swarm, Chant, Cloister Bass,
+# Howl, Lauds Pluck, Compline Bell, Night Glass); and, in the Vox
 # column, words of the Rule of St Benedict, said by the robot voice in pairs that answer each other
 # ("A little rule..." / "...for beginners"), each a robot cell whose words can be changed.
 #
@@ -64,11 +66,11 @@ def bass(steps, oc=0, held=None):
             out.append(N(s, B, r + up, oc=o + oc, **({'d': d} if d else {}), **({'vol': 1.0 if s % 4 == 0 else 0.8})))
         return out
     return bar
-loop(3, 'b1', 'Analog pulse', harmonic([(B, 'sawbass', 0.7, None)], bass([0, 2, 4, 6, 8, 10, 12, 14])))
+loop(3, 'b1', 'Cloister pulse', harmonic([(B, 'vigcloister', 0.7, None)], bass([0, 2, 4, 6, 8, 10, 12, 14])))
 loop(3, 'b2', 'Two-step bass', harmonic([(B, 'sqbass', 0.7, None)], bass([0, 3, (6, 7, None), 10, (13, 7, None)])))
 loop(3, 'b3', 'Reese drift', harmonic([(B, 'reese', 0.55, 'gate')], bass(lambda b: [(0, 0, 31)] if first(b) else [])))
 loop(3, 'b4', 'Offbeat FM bass', harmonic([(B, 'fmbass', 0.7, None)], bass([2, 6, 10, 14])))
-loop(3, 'b5', 'Octave bass', harmonic([(B, 'sawbass', 0.7, None)], bass([0, (4, 7, None), 8, (12, 7, None)])))
+loop(3, 'b5', 'Cloister octaves', harmonic([(B, 'vigcloister', 0.7, None)], bass([0, (4, 7, None), 8, (12, 7, None)])))
 loop(3, 'b6', 'Slow wobble', harmonic([(B, 'wobble', 0.5, 'gate')], bass(lambda b: [(0, 0, 31)] if first(b) else [])))
 
 # --- Chords -------------------------------------------------------------------------------
@@ -82,12 +84,12 @@ def broken(slot=C, up=7, vol=1):
         t = [k + up for k in TONES[ch]]; order = [0, 2, 1, 3, 2, 0, 3, 1]
         return [N(s, slot, t[order[i]], vol=vol * (1.0 if i % 2 == 0 else 0.75)) for i, s in enumerate(range(0, 16, 2))]
     return bar
-loop(4, 'c1', 'Night pad', harmonic([(C, 'pad', 0.45, 'gate')], held()))
-loop(4, 'c2', 'Glass chords', harmonic([(C, 'glass', 0.5, None)], hits([(0, 1), (6, 0.6), (10, 0.75)])))
+loop(4, 'c1', 'Vigil strings', harmonic([(C, 'vigstrings', 0.45, 'gate')], held()))
+loop(4, 'c2', 'Night glass', harmonic([(C, 'vigglass', 0.5, None)], hits([(0, 1), (6, 0.6), (10, 0.75)])))
 loop(4, 'c3', 'Abbey organ', harmonic([(C, 'pipeorgan', 0.4, 'gate')], held()))
 loop(4, 'c4', "Women's choir", harmonic([(C, 'choirwomen', 0.4, 'gate')], held(up=7)))
-loop(4, 'c5', 'Strings', harmonic([(C, 'strings', 0.4, 'gate')], held()))
-loop(4, 'c6', 'Celeste, broken', harmonic([(C, 'celeste', 0.55, None)], broken()))
+loop(4, 'c5', 'Chant', harmonic([(C, 'vigchant', 0.4, 'gate')], held()))
+loop(4, 'c6', 'Night swarm', harmonic([(C, 'vigswarm', 0.4, 'gate')], held()))
 
 # --- Lead: celestial arpeggios, bells, the howl -------------------------------------------
 L = 2
@@ -101,9 +103,9 @@ HOWL = [[(0, 11, 14)], [(0, 9, 6), (8, 10, 8)], [(0, 11, 16)], [(0, 12, 6), (8, 
         [(0, 9, 16)], [(0, 10, 6), (8, 9, 8)], [(0, 8, 16)], [(0, 7, 6), (8, 8, 8)]]
 GLOCK = [[(0, 14), (6, 11), (10, 9)], [(4, 12)], [(0, 11), (6, 9), (10, 7)], [(2, 9), (8, 11)],
          [(0, 9), (6, 7), (10, 6)], [(4, 8)], [(0, 8), (6, 10), (10, 12)], [(2, 11), (8, 10), (12, 8)]]
-loop(5, 'l1', 'Celestial arp', harmonic([(L, 'pluck', 0.45, None)], arp([0, 1, 2, 3, 4, 3, 2, 1])))
-loop(5, 'l2', 'Bell arp', harmonic([(L, 'fmbell', 0.35, None)], arp([0, 2, 4, 2, 1, 3, 5, 3], every=2)))
-loop(5, 'l3', 'Howling lead', harmonic([(L, 'supersaw', 0.3, 'gate')], lambda ch, b: [N(s, L, k, d=d) for s, k, d in HOWL[b]]))
+loop(5, 'l1', 'Lauds arp', harmonic([(L, 'viglauds', 0.45, None)], arp([0, 1, 2, 3, 4, 3, 2, 1])))
+loop(5, 'l2', 'Compline bells', harmonic([(L, 'vigbell', 0.4, None)], arp([0, 2, 4, 2, 1, 3, 5, 3], every=2)))
+loop(5, 'l3', 'Howl', harmonic([(L, 'vighowl', 0.3, 'gate')], lambda ch, b: [N(s, L, k, d=d) for s, k, d in HOWL[b]]))
 loop(5, 'l4', 'Glockenspiel', harmonic([(L, 'glock', 0.45, None)], lambda ch, b: [N(s, L, k) for s, k in GLOCK[b]]))
 loop(5, 'l5', 'Vibraphone', harmonic([(L, 'vibes', 0.5, None)], arp([0, 3, 1, 4, 2, 5], every=2, up=0)))     # (the kalimba's recordings are up to half a step out of tune)
 loop(5, 'l6', 'Night violin', harmonic([(L, 'violin', 0.4, 'gate')], lambda ch, b: [N(s, L, k - 7, d=d) for s, k, d in HOWL[b]]))
