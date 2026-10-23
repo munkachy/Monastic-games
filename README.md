@@ -232,8 +232,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   picture of each beside the closest real one; then each pack's kit, and
   its kick, snare and tops loops.
 - **Per-loop fade, robot words, reverb in the Loops:** hold a cell for its
-  own fade in and out; for a robot voice, 🤖 Words (type what it says,
-  choose the voice); EQ & Effect chooses the reverb space for the song.
+  own fade in and out; for a robot voice, its words and voice at the top of Settings
+  (type what it says, choose the voice, 🔄 Update); EQ & Effect chooses the reverb space for the song.
 - **Packs when choosing a cell's sound:** below the colour folders, the sets
   made for the looper (Electro Boom Bap), its sounds under a heading for each colour. The wave editor
   is on the cell's Settings tab.
