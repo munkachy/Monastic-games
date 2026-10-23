@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023n';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023o';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -424,6 +424,7 @@ const keyFor = (sl, key) => (drumSound(sl) ? { root: sl.params.keyOf ?? 0, scale
 function noteOn(e, si, k, when, m = null, lock = null, hold = false, key = null, phase = 0) {
   const slot = S.slots[si]; if (!slot) return null;
   key = keyFor(slot, key ?? keyAt(when));
+  if (slot.params.robot && lock?.pitch != null) { const { pitch, ...rest } = lock; lock = rest; }    // the Robot pads keep the voice's pitch
   m ??= modsFor(si, [...activeFx].map(k => [k, fxAim.get(k) || 'all']));
   if (e === eng) {
     lastNoteAt = Math.max(lastNoteAt, when);
@@ -741,6 +742,7 @@ const octOf = si => S.oct?.[si] || 0;
 const ocOf = si => (octOf(si) ? { oc: octOf(si) } : {});
 const withOct = (si, lock, oc) => (oc ? { ...lock, pitch: (lock?.pitch ?? S.slots[si]?.params.pitch ?? 0) + 12 * oc } : lock);
 function shiftOct(d) {
+  if (isRobot(S.cur)) { status('The Robot pads keep the voice’s own pitch: the octave buttons leave them as they are.'); return; }
   const o = Math.max(-2, Math.min(2, octOf(S.cur) + d));
   if (o === octOf(S.cur)) { status(`Sound ${S.cur + 1} is already ${o > 0 ? 'two octaves up' : 'two octaves down'}: that's as far as it goes.`); return; }
   S.oct[S.cur] = o; persist(); draw();
@@ -1798,11 +1800,11 @@ for (const [id, fmt] of voxOut) {
   $(id).addEventListener('input', show); show();
 }
 let vox = null;
-async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value) {
+async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023n'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023o'); }
   status('Speaking…');
-  let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch: +$('voxPitch').value,
+  let v = await vox.speak(text, { voice: 'en-us', variant: $('voxVariant').value, pitch,
     pitchRange: +$('voxRange').value, speed: +$('voxSpeed').value, wordGap: gap });
   v = vox.stretchVowels(v, +$('voxVowel').value);
   const b = ctx.createBuffer(1, v.samples.length, v.rate); b.copyToChannel(Float32Array.from(v.samples), 0);
@@ -1892,22 +1894,22 @@ function nameParts(t, n) {
 // Robot-precise: each syllable is spoken on its own, from its phonemes, so
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
-async function voiceSyllables(text, cut = $('rapCut').value) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023n'); }
+async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value) {
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023o'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
   let buf = null, found = null;
   if (cut === 'robot' && all.every(y => y.ph)) {
     const said = all.map(y => { const v = y.ph.findIndex(PH_VOWEL), m = ['', ',', "'"][y.stress]; return [...y.ph.slice(0, v), m + y.ph[v], ...y.ph.slice(v + 1)].join(''); });
-    buf = await makeVoice(`[[${said.join(' ')}]]`, 20);
+    buf = await makeVoice(`[[${said.join(' ')}]]`, 20, pitch);
     found = syllables(buf, all.map(() => 1));
   }
   if (!found) {
-    buf = await makeVoice(text, Math.max(30, +$('voxGap').value)); found = syllables(buf, counts);
+    buf = await makeVoice(text, Math.max(30, +$('voxGap').value), pitch); found = syllables(buf, counts);
     if (!found) {           // the words found don't match: speak them one at a time
       const pieces = [];
-      for (const [i, w] of words.entries()) { status(`Speaking word ${i + 1} of ${words.length}…`); pieces.push(await makeVoice(w.t, 0)); }
+      for (const [i, w] of words.entries()) { status(`Speaking word ${i + 1} of ${words.length}…`); pieces.push(await makeVoice(w.t, 0, pitch)); }
       const r = pieces[0].sampleRate, gap = Math.round(r * 0.3), len = pieces.reduce((a, b) => a + b.length + gap, 0);
       buf = ctx.createBuffer(1, len, r); let o = 0;
       for (const b of pieces) { buf.getChannelData(0).set(b.getChannelData(0), o); o += b.length + gap; }
@@ -2170,7 +2172,7 @@ $('rapIt').addEventListener('click', busy($('rapIt'), rapIt));
 // word in the sound. Each change makes a new object, so Undo puts it back.
 // ---------------------------------------------------------------------------
 function isRobot(si) { return !!S.slots[si]?.params?.robot; }
-function emptyRobot() { return { pads: Array.from({ length: 16 }, () => ({ t: null, n: null })), words: {} }; }
+function emptyRobot() { return { pads: Array.from({ length: 16 }, () => ({ t: null, n: null })), words: {}, v: ROBOT_V }; }
 const sylls = n => `${n} syllable${n === 1 ? '' : 's'}`;
 // Which syllables fall on which pad, and what doesn't fit.
 function robotLayout(R) {
@@ -2195,7 +2197,10 @@ function robotSlotChoice() {
   const r = S.slots.findIndex((_, i) => isRobot(i));
   return r >= 0 ? r : rapSlot();
 }
-const voiceNow = () => JSON.stringify(['voxVariant', 'voxPitch', 'voxRange', 'voxSpeed', 'voxVowel', 'voxGap', 'rapCut'].map(id => $(id).value));
+// The Robot pads are said at the voice's own normal pitch (eSpeak's 50, not the Voice page's), and
+// nothing in the song moves them: not the tempo, the key, or the octave buttons.
+const ROBOT_PITCH = 50, ROBOT_V = 2;          // ROBOT_V: words made before this are said again
+const voiceNow = () => JSON.stringify(['voxVariant', 'voxRange', 'voxSpeed', 'voxVowel', 'voxGap', 'rapCut'].map(id => $(id).value));
 const spoken = new Map();         // a word as said in a voice: { buf, syl }, while the page is open
 function resampled(d, from, to) {
   const n = Math.round(d.length * to / from), o = new Float32Array(n);
@@ -2207,9 +2212,9 @@ function resampled(d, from, to) {
 async function robotBuild(si, R) {
   const old = S.slots[si], oldR = old?.params?.robot, parts = [];
   for (const t of [...new Set(R.pads.map(p => p.t).filter(Boolean))]) {
-    if (oldR?.words[t] && old.buf) { const y = oldR.words[t]; parts.push([t, old.buf, y[0].s, y.at(-1).e, y]); continue; }
+    if (oldR?.v === ROBOT_V && oldR.words[t] && old.buf) { const y = oldR.words[t]; parts.push([t, old.buf, y[0].s, y.at(-1).e, y]); continue; }
     const key = t + voiceNow();
-    if (!spoken.has(key)) spoken.set(key, await voiceSyllables(t));
+    if (!spoken.has(key)) spoken.set(key, await voiceSyllables(t, $('rapCut').value, ROBOT_PITCH));
     const { buf, syl } = spoken.get(key);
     parts.push([t, buf, syl[0].s, syl.at(-1).e, syl.map(x => ({ s: x.s, e: x.e, name: x.name }))]);
   }
@@ -2225,10 +2230,11 @@ async function robotBuild(si, R) {
     ch.set(d, o); const off = o / rate - s0;
     words[t] = y.map(x => ({ ...x, s: x.s + off, e: x.e + off })); o += d.length + gap;
   }
-  const R2 = { pads: R.pads, words }, { out, warn } = robotLayout(R2);
+  const R2 = { pads: R.pads, words, v: ROBOT_V }, { out, warn } = robotLayout(R2);
   const slices = out.map(q => (q.syl.length ? { s: q.syl[0].s, e: q.syl.at(-1).e, name: q.syl.map(x => x.name).join('·') } : { s: 0, e: gap / rate / 2, name: '' }));
   const params = { ...(isRobot(si) ? old.params : { ...defParams(), choke: true }), robot: R2 };
   S.slots[si] = { factory: null, kind: 'chop', contiguous: false, name: 'Robot pads', params, buf, made: 'GEN', slices };
+  if (S.oct) S.oct[si] = 0;
   return { out, warn };
 }
 // A change to the pads (f gives the new R from the old), one at a time, in order.
@@ -2287,7 +2293,12 @@ function toggleRobot() {
   S.mode = 'robot'; if (chainEdit) setChainEdit(false); copying = null;
   const r = isRobot(S.cur) ? S.cur : S.slots.findIndex((_, i) => isRobot(i));
   robotTarget = r;
-  if (r >= 0) { S.cur = r; syncPanel(); status(`Robot pads on sound ${r + 1}. Type a word on a pad; − and + choose its syllables (the rest go on to the next pad). Tap a pad to hear it.`); }
+  if (r >= 0) {
+    S.cur = r; syncPanel(); status(`Robot pads on sound ${r + 1}. Type a word on a pad; − and + choose its syllables (the rest go on to the next pad). Tap a pad to hear it.`);
+    if (S.slots[r].params.robot.v !== ROBOT_V && S.slots[r].params.robot.pads.some(p => p.t)) {      // made at the old, lower pitch: said again
+      robotChange(R => ({ ...R, v: ROBOT_V }), 0);
+    }
+  }
   else {
     let si = -1; try { si = robotSlotChoice(); } catch (e) { status(e.message); }
     if (si >= 0) status(`Type a word on a pad: it is said by the robot voice and cut into syllables, all on that pad at first; − and + choose how many (the rest go on to the next pad). The pads go on sound ${si + 1}, in place of ${S.slots[si]?.name || 'nothing'}.`);
