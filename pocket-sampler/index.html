@@ -109,9 +109,10 @@
     box-shadow: 0 0 0 2px var(--edge), 0 8px 24px #0009; }
   #wheel[hidden] { display: none; }
   /* on the Loops: over the right of the grid */
-  #lview #wheel.inloops { position: absolute; left: auto; right: 10px; top: 52px; bottom: 10px; width: min(400px, 52%); z-index: 20; display: flex; flex-direction: column; min-height: 0; }
+  #lview #wheel.inloops { position: absolute; left: 50%; right: auto; transform: translateX(-50%); top: 52px; bottom: 10px; width: auto; aspect-ratio: .9; max-width: 94%;
+    z-index: 20; display: flex; flex-direction: column; min-height: 0; container-type: size; }
   #lview #wheel.inloops[hidden] { display: none; }
-  #lview #wheel.inloops .wheelwrap { width: auto; height: 100%; min-height: 0; flex: 1; }
+  #lview #wheel.inloops .wheelwrap { flex: none; margin: auto; width: min(100cqw - 12px, 100cqh - 48px); height: min(100cqw - 12px, 100cqh - 48px); }
   #lview #wheel.inloops .note { display: none; }
   .wheelbar { display: flex; gap: 6px; align-items: center; padding: 0 6px; }
   .wheelbar b { flex: 1; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
@@ -301,7 +302,7 @@
   :root.sidepads .key b { font-size: 13px; }
   :root.sidepads #wheel { left: auto; right: 10px; top: 6px; bottom: 6px; width: 54%; display: flex; flex-direction: column; }
   :root.sidepads #wheel[hidden] { display: none; }
-  :root.sidepads .wheelwrap { width: auto; height: 100%; min-height: 0; flex: 1; }
+  :root.sidepads .wheelwrap { width: auto; max-width: 100%; height: 100%; min-height: 0; flex: 1; }
   :root.sidepads #wheel .note { display: none; }
   /* the menus and the editor, sideways: as wide as they need, the full height */
   :root.sidepads #menu .sheet, :root.sidepads #editor .sheet { max-width: 640px; }
@@ -522,7 +523,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023ze</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zf</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -962,6 +963,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023ze"></script>
+<script type="module" src="app.js?v=20261023zf"></script>
 </body>
 </html>
