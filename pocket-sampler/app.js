@@ -3,7 +3,7 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023p';
+import { Engine, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023q';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -92,6 +92,7 @@ function onAudioState() {
   log('state', `${ctx.state}${document.hidden ? ' (page hidden)' : ''}`);
   if (ctx.state === 'interrupted' && playing) status('The phone paused the sound. Tap any key to bring it back.');
 }
+const b64f = f => { const b = new Uint8Array(f.buffer.slice(f.byteOffset, f.byteOffset + f.byteLength)); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
 window.pocketDebug = { rebuildAudio, load: id => loadLibrary(id), ids: () => Object.keys(LIBRARY), captureMedia: f => captureMedia(f).then(b => b.duration),
   step: (p, k) => S.patterns[p][k],
   // what a bug report needs: the log, and the state in short (no audio)
@@ -212,19 +213,17 @@ const OLD_ORDER = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ
 // A sound starts at 20% (it was 80%: too loud to begin with, and the mix crowded the limiter).
 const defParams = () => ({ vol: 0.2, pitch: 0, filter: 0, res: 0, start: 0, len: 1, choke: false, trig: 'oneshot' });
 let banks = null;
-const kitCache = {};
 
 async function factorySlot(id) {
   const F = LIBRARY[id], slot = { factory: id, name: F.name, params: defParams() };
-  if (F.synth) Object.assign(slot, { kind: 'synth', synth: { ...F.synth } }), slot.params.len = F.len;
+  // The synths and the kits made in code are played from recordings of them (tools/bake_sounds.js):
+  // a recording costs the phone far less than making the sound again for every note.
+  if (F.synth) { await multiSlot(slot, { multi: id, base: F.synth.root }); slot.params.baked = 1; return slot; }
   else if (F.multi) return multiSlot(slot, F);
-  else if (F.kit) {
-    kitCache[F.kit] ||= await makeKit(F.kit);
-    Object.assign(slot, { kind: 'chop', slices: kitCache[F.kit].map(d => ({ buf: d.buf, s: 0, e: d.buf.duration, name: d.name })) });
-  } else {
+  else {
     if (!banks) banks = await (await fetch('sounds/banks.json')).json();
-    const B = banks[F.bank];
-    B.buf ||= await decode(await (await fetch(`sounds/${F.bank}.wav`)).arrayBuffer());
+    const bank = F.bank || id, B = banks[bank];
+    B.buf ||= await decode(await (await fetch(`sounds/${bank}.wav`)).arrayBuffer());
     const r = B.rate || 22050;
     Object.assign(slot, { kind: 'chop', buf: B.buf, slices: B.slices.map(([a, b], k) => ({ s: a / r, e: b / r, name: shortName(B.from[k]),
       ...(B.loops?.[k] && { bpm: B.loops[k][0], bars: B.loops[k][1] }) })) });
@@ -241,9 +240,9 @@ async function bankOf(id) {
 }
 async function multiSlot(slot, F) {
   const B = await bankOf(F.multi), r = B.rate;
-  return Object.assign(slot, { kind: 'multi', buf: B.buf, base: F.base,
-    zones: B.zones.map(([m, a, b, la, lb]) => ({ m, s: a / r, e: b / r, ...(la != null && { ls: la / r, le: lb / r }) })) });
-  return slot;
+  // la, lb: a loop for a held note; ha, hb: a held take of its own (a recorded synth whose note dies away)
+  return Object.assign(slot, { kind: 'multi', buf: B.buf, base: F.base, ...(B.level && { level: B.level }), ...(B.synth && { holdLoop: true }),
+    zones: B.zones.map(([m, a, b, la, lb, ha, hb]) => ({ m, s: a / r, e: b / r, ...(la != null && { ls: la / r, le: lb / r }), ...(ha != null && { hs: ha / r, he: hb / r }) })) });
 }
 const shortName = s => s.replace(/^sfx_/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 18);
 function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok, bad)); }
@@ -1195,7 +1194,7 @@ const GEN_SLICES = { ambience: ['Vinyl light', 'Vinyl dusty', 'Vinyl worn', 'Rai
 const TAG_ABOUT = { SYN: 'synthesized as you play', REC: 'a recording', GEN: 'made in code', MINE: 'yours' };
 function libTag(id, name) {
   const F = LIBRARY[id]; if (!F) return 'MINE';
-  if (F.synth) return 'SYN';
+  if (F.synth) return 'GEN';
   if (F.kit || GEN_BANKS.has(id) || GEN_MULTI.has(id)) return 'GEN';
   if (name != null) return GEN_SLICES[id]?.includes(name) ? 'GEN' : 'REC';
   return GEN_SLICES[id] ? 'REC + GEN' : 'REC';
@@ -1803,7 +1802,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023q'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -1896,7 +1895,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023q'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3300,7 +3299,11 @@ async function load() {
       const id = typeof s?.factory === 'number' ? OLD_ORDER[s.factory] : LIBRARY[s?.factory] ? s.factory : DEFAULT[i];
       S.slots[i] = await factorySlot(id);
       if (s?.factory != null) {
-        S.slots[i].params = params(s.params); if (s.synth) S.slots[i].synth = s.synth;
+        S.slots[i].params = params(s.params);
+        if (LIBRARY[id].synth) {          // a synth saved before it was recorded: its note length, as a share of the recording
+          if (!S.slots[i].params.baked) S.slots[i].params.len = Math.min(1, (0.05 + 2 * (s.params?.len ?? LIBRARY[id].len)) / (0.05 + 2 * LIBRARY[id].len));
+          S.slots[i].params.baked = 1;
+        } else if (s.synth) S.slots[i].synth = s.synth;
         s.trims?.forEach(([start, len], k) => { const x = S.slots[i].slices?.[k]; if (x) Object.assign(x, { start, len }); });
       }
     } catch (e) { console.warn('Sound', i + 1, e); S.slots[i] = await factorySlot(DEFAULT[i]).catch(() => null); }
@@ -4063,6 +4066,19 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   cellSlot: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); const x = sl.slices[0]; return { s: x.s, e: x.e, bpm: x.bpm, bars: x.bars, pitch: sl.params.pitch, nostretch: sl.params.nostretch, keyOf: sl.params.keyOf }; },
   // drums and the key: is sound si a drum, and a fingerprint of one note of it as rendered (the same in every key, for a drum)
   drum: si => drumSound(S.slots[si]),
+  // tools/bake_sounds.js: one note of a synth, or a code-made kit, rendered (raw float32, base64), to be kept as WAV
+  bakeNote: async (id, midi, held, secs, rate) => {
+    const F = LIBRARY[id], off = new OfflineAudioContext(1, Math.ceil(secs * rate), rate), e = new Engine(off, { live: false });
+    const slot = { kind: 'synth', synth: { ...F.synth }, params: { ...defParams(), vol: 1, len: F.len, trig: held ? 'gate' : 'oneshot' } };
+    playNote(e, slot, -1, 0, 0, { bpm: 120, root: midi - F.synth.root, scale: 'minor', hold: held, dest: off.destination });
+    return b64f((await off.startRendering()).getChannelData(0));
+  },
+  lib: id => LIBRARY[id],
+  heldLevels: async (si, k, trig) => { const off = new OfflineAudioContext(1, SR * 4, SR), e = new Engine(off, { live: false }); const sl = { ...S.slots[si], params: { ...S.slots[si].params, trig } };
+    const v = playNote(e, sl, si, k, 0, { scale: S.scale, bpm: S.bpm, root: 0, hold: true, dest: off.destination }); v.stop(3); const d = (await off.startRendering()).getChannelData(0);
+    return [0.5, 1, 1.5, 2, 2.5, 2.9, 3.2].map(t => { let m = 0; for (let i = Math.round(t * SR); i < Math.round((t + 0.05) * SR); i++) m = Math.max(m, Math.abs(d[i])); return +m.toFixed(3); }); },
+  noteSumRaw: async (si, k) => { const off = new OfflineAudioContext(1, SR * 4, SR), e = new Engine(off, { live: false }); playNote(e, S.slots[si], si, k, 0, { scale: S.scale, bpm: S.bpm, root: 0, dest: off.destination }); return (await off.startRendering()).getChannelData(0); },
+  bakeKit: async name => (await makeKit(name)).map(d => ({ name: d.name, rate: d.buf.sampleRate, b64: b64f(d.buf.getChannelData(0)) })),
   noteSum: async (si, k) => { const b = await renderNote(si, k), d = b.getChannelData(0); let z = 0; for (let i = 1; i < d.length; i++) if ((d[i - 1] < 0) !== (d[i] < 0)) z++; return { len: d.length, z }; },
   alone: async (lib, k, si) => { const src = await slotOf({ lib }); S.slots[si] = sliceAlone(src, k, src.slices[k].name); draw(); return S.slots[si].name; },
   setRoot: r => { S.root = r; draw(); },
