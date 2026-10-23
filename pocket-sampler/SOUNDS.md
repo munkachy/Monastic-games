@@ -55,6 +55,13 @@ Selling: **Yes** = the license allows commercial use (with the credit asked for)
 | Drum loops; the Electro Boom Bap loops | written for the app, played by the app on the sounds above (tools/loopset.py, tools/render_loops.js) | as the sounds they are played on: the parts on Dirt-Samples sounds, the Rhodes or Sonatina carry those sounds' limits |
 | Hype words, the robot voice, Robot pads, raps | spoken by eSpeak NG through Vox Machina | the sounds: Yes. The engine: eSpeak NG is GPL-3, so a sold app that includes it must give its users the source code under the GPL, or use another voice |
 
+## Made by Br. Augustine in the app
+
+Sounds he designs (Menu › Design), records (● Rec, ⏺ Loop rec) or makes into loops are his own, kept
+on his devices; what he sends to the library comes in with his notes (tools/inbox.py files it below).
+A recording he makes of someone else's music or sounds carries that source's license, which he
+gives when he sends it.
+
 ## If it were ever sold
 
 What would have to change: the Rhodes (non-commercial), the Ely reverb (until its license is settled), and the Dirt-Samples packs (no license; the Amen break is copyrighted) would come out or be replaced; the TR-808 and the Sonatina strings and choirs would need their terms confirmed; and the voice engine's GPL would have to be met. Everything else (most of the app) can stay with its credits.

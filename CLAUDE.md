@@ -23,3 +23,15 @@ change. Prefer sources that allow commercial use (CC0, CC BY, MIT); say so plain
 ## Never commit or publish API keys
 
 A Freesound key was once pasted in a chat; it must never go in the repo.
+
+## Pocket Sampler: what Br. Augustine sends to the library
+
+The app's ☁ Send to the library (Menu › Sounds › My Sounds) puts a pack file and his notes on it
+(what it is, who made it, where from, its license) in `inbox/<item>/` on the `library-inbox`
+branch; Menu › Sounds › ☁ Shared shows it on every device at once. When he says he sent something
+(or at the start of Pocket Sampler work), file the inbox:
+`git fetch origin library-inbox`, check it out in a worktree, run
+`python3 -I pocket-sampler/tools/inbox.py <worktree> pocket-sampler/sounds pocket-sampler/SOUNDS.md`,
+read the notes it filed (and tell him anything unclear, such as a license marked Check), commit the
+new `sounds/shared` files and SOUNDS.md lines, deploy them with the rest, and remove the filed
+folders from the inbox branch. His GitHub token lives only in his browser; never ask for it.
