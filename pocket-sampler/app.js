@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zs';
+import * as DZ from './design.js?v=20261023zt';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zs';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zt';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2007,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zs'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zt'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zs'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zt'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4528,45 +4528,86 @@ $('lmSound').addEventListener('click', () => { choosing = true; drawCellMenu(); 
 // one-bar loop at the song's tempo and swing, into this cell (and the library's Beats, My loops). An
 // empty cell gets it from its picker (🥁 Design a hit).
 let cellDz = null, cellDzFor = null, dzEmpty = false;
-const cellSteps = new Array(16).fill(0);
+// The sequencer: up to 6 lines, each its own drum (all its knobs) on its own 16 steps. Tap a line's
+// name to shape its drum below; ＋ adds a line, ✕ takes one away.
+const DZ_LINES = 6, DZ_ORDER = ['kick', 'snare', 'hat', 'clap', 'open', 'tom', 'perc', 'shaker'];
+const DZ_STEPS = { kick: [0, 8], snare: [4, 12], clap: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14], open: [2, 6, 10, 14], tom: [14], perc: [3, 11], shaker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] };
 const DZ_COLKIND = ['kick', 'snare', 'hat'];
+let cellLines = [], cellLine = 0;
+function dzLine(kind) {
+  const steps = new Array(16).fill(0), soft = kind === 'hat' || kind === 'shaker';
+  for (const i of DZ_STEPS[kind]) steps[i] = soft && i % 4 ? 0.55 : 1;
+  return { st: dzState(kind), steps };
+}
 function cellDesign(c, r) {
-  cellDz ||= drumDesigner($('lmDz'));
+  cellDz ||= drumDesigner($('lmDz'), () => drawLines(), true);
   const at = `${c}:${r}`;
   if (cellDzFor !== at) {          // a cell new to it: the drum and steps its column suggests
-    cellDzFor = at; cellDz.setKind(DZ_COLKIND[c] || 'perc');
-    const on = c === 0 ? [0, 8] : c === 1 ? [4, 12] : c === 2 ? [0, 2, 4, 6, 8, 10, 12, 14] : [0, 6, 10];
-    cellSteps.fill(0); for (const i of on) cellSteps[i] = c === 2 && i % 4 ? 0.55 : 1;
+    cellDzFor = at; cellLines = [dzLine(DZ_COLKIND[c] || 'perc')]; cellLine = 0;
+    if (c > 2) cellLines[0].steps = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+    cellDz.use(cellLines[0].st);
   }
-  const box = $('lmSteps'); box.textContent = '';
-  cellSteps.forEach((v, i) => {
-    const b = document.createElement('button'); b.textContent = i % 4 ? '·' : String(i / 4 + 1);
-    b.classList.toggle('on', v === 1); b.classList.toggle('soft', v > 0 && v < 1);
-    b.addEventListener('click', () => { cellSteps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; cellDesign(c, r); });
-    box.appendChild(b);
-  });
+  drawLines();
 }
-// the bar: the hit on its steps (soft at 55%), at the tempo and swing now; a hit ringing past the bar
-// comes round to its start, so the loop is seamless
+function drawLines() {
+  const box = $('lmSteps'); box.textContent = '';
+  cellLines.forEach((L, li) => {
+    const row = document.createElement('div'); row.className = 'dzline' + (li === cellLine ? ' sel' : '');
+    const nm = document.createElement('button'); nm.className = 'dzlname'; nm.textContent = DZ.DRUMS[L.st.kind].name;
+    nm.title = dzName(L.st) + ': tap to shape it below';
+    nm.addEventListener('click', () => { cellLine = li; cellDz.use(L.st); drawLines(); });
+    const g = document.createElement('div'); g.className = 'dzsteps';
+    L.steps.forEach((v, i) => {
+      const b = document.createElement('button'); b.textContent = i % 4 ? '·' : String(i / 4 + 1);
+      b.classList.toggle('on', v === 1); b.classList.toggle('soft', v > 0 && v < 1);
+      b.addEventListener('click', () => { L.steps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; drawLines(); });
+      g.appendChild(b);
+    });
+    const x = document.createElement('button'); x.className = 'dzlx'; x.textContent = '✕'; x.title = 'Take this line away';
+    x.disabled = cellLines.length < 2;
+    x.addEventListener('click', () => {
+      cellLines.splice(li, 1); cellLine = Math.min(cellLine > li ? cellLine - 1 : cellLine, cellLines.length - 1);
+      cellDz.use(cellLines[cellLine].st); drawLines();
+    });
+    row.append(nm, g, x); box.appendChild(row);
+  });
+  if (cellLines.length < DZ_LINES) {
+    const add = document.createElement('button'); add.className = 'dzladd'; add.textContent = '＋ Add a line';
+    add.addEventListener('click', () => {
+      const used = cellLines.map(L => L.st.kind), k = DZ_ORDER.find(k => !used.includes(k)) || 'perc';
+      cellLines.push(dzLine(k)); cellLine = cellLines.length - 1; cellDz.use(cellLines[cellLine].st); drawLines();
+      dzHit(cellLines[cellLine].st).then(b => dzPlay(b));
+    });
+    box.appendChild(add);
+  }
+}
+const cellHits = () => cellLines.reduce((n, L) => n + L.steps.filter(v => v).length, 0);
+// the bar: each line's hit on its steps (soft at 55%), at the tempo and swing now; a hit ringing past
+// the bar comes round to its start, so the loop is seamless
 async function cellBar() {
-  const b = await cellDz.buffer(), x = b.getChannelData(0), sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
-  const n = Math.round(16 * sd * b.sampleRate), out = new Float32Array(n);
-  cellSteps.forEach((v, i) => { if (!v) return; const a = Math.round((i * sd + (i % 2 ? sw : 0)) * b.sampleRate); for (let j = 0; j < x.length; j++) out[(a + j) % n] += x[j] * v; });
+  const sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd, rate = DZ.SR;
+  const n = Math.round(16 * sd * rate), out = new Float32Array(n);
+  for (const L of cellLines) {
+    if (!L.steps.some(v => v)) continue;
+    const x = (await dzHit(L.st)).getChannelData(0);
+    L.steps.forEach((v, i) => { if (!v) return; const a = Math.round((i * sd + (i % 2 ? sw : 0)) * rate); for (let j = 0; j < x.length; j++) out[(a + j) % n] += x[j] * v; });
+  }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
   if (top > 0.95) for (let i = 0; i < n; i++) out[i] *= 0.95 / top;
-  const bar = ctx.createBuffer(1, n, b.sampleRate); bar.copyToChannel(out, 0); return { bar, hit: b };
+  const bar = ctx.createBuffer(1, n, rate); bar.copyToChannel(out, 0); return { bar };
 }
 $('lmDzBar').addEventListener('click', async () => {
-  if (!cellSteps.some(v => v)) { status('Tap a step or two first.'); return; }
+  if (!cellHits()) { status('Tap a step or two first.'); return; }
   const { bar } = await cellBar(); dzPlay(bar, playing ? nextBar().when : ctx.currentTime + 0.02);
 });
 $('lmDzSave').addEventListener('click', async () => { if (cellDz) await saveMine(hitSlot(await cellDz.buffer(), cellDz.name()), cellDz.name()); });
 $('lmDzPut').addEventListener('click', async () => {
   if (!menuCell || !cellDz) return;
-  if (!cellSteps.some(v => v)) { status('Tap a step or two first.'); return; }
+  if (!cellHits()) { status('Tap a step or two first.'); return; }
   if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
   const { c, r } = menuCell, { bar } = await cellBar(), was = S.grid.cells[c][r];
-  const name = `${cellDz.name()}, ${cellSteps.filter(v => v).length} steps`, folder = c < 3 ? 'Beats' : LR_FOLDER[c];
+  const used = cellLines.filter(L => L.steps.some(v => v));
+  const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`, folder = c < 3 ? 'Beats' : LR_FOLDER[c];
   const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf: bar, drumLoop: true,
     slices: [{ s: 0, e: bar.duration, name, bpm: S.bpm, bars: 1 }] };
   const id = 'm' + Date.now().toString(36);
@@ -5158,8 +5199,35 @@ async function withRoom(x, amt) {
 // The drum designer, built into a box: in Menu › Design, and in a Loops cell's 🥁 Design tab. Returns its
 // state, and the hit as it is now (a buffer).
 const DZ_PITCH = { kick: 'pitch', snare: 'tune', tom: 'pitch', perc: 'pitch' };
-function drumDesigner(box, onChange = () => {}) {
-  const st = { kind: 'kick', p: {}, f: { ...DZ.FINISH_DEFAULT }, seed: 1, name: '', layer: '' };
+async function dzHit(st) {
+  let x = DZ.renderDrum(st.kind, st.p, st.seed, st.f, st.layer || null);
+  if (st.f.room > 0) x = await withRoom(x, st.f.room);
+  const b = ctx.createBuffer(1, x.length, DZ.SR); b.copyToChannel(x, 0); return b;
+}
+const dzName = st => `${st.name && st.name !== 'Surprise' ? st.name + ' ' : 'My '}${DZ.DRUMS[st.kind].name.toLowerCase()}`.replace(/^(\w)/, c => c.toUpperCase());
+const dzState = kind => { const [name, v] = Object.entries(DZ.DRUMS[kind].presets)[0]; return { kind, p: { ...v }, f: { ...DZ.FINISH_DEFAULT }, seed: 1, name, layer: '' }; };
+// Basic or Advanced (one choice for every designer, kept on this device): Basic shows the few knobs
+// that shape each drum most (and Room, ♪ In key); Advanced, every knob, the old sampler, drive, tone,
+// Layer and the rest of the finish.
+const DZ_BASIC = { kick: ['pitch', 'sweep', 'decay', 'click', 'drive'], snare: ['tune', 'body', 'wires', 'snap'], clap: ['tone', 'hands', 'tail'],
+  hat: ['pitch', 'decay', 'sizzle'], open: ['pitch', 'decay', 'sizzle'], tom: ['pitch', 'bend', 'decay'], perc: ['material', 'pitch', 'decay'], shaker: ['tone', 'beads', 'length'],
+  finish: ['room'], synth: ['wave1', 'sub', 'cutoff', 'res', 'a', 'r', 'vib', 'drive'] };
+let dzMode = (() => { try { return localStorage.getItem('pocketDzMode') || 'basic'; } catch (e) { return 'basic'; } })();
+const dzRedraws = new Set();
+function setDzMode(m) {
+  dzMode = m; try { localStorage.setItem('pocketDzMode', m); } catch (e) {}
+  for (const f of dzRedraws) f();
+}
+function dzModeButtons() {           // Basic | Advanced, as two buttons that follow the choice
+  const box = document.createElement('div'); box.className = 'lmodes dzmodeset';
+  for (const [m, l] of [['basic', 'Basic'], ['advanced', 'Advanced']]) {
+    const b = document.createElement('button'); b.textContent = l; b.dataset.m = m; b.addEventListener('click', () => setDzMode(m)); box.appendChild(b);
+  }
+  const show = () => box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === dzMode));
+  dzRedraws.add(show); show(); return box;
+}
+function drumDesigner(box, onChange = () => {}, withMode = false) {
+  let st = { kind: 'kick', p: {}, f: { ...DZ.FINISH_DEFAULT }, seed: 1, name: '', layer: '' };
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; };
   const row = (label, control) => { const r = el('div', 'row'), l = el('label', null, label); r.append(l, control, el('span')); return r; };
   const kind = document.createElement('select'); for (const [k, D] of Object.entries(DZ.DRUMS)) kind.add(new Option(D.name, k));
@@ -5169,25 +5237,26 @@ function drumDesigner(box, onChange = () => {}) {
   strike.title = 'The same knobs, a new strike'; key.title = 'Tune it to the nearest note of the key';
   btns.append(hear, dice, strike, key);
   box.textContent = '';
-  box.append(row('Drum', kind), pre, knobs, el('div', 'dzgroup', 'Finish'), row('Layer', layer), fin, btns);
+  const layerRow = row('Layer', layer);
+  if (withMode) box.append(dzModeButtons());
+  box.append(row('Drum', kind), pre, knobs, el('div', 'dzgroup', 'Finish'), layerRow, fin, btns);
   const draw = () => {
-    const D = DZ.DRUMS[st.kind]; pre.textContent = ''; knobs.textContent = ''; fin.textContent = '';
+    const D = DZ.DRUMS[st.kind], basic = dzMode === 'basic'; pre.textContent = ''; knobs.textContent = ''; fin.textContent = '';
     for (const [name, v] of Object.entries(D.presets)) {
       const b = el('button', null, name); b.addEventListener('click', () => { st.p = { ...v }; st.name = name; draw(); api.hear(); }); pre.appendChild(b);
     }
-    dzKnobs(knobs, D.knobs, st.p, onChange); dzKnobs(fin, DZ.FINISH, st.f, onChange);
-    kind.value = st.kind; layer.value = st.layer; key.hidden = !DZ_PITCH[st.kind];
+    dzKnobs(knobs, basic ? D.knobs.filter(k => DZ_BASIC[st.kind].includes(k.key)) : D.knobs, st.p, onChange);
+    dzKnobs(fin, basic ? DZ.FINISH.filter(k => DZ_BASIC.finish.includes(k.key)) : DZ.FINISH, st.f, onChange);
+    kind.value = st.kind; layer.value = st.layer; key.hidden = !DZ_PITCH[st.kind]; layerRow.hidden = basic;
   };
+  dzRedraws.add(draw);
   const api = {
-    st,
-    setKind(k) { st.kind = k; const [name, v] = Object.entries(DZ.DRUMS[k].presets)[0]; st.p = { ...v }; st.name = name; draw(); },
-    async buffer() {
-      let x = DZ.renderDrum(st.kind, st.p, st.seed, st.f, st.layer || null);
-      if (st.f.room > 0) x = await withRoom(x, st.f.room);
-      const b = ctx.createBuffer(1, x.length, DZ.SR); b.copyToChannel(x, 0); return b;
-    },
+    get st() { return st; },
+    use(s) { st = s; draw(); },              // edit this state (a sequencer line's) from now on
+    setKind(k) { st.kind = k; const [name, v] = Object.entries(DZ.DRUMS[k].presets)[0]; st.p = { ...v }; st.name = name; draw(); onChange(); },
+    buffer: () => dzHit(st),
     async hear() { dzPlay(await api.buffer()); },
-    name() { return `${st.name && st.name !== 'Surprise' ? st.name + ' ' : 'My '}${DZ.DRUMS[st.kind].name.toLowerCase()}`.replace(/^(\w)/, c => c.toUpperCase()); },
+    name: () => dzName(st),
   };
   kind.addEventListener('change', () => { api.setKind(kind.value); api.hear(); onChange(); });
   layer.addEventListener('change', () => { st.layer = layer.value; if (st.layer && st.f.layermix === 0) st.f.layermix = 0.5; draw(); api.hear(); onChange(); });
@@ -5235,6 +5304,7 @@ for (const name of Object.keys(DZ.SYNTH_PRESETS)) $('dzSPreset').add(new Option(
 for (const [m, l] of DZ.REGISTERS) $('dzReg').add(new Option(l, m));
 function dzDrawSynth() {
   const box = $('dzSKnobs'); box.textContent = '';
+  if (dzMode === 'basic') { dzKnobs(box, DZ.SYNTH_KNOBS.flatMap(([, k]) => k).filter(k => DZ_BASIC.synth.includes(k.key)), dz.sp); $('dzReg').value = dz.sp.register; return; }
   for (const [group, knobs] of DZ.SYNTH_KNOBS) { const h = document.createElement('div'); h.className = 'dzgroup'; h.textContent = group; box.appendChild(h); dzKnobs(box, knobs, dz.sp); }
   $('dzReg').value = dz.sp.register;
 }
@@ -5277,6 +5347,8 @@ document.querySelectorAll('[data-dz]').forEach(b => b.addEventListener('click', 
   $('dzDrum').hidden = b.dataset.dz !== 'drum'; $('dzSynth').hidden = b.dataset.dz !== 'synth';
 }));
 dzSetSynth('Warm pad');
+dzRedraws.add(() => { if (dz.sp.wave1 != null) dzDrawSynth(); });
+$('dzModeBox').appendChild(dzModeButtons());
 document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => { dzKits(); $('dzSLoad').textContent = `Put on sound ${S.cur < 8 ? S.cur + 1 : 1}`; });
 
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
