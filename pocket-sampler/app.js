@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261024f';
+import * as DZ from './design.js?v=20261024g';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024f';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024g';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024g'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024g'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2346,7 +2346,7 @@ $('voxMake').addEventListener('click', busy($('voxMake'), async () => {
   status(`${name} → sound ${S.cur + 1}, ${Math.min(16, syl.length)} syllables on keys: ${syl.slice(0, 16).map(x => x.name).join(' · ')}${syl.length > 16 ? ` (the first 16 of ${syl.length})` : ''}`);
   noteOn(eng, S.cur, 0, ctx.currentTime + 0.02);
 }));
-$('rapIt').addEventListener('click', busy($('rapIt'), rapIt));
+
 
 // ---------------------------------------------------------------------------
 // Robot pads (🤖 Robot): words typed on the pads, said by the robot voice (the Voice page's voice
@@ -2551,15 +2551,57 @@ function drawRobot() {
     d.classList.toggle('head', playing && k === headStep);
   });
 }
-$('rapHear').addEventListener('click', () => { ctx.resume(); hearRap(); });
-// 🎲 New flow: another flow (never the steady ones, nor the one you're on), laid out afresh.
+// 🎤 Rap (a Loops cell's tab, or 🎤 Rap a verse in its picker): the words (typed, or a psalm's verses)
+// said by the robot, cut into syllables, and laid on the beat in a flow, made into a loop at the song's
+// tempo (1, 2, 4 or 8 bars, as the words need) in this cell. The syllables are kept with it, so 🎲 New
+// flow (or another Flow, or the rest) lays them out again without speaking again.
+const rapCellRec = () => { const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; return cell && mine.find(m => m.id === cell.mine)?.rap ? mine.find(m => m.id === cell.mine) : null; };
+async function rapRender(chop, flow, rest, seed) {
+  const places = flowPlaces(chop.slices, flow, rest, seed), need = Math.ceil((Math.floor(places.at(-1) + 1e-6) + 1) / 16);
+  const bars = [1, 2, 4, 8].find(n => n >= need);
+  if (!bars) throw new Error('That is more than 8 bars of rap: fewer words, or a quicker flow.');
+  const sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd, len = bars * 16 * sd, tail = 1.5;
+  const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR), e = new Engine(off, { live: false });
+  places.forEach((p, k) => { const j = Math.floor(p + 1e-6), o = p - j; playNote(e, chop, -1, k, j * sd + (o > 0.01 ? o * sd : j % 2 ? sw : 0), { bpm: S.bpm, scale: S.scale, root: S.root }); });
+  const b = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
+  for (const c of [0, 1]) { const x = b.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
+  let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
+  for (let i = 0; i < m; i++) out[i] *= 0.9 / (top || 1);
+  const buf = ctx.createBuffer(1, m, SR); buf.copyToChannel(out, 0); return { buf, bars };
+}
+async function rapToCell(chop, text, flow, rest, seed, old = null) {
+  const { c, r } = menuCell, { buf, bars } = await rapRender(chop, flow, rest, seed);
+  const name = '🎤 ' + (text.length > 22 ? text.slice(0, 21) + '…' : text);
+  const rap = { text, flow, rest, seed, src: old?.rap.src || packSlot(chop) };
+  await loopToCell(c, r, buf, name, bars, false, { rap });
+  if (old && !S.grid.cells.flat().some(x => x && x.mine === old.id)) { await idbDel('mine', old.id); await refreshMine(); }
+  status(`${name}: ${FLOWS[flow][0].split(':')[0]}, ${bars} bar${bars > 1 ? 's' : ''} at ${S.bpm} BPM, in ${CHANNELS[c]}, cell ${r + 1}${playing ? ', from the next bar' : ''}. 🎲 New flow for another.`);
+}
+$('rapIt').addEventListener('click', busy($('rapIt'), async () => {
+  if (!menuCell) return;
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const text = $('voxText').value.trim(), vo = { variant: $('voxVariant').value, range: +$('voxRange').value, speed: +$('voxSpeed').value, vowel: +$('voxVowel').value, gap: +$('voxGap').value };
+  const { buf, syl } = await voiceSyllables(text, $('rapCut').value, +$('voxPitch').value, vo);
+  const chop = voiceChop(text, buf, syl); chop.params.vol = 1;
+  dzEmpty = false; rapSeed = (Math.random() * 2 ** 31) | 0;
+  await rapToCell(chop, text, $('rapFlow').value, $('rapRest').checked, rapSeed, rapCellRec());
+}));
+// 🎲 New flow: another flow (never the steady ones, nor the one you're on), laid out afresh
+async function rapAgain(flow, seed) {
+  const rec = rapCellRec(); if (!rec) { status('Rap it into this cell first: 🎤 Rap it into this cell.'); return; }
+  const chop = unpackSlot({ name: rec.rap.text, item: rec.rap.src });
+  try { await rapToCell(chop, rec.rap.text, flow, $('rapRest').checked, seed, rec); } catch (e) { status(e.message); }
+}
 $('rapNew').addEventListener('click', () => {
   const pool = Object.keys(FLOWS).filter(f => !f.startsWith('steady') && f !== $('rapFlow').value);
   $('rapFlow').value = pool[(Math.random() * pool.length) | 0];
-  try { reflow((Math.random() * 2 ** 31) | 0); } catch (e) { status(e.message); }
+  rapAgain($('rapFlow').value, (Math.random() * 2 ** 31) | 0);
 });
-for (const id of ['rapFlow', 'rapRest']) $(id).addEventListener('change', () => {     // a rap already on this sound takes the new flow at once
-  if (S.slots[S.cur]?.slices?.[0]?.w != null) try { reflow(rapSeed); } catch (e) { status(e.message); }
+for (const id of ['rapFlow', 'rapRest']) $(id).addEventListener('change', () => { if (rapCellRec()) rapAgain($('rapFlow').value, rapCellRec().rap.seed); });
+$('rapHear').addEventListener('click', async () => {
+  const cell = menuCell && S.grid.cells[menuCell.c][menuCell.r]; if (!cell) return;
+  const slot = await cellSlot({ ...cell, mode: 'oneshot' }); if (!slot) return;
+  ctx.resume(); playNote(eng, slot, -1, 0, ctx.currentTime + 0.02, { bpm: S.bpm, root: S.root, scale: S.scale });
 });
 $('voxHear').addEventListener('click', busy($('voxHear'), async () => {
   const b = await makeVoice(), src = ctx.createBufferSource(); src.buffer = b; src.connect(eng.bus); src.start();
@@ -4564,7 +4606,11 @@ $('lwSay').addEventListener('click', sayWords);
 $('lwText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sayWords(); } });
 function openCellMenu(c, r) {
   menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r]; dzEmpty = false; rollUndo = [];
-  if (mine.find(m => m.id === S.grid.cells[c][r]?.mine)?.seq) { lPane = 'notes'; document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x.dataset.lpane === 'notes')); document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== 'notes'; }); }
+  const rapRec = mine.find(m => m.id === S.grid.cells[c][r]?.mine)?.rap;
+  if (rapRec) { $('voxText').value = rapRec.text; $('rapFlow').value = rapRec.flow; $('rapRest').checked = !!rapRec.rest; }
+  const openOn = rapRec ? 'rap' : mine.find(m => m.id === S.grid.cells[c][r]?.mine)?.seq ? 'notes' : null;
+  if (openOn === 'rap') openPsalter();
+  if (openOn) { lPane = openOn; document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x.dataset.lpane === openOn)); document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== openOn; }); }
   if (!S.grid.cells[c][r] && lPane !== 'set') document.querySelector('[data-lpane="set"]').click();
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
 }
@@ -4693,6 +4739,9 @@ async function drawCellMenu() {
       if (DZ.SYNTH_PRESETS[fit]) dzSetSynth(fit);
       document.querySelector('[data-lpane="synth"]').click();
     }, false, 'var(--c-lead)', 'folder');
+    btn('🎤 Rap a verse', 'words or a psalm, rapped on the beat by the robot', () => {
+      choosing = false; dzEmpty = true; openPsalter(); document.querySelector('[data-lpane="rap"]').click();
+    }, false, 'var(--c-vox)', 'folder');
     btn('🎹 From the pads', 'play the pads and ⏺ record into this cell', () => padsToCell(c, menuCell.r), false, 'var(--c-chords)', 'folder');
     btn('🤖 Robot words', 'type what it says, choose the voice', () => {
       choosing = false; lwFor = null;
@@ -4997,6 +5046,7 @@ $('lmRollUndo').addEventListener('click', () => {
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
   lPane = b.dataset.lpane;
+  if (lPane === 'rap') openPsalter();          // the psalms, the first time
   document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== lPane; });
   drawCellMenu();
@@ -5206,8 +5256,8 @@ function pcm16(f32) {
 function unpcm16(b64) { const s = atob(b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); const v = new Int16Array(b.buffer), f = new Float32Array(v.length); for (let i = 0; i < v.length; i++) f[i] = v[i] / 32767; return f; }
 const bufsOut = it => ({ ...it, bufs: it.bufs.map(b => ({ rate: b.rate, pcm16: pcm16(b.data) })) }), bufsIn = it => ({ ...it, bufs: it.bufs.map(b => ({ rate: b.rate, data: unpcm16(b.pcm16) })) });
 // (a loop played on the pads keeps its notes and their sound, so they can still be moved where it is opened)
-const recOut = m => ({ ...m, item: bufsOut(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsOut(m.seq.src) } }) });
-const recIn = m => ({ ...m, item: bufsIn(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsIn(m.seq.src) } }) });
+const recOut = m => ({ ...m, item: bufsOut(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsOut(m.seq.src) } }), ...(m.rap && { rap: { ...m.rap, src: bufsOut(m.rap.src) } }) });
+const recIn = m => ({ ...m, item: bufsIn(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsIn(m.seq.src) } }), ...(m.rap && { rap: { ...m.rap, src: bufsIn(m.rap.src) } }) });
 // a pack: { name, set?, ids? } -> the file's contents. A set brings every sound of yours its cells use.
 function packOf({ name, set = null, ids = [] }) {
   const want = new Set(ids);
@@ -5730,7 +5780,8 @@ document.querySelectorAll('[data-dz]').forEach(b => b.addEventListener('click', 
 dzSetSynth('Warm pad');
 dzRedraws.add(() => { if (dz.sp.wave1 != null) dzDrawSynth(); });
 $('dzModeBox').appendChild(dzModeButtons());
-$('lmSynthHead').append(dzModeButtons()); $('lmSynthHead').parentNode.appendChild($('dzSynth')); $('dzSynth').hidden = false;
+$('lmSynthHead').append(dzModeButtons());
+{ const pane = document.querySelector('[data-pane="rap"]'); for (const el of [...$('tVoice').children]) pane.appendChild(el); } $('lmSynthHead').parentNode.appendChild($('dzSynth')); $('dzSynth').hidden = false;
 document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => dzKits());
 
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
