@@ -233,6 +233,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   (kick, snare, clap, hats, tom, percussion, shaker: models with knobs)
   and synths (two waves, filter, envelopes, vibrato, unison), made once
   into recordings, into kits and My Sounds.
+- **Loops + Pads** (where the app opens): the loops on the left, four columns
+  a page, and 16 pads on the right that play the loop tapped last: in 16
+  slices, or its first note pitched across the key.
 - **🥁 Design in a Loops cell** (hold a cell, third tab): make a hit, tap
   its steps (up to 6 lines, a drum on each), and put the bar straight
   into the cell as a loop. Basic or Advanced shows a few knobs or all. The

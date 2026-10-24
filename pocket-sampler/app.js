@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zu';
+import * as DZ from './design.js?v=20261023zv';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zu';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zv';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2007,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zu'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zv'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zu'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zv'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3820,6 +3820,7 @@ const kill = h => { if (h) { h.voice.stop(ctx.currentTime); unplugAt(h, ctx.curr
 async function tapCell(c, r) {
   const col = lane(c, r), cell = S.grid.cells[c][r];
   if (!cell) { openCellMenu(c, r); return; }
+  lpPick(c, r);
   ctx.resume();
   if (cell.mode === 'oneshot') {      // a hit: on the next 16th (at once if stopped, or quantize off), again on every tap
     const slot = await cellSlot(cell);
@@ -3864,6 +3865,7 @@ async function tapCell(c, r) {
 }
 // Gate: it sounds while the finger is down, from the next beat (or at once, quantize off), in step with the bar.
 async function gateDown(c, r) {
+  lpPick(c, r);
   const col = lane(c, r), cell = S.grid.cells[c][r];
   ctx.resume();
   const token = col.gateToken = {};
@@ -4046,10 +4048,12 @@ function drawLoops() {
     const L = colLanes(c), has = (k, r, f = () => true) => L.some(l => l[k]?.r === r && f(l[k], l));
     // editing: every column a shade of one colour (amber), so the grid looks plainly different
     cellEls[c].col.style.setProperty('--c', lEdit ? `hsl(38 95% ${44 + c * 5}%)` : CHANNEL_COLOR[c]);
+    cellEls[c].col.classList.toggle('off', (c < 4) !== (lPage === 0));
     for (let r = 0; r < ROWS; r++) {
       const cell = S.grid.cells[c][r], el = cellEls[c][r];
       const on = has('cur', r, h => h.stopAt == null) || has('gate', r);
       el.b.classList.toggle('filled', !!cell);
+      el.b.classList.toggle('picked', view === 'both' && c === lp.c && r === lp.r && !!cell);
       el.b.classList.toggle('playing', !!on);
       el.b.classList.toggle('queued', has('next', r));
       el.b.classList.toggle('resume', !playing && !!S.grid.resume?.some(([cc, rr]) => cc === c && rr === r));
@@ -4087,9 +4091,80 @@ function setView(v) {
   view = v;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   if ($('wheel').classList.contains('inloops')) closeWheel();
-  $('loops').hidden = v !== 'loops';
-  if (v === 'loops') { drawLoops(); nameCells(); warmGridSoon(); }
+  $('loops').hidden = v === 'pads';
+  $('loops').classList.toggle('split', v === 'both'); $('lpads').hidden = $('lPager').hidden = v !== 'both';
+  if (v !== 'pads') { drawLoops(); nameCells(); warmGridSoon(); }
+  if (v === 'both') lpDraw();
 }
+// Loops + Pads: the loops four columns a page, and the pads, which play the loop last tapped (a drum
+// loop too): Slices, the loop cut in 16 equal parts, one a pad; or Notes, its first note, pitched
+// down and up the key across the pads (the 8th pad as it was played).
+let lPage = 0, lp = { c: -1, r: -1, cell: null, slot: null, mode: 'slices' };
+try { lp.mode = localStorage.getItem('pocketLpMode') || 'slices'; const at = JSON.parse(localStorage.getItem('pocketLpCell') || 'null'); if (at) { lp.c = at[0]; lp.r = at[1]; } } catch (e) {}
+const lpKeys = [];
+for (let k = 0; k < 16; k++) {
+  const b = document.createElement('button');
+  b.addEventListener('pointerdown', async ev => {
+    ev.preventDefault(); capture(b, ev); ctx.resume(); b.classList.add('down');
+    const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
+    playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+  });
+  const up = () => b.classList.remove('down');
+  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('contextmenu', ev => ev.preventDefault());
+  lpKeys.push(b); $('lpKeys').appendChild(b);
+}
+function lpPick(c, r) {
+  if (!S.grid.cells[c][r] || (lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
+  lp.c = c; lp.r = r; lp.cell = null; lp.slot = null;
+  try { localStorage.setItem('pocketLpCell', JSON.stringify([c, r])); } catch (e) {}
+  if (view === 'both') { lpDraw(); lpSlot(); drawLoops(); }
+}
+// the pads' sound, made from the cell's loop (again when the cell, or Slices/Notes, changes)
+async function lpSlot() {
+  const cell = S.grid.cells[lp.c]?.[lp.r];
+  if (!cell) return null;
+  if (lp.cell === cell && lp.slot && lp.slot.lpMode === lp.mode) return lp.slot;
+  const base = await cellSlot(cell), one = base?.slices?.[0]; if (!one) return null;
+  const buf = one.buf || base.buf, vol = Math.min(1, (cell.vol ?? 1) * 0.9), params = { ...defParams(), vol };
+  let slot;
+  if (lp.mode === 'slices') {
+    const w = (one.e - one.s) / 16;
+    slot = { kind: 'chop', name: cell.name, buf, params: { ...params, keyOf: base.params.keyOf, pitch: base.params.pitch },
+      slices: Array.from({ length: 16 }, (_, i) => ({ s: one.s + i * w, e: one.s + (i + 1) * w, name: String(i + 1) })) };
+  } else {
+    // the first note: from the first sound to the next (at most 1.5 s), at its own pitch (a drum: as it is)
+    const st = onsets(buf, 8).filter(t => t >= one.s - 0.001 && t < one.e);
+    const lvl = t => { const x = buf.getChannelData(0), i = Math.round(t * buf.sampleRate); let m = 0; for (let j = i; j < Math.min(x.length, i + 400); j++) m = Math.max(m, Math.abs(x[j])); return m; };
+    const a = st.find(t => lvl(t) > 0.02) ?? one.s, next = st.find(t => t > a + 0.08), e = Math.min(one.e, next ?? one.e, a + 1.5);
+    let shift = 0;
+    if (lp.c > 2) { const ch = chroma(buf, a, e), pc = ch.indexOf(Math.max(...ch)); shift = ((S.root - pc + 18) % 12) - 6; }
+    const mid = keySemis(7, S.scale);                   // the 8th pad: the note as played (in the key's root)
+    slot = { kind: 'multi', name: cell.name, buf, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: a, e }], params, scale: S.scale, root: S.root };
+  }
+  slot.lpMode = lp.mode; lp.cell = cell; lp.slot = slot;
+  return slot;
+}
+function lpDraw() {
+  const cell = S.grid.cells[lp.c]?.[lp.r];
+  $('lpads').style.setProperty('--c', cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
+  $('lpSrc').textContent = cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}` : 'Tap a loop: the pads play it.';
+  $('lpKeys').classList.toggle('empty', !cell);
+  document.querySelectorAll('[data-lp]').forEach(b => b.classList.toggle('on', b.dataset.lp === lp.mode));
+  const mid = keySemis(7, S.scale);
+  lpKeys.forEach((b, k) => {
+    const semi = keySemis(k, S.scale) - mid;
+    b.textContent = lp.mode === 'slices' ? String(k + 1) : NOTE_NAMES[((S.root + semi) % 12 + 12) % 12] + (semi === 0 ? ' •' : '');
+    b.classList.toggle('root', lp.mode === 'notes' ? semi % 12 === 0 : k % 4 === 0);
+  });
+  $('lPage').textContent = `${lPage + 1}/2`;
+}
+document.querySelectorAll('[data-lp]').forEach(b => b.addEventListener('click', () => {
+  lp.mode = b.dataset.lp; lp.slot = null; try { localStorage.setItem('pocketLpMode', lp.mode); } catch (e) {}
+  lpDraw(); lpSlot();
+}));
+const lFlip = () => { lPage = 1 - lPage; drawLoops(); lpDraw(); };
+$('lPrev').addEventListener('click', lFlip); $('lNext').addEventListener('click', lFlip);
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 $('lPlay').addEventListener('click', () => { ctx.resume(); playing ? stop() : (start(), resumeLoops()); drawLoops(); });
 $('lReset').addEventListener('click', () => {
@@ -5462,5 +5537,5 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   colFx: c => { const k = eng.cols?.[c]; return k && { type: k.type, ins: k.ins?.constructor.name, send: !!k.send }; } });
 
 draw();
-load().then(() => { status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
+load().then(() => { setView('both'); status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
 requestAnimationFrame(frame);
