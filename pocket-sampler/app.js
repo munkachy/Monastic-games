@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zt';
+import * as DZ from './design.js?v=20261023zu';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zt';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zu';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2007,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zt'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zu'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zt'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zu'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3543,6 +3543,7 @@ function save() {
 }
 async function load() {
   db = await openDb();
+  try { await refreshMine(); } catch (e) { console.warn('My Sounds not read:', e); }   // the Loops' own loops (designed, recorded) need them from the start
   const saved = db && await idbGet('state', 'v1');
   const getBuf = async id => {
     if (!id) return null;
@@ -3673,7 +3674,15 @@ const cellSlots = new Map();
 const mineSlots = new Map();
 function cellBase(cell) {
   if (!cell.mine) return slotOf({ lib: cell.lib });
-  if (!mineSlots.has(cell.mine)) { const m = mine.find(x => x.id === cell.mine); if (!m) return Promise.resolve(null); mineSlots.set(cell.mine, Promise.resolve(unpackSlot(m))); }
+  if (!mineSlots.has(cell.mine)) {
+    const m = mine.find(x => x.id === cell.mine);
+    if (!m) return (db ? refreshMine() : Promise.resolve()).then(() => {      // not read yet: read My Sounds again, then try
+      const m2 = mine.find(x => x.id === cell.mine); if (!m2) return null;
+      if (!mineSlots.has(cell.mine)) mineSlots.set(cell.mine, Promise.resolve(unpackSlot(m2)));
+      return mineSlots.get(cell.mine);
+    });
+    mineSlots.set(cell.mine, Promise.resolve(unpackSlot(m)));
+  }
   return mineSlots.get(cell.mine);
 }
 function cellSlot(cell) {
@@ -3682,7 +3691,7 @@ function cellSlot(cell) {
     cell.from || 0, cell.to ?? 1, cell.beats ? S.bpm : 0]);
   if (cellSlots.size > 300) cellSlots.clear();
   if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell).then(slot => {
-    const x = slot?.slices?.[cell.k]; if (!x) return null;
+    const x = slot?.slices?.[cell.k]; if (!x) { cellSlots.delete(id); return null; }
     cell.name ||= x.name;
     const buf = x.buf || slot.buf, whole = x.e - x.s, beat = 60 / (x.bpm || S.bpm);
     let ko = keyOf;
@@ -4450,6 +4459,7 @@ async function drawCellMenu() {
     btn('🥁 Design a hit', 'make a drum hit, tap its steps: a loop', () => {
       choosing = false; dzEmpty = true; cellDzFor = null; document.querySelector('[data-lpane="design"]').click();
     }, false, 'var(--c-kick)', 'folder');
+    btn('🎹 From the pads', S.chain.length > 1 ? `the chain: patterns ${S.chain.map(p => p + 1).join(', ')}, as one loop` : `pattern ${S.pat + 1}, as you hear it`, () => padsToCell(c, menuCell.r), false, 'var(--c-chords)', 'folder');
     btn('🤖 Robot words', 'type what it says, choose the voice', () => {
       choosing = false; lwFor = null;
       const V = { ...defaultVoice(), variant: 'robosoft' };
@@ -4605,20 +4615,43 @@ $('lmDzPut').addEventListener('click', async () => {
   if (!menuCell || !cellDz) return;
   if (!cellHits()) { status('Tap a step or two first.'); return; }
   if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
-  const { c, r } = menuCell, { bar } = await cellBar(), was = S.grid.cells[c][r];
+  const { c, r } = menuCell, { bar } = await cellBar();
   const used = cellLines.filter(L => L.steps.some(v => v));
-  const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`, folder = c < 3 ? 'Beats' : LR_FOLDER[c];
-  const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf: bar, drumLoop: true,
-    slices: [{ s: 0, e: bar.duration, name, bpm: S.bpm, bars: 1 }] };
+  const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`;
+  dzEmpty = false; await loopToCell(c, r, bar, name, 1, true);
+});
+// a loop made here (designed, or from the pads) into a cell, kept in the library too (My loops)
+async function loopToCell(c, r, buf, name, bars, drumLoop) {
+  const was = S.grid.cells[c][r], folder = c < 3 ? 'Beats' : LR_FOLDER[c];
+  const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf, ...(drumLoop && { drumLoop: true }),
+    slices: [{ s: 0, e: buf.duration, name, bpm: S.bpm, bars }] };
   const id = 'm' + Date.now().toString(36);
   await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot) }, id);
   await refreshMine();
   for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
   S.grid.cells[c][r] = { mine: id, k: 0, name, mode: 'loop', vol: was?.vol ?? 1, ...(c >= 3 && { follow: false }) };
-  dzEmpty = false; persist(); drawLoops(); warmGridSoon(); drawCellMenu();
+  persist(); drawLoops(); warmGridSoon(); drawCellMenu();
   if (playing) tapCell(c, r);
   status(`“${name}” is in ${CHANNELS[c]}, cell ${r + 1}${playing ? ', playing from the next bar' : ''} (and in the library: ${folder}, My loops).`);
-});
+}
+// 🎹 From the pads: the Pads' pattern as it is now (or its chain, as one long loop), as you hear it
+// (with Mute's beat muted), made into a loop and put in the cell
+async function padsToCell(c, r) {
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  const sounds = chainSounds();
+  if (!sounds.length) { status('The Pads’ pattern is empty: play or write something on the pads first.'); return; }
+  status('Making a loop of the pads…');
+  let r0;
+  try { r0 = await renderLoop(); } catch (e) { status('Could not make the loop: ' + e.message); log('error', 'from pads: ' + e.message); return; }
+  if (r0.top < 0.001) { status('The pads’ pattern is silent (muted?), so there is nothing to put in.'); return; }
+  const n = r0.chs[0].length, buf = ctx.createBuffer(1, n, SR), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (r0.chs[0][i] + r0.chs[1][i]) / 2;
+  const heard = S.muteBeat ? sounds.filter(si => !isDrum(si)) : sounds, inst = heard.filter(si => !isDrum(si));
+  const what = inst.length === 1 && heard.length === 1 ? S.slots[inst[0]].name : inst.length ? 'Pads' : 'Pads beat';
+  const name = `${what}, ${S.chain.length > 1 ? `patterns ${S.chain.map(p => p + 1).join('-')}` : `pattern ${S.chain[0] + 1}`}`;
+  choosing = false;
+  await loopToCell(c, r, buf, name, S.chain.length, !inst.length);
+}
 // The cell's settings in two tabs: Settings (with the wave first) and EQ & Effect.
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
