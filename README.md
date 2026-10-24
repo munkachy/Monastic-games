@@ -235,6 +235,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
   slices, or its first note pitched across the key.
+- **⏺ Rec in Loops + Pads:** what you play on the pads, recorded as notes
+  into a loop cell (🎹 From the pads, in a cell's picker, chooses which).
+  Hold the cell for 🎹 Notes: drag notes along the beat, tap to delete.
 - **🥁 Design in a Loops cell** (hold a cell, third tab): make a hit, tap
   its steps, and put the bar straight into the cell as a loop. The
   designer can also tune a drum to the key, soften its click, cut its low
