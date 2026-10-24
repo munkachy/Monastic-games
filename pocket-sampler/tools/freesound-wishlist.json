@@ -1,0 +1,41 @@
+{
+ "about": "What freesound_fetch.py downloads: each wish is a Freesound search; count is how many of the most-downloaded results to keep. Claude edits this list. Now: real vinyl record noise, CC0 only (free for any use), to go beside the Edison records.",
+ "wishes": [
+  {
+   "category": "vinyl-crackle",
+   "query": "vinyl crackle",
+   "filter": "duration:[5 TO 90] license:\"Creative Commons 0\"",
+   "count": 6
+  },
+  {
+   "category": "vinyl-hiss",
+   "query": "vinyl hiss surface noise",
+   "filter": "duration:[5 TO 90] license:\"Creative Commons 0\"",
+   "count": 4
+  },
+  {
+   "category": "vinyl-runout",
+   "query": "vinyl run out groove",
+   "filter": "duration:[3 TO 90] license:\"Creative Commons 0\"",
+   "count": 3
+  },
+  {
+   "category": "vinyl-needle",
+   "query": "needle drop record",
+   "filter": "duration:[1 TO 30] license:\"Creative Commons 0\"",
+   "count": 3
+  },
+  {
+   "category": "vinyl-dust",
+   "query": "vinyl dust pops",
+   "filter": "duration:[3 TO 90] license:\"Creative Commons 0\"",
+   "count": 3
+  },
+  {
+   "category": "vinyl-stop",
+   "query": "record player stop turntable",
+   "filter": "duration:[1 TO 15] license:\"Creative Commons 0\"",
+   "count": 2
+  }
+ ]
+}
