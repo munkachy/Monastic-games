@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261024a';
+import * as DZ from './design.js?v=20261024b';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024a';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024b';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024b'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024b'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4867,54 +4867,70 @@ function padsToCell(c, r) {
   lPage = c < 4 ? 0 : 1; setView('both');
   status(`Tap a loop for the pads' sound (now: ${lp.cell?.name || S.grid.cells[lp.c]?.[lp.r]?.name || 'none'}), then ⏺ Rec: what you play goes in ${CHANNELS[c]}, cell ${r + 1}.`);
 }
-// 🎹 Notes: a loop recorded on the pads, its notes a line a pad (highest at the top), along its bars.
-// Drag a note left or right: it moves, landing on a 16th; tap it: it is deleted (↶ Undo brings it
-// back). Each change makes the loop again, as a recording, into the cell (and the library).
+// 🎹 Notes: a loop recorded on the pads, all its notes on one line along its bars, each named (notes
+// on the same 16th share the line, in strips). Drag a note left or right: it moves, landing on a
+// 16th; tap it: it is deleted. Length: 1 to 32 bars; made shorter, the notes past the end go.
+// ↶ Undo takes back the last change. Each change makes the loop again, as a recording, into the
+// cell (and the library).
+const ROLL_BARS = [1, 2, 4, 8, 16, 32];
 let rollUndo = [];
 function drawRoll(c, r) {
   const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), seq = rec?.seq, box = $('lmRoll');
   box.textContent = ''; $('lmRollUndo').disabled = !rollUndo.length; if (!seq) return;
-  const steps = seq.bars * 16, st = Math.max(14, Math.min(26, 560 / steps));
-  box.style.setProperty('--st', st + 'px');
-  const mid = keySemis(7, seq.scale), ks = [...new Set(seq.notes.map(n => n.k))].sort((a, b) => b - a);
-  for (const k of ks) {
-    const semi = keySemis(k, seq.scale) - mid, l = document.createElement('div'); l.className = 'rl';
-    l.textContent = seq.src.kind === 'chop' ? `#${k + 1}` : NOTE_NAMES[((seq.root + semi) % 12 + 12) % 12];
-    const row = document.createElement('div'); row.className = 'rr'; row.style.width = steps * st + 'px';
-    seq.notes.forEach((n, i) => {
-      if (n.k !== k) return;
-      const b = document.createElement('div'); b.className = 'rn'; b.style.left = n.t * st + 'px'; b.style.width = st - 2 + 'px';
-      let x0 = 0, moved = false, to = n.t, turned = false;
-      const along = ev => (turned ? ev.clientY : ev.clientX);
-      b.addEventListener('pointerdown', ev => {
-        ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
-        const rc = row.getBoundingClientRect(); turned = rc.height > rc.width;     // held upright: the row runs down the glass
-        x0 = along(ev); moved = false; b.classList.add('drag');
-      });
-      b.addEventListener('pointermove', ev => {
-        if (!b.classList.contains('drag')) return;
-        const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
-        moved = true; to = Math.max(0, Math.min(steps - 1, Math.round(n.t + dx / st))); b.style.left = to * st + 'px';
-      });
-      b.addEventListener('pointerup', () => {
-        b.classList.remove('drag');
-        const notes = seq.notes.slice();
-        if (!moved) notes.splice(i, 1); else if (to !== n.t) notes[i] = { ...n, t: to }; else return;
-        rollChange(c, r, notes);
-      });
-      b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = n.t * st + 'px'; });
-      row.appendChild(b);
+  const lens = document.createElement('div'); lens.className = 'lmodes rlen';
+  lens.append(Object.assign(document.createElement('span'), { textContent: 'Length' }));
+  for (const n of ROLL_BARS) {
+    const b = document.createElement('button'); b.textContent = n === 1 ? '1 bar' : `${n}`; b.classList.toggle('on', n === seq.bars);
+    b.addEventListener('click', () => {
+      if (n === seq.bars) return;
+      const keep = seq.notes.filter(x => x.t < n * 16), cut = seq.notes.length - keep.length;
+      if (!keep.length) { status(`At ${n} bar${n > 1 ? 's' : ''} no note would be left: choose a longer length.`); return; }
+      rollChange(c, r, keep, false, n).then(() => status(`${n} bar${n > 1 ? 's' : ''}${cut ? `: ${cut} note${cut > 1 ? 's' : ''} past the end deleted (↶ Undo brings ${cut > 1 ? 'them' : 'it'} back)` : ''}.`));
     });
-    box.append(l, row);
+    lens.appendChild(b);
   }
+  const steps = seq.bars * 16, st = Math.max(14, Math.min(28, 560 / steps)), mid = keySemis(7, seq.scale);
+  const wrap = document.createElement('div'); wrap.className = 'rwrap';
+  const row = document.createElement('div'); row.className = 'rr'; row.style.width = steps * st + 'px'; row.style.setProperty('--st', st + 'px');
+  // notes on the same 16th share the line: each a strip of it, lowest note at the bottom
+  const slot16 = n => Math.floor(n.t + 0.001), groups = new Map();
+  seq.notes.forEach((n, i) => { const g = slot16(n); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(i); });
+  for (const g of groups.values()) g.sort((a, b) => seq.notes[b].k - seq.notes[a].k);
+  const name = k => seq.src.kind === 'chop' ? `#${k + 1}` : NOTE_NAMES[((seq.root + keySemis(k, seq.scale) - mid) % 12 + 12) % 12];
+  seq.notes.forEach((n, i) => {
+    const g = groups.get(slot16(n)), lane = g.indexOf(i), h = 100 / g.length;
+    const b = document.createElement('div'); b.className = 'rn'; b.textContent = name(n.k); b.title = name(n.k);
+    Object.assign(b.style, { left: n.t * st + 'px', width: Math.max(st - 2, 16) + 'px', top: `calc(${lane * h}% + 2px)`, height: `calc(${h}% - 4px)`, fontSize: g.length > 2 ? '8px' : '10px' });
+    let x0 = 0, moved = false, to = n.t, turned = false;
+    const along = ev => (turned ? ev.clientY : ev.clientX);
+    b.addEventListener('pointerdown', ev => {
+      ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
+      const rc = row.getBoundingClientRect(); turned = rc.height > rc.width;     // held upright: the line runs down the glass
+      x0 = along(ev); moved = false; b.classList.add('drag');
+    });
+    b.addEventListener('pointermove', ev => {
+      if (!b.classList.contains('drag')) return;
+      const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
+      moved = true; to = Math.max(0, Math.min(steps - 1, Math.round(n.t + dx / st))); b.style.left = to * st + 'px';
+    });
+    b.addEventListener('pointerup', () => {
+      b.classList.remove('drag');
+      const notes = seq.notes.slice();
+      if (!moved) notes.splice(i, 1); else if (to !== n.t) notes[i] = { ...n, t: to }; else return;
+      rollChange(c, r, notes);
+    });
+    b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = n.t * st + 'px'; });
+    row.appendChild(b);
+  });
+  wrap.appendChild(row); box.append(lens, wrap);
 }
 let rollBusy = Promise.resolve();
-function rollChange(c, r, notes, undoing = false) {
+function rollChange(c, r, notes, undoing = false, bars = null) {
   rollBusy = rollBusy.then(async () => {
     const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine); if (!rec?.seq) return;
     if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return; }
-    if (!undoing) rollUndo.push(rec.seq.notes);
-    const seq = { ...rec.seq, notes }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
+    if (!undoing) rollUndo.push({ notes: rec.seq.notes, bars: rec.seq.bars });
+    const seq = { ...rec.seq, notes, bars: bars ?? rec.seq.bars }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
     const slot = { factory: null, kind: 'chop', contiguous: false, name: rec.name, params: { ...defParams(), trig: 'loop' }, buf, ...(c < 3 && { drumLoop: true }),
       slices: [{ s: 0, e: buf.duration, name: rec.name, bpm: seq.bpm, bars: seq.bars }] };
     const id = 'm' + Date.now().toString(36);
@@ -4927,7 +4943,10 @@ function rollChange(c, r, notes, undoing = false) {
   });
   return rollBusy;
 }
-$('lmRollUndo').addEventListener('click', () => { if (menuCell && rollUndo.length) rollChange(menuCell.c, menuCell.r, rollUndo.pop(), true); });
+$('lmRollUndo').addEventListener('click', () => {
+  if (!menuCell || !rollUndo.length) return;
+  const u = rollUndo.pop(); rollChange(menuCell.c, menuCell.r, u.notes, true, u.bars);
+});
 // The cell's settings in two tabs: Settings (with the wave first) and EQ & Effect.
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
