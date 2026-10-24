@@ -233,6 +233,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   (kick, snare, clap, hats, tom, percussion, shaker: models with knobs)
   and synths (two waves, filter, envelopes, vibrato, unison), made once
   into recordings, into kits and My Sounds.
+- **🥁 Design in a Loops cell** (hold a cell, third tab): make a hit, tap
+  its steps, and put the bar straight into the cell as a loop. The
+  designer can also tune a drum to the key, soften its click, cut its low
+  or high end, layer a second drum, bake in a short room, or reverse it.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,

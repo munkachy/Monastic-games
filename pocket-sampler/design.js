@@ -205,7 +205,35 @@ export const DRUMS = {
       'Rain stick': { tone: 2600, beads: 120, length: 0.45, shake: 0.05, grit: 0 } } },
 };
 // One hit: the drum, its knobs, a seed (the same seed, the same noise). Returns samples at SR.
-export function renderDrum(kind, p, seed = 1) { return finish(DRUMS[kind].make(p, rng(seed))); }
+// Finishing, for every drum (after Microtonic's and Ableton's DS drums, and the usual advice on
+// layering): soften the attack (less click), a low and a high cut (so a layer keeps to its range),
+// a second drum layered under it (lined up at the start, so the two never flam), reversed. (The
+// room, a short real room baked in, is the app's: it needs the room's recording.)
+export const FINISH = [K('attack', 'Soften the hit', 0, 25, 0.5, 'ms'), K('lowcut', 'Low cut', 20, 1200, 5, 'Hz'), K('highcut', 'High cut', 1500, 20000, 100, 'Hz'),
+  K('layermix', 'Layer level', 0, 1, 0.01), K('room', 'Room', 0, 1, 0.01), K('reverse', 'Reverse', 0, 1, 1)];
+export const FINISH_DEFAULT = { attack: 0, lowcut: 20, highcut: 20000, layermix: 0.5, room: 0, reverse: 0 };
+// every starting point, as "kind/name", for the layer
+export const LAYERS = Object.entries(DRUMS).flatMap(([k, D]) => Object.keys(D.presets).map(n => [`${k}/${n}`, `${D.name}: ${n}`]));
+export function renderDrum(kind, p, seed = 1, f = null, layer = null) {
+  let x = finish(DRUMS[kind].make(p, rng(seed)));
+  if (!f) return x;
+  if (layer && f.layermix > 0) {              // the second drum, from its start, at its level
+    const [lk, ln] = layer.split('/'), y = finish(DRUMS[lk].make(DRUMS[lk].presets[ln], rng(seed + 7)));
+    x = mix(scale(x, 1 - f.layermix * 0.5), scale(y, f.layermix));
+  }
+  if (f.attack > 0) { const n = Math.min(x.length, T(f.attack / 1000)); for (let i = 0; i < n; i++) x[i] *= Math.sin(Math.PI / 2 * i / n) ** 2; }
+  if (f.lowcut > 25) x = hp(x, f.lowcut);
+  if (f.highcut < 19000) x = lp(x, f.highcut);
+  if (f.reverse >= 0.5) x = x.slice().reverse();
+  return finish(x);
+}
+// the note a frequency is nearest, and that note's frequency in the key given (root 0-11, scale steps)
+export const noteOf = f => 69 + 12 * Math.log2(f / 440);
+export function inKey(f, root, steps) {
+  let best = f, d = 1e9;
+  for (let m = 12; m < 120; m++) if (steps.includes(((m - root) % 12 + 12) % 12)) { const g = 440 * 2 ** ((m - 69) / 12), e = Math.abs(Math.log2(g / f)); if (e < d) { d = e; best = g; } }
+  return best;
+}
 // A surprise: each knob somewhere near a starting point, so it stays a drum
 export function surprise(kind, seed) {
   const r = rng(seed), D = DRUMS[kind], names = Object.keys(D.presets), base = D.presets[names[Math.floor(r() * names.length)]], p = {};

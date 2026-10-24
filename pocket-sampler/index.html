@@ -489,9 +489,15 @@
   #menu .tabs { flex-wrap: wrap; margin: 0; padding: 0 10px; gap: 4px; }
   #menu .tabs button { flex: 1 0 18%; border-radius: 7px; padding: 8px 0; }
   .dzmodes { margin: 0 0 8px; } .dzmodes button { flex: 1; }
-  #tDesign .row { grid-template-columns: 110px 1fr 66px; }
+  #tDesign .row { grid-template-columns: 110px 1fr 84px; }
   .dzpresets { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
   .dzpresets button { font: inherit; font-size: 11px; border: 0; border-radius: 6px; padding: 6px 9px; background: var(--btn); color: var(--btn-ink); }
+  .dzsteps { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; margin: 4px 0; }
+  .dzsteps button { font: inherit; font-size: 10px; border: 0; border-radius: 4px; padding: 9px 0; background: var(--btn); color: var(--btn-ink); }
+  .dzsteps button:nth-child(4n+1) { box-shadow: inset 0 -2px 0 rgba(255,255,255,.25); }
+  .dzsteps button.on { background: var(--c, var(--accent)); color: #000; }
+  .dzsteps button.soft { background: color-mix(in srgb, var(--c, var(--accent)) 45%, var(--btn)); }
+  .lmdz .row { grid-template-columns: 110px 1fr 84px; }
   .dzgroup { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin: 10px 0 2px; }
   .menubody { overflow: auto; flex: 1; padding: 8px 10px 16px; -webkit-overflow-scrolling: touch; }
   .menubody .panel { border-radius: 10px; }
@@ -554,7 +560,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zo</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zp</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -629,7 +635,13 @@
     <div class="lmhead"><b id="lmTitle"></b><button id="lmClose">✕ Done</button></div>
     <div class="lmodes"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="grow"></span><button id="lmEmpty">Empty this cell</button></div>
     <div id="lmSets" class="lsetbody">
-      <div class="lmodes ltabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="eq">EQ &amp; Effect</button></div>
+      <div class="lmodes ltabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="eq">EQ &amp; Effect</button><button data-lpane="design">🥁 Design</button></div>
+      <div class="lpane" data-pane="design" hidden>     <!-- a hit designed here, on the steps of a bar, into this cell -->
+        <div class="dzsteps" id="lmSteps"></div>
+        <div class="lmodes"><button id="lmDzBar">▶ Hear the bar</button><button id="lmDzPut" class="on">✓ Put in this cell</button><span class="grow"></span><button id="lmDzSave">★ Save the hit</button></div>
+        <small class="lsub">The steps of one bar: tap one for on, again for soft, again for off. It plays at the song's tempo and swing, and keeps time if the tempo changes. The hit: below.</small>
+        <div id="lmDz" class="lmdz"></div>
+      </div>
       <div class="lpane two" data-pane="set">
         <div class="lrobot" id="lwBox" hidden>     <!-- a robot voice: what it says, and its voice -->
           <div class="lrow lfull"><span>🤖 It says</span><input type="text" id="lwText" autocomplete="off" enterkeyhint="done" class="ltext"><span class="lmodes"><button id="lwSay" class="on">🔄 Update</button></span></div>
@@ -856,13 +868,10 @@
   <div class="panel" id="tDesign">     <!-- make your own drum hits and synths (design.js) -->
     <div class="lmodes dzmodes"><button data-dz="drum" class="on">🥁 Drum hit</button><button data-dz="synth">🎹 Synth</button></div>
     <div id="dzDrum">
-      <div class="row"><label for="dzKind">Drum</label><select id="dzKind"></select><span></span></div>
-      <div class="dzpresets" id="dzPresets"></div>
-      <div id="dzKnobs"></div>
-      <div class="btns"><button id="dzHear" class="go">▶ Hear it</button><button id="dzDice">🎲 Surprise</button><button id="dzSeed" title="The same knobs, a new strike">↻ New strike</button></div>
+      <div id="dzDrumUI"></div>
       <div class="row"><label for="dzKit">Kit</label><select id="dzKit"></select><button id="dzAdd">＋ Add</button></div>
       <div class="btns"><button id="dzSave">★ Save to My Sounds</button></div>
-      <p class="note">Turn the knobs and ▶ Hear it. ＋ Add puts the hit in a kit of yours (up to 16; a new one if you choose New kit), which loads on the drum sounds (9–16) like any kit and goes in the Loops' colour folders. Each hit is made once and kept as a recording, so the phone only plays it back.</p>
+      <p class="note">Turn the knobs and ▶ Hear it. Finish: soften the hit (less click), low and high cut, a second drum layered under it (Layer), a short real room (Room), reversed; ♪ In key tunes it to the nearest note of the song's key. ＋ Add puts the hit in a kit of yours (up to 16; a new one if you choose New kit), which loads on the drum sounds (9–16) like any kit and goes in the Loops' colour folders. Each hit is made once and kept as a recording, so the phone only plays it back.</p>
     </div>
     <div id="dzSynth" hidden>
       <div class="row"><label for="dzSPreset">Start from</label><select id="dzSPreset"></select><span></span></div>
@@ -908,7 +917,8 @@
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). Switch the sound to One shot or Gate and its loops keep going, so you can play over them; come back to Loop and tap a looping key to stop it. In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
     <p><b>⏺ Loop rec</b> (an amber button, ⏺ Loop): record what you play over the beat or the Loops, straight into a loop. Choose how: <b>Notes</b> (your taps on the pads, on the beat as Quantize puts them; afterwards ▶ Hear it, ✓ Keep it, or ✎ Fix it as patterns: the notes go into empty patterns, chained, to fix a note before ⟳ Make a loop) or <b>Sound</b> (the sound itself, like a looper pedal: the pads alone, without the Loops grid or the effects on the whole mix, or everything you hear); how many bars (1, 2, 4 or 8); and the Loops column it goes in (or a guess from what you play). Start: it begins on the next bar (if nothing is playing, Play starts and a bar counts in), shows the bar it is on, and stops by itself; tap it again to stop early. Kept, it goes in the first empty cell of its column (the next column with room, if that one is full), playing from the next bar, and in the library (My Sounds, its folder, My loops), in time at any tempo.</p>
-    <p><b>Design</b> (Menu › Design): make your own sounds. <b>🥁 Drum hit</b>: a kick, snare, clap, hat, open hat or ride, tom, percussion (wood, metal or glass: a woodblock, rimshot, cowbell, chime) or shaker, each a model of how that drum makes its sound, with its own knobs (a kick's pitch, how far and fast it drops, its length, click, beater, knock, sub; a snare's tuning, body and wires; drive, tone and Old sampler, a 1980s sampler's grit, on most). Start from one of its starting points, turn the knobs, ▶ Hear it; 🎲 Surprise makes a new one near a starting point, ↻ New strike the same with different noise. ＋ Add puts it in a kit of yours (up to 16 hits; New kit makes one), which loads on a drum sound (9–16) from Menu › Sounds › My packs; ★ Save keeps it alone in My Sounds. <b>🎹 Synth</b>: two waves (sine, triangle, saw, square; the second tuned and detuned), a sub an octave down, noise, unison voices; a filter (low, band or high pass) with resonance and an envelope that opens it; the volume's attack, decay, sustain and release; vibrato, a glide into each note, and drive. Start from Warm pad, Analog bass, Pluck, Supersaw lead, Howl, Bell keys or Organ, in a Bass, Middle or High range. ▶ Hear it plays one note, tapped then held; Put on sound records the whole instrument (a note every 6 half steps, tapped and held, a seamless loop for held notes) onto that sound, to play and record into patterns and loops; ★ Save keeps it in My Sounds. Every sound made here is made once and kept as a recording.</p>
+    <p><b>Design</b> (Menu › Design): make your own sounds. <b>🥁 Drum hit</b>: a kick, snare, clap, hat, open hat or ride, tom, percussion (wood, metal or glass: a woodblock, rimshot, cowbell, chime) or shaker, each a model of how that drum makes its sound, with its own knobs (a kick's pitch, how far and fast it drops, its length, click, beater, knock, sub; a snare's tuning, body and wires; drive, tone and Old sampler, a 1980s sampler's grit, on most). Start from one of its starting points, turn the knobs, ▶ Hear it; 🎲 Surprise makes a new one near a starting point, ↻ New strike the same with different noise. Each pitch shows its note (52 Hz A♭1), and ♪ In key tunes the drum to the nearest note of the song's key. <b>Finish</b>, for every drum: Soften the hit (less click), Low cut and High cut (so a layer keeps to its own range), Layer (a second drum under it, from any starting point, lined up so they never flam, at Layer level), Room (a short real room, baked in) and Reverse. ＋ Add puts it in a kit of yours (up to 16 hits; New kit makes one), which loads on a drum sound (9–16) from Menu › Sounds › My packs; ★ Save keeps it alone in My Sounds. <b>🎹 Synth</b>: two waves (sine, triangle, saw, square; the second tuned and detuned), a sub an octave down, noise, unison voices; a filter (low, band or high pass) with resonance and an envelope that opens it; the volume's attack, decay, sustain and release; vibrato, a glide into each note, and drive. Start from Warm pad, Analog bass, Pluck, Supersaw lead, Howl, Bell keys or Organ, in a Bass, Middle or High range. ▶ Hear it plays one note, tapped then held; Put on sound records the whole instrument (a note every 6 half steps, tapped and held, a seamless loop for held notes) onto that sound, to play and record into patterns and loops; ★ Save keeps it in My Sounds. Every sound made here is made once and kept as a recording.</p>
+    <p><b>🥁 Design in the Loops</b>: hold a cell for its settings, and its third tab, 🥁 Design, makes a hit and puts it straight in: tap the steps of one bar (on, soft, off; the column suggests a start: kicks on 1 and 3, snares on 2 and 4, hats in eighths), make the hit below (the same designer as Menu › Design), ▶ Hear the bar, and ✓ Put in this cell: a one-bar loop at the song's tempo and swing, playing from the next bar, also kept in the library (My loops). An empty cell has 🥁 Design a hit at the top of its picker.</p>
     <p><b>Sets and pack files</b> (Loops › ⚙): 💾 Save the grid as a set keeps the whole grid (every cell and its settings, the column effects, tempo, key and reverb) in My sets, to load again in one tap (hold one to share, rename or delete it). ⬆ Share as a pack file makes one file with the grid and every sound of yours in it, to keep in Files or iCloud Drive; ⬇ Open a pack file (or My Sounds › ⬆ Import) opens one on any device: its sounds go into My Sounds and its set into My sets. My Sounds › ⬆ Share as a pack file puts all your sounds in one file (a backup, too).</p>
     <p><b>☁ Send to the library</b> (Menu › Sounds › My Sounds): sends a pack (the Loops grid, all your sounds, one sound, or a pack file) with notes on it (what it is; who made it: you, a recording you made of something else, or someone else, with where it is from and its license) to the repository, so it is kept for good and shows on every device in Menu › Sounds › <b>☁ Shared</b> at once (tap one to add it to My Sounds). It needs a GitHub token, once on each device: a fine-grained token for munkachy/Monastic-games only, with Contents: Read and write; it is kept only in that browser (Forget my token clears it). Tell Claude, and what you sent is filed in the library and in the list of every sound and its license.</p>
     <p><b>⟳ Make a loop</b> (an amber button, ⟳ Loop): the pattern, or the chain of patterns as one long loop, made into a loop for the library. Name it, choose the folder it goes in (Beats, Bass, Chords, Lead, Sub, Vox and keys, Pads…; it guesses from what plays) and what plays in it (everything, everything but the drums, or only the drums); ▶ Hear it, then Save. It is then in that folder of Menu › Sounds (your loops first), in My Sounds, and in the Loops cells' sounds (My loops), and keeps time at any tempo. It is kept on this device.</p>
@@ -1077,6 +1087,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023zo"></script>
+<script type="module" src="app.js?v=20261023zp"></script>
 </body>
 </html>

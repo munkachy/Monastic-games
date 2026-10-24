@@ -60,7 +60,8 @@ Selling: **Yes** = the license allows commercial use (with the credit asked for)
 Sounds he designs (Menu › Design), records (● Rec, ⏺ Loop rec) or makes into loops are his own, kept
 on his devices; what he sends to the library comes in with his notes (tools/inbox.py files it below).
 A recording he makes of someone else's music or sounds carries that source's license, which he
-gives when he sends it.
+gives when he sends it. A hit designed with Room on has the Aalto meeting room's recording (CC BY
+4.0, above) baked into it: credit as that reverb.
 
 ## If it were ever sold
 
