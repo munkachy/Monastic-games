@@ -119,47 +119,12 @@ The first build: the arena, played with the phone sideways. The name is from the
 A 16-key pocket sampler and step sequencer, played like a Teenage Engineering
 PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 
-- **Sixteen sounds.** 1–8 are melodic and play up a scale: 808 bass, dubstep
-  wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
-  and choir. 9–16 are kits, one hit per key: a real acoustic drum kit and
-  hand percussion, 808 and 909 kits drawn in code, then blips, lasers,
-  glitches and coins. *Load sound* puts any of 50 sounds on any key:
-  - **Bass:** 808, sub, wobble, growl, Reese, analog, square, FM and acid
-    synths, and a real upright bass and electric bass.
-  - **Keys:** grand and upright piano, FM electric piano, harpsichord, pipe
-    organ, Renaissance organ, vibraphone, marimba, kalimba, harp, tubular bells
-    and glockenspiel, all recorded, each key playing the nearest recording.
-  - **Synth:** supersaw, strings, warm pad, brass, choir, FM bell, glass keys.
-  - **Drum kits** (chosen in the Beat menu): three recorded acoustic kits (jazz, a big 1980s kit, a
-    brush kit), a lo-fi kit, hand percussion, and 808, 909, CR-78, 606 and
-    minimal kits drawn in code.
-- **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
-  techno, Afro house, dembow, drum & bass, dubstep and jazz swing, on
-  whatever kit you've chosen; **🎲 Make a new one** makes a new one in
-  that style each time, and the **🎲 Vary** button keeps the beat you
-  have and makes one or two small changes a drummer might (a pushed kick,
-  ghost notes, an open hat, a little fill), always from the same beat. **↶ Undo / ↷ Redo** for every change.
-- **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
-  is chopped at each syllable or hit, one per key; drag the markers on the
-  screen to move the cuts. It can also resample the beat that's playing.
-- **Voice:** type words and Vox Machina's eSpeak engine says them onto the
-  current sound, with tone variation (0 = flat monotone) and vowel length.
-  On 9–16 it is cut into syllables, one per key, named on the keys: eSpeak's
-  own phonetics give the exact syllables and which are stressed. Cut
-  *Natural* (the line spoken whole, cut at the quiet dips) or
-  *Robot-precise* (each syllable spoken alone, every cut clean).
-  **🎤 Rap it on the beat** writes the syllables into the pattern in a flow:
-  steady 1/16, 1/8 or 1/4, old school, boom bap, laid back, triplet,
-  syncopated, chopper (double time) or mixed, with stressed syllables put
-  on the beat (off it, for syncopated) and a breath at commas and full
-  stops, chaining on into the next patterns when it needs more bars.
-  **🎲 New flow** lays the same rap out in another flow.
-- **Psalms for the voice:** pick a psalm and a verse (or a run of verses)
-  from the built-in Douay-Rheims, or from your own Grail file (the psalter
-  pack Selah takes, kept in the browser on your device and never sent
-  anywhere), and its words go into the voice box, a line per half-verse.
-- **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
-  hit, jump, blip, glitch) on the last key played, or a whole kit of them.
+- **Sixteen instruments.** The Pads are for instruments; the drums, the robot
+  voice and the rap live in the Loops (🥁 Design a hit, 🤖 Robot words). Four
+  of each part, in shades of its colour: bass (808, Reese, electric, upright),
+  keys (Rhodes, grand piano, FM e-piano, organ), lead (supersaw, violin, chip,
+  brass) and pads (warm pad, strings, Vigil Strings, Night Swarm). Any
+  instrument from Menu › Sounds can go on any of the 16.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
 - **Key wheel:** tap the key on the screen. Majors and minors in
@@ -198,14 +163,13 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   reverb, fewer notes at once, loops made ready only when tapped. The app
   suggests it when it hears the sound breaking up; sounds only previewed
   are let go to save memory, on any device.
-- **Sideways:** twenty of your blue buttons, full size, on the left.
 - **Tags:** REC (a recording), GEN (made in code beforehand and kept as a
   recording), MINE (yours), on every sound.
 - **Everything made in code is played from a recording.** The synths (a
   note every 6 half steps, with a held take that loops seamlessly) and the
   808, 909, CR-78, 606 and Minimal kits are recorded once with the app's own
-  engine and played back as WAVs, which is far easier on a phone than making
-  each note as it plays. **☆ Favorite** and
+  engine and played back as WAVs,
+  which is far easier on a phone than making each note as it plays. **☆ Favorite** and
   **★ Save to My Sounds** under Load in the sound browser.
 - **⟳ Make a loop:** the pattern, or a chain as one long loop, into the
   library: name it, choose its folder (Bass, Chords...) and whether the
@@ -223,45 +187,54 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   responses) for every reverb: the Lady Chapels of St Albans and Ely
   Cathedrals, the St. Nicholas Chapel of Aachen Cathedral, a church in
   Cremona, a stairwell and a meeting room (OpenAIR, University of York, and
-  Zenodo datasets; CC BY 4.0, credited in Help).
+  Zenodo datasets; CC BY 4.0, credited in Help), made ready by
+ .
 - **⏺ Loop rec:** record over the beat or the Loops straight into a loop,
   as notes (fixable as patterns first) or as sound (the pads alone, or
   everything, like a looper pedal); it starts on the next bar and goes in
   the Loops and the library.
-- **Design** (Menu › Design): drum hits (kick, snare, clap, hats, tom,
-  percussion, shaker: models with knobs) and synths (two waves, filter,
-  envelopes, vibrato, unison), made once into recordings, into kits and
-  My Sounds.
+- **Design** (Menu › Design, `pocket-sampler/design.js`): drum hits
+  (kick, snare, clap, hats, tom, percussion, shaker: models with knobs)
+  and synths (two waves, filter, envelopes, vibrato, unison), made once
+  into recordings, into kits and My Sounds.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
   slices, or its first note pitched across the key.
+- **🥁 Design in a Loops cell** (hold a cell, third tab): make a hit, tap
+  its steps (up to 6 lines, a drum on each), and put the bar straight
+  into the cell as a loop. Basic or Advanced shows a few knobs or all. The
+  designer can also tune a drum to the key, soften its click, cut its low
+  or high end, layer a second drum, bake in a short room, or reverse it.
 - **⏺ Rec in Loops + Pads:** what you play on the pads, recorded as notes
   into a loop cell (🎹 From the pads, in a cell's picker, chooses which).
   Hold the cell for 🎹 Notes: drag notes along the beat, tap to delete.
-- **🥁 Design in a Loops cell** (hold a cell, third tab): make a hit, tap
-  its steps, and put the bar straight into the cell as a loop. The
-  designer can also tune a drum to the key, soften its click, cut its low
-  or high end, layer a second drum, bake in a short room, or reverse it.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,
-  license) go to the library; ☁ Shared shows it on every device.
+  license) go to the repository's library-inbox branch; ☁ Shared shows
+  it on every device; files it.
 - **Vigils loop set** (Loops › ⚙ › Sets): night electronica in G minor at
   144 BPM, broken beats, inspired by Remixlive's "Breakpoint Electro" and
   borrowing nothing from it: its own Plaits kit and kick, snare and tops
   loops; bass, pads, the abbey organ and choir, celestial arpeggios and a
   howling lead, sub and rain; and words of the Rule of St Benedict in
   pairs (A little rule… / …for beginners), robot cells whose words can be
-  changed. It brings its own column effects and the Aachen chapel's reverb.
-- **New sounds for Vigils:** eight instruments made with Plaits' engines
-  and kept as recordings: Vigil Strings, Night Swarm, Chant, Cloister Bass,
-  Howl, Lauds Pluck, Compline Bell and Night Glass.
-- **Old records:** real record noise in place of the made-up vinyl: the
-  run-in and run-out grooves of Edison's own discs and cylinders
-  (1888-1925, public domain), looped seamlessly.
-- **Drums made with Plaits:** each pack's kit is made with Mutable
-  Instruments Plaits' drum engines (MIT), shaped and checked against the
-  recorded kits, with kick, snare and tops loops of it.
+  changed. It brings its own column effects and the Aachen chapel's reverb
+ .
+- **New sounds for Vigils**: eight
+  instruments made with Plaits' engines and kept as recordings: Vigil
+  Strings (the string machine), Night Swarm, Chant (the formant voice),
+  Cloister Bass, Howl, Lauds Pluck, Compline Bell and Night Glass, each
+  checked as it is made to play the note asked.
+- **Old records**: real record noise in
+  place of the made-up vinyl: the run-in and run-out grooves of Edison's
+  own discs and cylinders (1888-1925, public domain), looped seamlessly.
+- **Drum lab**: drum hits made with
+  Mutable Instruments Plaits' drum engines (MIT), shaped (old-sampler grit,
+  saturation, layers, tuned to the key) and measured against every hit of
+  the recorded kits (attack, decay, brightness, pitch, noisiness), with a
+  picture of each beside the closest real one; then each pack's kit, and
+  its kick, snare and tops loops.
 - **Per-loop fade, robot words, reverb in the Loops:** hold a cell for its
   own fade in and out; for a robot voice, its words and voice at the top of Settings
   (type what it says, choose the voice, 🔄 Update); EQ & Effect chooses the reverb space for the song.
@@ -333,7 +306,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   New Orleans, blues shuffle, dance), every hit at the drummer's own timing
   and loudness, on the acoustic kit: two steady bars from performances in
   the [Groove MIDI Dataset](https://magenta.tensorflow.org/datasets/groove)
-  (Gillick, Roberts, Engel, Eck and Bamman, Magenta, 2019; CC BY 4.0).
+  (Gillick, Roberts, Engel, Eck and Bamman, Magenta, 2019; CC BY 4.0)
+ .
 - **Beats played by drummers** (Menu › Rhythm › Drum beat): 56 one-bar beats
   in 17 styles from the same dataset, each hit at the drummer's timing and
   loudness, put on whatever kit is chosen; the app's own patterns are
@@ -381,13 +355,15 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   [Big Rusty Drums](https://github.com/sfzinstruments/karoryfer.big-rusty-drums),
   [Swirly Drums](https://github.com/sfzinstruments/karoryfer.swirly-drums),
   [Meatbass](https://github.com/sfzinstruments/karoryfer.meatbass),
-  [Growlybass](https://github.com/sfzinstruments/karoryfer.growlybass)).
+  [Growlybass](https://github.com/sfzinstruments/karoryfer.growlybass));
+  and `kits.py` build them.
 - The Acoustic Kit and Percussion are from Karoryfer Samples' [Virtuosity
   Drums](https://github.com/sfzinstruments/virtuosity_drums), played by
-  Austin McMahon (CC0).
+  Austin McMahon (CC0); builds them.
 - The video-game sounds are CC0, from Juhani Junkala's [Essential Retro Video
   Game Sound Effects Collection](https://opengameart.org/content/512-sound-effects-8-bit-style)
-  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001).
+  and Deva's [8-bit Sound Effect Pack](https://opengameart.org/content/8-bit-sound-effect-pack-vol-001);
+  builds the banks from them.
 
 ### [Vox Machina](https://munkachy.github.io/Monastic-games/vox-machina/)
 

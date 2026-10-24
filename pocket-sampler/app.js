@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zw';
+import * as DZ from './design.js?v=20261023zx';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zw';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zx';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -255,9 +255,10 @@ $('spaceSel').addEventListener('change', () => chooseSpace($('spaceSel').value))
 $('lmSpace').addEventListener('change', () => chooseSpace($('lmSpace').value));
 loadSpace();
 // Sounds 1-8 are instruments, one part each (its colour); 9-16 are drums.
-const DEFAULT = ['bass808', 'subsine', 'rhodes', 'chip', 'choir', 'pad', 'pluck', 'brass',
-  'acoustic', 'boombap', 'kit808', 'kit909', 'tr808', 'electro', 'percussion', 'shakers'];
-const PART = ['Bass', 'Sub', 'Chords', 'Lead', 'Vox/Keys', 'Pad', 'Pluck/Arp', 'Stab/FX', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums', 'Drums'];
+// The Pads are for instruments (the drums are the Loops'): four each of bass, keys, lead and pads.
+const DEFAULT = ['bass808', 'reese', 'elecbass', 'uprightbass', 'rhodes', 'piano', 'epiano', 'organ',
+  'supersaw', 'violin', 'chip', 'brass', 'pad', 'strings', 'vigstrings', 'vigswarm'];
+const PART = ['Bass', 'Bass', 'Bass', 'Bass', 'Chords', 'Chords', 'Chords', 'Chords', 'Lead', 'Lead', 'Lead', 'Lead', 'Pad', 'Pad', 'Pad', 'Pad'];
 // The first version saved sounds by number, in this order.
 const OLD_ORDER = ['bass808', 'wobble', 'reese', 'acid', 'chip', 'pluck', 'organ', 'choir',
   'kit808', 'kit909', 'hits', 'blips', 'lasers', 'glitch', 'coins', 'robots'];
@@ -307,9 +308,8 @@ const DEFAULT_SLOTS = ['loop4', 'loop8', 'loop16', 'roll32', 'scratch', 'half', 
   'octup', 'octdown', 'reverse', 'chorus', 'crush', 'lowpass', 'reverb', 'pingpong'];
 // Your buttons, a row (sideways) for each kind of thing, in that kind's colour: rhythm, pitch and key, the sound,
 // the voice, effects. Upright, the first four sit beside Copy and Undo and the next eight under the keys.
-const DEFAULT_CUSTOM_IDS = ['mute', 'beat', 'chain', 'beats',
-  'octdown', 'octup', 'key', 'nextkey', 'makeloop', 'edit', 'clear', 'looprec',
-  'rap', 'newflow', 'hearrap', 'robot', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
+const DEFAULT_CUSTOM_IDS = ['chain', 'octdown', 'octup', 'key',
+  'makeloop', 'edit', 'clear', 'looprec', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:crush'];
 const OLD_CUSTOM_IDS = ['mute', 'export', 'roll', 'beat', 'octdown', 'octup', 'key', 'nextkey', 'rap', 'newflow', 'hearrap', 'chain',
   'clear', 'edit', 'beats', 'fx:reverb', 'fx:echo', 'fx:lowpass', 'fx:roll32', 'fx:crush'];   // before the rows had colours
 const S = {
@@ -318,7 +318,7 @@ const S = {
   fx: Array.from({ length: 16 }, () => new Array(16).fill(null)),   // effects saved on steps
   patKeys: new Array(16).fill(null),
   oct: new Array(16).fill(0),          // each sound's octave for the keys you play (−2 to +2); saved with what you record   // a key saved in a pattern ({ root, scale }), or null: it plays in whatever key is set
-  custom: [...DEFAULT_CUSTOM_IDS], quiet20: true, pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
+  custom: [...DEFAULT_CUSTOM_IDS], quiet20: true, inst16: true, pat: 0, chain: [0], bpm: 120, swing: 50, scale: 'minor', root: 0, vol: 0.9, quantGrid: 1, fxTarget: 'all', fxAmt: {}, fxSlots: [...DEFAULT_SLOTS], fxLatch: true, write: false, replace: false,
 };
 const stepDur = () => 60 / S.bpm / 4;
 
@@ -743,7 +743,7 @@ function press(k) {
   switch (S.mode) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
-      if (!copying && (k < 8) !== (soundPage === 'inst')) break;      // the other side's pads are dim
+
       S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); break;   // a taste: never left looping
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
@@ -946,11 +946,8 @@ let soundPage = 'inst';
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   const m = b.dataset.mode;
   if (m === 'sound' && !copying) {
-    if (S.mode !== 'sound') { S.mode = 'sound'; soundPage = 'inst'; }
-    else if (soundPage === 'inst') soundPage = 'perc';
-    else S.mode = 'play';
-    status(S.mode !== 'sound' ? '' : soundPage === 'inst' ? 'Instruments: tap a sound (1–8). Sound again for the drums.'
-      : 'Drums: tap a kit (9–16). Its hits are the 16 keys, each in its colour. Sound again to play.');
+    S.mode = S.mode === 'sound' ? 'play' : 'sound'; soundPage = 'inst';
+    status(S.mode === 'sound' ? 'Tap a sound (1–16). Sound again to play.' : '');
   } else S.mode = S.mode === m ? 'play' : m;
   if (S.mode !== 'fx' && !S.fxLatch) for (const f of [...activeFx]) releaseFx(f);
   if (S.mode !== 'pattern' && chainEdit) setChainEdit(false);
@@ -1018,18 +1015,12 @@ async function finishRec(chunks, type, src) {
   } catch (e) { status('Could not read the recording: ' + e.message); }
 }
 
-// Put a new sound on a slot: pitched on 1-8, chopped on 9-16.
+// Put a new sound on a slot: pitched across the keys (key 8 the original).
 function assignBuffer(si, buf, name) {
   checkpoint();
-  const slot = { factory: null, name, params: { ...defParams(), choke: true }, buf };
-  if (si < 8) slot.kind = 'sample';
-  else {
-    const st = onsets(buf, 16);
-    Object.assign(slot, { kind: 'chop', contiguous: true,
-      slices: st.map((s, k) => ({ s, e: st[k + 1] ?? buf.duration, name: `slice ${k + 1}` })) });
-  }
-  S.slots[si] = slot; S.lastKey[si] = si < 8 ? 7 : 0;
-  status(`${name} → sound ${si + 1} (${buf.duration.toFixed(1)} s${si < 8 ? ', key 8 is the original pitch' : ', chopped into 16'})`);
+  const slot = { factory: null, name, params: { ...defParams(), choke: true }, buf, kind: 'sample' };
+  S.slots[si] = slot; S.lastKey[si] = 7;
+  status(`${name} → sound ${si + 1} (${buf.duration.toFixed(1)} s, key 8 is the original pitch)`);
   syncPanel(); dirty(); draw();
   noteOn(eng, si, S.lastKey[si], ctx.currentTime + 0.02);
 }
@@ -1203,7 +1194,9 @@ const EMPTY = { Songs: 'No songs yet: the songs Claude builds for you will be he
 const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
 // What can be chosen in the browser: { lib: id } a built-in sound, { mine: record } one of yours,
 // { from: chosen pack, k } one sound inside a pack.
-let bPath = [TREE], bSel = null, mine = [];
+const NOT_PADS = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Drum kits', 'Songs'];
+const PADS_TREE = ['Sounds', TREE[1].filter(f => !NOT_PADS.includes(f[0]))];
+let bPath = [PADS_TREE], bSel = null, mine = [];
 const previews = new Map();
 const selName = c => c.song ? `${c.song.name} (${c.song.by})` : c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
 const selPack = c => (c.lib ? isPack(c.lib) : c.mine ? c.mine.type === 'pack' : false);
@@ -1366,8 +1359,7 @@ const isKitLib = id => KITS_MENU.some(([, ids]) => ids.includes(id)) || ['percus
 const isInstLib = id => !!(LIBRARY[id]?.synth || LIBRARY[id]?.multi);
 function sideRefuses(c) {
   if (!c.lib) return '';
-  if (isKitLib(c.lib) && !drumSide(S.cur)) return `${LIBRARY[c.lib].name} is drums: they go on the drum pads. Sound, Sound again (🥁 Drums), tap a kit, then load it.`;
-  if (isInstLib(c.lib) && drumSide(S.cur)) return `${LIBRARY[c.lib].name} is an instrument: it goes on sounds 1–8. Sound (🎹 Instr.), tap one, then load it.`;
+  if (isKitLib(c.lib)) return `${LIBRARY[c.lib].name} is drums: they live in the Loops now (a cell's picker, or 🥁 Design a hit); the Pads are for instruments.`;
   return '';
 }
 
@@ -1506,7 +1498,7 @@ $('bLoad').addEventListener('click', async () => {
   if (bSel.lib) await loadLibrary(bSel.lib);
   else {
     checkpoint();
-    S.slots[S.cur] = await slotOf(bSel); S.lastKey[S.cur] = S.cur < 8 && S.slots[S.cur].kind === 'sample' ? 7 : 0;
+    S.slots[S.cur] = await slotOf(bSel); S.lastKey[S.cur] = S.slots[S.cur].kind === 'sample' ? 7 : 0;
     syncPanel(); dirty(); draw(); status(`${S.slots[S.cur].name} → sound ${S.cur + 1}.`);
   }
   closeMenu(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.01);
@@ -1766,7 +1758,7 @@ function edResult() {
 }
 function slotFromEd(si, name) {
   const { buf, cuts } = edResult();
-  if (si < 8 && !cuts.length) return { factory: null, kind: 'sample', name, params: { ...defParams(), choke: true }, buf };
+  if (!cuts.length) return { factory: null, kind: 'sample', name, params: { ...defParams(), choke: true }, buf };
   const st = [0, ...cuts];
   return { factory: null, kind: 'chop', contiguous: true, name, params: { ...defParams(), choke: true }, buf,
     slices: st.map((s, k) => ({ s, e: st[k + 1] ?? buf.duration, name: `piece ${k + 1}` })) };
@@ -1808,26 +1800,16 @@ $('menuClose').addEventListener('click', closeMenu);
 // ---------------------------------------------------------------------------
 const THEMES = [['rhythm', 'Rhythm (red)'], ['pitch', 'Pitch and key (purple)'], ['sound', 'The sound (amber)'], ['voice', 'Voice (blue)']];
 const ACTIONS = {
-  mute: { th: 'rhythm', name: 'Mute drums', label: () => 'Mute', on: () => !!S.muteBeat, tap: () => toggleMute() },
-  beat: { th: 'rhythm', name: 'Vary the beat (the same beat, a small change)', label: () => '🎲 Vary', tap: () => varyBeat() },
-  newbeat: { th: 'rhythm', name: 'New beat (in the style chosen on the Rhythm page)', label: () => '🎲 New', tap: () => genBeat() },
   chain: { th: 'rhythm', name: 'Chain: tap, choose patterns, tap again (twice with none: unchain)', label: () => (chainEdit ? 'Done' : 'Chain'), on: () => chainEdit, tap: () => setChainEdit(!chainEdit) },
-  beats: { th: 'rhythm', name: 'Rhythm (open the Rhythm page: kit, beat, bass)', label: () => 'Rhythm', tap: () => openMenu('tBeat') },
   octdown: { th: 'pitch', name: 'Octave down', label: () => (octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'), on: () => octOf(S.cur) < 0, tap: () => shiftOct(-1) },
   octup: { th: 'pitch', name: 'Octave up', label: () => (octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'), on: () => octOf(S.cur) > 0, tap: () => shiftOct(1) },
   key: { th: 'pitch', name: 'Key wheel', label: () => 'Key', tap: () => ($('wheel').hidden ? openWheel() : closeWheel()) },
-  nextkey: { th: 'pitch', name: 'Next key', label: () => 'Key ▸', tap: () => nextKey() },
   roll: { th: 'sound', name: 'Roll a sound', label: () => '🎲 Roll', tap: () => roll(false) },
   edit: { th: 'sound', name: 'Edit sound', label: () => '✂ Edit', tap: () => editCurrent() },
   clear: { th: 'sound', name: 'Clear (the pattern; in Sound mode, the sound)', label: () => 'Clear', tap: () => (S.mode === 'sound' ? clearSlot(S.cur) : $('clearPat').click()) },
   makeloop: { th: 'sound', name: 'Make a loop (the pattern or chain, into the library)', label: () => '⟳ Loop', tap: () => openMakeLoop() },
   export: { th: 'sound', name: 'Export loop', label: () => '⬆ Export', tap: () => openExport() },
   looprec: { th: 'sound', name: 'Loop rec: record what you play over the beat, straight into a loop', label: () => lrLabel(), on: () => !!lrTake, tap: () => lrTap() },
-  rap: { th: 'voice', name: 'Rap it: the words typed, on this sound', label: () => '🎤 Rap', tap: () => $('rapIt').click() },
-  newflow: { th: 'voice', name: 'New flow for the rap on this sound', label: () => '🎲 Flow', tap: () => $('rapNew').click() },
-  hearrap: { th: 'voice', name: 'Hear the rap on its own', label: () => (rapPv ? '■ Stop' : '▶ Rap'), on: () => !!rapPv, tap: () => hearRap() },
-  voice: { th: 'voice', name: 'Robot voice (open the Voice page)', label: () => '🤖 Voice', tap: () => openMenu('tVoice') },
-  robot: { th: 'voice', name: 'Robot pads: type words on the pads', label: () => (S.mode === 'robot' ? '🤖 Done' : '🤖 Robot'), on: () => S.mode === 'robot', tap: () => toggleRobot() },
   ...Object.fromEntries(Object.entries(FX).map(([id, [n]]) => [`fx:${id}`, { th: 'fx', name: `FX: ${n}`, label: () => n, fx: id, on: () => activeFx.has(id) }])),
 };
 const DEFAULT_CUSTOM = DEFAULT_CUSTOM_IDS;
@@ -2007,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zw'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zx'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zw'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zx'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2723,8 +2705,7 @@ const cv = $('wave'), g = cv.getContext('2d');
 function keyLabel(k) {
   const sl = S.slots[S.cur]; if (!sl) return '';
   switch (S.mode) {
-    case 'sound': if (!copying && (k < 8) !== (soundPage === 'inst')) return '';
-      return k < 8 ? `${PART[k]} · ${S.slots[k]?.name || ''}` : `Kit · ${S.slots[k]?.name || ''}`;
+    case 'sound': return `${PART[k]} · ${S.slots[k]?.name || ''}`;
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
     case 'fx': return FX[S.fxSlots[k]][0];
     case 'play': if (S.write && !playing) {
@@ -2795,7 +2776,7 @@ function hitPart(name = '') {
 // sound order. One fills the step; 2-4 split it side by side; 5 or more make a grid. Each
 // block is dark and see-through, with a neon edge (the CSS for .key.steps).
 // Which side Write shows: the drums when a kit (9-16) is the sound chosen, else the instruments.
-const drumSide = si => si >= 8;
+const drumSide = () => false;          // (the Pads were kits on 9-16; now all 16 are instruments)
 const wview = () => (drumSide(S.cur) ? 'perc' : 'inst');
 // A key's colour: an instrument's is its part's; a kit's keys are each their hit's (kick red, snare orange...).
 const keyColor = (si, k) => (drumSide(si) && S.slots[si]?.kind === 'chop' ? `var(--c-${hitPart(S.slots[si].slices[k]?.name)})` : soundVar(si));
@@ -2843,7 +2824,7 @@ function draw() {
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
   $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
   const sb = document.querySelector('[data-mode=sound]');
-  sb.textContent = S.mode !== 'sound' ? 'Sound' : soundPage === 'inst' ? '🎹 Instr.' : '🥁 Drums';
+  sb.textContent = 'Sound';
   for (let k = 0; k < 16; k++) {
     const el = keyEls[k], steps = S.patterns[S.pat][k];
     let lit = false, some = false, cur = false;
@@ -2858,7 +2839,7 @@ function draw() {
     }
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
-    const away = S.mode === 'sound' && !copying && (k < 8) !== (soundPage === 'inst');      // the other side, in Sound
+    const away = false;
     if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : keyColor(S.cur, k));
     el.classList.toggle('tint', tint && !away); el.classList.toggle('away', away);
     el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('kitpad', S.mode === 'sound' && drumSide(k)); el.classList.toggle('steps', steps_);
@@ -3550,9 +3531,9 @@ async function load() {
     const r = await idbGet('bufs', id); if (!r) return null;
     const b = ctx.createBuffer(1, r.data.length, r.rate); b.copyToChannel(r.data, 0); b.id = id; stored.add(id); return b;
   };
-  const gone = new Set();
+  const gone = new Set(), fresh = saved && !saved.inst16;       // the Pads made instruments only: the old sounds and patterns go, once
   for (let i = 0; i < 16; i++) {
-    const s = saved?.slots?.[i];
+    const s = fresh ? null : saved?.slots?.[i];
     try {
       const withdrawn = /Good Day/.test(s?.credit || '');     // the song pack taken out: its sounds go, the usual ones come back
       if (withdrawn) gone.add(i);
@@ -3596,20 +3577,19 @@ async function load() {
     if (S.custom[15] === 'voice' && S.custom.every((c, i) => i === 15 || c === DEFAULT_CUSTOM_IDS[i] || (i === 8 && c === 'roll'))) S.custom[15] = 'robot';   // 🤖 Robot took Voice's place
     if (S.custom[8] === 'roll' && S.custom.every((c, i) => i === 8 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[8] = 'makeloop';   // ⟳ Loop took Roll's place
     if (S.custom[11] === 'export' && S.custom.every((c, i) => i === 11 || c === DEFAULT_CUSTOM_IDS[i])) S.custom[11] = 'looprec';   // ⏺ Loop rec took Export's place (Export is in Menu › Rhythm)
+    if (fresh) {
+      S.custom = [...DEFAULT_CUSTOM_IDS]; S.muteBeat = false; S.cur = 0; S.oct = new Array(16).fill(0); S.lastKey = new Array(16).fill(7);
+      S.patterns = Array.from({ length: 16 }, () => Array.from({ length: 16 }, () => []));
+      S.fx = Array.from({ length: 16 }, () => new Array(16).fill(null)); S.patKeys = new Array(16).fill(null); S.pat = 0; S.chain = [0];
+    }
   }
-  else demo();
+
   setVolume(); syncPanel(); draw();
   committed = snapshot();
 }
 // Sound settings saved by an older version had a low-pass "tone" instead of the filter.
 function params(p) { const { tone, ...rest } = p || {}; return { ...defParams(), ...rest }; }
 // A first beat, so pressing play does something.
-function demo() {
-  S.cur = 8; putBeat(STYLES.boombap, 8, false);
-  const P = S.patterns[0], put = (s, k, steps) => steps.forEach(i => P[i].push({ s, k }));
-  put(0, 0, [0, 7]); put(0, 2, [10]); put(0, 4, [11]);
-  put(14, 0, [3]); put(14, 2, [14]);
-}
 
 // ---------------------------------------------------------------------------
 // The Loops tab: a grid like Remixlive's. Eight columns (channels) in their
@@ -5581,7 +5561,7 @@ async function dzInstrument() {
   return { factory: null, kind: 'multi', name, params: { ...defParams(), vol: 0.5, trig: 'gate' }, buf: b, base: r.base, zones: r.zones, holdLoop: true, made: 'MINE' };
 }
 $('dzSLoad').addEventListener('click', async () => {
-  const si = S.cur < 8 ? S.cur : 0, sl = await dzInstrument();
+  const si = S.cur, sl = await dzInstrument();
   checkpoint(); S.slots[si] = sl; S.cur = si; S.lastKey[si] = 0; syncPanel(); dirty(); draw();
   status(`${sl.name} → sound ${si + 1}: play it on the keys (Gate holds the notes). ★ Save keeps it in My Sounds.`);
   noteOn(eng, si, 0, ctx.currentTime + 0.02);
@@ -5594,7 +5574,7 @@ document.querySelectorAll('[data-dz]').forEach(b => b.addEventListener('click', 
 dzSetSynth('Warm pad');
 dzRedraws.add(() => { if (dz.sp.wave1 != null) dzDrawSynth(); });
 $('dzModeBox').appendChild(dzModeButtons());
-document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => { dzKits(); $('dzSLoad').textContent = `Put on sound ${S.cur < 8 ? S.cur + 1 : 1}`; });
+document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => { dzKits(); $('dzSLoad').textContent = `Put on sound ${S.cur + 1}`; });
 
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
   grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
@@ -5603,6 +5583,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   press: k => press(k), release: k => release(k),
   state: () => S,
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
+  cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
     const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
     for (let f = 0; f * F < x.length; f++) { let q = 0; for (let i = f * F; i < Math.min(x.length, (f + 1) * F); i++) q += x[i] * x[i]; e.push(Math.sqrt(q / F)); top = Math.max(top, e.at(-1)); }
