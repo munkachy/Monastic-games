@@ -343,18 +343,27 @@ function slicePoints(x, rate, bpm) {
     if (en[i] > before * 1.25 && en[i] > m * 0.4 && en[i] >= en[i + 1] * 0.8 && i - last >= G) { pts.push(Math.max(0, (i - 1) * hop)); last = i; }
   }
   if (bpm) {
-    const st = 60 / bpm / 4 * rate, near = 0.035 * rate;
-    for (let t = st; t < x.length - st / 4; t += st) if (!pts.some(p => Math.abs(p - t) < near)) pts.push(Math.round(t));
+    // the 16th-note grid, for soft hits the onsets missed: only where the sound has died down (under a
+    // third of the loudest over the 16th before), never through a note still ringing (a long 808
+    // kick cut there sixteen times a bar crackles)
+    const st = 60 / bpm / 4 * rate, near = 0.035 * rate, lvl = i => { let m = 0; for (let j = Math.max(0, i - 64); j < Math.min(x.length, i + 64); j++) m = Math.max(m, Math.abs(x[j])); return m; };
+    for (let t = st; t < x.length - st / 4; t += st) {
+      if (pts.some(p => Math.abs(p - t) < near)) continue;
+      let before = 0; for (let j = Math.max(0, Math.round(t - st)); j < t; j += 32) before = Math.max(before, Math.abs(x[j]));
+      if (lvl(Math.round(t)) < before / 3) pts.push(Math.round(t));
+    }
     pts.sort((a, b) => a - b);
   }
   return pts;
 }
 function sliceStretch(x, rate, factor, bpm) {
-  const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N), fade = Math.round(0.006 * rate);
+  const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N), fade = Math.round(0.006 * rate), rise = Math.round(0.001 * rate);
   for (let k = 0; k < pts.length; k++) {
     const a = pts[k], b = k + 1 < pts.length ? pts[k + 1] : x.length, o = Math.round(a * factor);
     const room = (k + 1 < pts.length ? Math.round(b * factor) : N) - o, len = Math.min(b - a, room);
-    for (let i = 0; i < len && o + i < N; i++) out[o + i] += x[a + i] * (i > len - fade ? (len - i) / fade : 1);
+    // each piece fades out at its end, and in over 1 ms at its start (a piece starting mid-wave never clicks;
+    // nor the first, which holds the tail of the loop's last hit, folded round)
+    for (let i = 0; i < len && o + i < N; i++) out[o + i] += x[a + i] * (i > len - fade ? (len - i) / fade : 1) * (i < rise ? i / rise : 1);
   }
   return out;
 }
