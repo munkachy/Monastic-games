@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zq';
+import * as DZ from './design.js?v=20261023zr';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zq';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zr';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2007,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zq'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zr'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zq'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zr'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4061,6 +4061,7 @@ function drawLoops() {
   fillTempos();
   $('lKey').textContent = $('keyBtn').textContent; $('lKey').classList.toggle('on', !$('wheel').hidden && $('wheel').classList.contains('inloops'));
   $('lEdit').classList.toggle('on', lEdit);
+  $('lClearAll').hidden = !lEdit; $('lClearAll').textContent = gridBefore ? '↶ Undo clear' : '🗑 Clear all';
   $('lMulti').classList.toggle('on', !!S.grid.multi);
   $('lCopy').classList.toggle('on', clipMode === 'copy'); $('lPaste').classList.toggle('on', clipMode === 'paste'); $('lPaste').disabled = !cellClip;
   $('lgrid').classList.toggle('clipping', !!clipMode);
@@ -4147,7 +4148,21 @@ function setMulti(on) {
   status(on ? 'Multi: the cells of a column play together. Tap a playing cell to stop it.' : 'One cell per column again: each column keeps the cell started last.');
 }
 $('lMulti').addEventListener('click', () => setMulti(!S.grid.multi));
-$('lEdit').addEventListener('click', () => { lEdit = !lEdit; cellDrag = null; status(lEdit ? 'Edit: tap a cell for its settings, or drag it to move it (onto a full cell, the two swap). Tap ✎ Edit again to play.' : ''); drawLoops(); });
+// 🗑 Clear all (with ✎ Edit on): every cell emptied, the loops stopped; the sounds stay in the library.
+// Until ✎ Edit is turned off, the same button (↶ Undo clear) brings the grid back as it was.
+let gridBefore = null;
+$('lClearAll').addEventListener('click', () => {
+  if (gridBefore) {
+    stopGrid(); S.grid.cells = gridBefore; gridBefore = null; persist(); drawLoops();
+    status('The cells are back as they were.'); return;
+  }
+  if (!S.grid.cells.flat().some(Boolean)) { status('The grid is already empty.'); return; }
+  if (!confirm('Empty every cell of the Loops? (The sounds stay in the library, and the same button brings them back until you leave ✎ Edit.)')) return;
+  gridBefore = S.grid.cells.map(col => col.map(c => (c ? { ...c } : null)));
+  stopGrid(); S.grid.cells = S.grid.cells.map(col => col.map(() => null)); S.grid.resume = []; persist(); drawLoops();
+  status('Every cell is empty. Tap a cell to fill it; ↶ Undo clear brings them back while ✎ Edit is on.');
+});
+$('lEdit').addEventListener('click', () => { if (lEdit) gridBefore = null; lEdit = !lEdit; cellDrag = null; status(lEdit ? 'Edit: tap a cell for its settings, or drag it to move it (onto a full cell, the two swap). Tap ✎ Edit again to play.' : ''); drawLoops(); });
 
 // ⚙ The settings for all the loops.
 function choices(box, list, now, pick) {
