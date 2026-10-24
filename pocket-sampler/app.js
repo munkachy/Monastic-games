@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261024g';
+import * as DZ from './design.js?v=20261024h';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024g';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024h';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024h'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024h'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4742,6 +4742,9 @@ async function drawCellMenu() {
     btn('🎤 Rap a verse', 'words or a psalm, rapped on the beat by the robot', () => {
       choosing = false; dzEmpty = true; openPsalter(); document.querySelector('[data-lpane="rap"]').click();
     }, false, 'var(--c-vox)', 'folder');
+    btn('🎙 Record', 'your voice or anything, into this cell, in time', () => {
+      choosing = false; dzEmpty = true; document.querySelector('[data-lpane="mic"]').click();
+    }, false, 'var(--c-snare)', 'folder');
     btn('🎹 From the pads', 'play the pads and ⏺ record into this cell', () => padsToCell(c, menuCell.r), false, 'var(--c-chords)', 'folder');
     btn('🤖 Robot words', 'type what it says, choose the voice', () => {
       choosing = false; lwFor = null;
@@ -5047,6 +5050,7 @@ let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
   lPane = b.dataset.lpane;
   if (lPane === 'rap') openPsalter();          // the psalms, the first time
+  if (lPane === 'mic') micDraw();
   document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== lPane; });
   drawCellMenu();
@@ -5461,15 +5465,74 @@ const LR_WORKLET = `class LoopTap extends AudioWorkletProcessor {
 }
 registerProcessor('loop-tap', LoopTap);`;
 let lrModule = null;
-async function lrTapNode(what) {
+async function lrTapNode(what, input = null) {
   lrModule ||= ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([LR_WORKLET], { type: 'application/javascript' })));
   await lrModule;
   const node = new AudioWorkletNode(ctx, 'loop-tap', { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 2, channelCountMode: 'explicit' });
   const sink = ctx.createGain(); sink.gain.value = 0; node.connect(sink); sink.connect(ctx.destination);
-  const from = what === 'all' ? [eng.master] : [eng.padsWet, eng.padsDry];
+  const from = input ? [input] : what === 'all' ? [eng.master] : [eng.padsWet, eng.padsDry];
   for (const n of from) n.connect(node);
   node.unplug = () => { for (const n of from) try { n.disconnect(node); } catch (e) {} try { node.disconnect(); sink.disconnect(); } catch (e) {} };
   return node;
+}
+// 🎙 Rec (a Loops cell's tab, or 🎙 Record in its picker): the microphone, recorded in time into the
+// cell. A bar to count in (clicks of the 808's clave, a recording, if wanted), then exactly 1, 2 or 4
+// bars, taken sample-true by the same tap as ⏺ Loop rec, moved earlier by the device's own delay (what
+// was heard came out late, and what was sung came in late). The microphone is let go after each take.
+let micTake = null, micBarsN = (() => { try { return +localStorage.getItem('pocketMicBars') || 2; } catch (e) { return 2; } })();
+function micDraw() {
+  document.querySelectorAll('[data-mb]').forEach(b => b.classList.toggle('on', +b.dataset.mb === micBarsN));
+  const T = micTake, now = ctx.currentTime;
+  if (!T) { $('micGo').textContent = '🎙 Record'; $('micGo').classList.remove('armed', 'on'); return; }
+  const beat = 4 * stepDur(), left = T.t0 - now;
+  $('micGo').textContent = left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
+}
+document.querySelectorAll('[data-mb]').forEach(b => b.addEventListener('click', () => { micBarsN = +b.dataset.mb; try { localStorage.setItem('pocketMicBars', micBarsN); } catch (e) {} micDraw(); }));
+function micEnd(T) { clearInterval(T.tick); try { T.node?.unplug(); } catch (e) {} try { T.src?.disconnect(); } catch (e) {} for (const t of T.stream?.getTracks() || []) t.stop(); for (const v of T.clicks || []) try { v?.stop?.(ctx.currentTime); } catch (e) {} }
+$('micGo').addEventListener('click', async () => {
+  if (micTake) { const T = micTake; micTake = null; T.node?.port.postMessage({ cancel: true }); micEnd(T); micDraw(); status('The recording was stopped and thrown away.'); return; }
+  if (!menuCell) return;
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  if (!ctx.audioWorklet || !navigator.mediaDevices?.getUserMedia) { status('This browser cannot record from the microphone here.'); return; }
+  const { c, r } = menuCell, bars = micBarsN; ctx.resume();
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }); }
+  catch (e) { status('The microphone was not allowed: ' + e.message + ' (allow it for this site in the browser’s settings).'); return; }
+  const src = ctx.createMediaStreamSource(stream);
+  let node; try { node = await lrTapNode('mic', src); } catch (e) { for (const t of stream.getTracks()) t.stop(); status('Could not start the recorder: ' + e.message); return; }
+  // a bar to count in: if stopped, Play starts and the second bar records; playing, the next bar a bar or so away
+  const bar = 16 * stepDur(); let t0;
+  if (!playing) { start(); resumeLoops(); t0 = nextT + bar; }
+  else { t0 = nextBar().when; if (t0 - ctx.currentTime < bar * 0.75) t0 += bar; }
+  const set = stream.getAudioTracks()[0]?.getSettings?.() || {};
+  const lat = Math.min(0.3, (ctx.baseLatency || 0) + (ctx.outputLatency || 0) + (set.latency || 0.01));
+  const t1 = t0 + bars * bar, T = micTake = { c, r, bars, t0, t1, stream, src, node, chunks: [], bpm: S.bpm, clicks: [] };
+  if ($('micClick').checked) {
+    try {
+      const kit = await slotOf({ lib: 'kit808' }), k = kit.slices.findIndex(x => /clave/i.test(x.name));
+      for (let i = 0; i < 4; i++) T.clicks.push(playNote(eng, { ...kit, params: { ...kit.params, vol: i ? 0.35 : 0.6 } }, -1, Math.max(0, k), t0 - bar + i * bar / 4, {}));
+    } catch (e) { console.warn('count-in clicks', e); }
+  }
+  node.port.onmessage = e => {
+    if (micTake !== T) return;
+    if (!e.data.done) { T.chunks.push(e.data); return; }
+    micTake = null; micEnd(T); micDraw(); micKeep(T);
+  };
+  node.port.postMessage({ start: t0 + lat, end: t1 + lat });
+  T.tick = setInterval(micDraw, 100); micDraw();
+  status(`🎙 Counting in a bar, then recording ${bars} bar${bars > 1 ? 's' : ''} into ${CHANNELS[c]}, cell ${r + 1}.`);
+});
+async function micKeep(T) {
+  const rate = ctx.sampleRate, m = Math.round((T.t1 - T.t0) * rate), out = new Float32Array(m);
+  for (const ch of T.chunks) for (let i = 0; i < ch.L.length; i++) { const j = ch.at + i; if (j >= 0 && j < m) out[j] = (ch.L[i] + ch.R[i]) / 2; }
+  let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
+  if (top < 0.002) { status('Nothing was heard: check that the microphone is allowed and not muted, then try again.'); return; }
+  const X = Math.min(Math.round(0.005 * rate), m >> 2);            // 5 ms fades at the seam, so it never clicks
+  for (let i = 0; i < X; i++) { const u = i / X; out[i] *= u; out[m - 1 - i] *= u; }
+  for (let i = 0; i < m; i++) out[i] *= 0.9 / top;
+  const buf = ctx.createBuffer(1, m, rate); buf.copyToChannel(out, 0);
+  const d = new Date(), name = `🎙 Take ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  await loopToCell(T.c, T.r, buf, name, T.bars, T.c < 3);
 }
 $('lrStart').addEventListener('click', async () => {
   const mode = $('lrMode').value, bars = +$('lrBars').value, what = $('lrWhat').value, col = +$('lrCol').value;

@@ -200,6 +200,8 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
   slices, or its first note pitched across the key.
+- **🎙 Record into a Loops cell:** a bar to count in, then exactly 1, 2 or 4
+  bars from the microphone, in time, as a loop in the cell.
 - **🎤 Rap a verse in a Loops cell:** a psalm verse or your words, rapped by
   the robot on the beat in a chosen flow, made into a loop in the cell;
   🎲 New flow lays the same syllables out another way.
