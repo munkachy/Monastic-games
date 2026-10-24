@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zx';
+import * as DZ from './design.js?v=20261023zy';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zx';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zy';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zx'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zy'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zx'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zy'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2969,9 +2969,11 @@ const KB = '1234qwerasdfzxcv';
 addEventListener('keydown', ev => {
   if (ev.target.matches('input, textarea, select') || ev.metaKey || ev.ctrlKey || ev.repeat) return;
   if (ev.code === 'Space') { ev.preventDefault(); playing ? stop() : (start(), resumeLoops()); return; }
-  const k = KB.indexOf(ev.key.toLowerCase()); if (k >= 0) press(k);
+  const k = KB.indexOf(ev.key.toLowerCase()); if (k < 0) return;
+  if (view === 'both') lpPress(k);          // Loops + Pads: its own pads (what the loop tapped last plays)
+  else if (view === 'pads') press(k);       // (on the Loops alone the keys play nothing)
 });
-addEventListener('keyup', ev => { const k = KB.indexOf(ev.key.toLowerCase()); if (k >= 0) release(k); });
+addEventListener('keyup', ev => { const k = KB.indexOf(ev.key.toLowerCase()); if (k < 0) return; if (view === 'both') lpRelease(k); else release(k); });
 // iPhone: the audio clock stops when the page is hidden; stop cleanly.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) return; if (playing) stop(); flushSave(); });
 addEventListener('pagehide', () => flushSave());
@@ -4085,18 +4087,20 @@ try { lp.mode = localStorage.getItem('pocketLpMode') || 'notes'; const at = JSON
 const lpKeys = [];
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button');
-  b.addEventListener('pointerdown', async ev => {
-    ev.preventDefault(); capture(b, ev); ctx.resume(); b.classList.add('down');
-    const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
-    const now = ctx.currentTime;
-    playNote(eng, slot, -1, k, now, { scale: S.scale, bpm: S.bpm, root: S.root });
-    if (lpRec) lpNote(k, now, slot);
-  });
-  const up = () => b.classList.remove('down');
+  b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); lpPress(k); });
+  const up = () => lpRelease(k);
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   lpKeys.push(b); $('lpKeys').appendChild(b);
 }
+// a pad played (a finger, or the computer's keys: 1234 / QWER / ASDF / ZXCV)
+async function lpPress(k) {
+  const now = ctx.currentTime; ctx.resume(); lpKeys[k].classList.add('down');
+  const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
+  playNote(eng, slot, -1, k, now, { scale: S.scale, bpm: S.bpm, root: S.root });
+  if (lpRec) lpNote(k, now, slot);
+}
+function lpRelease(k) { lpKeys[k].classList.remove('down'); }
 function lpPick(c, r) {
   if (!S.grid.cells[c][r] || (lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
   lp.c = c; lp.r = r; lp.cell = null; lp.slot = null;
@@ -4139,8 +4143,11 @@ async function lpSlot() {
 let lpRec = null, lpTarget = null;
 function lpTargetCell() {
   if (lpTarget && !S.grid.cells[lpTarget.c][lpTarget.r]) return lpTarget;
-  const c = lp.c; if (c < 0) return null;
-  const r = S.grid.cells[c].findIndex(x => !x); return r < 0 ? null : { c, r };
+  const c0 = lp.c; if (c0 < 0) return null;
+  // the loop's own column; if it is full, a column of its kind (the drums, or the rest), then any
+  const kind = c => c < 3, order = [c0, ...[0, 1, 2, 3, 4, 5, 6, 7].filter(c => c !== c0 && kind(c) === kind(c0)), ...[0, 1, 2, 3, 4, 5, 6, 7].filter(c => kind(c) !== kind(c0))];
+  for (const c of order) { const r = S.grid.cells[c].findIndex(x => !x); if (r >= 0) return { c, r }; }
+  return null;
 }
 function lpNote(k, t, slot) {
   const R = lpRec; if (t < R.t0 - stepDur() / 2) return;           // still counting in
@@ -4154,7 +4161,7 @@ async function lpRecTap() {
   ctx.resume();
   if (lpRec) return lpRecStop();
   const at = lpTargetCell();
-  if (!at) { status(lp.c < 0 ? 'Tap a loop first: the pads play it, and ⏺ Rec puts what you play in the next empty cell of its column.' : `${CHANNELS[lp.c]} is full: empty a cell, or choose one with 🎹 From the pads (hold a cell).`); return; }
+  if (!at) { status(lp.c < 0 ? 'Tap a loop first: the pads play it, and ⏺ Rec puts what you play in the next empty cell of its column.' : 'Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
   if (!await lpSlot()) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const was = playing;
   if (!playing) { start(); resumeLoops(); }
@@ -4162,7 +4169,7 @@ async function lpRecTap() {
   if (!was && t0 - ctx.currentTime < 8 * stepDur()) t0 += 16 * stepDur();      // stopped: a bar to count in
   lpRec = { ...at, t0, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
   lpDraw(); drawLoops();
-  status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}, from the next bar: play the pads, then ⏺ again to stop.`);
+  status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}${at.c !== lp.c && !lpTarget ? ` (${CHANNELS[lp.c]} is full)` : ''}, from the next bar: play the pads, then ⏺ again to stop.`);
 }
 async function lpRecStop() {
   const R = lpRec; lpRec = null; lpTarget = null; lpDraw(); drawLoops();
