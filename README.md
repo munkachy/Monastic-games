@@ -241,8 +241,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   into the cell as a loop. Basic or Advanced shows a few knobs or all. The
   designer can also tune a drum to the key, soften its click, cut its low
   or high end, layer a second drum, bake in a short room, or reverse it.
-- **🎹 From the pads** (a Loops cell's picker): the Pads' pattern, or its
-  chain, made into a loop and put straight in the cell.
+- **⏺ Rec in Loops + Pads:** what you play on the pads, recorded as notes
+  into a loop cell (🎹 From the pads, in a cell's picker, chooses which).
+  Hold the cell for 🎹 Notes: drag notes along the beat, tap to delete.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,

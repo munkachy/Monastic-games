@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zv';
+import * as DZ from './design.js?v=20261023zw';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zv';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zw';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2007,7 +2007,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zv'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zw'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2100,7 +2100,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zv'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zw'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4054,6 +4054,7 @@ function drawLoops() {
       const on = has('cur', r, h => h.stopAt == null) || has('gate', r);
       el.b.classList.toggle('filled', !!cell);
       el.b.classList.toggle('picked', view === 'both' && c === lp.c && r === lp.r && !!cell);
+      const tg = lpRec || (view === 'both' && lpTarget); el.b.classList.toggle('rectarget', !!tg && tg.c === c && tg.r === r);
       el.b.classList.toggle('playing', !!on);
       el.b.classList.toggle('queued', has('next', r));
       el.b.classList.toggle('resume', !playing && !!S.grid.resume?.some(([cc, rr]) => cc === c && rr === r));
@@ -4099,15 +4100,17 @@ function setView(v) {
 // Loops + Pads: the loops four columns a page, and the pads, which play the loop last tapped (a drum
 // loop too): Slices, the loop cut in 16 equal parts, one a pad; or Notes, its first note, pitched
 // down and up the key across the pads (the 8th pad as it was played).
-let lPage = 0, lp = { c: -1, r: -1, cell: null, slot: null, mode: 'slices' };
-try { lp.mode = localStorage.getItem('pocketLpMode') || 'slices'; const at = JSON.parse(localStorage.getItem('pocketLpCell') || 'null'); if (at) { lp.c = at[0]; lp.r = at[1]; } } catch (e) {}
+let lPage = 0, lp = { c: -1, r: -1, cell: null, slot: null, mode: 'notes' };
+try { lp.mode = localStorage.getItem('pocketLpMode') || 'notes'; const at = JSON.parse(localStorage.getItem('pocketLpCell') || 'null'); if (at) { lp.c = at[0]; lp.r = at[1]; } } catch (e) {}
 const lpKeys = [];
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button');
   b.addEventListener('pointerdown', async ev => {
     ev.preventDefault(); capture(b, ev); ctx.resume(); b.classList.add('down');
     const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
-    playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });
+    const now = ctx.currentTime;
+    playNote(eng, slot, -1, k, now, { scale: S.scale, bpm: S.bpm, root: S.root });
+    if (lpRec) lpNote(k, now, slot);
   });
   const up = () => b.classList.remove('down');
   b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
@@ -4140,12 +4143,78 @@ async function lpSlot() {
     let shift = 0;
     if (lp.c > 2) { const ch = chroma(buf, a, e), pc = ch.indexOf(Math.max(...ch)); shift = ((S.root - pc + 18) % 12) - 6; }
     const mid = keySemis(7, S.scale);                   // the 8th pad: the note as played (in the key's root)
-    slot = { kind: 'multi', name: cell.name, buf, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: a, e }], params, scale: S.scale, root: S.root };
+    const i0 = Math.round(a * buf.sampleRate), n = Math.max(1, Math.round((e - a) * buf.sampleRate)), note = ctx.createBuffer(1, n, buf.sampleRate);
+    note.copyToChannel(buf.getChannelData(0).subarray(i0, i0 + n), 0);       // the note alone (kept with what is recorded on it)
+    const fo = note.getChannelData(0), F = Math.min(n >> 2, Math.round(0.01 * buf.sampleRate)); for (let j = 0; j < F; j++) fo[n - 1 - j] *= j / F;
+    slot = { kind: 'multi', name: cell.name, buf: note, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: 0, e: n / buf.sampleRate }], params };
   }
   slot.lpMode = lp.mode; lp.cell = cell; lp.slot = slot;
   return slot;
 }
+// ⏺ Rec: what is played on the pads, recorded as notes into a loop cell (the one 🎹 From the pads chose,
+// else the next empty cell in the column of the loop the pads play). It starts on the next bar (a bar
+// to count in, if the beat was stopped); tap again to stop: whole bars, 1, 2, 4 or 8. The notes keep the
+// timing played, unless 1/16 is on (the pads' Quantize): then each lands on its 16th. Made once into a
+// recording (the sound is kept with it, so the notes can be moved and deleted later, and made again).
+let lpRec = null, lpTarget = null;
+function lpTargetCell() {
+  if (lpTarget && !S.grid.cells[lpTarget.c][lpTarget.r]) return lpTarget;
+  const c = lp.c; if (c < 0) return null;
+  const r = S.grid.cells[c].findIndex(x => !x); return r < 0 ? null : { c, r };
+}
+function lpNote(k, t, slot) {
+  const R = lpRec; if (t < R.t0 - stepDur() / 2) return;           // still counting in
+  if (!R.src) R.src = slot;
+  if (slot !== R.src) return;                                      // one sound a recording
+  let pos = Math.max(0, (t - R.t0) / stepDur());
+  if (S.quantGrid) pos = Math.round(pos);
+  R.notes.push({ k, t: pos });
+}
+async function lpRecTap() {
+  ctx.resume();
+  if (lpRec) return lpRecStop();
+  const at = lpTargetCell();
+  if (!at) { status(lp.c < 0 ? 'Tap a loop first: the pads play it, and ⏺ Rec puts what you play in the next empty cell of its column.' : `${CHANNELS[lp.c]} is full: empty a cell, or choose one with 🎹 From the pads (hold a cell).`); return; }
+  if (!await lpSlot()) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
+  const was = playing;
+  if (!playing) { start(); resumeLoops(); }
+  let t0 = nextBar().when;
+  if (!was && t0 - ctx.currentTime < 8 * stepDur()) t0 += 16 * stepDur();      // stopped: a bar to count in
+  lpRec = { ...at, t0, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
+  lpDraw(); drawLoops();
+  status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}, from the next bar: play the pads, then ⏺ again to stop.`);
+}
+async function lpRecStop() {
+  const R = lpRec; lpRec = null; lpTarget = null; lpDraw(); drawLoops();
+  if (!R.notes.length) { status('Nothing was played, so nothing was recorded.'); return; }
+  const played = (ctx.currentTime - R.t0) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
+  const notes = R.notes.filter(n => n.t < bars * 16).map(n => ({ k: n.k, t: Math.min(n.t, bars * 16 - 0.01) }));
+  const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src) };
+  const name = `${(lp.cell?.name || 'Pads').replace(/, played$/, '')}, played`;
+  status('Making the loop…');
+  const buf = await seqRender(seq, R.src), keep = { ...lp };
+  await loopToCell(R.c, R.r, buf, name, bars, R.c < 3, { seq });
+  Object.assign(lp, keep); lpDraw(); drawLoops();            // the pads keep the sound they were playing
+}
+// the notes, made into a loop (offline, as an export is), at the tempo they were played at; a note
+// ringing past the end comes round to the start
+async function seqRender(seq, slot) {
+  const sd = 60 / seq.bpm / 4, len = seq.bars * 16 * sd, tail = 2;
+  const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR), e = new Engine(off, { live: false });
+  for (const n of seq.notes) playNote(e, slot, -1, n.k, n.t * sd, { scale: seq.scale, bpm: seq.bpm, root: seq.root });
+  const b = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
+  for (const c of [0, 1]) { const x = b.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
+  let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
+  if (top > 0.95) for (let i = 0; i < m; i++) out[i] *= 0.95 / top;
+  const buf = ctx.createBuffer(1, m, SR); buf.copyToChannel(out, 0); return buf;
+}
+$('lpRec').addEventListener('click', lpRecTap);
+$('lpQ').addEventListener('click', () => { S.quantGrid = S.quantGrid ? 0 : 1; persist(); lpDraw(); });
 function lpDraw() {
+  $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
+  $('lpRec').textContent = lpRec ? '■ Stop rec' : '⏺ Rec';
+  $('lpQ').textContent = S.quantGrid ? '1/16' : 'Free'; $('lpQ').classList.toggle('on', !!S.quantGrid);
+  if (lpRec && ctx.currentTime < lpRec.t0) setTimeout(lpDraw, Math.max(30, (lpRec.t0 - ctx.currentTime) * 1000));
   const cell = S.grid.cells[lp.c]?.[lp.r];
   $('lpads').style.setProperty('--c', cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
   $('lpSrc').textContent = cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}` : 'Tap a loop: the pads play it.';
@@ -4415,7 +4484,8 @@ async function sayWords() {
 $('lwSay').addEventListener('click', sayWords);
 $('lwText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sayWords(); } });
 function openCellMenu(c, r) {
-  menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r]; dzEmpty = false;
+  menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r]; dzEmpty = false; rollUndo = [];
+  if (mine.find(m => m.id === S.grid.cells[c][r]?.mine)?.seq) { lPane = 'notes'; document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x.dataset.lpane === 'notes')); document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== 'notes'; }); }
   if (!S.grid.cells[c][r] && lPane !== 'set') document.querySelector('[data-lpane="set"]').click();
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
 }
@@ -4441,7 +4511,11 @@ async function drawCellMenu() {
   if (robo) fillWords(cell);
   $('lmSets').hidden = (!cell && !dzEmpty) || choosing;
   document.querySelectorAll('[data-lpane="set"], [data-lpane="eq"]').forEach(b => { b.hidden = !cell; });
+  const seqOf = cell && mine.find(m => m.id === cell.mine)?.seq;
+  document.querySelector('[data-lpane="notes"]').hidden = !seqOf;
+  if (lPane === 'notes' && !seqOf) { document.querySelector('[data-lpane="set"]').click(); return; }
   if (lPane === 'design' && !choosing) cellDesign(c, r);
+  if (lPane === 'notes' && !choosing) drawRoll(c, r);
   $('lmPick').hidden = !choosing;
   if (cell) {
     $('lmVolBar').firstChild.style.width = Math.round((cell.vol ?? 1) * 100) + '%';
@@ -4534,7 +4608,7 @@ async function drawCellMenu() {
     btn('🥁 Design a hit', 'make a drum hit, tap its steps: a loop', () => {
       choosing = false; dzEmpty = true; cellDzFor = null; document.querySelector('[data-lpane="design"]').click();
     }, false, 'var(--c-kick)', 'folder');
-    btn('🎹 From the pads', S.chain.length > 1 ? `the chain: patterns ${S.chain.map(p => p + 1).join(', ')}, as one loop` : `pattern ${S.pat + 1}, as you hear it`, () => padsToCell(c, menuCell.r), false, 'var(--c-chords)', 'folder');
+    btn('🎹 From the pads', 'play the pads and ⏺ record into this cell', () => padsToCell(c, menuCell.r), false, 'var(--c-chords)', 'folder');
     btn('🤖 Robot words', 'type what it says, choose the voice', () => {
       choosing = false; lwFor = null;
       const V = { ...defaultVoice(), variant: 'robosoft' };
@@ -4642,10 +4716,21 @@ function drawLines() {
     nm.title = dzName(L.st) + ': tap to shape it below';
     nm.addEventListener('click', () => { cellLine = li; cellDz.use(L.st); drawLines(); });
     const g = document.createElement('div'); g.className = 'dzsteps';
+    // tap a step: on, soft, off; drag a lit step along the line: it moves (on or soft as it was)
     L.steps.forEach((v, i) => {
-      const b = document.createElement('button'); b.textContent = i % 4 ? '·' : String(i / 4 + 1);
+      const b = document.createElement('button'); b.textContent = i % 4 ? '·' : String(i / 4 + 1); b.style.touchAction = 'none';
       b.classList.toggle('on', v === 1); b.classList.toggle('soft', v > 0 && v < 1);
-      b.addEventListener('click', () => { L.steps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; drawLines(); });
+      let at = i, moved = false;
+      b.addEventListener('pointerdown', ev => { ev.preventDefault(); b.setPointerCapture(ev.pointerId); at = i; moved = false; });
+      b.addEventListener('pointermove', ev => {
+        if (!b.hasPointerCapture?.(ev.pointerId) || !L.steps[at]) return;
+        const t = document.elementFromPoint(ev.clientX, ev.clientY), j = t && t.parentNode === g ? [...g.children].indexOf(t) : -1;
+        if (j < 0 || j === at || L.steps[j]) return;
+        L.steps[j] = L.steps[at]; L.steps[at] = 0; moved = true;
+        const kids = g.children; for (const [x, w] of [[at, 0], [j, L.steps[j]]]) { kids[x].classList.toggle('on', w === 1); kids[x].classList.toggle('soft', w > 0 && w < 1); }
+        at = j;
+      });
+      b.addEventListener('pointerup', () => { if (!moved) L.steps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; drawLines(); });
       g.appendChild(b);
     });
     const x = document.createElement('button'); x.className = 'dzlx'; x.textContent = '✕'; x.title = 'Take this line away';
@@ -4696,12 +4781,12 @@ $('lmDzPut').addEventListener('click', async () => {
   dzEmpty = false; await loopToCell(c, r, bar, name, 1, true);
 });
 // a loop made here (designed, or from the pads) into a cell, kept in the library too (My loops)
-async function loopToCell(c, r, buf, name, bars, drumLoop) {
+async function loopToCell(c, r, buf, name, bars, drumLoop, extra = {}) {
   const was = S.grid.cells[c][r], folder = c < 3 ? 'Beats' : LR_FOLDER[c];
   const slot = { factory: null, kind: 'chop', contiguous: false, name, params: { ...defParams(), trig: 'loop' }, buf, ...(drumLoop && { drumLoop: true }),
     slices: [{ s: 0, e: buf.duration, name, bpm: S.bpm, bars }] };
   const id = 'm' + Date.now().toString(36);
-  await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot) }, id);
+  await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot), ...extra }, id);
   await refreshMine();
   for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
   S.grid.cells[c][r] = { mine: id, k: 0, name, mode: 'loop', vol: was?.vol ?? 1, ...(c >= 3 && { follow: false }) };
@@ -4709,24 +4794,74 @@ async function loopToCell(c, r, buf, name, bars, drumLoop) {
   if (playing) tapCell(c, r);
   status(`“${name}” is in ${CHANNELS[c]}, cell ${r + 1}${playing ? ', playing from the next bar' : ''} (and in the library: ${folder}, My loops).`);
 }
-// 🎹 From the pads: the Pads' pattern as it is now (or its chain, as one long loop), as you hear it
-// (with Mute's beat muted), made into a loop and put in the cell
-async function padsToCell(c, r) {
-  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
-  const sounds = chainSounds();
-  if (!sounds.length) { status('The Pads’ pattern is empty: play or write something on the pads first.'); return; }
-  status('Making a loop of the pads…');
-  let r0;
-  try { r0 = await renderLoop(); } catch (e) { status('Could not make the loop: ' + e.message); log('error', 'from pads: ' + e.message); return; }
-  if (r0.top < 0.001) { status('The pads’ pattern is silent (muted?), so there is nothing to put in.'); return; }
-  const n = r0.chs[0].length, buf = ctx.createBuffer(1, n, SR), d = buf.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = (r0.chs[0][i] + r0.chs[1][i]) / 2;
-  const heard = S.muteBeat ? sounds.filter(si => !isDrum(si)) : sounds, inst = heard.filter(si => !isDrum(si));
-  const what = inst.length === 1 && heard.length === 1 ? S.slots[inst[0]].name : inst.length ? 'Pads' : 'Pads beat';
-  const name = `${what}, ${S.chain.length > 1 ? `patterns ${S.chain.map(p => p + 1).join('-')}` : `pattern ${S.chain[0] + 1}`}`;
-  choosing = false;
-  await loopToCell(c, r, buf, name, S.chain.length, !inst.length);
+// 🎹 From the pads: Loops + Pads, with this cell the one ⏺ Rec records into (a red edge); the pads play
+// the loop tapped last (tap another first, for its sound)
+function padsToCell(c, r) {
+  lpTarget = { c, r }; choosing = false; closeCellMenu();
+  lPage = c < 4 ? 0 : 1; setView('both');
+  status(`Tap a loop for the pads' sound (now: ${lp.cell?.name || S.grid.cells[lp.c]?.[lp.r]?.name || 'none'}), then ⏺ Rec: what you play goes in ${CHANNELS[c]}, cell ${r + 1}.`);
 }
+// 🎹 Notes: a loop recorded on the pads, its notes a line a pad (highest at the top), along its bars.
+// Drag a note left or right: it moves, landing on a 16th; tap it: it is deleted (↶ Undo brings it
+// back). Each change makes the loop again, as a recording, into the cell (and the library).
+let rollUndo = [];
+function drawRoll(c, r) {
+  const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), seq = rec?.seq, box = $('lmRoll');
+  box.textContent = ''; $('lmRollUndo').disabled = !rollUndo.length; if (!seq) return;
+  const steps = seq.bars * 16, st = Math.max(14, Math.min(26, 560 / steps));
+  box.style.setProperty('--st', st + 'px');
+  const mid = keySemis(7, seq.scale), ks = [...new Set(seq.notes.map(n => n.k))].sort((a, b) => b - a);
+  for (const k of ks) {
+    const semi = keySemis(k, seq.scale) - mid, l = document.createElement('div'); l.className = 'rl';
+    l.textContent = seq.src.kind === 'chop' ? `#${k + 1}` : NOTE_NAMES[((seq.root + semi) % 12 + 12) % 12];
+    const row = document.createElement('div'); row.className = 'rr'; row.style.width = steps * st + 'px';
+    seq.notes.forEach((n, i) => {
+      if (n.k !== k) return;
+      const b = document.createElement('div'); b.className = 'rn'; b.style.left = n.t * st + 'px'; b.style.width = st - 2 + 'px';
+      let x0 = 0, moved = false, to = n.t, turned = false;
+      const along = ev => (turned ? ev.clientY : ev.clientX);
+      b.addEventListener('pointerdown', ev => {
+        ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
+        const rc = row.getBoundingClientRect(); turned = rc.height > rc.width;     // held upright: the row runs down the glass
+        x0 = along(ev); moved = false; b.classList.add('drag');
+      });
+      b.addEventListener('pointermove', ev => {
+        if (!b.classList.contains('drag')) return;
+        const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
+        moved = true; to = Math.max(0, Math.min(steps - 1, Math.round(n.t + dx / st))); b.style.left = to * st + 'px';
+      });
+      b.addEventListener('pointerup', () => {
+        b.classList.remove('drag');
+        const notes = seq.notes.slice();
+        if (!moved) notes.splice(i, 1); else if (to !== n.t) notes[i] = { ...n, t: to }; else return;
+        rollChange(c, r, notes);
+      });
+      b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = n.t * st + 'px'; });
+      row.appendChild(b);
+    });
+    box.append(l, row);
+  }
+}
+let rollBusy = Promise.resolve();
+function rollChange(c, r, notes, undoing = false) {
+  rollBusy = rollBusy.then(async () => {
+    const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine); if (!rec?.seq) return;
+    if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return; }
+    if (!undoing) rollUndo.push(rec.seq.notes);
+    const seq = { ...rec.seq, notes }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
+    const slot = { factory: null, kind: 'chop', contiguous: false, name: rec.name, params: { ...defParams(), trig: 'loop' }, buf, ...(c < 3 && { drumLoop: true }),
+      slices: [{ s: 0, e: buf.duration, name: rec.name, bpm: seq.bpm, bars: seq.bars }] };
+    const id = 'm' + Date.now().toString(36);
+    await idbPut('mine', { ...rec, id, created: Date.now(), item: packSlot(slot), seq }, id);
+    if (!S.grid.cells.flat().some(x => x && x !== cell && x.mine === rec.id)) await idbDel('mine', rec.id);
+    await refreshMine();
+    S.grid.cells[c][r] = { ...cell, mine: id };
+    if (lp.c === c && lp.r === r) lp.cell = null;
+    changed(c, r);
+  });
+  return rollBusy;
+}
+$('lmRollUndo').addEventListener('click', () => { if (menuCell && rollUndo.length) rollChange(menuCell.c, menuCell.r, rollUndo.pop(), true); });
 // The cell's settings in two tabs: Settings (with the wave first) and EQ & Effect.
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
@@ -4937,8 +5072,10 @@ function pcm16(f32) {
   return btoa(s);
 }
 function unpcm16(b64) { const s = atob(b64), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); const v = new Int16Array(b.buffer), f = new Float32Array(v.length); for (let i = 0; i < v.length; i++) f[i] = v[i] / 32767; return f; }
-const recOut = m => ({ ...m, item: { ...m.item, bufs: m.item.bufs.map(b => ({ rate: b.rate, pcm16: pcm16(b.data) })) } });
-const recIn = m => ({ ...m, item: { ...m.item, bufs: m.item.bufs.map(b => ({ rate: b.rate, data: unpcm16(b.pcm16) })) } });
+const bufsOut = it => ({ ...it, bufs: it.bufs.map(b => ({ rate: b.rate, pcm16: pcm16(b.data) })) }), bufsIn = it => ({ ...it, bufs: it.bufs.map(b => ({ rate: b.rate, data: unpcm16(b.pcm16) })) });
+// (a loop played on the pads keeps its notes and their sound, so they can still be moved where it is opened)
+const recOut = m => ({ ...m, item: bufsOut(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsOut(m.seq.src) } }) });
+const recIn = m => ({ ...m, item: bufsIn(m.item), ...(m.seq && { seq: { ...m.seq, src: bufsIn(m.seq.src) } }) });
 // a pack: { name, set?, ids? } -> the file's contents. A set brings every sound of yours its cells use.
 function packOf({ name, set = null, ids = [] }) {
   const want = new Set(ids);
