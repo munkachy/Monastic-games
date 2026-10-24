@@ -119,47 +119,12 @@ The first build: the arena, played with the phone sideways. The name is from the
 A 16-key pocket sampler and step sequencer, played like a Teenage Engineering
 PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 
-- **Sixteen sounds.** 1–8 are melodic and play up a scale: 808 bass, dubstep
-  wobble (tempo-locked, rate adjustable), Reese, acid, chip lead, pluck, organ
-  and choir. 9–16 are kits, one hit per key: a real acoustic drum kit and
-  hand percussion, 808 and 909 kits drawn in code, then blips, lasers,
-  glitches and coins. *Load sound* puts any of 50 sounds on any key:
-  - **Bass:** 808, sub, wobble, growl, Reese, analog, square, FM and acid
-    synths, and a real upright bass and electric bass.
-  - **Keys:** grand and upright piano, FM electric piano, harpsichord, pipe
-    organ, Renaissance organ, vibraphone, marimba, kalimba, harp, tubular bells
-    and glockenspiel, all recorded, each key playing the nearest recording.
-  - **Synth:** supersaw, strings, warm pad, brass, choir, FM bell, glass keys.
-  - **Drum kits** (chosen in the Beat menu): three recorded acoustic kits (jazz, a big 1980s kit, a
-    brush kit), a lo-fi kit, hand percussion, and 808, 909, CR-78, 606 and
-    minimal kits drawn in code.
-- **Drum beats:** boom bap, lo-fi, hip hop, trap, funk break, rock, house,
-  techno, Afro house, dembow, drum & bass, dubstep and jazz swing, on
-  whatever kit you've chosen; **🎲 Make a new one** makes a new one in
-  that style each time, and the **🎲 Vary** button keeps the beat you
-  have and makes one or two small changes a drummer might (a pushed kick,
-  ghost notes, an open hat, a little fill), always from the same beat. **↶ Undo / ↷ Redo** for every change.
-- **● Rec:** hold it and sing or beatbox into the phone. On 9–16 the recording
-  is chopped at each syllable or hit, one per key; drag the markers on the
-  screen to move the cuts. It can also resample the beat that's playing.
-- **Voice:** type words and Vox Machina's eSpeak engine says them onto the
-  current sound, with tone variation (0 = flat monotone) and vowel length.
-  On 9–16 it is cut into syllables, one per key, named on the keys: eSpeak's
-  own phonetics give the exact syllables and which are stressed. Cut
-  *Natural* (the line spoken whole, cut at the quiet dips) or
-  *Robot-precise* (each syllable spoken alone, every cut clean).
-  **🎤 Rap it on the beat** writes the syllables into the pattern in a flow:
-  steady 1/16, 1/8 or 1/4, old school, boom bap, laid back, triplet,
-  syncopated, chopper (double time) or mixed, with stressed syllables put
-  on the beat (off it, for syncopated) and a breath at commas and full
-  stops, chaining on into the next patterns when it needs more bars.
-  **🎲 New flow** lays the same rap out in another flow.
-- **Psalms for the voice:** pick a psalm and a verse (or a run of verses)
-  from the built-in Douay-Rheims, or from your own Grail file (the psalter
-  pack Selah takes, kept in the browser on your device and never sent
-  anywhere), and its words go into the voice box, a line per half-verse.
-- **🎲 Roll:** a new random video-game sound (coin, laser, boom, power-up,
-  hit, jump, blip, glitch) on the last key played, or a whole kit of them.
+- **Sixteen instruments.** The Pads are for instruments; the drums, the robot
+  voice and the rap live in the Loops (🥁 Design a hit, 🤖 Robot words). Four
+  of each part, in shades of its colour: bass (808, Reese, electric, upright),
+  keys (Rhodes, grand piano, FM e-piano, organ), lead (supersaw, violin, chip,
+  brass) and pads (warm pad, strings, Vigil Strings, Night Swarm). Any
+  instrument from Menu › Sounds can go on any of the 16.
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
 - **Key wheel:** tap the key on the screen. Majors and minors in
@@ -198,7 +163,6 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   reverb, fewer notes at once, loops made ready only when tapped. The app
   suggests it when it hears the sound breaking up; sounds only previewed
   are let go to save memory, on any device.
-- **Sideways:** twenty of your blue buttons, full size, on the left.
 - **Tags:** REC (a recording), GEN (made in code beforehand and kept as a
   recording), MINE (yours), on every sound.
 - **Everything made in code is played from a recording.** The synths (a
