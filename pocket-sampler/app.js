@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261024e';
+import * as DZ from './design.js?v=20261024f';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024f'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024f'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4888,7 +4888,7 @@ function padsToCell(c, r) {
 }
 // 🎹 Notes: a loop recorded on the pads, its notes along its bars, each named, in rows one under the
 // other. Zoom: Bar (the least room: 16 bars a row, a line a bar), 1/4 (8 bars a row, a line a beat),
-// 1/8 (4 bars), 1/16 (2 bars, a line every 16th). Notes too close to tell apart share their place, in strips. Drag a note left or right: it moves, landing on a
+// 1/8 (4 bars), 1/16 (2 bars, a line every 16th). Drag a note left or right: it moves, landing on a
 // 16th; tap it: it is deleted. Length: 1 to 32 bars; made shorter, the notes past the end go.
 // ↶ Undo takes back the last change. Each change makes the loop again, as a recording, into the
 // cell (and the library).
@@ -4928,44 +4928,46 @@ function drawRoll(c, r) {
     wrap.appendChild(row); return row;
   });
   // notes on the same 16th share the line: each a strip of it, lowest note at the bottom
-  // notes closer than a note's width share a place: lined up at the first, stacked (highest on top);
-  // a row grows taller for a deep stack, so each note stays big enough to tap
-  const nw = Math.max(st - 1, 14), order = seq.notes.map((n, i) => i).sort((a, b) => seq.notes[a].t - seq.notes[b].t), placeOf = new Map(), groups = new Map(), groupAt = new Map();
-  let start = -1e9, gid = -1, rowOf = t => Math.min(rows.length - 1, Math.floor(t / per)), lastRow = -1;
-  for (const i of order) {
-    const t = seq.notes[i].t, ri = rowOf(t);
-    if ((t - ri * per) * st >= start + nw || ri !== lastRow) { gid++; start = (t - ri * per) * st; groups.set(gid, []); groupAt.set(gid, t); lastRow = ri; }
-    groups.get(gid).push(i); placeOf.set(i, gid);
-  }
-  for (const [g, list] of groups) list.sort((a, b) => seq.notes[b].k - seq.notes[a].k);
-  const deepest = rows.map(() => 1); for (const [g, list] of groups) { const ri = rowOf(seq.notes[list[0]].t); deepest[ri] = Math.max(deepest[ri], list.length); }
-  rows.forEach((row, ri) => { row.style.height = Math.max(52, deepest[ri] * 18 + 4) + 'px'; });
+  // one block a slot of the zoom (a bar, a beat, an 8th, a 16th) with anything in it, filling the slot:
+  // a note's name when it holds one note, ×n when more. Tap: everything in it is deleted (zoom in to pick
+  // out one); drag left or right: everything in it moves together, by 16ths (one note lands on a 16th).
+  const rowOf = t => Math.min(rows.length - 1, Math.floor(t / per)), slots = new Map();
+  seq.notes.forEach((n, i) => { const k = Math.floor((n.t + 1e-6) / unit); if (!slots.has(k)) slots.set(k, []); slots.get(k).push(i); });
   const name = k => seq.src.kind === 'chop' ? `#${k + 1}` : NOTE_NAMES[((seq.root + keySemis(k, seq.scale) - mid) % 12 + 12) % 12];
-  seq.notes.forEach((n, i) => {
-    const g = groups.get(placeOf.get(i)), lane = g.indexOf(i), h = 100 / g.length, ri = rowOf(n.t), row = rows[ri], x0t = ri * per, at = groupAt.get(placeOf.get(i));
-    const b = document.createElement('div'); b.className = 'rn'; b.textContent = name(n.k); b.title = name(n.k);
-    Object.assign(b.style, { left: (at - x0t) * st + 'px', width: nw + 'px', top: `calc(${lane * h}% + 2px)`, height: `calc(${h}% - 4px)`, fontSize: g.length > 2 ? '8px' : '10px' });
-    let x0 = 0, moved = false, to = n.t, turned = false;
+  for (const [k, list] of slots) {
+    const t0 = k * unit, ri = rowOf(t0), row = rows[ri], x0t = ri * per, w = Math.min(unit, steps - t0) * st;
+    const b = document.createElement('div'); b.className = 'rn' + (list.length > 1 ? ' many' : '');
+    b.textContent = list.length > 1 ? `×${list.length}` : name(seq.notes[list[0]].k);
+    b.title = list.map(i => name(seq.notes[i].k)).join(' ');
+    Object.assign(b.style, { left: (t0 - x0t) * st + 1 + 'px', width: Math.max(4, w - 2) + 'px', top: '3px', bottom: '3px', fontSize: w < 18 ? '8px' : '10px' });
+    let x0 = 0, moved = false, shift = 0, turned = false;
     const along = ev => (turned ? ev.clientY : ev.clientX);
+    const one = list.length === 1 ? seq.notes[list[0]] : null;
+    const lo = Math.min(...list.map(i => seq.notes[i].t)), hi = Math.max(...list.map(i => seq.notes[i].t));
     b.addEventListener('pointerdown', ev => {
       ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
       const rc = row.getBoundingClientRect(); turned = rc.height > rc.width;     // held upright: the line runs down the glass
-      x0 = along(ev); moved = false; b.classList.add('drag');
+      x0 = along(ev); moved = false; shift = 0; b.classList.add('drag');
     });
     b.addEventListener('pointermove', ev => {
       if (!b.classList.contains('drag')) return;
       const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
-      moved = true; to = Math.max(0, Math.min(steps - 1, Math.round(n.t + dx / st))); b.style.left = (to - x0t) * st + 'px';     // (past the row's end: into the next row)
+      moved = true;
+      shift = one ? Math.max(0, Math.min(steps - 1, Math.round(one.t + dx / st))) - one.t       // one note: onto a 16th
+        : Math.max(-Math.floor(lo), Math.min(Math.floor(steps - 1 - hi), Math.round(dx / st)));  // more: together, by 16ths
+      b.style.left = (t0 - x0t + shift) * st + 1 + 'px';             // (past the row's end: into the next row)
     });
     b.addEventListener('pointerup', () => {
       b.classList.remove('drag');
-      const notes = seq.notes.slice();
-      if (!moved) notes.splice(i, 1); else if (to !== n.t) notes[i] = { ...n, t: to }; else return;
+      let notes;
+      if (!moved) notes = seq.notes.filter((n, i) => !list.includes(i));
+      else if (shift) notes = seq.notes.map((n, i) => (list.includes(i) ? { ...n, t: n.t + shift } : n));
+      else return;
       rollChange(c, r, notes);
     });
-    b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = (at - x0t) * st + 'px'; });
+    b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = (t0 - x0t) * st + 1 + 'px'; });
     row.appendChild(b);
-  });
+  }
   box.append(lens, zoom, wrap);
 }
 let rollBusy = Promise.resolve();
