@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261023zy';
+import * as DZ from './design.js?v=20261024a';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261023zy';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261024a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zy'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261023zy'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261024a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4105,7 +4105,7 @@ function lpPick(c, r) {
   if (!S.grid.cells[c][r] || (lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
   lp.c = c; lp.r = r; lp.cell = null; lp.slot = null;
   try { localStorage.setItem('pocketLpCell', JSON.stringify([c, r])); } catch (e) {}
-  if (view === 'both') { lpDraw(); lpSlot(); drawLoops(); }
+  if (view === 'both') { lpDraw(); lpSlot(); drawLoops(); if (lpEd.on) lpEdit(); }
 }
 // the pads' sound, made from the cell's loop (again when the cell, or Slices/Notes, changes)
 async function lpSlot() {
@@ -4120,16 +4120,17 @@ async function lpSlot() {
     slot = { kind: 'chop', name: cell.name, buf, params: { ...params, keyOf: base.params.keyOf, pitch: base.params.pitch },
       slices: Array.from({ length: 16 }, (_, i) => ({ s: one.s + i * w, e: one.s + (i + 1) * w, name: String(i + 1) })) };
   } else {
-    // the first note: from the first sound to the next (at most 1.5 s), at its own pitch (a drum: as it is)
-    const st = onsets(buf, 8).filter(t => t >= one.s - 0.001 && t < one.e);
-    const lvl = t => { const x = buf.getChannelData(0), i = Math.round(t * buf.sampleRate); let m = 0; for (let j = i; j < Math.min(x.length, i + 400); j++) m = Math.max(m, Math.abs(x[j])); return m; };
-    const a = st.find(t => lvl(t) > 0.02) ?? one.s, next = st.find(t => t > a + 0.08), e = Math.min(one.e, next ?? one.e, a + 1.5);
+    // the bit chosen (hold Notes), else the first note: from the first sound to the next (at most
+    // 1.5 s); at its own pitch (a drum: as it is)
+    const [a, e] = cell.lpNote ? cell.lpNote.map(f => one.s + f * (one.e - one.s)) : lpFirstNote(buf, one);
     let shift = 0;
     if (lp.c > 2) { const ch = chroma(buf, a, e), pc = ch.indexOf(Math.max(...ch)); shift = ((S.root - pc + 18) % 12) - 6; }
     const mid = keySemis(7, S.scale);                   // the 8th pad: the note as played (in the key's root)
     const i0 = Math.round(a * buf.sampleRate), n = Math.max(1, Math.round((e - a) * buf.sampleRate)), note = ctx.createBuffer(1, n, buf.sampleRate);
     note.copyToChannel(buf.getChannelData(0).subarray(i0, i0 + n), 0);       // the note alone (kept with what is recorded on it)
-    const fo = note.getChannelData(0), F = Math.min(n >> 2, Math.round(0.01 * buf.sampleRate)); for (let j = 0; j < F; j++) fo[n - 1 - j] *= j / F;
+    const fo = note.getChannelData(0), F = Math.min(n >> 2, Math.round(0.01 * buf.sampleRate)), Fi = Math.min(n >> 2, Math.round(0.003 * buf.sampleRate));
+    for (let j = 0; j < F; j++) fo[n - 1 - j] *= j / F;
+    if (cell.lpNote) for (let j = 0; j < Fi; j++) fo[j] *= j / Fi;      // a bit chosen by hand may start mid-wave: a 3 ms fade in
     slot = { kind: 'multi', name: cell.name, buf: note, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: 0, e: n / buf.sampleRate }], params };
   }
   slot.lpMode = lp.mode; lp.cell = cell; lp.slot = slot;
@@ -4197,6 +4198,74 @@ async function seqRender(seq, slot) {
 }
 $('lpRec').addEventListener('click', lpRecTap);
 $('lpQ').addEventListener('click', () => { S.quantGrid = S.quantGrid ? 0 : 1; persist(); lpDraw(); });
+function lpFirstNote(buf, one) {
+  const st = onsets(buf, 8).filter(t => t >= one.s - 0.001 && t < one.e);
+  const lvl = t => { const x = buf.getChannelData(0), i = Math.round(t * buf.sampleRate); let m = 0; for (let j = i; j < Math.min(x.length, i + 400); j++) m = Math.max(m, Math.abs(x[j])); return m; };
+  const a = st.find(t => lvl(t) > 0.02) ?? one.s, next = st.find(t => t > a + 0.08);
+  return [a, Math.min(one.e, next ?? one.e, a + 1.5)];
+}
+// Hold Notes: the loop's wave in place of the pads. Drag across the bit to play as notes (kept with
+// the cell); tap to hear from there; Auto: back to the first note; ✓ Done: back to the pads.
+const lpEd = { on: false, one: null, buf: null, sel: null, p0: null };
+async function lpEdit() {
+  const cell = S.grid.cells[lp.c]?.[lp.r]; if (!cell) { status('Tap a loop first: then hold Notes to choose the bit the pads play.'); return; }
+  const base = await cellSlot(cell), one = base?.slices?.[0]; if (!one) return;
+  lpEd.on = true; lpEd.one = one; lpEd.buf = one.buf || base.buf;
+  const w = one.e - one.s, [a, e] = cell.lpNote ? cell.lpNote.map(f => one.s + f * w) : lpFirstNote(lpEd.buf, one);
+  lpEd.sel = [(a - one.s) / w, (e - one.s) / w];
+  if (lp.mode !== 'notes') { lp.mode = 'notes'; lp.slot = null; try { localStorage.setItem('pocketLpMode', 'notes'); } catch (e) {} }
+  $('lpKeys').hidden = true; $('lpEd').hidden = false; lpDraw(); lpWave();
+}
+function lpWave() {
+  const cv = $('lpWave'), dpr = devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
+  if (!W || !H || !lpEd.one) return;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const g2 = cv.getContext('2d'), { one, buf } = lpEd, d = buf.getChannelData(0), sr = buf.sampleRate, colr = cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][lp.c]}`);
+  const [from, to] = lpEd.sel, i0 = Math.floor(one.s * sr), n = Math.max(1, Math.floor((one.e - one.s) * sr)), per = n / W;
+  g2.clearRect(0, 0, W, H); g2.fillStyle = '#000'; g2.fillRect(0, 0, W, H);
+  g2.fillStyle = colr; g2.globalAlpha = 0.2; g2.fillRect(from * W, 0, (to - from) * W, H);
+  if (one.bpm) { const beat = 60 / one.bpm, whole = one.e - one.s; for (let i = 0; i * beat <= whole + 1e-6; i++) { g2.globalAlpha = i % 4 ? 0.15 : 0.4; g2.fillStyle = '#fff'; g2.fillRect(i * beat / whole * W, 0, dpr, H); } }
+  for (let px = 0; px < W; px++) {
+    let lo = 0, hi = 0; const a = i0 + Math.floor(px * per), b = Math.min(i0 + n, a + Math.max(1, Math.ceil(per)));
+    for (let i = a; i < b; i += Math.max(1, (per / 24) | 0)) { const v = d[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
+    const f = px / W; g2.globalAlpha = f >= from && f < to ? 1 : 0.3; g2.fillStyle = colr;
+    g2.fillRect(px, H / 2 - hi * H * 0.47, 1, Math.max(1, (hi - lo) * H * 0.47));
+  }
+  g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.fillRect(from * W, 0, 2 * dpr, H); g2.fillRect(to * W - 2 * dpr, 0, 2 * dpr, H);
+  const cell = S.grid.cells[lp.c]?.[lp.r];
+  $('lpEdInfo').textContent = `${cell?.lpNote ? 'Your bit' : 'Auto: the first note'} · ${((to - from) * (one.e - one.s)).toFixed(2)} s. Drag across another bit to change it; tap to hear from there.`;
+}
+function lpEdClose() { lpEd.on = false; $('lpEd').hidden = true; $('lpKeys').hidden = false; lpDraw(); }
+{
+  const cv = $('lpWave');
+  let moved = false;
+  cv.addEventListener('pointerdown', ev => { if (!lpEd.on) return; ev.preventDefault(); capture(cv, ev); lpEd.p0 = along(cv, ev); moved = false; });
+  cv.addEventListener('pointermove', ev => {
+    if (lpEd.p0 == null) return;
+    const p = along(cv, ev); if (!moved && Math.abs(p - lpEd.p0) < 0.012) return;
+    moved = true; lpEd.sel = [Math.min(lpEd.p0, p), Math.max(lpEd.p0, p)]; lpWave();
+  });
+  const end = () => {
+    if (lpEd.p0 == null) return;
+    const cell = S.grid.cells[lp.c]?.[lp.r], { one, buf } = lpEd, w = one.e - one.s;
+    if (moved && lpEd.sel[1] - lpEd.sel[0] > 0.002 && cell) {
+      cell.lpNote = [...lpEd.sel]; lp.slot = null; persist(); lpWave();
+      lpSlot().then(sl => sl && playNote(eng, sl, -1, 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root }));     // hear it, as the 8th pad
+    } else {                       // a tap: hear from there
+      const at = one.s + w * lpEd.p0;
+      playNote(eng, { kind: 'chop', buf, slices: [{ buf, s: at, e: Math.min(one.e, at + 2), start: 0, len: 1 }], params: { ...defParams(), vol: 0.9 } }, -1, 0, ctx.currentTime, {});
+    }
+    lpEd.p0 = null;
+  };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+}
+$('lpEdHear').addEventListener('click', () => { ctx.resume(); lpSlot().then(sl => sl && playNote(eng, sl, -1, 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root })); });
+$('lpEdAuto').addEventListener('click', () => {
+  const cell = S.grid.cells[lp.c]?.[lp.r]; if (!cell) return;
+  delete cell.lpNote; lp.slot = null; persist();
+  const { one, buf } = lpEd, w = one.e - one.s, [a, e] = lpFirstNote(buf, one); lpEd.sel = [(a - one.s) / w, (e - one.s) / w]; lpWave();
+});
+$('lpEdDone').addEventListener('click', lpEdClose);
 function lpDraw() {
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
   $('lpRec').textContent = lpRec ? '■ Stop rec' : '⏺ Rec';
@@ -4215,10 +4284,20 @@ function lpDraw() {
   });
   $('lPage').textContent = `${lPage + 1}/2`;
 }
-document.querySelectorAll('[data-lp]').forEach(b => b.addEventListener('click', () => {
-  lp.mode = b.dataset.lp; lp.slot = null; try { localStorage.setItem('pocketLpMode', lp.mode); } catch (e) {}
-  lpDraw(); lpSlot();
-}));
+document.querySelectorAll('[data-lp]').forEach(b => {
+  let held = 0, long = false;
+  if (b.dataset.lp === 'notes') {
+    b.addEventListener('pointerdown', () => { long = false; clearTimeout(held); held = setTimeout(() => { long = true; lpEdit(); }, 500); });
+    for (const t of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(t, () => clearTimeout(held));
+    b.addEventListener('contextmenu', ev => ev.preventDefault());
+  }
+  b.addEventListener('click', () => {
+    if (long) { long = false; return; }
+    if (lpEd.on) lpEdClose();
+    lp.mode = b.dataset.lp; lp.slot = null; try { localStorage.setItem('pocketLpMode', lp.mode); } catch (e) {}
+    lpDraw(); lpSlot();
+  });
+});
 const lFlip = () => { lPage = 1 - lPage; drawLoops(); lpDraw(); };
 $('lPrev').addEventListener('click', lFlip); $('lNext').addEventListener('click', lFlip);
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
