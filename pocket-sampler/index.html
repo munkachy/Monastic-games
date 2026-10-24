@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
 <script>try { if (localStorage.getItem('pocketLook') === 'classic') document.documentElement.classList.add('classic'); } catch (e) {}
@@ -11,6 +11,10 @@
     document.documentElement.classList.toggle('sidepads', side || !tall); document.documentElement.classList.toggle('turned', side && tall); } catch (e) {}</script>
 <title>Pocket Sampler</title>
 <style>
+  /* No double-tap zoom, in Safari or Chrome: two quick taps (− and + on the tempo) are two taps. The pads,
+     faders and waves keep their own touch-action (none), set below. maximum-scale above stops iOS zooming
+     in on a menu or text box it focuses. */
+  *, *::before, *::after { touch-action: manipulation; }
   /* The colours, by part, the same everywhere: a kick is always red, a bass always green. Defined
      here only; app.js reads them from here. The Loops columns are Remixlive's eight: kick, snare,
      tops (hats), bass, chords, lead, sub, vox/keys; the other eight are the other drum hits and parts. */
@@ -560,7 +564,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zp</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261023zq</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs"><button data-view="pads" class="on">Pads</button><button data-view="loops">Loops</button></div>
 
   <div class="screen" id="screen">
@@ -1087,6 +1091,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261023zp"></script>
+<script type="module" src="app.js?v=20261023zq"></script>
 </body>
 </html>
