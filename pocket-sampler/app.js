@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025o';
+import * as DZ from './design.js?v=20261025p';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025o';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025p';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025p'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025p'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3700,7 +3700,7 @@ const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar'], [32, '2
 // Repeat, in beats, shown as note values: 1/32 note (an eighth of a beat) up to 8 bars.
 const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars']];
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
-  ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['tape', 'Tape']];
+  ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['tape', 'Tape']];
 // The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
 // and Tops columns hold single hits (a snare, a clap, a hat), each a loop that plays it again every 4 beats.
 function defaultGrid() {
@@ -3832,7 +3832,7 @@ function wireFx(k, fx, c = ctx, e = eng) {
   for (const n of [k.ins, k.send]) if (n) try { n.dispose ? n.dispose() : n.disconnect(); } catch (er) {}
   k.ins = k.send = null; k.type = fx.type;
   if (fx.type === 'lowpass' || fx.type === 'highpass') { k.ins = c.createBiquadFilter(); k.ins.type = fx.type; }
-  else if (fx.type === 'overdrive' || fx.type === 'tape') k.ins = satChain(c, fx.type);      // (audio.js: Drive and Tape as the hardware does them)
+  else if (fx.type === 'overdrive' || fx.type === 'distortion' || fx.type === 'tape') k.ins = satChain(c, fx.type);      // (audio.js: Drive and Tape as the hardware does them)
   if (k.ins) { k.inp.connect(k.ins.input || k.ins); (k.ins.output || k.ins).connect(k.out); } else k.inp.connect(k.out);
   if (['reverb', 'echo', 'pingpong'].includes(fx.type)) {
     k.send = c.createGain(); k.out.connect(k.send);
@@ -3844,7 +3844,7 @@ function fxAmount(k, fx, c = ctx, e = eng) {
   const { type, amt: a } = fx, t = c.currentTime, echo = Math.min(1.9, stepDur() * 3);
   if (type === 'lowpass') { k.ins.frequency.setTargetAtTime(6000 * Math.pow(0.03, a), t, 0.03); k.ins.Q.value = 1 + a * 6; }
   if (type === 'highpass') { k.ins.frequency.setTargetAtTime(80 * Math.pow(40, a), t, 0.03); k.ins.Q.value = 1 + a * 4; }
-  if (type === 'overdrive' || type === 'tape') k.ins.set(a);
+  if (type === 'overdrive' || type === 'distortion' || type === 'tape') k.ins.set(a);
   if (k.send) k.send.gain.setTargetAtTime(a * (type === 'reverb' ? 1.3 : 0.9), t, 0.03);
   if (type === 'echo') e.delay.delayTime.setValueAtTime(echo, t);
   if (type === 'pingpong') { e.ppL.delayTime.setValueAtTime(echo, t); e.ppR.delayTime.setValueAtTime(echo, t); }
@@ -5249,7 +5249,7 @@ function eqCurve(cv, eq, colr) {
 // A sound's own menu: hold its pad in Sound mode (an instrument, or a kit). Its volume, pitch
 // and how it plays; its EQ and an effect of its own, on every note of it (audio.js: P.eq, P.fx).
 const SOUND_FX = [['none', 'None'], ['reverb', 'Reverb'], ['echo', 'Echo'], ['pingpong', 'Ping-pong'], ['chorus', 'Chorus'],
-  ['overdrive', 'Drive'], ['fuzz', 'Fuzz'], ['tape', 'Tape']];
+  ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['fuzz', 'Fuzz'], ['tape', 'Tape']];
 let snSi = null;
 function openSoundSheet(si) {
   if (!S.slots[si]) return;

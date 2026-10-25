@@ -156,7 +156,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   side of the sound chosen: a kit's hits by colour, or the instruments.
 - **A sound's own menu:** hold a sound in Sound mode (an instrument or a
   kit) for its volume, pitch and how it plays, and its own EQ (three bands,
-  with its curve) and effect (reverb, echo, ping-pong, chorus, drive, fuzz,
+  with its curve) and effect (reverb, echo, ping-pong, chorus, drive, distortion, fuzz,
   tape), on every note of it, in the beat and in the export.
 - **Light sound engine** (Menu › Buttons › Sound engine), for older iPads
   whose sound breaks up: a bigger audio buffer, 32 kHz inside, a shorter
@@ -207,8 +207,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   a page, and 16 pads on the right that play the loop tapped last: in 16
   slices, or its first note pitched across the key. FX gives the pads
   their own EQ and effect (low or high pass, reverb, echo, ping-pong,
-  drive, tape), kept in what ⏺ Rec records. Drive is modelled on a Tube
-  Screamer (clean bass, soft-clipped mids); Tape on ChowTape (pre- and
+  drive, distortion, tape), kept in what ⏺ Rec records. Drive is modelled
+  on a Tube Screamer (clean bass, soft-clipped mids); Distortion on a
+  ProCo RAT (high gain, hard diode clipping, filter after); Tape on ChowTape (pre- and
   de-emphasis, soft saturation, head bump, high loss, wow and flutter),
   both level-matched.
 - **🎹 Design a sound in a Loops cell:** the synth designer, for that cell;
