@@ -221,7 +221,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   or high end, layer a second drum, bake in a short room, or reverse it.
 - **⏺ Rec in Loops + Pads:** what you play on the pads, recorded as notes
   into a loop cell (🎹 From the pads, in a cell's picker, chooses which).
-  Hold the cell for 🎹 Notes: drag notes along the beat, tap to delete.
+  Recorded exactly as played, never quantized; hold the cell for 🎹 Notes
+  to quantize afterwards (1/16, 1/8, 1/4, or back to As played), drag
+  notes along the beat, or tap to delete.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,
