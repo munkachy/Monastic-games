@@ -758,7 +758,16 @@ function synthNote(ctx, out, sp, f, t, len, bpm, voice) {
     case 'sub': {          // 808 bass: a sine that falls into its note, with drive
       const o = osc(ctx, 'sine', f, t, voice);
       o.frequency.setValueAtTime(f * 2.2, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
-      o.connect(into); break;
+      o.connect(into);
+      // harm: its overtones (2nd to 6th, each quieter), locked to it. A phone's or iPad's speakers play
+      // almost nothing under about 150 Hz, but given the overtones the ear hears the low note anyway
+      // (the "missing fundamental", as bass enhancers like MaxxBass use); on big speakers the sine is still there.
+      if (sp.harm) for (const [n, g0] of [[2, 0.6], [3, 0.42], [4, 0.28], [5, 0.16], [6, 0.09]]) {
+        const h = osc(ctx, 'sine', f * n, t, voice), g = ctx.createGain(); g.gain.value = g0 * sp.harm;
+        h.frequency.setValueAtTime(f * n * 2.2, t); h.frequency.exponentialRampToValueAtTime(f * n, t + 0.06);
+        h.connect(g); g.connect(into);
+      }
+      break;
     }
     case 'wobble': {       // dubstep: detuned saws through a filter an LFO opens and shuts
       const fl = filt();

@@ -228,6 +228,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Recorded exactly as played, never quantized; hold the cell for 🎹 Notes
   to quantize afterwards (1/16, 1/8, 1/4, or back to As played), drag
   notes along the beat, or tap to delete.
+- **Sub bass you can hear on a phone:** the Sub Bass synth has its 2nd to
+  6th overtones, and the sets' sub loops are given them by
+  `pocket-sampler/tools/subbass.py` (the missing-fundamental trick bass
+  enhancers use), so a sub comes through on small speakers.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,
