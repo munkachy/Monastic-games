@@ -206,8 +206,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
   slices, or its first note pitched across the key. FX gives the pads
-  their own EQ and effect (low or high pass, reverb, echo, ping-pong,
-  drive, distortion, tape), kept in what ⏺ Rec records. Drive is modelled
+  their own EQ and effects (low or high pass, reverb, echo, ping-pong,
+  drive, distortion, tape; any number at once, as on a Loops column, each
+  with its amount), kept in what ⏺ Rec records. Drive is modelled
   on a Tube Screamer (clean bass, soft-clipped mids); Distortion on a
   ProCo RAT (high gain, hard diode clipping, filter after); Tape on ChowTape (pre- and
   de-emphasis, soft saturation, head bump, high loss, wow and flutter),
