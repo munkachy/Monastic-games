@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025d';
+import * as DZ from './design.js?v=20261025e';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025d';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025e';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025e'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025e'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3601,7 +3601,7 @@ async function load() {
   }
   // Sounds still at the old default of 80% go to the new 20%, once (any you set yourself stay).
   if (saved && !saved.quiet20) for (const sl of S.slots) if (sl?.params && Math.abs(sl.params.vol - 0.8) < 1e-6) sl.params.vol = 0.2;
-  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid', 'lpQLast']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
   if (S.grid.cells.flat().some(x => x?.lib === 'ebbbeats')) gridAgain = 'electroboombap';      // its beats became kick, snare and tops loops
@@ -4226,11 +4226,11 @@ function lpTargetCell() {
   return null;
 }
 function lpNote(k, t, slot) {
-  const R = lpRec; if (t < R.t0 - stepDur() / 2) return;           // still counting in
+  const R = lpRec, q = +S.quantGrid || 0; if (t < R.t0 - stepDur() * Math.max(0.5, q / 2)) return;           // still counting in
   if (!R.src) R.src = slot;
   if (slot !== R.src) return;                                      // one sound a recording
   let pos = Math.max(0, (t - R.t0) / stepDur());
-  if (S.quantGrid) pos = Math.round(pos);
+  if (q) pos = Math.round(pos / q) * q;
   R.notes.push({ k, t: pos });
 }
 async function lpRecTap() {
@@ -4239,16 +4239,14 @@ async function lpRecTap() {
   const at = lpTargetCell();
   if (!at) { status(lp.c < 0 ? 'Tap a loop first: the pads play it, and ⏺ Rec puts what you play in the next empty cell of its column.' : 'Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
   if (!await lpSlot()) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
-  const was = playing;
-  if (!playing) { start(); resumeLoops(); }
-  let t0 = nextBar().when;
-  if (!was && t0 - ctx.currentTime < 8 * stepDur()) t0 += 16 * stepDur();      // stopped: a bar to count in
-  lpRec = { ...at, t0, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
+  const ci = await recCountIn(), t0 = ci.t0;
+  lpRec = { ...at, t0, ci, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
   lpDraw(); drawLoops();
-  status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}${at.c !== lp.c && !lpTarget ? ` (${CHANNELS[lp.c]} is full)` : ''}, from the next bar: play the pads, then ⏺ again to stop.`);
+  status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}${at.c !== lp.c && !lpTarget ? ` (${CHANNELS[lp.c]} is full)` : ''}, ${countBars() ? `after ${countBars()} bar${countBars() > 1 ? 's' : ''} to count in` : 'from the next bar'}: play the pads, then ⏺ again to stop.`);
 }
 async function lpRecStop() {
   const R = lpRec; lpRec = null; lpTarget = null; lpDraw(); drawLoops();
+  if (ctx.currentTime < R.t0) { R.ci?.undo?.(); status('Stopped before it began: nothing was recorded.'); return; }
   if (!R.notes.length) { status('Nothing was played, so nothing was recorded.'); return; }
   const played = (ctx.currentTime - R.t0) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
   const notes = R.notes.filter(n => n.t < bars * 16).map(n => ({ k: n.k, t: Math.min(n.t, bars * 16 - 0.01) }));
@@ -4274,7 +4272,28 @@ async function seqRender(seq, slot) {
   const buf = ctx.createBuffer(1, m, SR); buf.copyToChannel(out, 0); return buf;
 }
 $('lpRec').addEventListener('click', lpRecTap);
-$('lpQ').addEventListener('click', () => { S.quantGrid = S.quantGrid ? 0 : 1; persist(); lpDraw(); });
+// the 1/16 button: a tap switches between your quantize and Free; hold it for the others
+const LPQ = [[0, 'Free'], [1, '1/16'], [2, '1/8'], [4, '1/4']], lpQName = q => (LPQ.find(x => x[0] === +q) || [0, `1/${16 / q}`])[1];
+{
+  let held = 0, long = false;
+  $('lpQ').addEventListener('pointerdown', () => { long = false; clearTimeout(held); held = setTimeout(() => { long = true; lpQMenu(); }, 500); });
+  for (const t of ['pointerup', 'pointercancel', 'pointerleave']) $('lpQ').addEventListener(t, () => clearTimeout(held));
+  $('lpQ').addEventListener('contextmenu', ev => ev.preventDefault());
+  $('lpQ').addEventListener('click', () => {
+    if (long) { long = false; return; }
+    if (S.quantGrid) { S.lpQLast = +S.quantGrid; S.quantGrid = 0; } else S.quantGrid = S.lpQLast || 1;
+    persist(); lpDraw(); status(`Recording: ${S.quantGrid ? `each note on its ${lpQName(S.quantGrid)}` : 'Free, the timing exactly as played'}. Hold it for the others.`);
+  });
+}
+function lpQMenu() {
+  const box = $('lpQMenu'); box.textContent = ''; box.hidden = false;
+  for (const [q, l] of LPQ) {
+    const b = document.createElement('button'); b.textContent = l; b.classList.toggle('on', +S.quantGrid === q);
+    b.addEventListener('click', () => { S.quantGrid = q; if (q) S.lpQLast = q; persist(); box.hidden = true; lpDraw(); status(`Recording: ${q ? `each note on its ${l}` : 'Free, the timing exactly as played'}.`); });
+    box.appendChild(b);
+  }
+}
+addEventListener('pointerdown', ev => { if (!$('lpQMenu').hidden && !ev.target.closest('#lpQMenu, #lpQ')) $('lpQMenu').hidden = true; }, true);
 function lpFirstNote(buf, one) {
   const st = onsets(buf, 8).filter(t => t >= one.s - 0.001 && t < one.e);
   const lvl = t => { const x = buf.getChannelData(0), i = Math.round(t * buf.sampleRate); let m = 0; for (let j = i; j < Math.min(x.length, i + 400); j++) m = Math.max(m, Math.abs(x[j])); return m; };
@@ -4347,7 +4366,7 @@ function lpDraw() {
   const gone = !S.grid.cells[lp.c]?.[lp.r] && !!lp.saved;
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
   $('lpRec').textContent = lpRec ? '■ Stop rec' : '⏺ Rec';
-  $('lpQ').textContent = S.quantGrid ? '1/16' : 'Free'; $('lpQ').classList.toggle('on', !!S.quantGrid);
+  $('lpQ').textContent = S.quantGrid ? lpQName(S.quantGrid) : 'Free'; $('lpQ').classList.toggle('on', !!S.quantGrid);
   if (lpRec && ctx.currentTime < lpRec.t0) setTimeout(lpDraw, Math.max(30, (lpRec.t0 - ctx.currentTime) * 1000));
   const cell = lpCellNow();
   $('lpads').style.setProperty('--c', lpInst && lpTarget ? CHANNEL_COLOR[lpTarget.c] : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
@@ -4488,6 +4507,7 @@ function drawSets() {
   }
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
+  drawCountIn();
   // every loop at once (each can be changed after: hold it)
   S.grid.stretch ??= true;
   const mixed = S.grid.cells.flat().some(x => x && x.stretch != null && x.stretch !== S.grid.stretch);
@@ -5086,7 +5106,7 @@ let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
   lPane = b.dataset.lpane;
   if (lPane === 'rap') openPsalter();          // the psalms, the first time
-  if (lPane === 'mic') micDraw();
+  if (lPane === 'mic') { micDraw(); drawCountIn(); }
   document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('[data-pane]').forEach(x => { x.hidden = x.dataset.pane !== lPane; });
   drawCellMenu();
@@ -5511,6 +5531,33 @@ async function lrTapNode(what, input = null) {
   node.unplug = () => { for (const n of from) try { n.disconnect(node); } catch (e) {} try { node.disconnect(); sink.disconnect(); } catch (e) {} };
   return node;
 }
+// The count-in before a recording (⏺ Rec in Loops + Pads, 🎙 Record): Off, 1 or 2 bars (Loops › ⚙, or
+// the 🎙 Rec tab). Recording starts on a bar at least that far off (if stopped, Play starts); until
+// then everything is silent but the clicks (the 808's clave, a recording: louder on each bar's first
+// beat), which go straight out, past the faded master; everything comes back on the first beat
+// recorded. The loops play on underneath, so nothing loses its place.
+const countBars = () => S.grid.countIn ?? 1;
+let clickOut = null;
+async function recCountIn() {
+  const bars = countBars(), bar = 16 * stepDur(), now = ctx.currentTime; let t0;
+  if (!playing) { start(); resumeLoops(); t0 = nextT + bars * bar; }
+  else { t0 = nextBar().when; if (bars) while (t0 - now < bars * bar - 0.05) t0 += bar; else if (t0 - now < 0.25) t0 += bar; }
+  const h = { t0, clicks: [], undone: false };
+  if (!bars) return h;
+  const g = eng.master.gain;
+  g.cancelScheduledValues(now); g.setTargetAtTime(0, now, 0.012); g.setTargetAtTime(eng.vol, t0 - 0.006, 0.002);
+  h.undo = () => { if (h.undone) return; h.undone = true; const t = ctx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(eng.vol, t, 0.02); for (const v of h.clicks) try { v?.stop?.(t); } catch (e) {} };
+  try {
+    if (!clickOut || clickOut.context !== ctx) { clickOut = ctx.createGain(); clickOut.gain.value = 0.9; clickOut.connect(ctx.destination); }
+    const kit = await slotOf({ lib: 'kit808' }), k = Math.max(0, kit.slices.findIndex(x => /clave/i.test(x.name))), beat = bar / 4;
+    for (let i = 1; t0 - i * beat > ctx.currentTime + 0.03; i++)
+      h.clicks.push(playNote(eng, { ...kit, params: { ...kit.params, vol: i % 4 === 0 ? 0.7 : 0.4 } }, -1, k, t0 - i * beat, { dest: clickOut }));
+  } catch (e) { console.warn('count-in clicks', e); }
+  return h;
+}
+function drawCountIn() {
+  for (const id of ['lsCount', 'micCount']) choices($(id), [[0, 'Off'], [1, '1 bar'], [2, '2 bars']], countBars(), v => { S.grid.countIn = v; persist(); drawCountIn(); });
+}
 // 🎙 Rec (a Loops cell's tab, or 🎙 Record in its picker): the microphone, recorded in time into the
 // cell. A bar to count in (clicks of the 808's clave, a recording, if wanted), then exactly 1, 2 or 4
 // bars, taken sample-true by the same tap as ⏺ Loop rec, moved earlier by the device's own delay (what
@@ -5524,7 +5571,7 @@ function micDraw() {
   $('micGo').textContent = left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
 }
 document.querySelectorAll('[data-mb]').forEach(b => b.addEventListener('click', () => { micBarsN = +b.dataset.mb; try { localStorage.setItem('pocketMicBars', micBarsN); } catch (e) {} micDraw(); }));
-function micEnd(T) { clearInterval(T.tick); try { T.node?.unplug(); } catch (e) {} try { T.src?.disconnect(); } catch (e) {} for (const t of T.stream?.getTracks() || []) t.stop(); for (const v of T.clicks || []) try { v?.stop?.(ctx.currentTime); } catch (e) {} }
+function micEnd(T) { clearInterval(T.tick); T.ci?.undo?.(); try { T.node?.unplug(); } catch (e) {} try { T.src?.disconnect(); } catch (e) {} for (const t of T.stream?.getTracks() || []) t.stop(); for (const v of T.clicks || []) try { v?.stop?.(ctx.currentTime); } catch (e) {} }
 $('micGo').addEventListener('click', async () => {
   if (micTake) { const T = micTake; micTake = null; T.node?.port.postMessage({ cancel: true }); micEnd(T); micDraw(); status('The recording was stopped and thrown away.'); return; }
   if (!menuCell) return;
@@ -5536,19 +5583,10 @@ $('micGo').addEventListener('click', async () => {
   catch (e) { status('The microphone was not allowed: ' + e.message + ' (allow it for this site in the browser’s settings).'); return; }
   const src = ctx.createMediaStreamSource(stream);
   let node; try { node = await lrTapNode('mic', src); } catch (e) { for (const t of stream.getTracks()) t.stop(); status('Could not start the recorder: ' + e.message); return; }
-  // a bar to count in: if stopped, Play starts and the second bar records; playing, the next bar a bar or so away
-  const bar = 16 * stepDur(); let t0;
-  if (!playing) { start(); resumeLoops(); t0 = nextT + bar; }
-  else { t0 = nextBar().when; if (t0 - ctx.currentTime < bar * 0.75) t0 += bar; }
+  const bar = 16 * stepDur(), ci = await recCountIn(), t0 = ci.t0;
   const set = stream.getAudioTracks()[0]?.getSettings?.() || {};
   const lat = Math.min(0.3, (ctx.baseLatency || 0) + (ctx.outputLatency || 0) + (set.latency || 0.01));
-  const t1 = t0 + bars * bar, T = micTake = { c, r, bars, t0, t1, stream, src, node, chunks: [], bpm: S.bpm, clicks: [] };
-  if ($('micClick').checked) {
-    try {
-      const kit = await slotOf({ lib: 'kit808' }), k = kit.slices.findIndex(x => /clave/i.test(x.name));
-      for (let i = 0; i < 4; i++) T.clicks.push(playNote(eng, { ...kit, params: { ...kit.params, vol: i ? 0.35 : 0.6 } }, -1, Math.max(0, k), t0 - bar + i * bar / 4, {}));
-    } catch (e) { console.warn('count-in clicks', e); }
-  }
+  const t1 = t0 + bars * bar, T = micTake = { c, r, bars, t0, t1, stream, src, node, chunks: [], bpm: S.bpm, clicks: [], ci };
   node.port.onmessage = e => {
     if (micTake !== T) return;
     if (!e.data.done) { T.chunks.push(e.data); return; }
@@ -5556,7 +5594,7 @@ $('micGo').addEventListener('click', async () => {
   };
   node.port.postMessage({ start: t0 + lat, end: t1 + lat });
   T.tick = setInterval(micDraw, 100); micDraw();
-  status(`🎙 Counting in a bar, then recording ${bars} bar${bars > 1 ? 's' : ''} into ${CHANNELS[c]}, cell ${r + 1}.`);
+  status(`🎙 ${countBars() ? `Counting in ${countBars()} bar${countBars() > 1 ? 's' : ''}, then recording` : 'Recording from the next bar:'} ${bars} bar${bars > 1 ? 's' : ''} into ${CHANNELS[c]}, cell ${r + 1}.`);
 });
 async function micKeep(T) {
   const rate = ctx.sampleRate, m = Math.round((T.t1 - T.t0) * rate), out = new Float32Array(m);
@@ -5891,6 +5929,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   state: () => S,
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
   lpSlotInfo: async () => { const sl = await lpSlot(); return sl && { kind: sl.kind, zones: sl.zones?.length, base: sl.base, vol: sl.params?.vol, trig: sl.params?.trig, buf: sl.buf?.length, dur: sl.buf?.duration, z0: sl.zones?.[0] }; },
+  masterGain: () => eng.master.gain.value,
   cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
     const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
