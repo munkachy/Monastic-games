@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025y';
+import * as DZ from './design.js?v=20261025z';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025y';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025z';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025z'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025z'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3823,7 +3823,7 @@ function colChain(c) {
   return eng.cols[c];
 }
 const colInput = (c, cell) => (cell?.fxOff ? colChain(c).dry : colChain(c).inp);
-const setColGain = c => { const k = colChain(c); for (const g of [k.out, k.dout]) g.gain.setTargetAtTime(colLevel(c), ctx.currentTime, 0.02); };
+const setColGain = c => { const k = colChain(c); for (const g of [k.out, k.dout]) g.gain.setTargetAtTime(colLevel(c), ctx.currentTime, 0.02); lpLevel(); };
 // Effects (a Loops column's, or the Loops + Pads pads'): as many as wanted at once, each with its amount,
 // kept as { on: { drive: 0.5, reverb: 0.3 } } (an older { type, amt } is read as one). They always run in
 // one order, as a guitarist chains pedals: high pass, the drives, the low pass, in turn on the sound
@@ -3901,8 +3901,15 @@ function padStrip(c, e, dest, cfg) {
 }
 function lpStripNow() {
   S.grid.lpFx ||= LP_FX0();
-  if (!eng.lpStrip) eng.lpStrip = padStrip(ctx, eng, eng.bus, S.grid.lpFx);
+  if (!eng.lpStrip) { eng.lpLvl = ctx.createGain(); eng.lpLvl.connect(eng.bus); eng.lpStrip = padStrip(ctx, eng, eng.lpLvl, S.grid.lpFx); lpLevel(); }
   return eng.lpStrip;
+}
+// The pads are as loud as the column of the loop they play (its volume under the grid; not its mute, so
+// the pads can play in place of a muted loop). A designed sound: the column it records into.
+function lpLevel() {
+  if (!eng.lpLvl) return;
+  const c = lpInst && lpTarget ? lpTarget.c : lp.c;
+  eng.lpLvl.gain.setTargetAtTime(c >= 0 ? S.grid.vol[c] ?? 0.8 : 0.8, ctx.currentTime, 0.02);
 }
 function lpFxApply() {
   const k = lpStripNow(), f = S.grid.lpFx;
@@ -4280,6 +4287,7 @@ async function lpPress(k) {
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
   const trig = lpTrigNow(), held = lp.held ||= {};
   if (trig === 'loop' && held[k]) { lpLetGo(k, when); return; }       // Loop: a second tap stops it
+  lpLevel();
   if (held[k]) lpLetGo(k, when);
   const prevVoice = lp.voice;
   lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
