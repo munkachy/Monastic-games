@@ -224,7 +224,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   designer can also tune a drum to the key, soften its click, cut its low
   or high end, layer a second drum, bake in a short room, or reverse it.
 - **⏺ Rec in Loops + Pads:** what you play on the pads, recorded as notes
-  into a loop cell (🎹 From the pads, in a cell's picker, chooses which).
+  into a loop cell (🎹 From the pads, in a cell's picker, chooses which),
+  like a looper: choose the length (1/2 to 32 bars) and New, Layer or
+  Replace; it goes round until stopped, the notes appearing on a bar under
+  the grid and playing again each time round.
   Recorded exactly as played, never quantized; hold the cell for 🎹 Notes
   to quantize afterwards (1/16, 1/8, 1/4, or back to As played), drag
   notes along the beat, or tap to delete.
