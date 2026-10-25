@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026a';
+import * as DZ from './design.js?v=20261026b';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026a';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026b';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -816,7 +816,7 @@ function trigger(k, pad = k) {
 // first tap plays at once and starts an invisible grid at the tempo, which later taps wait for; it lets go
 // after two bars with no tap.
 let freeGrid = null;
-function snap() {
+function snap(straight = false) {           // straight: no swing (Loops + Pads: the loops' own bar grid)
   const g = +S.quantGrid; if (!g) return null;
   const now = ctx.currentTime, sd = stepDur();
   if (!playing) {
@@ -826,7 +826,7 @@ function snap() {
     return { j: null, when, on };
   }
   freeGrid = null;
-  const sw = (2 * S.swing / 100 - 1) * sd;
+  const sw = straight ? 0 : (2 * S.swing / 100 - 1) * sd;
   const at = j => nextT - (tick - j) * sd + (j % 2 ? sw : 0);
   let prev = Math.floor((tick - (nextT - now) / sd) / g) * g;
   while (prev > 0 && at(prev) > now) prev -= g;
@@ -2000,7 +2000,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026b'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2093,7 +2093,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026b'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4293,7 +4293,7 @@ for (let k = 0; k < 16; k++) {
 // your timing exactly as played (it can be put on the beat afterwards, in the cell's 🎹 Notes).
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
-  const snapped = snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
+  const snapped = snap(true), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
@@ -4304,7 +4304,7 @@ async function lpPress(k) {
   const prevVoice = lp.voice;
   lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
   lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
-  const note = lpRec ? lpNote(k, snapped ? snapped.on : at, slot, oct) : null;
+  const note = lpRec ? lpNote(k, snapped ? snapped.on : at, slot, oct, snapped ? +S.quantGrid : 0) : null;
   if (trig !== 'oneshot') { held[k] = { voice: lp.voice, at: when, note }; lpDraw(); }
   if (trig === 'gate' && !lpKeys[k].classList.contains('down')) lpLetGo(k);       // let go before the sound was ready
 }
@@ -4404,11 +4404,13 @@ function lpTargetCell() {
 // A note played while recording: where it falls in the loop (as played: never quantized), and which time
 // round (cyc). The loop goes round and round: what was played on earlier times round plays again on each
 // later one (a looper), while you add more.
-function lpNote(k, t, slot, oct = 0) {
+function lpNote(k, t, slot, oct = 0, g = 0) {
   const R = lpRec; if (t < R.t0 - R.sd / 2) return;           // still counting in
   if (!R.src) R.src = slot;
   if (slot !== R.src) return;                                      // one sound a recording
-  const p = Math.max(0, (t - R.origin) / R.sd), cyc = Math.floor(p / R.L);
+  let p = Math.max(0, (t - R.origin) / R.sd);
+  if (g) p = Math.round(p / g) * g;                                // quantized: exactly on its grid point
+  const cyc = Math.floor(p / R.L + 1e-9);
   const n = { k, t: p - cyc * R.L, cyc, ...(oct && { o: oct }) }; R.notes.push(n);
   if (R.m > cyc + 1) lpRecPlayOne(R, n, cyc + 1);                // the next time round was booked already: book this too
   lpRecBarNote(n); return n;
@@ -5357,7 +5359,7 @@ function drawRoll(c, r) {
     b.textContent = list.length > 1 ? `×${list.length}` : name(seq.notes[list[0]].k);
     b.title = list.map(i => name(seq.notes[i].k)).join(' ');
     Object.assign(b.style, { left: (t0 - x0t) * st + 1 + 'px', width: Math.max(4, w - 2) + 'px', top: '3px', bottom: '3px', fontSize: w < 18 ? '8px' : '10px' });
-    let x0 = 0, moved = false, shift = 0, turned = false;
+    let x0 = 0, moved = false, shift = 0, turned = false;      // shift: in slots of the zoom
     const along = ev => (turned ? ev.clientY : ev.clientX);
     const lo = Math.min(...list.map(i => seq.notes[i].t)), hi = Math.max(...list.map(i => seq.notes[i].t));
     b.addEventListener('pointerdown', ev => {
@@ -5369,14 +5371,18 @@ function drawRoll(c, r) {
       if (!b.classList.contains('drag')) return;
       const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
       moved = true;
-      shift = Math.max(-Math.floor(lo), Math.min(Math.floor(steps - 1 - hi), Math.round(dx / st)));  // together, by 16ths (each keeps its own timing)
-      b.style.left = (t0 - x0t + shift) * st + 1 + 'px';             // (past the row's end: into the next row)
+      shift = Math.max(-k, Math.min(Math.floor((steps - 1 - hi + lo - t0) / unit), Math.round(dx / st / unit)));      // by whole slots of the zoom
+      b.style.left = (t0 - x0t + shift * unit) * st + 1 + 'px';             // (past the row's end: into the next row)
     });
     b.addEventListener('pointerup', () => {
       b.classList.remove('drag');
       let notes;
       if (!moved) notes = seq.notes.filter((n, i) => !list.includes(i));
-      else if (shift) notes = seq.notes.map((n, i) => (list.includes(i) ? { ...n, t: n.t + shift } : n));
+      else if (shift || lo !== t0) {
+        // dropped on a line of the zoom: the first note of the block exactly on it, the rest kept as far after it
+        const d = t0 + shift * unit - lo;
+        notes = seq.notes.map((n, i) => (list.includes(i) ? { ...n, t: Math.max(0, Math.min(steps - 0.01, n.t + d)) } : n));
+      }
       else return;
       rollChange(c, r, notes);
     });
