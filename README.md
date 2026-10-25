@@ -177,7 +177,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
 - **Repeat** in the Loops, as note values: 1/32, 1/16, 1/8, 1/4, 1/2, then bars.
 - **Drum loops are beat sliced to the tempo**, not stretched: cut at every
   hit (and every 16th with none), each hit put down at its new time as
-  recorded, so breaks like the Amen stay crisp at any tempo. 🔁 in Review
+  recorded, so breaks like the Amen stay crisp at any tempo; slowed, each
+  hit's ringing is stretched to fill the space after it (no gap, no rasp).
+  Other loops are stretched by WSOLA or a phase vocoder, whichever comes out
+  closer to the original. 🔁 in Review
   the library loops a sound at the tempo playing, as the Loops would.
 - **A cell's sounds by colour:** choosing a sound for a Loops cell shows the
   browser's colour folders, the column's own first; anything can go anywhere.
