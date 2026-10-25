@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025i';
+import * as DZ from './design.js?v=20261025j';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025i';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025j';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025j'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025j'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5592,26 +5592,29 @@ async function lrTapNode(what, input = null) {
   return node;
 }
 // The count-in before a recording (⏺ Rec in Loops + Pads, 🎙 Record): Off, 1 or 2 bars (Loops › ⚙, or
-// the 🎙 Rec tab). Recording starts on a bar at least that far off (if stopped, Play starts); until
-// then everything is silent but the clicks (the 808's clave, a recording: louder on each bar's first
-// beat), which go straight out, past the faded master; everything comes back on the first beat
-// recorded. The loops play on underneath, so nothing loses its place.
+// the 🎙 Rec tab). It begins on the next bar and is exactly that long: four clicks a bar (the 808's
+// clave, a recording: louder on each bar's first beat), sent straight out past the master, which is
+// silent through it; the music plays on until it begins, and comes back on the first beat recorded.
+// The loops play on underneath, so nothing loses its place. (If stopped, Play starts and it begins now.)
 const countBars = () => S.grid.countIn ?? 1;
 let clickOut = null;
 async function recCountIn() {
-  const bars = countBars(), bar = 16 * stepDur(), now = ctx.currentTime; let t0;
-  if (!playing) { start(); resumeLoops(); t0 = nextT + bars * bar; }
-  else { t0 = nextBar().when; if (bars) while (t0 - now < bars * bar - 0.05) t0 += bar; else if (t0 - now < 0.25) t0 += bar; }
-  const h = { t0, clicks: [], undone: false };
+  // the count-in begins on a bar (the next one; if stopped, Play starts it now) and is exactly its bars
+  // long, four clicks a bar, wherever the song was when the tap came; the music plays on until then
+  const bars = countBars(), bar = 16 * stepDur(), now = ctx.currentTime; let c0;
+  if (!playing) { start(); resumeLoops(); c0 = nextT; }
+  else { c0 = nextBar().when; if (c0 - now < 0.08) c0 += bar; }
+  if (!bars && playing && c0 - now < 0.25) c0 += bar;
+  const t0 = c0 + bars * bar, h = { c0, t0, clicks: [], undone: false };
   if (!bars) return h;
   const g = eng.master.gain;
-  g.cancelScheduledValues(now); g.setTargetAtTime(0, now, 0.012); g.setTargetAtTime(eng.vol, t0 - 0.006, 0.002);
+  g.cancelScheduledValues(now); g.setValueAtTime(eng.vol, Math.max(now, c0 - 0.012)); g.linearRampToValueAtTime(0, c0); g.setValueAtTime(0, t0 - 0.004); g.linearRampToValueAtTime(eng.vol, t0);
   h.undo = () => { if (h.undone) return; h.undone = true; const t = ctx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(eng.vol, t, 0.02); for (const v of h.clicks) try { v?.stop?.(t); } catch (e) {} };
   try {
     if (!clickOut || clickOut.context !== ctx) { clickOut = ctx.createGain(); clickOut.gain.value = 0.9; clickOut.connect(ctx.destination); }
     const kit = await slotOf({ lib: 'kit808' }), k = Math.max(0, kit.slices.findIndex(x => /clave/i.test(x.name))), beat = bar / 4;
-    for (let i = 1; t0 - i * beat > ctx.currentTime + 0.03; i++)
-      h.clicks.push(playNote(eng, { ...kit, params: { ...kit.params, vol: i % 4 === 0 ? 0.7 : 0.4 } }, -1, k, t0 - i * beat, { dest: clickOut }));
+    for (let i = 0; i < bars * 4; i++)
+      h.clicks.push(playNote(eng, { ...kit, params: { ...kit.params, vol: i % 4 === 0 ? 0.7 : 0.4 } }, -1, k, Math.max(ctx.currentTime, c0 + i * beat), { dest: clickOut }));
   } catch (e) { console.warn('count-in clicks', e); }
   return h;
 }
@@ -5628,7 +5631,7 @@ function micDraw() {
   const T = micTake, now = ctx.currentTime;
   if (!T) { $('micGo').textContent = '🎙 Record'; $('micGo').classList.remove('armed', 'on'); return; }
   const beat = 4 * stepDur(), left = T.t0 - now;
-  $('micGo').textContent = left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
+  $('micGo').textContent = T.ci && now < T.ci.c0 ? 'Waiting for the bar…  (■ stop)' : left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
 }
 document.querySelectorAll('[data-mb]').forEach(b => b.addEventListener('click', () => { micBarsN = +b.dataset.mb; try { localStorage.setItem('pocketMicBars', micBarsN); } catch (e) {} micDraw(); }));
 function micEnd(T) { clearInterval(T.tick); T.ci?.undo?.(); try { T.node?.unplug(); } catch (e) {} try { T.src?.disconnect(); } catch (e) {} for (const t of T.stream?.getTracks() || []) t.stop(); for (const v of T.clicks || []) try { v?.stop?.(ctx.currentTime); } catch (e) {} }
@@ -5992,6 +5995,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   masterGain: () => eng.master.gain.value,
   lpLast: () => lp.last && { ...lp.last, sd: stepDur(), nextT, tick },
   lpVoiceEnd: () => lp.voice?.end,
+  lpRecInfo: () => lpRec && { clicks: lpRec.ci?.clicks?.length || 0, len: lpRec.t0 - lpRec.ci.c0, onBar: Math.abs(((lpRec.ci.c0 - nextT) / stepDur() + tick) % 16) < 0.01 || Math.abs(((lpRec.ci.c0 - nextT) / stepDur() + tick) % 16 - 16) < 0.01 },
   cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
     const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
