@@ -573,6 +573,7 @@ export function stretchedNow(buf, s, e, factor, drums = 0) {
 }
 // How much a loop is stretched: to the tempo playing, and to the key (stretched
 // by tempo x pitch, then sped up by the pitch, it keeps the beat in the new key).
+export const keyStretch = (P, root) => Math.pow(2, (P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0)) / 12);    // Re-Pitch: the key alone
 export const loopStretch = (slot, P, bpm, root) => {
   const semis = P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0);
   return (slot.bpm / bpm) * Math.pow(2, semis / 12);
@@ -644,7 +645,13 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       // A loop (made at a known tempo: the loop's own, or its sound's) is stretched to the tempo and
       // key playing; until that is ready, it is sped up or slowed to keep the beat (the pitch moves a moment).
       const lb = sl.bpm || slot.bpm;
-      if (lb && P.nostretch) r = Math.pow(2, semis / 12) * rate * bpm / lb;    // time stretch off: sped up or slowed like a record, pitch and all
+      if (lb && P.nostretch) {
+        // Re-Pitch: sped up or slowed like a record, pitch and all. A change of key (or Transpose) is a pitch
+        // shift that keeps the length (stretched by the shift, then sped up by it), or the loop would drift
+        // out of time with the rest; until that copy is ready it keeps time in its own key.
+        const k = Math.pow(2, semis / 12); r = rate * bpm / lb;
+        if (Math.abs(k - 1) > 0.002) { const sb = stretchedNow(buf, s, e, k, slot.drumLoop ? lb : 0); if (sb) { buf = sb; s = 0; e = sb.duration; r *= k; } }
+      }
       else if (lb) {
         const f = loopStretch({ bpm: lb }, P, bpm, root);
         if (Math.abs(f - 1) > 0.002) {
