@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025s';
+import * as DZ from './design.js?v=20261025t';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025s';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025t';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025t'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025s'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025t'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4468,29 +4468,45 @@ const lpEd = { on: false, one: null, buf: null, sel: null, p0: null };
 async function lpEdit() {
   const cell = lpCellNow(); if (!cell) { status('Tap a loop first: then ✂ Crop to choose the bit the pads play.'); return; }
   const base = await cellSlot(cell), one = base?.slices?.[0]; if (!one) return;
-  lpEd.on = true; lpEd.one = one; lpEd.buf = one.buf || base.buf;
+  lpEd.on = true; lpEd.one = one; lpEd.buf = one.buf || base.buf; lpEd.view = [0, 1]; lpEd.focus = null;
   const w = one.e - one.s, [a, e] = cell.lpNote ? cell.lpNote.map(f => one.s + f * w) : lpFirstNote(lpEd.buf, one);
   lpEd.sel = [(a - one.s) / w, (e - one.s) / w];
   if (lpFxOpen) lpFxShow(false);
   $('lpKeys').hidden = true; $('lpEd').hidden = false; lpDraw(); lpWave();
+}
+// Zooming a wave: view = [from, to], the part on screen (0-1 of the sound). Zoom in or out keeps the point
+// last touched where it is on screen (if it is on screen; else it comes to the middle); ◀ ▶ move half a
+// screen. At most 20 ms across.
+function wvZoom(v, focus, factor, secs) {
+  const span = v[1] - v[0], ns = Math.min(1, Math.max(0.02 / Math.max(secs, 0.02), span / factor));
+  const f = focus ?? (v[0] + v[1]) / 2, a = f >= v[0] && f <= v[1] ? f - (f - v[0]) * ns / span : f - ns / 2;
+  const a1 = Math.max(0, Math.min(1 - ns, a)); return [a1, a1 + ns];
+}
+function wvPan(v, dir) { const sp = v[1] - v[0], a = Math.max(0, Math.min(1 - sp, v[0] + dir * sp / 2)); return [a, a + sp]; }
+function wvButtons(pre, v) {           // −, +, ◀, ▶ greyed when they can't go further; the zoom shown
+  $(pre + 'ZOut').disabled = v[1] - v[0] >= 1; $(pre + 'ZL').disabled = v[0] <= 0; $(pre + 'ZR').disabled = v[1] >= 1;
+  $(pre + 'ZL').hidden = $(pre + 'ZR').hidden = v[1] - v[0] >= 1;
+  $(pre + 'ZIn').textContent = v[1] - v[0] < 1 ? `+ ×${Math.round(1 / (v[1] - v[0]))}` : '+';
 }
 function lpWave() {
   const cv = $('lpWave'), dpr = devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
   if (!W || !H || !lpEd.one) return;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const g2 = cv.getContext('2d'), { one, buf } = lpEd, d = buf.getChannelData(0), sr = buf.sampleRate, colr = cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][lp.c]}`);
-  const none = !lpEd.sel, [from, to] = lpEd.sel || [0, 0], i0 = Math.floor(one.s * sr), n = Math.max(1, Math.floor((one.e - one.s) * sr)), per = n / W;
+  const v = lpEd.view ||= [0, 1], span = v[1] - v[0], X = f => (f - v[0]) / span * W, whole = one.e - one.s;
+  const none = !lpEd.sel, [from, to] = lpEd.sel || [0, 0], i0 = Math.floor((one.s + v[0] * whole) * sr), n = Math.max(1, Math.floor(span * whole * sr)), per = n / W;
   g2.clearRect(0, 0, W, H); g2.fillStyle = '#000'; g2.fillRect(0, 0, W, H);
-  g2.fillStyle = colr; g2.globalAlpha = 0.2; g2.fillRect(from * W, 0, (to - from) * W, H);
-  if (one.bpm) { const beat = 60 / one.bpm, whole = one.e - one.s; for (let i = 0; i * beat <= whole + 1e-6; i++) { g2.globalAlpha = i % 4 ? 0.15 : 0.4; g2.fillStyle = '#fff'; g2.fillRect(i * beat / whole * W, 0, dpr, H); } }
+  g2.fillStyle = colr; g2.globalAlpha = 0.2; g2.fillRect(X(from), 0, X(to) - X(from), H);
+  if (one.bpm) { const beat = 60 / one.bpm; for (let i = 0; i * beat <= whole + 1e-6; i++) { const f = i * beat / whole; if (f < v[0] || f > v[1]) continue; g2.globalAlpha = i % 4 ? 0.15 : 0.4; g2.fillStyle = '#fff'; g2.fillRect(X(f), 0, dpr, H); } }
   for (let px = 0; px < W; px++) {
     let lo = 0, hi = 0; const a = i0 + Math.floor(px * per), b = Math.min(i0 + n, a + Math.max(1, Math.ceil(per)));
     for (let i = a; i < b; i += Math.max(1, (per / 24) | 0)) { const v = d[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
-    const f = px / W; g2.globalAlpha = none ? 0.6 : f >= from && f < to ? 1 : 0.3; g2.fillStyle = colr;
+    const f = v[0] + px / W * span; g2.globalAlpha = none ? 0.6 : f >= from && f < to ? 1 : 0.3; g2.fillStyle = colr;
     g2.fillRect(px, H / 2 - hi * H * 0.47, 1, Math.max(1, (hi - lo) * H * 0.47));
   }
   g2.globalAlpha = 1; g2.fillStyle = '#fff';
-  if (!none) for (const x of [from * W, to * W - 3 * dpr]) { g2.fillRect(x, 0, 3 * dpr, H); g2.fillRect(x - 3 * dpr, H / 2 - 9 * dpr, 9 * dpr, 18 * dpr); }      // the edges, with handles
+  if (!none) for (const x of [X(from), X(to) - 3 * dpr]) { g2.fillRect(x, 0, 3 * dpr, H); g2.fillRect(x - 3 * dpr, H / 2 - 9 * dpr, 9 * dpr, 18 * dpr); }      // the edges, with handles
+  wvButtons('lp', v);
   const cell = lpCellNow();
   $('lpEdInfo').textContent = none ? 'Nothing selected: drag across the bit you want (the pads keep the last bit until then).'
     : `${cell?.lpNote ? 'Your bit' : 'Auto: the first note'} · ${((to - from) * (one.e - one.s)).toFixed(2)} s. Drag an edge to move it, or across another bit; tap to hear from there.`;
@@ -4500,15 +4516,16 @@ function lpEdClose() { lpEd.on = false; $('lpEd').hidden = true; $('lpKeys').hid
   const cv = $('lpWave');
   let moved = false;
   let grab = null;                // on an edge (a finger's width): that edge moves, the other stays
+  const at = ev => { const v = lpEd.view || [0, 1]; return v[0] + Math.max(0, Math.min(1, along(cv, ev))) * (v[1] - v[0]); };    // where on the sound (zoomed)
   cv.addEventListener('pointerdown', ev => {
-    if (!lpEd.on) return; ev.preventDefault(); capture(cv, ev); lpEd.p0 = along(cv, ev); moved = false; grab = null;
-    const r = cv.getBoundingClientRect(), tol = 22 / Math.max(r.width, r.height), sel = lpEd.sel;
+    if (!lpEd.on) return; ev.preventDefault(); capture(cv, ev); lpEd.p0 = at(ev); lpEd.u0 = along(cv, ev); moved = false; grab = null;
+    const v = lpEd.view || [0, 1], r = cv.getBoundingClientRect(), tol = 22 / Math.max(r.width, r.height) * (v[1] - v[0]), sel = lpEd.sel;
     if (sel) { const d0 = Math.abs(lpEd.p0 - sel[0]), d1 = Math.abs(lpEd.p0 - sel[1]); if (Math.min(d0, d1) < tol) grab = d0 <= d1 ? 0 : 1; }
   });
   cv.addEventListener('pointermove', ev => {
     if (lpEd.p0 == null) return;
-    const p = Math.max(0, Math.min(1, along(cv, ev))); if (!moved && Math.abs(p - lpEd.p0) < 0.012) return;
-    moved = true;
+    const p = at(ev); if (!moved && Math.abs(along(cv, ev) - lpEd.u0) < 0.012) return;
+    moved = true; lpEd.focus = p;
     if (grab != null) { const o = lpEd.sel[1 - grab]; lpEd.sel = [Math.min(o, p), Math.max(o, p)]; grab = p < o ? 0 : 1; }
     else lpEd.sel = [Math.min(lpEd.p0, p), Math.max(lpEd.p0, p)];
     lpWave();
@@ -4523,7 +4540,7 @@ function lpEdClose() { lpEd.on = false; $('lpEd').hidden = true; $('lpKeys').hid
       const at = one.s + w * lpEd.p0;
       playNote(eng, { kind: 'chop', buf, slices: [{ buf, s: at, e: Math.min(one.e, at + 2), start: 0, len: 1 }], params: { ...defParams(), vol: 0.9 } }, -1, 0, ctx.currentTime, {});
     }
-    lpEd.p0 = null;
+    lpEd.focus ??= lpEd.p0; if (!moved) lpEd.focus = lpEd.p0; lpEd.p0 = null;
   };
   cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 }
@@ -4540,6 +4557,11 @@ $('lpEdAll').addEventListener('click', () => {
   status('All of it: the whole loop is the note on the pads.');
 });
 $('lpEdNone').addEventListener('click', () => { lpEd.sel = null; lpWave(); });
+const lpSecs = () => (lpEd.one ? lpEd.one.e - lpEd.one.s : 1), lpFocus = () => lpEd.focus ?? (lpEd.sel ? (lpEd.sel[0] + lpEd.sel[1]) / 2 : null);
+$('lpZIn').addEventListener('click', () => { lpEd.view = wvZoom(lpEd.view || [0, 1], lpFocus(), 2, lpSecs()); lpWave(); });
+$('lpZOut').addEventListener('click', () => { lpEd.view = wvZoom(lpEd.view || [0, 1], lpFocus(), 0.5, lpSecs()); lpWave(); });
+$('lpZL').addEventListener('click', () => { lpEd.view = wvPan(lpEd.view || [0, 1], -1); lpWave(); });
+$('lpZR').addEventListener('click', () => { lpEd.view = wvPan(lpEd.view || [0, 1], 1); lpWave(); });
 function lpDraw() {
   const gone = !S.grid.cells[lp.c]?.[lp.r] && !!lp.saved;
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
@@ -4832,6 +4854,7 @@ async function sayWords() {
 $('lwSay').addEventListener('click', sayWords);
 $('lwText').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); sayWords(); } });
 function openCellMenu(c, r) {
+  if (menuCell?.c !== c || menuCell?.r !== r) { lmView = [0, 1]; lmFocus = null; }
   menuCell = { c, r }; menuPack = null; menuFolder = null; menuSet = null; choosing = !S.grid.cells[c][r]; dzEmpty = false; rollUndo = [];
   const rapRec = mine.find(m => m.id === S.grid.cells[c][r]?.mine)?.rap;
   if (rapRec) { $('voxText').value = rapRec.text; $('rapFlow').value = rapRec.flow; $('rapRest').checked = !!rapRec.rest; }
@@ -5396,49 +5419,53 @@ $('lmZero').addEventListener('click', () => transpose(0));
 // loop with a tempo, it snaps to 16th notes); tap to hear from there. The part
 // that repeats is bright; beats are marked, and bars more strongly.
 let waveSel = null;           // while dragging: [from, to]
+let lmView = [0, 1], lmFocus = null, lmSecs = 1;      // the zoom (see wvZoom)
 function drawCellWave(x, base, cell, c) {
   const cv = $('lmWave'), dpr = devicePixelRatio || 1, W = cv.clientWidth * dpr, H = cv.clientHeight * dpr;
   if (!W || !H) return;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const g2 = cv.getContext('2d'), buf = x.buf || base.buf, d = buf.getChannelData(0), sr = buf.sampleRate, whole = x.e - x.s;
   const colr = cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][c]}`);
-  const [from, to] = waveSel || [cell.from || 0, cell.to ?? 1];
+  const [from, to] = waveSel || [cell.from || 0, cell.to ?? 1], v = lmView, span = v[1] - v[0], X = f => (f - v[0]) / span * W;
   const beat = 60 / (x.bpm || S.bpm), playTo = cell.beats ? Math.min(to, from + cell.beats * beat / whole) : to;
   g2.clearRect(0, 0, W, H); g2.fillStyle = '#000'; g2.fillRect(0, 0, W, H);
-  g2.fillStyle = colr; g2.globalAlpha = 0.18; g2.fillRect(from * W, 0, (to - from) * W, H);
+  g2.fillStyle = colr; g2.globalAlpha = 0.18; g2.fillRect(X(from), 0, X(to) - X(from), H);
   if (x.bpm) for (let i = 0, b = 0; b <= whole + 1e-6; i++, b = i * beat) {
-    g2.globalAlpha = i % 4 ? 0.18 : 0.45; g2.fillStyle = '#fff'; g2.fillRect(b / whole * W, 0, Math.max(1, dpr * (i % 4 ? 1 : 1.5)), H);
+    if (b / whole < v[0] || b / whole > v[1]) continue;
+    g2.globalAlpha = i % 4 ? 0.18 : 0.45; g2.fillStyle = '#fff'; g2.fillRect(X(b / whole), 0, Math.max(1, dpr * (i % 4 ? 1 : 1.5)), H);
   }
-  const i0 = Math.floor(x.s * sr), n = Math.max(1, Math.floor(whole * sr)), per = n / W;
+  const i0 = Math.floor((x.s + v[0] * whole) * sr), n = Math.max(1, Math.floor(span * whole * sr)), per = n / W;
   for (let px = 0; px < W; px++) {
     let lo = 0, hi = 0; const a = i0 + Math.floor(px * per), b = Math.min(i0 + n, a + Math.max(1, Math.ceil(per)));
     for (let i = a; i < b; i += Math.max(1, (per / 24) | 0)) { const v = d[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
-    const f = px / W; g2.globalAlpha = f >= from && f < playTo ? 1 : 0.3; g2.fillStyle = colr;
+    const f = v[0] + px / W * span; g2.globalAlpha = f >= from && f < playTo ? 1 : 0.3; g2.fillStyle = colr;
     g2.fillRect(px, H / 2 - hi * H * 0.47, 1, Math.max(1, (hi - lo) * H * 0.47));
   }
-  g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.fillRect(from * W, 0, 2 * dpr, H); g2.fillRect(playTo * W - 2 * dpr, 0, 2 * dpr, H);
+  g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.fillRect(X(from), 0, 2 * dpr, H); g2.fillRect(X(playTo) - 2 * dpr, 0, 2 * dpr, H);
+  wvButtons('lm', v); lmSecs = whole;
   const secs = (playTo - from) * whole;
   $('lmSel').textContent = `${(from === 0 && to === 1 ? 'all' : 'part')} · ${x.bpm ? +(secs / beat).toFixed(1) + ' beats' : secs.toFixed(2) + ' s'}${cell.beats ? ' (repeats)' : ''}`;
 }
 {
   const cv = $('lmWave');
-  let p0 = null, info = null;
+  let p0 = null, u0 = 0, info = null;
   const snap = v => (info?.x.bpm ? Math.round(v * info.steps) / info.steps : v);
+  const at = ev => lmView[0] + Math.max(0, Math.min(1, along(cv, ev))) * (lmView[1] - lmView[0]);
   cv.addEventListener('pointerdown', async ev => {
     const cell = menuCellNow(); if (!cell) return;
-    ev.preventDefault(); capture(cv, ev); p0 = along(cv, ev);
+    ev.preventDefault(); capture(cv, ev); u0 = along(cv, ev); p0 = at(ev);
     const base = await cellBase(cell), x = base.slices[cell.k];
     info = { base, x, cell, steps: x.bpm ? Math.round((x.e - x.s) / (15 / x.bpm)) : 0 };
   });
   cv.addEventListener('pointermove', ev => {
     if (p0 == null || !info) return;
-    const p = along(cv, ev); if (Math.abs(p - p0) < 0.015) return;
-    waveSel = [snap(Math.min(p0, p)), snap(Math.max(p0, p))];
+    const p = at(ev); if (Math.abs(along(cv, ev) - u0) < 0.015) return;
+    waveSel = [snap(Math.min(p0, p)), snap(Math.max(p0, p))]; lmFocus = p;
     drawCellWave(info.x, info.base, info.cell, menuCell.c);
   });
   const end = () => {
     if (p0 == null || !info) { p0 = null; return; }
-    const { cell, x, base } = info;
+    const { cell, x, base } = info; if (!waveSel) lmFocus = p0;
     if (waveSel && waveSel[1] - waveSel[0] > 0.005) { [cell.from, cell.to] = waveSel; changed(menuCell.c, menuCell.r); }
     else {                      // a tap: hear from there
       const at = x.s + (x.e - x.s) * p0, buf = x.buf || base.buf;
@@ -5453,6 +5480,12 @@ $('lmHear').addEventListener('click', async () => {
   const slot = await cellSlot({ ...cell, mode: 'oneshot' }); if (!slot) return;
   ctx.resume(); playNote(eng, slot, -1, 0, ctx.currentTime, { bpm: S.bpm, root: S.root, scale: S.scale });
 });
+const lmRedraw = async () => { const cell = menuCellNow(); if (!cell) return; const base = await cellBase(cell), x = base?.slices?.[cell.k]; if (x) drawCellWave(x, base, cell, menuCell.c); };
+const lmF = () => { const cell = menuCellNow(); return lmFocus ?? (cell ? ((cell.from || 0) + (cell.to ?? 1)) / 2 : null); };
+$('lmZIn').addEventListener('click', () => { lmView = wvZoom(lmView, lmF(), 2, lmSecs); lmRedraw(); });
+$('lmZOut').addEventListener('click', () => { lmView = wvZoom(lmView, lmF(), 0.5, lmSecs); lmRedraw(); });
+$('lmZL').addEventListener('click', () => { lmView = wvPan(lmView, -1); lmRedraw(); });
+$('lmZR').addEventListener('click', () => { lmView = wvPan(lmView, 1); lmRedraw(); });
 $('lmWhole').addEventListener('click', () => { const cell = menuCellNow(); if (!cell) return; cell.from = 0; cell.to = 1; changed(menuCell.c, menuCell.r); });
 $('lmEmpty').addEventListener('click', () => {
   const { c, r } = menuCell; const col = lane(c, r);
