@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026c';
+import * as DZ from './design.js?v=20261026d';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026c';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026d';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2000,7 +2000,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026d'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2093,7 +2093,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026d'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3754,14 +3754,21 @@ const mineSlots = new Map();
 // A loop made here from notes (played on the pads, a designed beat, a rap) keeps its notes, so at
 // another tempo it is played again at that tempo and recorded, never stretched: nothing to crackle.
 const remakeOf = cell => { const m = cell?.mine && mine.find(x => x.id === cell.mine); return m && (m.seq || m.dz || m.rap) ? m : null; };
+// A loop played on the pads (notes, on a pitched sound) is made again in the key it should sound in: the
+// song's key if it follows it (as the loops do), moved by its Transpose; clean, as played, never stretched.
+const seqOf = cell => { const m = remakeOf(cell); return m?.seq && m.seq.src?.kind !== 'chop' ? m : null; };
+function seqKey(cell, m, k = S) {
+  const q = m.seq, f = follows(cell);
+  return { root: q.root + (f ? toKey(k.root, q.root) : 0) + (cell.pitch || 0), scale: f ? k.scale : q.scale };
+}
 const remade = new Map();
-function remakeAt(m, bpm) {
-  const key = `${m.id}@${bpm}`;
+function remakeAt(m, bpm, kk = null) {
+  const key = `${m.id}@${bpm}${kk ? `@${kk.root}${kk.scale}` : ''}`;
   if (!remade.has(key)) {
     if (remade.size > 24) remade.delete(remade.keys().next().value);
     remade.set(key, (async () => {
       const base = unpackSlot(m); let buf, bars;
-      if (m.seq) { buf = await seqRender({ ...m.seq, bpm }, unpackSlot({ name: m.name, item: m.seq.src })); bars = m.seq.bars; }
+      if (m.seq) { buf = await seqRender({ ...m.seq, bpm, ...(kk && { root: kk.root, scale: kk.scale }) }, unpackSlot({ name: m.name, item: m.seq.src })); bars = m.seq.bars; }
       else if (m.dz) { buf = (await cellBar(m.dz.lines, m.dz.swing)).bar; bars = 1; }
       else { const r = await rapRender(unpackSlot({ name: m.rap.text, item: m.rap.src }), m.rap.flow, m.rap.rest, m.rap.seed); buf = r.buf; bars = r.bars; }
       return { ...base, buf, slices: [{ ...base.slices[0], s: 0, e: buf.duration, bpm, bars, buf: null }] };
@@ -3769,8 +3776,13 @@ function remakeAt(m, bpm) {
   }
   return remade.get(key);
 }
-function cellBase(cell) {
+function cellBase(cell, k = S) {
   if (!cell.mine) return slotOf({ lib: cell.lib });
+  const sq = seqOf(cell);
+  if (sq) {
+    const want = seqKey(cell, sq, k);
+    if (want.root !== sq.seq.root || want.scale !== sq.seq.scale || Math.abs((sq.item.slices?.[0]?.bpm || S.bpm) - S.bpm) > 0.01) return remakeAt(sq, S.bpm, want);
+  }
   const rm = remakeOf(cell);
   if (rm && Math.abs((rm.item.slices?.[0]?.bpm || S.bpm) - S.bpm) > 0.01) return remakeAt(rm, S.bpm);
   if (!mineSlots.has(cell.mine)) {
@@ -3788,16 +3800,18 @@ function cellBase(cell) {
 // slowed like a record: clean, the pitch moving with the tempo). Each loop its own; Loops › ⚙ sets them all.
 const stretchOf = cell => cell.stretch ?? S.grid?.stretch ?? true;
 function cellSlot(cell) {
-  const keyOf = follows(cell) ? cell.keyOf ?? null : null;
+  const sq = !!seqOf(cell);
+  if (sq && cell.follow === false && !cell.fk) { delete cell.follow; cell.fk = 1; }      // (recorded before they followed the key)
+  const keyOf = !sq && follows(cell) ? cell.keyOf ?? null : null;
   const id = JSON.stringify([cell.mine || cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, stretchOf(cell),
-    cell.from || 0, cell.to ?? 1, cell.beats || remakeOf(cell) ? S.bpm : 0]);
+    cell.from || 0, cell.to ?? 1, cell.beats || remakeOf(cell) ? S.bpm : 0, sq && follows(cell) ? `${keyAhead().root}${keyAhead().scale}` : 0]);
   if (cellSlots.size > 300) cellSlots.clear();
-  if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell).then(slot => {
+  if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell, keyAhead()).then(slot => {      // (the key landing on the bar it is launched for)
     const x = slot?.slices?.[cell.k]; if (!x) { cellSlots.delete(id); return null; }
     cell.name ||= x.name;
     const buf = x.buf || slot.buf, whole = x.e - x.s, beat = 60 / (x.bpm || S.bpm);
     let ko = keyOf;
-    if (follows(cell) && ko == null) { ko = cell.keyOf = findKey(buf, x.s, x.e).root; persist(); }     // its key, found by listening, once
+    if (!sq && follows(cell) && ko == null) { ko = cell.keyOf = findKey(buf, x.s, x.e).root; persist(); }     // its key, found by listening, once
     const s = x.s + whole * (cell.from || 0), e = x.s + whole * (cell.to ?? 1);
     let one = { name: x.name, buf, s, e, bpm: x.bpm, bars: x.bpm ? Math.max(1, Math.round((e - s) / beat * 4)) / 16 : undefined, start: 0, len: 1 };
     if (cell.beats) {
@@ -3812,7 +3826,7 @@ function cellSlot(cell) {
       one = { name: x.name, buf: out, s: 0, e: n / rate, bpm: x.bpm || S.bpm, bars: cell.beats / 4, start: 0, len: 1 };
     }
     return { kind: 'chop', name: x.name, buf: one.buf, slices: [one], drumLoop: !!slot.drumLoop || drumCell(cell),
-      params: { ...defParams(), vol: 1, keyOf: ko, pitch: cell.pitch || 0, nostretch: !stretchOf(cell),
+      params: { ...defParams(), vol: 1, keyOf: ko, pitch: sq ? 0 : cell.pitch || 0, nostretch: !stretchOf(cell),     // (notes: made in the key already)
         trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
   }).catch(() => null));
   return cellSlots.get(id);
@@ -3938,7 +3952,10 @@ function stretchFor(slot, roots = [S.root, keyAhead().root]) {
 }
 async function warmGrid() {
   if (LIGHT) return;            // Light: each loop is made ready when it is tapped, not all at once
-  for (const col of S.grid.cells) for (const cell of col) if (cell) { const sl = await cellSlot(cell); if (sl) await stretchFor(sl); }
+  for (const col of S.grid.cells) for (const cell of col) if (cell) {
+    const sl = await cellSlot(cell); if (sl) await stretchFor(sl);
+    if (seqOf(cell) && keyAhead() !== S) await cellBase(cell, keyAhead());       // a key change coming: made ready in it
+  }
 }
 let gridWarmTimer = 0;
 const warmGridSoon = () => { clearTimeout(gridWarmTimer); gridWarmTimer = setTimeout(warmGrid, 300); };
@@ -5296,7 +5313,7 @@ async function loopToCell(c, r, buf, name, bars, drumLoop, extra = {}) {
   await idbPut('mine', { id, name, type: 'loop', folder, created: Date.now(), item: packSlot(slot), ...extra }, id);
   await refreshMine();
   for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
-  S.grid.cells[c][r] = { mine: id, k: 0, name, mode: 'loop', vol: was?.vol ?? 1, ...(c >= 3 && { follow: false }) };
+  S.grid.cells[c][r] = { mine: id, k: 0, name, mode: 'loop', vol: was?.vol ?? 1, ...(c >= 3 && !extra.seq && { follow: false }), ...(extra.seq && { fk: 1 }) };
   persist(); drawLoops(); warmGridSoon(); drawCellMenu();
   if (playing) tapCell(c, r);
   status(`“${name}” is in ${CHANNELS[c]}, cell ${r + 1}${playing ? ', playing from the next bar' : ''} (and in the library: ${folder}, My loops).`);
