@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025q';
+import * as DZ from './design.js?v=20261025r';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025q';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025r';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025r'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025r'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4277,16 +4277,37 @@ async function lpPress(k) {
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
+  const trig = lpTrigNow(), held = lp.held ||= {};
+  if (trig === 'loop' && held[k]) { lpLetGo(k, when); return; }       // Loop: a second tap stops it
+  if (held[k]) lpLetGo(k, when);
   const prevVoice = lp.voice;
-  lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre });
+  lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
   lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
-  if (lpRec) lpNote(k, at, slot, oct);
+  const note = lpRec ? lpNote(k, at, slot, oct) : null;
+  if (trig !== 'oneshot') { held[k] = { voice: lp.voice, at: when, note }; lpDraw(); }
+  if (trig === 'gate' && !lpKeys[k].classList.contains('down')) lpLetGo(k);       // let go before the sound was ready
 }
+// How a pad plays (the button by FX; Loops + Pads only): One shot, the whole note, however short the tap;
+// Loop, round and round from a tap until it is tapped again; Gate, only while held down.
+const LP_TRIGS = [['oneshot', 'One shot'], ['loop', 'Loop'], ['gate', 'Gate']];
+const lpTrigNow = () => S.grid.lpTrig || 'oneshot';
+function lpLetGo(k, t = ctx.currentTime) {
+  const h = lp.held?.[k]; if (!h) return; delete lp.held[k];
+  const end = Math.max(t, h.at + 0.02); h.voice?.stop?.(end);
+  if (h.note) h.note.d = Math.max(0.1, Math.round((end - h.at) / stepDur() * 100) / 100);      // how long it sounded, in 16ths
+  lpDraw();
+}
+$('lpTrig').addEventListener('click', () => {
+  const i = LP_TRIGS.findIndex(x => x[0] === lpTrigNow()), next = LP_TRIGS[(i + 1) % 3][0];
+  for (const k of Object.keys(lp.held || {})) lpLetGo(+k);
+  S.grid.lpTrig = next; persist(); lpDraw();
+  status({ oneshot: 'One shot: each tap plays the whole note.', loop: 'Loop: a tap starts the note going round, another tap stops it.', gate: 'Gate: a pad plays only while held down.' }[next]);
+});
 function lpOct(d) { lp.oct = Math.max(-2, Math.min(2, (lp.oct || 0) + d)); try { localStorage.setItem('pocketLpOct', lp.oct); } catch (e) {} lpDraw(); }
 $('lpOctDn').addEventListener('click', () => lpOct(-1));
 $('lpOctUp').addEventListener('click', () => lpOct(1));
 $('lpCrop').addEventListener('click', () => (lpEd.on ? lpEdClose() : lpEdit()));
-function lpRelease(k) { lpKeys[k].classList.remove('down'); }
+function lpRelease(k) { lpKeys[k].classList.remove('down'); if (lpTrigNow() === 'gate') lpLetGo(k); }
 // FX: the pads' own EQ (low, middle, high) and effect (low pass, high pass, reverb, echo, ping-pong,
 // drive, tape), as a Loops cell has, in place of the pads until ✓ Done; on everything they play.
 let lpFxOpen = false;
@@ -4363,7 +4384,7 @@ function lpNote(k, t, slot, oct = 0) {
   if (!R.src) R.src = slot;
   if (slot !== R.src) return;                                      // one sound a recording
   const pos = Math.max(0, (t - R.origin) / stepDur());          // (as played: never quantized)
-  R.notes.push({ k, t: pos, ...(oct && { o: oct }) });
+  const n = { k, t: pos, ...(oct && { o: oct }) }; R.notes.push(n); return n;
 }
 async function lpRecTap() {
   ctx.resume();
@@ -4377,12 +4398,14 @@ async function lpRecTap() {
   status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}${at.c !== lp.c && !lpTarget ? ` (${CHANNELS[lp.c]} is full)` : ''}, ${countBars() ? `after ${countBars()} bar${countBars() > 1 ? 's' : ''} to count in` : 'from the next bar'}: play the pads, then ⏺ again to stop.`);
 }
 async function lpRecStop() {
-  const R = lpRec; lpRec = null; lpTarget = null; lpDraw(); drawLoops();
+  const R = lpRec; lpRec = null; lpTarget = null;
+  for (const h of Object.values(lp.held || {})) if (h.note && h.note.d == null) h.note.d = Math.max(0.1, (ctx.currentTime - h.at) / stepDur());     // (held past the end: to the end)
+  lpDraw(); drawLoops();
   if (ctx.currentTime < R.t0) { R.ci?.undo?.(); status('Stopped before it began: nothing was recorded.'); return; }
   if (!R.notes.length) { status('Nothing was played, so nothing was recorded.'); return; }
   const played = (ctx.currentTime - R.origin) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
   const notes = R.notes.filter(n => n.t < bars * 16).map(n => ({ ...n, t: Math.min(n.t, bars * 16 - 0.01) }));
-  const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src), ...(S.grid.lpChoke && { choke: true }), ...(lpFxOn() && { fx: JSON.parse(JSON.stringify(S.grid.lpFx)) }) };
+  const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src), ...(S.grid.lpChoke && { choke: true }), ...(lpTrigNow() !== 'oneshot' && { trig: lpTrigNow() }), ...(lpFxOn() && { fx: JSON.parse(JSON.stringify(S.grid.lpFx)) }) };
   const name = `${(lpInst?.name || lp.cell?.name || 'Pads').replace(/, played$/, '')}, played`;
   status('Making the loop…');
   const buf = await seqRender(seq, R.src), keep = { ...lp }, designed = !!lpInst;
@@ -4403,7 +4426,7 @@ async function seqRender(seq, slot) {
   const strip = seq.fx ? padStrip(off, e, e.bus, seq.fx) : null;      // (recorded with the pads' EQ and effect: as it was heard)
   let last = null;          // (recorded with Choke on: each note cuts off the one before, as it was heard)
   const at = n => seqAt(seq, n) * sd;
-  for (const n of [...seq.notes].sort((a, b) => seqAt(seq, a) - seqAt(seq, b))) { if (seq.choke) last?.stop?.(at(n)); last = playNote(e, slot, -1, n.k, at(n), { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0), ...(strip && { dest: strip.pre }) }); }
+  for (const n of [...seq.notes].sort((a, b) => seqAt(seq, a) - seqAt(seq, b))) { if (seq.choke) last?.stop?.(at(n)); last = playNote(e, slot, -1, n.k, at(n), { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0), ...(strip && { dest: strip.pre }), ...(seq.trig && { hold: n.d != null, lock: { trig: seq.trig } }) }); if (seq.trig && n.d != null) last?.stop?.(at(n) + n.d * sd); }
   const b = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
   for (const c of [0, 1]) { const x = b.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
@@ -4456,34 +4479,44 @@ function lpWave() {
   if (!W || !H || !lpEd.one) return;
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const g2 = cv.getContext('2d'), { one, buf } = lpEd, d = buf.getChannelData(0), sr = buf.sampleRate, colr = cssVar(`--c-${['kick', 'snare', 'hat', 'bass', 'chords', 'lead', 'sub', 'vox'][lp.c]}`);
-  const [from, to] = lpEd.sel, i0 = Math.floor(one.s * sr), n = Math.max(1, Math.floor((one.e - one.s) * sr)), per = n / W;
+  const none = !lpEd.sel, [from, to] = lpEd.sel || [0, 0], i0 = Math.floor(one.s * sr), n = Math.max(1, Math.floor((one.e - one.s) * sr)), per = n / W;
   g2.clearRect(0, 0, W, H); g2.fillStyle = '#000'; g2.fillRect(0, 0, W, H);
   g2.fillStyle = colr; g2.globalAlpha = 0.2; g2.fillRect(from * W, 0, (to - from) * W, H);
   if (one.bpm) { const beat = 60 / one.bpm, whole = one.e - one.s; for (let i = 0; i * beat <= whole + 1e-6; i++) { g2.globalAlpha = i % 4 ? 0.15 : 0.4; g2.fillStyle = '#fff'; g2.fillRect(i * beat / whole * W, 0, dpr, H); } }
   for (let px = 0; px < W; px++) {
     let lo = 0, hi = 0; const a = i0 + Math.floor(px * per), b = Math.min(i0 + n, a + Math.max(1, Math.ceil(per)));
     for (let i = a; i < b; i += Math.max(1, (per / 24) | 0)) { const v = d[i] || 0; if (v < lo) lo = v; if (v > hi) hi = v; }
-    const f = px / W; g2.globalAlpha = f >= from && f < to ? 1 : 0.3; g2.fillStyle = colr;
+    const f = px / W; g2.globalAlpha = none ? 0.6 : f >= from && f < to ? 1 : 0.3; g2.fillStyle = colr;
     g2.fillRect(px, H / 2 - hi * H * 0.47, 1, Math.max(1, (hi - lo) * H * 0.47));
   }
-  g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.fillRect(from * W, 0, 2 * dpr, H); g2.fillRect(to * W - 2 * dpr, 0, 2 * dpr, H);
+  g2.globalAlpha = 1; g2.fillStyle = '#fff';
+  if (!none) for (const x of [from * W, to * W - 3 * dpr]) { g2.fillRect(x, 0, 3 * dpr, H); g2.fillRect(x - 3 * dpr, H / 2 - 9 * dpr, 9 * dpr, 18 * dpr); }      // the edges, with handles
   const cell = lpCellNow();
-  $('lpEdInfo').textContent = `${cell?.lpNote ? 'Your bit' : 'Auto: the first note'} · ${((to - from) * (one.e - one.s)).toFixed(2)} s. Drag across another bit to change it; tap to hear from there.`;
+  $('lpEdInfo').textContent = none ? 'Nothing selected: drag across the bit you want (the pads keep the last bit until then).'
+    : `${cell?.lpNote ? 'Your bit' : 'Auto: the first note'} · ${((to - from) * (one.e - one.s)).toFixed(2)} s. Drag an edge to move it, or across another bit; tap to hear from there.`;
 }
 function lpEdClose() { lpEd.on = false; $('lpEd').hidden = true; $('lpKeys').hidden = lpFxOpen; lpDraw(); }
 {
   const cv = $('lpWave');
   let moved = false;
-  cv.addEventListener('pointerdown', ev => { if (!lpEd.on) return; ev.preventDefault(); capture(cv, ev); lpEd.p0 = along(cv, ev); moved = false; });
+  let grab = null;                // on an edge (a finger's width): that edge moves, the other stays
+  cv.addEventListener('pointerdown', ev => {
+    if (!lpEd.on) return; ev.preventDefault(); capture(cv, ev); lpEd.p0 = along(cv, ev); moved = false; grab = null;
+    const r = cv.getBoundingClientRect(), tol = 22 / Math.max(r.width, r.height), sel = lpEd.sel;
+    if (sel) { const d0 = Math.abs(lpEd.p0 - sel[0]), d1 = Math.abs(lpEd.p0 - sel[1]); if (Math.min(d0, d1) < tol) grab = d0 <= d1 ? 0 : 1; }
+  });
   cv.addEventListener('pointermove', ev => {
     if (lpEd.p0 == null) return;
-    const p = along(cv, ev); if (!moved && Math.abs(p - lpEd.p0) < 0.012) return;
-    moved = true; lpEd.sel = [Math.min(lpEd.p0, p), Math.max(lpEd.p0, p)]; lpWave();
+    const p = Math.max(0, Math.min(1, along(cv, ev))); if (!moved && Math.abs(p - lpEd.p0) < 0.012) return;
+    moved = true;
+    if (grab != null) { const o = lpEd.sel[1 - grab]; lpEd.sel = [Math.min(o, p), Math.max(o, p)]; grab = p < o ? 0 : 1; }
+    else lpEd.sel = [Math.min(lpEd.p0, p), Math.max(lpEd.p0, p)];
+    lpWave();
   });
   const end = () => {
     if (lpEd.p0 == null) return;
     const cell = lpCellNow(), { one, buf } = lpEd, w = one.e - one.s;
-    if (moved && lpEd.sel[1] - lpEd.sel[0] > 0.002 && cell) {
+    if (moved && lpEd.sel && lpEd.sel[1] - lpEd.sel[0] > 0.002 && cell) {
       cell.lpNote = [...lpEd.sel]; lp.slot = null; persist(); lpKeep(); lpWave();
       lpSlot().then(sl => sl && playNote(eng, sl, -1, 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root }));     // hear it, as the 8th pad
     } else {                       // a tap: hear from there
@@ -4501,6 +4534,12 @@ $('lpEdAuto').addEventListener('click', () => {
   const { one, buf } = lpEd, w = one.e - one.s, [a, e] = lpFirstNote(buf, one); lpEd.sel = [(a - one.s) / w, (e - one.s) / w]; lpWave();
 });
 $('lpEdDone').addEventListener('click', lpEdClose);
+$('lpEdAll').addEventListener('click', () => {
+  const cell = lpCellNow(); if (!cell || !lpEd.one) return;
+  lpEd.sel = [0, 1]; cell.lpNote = [0, 1]; lp.slot = null; persist(); lpKeep(); lpWave();
+  status('All of it: the whole loop is the note on the pads.');
+});
+$('lpEdNone').addEventListener('click', () => { lpEd.sel = null; lpWave(); });
 function lpDraw() {
   const gone = !S.grid.cells[lp.c]?.[lp.r] && !!lp.saved;
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
@@ -4512,6 +4551,8 @@ function lpDraw() {
   $('lpSrc').textContent = lpInst ? `🎹 ${lpInst.name}${lpTarget ? ` → ${CHANNELS[lpTarget.c]}, cell ${lpTarget.r + 1}` : ''}` : cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}${gone ? ' (its cell emptied: still on the pads)' : ''}` : 'Tap a loop: the pads play it.';
   $('lpKeys').classList.toggle('empty', !cell && !lpInst);
   $('lpCrop').classList.toggle('on', !!lpEd.on || !!cell?.lpNote);
+  $('lpTrig').textContent = LP_TRIGS.find(x => x[0] === lpTrigNow())[1]; $('lpTrig').classList.toggle('on', lpTrigNow() !== 'oneshot');
+  lpKeys.forEach((b, k) => b.classList.toggle('held', !!lp.held?.[k]));
   $('lpOctDn').textContent = lp.oct < 0 ? `Oct ${lp.oct}` : 'Oct −'; $('lpOctUp').textContent = lp.oct > 0 ? `Oct +${lp.oct}` : 'Oct +';
   $('lpOctDn').classList.toggle('on', lp.oct < 0); $('lpOctUp').classList.toggle('on', lp.oct > 0);
   const mid = keySemis(7, S.scale);

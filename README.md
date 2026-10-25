@@ -205,7 +205,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   into recordings, into kits and My Sounds.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
-  slices, or its first note pitched across the key. FX gives the pads
+  slices, or its first note pitched across the key (✂ Crop: drag a bit,
+  or either edge; Select all, Select none). One shot / Loop / Gate sets
+  how a pad plays. FX gives the pads
   their own EQ and effects (low or high pass, reverb, echo, ping-pong,
   drive, distortion, tape; any number at once, as on a Loops column, each
   with its amount), kept in what ⏺ Rec records. Drive is modelled
