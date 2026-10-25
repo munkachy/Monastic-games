@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025g';
+import * as DZ from './design.js?v=20261025h';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025g';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025h';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025h'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025h'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4209,8 +4209,12 @@ for (let k = 0; k < 16; k++) {
 // a pad played (a finger, or the computer's keys: 1234 / QWER / ASDF / ZXCV)
 // While the beat plays, a tap lands on the next point of the Quantize (1/16, 1/8, 1/4; one just after a
 // point plays at once), what is heard and what is recorded alike; Free, or stopped: at once.
+// FX: the pads are the 16 effects, as the Pads' FX keys (the same ones, Menu › Effects; they go on what
+// FX › Tracks aims them at, everything at first): hold one for its effect, or tap on and off if latched.
+let lpFx = false;
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
+  if (lpFx) { const id = S.fxSlots[k]; if (S.fxLatch && activeFx.has(id)) releaseFx(id); else engageFx(id, aimNow()); lpDraw(); return; }
   const snapped = snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   playNote(eng, slot, -1, k, Math.max(at, ctx.currentTime), { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct });
@@ -4221,7 +4225,16 @@ function lpOct(d) { lp.oct = Math.max(-2, Math.min(2, (lp.oct || 0) + d)); try {
 $('lpOctDn').addEventListener('click', () => lpOct(-1));
 $('lpOctUp').addEventListener('click', () => lpOct(1));
 $('lpCrop').addEventListener('click', () => (lpEd.on ? lpEdClose() : lpEdit()));
-function lpRelease(k) { lpKeys[k].classList.remove('down'); }
+function lpRelease(k) {
+  lpKeys[k].classList.remove('down');
+  if (lpFx && !S.fxLatch && activeFx.has(S.fxSlots[k])) { releaseFx(S.fxSlots[k]); lpDraw(); }
+}
+$('lpFx').addEventListener('click', () => {
+  lpFx = !lpFx;
+  if (!lpFx && !S.fxLatch) for (const f of [...activeFx]) releaseFx(f);
+  if (lpEd.on) lpEdClose(); lpDraw();
+  status(lpFx ? `The pads are the effects: ${S.fxLatch ? 'tap one on, again off' : 'hold one'}. FX again for the notes.` : '');
+});
 function lpPick(c, r) {
   if (!S.grid.cells[c][r] || (!lpInst && lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
   if (lpInst && lpRec) return;                // recording a designed sound: the pads keep it
@@ -4419,12 +4432,15 @@ function lpDraw() {
   const cell = lpCellNow();
   $('lpads').style.setProperty('--c', lpInst && lpTarget ? CHANNEL_COLOR[lpTarget.c] : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
   $('lpSrc').textContent = lpInst ? `🎹 ${lpInst.name}${lpTarget ? ` → ${CHANNELS[lpTarget.c]}, cell ${lpTarget.r + 1}` : ''}` : cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}${gone ? ' (its cell emptied: still on the pads)' : ''}` : 'Tap a loop: the pads play it.';
-  $('lpKeys').classList.toggle('empty', !cell && !lpInst);
+  $('lpKeys').classList.toggle('empty', !cell && !lpInst && !lpFx);
   $('lpCrop').classList.toggle('on', !!lpEd.on || !!cell?.lpNote);
   $('lpOctDn').textContent = lp.oct < 0 ? `Oct ${lp.oct}` : 'Oct −'; $('lpOctUp').textContent = lp.oct > 0 ? `Oct +${lp.oct}` : 'Oct +';
   $('lpOctDn').classList.toggle('on', lp.oct < 0); $('lpOctUp').classList.toggle('on', lp.oct > 0);
   const mid = keySemis(7, S.scale);
+  $('lpFx').classList.toggle('on', lpFx); $('lpKeys').classList.toggle('fx', lpFx);
   lpKeys.forEach((b, k) => {
+    if (lpFx) { const id = S.fxSlots[k]; b.textContent = FX[id]?.[0] || id; b.classList.toggle('live', activeFx.has(id)); b.classList.remove('root'); return; }
+    b.classList.remove('live');
     const semi = keySemis(k, S.scale) - mid;
     b.textContent = NOTE_NAMES[((S.root + semi) % 12 + 12) % 12] + (semi === 0 ? ' •' : '');
     b.classList.toggle('root', semi % 12 === 0);
