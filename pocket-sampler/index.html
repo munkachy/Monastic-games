@@ -391,6 +391,7 @@
   .lrnotes i { position: absolute; height: 4px; border-radius: 2px; background: #ff6b6b; } .lrnotes i.old { background: #ffffff88; }
   .lrhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; } .lrhead.wait { opacity: .3; }
   .lprtitle { font-size: 12px; }
+  #lsSets button.on small, #lsMine button.on small { color: #ffffffd0; }
   .wzoom { display: inline-flex; gap: 3px; } .wzoom button { min-width: 30px; padding-left: 7px !important; padding-right: 7px !important; } .wzoom button[hidden] { display: none; }
   #lpEd .lmodes { flex-wrap: wrap; row-gap: 4px; }
   .fxamts { display: flex; flex-direction: column; gap: 4px; } .fxamts:empty { display: none; }
@@ -644,7 +645,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026b</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026c</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span></div>
 
   <div class="screen" id="screen">
@@ -1032,7 +1033,7 @@
     <p><b>🥁 Design in the Loops</b>: hold a cell for its settings, and its third tab, 🥁 Design, makes a hit and puts it straight in: tap the steps of one bar (on, soft, off; drag a lit step along its line to move it; the column suggests a start: kicks on 1 and 3, snares on 2 and 4, hats in eighths), make the hit below (the same designer as Menu › Design), ＋ Add a line for another drum on its own steps (up to 6 lines: kick, snare, hat, clap and so on; tap a line's name to shape that one's drum, ✕ takes it away), ▶ Hear the bar, and ✓ Put in this cell: a one-bar loop at the song's tempo and swing, playing from the next bar, also kept in the library (My loops). An empty cell has 🥁 Design a hit at the top of its picker.</p>
     <p><b>🎹 From the pads</b> (at the top of a cell's picker: an empty cell, or Change the sound): opens Loops + Pads with that cell ready to record into (a red edge). Tap a loop for the pads' sound, then <b>⏺ Rec</b>.</p>
     <p><b>Basic and Advanced</b> (at the top of Menu › Design and of a cell's 🥁 Design): Basic shows the few knobs that shape each sound most (a kick's pitch, pitch drop, length, click and drive; a snare's tune, body, wires and snap; a synth's wave, sub, cutoff, resonance, attack, release, vibrato and drive) and the Room; Advanced shows every knob, the layer, and the whole finish (soften, low and high cut, reverse). The choice holds for every designer on this device, and what you set in Advanced stays when you go back to Basic.</p>
-    <p><b>Sets and pack files</b> (Loops › ⚙): 💾 Save the grid as a set keeps the whole grid (every cell and its settings, the column effects, tempo, key and reverb) in My sets, to load again in one tap (hold one to share, rename or delete it). ⬆ Share as a pack file makes one file with the grid and every sound of yours in it, to keep in Files or iCloud Drive; ⬇ Open a pack file (or My Sounds › ⬆ Import) opens one on any device: its sounds go into My Sounds and its set into My sets. My Sounds › ⬆ Share as a pack file puts all your sounds in one file (a backup, too).</p>
+    <p><b>Sets and pack files</b> (Loops › ⚙): the set on the grid is lit (the one last loaded or saved). <b>💾 Save set</b> (at the end of My sets) saves your changes into it, if it is one of yours (its volumes, mutes and Follow the tempo too); with a built-in set lit, it saves the grid as a new set of yours, named after it. It reads 💾 Saved when there is nothing new to save. 💾 Save the grid as a set keeps the whole grid (every cell and its settings, the column effects, tempo, key and reverb) in My sets, to load again in one tap (hold one to share, rename or delete it). ⬆ Share as a pack file makes one file with the grid and every sound of yours in it, to keep in Files or iCloud Drive; ⬇ Open a pack file (or My Sounds › ⬆ Import) opens one on any device: its sounds go into My Sounds and its set into My sets. My Sounds › ⬆ Share as a pack file puts all your sounds in one file (a backup, too).</p>
     <p><b>☁ Send to the library</b> (Menu › Sounds › My Sounds): sends a pack (the Loops grid, all your sounds, one sound, or a pack file) with notes on it (what it is; who made it: you, a recording you made of something else, or someone else, with where it is from and its license) to the repository, so it is kept for good and shows on every device in Menu › Sounds › <b>☁ Shared</b> at once (tap one to add it to My Sounds). It needs a GitHub token, once on each device: a fine-grained token for munkachy/Monastic-games only, with Contents: Read and write; it is kept only in that browser (Forget my token clears it). Tell Claude, and what you sent is filed in the library and in the list of every sound and its license.</p>
     <p><b>⟳ Make a loop</b> (an amber button, ⟳ Loop): the pattern, or the chain of patterns as one long loop, made into a loop for the library. Name it, choose the folder it goes in (Beats, Bass, Chords, Lead, Sub, Vox and keys, Pads…; it guesses from what plays) and what plays in it (everything, everything but the drums, or only the drums); ▶ Hear it, then Save. It is then in that folder of Menu › Sounds (your loops first), in My Sounds, and in the Loops cells' sounds (My loops), and keeps time at any tempo. It is kept on this device.</p>
     <p><b>🗑 Review the library</b> (Menu › Sounds, at the top): every built-in sound, folder by folder, with ▶ to hear it and a <b>Delete</b> box. Packs and kits open (▸) so single sounds in them can be ticked. Ticked sounds leave the menus on this device at once; <b>Send to Claude</b> opens a GitHub issue listing them (tap Submit), or <b>Copy the list</b> to paste in a chat, and Claude deletes them from the app for good, so they are gone wherever Pocket Sampler is opened.</p>
@@ -1198,6 +1199,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261026b"></script>
+<script type="module" src="app.js?v=20261026c"></script>
 </body>
 </html>
