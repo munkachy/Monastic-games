@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025j';
+import * as DZ from './design.js?v=20261025k';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025j';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4294,7 +4294,7 @@ function lpNote(k, t, slot, oct = 0) {
   const R = lpRec, q = +S.quantGrid || 0; if (t < R.t0 - stepDur() * Math.max(0.5, q / 2)) return;           // still counting in
   if (!R.src) R.src = slot;
   if (slot !== R.src) return;                                      // one sound a recording
-  let pos = Math.max(0, (t - R.t0) / stepDur());
+  let pos = Math.max(0, (t - R.origin) / stepDur());
   if (q) pos = Math.round(pos / q) * q;
   R.notes.push({ k, t: pos, ...(oct && { o: oct }) });
 }
@@ -4304,8 +4304,8 @@ async function lpRecTap() {
   const at = lpTargetCell();
   if (!at) { status(lp.c < 0 ? 'Tap a loop first: the pads play it, and ⏺ Rec puts what you play in the next empty cell of its column.' : 'Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
   if (!await lpSlot()) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
-  const ci = await recCountIn(), t0 = ci.t0;
-  lpRec = { ...at, t0, ci, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
+  const tapped = ctx.currentTime, ci = await recCountIn(), t0 = ci.t0;
+  lpRec = { ...at, t0, origin: ci.origin, ci, tapped, notes: [], src: null, bpm: S.bpm, root: S.root, scale: S.scale };
   lpDraw(); drawLoops();
   status(`Recording into ${CHANNELS[at.c]}, cell ${at.r + 1}${at.c !== lp.c && !lpTarget ? ` (${CHANNELS[lp.c]} is full)` : ''}, ${countBars() ? `after ${countBars()} bar${countBars() > 1 ? 's' : ''} to count in` : 'from the next bar'}: play the pads, then ⏺ again to stop.`);
 }
@@ -4313,7 +4313,7 @@ async function lpRecStop() {
   const R = lpRec; lpRec = null; lpTarget = null; lpDraw(); drawLoops();
   if (ctx.currentTime < R.t0) { R.ci?.undo?.(); status('Stopped before it began: nothing was recorded.'); return; }
   if (!R.notes.length) { status('Nothing was played, so nothing was recorded.'); return; }
-  const played = (ctx.currentTime - R.t0) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
+  const played = (ctx.currentTime - R.origin) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
   const notes = R.notes.filter(n => n.t < bars * 16).map(n => ({ ...n, t: Math.min(n.t, bars * 16 - 0.01) }));
   const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src), ...(S.grid.lpChoke && { choke: true }) };
   const name = `${(lpInst?.name || lp.cell?.name || 'Pads').replace(/, played$/, '')}, played`;
@@ -5592,20 +5592,23 @@ async function lrTapNode(what, input = null) {
   return node;
 }
 // The count-in before a recording (⏺ Rec in Loops + Pads, 🎙 Record): Off, 1 or 2 bars (Loops › ⚙, or
-// the 🎙 Rec tab). It begins on the next bar and is exactly that long: four clicks a bar (the 808's
-// clave, a recording: louder on each bar's first beat), sent straight out past the master, which is
-// silent through it; the music plays on until it begins, and comes back on the first beat recorded.
+// the 🎙 Rec tab). It begins on the next beat, with no waiting for a bar, and is exactly that long: four
+// clicks a bar (the 808's clave, a recording: louder on the first), sent straight out past the master,
+// which is silent through it; the music comes back on the first beat recorded.
 // The loops play on underneath, so nothing loses its place. (If stopped, Play starts and it begins now.)
 const countBars = () => S.grid.countIn ?? 1;
 let clickOut = null;
 async function recCountIn() {
-  // the count-in begins on a bar (the next one; if stopped, Play starts it now) and is exactly its bars
-  // long, four clicks a bar, wherever the song was when the tap came; the music plays on until then
-  const bars = countBars(), bar = 16 * stepDur(), now = ctx.currentTime; let c0;
+  // the count-in begins on the next beat (at once, if the tap came on one), wherever the song is, no
+  // waiting for a bar: four clicks a bar, and the recording starts on the beat after the last. What is
+  // recorded keeps its place in the bar (origin: the bar line it starts in), so the loop it makes plays
+  // in step with the others.
+  const bars = countBars(), sd = stepDur(), bar = 16 * sd, now = ctx.currentTime;
+  let c0;
   if (!playing) { start(); resumeLoops(); c0 = nextT; }
-  else { c0 = nextBar().when; if (c0 - now < 0.08) c0 += bar; }
-  if (!bars && playing && c0 - now < 0.25) c0 += bar;
-  const t0 = c0 + bars * bar, h = { c0, t0, clicks: [], undone: false };
+  else c0 = nextBar(4).when;
+  const t0 = c0 + bars * bar, jt = tick - (nextT - t0) / sd, origin = t0 - ((((Math.round(jt * 1000) / 1000) % 16) + 16) % 16) * sd;
+  const h = { c0, t0, origin, clicks: [], undone: false };
   if (!bars) return h;
   const g = eng.master.gain;
   g.cancelScheduledValues(now); g.setValueAtTime(eng.vol, Math.max(now, c0 - 0.012)); g.linearRampToValueAtTime(0, c0); g.setValueAtTime(0, t0 - 0.004); g.linearRampToValueAtTime(eng.vol, t0);
@@ -5631,7 +5634,7 @@ function micDraw() {
   const T = micTake, now = ctx.currentTime;
   if (!T) { $('micGo').textContent = '🎙 Record'; $('micGo').classList.remove('armed', 'on'); return; }
   const beat = 4 * stepDur(), left = T.t0 - now;
-  $('micGo').textContent = T.ci && now < T.ci.c0 ? 'Waiting for the bar…  (■ stop)' : left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
+  $('micGo').textContent = left > 0 ? `Counting in… ${Math.max(1, Math.ceil(left / beat))}  (■ stop)` : `● Recording ${Math.min(T.bars, Math.floor((now - T.t0) / (16 * stepDur())) + 1)} of ${T.bars}  (■ stop)`;
 }
 document.querySelectorAll('[data-mb]').forEach(b => b.addEventListener('click', () => { micBarsN = +b.dataset.mb; try { localStorage.setItem('pocketMicBars', micBarsN); } catch (e) {} micDraw(); }));
 function micEnd(T) { clearInterval(T.tick); T.ci?.undo?.(); try { T.node?.unplug(); } catch (e) {} try { T.src?.disconnect(); } catch (e) {} for (const t of T.stream?.getTracks() || []) t.stop(); for (const v of T.clicks || []) try { v?.stop?.(ctx.currentTime); } catch (e) {} }
@@ -5649,7 +5652,7 @@ $('micGo').addEventListener('click', async () => {
   const bar = 16 * stepDur(), ci = await recCountIn(), t0 = ci.t0;
   const set = stream.getAudioTracks()[0]?.getSettings?.() || {};
   const lat = Math.min(0.3, (ctx.baseLatency || 0) + (ctx.outputLatency || 0) + (set.latency || 0.01));
-  const t1 = t0 + bars * bar, T = micTake = { c, r, bars, t0, t1, stream, src, node, chunks: [], bpm: S.bpm, clicks: [], ci };
+  const t1 = t0 + bars * bar, T = micTake = { c, r, bars, t0, t1, origin: ci.origin, stream, src, node, chunks: [], bpm: S.bpm, clicks: [], ci };
   node.port.onmessage = e => {
     if (micTake !== T) return;
     if (!e.data.done) { T.chunks.push(e.data); return; }
@@ -5660,12 +5663,13 @@ $('micGo').addEventListener('click', async () => {
   status(`🎙 ${countBars() ? `Counting in ${countBars()} bar${countBars() > 1 ? 's' : ''}, then recording` : 'Recording from the next bar:'} ${bars} bar${bars > 1 ? 's' : ''} into ${CHANNELS[c]}, cell ${r + 1}.`);
 });
 async function micKeep(T) {
-  const rate = ctx.sampleRate, m = Math.round((T.t1 - T.t0) * rate), out = new Float32Array(m);
-  for (const ch of T.chunks) for (let i = 0; i < ch.L.length; i++) { const j = ch.at + i; if (j >= 0 && j < m) out[j] = (ch.L[i] + ch.R[i]) / 2; }
+  // (a take begun partway through a bar is turned round, so each moment sits in its bar as it was sung)
+  const rate = ctx.sampleRate, m = Math.round((T.t1 - T.t0) * rate), out = new Float32Array(m), off = ((Math.round((T.t0 - T.origin) * rate) % m) + m) % m;
+  for (const ch of T.chunks) for (let i = 0; i < ch.L.length; i++) { const j = ch.at + i; if (j >= 0 && j < m) out[(j + off) % m] = (ch.L[i] + ch.R[i]) / 2; }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
   if (top < 0.002) { status('Nothing was heard: check that the microphone is allowed and not muted, then try again.'); return; }
-  const X = Math.min(Math.round(0.005 * rate), m >> 2);            // 5 ms fades at the seam, so it never clicks
-  for (let i = 0; i < X; i++) { const u = i / X; out[i] *= u; out[m - 1 - i] *= u; }
+  const X = Math.min(Math.round(0.005 * rate), m >> 2);            // 5 ms fades at the seam (where it began and ended), so it never clicks
+  for (let i = 0; i < X; i++) { const u = i / X; out[(off + i) % m] *= u; out[(off + m - 1 - i) % m] *= u; }
   for (let i = 0; i < m; i++) out[i] *= 0.9 / top;
   const buf = ctx.createBuffer(1, m, rate); buf.copyToChannel(out, 0);
   const d = new Date(), name = `🎙 Take ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -5995,7 +5999,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   masterGain: () => eng.master.gain.value,
   lpLast: () => lp.last && { ...lp.last, sd: stepDur(), nextT, tick },
   lpVoiceEnd: () => lp.voice?.end,
-  lpRecInfo: () => lpRec && { clicks: lpRec.ci?.clicks?.length || 0, len: lpRec.t0 - lpRec.ci.c0, onBar: Math.abs(((lpRec.ci.c0 - nextT) / stepDur() + tick) % 16) < 0.01 || Math.abs(((lpRec.ci.c0 - nextT) / stepDur() + tick) % 16 - 16) < 0.01 },
+  lpRecInfo: () => lpRec && { clicks: lpRec.ci?.clicks?.length || 0, wait: lpRec.ci.c0 - lpRec.tapped, len: lpRec.t0 - lpRec.ci.c0, startBeat: ((((lpRec.t0 - nextT) / stepDur() + tick) % 16) + 16) % 16 / 4 + 1, originOff: (lpRec.t0 - lpRec.origin) / stepDur() },
   cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
     const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
