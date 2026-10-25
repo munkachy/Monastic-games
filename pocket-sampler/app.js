@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025n';
+import * as DZ from './design.js?v=20261025o';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025n';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025o';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025n'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025o'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025n'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025o'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4229,10 +4229,11 @@ for (let k = 0; k < 16; k++) {
 }
 // a pad played (a finger, or the computer's keys: 1234 / QWER / ASDF / ZXCV)
 // While the beat plays, a tap lands on the next point of the Quantize (1/16, 1/8, 1/4; one just after a
-// point plays at once), what is heard and what is recorded alike; Free, or stopped: at once.
+// point plays at once); Free, or stopped: at once. While ⏺ Rec records, always at once: a recording keeps
+// your timing exactly as played (it can be put on the beat afterwards, in the cell's 🎹 Notes).
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
-  const snapped = snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
+  const snapped = lpRec ? null : snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
@@ -4320,11 +4321,10 @@ function lpTargetCell() {
   return null;
 }
 function lpNote(k, t, slot, oct = 0) {
-  const R = lpRec, q = +S.quantGrid || 0; if (t < R.t0 - stepDur() * Math.max(0.5, q / 2)) return;           // still counting in
+  const R = lpRec; if (t < R.t0 - stepDur() / 2) return;           // still counting in
   if (!R.src) R.src = slot;
   if (slot !== R.src) return;                                      // one sound a recording
-  let pos = Math.max(0, (t - R.origin) / stepDur());
-  if (q) pos = Math.round(pos / q) * q;
+  const pos = Math.max(0, (t - R.origin) / stepDur());          // (as played: never quantized)
   R.notes.push({ k, t: pos, ...(oct && { o: oct }) });
 }
 async function lpRecTap() {
@@ -4353,6 +4353,9 @@ async function lpRecStop() {
   else Object.assign(lp, keep);                              // the pads keep the sound they were playing
   lpDraw(); drawLoops();
 }
+// where a note plays, in 16ths: as played, or put on the 16th, 8th or beat (seq.q: 1, 2, 4) if chosen in
+// 🎹 Notes (the notes keep their timing as played, so Quantize can be taken off again)
+const seqAt = (seq, n) => (seq.q ? (Math.round(n.t / seq.q) * seq.q) % (seq.bars * 16) : n.t);
 // the notes, made into a loop (offline, as an export is), at the tempo they were played at; a note
 // ringing past the end comes round to the start
 async function seqRender(seq, slot) {
@@ -4361,7 +4364,8 @@ async function seqRender(seq, slot) {
   if (seq.fx) { e.delay.delayTime.value = Math.min(1.9, sd * 3); e.ppL.delayTime.value = e.ppR.delayTime.value = Math.min(1.9, sd * 3); }
   const strip = seq.fx ? padStrip(off, e, e.bus, seq.fx) : null;      // (recorded with the pads' EQ and effect: as it was heard)
   let last = null;          // (recorded with Choke on: each note cuts off the one before, as it was heard)
-  for (const n of [...seq.notes].sort((a, b) => a.t - b.t)) { if (seq.choke) last?.stop?.(n.t * sd); last = playNote(e, slot, -1, n.k, n.t * sd, { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0), ...(strip && { dest: strip.pre }) }); }
+  const at = n => seqAt(seq, n) * sd;
+  for (const n of [...seq.notes].sort((a, b) => seqAt(seq, a) - seqAt(seq, b))) { if (seq.choke) last?.stop?.(at(n)); last = playNote(e, slot, -1, n.k, at(n), { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0), ...(strip && { dest: strip.pre }) }); }
   const b = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
   for (const c of [0, 1]) { const x = b.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
@@ -5119,6 +5123,13 @@ function drawRoll(c, r) {
     b.addEventListener('click', () => { rollZoom = id; try { localStorage.setItem('pocketRollZoom', id); } catch (e) {} drawRoll(c, r); });
     zoom.appendChild(b);
   }
+  const qz = document.createElement('div'); qz.className = 'lmodes rlen';
+  qz.append(Object.assign(document.createElement('span'), { textContent: 'Quantize' }));
+  for (const [q, label] of [[0, 'As played'], [1, '1/16'], [2, '1/8'], [4, '1/4']]) {
+    const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', (seq.q || 0) === q);
+    b.addEventListener('click', () => { if ((seq.q || 0) !== q) rollChange(c, r, seq.notes, false, null, q).then(() => status(q ? `Quantized to ${label}: the notes keep how you played them, so As played brings that back.` : 'As played: the timing exactly as you played it.')); });
+    qz.appendChild(b);
+  }
   const Z = ROLL_ZOOM.find(z => z[0] === rollZoom) || ROLL_ZOOM[0], unit = Z[2];
   const steps = seq.bars * 16, per = Math.min(steps, Z[3] * 16), mid = keySemis(7, seq.scale);       // a row: as many bars as the zoom shows
   const st = Math.min(40, Math.max(0.5, ((box.clientWidth || 600) - 2) / per));
@@ -5133,7 +5144,7 @@ function drawRoll(c, r) {
   // a note's name when it holds one note, ×n when more. Tap: everything in it is deleted (zoom in to pick
   // out one); drag left or right: everything in it moves together, by 16ths (one note lands on a 16th).
   const rowOf = t => Math.min(rows.length - 1, Math.floor(t / per)), slots = new Map();
-  seq.notes.forEach((n, i) => { const k = Math.floor((n.t + 1e-6) / unit); if (!slots.has(k)) slots.set(k, []); slots.get(k).push(i); });
+  seq.notes.forEach((n, i) => { const k = Math.floor((seqAt(seq, n) + 1e-6) / unit); if (!slots.has(k)) slots.set(k, []); slots.get(k).push(i); });
   const name = k => seq.src.kind === 'chop' ? `#${k + 1}` : NOTE_NAMES[((seq.root + keySemis(k, seq.scale) - mid) % 12 + 12) % 12];
   for (const [k, list] of slots) {
     const t0 = k * unit, ri = rowOf(t0), row = rows[ri], x0t = ri * per, w = Math.min(unit, steps - t0) * st;
@@ -5143,7 +5154,6 @@ function drawRoll(c, r) {
     Object.assign(b.style, { left: (t0 - x0t) * st + 1 + 'px', width: Math.max(4, w - 2) + 'px', top: '3px', bottom: '3px', fontSize: w < 18 ? '8px' : '10px' });
     let x0 = 0, moved = false, shift = 0, turned = false;
     const along = ev => (turned ? ev.clientY : ev.clientX);
-    const one = list.length === 1 ? seq.notes[list[0]] : null;
     const lo = Math.min(...list.map(i => seq.notes[i].t)), hi = Math.max(...list.map(i => seq.notes[i].t));
     b.addEventListener('pointerdown', ev => {
       ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
@@ -5154,8 +5164,7 @@ function drawRoll(c, r) {
       if (!b.classList.contains('drag')) return;
       const dx = along(ev) - x0; if (!moved && Math.abs(dx) < 6) return;
       moved = true;
-      shift = one ? Math.max(0, Math.min(steps - 1, Math.round(one.t + dx / st))) - one.t       // one note: onto a 16th
-        : Math.max(-Math.floor(lo), Math.min(Math.floor(steps - 1 - hi), Math.round(dx / st)));  // more: together, by 16ths
+      shift = Math.max(-Math.floor(lo), Math.min(Math.floor(steps - 1 - hi), Math.round(dx / st)));  // together, by 16ths (each keeps its own timing)
       b.style.left = (t0 - x0t + shift) * st + 1 + 'px';             // (past the row's end: into the next row)
     });
     b.addEventListener('pointerup', () => {
@@ -5169,15 +5178,15 @@ function drawRoll(c, r) {
     b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.left = (t0 - x0t) * st + 1 + 'px'; });
     row.appendChild(b);
   }
-  box.append(lens, zoom, wrap);
+  box.append(lens, qz, zoom, wrap);
 }
 let rollBusy = Promise.resolve();
-function rollChange(c, r, notes, undoing = false, bars = null) {
+function rollChange(c, r, notes, undoing = false, bars = null, q = null) {
   rollBusy = rollBusy.then(async () => {
     const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine); if (!rec?.seq) return;
     if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return; }
-    if (!undoing) rollUndo.push({ notes: rec.seq.notes, bars: rec.seq.bars });
-    const seq = { ...rec.seq, notes, bars: bars ?? rec.seq.bars }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
+    if (!undoing) rollUndo.push({ notes: rec.seq.notes, bars: rec.seq.bars, q: rec.seq.q || 0 });
+    const seq = { ...rec.seq, notes, bars: bars ?? rec.seq.bars, q: q ?? rec.seq.q ?? 0 }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
     const slot = { factory: null, kind: 'chop', contiguous: false, name: rec.name, params: { ...defParams(), trig: 'loop' }, buf, ...(c < 3 && { drumLoop: true }),
       slices: [{ s: 0, e: buf.duration, name: rec.name, bpm: seq.bpm, bars: seq.bars }] };
     const id = 'm' + Date.now().toString(36);
@@ -5192,7 +5201,7 @@ function rollChange(c, r, notes, undoing = false, bars = null) {
 }
 $('lmRollUndo').addEventListener('click', () => {
   if (!menuCell || !rollUndo.length) return;
-  const u = rollUndo.pop(); rollChange(menuCell.c, menuCell.r, u.notes, true, u.bars);
+  const u = rollUndo.pop(); rollChange(menuCell.c, menuCell.r, u.notes, true, u.bars, u.q);
 });
 // The cell's settings in two tabs: Settings (with the wave first) and EQ & Effect.
 let lPane = 'set';
