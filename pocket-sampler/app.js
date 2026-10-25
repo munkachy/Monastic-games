@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025b';
+import * as DZ from './design.js?v=20261025c';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025b';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025c';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025c'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025c'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3605,7 +3605,7 @@ async function load() {
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
   if (S.grid.cells.flat().some(x => x?.lib === 'ebbbeats')) gridAgain = 'electroboombap';      // its beats became kick, snare and tops loops
-  S.grid.quant ??= 16; S.grid.fade ??= 0; if (S.grid.colFx?.length !== 8) S.grid.colFx = newColFx();
+  S.grid.quant ??= 16; S.grid.fade ??= 0; S.grid.stretch ??= true; if (S.grid.colFx?.length !== 8) S.grid.colFx = newColFx();
   if (!S.grid.hits4) { hitsRepeat(S.grid.cells); S.grid.hits4 = true; }      // the hits become 4-beat loops, once
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
@@ -3709,9 +3709,12 @@ function cellBase(cell) {
   }
   return mineSlots.get(cell.mine);
 }
+// Follow the tempo: Stretch (it keeps its pitch, at the cost of a little grit) or Re-Pitch (sped up or
+// slowed like a record: clean, the pitch moving with the tempo). Each loop its own; Loops › ⚙ sets them all.
+const stretchOf = cell => cell.stretch ?? S.grid?.stretch ?? true;
 function cellSlot(cell) {
   const keyOf = follows(cell) ? cell.keyOf ?? null : null;
-  const id = JSON.stringify([cell.mine || cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, cell.stretch ?? true,
+  const id = JSON.stringify([cell.mine || cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, stretchOf(cell),
     cell.from || 0, cell.to ?? 1, cell.beats ? S.bpm : 0]);
   if (cellSlots.size > 300) cellSlots.clear();
   if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell).then(slot => {
@@ -3734,7 +3737,7 @@ function cellSlot(cell) {
       one = { name: x.name, buf: out, s: 0, e: n / rate, bpm: x.bpm || S.bpm, bars: cell.beats / 4, start: 0, len: 1 };
     }
     return { kind: 'chop', name: x.name, buf: one.buf, slices: [one], drumLoop: !!slot.drumLoop || drumCell(cell),
-      params: { ...defParams(), vol: 1, keyOf: ko, pitch: cell.pitch || 0, nostretch: cell.stretch === false,
+      params: { ...defParams(), vol: 1, keyOf: ko, pitch: cell.pitch || 0, nostretch: !stretchOf(cell),
         trig: cell.mode === 'oneshot' ? 'oneshot' : 'loop' } };
   }).catch(() => null));
   return cellSlots.get(id);
@@ -4465,6 +4468,17 @@ function drawSets() {
   }
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
+  // every loop at once (each can be changed after: hold it)
+  S.grid.stretch ??= true;
+  const mixed = S.grid.cells.flat().some(x => x && x.stretch != null && x.stretch !== S.grid.stretch);
+  choices($('lsStretch'), [[true, 'Stretch'], [false, 'Re-Pitch']], S.grid.stretch, v => {
+    S.grid.stretch = v; for (const col of S.grid.cells) for (const x of col) if (x) delete x.stretch;
+    persist(); drawSets(); drawLoops(); warmGridSoon();
+    if (playing) relaunchGrid(nextBar(), () => true);
+    status(v ? 'Every loop stretches to the tempo, keeping its pitch' + (playing ? ', from the next bar.' : '.') : 'Every loop follows the tempo like a record: clean, its pitch moving with the tempo' + (playing ? ', from the next bar.' : '.'));
+  });
+  $('lsStretchNote').textContent = (S.grid.stretch ? 'Stretch: every loop keeps its pitch at any tempo; the stretching leaves a little grit, even a few BPM off.' : 'Re-Pitch: every loop is sped up or slowed like a record: no grit at all, but its pitch moves with the tempo (1 BPM off at 92: a fifth of a half step; 10 BPM: about two half steps).')
+    + ' Tapping either sets every loop at once; a loop can still be changed on its own (hold it: Follow the tempo).' + (mixed ? ' (Some loops are set the other way now.)' : '');
 }
 $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
@@ -4669,9 +4683,9 @@ async function drawCellMenu() {
     drawEq(cell);
     const base = await cellBase(cell), x = base?.slices?.[cell.k];
     if (!menuCell || S.grid.cells[c][r] !== cell) return;
-    choices($('lmStretch'), [[true, 'On'], [false, 'Off']], cell.stretch ?? true, v => { cell.stretch = v; changed(c, r); });
+    choices($('lmStretch'), [[true, 'Stretch'], [false, 'Re-Pitch']], stretchOf(cell), v => { cell.stretch = v; changed(c, r); });
     $('lmStretch').querySelectorAll('button').forEach(b => { b.disabled = !x?.bpm; });
-    $('lmStretchNote').textContent = !x?.bpm ? 'Not a loop with a tempo' : cell.stretch === false ? `Sped up like a record (made at ${Math.round(x.bpm)} BPM)` : 'Keeps its pitch at any tempo';
+    $('lmStretchNote').textContent = !x?.bpm ? 'Not a loop with a tempo' : !stretchOf(cell) ? `Like a record: clean, its pitch moving with the tempo (made at ${Math.round(x.bpm)} BPM)` : 'Keeps its pitch at any tempo (a little grit)';
     const fx = S.grid.colFx[c];
     $('lmFxCol').textContent = `on the whole ${CHANNELS[c]} column`;
     choices($('lmFx'), COL_FX, fx.type, v => { fx.type = v; if (eng.cols?.[c]) wireColFx(c); persist(); drawCellMenu(); drawLoops(); });
