@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025p';
+import * as DZ from './design.js?v=20261025q';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025p';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025q';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025q'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025q'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3815,7 +3815,7 @@ const colLevel = c => (S.grid.mute[c] ? 0 : S.grid.vol[c]);
 function colChain(c) {
   eng.cols ||= [];
   if (!eng.cols[c]) {
-    const k = { inp: ctx.createGain(), out: ctx.createGain(), dry: ctx.createGain(), dout: ctx.createGain(), ins: null, send: null, type: null };
+    const k = { inp: ctx.createGain(), out: ctx.createGain(), dry: ctx.createGain(), dout: ctx.createGain() };
     k.out.connect(eng.bus); k.dry.connect(k.dout); k.dout.connect(eng.bus); k.to = eng.bus;
     k.out.gain.value = k.dout.gain.value = colLevel(c);
     eng.cols[c] = k; wireColFx(c); routeLoops();
@@ -3824,39 +3824,78 @@ function colChain(c) {
 }
 const colInput = (c, cell) => (cell?.fxOff ? colChain(c).dry : colChain(c).inp);
 const setColGain = c => { const k = colChain(c); for (const g of [k.out, k.dout]) g.gain.setTargetAtTime(colLevel(c), ctx.currentTime, 0.02); };
-// An effect slot (a Loops column's, or the Loops + Pads pads'): inp -> [the effect] -> out, and a send
-// from out for reverb and the echoes. c and e: the context and engine (an export's, offline, too).
+// Effects (a Loops column's, or the Loops + Pads pads'): as many as wanted at once, each with its amount,
+// kept as { on: { drive: 0.5, reverb: 0.3 } } (an older { type, amt } is read as one). They always run in
+// one order, as a guitarist chains pedals: high pass, the drives, the low pass, in turn on the sound
+// (inp -> ... -> out); then the echoes and the reverb, sent from out, side by side.
+const FX_ORDER = ['highpass', 'overdrive', 'distortion', 'tape', 'lowpass', 'echo', 'pingpong', 'reverb'];
+const FX_SENDS = ['echo', 'pingpong', 'reverb'];
+const fxOn = fx => fx?.on || (fx?.type && fx.type !== 'none' ? { [fx.type]: fx.amt ?? 0.5 } : {});
+const fxItems = fx => { const on = fxOn(fx); return FX_ORDER.filter(t => t in on).map(t => ({ type: t, amt: on[t] })); };
+function fxToggle(fx, t) {                 // on or off (an effect turned off keeps its amount, for next time)
+  const on = { ...fxOn(fx) }; fx.mem = { ...fx.mem };
+  if (t in on) { fx.mem[t] = on[t]; delete on[t]; } else on[t] = fx.mem[t] ?? 0.5;
+  fx.on = on; delete fx.type; delete fx.amt;
+}
+function fxNone(fx) { for (const [t, a] of Object.entries(fxOn(fx))) (fx.mem ||= {})[t] = a; fx.on = {}; delete fx.type; delete fx.amt; }
+// c and e: the context and engine (an export's, offline, too)
 function wireFx(k, fx, c = ctx, e = eng) {
-  if (k.type === fx.type && k.type !== 'none') { fxAmount(k, fx, c, e); return; }
+  const items = fxItems(fx), sig = items.map(x => x.type).join();
+  if (k.sig === sig) { fxAmount(k, fx, c, e); return; }
   try { k.inp.disconnect(); } catch (er) {}
-  for (const n of [k.ins, k.send]) if (n) try { n.dispose ? n.dispose() : n.disconnect(); } catch (er) {}
-  k.ins = k.send = null; k.type = fx.type;
-  if (fx.type === 'lowpass' || fx.type === 'highpass') { k.ins = c.createBiquadFilter(); k.ins.type = fx.type; }
-  else if (fx.type === 'overdrive' || fx.type === 'distortion' || fx.type === 'tape') k.ins = satChain(c, fx.type);      // (audio.js: Drive and Tape as the hardware does them)
-  if (k.ins) { k.inp.connect(k.ins.input || k.ins); (k.ins.output || k.ins).connect(k.out); } else k.inp.connect(k.out);
-  if (['reverb', 'echo', 'pingpong'].includes(fx.type)) {
-    k.send = c.createGain(); k.out.connect(k.send);
-    k.send.connect(fx.type === 'reverb' ? e.reverb : fx.type === 'echo' ? e.delay : e.ppL);
+  for (const n of [...Object.values(k.ins || {}), ...Object.values(k.sends || {})]) try { n.dispose ? n.dispose() : n.disconnect(); } catch (er) {}
+  k.ins = {}; k.sends = {}; k.sig = sig;
+  let at = k.inp;
+  for (const { type } of items) {
+    let n = null;
+    if (type === 'lowpass' || type === 'highpass') { n = c.createBiquadFilter(); n.type = type; }
+    else if (type === 'overdrive' || type === 'distortion' || type === 'tape') n = satChain(c, type);      // (audio.js: each as the hardware does it)
+    if (n) { at.connect(n.input || n); at = n.output || n; k.ins[type] = n; }
+  }
+  at.connect(k.out);
+  for (const { type } of items) if (FX_SENDS.includes(type)) {
+    const g = c.createGain(); k.out.connect(g); g.connect(type === 'reverb' ? e.reverb : type === 'echo' ? e.delay : e.ppL); k.sends[type] = g;
   }
   fxAmount(k, fx, c, e);
 }
 function fxAmount(k, fx, c = ctx, e = eng) {
-  const { type, amt: a } = fx, t = c.currentTime, echo = Math.min(1.9, stepDur() * 3);
-  if (type === 'lowpass') { k.ins.frequency.setTargetAtTime(6000 * Math.pow(0.03, a), t, 0.03); k.ins.Q.value = 1 + a * 6; }
-  if (type === 'highpass') { k.ins.frequency.setTargetAtTime(80 * Math.pow(40, a), t, 0.03); k.ins.Q.value = 1 + a * 4; }
-  if (type === 'overdrive' || type === 'distortion' || type === 'tape') k.ins.set(a);
-  if (k.send) k.send.gain.setTargetAtTime(a * (type === 'reverb' ? 1.3 : 0.9), t, 0.03);
-  if (type === 'echo') e.delay.delayTime.setValueAtTime(echo, t);
-  if (type === 'pingpong') { e.ppL.delayTime.setValueAtTime(echo, t); e.ppR.delayTime.setValueAtTime(echo, t); }
+  const t = c.currentTime, echo = Math.min(1.9, stepDur() * 3);
+  for (const { type, amt: a } of fxItems(fx)) {
+    const n = k.ins?.[type], g = k.sends?.[type];
+    if (type === 'lowpass') { n.frequency.setTargetAtTime(6000 * Math.pow(0.03, a), t, 0.03); n.Q.value = 1 + a * 6; }
+    if (type === 'highpass') { n.frequency.setTargetAtTime(80 * Math.pow(40, a), t, 0.03); n.Q.value = 1 + a * 4; }
+    if (type === 'overdrive' || type === 'distortion' || type === 'tape') n.set(a);
+    if (g) g.gain.setTargetAtTime(a * (type === 'reverb' ? 1.3 : 0.9), t, 0.03);
+    if (type === 'echo') e.delay.delayTime.setValueAtTime(echo, t);
+    if (type === 'pingpong') { e.ppL.delayTime.setValueAtTime(echo, t); e.ppR.delayTime.setValueAtTime(echo, t); }
+  }
 }
-const COL_NONE = { type: 'none', amt: 0.5 };
+// The effect buttons (any number on; None turns them all off) and an Amount for each one on.
+const fxName = t => COL_FX.find(f => f[0] === t)?.[1] || t;
+function fxPicker(box, amts, fx, changed) {
+  box.textContent = '';
+  const on = fxOn(fx);
+  for (const [t, label] of COL_FX) {
+    const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', t === 'none' ? !Object.keys(on).length : t in on);
+    b.addEventListener('click', () => { if (t === 'none') fxNone(fx); else fxToggle(fx, t); changed(true); fxPicker(box, amts, fx, changed); });
+    box.appendChild(b);
+  }
+  amts.textContent = '';
+  for (const { type, amt } of fxItems(fx)) {
+    const row = document.createElement('div'); row.className = 'lrow';
+    const f = document.createElement('div'); f.className = 'lfader wide'; f.innerHTML = '<i></i>'; f.firstChild.style.width = Math.round(amt * 100) + '%';
+    row.append(Object.assign(document.createElement('span'), { textContent: fxName(type) }), f); amts.appendChild(row);
+    fader(f, v => { fx.on = { ...fxOn(fx), [type]: v }; delete fx.type; delete fx.amt; f.firstChild.style.width = Math.round(v * 100) + '%'; changed(false); });
+  }
+}
+const COL_NONE = { on: {} };
 function wireColFx(c) { wireFx(eng.cols[c], S.grid.colFx[c] || COL_NONE); }
 function colFxAmount(c) { const k = eng.cols?.[c]; if (k) fxAmount(k, S.grid.colFx[c] || COL_NONE); }
 // The Loops + Pads pads' own EQ and effect (FX): pre -> EQ -> the effect slot -> dest. Made for each
 // sound engine; an export (a recording made again) makes its own.
-const LP_FX0 = () => ({ eq: { lo: 0, mid: 0, hi: 0 }, type: 'none', amt: 0.5 });
+const LP_FX0 = () => ({ eq: { lo: 0, mid: 0, hi: 0 }, on: {} });
 function padStrip(c, e, dest, cfg) {
-  const k = { pre: c.createGain(), eq: makeEq({ eq: cfg.eq }, c), inp: c.createGain(), out: c.createGain(), ins: null, send: null, type: null };
+  const k = { pre: c.createGain(), eq: makeEq({ eq: cfg.eq }, c), inp: c.createGain(), out: c.createGain() };
   k.pre.connect(k.eq[0]); k.eq[2].connect(k.inp); k.out.connect(dest);
   wireFx(k, cfg, c, e); return k;
 }
@@ -4177,7 +4216,8 @@ function drawLoops() {
       el.b.classList.toggle('lineprog', !!cell && (cell.mode === 'oneshot' || cell.mode === 'gate'));      // played once or held: a straight line, not a ring
     }
     const fx = S.grid.colFx[c];
-    cellEls[c].head.textContent = CHANNELS[c] + (fx.type !== 'none' ? ' · ' + COL_FX.find(f => f[0] === fx.type)[1] : '');
+    const its = fxItems(fx);
+    cellEls[c].head.textContent = CHANNELS[c] + (its.length ? ' · ' + (its.length > 2 ? `${its.length} effects` : its.map(x => fxName(x.type)).join(' + ')) : '');
     cellEls[c].fader.style.width = Math.round(S.grid.vol[c] * 100) + '%';
     cellEls[c].mute.classList.toggle('on', S.grid.mute[c]);
     cellEls[c].col.classList.toggle('muted', S.grid.mute[c]);
@@ -4250,7 +4290,7 @@ function lpRelease(k) { lpKeys[k].classList.remove('down'); }
 // FX: the pads' own EQ (low, middle, high) and effect (low pass, high pass, reverb, echo, ping-pong,
 // drive, tape), as a Loops cell has, in place of the pads until ✓ Done; on everything they play.
 let lpFxOpen = false;
-const lpFxOn = () => { const f = S.grid.lpFx; return !!f && (f.type !== 'none' || ['lo', 'mid', 'hi'].some(b => f.eq?.[b])); };
+const lpFxOn = () => { const f = S.grid.lpFx; return !!f && (fxItems(f).length > 0 || ['lo', 'mid', 'hi'].some(b => f.eq?.[b])); };
 function lpFxShow(open) {
   lpFxOpen = open; if (open && lpEd.on) lpEdClose();
   $('lpFxBox').hidden = !open; $('lpKeys').hidden = open || lpEd.on; lpFxDraw(); lpDraw();
@@ -4260,13 +4300,11 @@ function lpFxDraw() {
   if (!lpFxOpen) return;
   eqCurve($('lpEq'), f.eq, cssVar('--accent'));
   EQ_BANDS.forEach(([, , b]) => { const v = f.eq?.[b] || 0; $('lpEq' + b).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%'; $('lpEq' + b + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB'; });
-  choices($('lpFxType'), COL_FX, f.type, v => { f.type = v; lpFxApply(); persist(); lpFxDraw(); });
-  $('lpFxAmtRow').hidden = f.type === 'none'; $('lpFxAmt').firstChild.style.width = Math.round(f.amt * 100) + '%';
+  fxPicker($('lpFxType'), $('lpFxAmts'), f, redraw => { lpFxApply(); persist(); if (redraw) lpDraw(); });
 }
 $('lpFx').addEventListener('click', () => lpFxShow(!lpFxOpen));
 $('lpFxDone').addEventListener('click', () => lpFxShow(false));
 EQ_BANDS.forEach(([, , b]) => fader($('lpEq' + b), v => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { ...f.eq, [b]: Math.round((v - 0.5) * 24) }; lpFxApply(); persist(); lpFxDraw(); }));
-fader($('lpFxAmt'), v => { const f = S.grid.lpFx ||= LP_FX0(); f.amt = v; lpFxApply(); persist(); lpFxDraw(); });
 $('lpEqFlat').addEventListener('click', () => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { lo: 0, mid: 0, hi: 0 }; lpFxApply(); persist(); lpFxDraw(); });
 function lpPick(c, r) {
   if (!S.grid.cells[c][r] || (!lpInst && lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
@@ -4823,9 +4861,8 @@ async function drawCellMenu() {
     $('lmStretchNote').textContent = fromNotes ? 'Made from notes: played again at any tempo, never stretched' : !x?.bpm ? 'Not a loop with a tempo' : !stretchOf(cell) ? `Like a record: clean, its pitch moving with the tempo (made at ${Math.round(x.bpm)} BPM)` : 'Keeps its pitch at any tempo (a little grit)';
     const fx = S.grid.colFx[c];
     $('lmFxCol').textContent = `on the whole ${CHANNELS[c]} column`;
-    choices($('lmFx'), COL_FX, fx.type, v => { fx.type = v; if (eng.cols?.[c]) wireColFx(c); persist(); drawCellMenu(); drawLoops(); });
-    $('lmFxBar').firstChild.style.width = Math.round(fx.amt * 100) + '%';
-    $('lmFxRow').hidden = $('lmSkipRow').hidden = fx.type === 'none';
+    fxPicker($('lmFx'), $('lmFxAmts'), fx, redraw => { if (eng.cols?.[c]) wireColFx(c); persist(); if (redraw) { $('lmSkipRow').hidden = !fxItems(fx).length; drawLoops(); } });
+    $('lmSkipRow').hidden = !fxItems(fx).length;
     choices($('lmSkip'), [[false, 'Effect on'], [true, 'Skips it']], !!cell.fxOff, v => {
       cell.fxOff = v; persist();
       for (const h of cellHandles(c, r)) { h.g.disconnect(); h.g.connect(colInput(c, cell)); }
@@ -5313,7 +5350,6 @@ const transpose = d => { const cell = menuCellNow(); if (!cell) return; cell.pit
 $('lmDown').addEventListener('click', () => transpose(-1));
 $('lmUp').addEventListener('click', () => transpose(1));
 $('lmZero').addEventListener('click', () => transpose(0));
-fader($('lmFxBar'), v => { if (!menuCell) return; S.grid.colFx[menuCell.c].amt = v; colFxAmount(menuCell.c); persist(); $('lmFxBar').firstChild.style.width = Math.round(v * 100) + '%'; });
 
 // The wave of a cell's sound: drag across it to choose the part that plays (on a
 // loop with a tempo, it snaps to 16th notes); tap to hear from there. The part
@@ -6111,7 +6147,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     const id = setInterval(() => { scope.getFloatTimeDomainData(d); for (const v of d) m = Math.max(m, Math.abs(v)); }, 15);
     setTimeout(() => { clearInterval(id); ok(+m.toFixed(3)); }, ms);
   }),
-  colFx: c => { const k = eng.cols?.[c]; return k && { type: k.type, ins: k.ins?.constructor.name, send: !!k.send }; } });
+  colFx: c => { const k = eng.cols?.[c]; return k && { sig: k.sig, ins: Object.keys(k.ins || {}), sends: Object.keys(k.sends || {}) }; } });
 
 draw();
 load().then(() => { setView('both'); gridLast = gridNow(); drawGridUndo(); status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
