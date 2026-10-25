@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026e';
+import * as DZ from './design.js?v=20261026f';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -806,7 +806,7 @@ function trigger(k, pad = k) {
   S.lastKey[S.cur] = k;
   flash = { k: pad, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  const sn = snap(false, `${S.cur}:${k}`), h = playHeld(S.cur, k, pad, sn?.when);
+  const sn = snap(false, S.slots[S.cur]?.params.choke ? `${S.cur}:*` : `${S.cur}:${k}`), h = playHeld(S.cur, k, pad, sn?.when);
   if (h && sn) h.tick = sn.j;
   return h;
 }
@@ -819,7 +819,8 @@ let freeGrid = null;
 // Forward only: a tap a hair after a grid point waits for the next one (only one right on a point plays at
 // once); never pulled back. who: the pad (and sound) tapped. Tapped again before its point has come, it
 // takes the point after (and so on), so a quick double tap makes two hits in a row; other pads together
-// still land together, as a chord.
+// still land together, as a chord. With Choke on, all the pads share one queue: one note a point, in the
+// order tapped, never two at once. No limit: tapped faster than the grid, the notes queue on ahead.
 const snapQ = new Map();           // who -> { j, t }: the last point booked for that pad
 function snap(straight = false, who = null) {           // straight: no swing (Loops + Pads: the loops' own bar grid)
   const g = +S.quantGrid; if (!g) return null;
@@ -2011,7 +2012,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026f'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2104,7 +2105,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026f'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4321,7 +4322,7 @@ for (let k = 0; k < 16; k++) {
 // your timing exactly as played (it can be put on the beat afterwards, in the cell's 🎹 Notes).
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
-  const snapped = snap(true, 'lp' + k), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
+  const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
