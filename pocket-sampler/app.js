@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025c';
+import * as DZ from './design.js?v=20261025d';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025c';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025d';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025d'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025d'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3696,8 +3696,28 @@ const follows = cell => !drumCell(cell) && (cell.follow ?? true);
 const cellSlots = new Map();
 // A cell's sound: a built-in one ({ lib, k }), or one of your loops ({ mine: id, k: 0 }).
 const mineSlots = new Map();
+// A loop made here from notes (played on the pads, a designed beat, a rap) keeps its notes, so at
+// another tempo it is played again at that tempo and recorded, never stretched: nothing to crackle.
+const remakeOf = cell => { const m = cell?.mine && mine.find(x => x.id === cell.mine); return m && (m.seq || m.dz || m.rap) ? m : null; };
+const remade = new Map();
+function remakeAt(m, bpm) {
+  const key = `${m.id}@${bpm}`;
+  if (!remade.has(key)) {
+    if (remade.size > 24) remade.delete(remade.keys().next().value);
+    remade.set(key, (async () => {
+      const base = unpackSlot(m); let buf, bars;
+      if (m.seq) { buf = await seqRender({ ...m.seq, bpm }, unpackSlot({ name: m.name, item: m.seq.src })); bars = m.seq.bars; }
+      else if (m.dz) { buf = (await cellBar(m.dz.lines, m.dz.swing)).bar; bars = 1; }
+      else { const r = await rapRender(unpackSlot({ name: m.rap.text, item: m.rap.src }), m.rap.flow, m.rap.rest, m.rap.seed); buf = r.buf; bars = r.bars; }
+      return { ...base, buf, slices: [{ ...base.slices[0], s: 0, e: buf.duration, bpm, bars, buf: null }] };
+    })().catch(e => { remade.delete(key); console.warn('remake', e); return unpackSlot(m); }));
+  }
+  return remade.get(key);
+}
 function cellBase(cell) {
   if (!cell.mine) return slotOf({ lib: cell.lib });
+  const rm = remakeOf(cell);
+  if (rm && Math.abs((rm.item.slices?.[0]?.bpm || S.bpm) - S.bpm) > 0.01) return remakeAt(rm, S.bpm);
   if (!mineSlots.has(cell.mine)) {
     const m = mine.find(x => x.id === cell.mine);
     if (!m) return (db ? refreshMine() : Promise.resolve()).then(() => {      // not read yet: read My Sounds again, then try
@@ -3715,7 +3735,7 @@ const stretchOf = cell => cell.stretch ?? S.grid?.stretch ?? true;
 function cellSlot(cell) {
   const keyOf = follows(cell) ? cell.keyOf ?? null : null;
   const id = JSON.stringify([cell.mine || cell.lib, cell.k, cell.mode, keyOf, cell.pitch || 0, cell.beats || 0, stretchOf(cell),
-    cell.from || 0, cell.to ?? 1, cell.beats ? S.bpm : 0]);
+    cell.from || 0, cell.to ?? 1, cell.beats || remakeOf(cell) ? S.bpm : 0]);
   if (cellSlots.size > 300) cellSlots.clear();
   if (!cellSlots.has(id)) cellSlots.set(id, cellBase(cell).then(slot => {
     const x = slot?.slices?.[cell.k]; if (!x) { cellSlots.delete(id); return null; }
@@ -4684,8 +4704,9 @@ async function drawCellMenu() {
     const base = await cellBase(cell), x = base?.slices?.[cell.k];
     if (!menuCell || S.grid.cells[c][r] !== cell) return;
     choices($('lmStretch'), [[true, 'Stretch'], [false, 'Re-Pitch']], stretchOf(cell), v => { cell.stretch = v; changed(c, r); });
-    $('lmStretch').querySelectorAll('button').forEach(b => { b.disabled = !x?.bpm; });
-    $('lmStretchNote').textContent = !x?.bpm ? 'Not a loop with a tempo' : !stretchOf(cell) ? `Like a record: clean, its pitch moving with the tempo (made at ${Math.round(x.bpm)} BPM)` : 'Keeps its pitch at any tempo (a little grit)';
+    const fromNotes = !!remakeOf(cell);
+    $('lmStretch').querySelectorAll('button').forEach(b => { b.disabled = !x?.bpm || fromNotes; });
+    $('lmStretchNote').textContent = fromNotes ? 'Made from notes: played again at any tempo, never stretched' : !x?.bpm ? 'Not a loop with a tempo' : !stretchOf(cell) ? `Like a record: clean, its pitch moving with the tempo (made at ${Math.round(x.bpm)} BPM)` : 'Keeps its pitch at any tempo (a little grit)';
     const fx = S.grid.colFx[c];
     $('lmFxCol').textContent = `on the whole ${CHANNELS[c]} column`;
     choices($('lmFx'), COL_FX, fx.type, v => { fx.type = v; if (eng.cols?.[c]) wireColFx(c); persist(); drawCellMenu(); drawLoops(); });
@@ -4905,10 +4926,10 @@ function drawLines() {
 const cellHits = () => cellLines.reduce((n, L) => n + L.steps.filter(v => v).length, 0);
 // the bar: each line's hit on its steps (soft at 55%), at the tempo and swing now; a hit ringing past
 // the bar comes round to its start, so the loop is seamless
-async function cellBar() {
-  const sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd, rate = DZ.SR;
+async function cellBar(lines = cellLines, swing = S.swing) {
+  const sd = stepDur(), sw = (2 * swing / 100 - 1) * sd, rate = DZ.SR;
   const n = Math.round(16 * sd * rate), out = new Float32Array(n);
-  for (const L of cellLines) {
+  for (const L of lines) {
     if (!L.steps.some(v => v)) continue;
     const x = (await dzHit(L.st)).getChannelData(0);
     L.steps.forEach((v, i) => { if (!v) return; const a = Math.round((i * sd + (i % 2 ? sw : 0)) * rate); for (let j = 0; j < x.length; j++) out[(a + j) % n] += x[j] * v; });
@@ -4929,7 +4950,8 @@ $('lmDzPut').addEventListener('click', async () => {
   const { c, r } = menuCell, { bar } = await cellBar();
   const used = cellLines.filter(L => L.steps.some(v => v));
   const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`;
-  dzEmpty = false; await loopToCell(c, r, bar, name, 1, true);
+  const dzKeep = { lines: cellLines.map(L => ({ st: { ...L.st, p: { ...L.st.p }, f: { ...L.st.f } }, steps: [...L.steps] })), swing: S.swing };   // kept, to play again at another tempo
+  dzEmpty = false; await loopToCell(c, r, bar, name, 1, true, { dz: dzKeep });
 });
 // a loop made here (designed, or from the pads) into a cell, kept in the library too (My loops)
 async function loopToCell(c, r, buf, name, bars, drumLoop, extra = {}) {
