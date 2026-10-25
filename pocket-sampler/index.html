@@ -355,7 +355,7 @@
   .lbar.tight { gap: 4px; }
   .lbar.tight > button, .lbar.tight .ltempo button, .lbar.tight .vtabs button { padding: 7px 6px; letter-spacing: .01em; font-size: 10.5px; }
   .lbar.tight #lBpm { padding: 6px 0; letter-spacing: 0; }
-  .ltempo { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .ltempo { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; flex: none; }
   .ltempo button { padding: 7px 9px; }
   .ltempo button.on { background: var(--accent); color: #fff; }
   #lBpm { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--btn-ink); background: transparent; border: 0; padding: 6px 2px;
@@ -367,7 +367,7 @@
   /* Loops + Pads: four columns of loops a page (◀ ▶ for the others), the pads on the right */
   #loops.split .lgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   #loops.split .lcol.off { display: none; }
-  #loops.split #lCopy, #loops.split #lPaste, #loops.split #lMulti { display: none; }
+  #loops.split #lCopy, #loops.split #lPaste { display: none; }
   .lpager { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .lpager[hidden] { display: none; }
   .lpager button { font: inherit; border: 0; border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
@@ -376,6 +376,7 @@
   .lphead { display: flex; align-items: center; gap: 5px; font-size: 11px; min-width: 0; }
   #lpSrc { flex: 1; min-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c); font-weight: 700; }
   .lphead .lmodes { margin: 0; flex: none; }
+  .lphead.tight { gap: 3px; flex-wrap: wrap; row-gap: 4px; } .lphead.tight > button, .lphead.tight #lpQ { padding: 6px 3px; font-size: 10px; letter-spacing: 0; } .lphead.tight #lpSrc { min-width: 0; }
   .lphead .lmodes button { padding: 6px 10px; }
   .lped { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
   .lped[hidden], .lpkeys[hidden] { display: none; }
@@ -643,7 +644,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261025u</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261025v</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span></div>
 
   <div class="screen" id="screen">
@@ -1205,6 +1206,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261025u"></script>
+<script type="module" src="app.js?v=20261025v"></script>
 </body>
 </html>
