@@ -646,7 +646,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261025x</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261025y</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span></div>
 
   <div class="screen" id="screen">
@@ -829,22 +829,14 @@
     <div class="lmhead"><b>Loop settings</b><button id="lsClose">✕ Done</button></div>
     <div class="lsetbody">
       <div class="lrow"><span>Sets</span><div class="lmodes" id="lsSets"></div></div>
-      <p class="note">A set fills the whole grid at once, and sets the tempo and key it was made in. Every loop in it fits with every other.</p>
       <div class="lrow"><span>My sets</span><div class="lmodes" id="lsMine"></div></div>
       <div class="lrow"><span></span><div class="lmodes"><button id="lsSave">💾 Save the grid as a set</button><button id="lsShare">⬆ Share as a pack file</button><button id="lsOpen">⬇ Open a pack file</button></div></div>
-      <p class="note">Save the grid as a set (on this device, with every cell's settings), or as a pack file: one file with the grid and every sound of yours in it, to keep in Files or iCloud Drive and open on any other phone or computer with Pocket Sampler (⬇ Open, or Menu › Sounds › My Sounds › ⬆ Import). Hold a set of yours to share or delete it.</p>
       <div class="lrow"><span>Quantize (all)</span><div class="lmodes" id="lsQuant"></div></div>
-      <p class="note">The default for every loop (each can have its own: hold it). When a tap lands: a loop starts, switches and stops on the next 1/32, 1/16, 1/8, 1/4 (a beat) or 1/2 note, or the next bar, 2 bars or 4 bars. Off: at once. Off or under a bar, a loop starts from its beginning when tapped; a bar or more, it lines up with the bar. For the Loops tab only (the Pads have their own, in Menu › Settings).</p>
       <div class="lrow"><span>Pads choke</span><div class="lmodes" id="lsChoke"></div></div>
-      <p class="note">Loops + Pads: with Choke on, each note you play on the pads cuts off the one before (one voice, like a bass or a lead); off, they ring over each other.</p>
       <div class="lrow"><span>Count in</span><div class="lmodes" id="lsCount"></div></div>
-      <p class="note">Before ⏺ Rec (Loops + Pads): Off, or 1 or 2 bars of clicks, four a bar, from the next beat (no waiting for a bar), with everything else silent until the recording begins.</p>
       <div class="lrow"><span>Follow the tempo</span><div class="lmodes" id="lsStretch"></div></div>
-      <p class="note" id="lsStretchNote"></p>
       <div class="lrow"><span>Fade in and out</span><div class="lmodes" id="lsFade"></div></div>
-      <p class="note">Loops fade in as they start and out as they stop, over this long, instead of cutting in and out.</p>
       <div class="lrow"><button id="lsStop" class="lwide">■ Stop all loops</button></div>
-      <p class="note">Stops every loop on the next point; the Pads beat plays on. (■ Stop at the top stops everything.)</p>
     </div>
   </div>
  </div>
@@ -1208,6 +1200,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261025x"></script>
+<script type="module" src="app.js?v=20261025y"></script>
 </body>
 </html>

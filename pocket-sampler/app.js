@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025x';
+import * as DZ from './design.js?v=20261025y';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025x';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025y';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025y'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025x'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025y'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4805,15 +4805,12 @@ function drawSets() {
   choices($('lsChoke'), [[false, 'Off'], [true, 'On']], !!S.grid.lpChoke, v => { S.grid.lpChoke = v; persist(); drawSets(); status(v ? 'Choke on: each note on the pads cuts off the one before.' : 'Choke off: the notes on the pads ring over each other.'); });
   // every loop at once (each can be changed after: hold it)
   S.grid.stretch ??= true;
-  const mixed = S.grid.cells.flat().some(x => x && x.stretch != null && x.stretch !== S.grid.stretch);
   choices($('lsStretch'), [[true, 'Stretch'], [false, 'Re-Pitch']], S.grid.stretch, v => {
     S.grid.stretch = v; for (const col of S.grid.cells) for (const x of col) if (x) delete x.stretch;
     persist(); drawSets(); drawLoops(); warmGridSoon();
     if (playing) relaunchGrid(nextBar(), () => true);
     status(v ? 'Every loop stretches to the tempo, keeping its pitch' + (playing ? ', from the next bar.' : '.') : 'Every loop follows the tempo like a record: clean, its pitch moving with the tempo' + (playing ? ', from the next bar.' : '.'));
   });
-  $('lsStretchNote').textContent = (S.grid.stretch ? 'Stretch: every loop keeps its pitch at any tempo; the stretching leaves a little grit, even a few BPM off.' : 'Re-Pitch: every loop is sped up or slowed like a record: no grit at all, but its pitch moves with the tempo (1 BPM off at 92: a fifth of a half step; 10 BPM: about two half steps).')
-    + ' Tapping either sets every loop at once; a loop can still be changed on its own (hold it: Follow the tempo).' + (mixed ? ' (Some loops are set the other way now.)' : '');
 }
 $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
