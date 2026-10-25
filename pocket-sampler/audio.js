@@ -127,6 +127,58 @@ export function distortion(type, amt) {
   curves.set(key, c);
   return c;
 }
+// Drive and Tape, as the hardware does them (each amount 0-1), holding the level about where it was, so
+// turning them up adds their character, not loudness.
+// Drive, after the overdrive pedals everyone copies (the Tube Screamer): only the mids and highs are
+// clipped (the clipping path high-passed at 720 Hz, its soft clip run 4x oversampled), the bass going
+// round it clean, and a tone filter after it taking the fizz off (darker the harder it is driven).
+// Tape, after the stages of a tape machine (as ChowTape models a Sony TC-260): the highs boosted into the
+// saturation and cut by as much after (so loud highs squash first, as on tape), a soft saturation a
+// little lopsided (the even harmonics of the warmth), the playback head's bump in the low bass (+3 dB
+// at 80 Hz) and its loss at the top (16 kHz down to about 6.5 kHz), and wow (0.55 Hz) and flutter
+// (6.5 Hz), the tape's speed wavering. (Its magnetic hysteresis itself is too heavy for an old iPad.)
+// wow: false for a single note's own effect (a waver needs a running tape).
+const satCurves = new Map();
+function satCurve(kind, a) {
+  const key = kind + Math.round(a * 40);
+  if (satCurves.has(key)) return satCurves.get(key);
+  const c = new Float32Array(4096), k = kind === 'tape' ? 1 + a * 4 : 1 + a * 24, b = kind === 'tape' ? 0.15 * a : 0;
+  const f = x => Math.tanh(k * x + b) - Math.tanh(b), norm = kind === 'tape' ? 0.5 / f(0.5) : 1 / f(1);
+  for (let i = 0; i < c.length; i++) { const x = i / (c.length - 1) * 2 - 1; c[i] = f(x) * norm; }
+  satCurves.set(key, c); return c;
+}
+export function satChain(ctx, kind, { wow = true } = {}) {
+  const input = ctx.createGain(), output = ctx.createGain(), shaper = ctx.createWaveShaper(); shaper.oversample = '4x';
+  const filt = (type, f, q = 0.707) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
+  const oscs = [], parts = [input, output, shaper];
+  let set;
+  if (kind === 'tape') {
+    const pre = filt('highshelf', 3000), post = filt('highshelf', 3000), bump = filt('peaking', 80, 1.2), loss = filt('lowpass', 16000, 0.5);
+    input.connect(pre); pre.connect(shaper); shaper.connect(post); post.connect(bump); bump.connect(loss); parts.push(pre, post, bump, loss);
+    let last = loss, g1, g2;
+    if (wow && ctx.createDelay) {
+      const d = ctx.createDelay(0.05); d.delayTime.value = 0.004; loss.connect(d); last = d; parts.push(d);
+      for (const [hz, gg] of [[0.55, 'g1'], [6.5, 'g2']]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hz; o.connect(g); g.connect(d.delayTime); o.start(); oscs.push(o); parts.push(o, g); if (gg === 'g1') g1 = g; else g2 = g; }
+    }
+    last.connect(output);
+    set = a => {
+      pre.gain.value = 9 * a; post.gain.value = -9 * a; bump.gain.value = 3 * a; loss.frequency.value = 16000 * Math.pow(0.5, 1.3 * a);
+      shaper.curve = satCurve('tape', a); output.gain.value = 1 / (1 + 0.75 * a);    // (as loud as it went in: tape colours, it doesn't just add volume)
+      if (g1) { g1.gain.value = 0.0007 * a; g2.gain.value = 0.00008 * a; }
+    };
+  } else {
+    // (the pedal's first-order high pass, 720 Hz: a biquad's second order turned the bass's phase round and cancelled it)
+    const K = Math.tan(Math.PI * 720 / ctx.sampleRate), hp = ctx.createIIRFilter([1 / (1 + K), -1 / (1 + K)], [1, (K - 1) / (1 + K)]), clip = ctx.createGain(), dry = ctx.createGain(), sum = ctx.createGain(), tone = filt('lowpass', 6000);
+    input.connect(dry); dry.connect(sum); input.connect(hp); hp.connect(shaper); shaper.connect(clip); clip.connect(sum); sum.connect(tone); tone.connect(output);
+    parts.push(hp, clip, dry, sum, tone);
+    set = a => {
+      shaper.curve = satCurve('drive', a); clip.gain.value = 0.15 + 0.55 * a; dry.gain.value = 1 - 0.35 * a;
+      tone.frequency.value = 6500 - 3300 * a; output.gain.value = 1 / ((1 + 0.35 * a) * (1 + 0.6 * a * a));     // (level matched, measured on bass, mids and a saw)
+    };
+  }
+  set(0.5);
+  return { input, output, set, dispose() { for (const o of oscs) try { o.stop(); } catch (e) {} for (const n of parts) try { n.disconnect(); } catch (e) {} } };
+}
 // A hall to convolve with: stereo noise, each side its own, dying away.
 function hall(ctx, seconds) {
   const n = Math.round(ctx.sampleRate * seconds), b = ctx.createBuffer(2, n, ctx.sampleRate);
@@ -534,9 +586,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
     tail.connect(b); tail = b;
   }
   const sfx = P.fx?.type, amt = P.fx?.amt ?? 0.5;
-  if (sfx === 'overdrive' || sfx === 'tape' || sfx === 'fuzz') {
-    const ws = ctx.createWaveShaper(); ws.curve = distortion(sfx, amt); tail.connect(ws); tail = ws;
-  }
+  if (sfx === 'fuzz') { const ws = ctx.createWaveShaper(); ws.curve = distortion(sfx, amt); tail.connect(ws); tail = ws; }
+  else if (sfx === 'overdrive' || sfx === 'tape') { const ch = satChain(ctx, sfx, { wow: false }); ch.set(amt); tail.connect(ch.input); tail = ch.output; }
   tail.connect(into || (fx ? eng.padsWet : eng.padsDry));       // into: a Loops column's own volume
   const sendTo = { reverb: eng.reverb, echo: eng.delay, pingpong: eng.ppL, chorus: eng.chSend }[sfx];
   if (sendTo) {                      // reverb, echoes, chorus: a send into the engine's own

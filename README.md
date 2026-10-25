@@ -205,7 +205,12 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   into recordings, into kits and My Sounds.
 - **Loops + Pads** (where the app opens): the loops on the left, four columns
   a page, and 16 pads on the right that play the loop tapped last: in 16
-  slices, or its first note pitched across the key.
+  slices, or its first note pitched across the key. FX gives the pads
+  their own EQ and effect (low or high pass, reverb, echo, ping-pong,
+  drive, tape), kept in what ⏺ Rec records. Drive is modelled on a Tube
+  Screamer (clean bass, soft-clipped mids); Tape on ChowTape (pre- and
+  de-emphasis, soft saturation, head bump, high loss, wow and flutter),
+  both level-matched.
 - **🎹 Design a sound in a Loops cell:** the synth designer, for that cell;
   🎹 Play it on the pads records the instrument once and opens Loops +
   Pads with it on the pads; ⏺ Rec puts what you play in the cell.
