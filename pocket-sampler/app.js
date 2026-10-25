@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025k';
+import * as DZ from './design.js?v=20261025l';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025k';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025l';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025l'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025l'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5060,7 +5060,8 @@ function padsToCell(c, r) {
 // 16th; tap it: it is deleted. Length: 1 to 32 bars; made shorter, the notes past the end go.
 // ↶ Undo takes back the last change. Each change makes the loop again, as a recording, into the
 // cell (and the library).
-const ROLL_BARS = [1, 2, 4, 8, 16, 32];
+const ROLL_BARS = [1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32];
+const barsName = n => (n < 1 ? `1/${Math.round(1 / n)} bar` : `${n} bar${n > 1 ? 's' : ''}`);
 const ROLL_ZOOM = [['bar', 'Bar', 16, 16], ['4', '1/4', 4, 8], ['8', '1/8', 2, 4], ['16', '1/16', 1, 2]];       // [id, label, steps a line, bars a row]
 let rollZoom = (() => { try { return localStorage.getItem('pocketRollZoom') || 'bar'; } catch (e) { return 'bar'; } })();
 let rollUndo = [];
@@ -5070,12 +5071,12 @@ function drawRoll(c, r) {
   const lens = document.createElement('div'); lens.className = 'lmodes rlen';
   lens.append(Object.assign(document.createElement('span'), { textContent: 'Length' }));
   for (const n of ROLL_BARS) {
-    const b = document.createElement('button'); b.textContent = n === 1 ? '1 bar' : `${n}`; b.classList.toggle('on', n === seq.bars);
+    const b = document.createElement('button'); b.textContent = n < 1 ? `1/${Math.round(1 / n)}` : n === 1 ? '1 bar' : `${n}`; b.classList.toggle('on', Math.abs(n - seq.bars) < 1e-6);
     b.addEventListener('click', () => {
       if (n === seq.bars) return;
       const keep = seq.notes.filter(x => x.t < n * 16), cut = seq.notes.length - keep.length;
-      if (!keep.length) { status(`At ${n} bar${n > 1 ? 's' : ''} no note would be left: choose a longer length.`); return; }
-      rollChange(c, r, keep, false, n).then(() => status(`${n} bar${n > 1 ? 's' : ''}${cut ? `: ${cut} note${cut > 1 ? 's' : ''} past the end deleted (↶ Undo brings ${cut > 1 ? 'them' : 'it'} back)` : ''}.`));
+      if (!keep.length) { status(`At ${barsName(n)} no note would be left: choose a longer length.`); return; }
+      rollChange(c, r, keep, false, n).then(() => status(`${barsName(n)}${cut ? `: ${cut} note${cut > 1 ? 's' : ''} past the end deleted (↶ Undo brings ${cut > 1 ? 'them' : 'it'} back)` : ''}.`));
     });
     lens.appendChild(b);
   }
