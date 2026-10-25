@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025h';
+import * as DZ from './design.js?v=20261025i';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025h';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025i';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025i'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025i'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4217,8 +4217,11 @@ async function lpPress(k) {
   if (lpFx) { const id = S.fxSlots[k]; if (S.fxLatch && activeFx.has(id)) releaseFx(id); else engageFx(id, aimNow()); lpDraw(); return; }
   const snapped = snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
-  playNote(eng, slot, -1, k, Math.max(at, ctx.currentTime), { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct });
-  lp.last = { at, tapped: ctx.currentTime, oct };
+  const when = Math.max(at, ctx.currentTime);
+  if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
+  const prevVoice = lp.voice;
+  lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct });
+  lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
   if (lpRec) lpNote(k, at, slot, oct);
 }
 function lpOct(d) { lp.oct = Math.max(-2, Math.min(2, (lp.oct || 0) + d)); try { localStorage.setItem('pocketLpOct', lp.oct); } catch (e) {} lpDraw(); }
@@ -4312,7 +4315,7 @@ async function lpRecStop() {
   if (!R.notes.length) { status('Nothing was played, so nothing was recorded.'); return; }
   const played = (ctx.currentTime - R.t0) / stepDur() / 16, bars = [1, 2, 4, 8].find(n => n >= played - 0.05) || 8;
   const notes = R.notes.filter(n => n.t < bars * 16).map(n => ({ ...n, t: Math.min(n.t, bars * 16 - 0.01) }));
-  const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src) };
+  const seq = { notes, bars, bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src), ...(S.grid.lpChoke && { choke: true }) };
   const name = `${(lpInst?.name || lp.cell?.name || 'Pads').replace(/, played$/, '')}, played`;
   status('Making the loop…');
   const buf = await seqRender(seq, R.src), keep = { ...lp }, designed = !!lpInst;
@@ -4326,7 +4329,8 @@ async function lpRecStop() {
 async function seqRender(seq, slot) {
   const sd = 60 / seq.bpm / 4, len = seq.bars * 16 * sd, tail = 2;
   const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR), e = new Engine(off, { live: false });
-  for (const n of seq.notes) playNote(e, slot, -1, n.k, n.t * sd, { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0) });
+  let last = null;          // (recorded with Choke on: each note cuts off the one before, as it was heard)
+  for (const n of [...seq.notes].sort((a, b) => a.t - b.t)) { if (seq.choke) last?.stop?.(n.t * sd); last = playNote(e, slot, -1, n.k, n.t * sd, { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0) }); }
   const b = await off.startRendering(), m = Math.round(len * SR), out = new Float32Array(m);
   for (const c of [0, 1]) { const x = b.getChannelData(c); for (let i = 0; i < x.length; i++) out[i % m] += x[i] / 2; }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
@@ -4563,6 +4567,7 @@ function drawSets() {
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
   drawCountIn();
+  choices($('lsChoke'), [[false, 'Off'], [true, 'On']], !!S.grid.lpChoke, v => { S.grid.lpChoke = v; persist(); drawSets(); status(v ? 'Choke on: each note on the pads cuts off the one before.' : 'Choke off: the notes on the pads ring over each other.'); });
   // every loop at once (each can be changed after: hold it)
   S.grid.stretch ??= true;
   const mixed = S.grid.cells.flat().some(x => x && x.stretch != null && x.stretch !== S.grid.stretch);
@@ -5986,6 +5991,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   lpSlotInfo: async () => { const sl = await lpSlot(); return sl && { kind: sl.kind, zones: sl.zones?.length, base: sl.base, vol: sl.params?.vol, trig: sl.params?.trig, buf: sl.buf?.length, dur: sl.buf?.duration, z0: sl.zones?.[0] }; },
   masterGain: () => eng.master.gain.value,
   lpLast: () => lp.last && { ...lp.last, sd: stepDur(), nextT, tick },
+  lpVoiceEnd: () => lp.voice?.end,
   cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
     const x = lrMade.buf.getChannelData(0), F = Math.round(lrMade.buf.sampleRate / 100), e = []; let top = 0;
