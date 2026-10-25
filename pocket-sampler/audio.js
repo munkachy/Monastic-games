@@ -296,31 +296,109 @@ function tracking(ctx, made) {
     createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
 }
 
-// Time-stretching a loop (WSOLA: waveform-similarity overlap-add): short
-// windows read from the loop at a different pace and laid down overlapping,
-// each nudged to where its waveform best continues the last, so the length
-// changes and the pitch doesn't. Reading wraps round the loop and so does the
-// writing, so the stretched loop is seamless too. A little grainy on drums,
-// as stretched loops are. It runs in a worker, so playing never waits for it.
-function wsola(x, factor) {
-  const n = x.length, N = Math.round(n * factor), W = 2048, H = W / 2, tol = 384;
+// Time-stretching a loop, two ways, keeping whichever is closer to the original (by the log-spectral
+// distance between its frames and the original's at the same point in the music): stabs, keys and
+// voices usually come out best with WSOLA, sustained strings, pads and glassy sounds with the phase
+// vocoder. Both read round the loop and write round it, so the stretched loop is seamless too. They run
+// in a worker, so playing never waits. (Measured on the app's loops 10 BPM either side: the old WSOLA,
+// 2048-sample windows half overlapped, placed by a rough correlation, left a rough "Velcro" flutter.)
+//
+// WSOLA (waveform-similarity overlap-add): windows of 40-50 ms (in seconds, whatever the sample rate),
+// 75% overlapped, each placed where its waveform best carries on the last (normalised cross-correlation
+// over the whole overlap, coarse, then sample by sample). wrap = false: a piece of a loop (not read
+// round), as the drum slicer stretches a hit's tail; Nout: the length wanted.
+function wsola(x, factor, rate, wrap = true, Nout = 0) {
+  const n = x.length, N = Nout || Math.round(n * factor);
+  let W = Math.min(Math.round(rate * (factor > 1 ? 0.05 : 0.04)), wrap ? 1e9 : Math.floor(n / 2)); W -= W % 4;
+  if (W < 16) { const y = new Float32Array(N); y.set(x.subarray(0, Math.min(n, N))); return y; }
+  const H = W / 4, O = W - H, tol = Math.min(Math.round(rate * 0.012), wrap ? 1e9 : Math.floor(W / 2));
   const win = new Float32Array(W).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / W));
-  const out = new Float32Array(N), norm = new Float32Array(N), at = i => x[((i % n) + n) % n];
+  const out = new Float32Array(N), norm = new Float32Array(N);
+  // read from a copy with room either side (round the loop, or the edge held), so no reading needs a wrap
+  const pad = tol + W + 32, ext = new Float32Array(n + 2 * pad);
+  for (let i = 0; i < ext.length; i++) { const j = i - pad; ext[i] = wrap ? x[((j % n) + n) % n] : x[Math.min(n - 1, Math.max(0, j))]; }
+  const home = i => (wrap ? ((i % n) + n) % n : Math.min(n, Math.max(0, i))) + pad;      // a position, as an index of ext
+  const score = (cand, nat, step) => { let sc = 0, ea = 0, eb = 0; for (let i = 0; i < O; i += step) { const a = ext[cand + i], b = ext[nat + i]; sc += a * b; ea += a * a; eb += b * b; } return sc / Math.sqrt(ea * eb + 1e-12); };
   let prev = 0;
   for (let o = 0; o < N; o += H) {
-    let best = Math.round(o / factor);
+    let best = home(Math.round(o / factor));        // (as an index of ext)
+    if (!wrap) best = Math.max(pad, Math.min(best, pad + n - W));
     if (o > 0) {
-      let bestScore = -Infinity; const nominal = best;
-      for (let d = -tol; d <= tol; d += 4) {
-        let sc = 0; for (let i = 0; i < H; i += 8) sc += at(nominal + d + i) * at(prev + H + i);
-        if (sc > bestScore) { bestScore = sc; best = nominal + d; }
-      }
+      const nominal = best, nat = home(prev - pad + H);          // where the last window would naturally carry on
+      let bs = -Infinity;
+      for (let d = -tol; d <= tol; d += 8) { const sc = score(nominal + d, nat, 4); if (sc > bs) { bs = sc; best = nominal + d; } }
+      const c = best; for (let d = -8; d <= 8; d++) { const sc = score(c + d, nat, 1); if (sc > bs) { bs = sc; best = c + d; } }
+      if (!wrap) best = Math.max(pad, Math.min(best, pad + n - W));
     }
-    for (let i = 0; i < W; i++) { const j = (o + i) % N; out[j] += at(best + i) * win[i]; norm[j] += win[i]; }
+    for (let i = 0; i < W; i++) { const j = wrap ? (o + i) % N : o + i; if (j >= N) break; out[j] += ext[best + i] * win[i]; norm[j] += win[i]; }
     prev = best;
   }
   for (let i = 0; i < N; i++) if (norm[i] > 1e-3) out[i] /= norm[i];
   return out;
+}
+function fftIn(re, im, inv = false) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+  for (let len = 2; len <= n; len <<= 1) {
+    const a = (inv ? 2 : -2) * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len) { let cr = 1, ci = 0; for (let j = 0; j < len / 2; j++) { const p = i + j, q = p + len / 2, vr = re[q] * cr - im[q] * ci, vi = re[q] * ci + im[q] * cr; re[q] = re[p] - vr; im[q] = im[p] - vi; re[p] += vr; im[p] += vi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+  }
+}
+// The phase vocoder, with identity phase locking (Laroche & Dolson): each peak's phase moves on at its
+// own frequency and the bins around it keep their phase against it, so tones stay clean, not phasey.
+// About 85 ms frames, 75% overlapped.
+function pvoc(x, factor, rate) {
+  const n = x.length, Nout = Math.round(n * factor), N = rate > 30000 ? 4096 : 2048, Hs = N / 4, Ha = Hs / factor, K = N / 2 + 1;
+  const win = new Float64Array(N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const out = new Float64Array(Nout + N), norm = new Float64Array(Nout + N), at = i => x[((i % n) + n) % n];
+  const prevPh = new Float64Array(K), sumPh = new Float64Array(K), re = new Float64Array(N), im = new Float64Array(N), mag = new Float64Array(K), ph = new Float64Array(K), newPh = new Float64Array(K);
+  const frames = Math.ceil(Nout / Hs) + 1, peaks = [];
+  for (let f = 0; f < frames; f++) {
+    const ia = f * Ha, i0 = Math.floor(ia), fr = ia - i0;
+    for (let i = 0; i < N; i++) { const a = at(i0 + i), b = at(i0 + i + 1); re[i] = (a + (b - a) * fr) * win[i]; im[i] = 0; }
+    fftIn(re, im);
+    for (let k = 0; k < K; k++) { mag[k] = Math.hypot(re[k], im[k]); ph[k] = Math.atan2(im[k], re[k]); }
+    if (f === 0) sumPh.set(ph);
+    else {
+      peaks.length = 0; for (let k = 2; k < K - 2; k++) if (mag[k] > mag[k - 1] && mag[k] >= mag[k + 1] && mag[k] > mag[k - 2] && mag[k] >= mag[k + 2]) peaks.push(k);
+      for (const p of peaks) { const w = 2 * Math.PI * p / N; let d = ph[p] - prevPh[p] - w * Ha; d -= 2 * Math.PI * Math.round(d / (2 * Math.PI)); newPh[p] = sumPh[p] + (w + d / Ha) * Hs; }
+      let pi = 0;
+      for (let k = 0; k < K; k++) {
+        if (!peaks.length) { newPh[k] = sumPh[k] + 2 * Math.PI * k / N * Hs; continue; }
+        while (pi + 1 < peaks.length && Math.abs(peaks[pi + 1] - k) <= Math.abs(peaks[pi] - k)) pi++;
+        const p = peaks[pi]; if (k !== p) newPh[k] = newPh[p] + ph[k] - ph[p];
+      }
+      sumPh.set(newPh);
+    }
+    prevPh.set(ph);
+    for (let k = 0; k < K; k++) { re[k] = mag[k] * Math.cos(sumPh[k]); im[k] = mag[k] * Math.sin(sumPh[k]); }
+    for (let k = 1; k < N / 2; k++) { re[N - k] = re[k]; im[N - k] = -im[k]; }
+    fftIn(re, im, true);
+    const o = f * Hs; for (let i = 0; i < N; i++) { out[o + i] += re[i] / N * win[i]; norm[o + i] += win[i] * win[i]; }
+  }
+  const y = new Float32Array(Nout), nn = new Float64Array(Nout);
+  for (let i = 0; i < Nout + N; i++) { y[i % Nout] += out[i]; nn[i % Nout] += norm[i]; }
+  for (let i = 0; i < Nout; i++) y[i] /= Math.max(nn[i], 1e-3);
+  return y;
+}
+// how far a stretched loop's frames are from the original's at the same point in the music (dB, 200 Hz-8 kHz)
+function stretchDistance(x, y, factor, rate) {
+  const N = 2048, k0 = Math.round(200 * N / rate), k1 = Math.round(8000 * N / rate), win = new Float64Array(N).map((_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N));
+  const re = new Float64Array(N), im = new Float64Array(N), spec = (z, at) => { for (let i = 0; i < N; i++) { re[i] = (z[at + i] || 0) * win[i]; im[i] = 0; } fftIn(re, im); const m = new Float64Array(k1); for (let k = k0; k < k1; k++) m[k] = 10 * Math.log10(re[k] * re[k] + im[k] * im[k] + 1e-9); return m; };
+  let s = 0, c = 0;
+  for (let t = N; t < x.length - 2 * N; t += 2048) { const a = spec(x, t), b = spec(y, Math.round(t * factor)); let d = 0; for (let k = k0; k < k1; k++) d += (a[k] - b[k]) ** 2; s += Math.sqrt(d / (k1 - k0)); c++; }
+  return c ? s / c : 0;
+}
+// (on a long loop, the two are tried on 3 s of it, and only the better one is run on the whole loop)
+function stretchBest(x, factor, rate) {
+  const n = x.length, E = Math.round(3 * rate);
+  if (n > E * 1.6) {
+    const a0 = Math.floor((n - E) / 2), ex = x.slice(a0, a0 + E);
+    const pv = stretchDistance(ex, pvoc(ex, factor, rate), factor, rate) < stretchDistance(ex, wsola(ex, factor, rate), factor, rate);
+    return pv ? pvoc(x, factor, rate) : wsola(x, factor, rate);
+  }
+  const a = wsola(x, factor, rate), b = pvoc(x, factor, rate);
+  return stretchDistance(x, b, factor, rate) < stretchDistance(x, a, factor, rate) ? b : a;
 }
 // Drum loops are stretched another way, as drum samplers do (beat slicing): each hit is found
 // (where the sound jumps up against the 1/8 second around it), and the loop is cut there and on
@@ -356,29 +434,45 @@ function slicePoints(x, rate, bpm) {
   }
   return pts;
 }
+// Slowed, a piece no longer leaves a gap after it (heard as a "Velcro" rasp on anything that rings): its
+// hit (the first 25 ms) stays exactly as recorded and the rest of it is stretched (WSOLA) to fill its
+// room; sped up, it is cut short. Each piece fades out over the next one's first 6 ms, so there is no
+// dip before a hit, and fades in over 1 ms (a piece starting mid-wave never clicks; nor the first,
+// which holds the tail of the loop's last hit, folded round).
 function sliceStretch(x, rate, factor, bpm) {
-  const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N), fade = Math.round(0.006 * rate), rise = Math.round(0.001 * rate);
+  const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N);
+  const fade = Math.round(0.006 * rate), rise = Math.round(0.001 * rate), A = Math.round(0.025 * rate), X = Math.round(0.005 * rate), minLen = Math.round(0.03 * rate);
   for (let k = 0; k < pts.length; k++) {
-    const a = pts[k], b = k + 1 < pts.length ? pts[k + 1] : x.length, o = Math.round(a * factor);
-    const room = (k + 1 < pts.length ? Math.round(b * factor) : N) - o, len = Math.min(b - a, room);
-    // each piece fades out at its end, and in over 1 ms at its start (a piece starting mid-wave never clicks;
-    // nor the first, which holds the tail of the loop's last hit, folded round)
-    for (let i = 0; i < len && o + i < N; i++) out[o + i] += x[a + i] * (i > len - fade ? (len - i) / fade : 1) * (i < rise ? i / rise : 1);
+    const a = pts[k], b = k + 1 < pts.length ? pts[k + 1] : x.length, o = Math.round(a * factor), last = k + 1 === pts.length;
+    const room = (last ? N : Math.round(b * factor)) - o, len = b - a, want = room + (last ? 0 : fade);
+    let piece = x.subarray(a, Math.min(x.length, b + (last ? 0 : fade)));
+    if (want > piece.length + rise && len >= minLen) {
+      const st = wsola(x.subarray(a, b), want / len, rate, false, want), y = new Float32Array(want);
+      for (let i = 0; i < want; i++) { const u = i < A ? 0 : i < A + X ? (i - A) / X : 1; y[i] = (i < piece.length ? piece[i] : 0) * (1 - u) + st[i] * u; }
+      piece = y;
+    }
+    const L = Math.min(piece.length, want);
+    for (let i = 0; i < L; i++) {
+      const j = o + i, g = i > L - fade ? (L - i) / fade : 1;
+      if (j >= N) { if (last) out[j - N] += piece[i] * g; continue; }
+      out[j] += piece[i] * g * (i < rise ? i / rise : 1);
+    }
   }
   return out;
 }
 let stretchWorker, jobSeq = 0;
 const jobs = new Map();
-function runWsola(x, factor) {
+function runStretch(x, factor, rate, drums) {
   if (stretchWorker === undefined) {
     try {
-      const src = `const wsola = ${wsola.toString()};\nonmessage = e => { const out = wsola(e.data.x, e.data.factor); postMessage({ id: e.data.id, out }, [out.buffer]); };`;
+      const src = [wsola, fftIn, pvoc, stretchDistance, stretchBest, slicePoints, sliceStretch].map(f => f.toString()).join('\n')
+        + `\nonmessage = e => { const d = e.data, out = d.drums ? sliceStretch(d.x, d.rate, d.factor, d.drums) : stretchBest(d.x, d.factor, d.rate); postMessage({ id: d.id, out }, [out.buffer]); };`;
       stretchWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       stretchWorker.onmessage = e => { jobs.get(e.data.id)?.(e.data.out); jobs.delete(e.data.id); };
     } catch (e) { stretchWorker = null; }
   }
-  if (!stretchWorker) return Promise.resolve(wsola(x, factor));
-  return new Promise(ok => { const id = ++jobSeq; jobs.set(id, ok); stretchWorker.postMessage({ id, x, factor }, [x.buffer]); });
+  if (!stretchWorker) return Promise.resolve(drums ? sliceStretch(x, rate, factor, drums) : stretchBest(x, factor, rate));
+  return new Promise(ok => { const id = ++jobSeq; jobs.set(id, ok); stretchWorker.postMessage({ id, x, factor, rate, drums }, [x.buffer]); });
 }
 // buf -> Map(key -> AudioBuffer, or a Promise of one while it is being made)
 const stretchCache = new WeakMap();
@@ -391,7 +485,7 @@ export function stretchLoop(buf, s, e, factor, drums = 0) {     // drums: a drum
   const key = stretchKey(s, e, factor, drums), had = m.get(key);
   if (had) return had instanceof AudioBuffer ? Promise.resolve(had) : had;
   const rate = buf.sampleRate, x = buf.getChannelData(0).slice(Math.round(s * rate), Math.round(e * rate));
-  const p = (drums ? Promise.resolve(sliceStretch(x, rate, factor, drums)) : runWsola(x, factor)).then(out => {
+  const p = runStretch(x, factor, rate, drums).then(out => {
     const b = new AudioBuffer({ length: out.length, numberOfChannels: 1, sampleRate: rate }); b.copyToChannel(out, 0);
     m.set(key, b); return b;
   });
