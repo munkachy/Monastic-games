@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026b';
+import * as DZ from './design.js?v=20261026c';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026b';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026c';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2000,7 +2000,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026c'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2093,7 +2093,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026c'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4794,20 +4794,25 @@ function choices(box, list, now, pick) {
 function drawSets() {
   const box = $('lsSets'); box.textContent = '';
   for (const st of SETS) {
-    const b = document.createElement('button'); b.innerHTML = `${st.name} <small>${st.about}</small>`;
+    const b = document.createElement('button'); b.innerHTML = `${st.name} <small>${st.about}</small>`; b.classList.toggle('on', S.grid.setId === st.id);
     b.addEventListener('click', () => loadSet(st.id)); box.appendChild(b);
   }
   const my = $('lsMine'); my.textContent = '';
   const sets = mine.filter(m => m.type === 'set');
   if (!sets.length) { const n = document.createElement('small'); n.textContent = 'none yet'; my.appendChild(n); }
   for (const m of sets) {
-    const b = document.createElement('button'); b.innerHTML = `${m.name} <small>${m.set.bpm} BPM</small>`;
+    const b = document.createElement('button'); b.innerHTML = `${m.name} <small>${m.set.bpm} BPM</small>`; b.classList.toggle('on', S.grid.setId === m.id);
     let held = null;
     b.addEventListener('pointerdown', () => { held = setTimeout(() => { held = 'long'; mySetMenu(m); }, 550); });
     b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); loadSet(m.id, false, m.set); } held = null; });
     b.addEventListener('pointerleave', () => { if (held !== 'long') clearTimeout(held); });
     my.appendChild(b);
   }
+  // 💾 Save: the set on the grid, if it is one of yours, saved with its changes (a built-in set: as a new one of yours)
+  const cur = sets.find(m => m.id === S.grid.setId), sv = document.createElement('button'), same = cur && setSame(cur.set);
+  sv.className = 'lssave'; sv.textContent = cur ? (same ? '💾 Saved' : '💾 Save set') : '💾 Save set'; sv.disabled = !!same;
+  sv.title = cur ? `Save the grid into “${cur.name}”` : 'Save the grid as a new set of yours';
+  sv.addEventListener('click', () => (cur ? saveSetOver(cur) : saveSetNew())); my.appendChild(sv);
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
   drawCountIn();
@@ -4836,6 +4841,12 @@ async function loadSet(id, quiet = false, given = null) {          // quiet: the
     if (set.space && !quiet && SPACES.some(x => x[0] === set.space)) chooseSpace(set.space, true);
     if (set.bpm && !quiet) { S.bpm = set.bpm; gridTempo(); warmSoon(); }
     if (set.root != null && !playing && !quiet) { S.root = set.root; S.scale = set.scale || S.scale; }
+    if (!quiet) {
+      S.grid.vol = set.vol ? [...set.vol] : new Array(8).fill(0.8); S.grid.mute = set.mute ? [...set.mute] : new Array(8).fill(false);     // (a built-in set: as they start)
+      if (set.stretch != null) S.grid.stretch = set.stretch;
+      for (let c = 0; c < 8; c++) if (eng.cols?.[c]) setColGain(c);
+      S.grid.setId = id;            // the set on the grid (Loops › ⚙ shows it lit)
+    }
     persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
     status(quiet ? `The ${set.name} set has new drums: kick, snare and tops loops, any of them together, made of its own kit.`
       : `${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
@@ -5614,14 +5625,26 @@ buildLoops();
 // are named, not copied: every copy of the app has them.
 // ---------------------------------------------------------------------------
 const gridSet = name => ({ name, bpm: S.bpm, root: S.root, scale: S.scale, space: spaceNow(), cells: S.grid.cells.map(col => col.map(c => (c ? { ...c } : null))),
-  fx: S.grid.colFx.map(f => ({ ...f })), quant: S.grid.quant, fade: S.grid.fade });
-$('lsSave').addEventListener('click', async () => {
+  fx: S.grid.colFx.map(f => JSON.parse(JSON.stringify(f))), quant: S.grid.quant, fade: S.grid.fade, vol: [...S.grid.vol], mute: [...S.grid.mute], stretch: S.grid.stretch });
+// is the grid as the set was saved? (names the app gives cells, and which key a loop was found in, aside)
+function setSame(set) {
+  const pick = x => JSON.stringify({ bpm: x.bpm, root: x.root, scale: x.scale, cells: x.cells, fx: x.fx, vol: x.vol, mute: x.mute, stretch: x.stretch }, (k, v) => (k === 'name' || k === 'keyOf' ? undefined : v));
+  return pick(gridSet('')) === pick(set);
+}
+async function saveSetNew() {
   if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
-  const name = prompt('Name the set:', `My set ${S.bpm} BPM`); if (!name?.trim()) return;
+  const was = SETS.find(x => x.id === S.grid.setId);
+  const name = prompt('Name the set:', was ? `${was.name}, mine` : `My set ${S.bpm} BPM`); if (!name?.trim()) return;
   const id = 'm' + Date.now().toString(36);
   await idbPut('mine', { id, name: name.trim(), type: 'set', created: Date.now(), set: gridSet(name.trim()) }, id);
+  S.grid.setId = id; persist();
   await refreshMine(); drawSets(); status(`“${name.trim()}” is in My sets (Loops › ⚙).`);
-});
+}
+async function saveSetOver(m) {
+  await idbPut('mine', { ...m, set: gridSet(m.name), saved: Date.now() }, m.id);
+  await refreshMine(); drawSets(); status(`“${m.name}” is saved with your changes.`);
+}
+$('lsSave').addEventListener('click', saveSetNew);
 function mySetMenu(m) {
   const a = prompt(`“${m.name}”: type S to share it as a pack file, D to delete it, or a new name to rename it.`, 'S');
   if (a == null) return;
