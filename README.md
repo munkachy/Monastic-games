@@ -141,9 +141,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   chorus, low and high pass, bitcrush, and four distortions (overdrive,
   fuzz, wavefold, tape). Each has an amount on a slider, can be aimed at
   chosen tracks, and can be written into the pattern.
-- **Quantize** (Settings): off, 1/16, 1/8, a beat, half a bar or a bar, for
-  what you hear while the beat plays and for what is recorded. Exports are
-  stereo.
+- **Quantize** (Settings, and the same button above the pads in Loops +
+  Pads; a tap steps Off, 1/16, 1/8, 1/4, 1 bar): each tap waits for the next
+  grid point, for what you hear and what is recorded; with nothing playing,
+  the first tap starts an invisible grid at the tempo. Exports are stereo.
 - **Dark look and colours by part:** a near-black body and display, like
   Remixlive (the beige PO-33 look stays as Menu › Buttons › Look). Colours
   go by part, the same in the Pads and the Loops: kick red, snare orange,

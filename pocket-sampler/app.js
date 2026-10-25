@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025z';
+import * as DZ from './design.js?v=20261026a';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025z';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -810,17 +810,28 @@ function trigger(k, pad = k) {
   if (h && sn) h.tick = sn.j;
   return h;
 }
-// Quantize: while the beat plays, a tap sounds on the next point of the grid
-// (every quantGrid steps), unless it came at most 30 ms after one: then it
-// plays at once, counted on that point. Returns the tick and the time.
+// Quantize (one setting, the same button on the Pads and in Loops + Pads: Off, 1/16, 1/8, 1/4, 1 bar): a tap
+// sounds on the next point of the grid (every quantGrid steps), unless it came at most 30 ms after one:
+// then it plays at once, counted on that point. Returns the tick and the time. With nothing playing, the
+// first tap plays at once and starts an invisible grid at the tempo, which later taps wait for; it lets go
+// after two bars with no tap.
+let freeGrid = null;
 function snap() {
-  const g = +S.quantGrid; if (!playing || !g) return null;
-  const now = ctx.currentTime, sd = stepDur(), sw = (2 * S.swing / 100 - 1) * sd;
+  const g = +S.quantGrid; if (!g) return null;
+  const now = ctx.currentTime, sd = stepDur();
+  if (!playing) {
+    if (!freeGrid || now - freeGrid.last > 32 * sd || freeGrid.sd !== sd) { freeGrid = { t0: now, last: now, sd }; return { j: null, when: now }; }
+    const prev = Math.floor((now - freeGrid.t0) / sd / g) * g, at = j => freeGrid.t0 + j * sd;
+    const on = now - at(prev) <= 0.03 ? at(prev) : at(prev + g), when = Math.max(now, on); freeGrid.last = when;
+    return { j: null, when, on };
+  }
+  freeGrid = null;
+  const sw = (2 * S.swing / 100 - 1) * sd;
   const at = j => nextT - (tick - j) * sd + (j % 2 ? sw : 0);
   let prev = Math.floor((tick - (nextT - now) / sd) / g) * g;
   while (prev > 0 && at(prev) > now) prev -= g;
-  if (now - at(prev) <= 0.03) return { j: Math.max(0, prev), when: now };
-  return { j: prev + g, when: at(prev + g) };
+  if (now - at(prev) <= 0.03) return { j: Math.max(0, prev), when: now, on: at(prev) };      // on: the grid point (what is recorded)
+  return { j: prev + g, when: at(prev + g), on: at(prev + g) };
 }
 // Play key `key` of sound `si` from the pad under the finger, as One shot,
 // Gate (until the pad is let go) or Loop (until it is tapped again). A loop
@@ -1876,7 +1887,7 @@ for (let k = 0; k < 16; k++) {
 $('fxLatch').addEventListener('change', () => { S.fxLatch = $('fxLatch').checked; persist(); });
 $('fxReset').addEventListener('click', () => { S.fxSlots = [...DEFAULT_SLOTS]; persist(); draw(); });
 function drawFxSlots() { S.fxSlots.forEach((id, k) => { $('fxs' + k).value = id; }); $('fxLatch').checked = S.fxLatch; }
-$('quantGrid').addEventListener('change', () => { S.quantGrid = +$('quantGrid').value; persist(); draw(); });
+$('quantGrid').addEventListener('click', quantStep);
 
 // FX panel (on the screen in FX mode): which tracks the FX keys hit, and how
 // much of the last effect touched.
@@ -1989,7 +2000,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2093,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2864,7 +2875,7 @@ function draw() {
   kb.classList.toggle('saved', !!S.patKeys[S.pat]);
   if (!$('loops').hidden) drawLoops();
   $('bpm').value = S.bpm; $('oBpm').textContent = S.bpm; $('swing').value = S.swing; $('oSwing').textContent = S.swing + '%';
-  $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').value = S.quantGrid; drawFxPanel();
+  $('scale').value = S.scale; $('root').value = S.root; $('quantGrid').textContent = lpQName(S.quantGrid); $('quantGrid').classList.toggle('on', !!S.quantGrid); drawFxPanel();
   const sb = document.querySelector('[data-mode=sound]');
   sb.textContent = 'Sound';
   for (let k = 0; k < 16; k++) {
@@ -3644,7 +3655,7 @@ async function load() {
   }
   // Sounds still at the old default of 80% go to the new 20%, once (any you set yourself stay).
   if (saved && !saved.quiet20) for (const sl of S.slots) if (sl?.params && Math.abs(sl.params.vol - 0.8) < 1e-6) sl.params.vol = 0.2;
-  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid', 'lpQLast']) if (saved[k] != null) S[k] = saved[k];
+  if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
   if (S.grid.cells.flat().some(x => x?.lib === 'ebbbeats')) gridAgain = 'electroboombap';      // its beats became kick, snare and tops loops
@@ -3652,6 +3663,7 @@ async function load() {
   if (!S.grid.hits4) { hitsRepeat(S.grid.cells); S.grid.hits4 = true; }      // the hits become 4-beat loops, once
   if (gone.size) S.patterns = S.patterns.map(p => p.map(st => st.filter(n => !gone.has(n.s))));   // and their notes
     if (saved.quantGrid == null && saved.quant === false) S.quantGrid = 0;      // the old on/off Quantize
+    if (![0, 1, 2, 4, 16].includes(+S.quantGrid)) S.quantGrid = 4;            // (the old 1/2 bar)
     // Effects used to be saved by key number; now by name.
     const name = e => (typeof e === 'number' ? DEFAULT_SLOTS[e] : e && typeof e.f === 'number' ? { ...e, f: DEFAULT_SLOTS[e.f] } : e);
     S.fx = S.fx.map(row => row.map(name));
@@ -4281,7 +4293,7 @@ for (let k = 0; k < 16; k++) {
 // your timing exactly as played (it can be put on the beat afterwards, in the cell's 🎹 Notes).
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
-  const snapped = lpRec ? null : snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
+  const snapped = snap(), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
@@ -4292,7 +4304,7 @@ async function lpPress(k) {
   const prevVoice = lp.voice;
   lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
   lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
-  const note = lpRec ? lpNote(k, at, slot, oct) : null;
+  const note = lpRec ? lpNote(k, snapped ? snapped.on : at, slot, oct) : null;
   if (trig !== 'oneshot') { held[k] = { voice: lp.voice, at: when, note }; lpDraw(); }
   if (trig === 'gate' && !lpKeys[k].classList.contains('down')) lpLetGo(k);       // let go before the sound was ready
 }
@@ -4543,27 +4555,14 @@ async function seqRender(seq, slot) {
 }
 $('lpRec').addEventListener('click', lpRecTap);
 // the 1/16 button: a tap switches between your quantize and Free; hold it for the others
-const LPQ = [[0, 'Free'], [1, '1/16'], [2, '1/8'], [4, '1/4']], lpQName = q => (LPQ.find(x => x[0] === +q) || [0, `1/${16 / q}`])[1];
-{
-  let held = 0, long = false;
-  $('lpQ').addEventListener('pointerdown', () => { long = false; clearTimeout(held); held = setTimeout(() => { long = true; lpQMenu(); }, 500); });
-  for (const t of ['pointerup', 'pointercancel', 'pointerleave']) $('lpQ').addEventListener(t, () => clearTimeout(held));
-  $('lpQ').addEventListener('contextmenu', ev => ev.preventDefault());
-  $('lpQ').addEventListener('click', () => {
-    if (long) { long = false; return; }
-    if (S.quantGrid) { S.lpQLast = +S.quantGrid; S.quantGrid = 0; } else S.quantGrid = S.lpQLast || 1;
-    persist(); lpDraw(); status(`Recording: ${S.quantGrid ? `each note on its ${lpQName(S.quantGrid)}` : 'Free, the timing exactly as played'}. Hold it for the others.`);
-  });
+// The Quantize button (above the pads in Loops + Pads, and on the Pads): a tap steps Off, 1/16, 1/8, 1/4, 1 bar
+const LPQ = [[0, 'Off'], [1, '1/16'], [2, '1/8'], [4, '1/4'], [16, '1 bar']], lpQName = q => (LPQ.find(x => x[0] === +q) || LPQ[0])[1];
+function quantStep() {
+  const i = LPQ.findIndex(x => x[0] === +S.quantGrid), q = LPQ[(i + 1) % LPQ.length][0];
+  S.quantGrid = q; persist(); lpDraw(); draw();
+  status(q ? `Quantize ${lpQName(q)}: each note waits for the next ${lpQName(q) === '1 bar' ? 'bar' : lpQName(q)} (with nothing playing, the grid starts at your first tap).` : 'Quantize off: each note plays the moment you tap, as played.');
 }
-function lpQMenu() {
-  const box = $('lpQMenu'); box.textContent = ''; box.hidden = false;
-  for (const [q, l] of LPQ) {
-    const b = document.createElement('button'); b.textContent = l; b.classList.toggle('on', +S.quantGrid === q);
-    b.addEventListener('click', () => { S.quantGrid = q; if (q) S.lpQLast = q; persist(); box.hidden = true; lpDraw(); status(`Recording: ${q ? `each note on its ${l}` : 'Free, the timing exactly as played'}.`); });
-    box.appendChild(b);
-  }
-}
-addEventListener('pointerdown', ev => { if (!$('lpQMenu').hidden && !ev.target.closest('#lpQMenu, #lpQ')) $('lpQMenu').hidden = true; }, true);
+$('lpQ').addEventListener('click', quantStep);
 function lpFirstNote(buf, one) {
   const st = onsets(buf, 8).filter(t => t >= one.s - 0.001 && t < one.e);
   const lvl = t => { const x = buf.getChannelData(0), i = Math.round(t * buf.sampleRate); let m = 0; for (let j = i; j < Math.min(x.length, i + 400); j++) m = Math.max(m, Math.abs(x[j])); return m; };
@@ -4674,7 +4673,7 @@ function lpDraw() {
   const gone = !S.grid.cells[lp.c]?.[lp.r] && !!lp.saved;
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
   $('lpRec').textContent = lpRec ? '■ Stop' : '⏺ Rec'; $('lpRec').classList.toggle('open', lprOpen); if (lprOpen) lprDraw();
-  $('lpQ').textContent = S.quantGrid ? lpQName(S.quantGrid) : 'Free'; $('lpQ').classList.toggle('on', !!S.quantGrid);
+  $('lpQ').textContent = lpQName(S.quantGrid); $('lpQ').classList.toggle('on', !!S.quantGrid);
   if (lpRec && ctx.currentTime < lpRec.t0) setTimeout(lpDraw, Math.max(30, (lpRec.t0 - ctx.currentTime) * 1000));
   const cell = lpCellNow();
   $('lpads').style.setProperty('--c', lpInst && lpTarget ? CHANNEL_COLOR[lpTarget.c] : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
