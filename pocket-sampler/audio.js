@@ -142,6 +142,11 @@ const satCurves = new Map();
 function satCurve(kind, a) {
   const key = kind + Math.round(a * 40);
   if (satCurves.has(key)) return satCurves.get(key);
+  if (kind === 'dist') {               // a diode pair to ground: flat, then a sharp knee (hard clipping); the gain is before it
+    const c = new Float32Array(4096);
+    for (let i = 0; i < c.length; i++) { const x = (i / (c.length - 1) * 2 - 1) * 6; c[i] = x / Math.pow(1 + Math.pow(Math.abs(x), 5), 0.2); }
+    satCurves.set(key, c); return c;
+  }
   const c = new Float32Array(4096), k = kind === 'tape' ? 1 + a * 4 : 1 + a * 24, b = kind === 'tape' ? 0.15 * a : 0;
   const f = x => Math.tanh(k * x + b) - Math.tanh(b), norm = kind === 'tape' ? 0.5 / f(0.5) : 1 / f(1);
   for (let i = 0; i < c.length; i++) { const x = i / (c.length - 1) * 2 - 1; c[i] = f(x) * norm; }
@@ -165,6 +170,21 @@ export function satChain(ctx, kind, { wow = true } = {}) {
       pre.gain.value = 9 * a; post.gain.value = -9 * a; bump.gain.value = 3 * a; loss.frequency.value = 16000 * Math.pow(0.5, 1.3 * a);
       shaper.curve = satCurve('tape', a); output.gain.value = 1 / (1 + 0.75 * a);    // (as loud as it went in: tape colours, it doesn't just add volume)
       if (g1) { g1.gain.value = 0.0007 * a; g2.gain.value = 0.00008 * a; }
+    };
+  } else if (kind === 'distortion') {
+    // A ProCo RAT, the classic distortion pedal: an op-amp with up to about 67 dB of gain, less for the bass
+    // (its two legs, 560 ohms on 4.7 uF and 47 ohms on 2.2 uF, turn at about 60 Hz and 1.5 kHz), its
+    // treble narrowing as the gain rises (the op-amp's gain-bandwidth), then two diodes to ground clipping
+    // it hard, and the Filter (a low pass) after. Nothing of the clean sound is kept.
+    const o1 = (type, f) => { const K = Math.tan(Math.PI * f / ctx.sampleRate), n = 1 / (1 + K);
+      return type === 'hp' ? ctx.createIIRFilter([n, -n], [1, (K - 1) * n]) : ctx.createIIRFilter([K * n, K * n], [1, (K - 1) * n]); };
+    const leg = o1('hp', 60), mids = filt('highshelf', 1500), gain = ctx.createGain(), gbw = filt('lowpass', 20000, 0.5), tone = o1('lp', 3200), cab = filt('lowpass', 7000, 0.6);
+    input.connect(leg); leg.connect(mids); mids.connect(gain); gain.connect(gbw); gbw.connect(shaper); shaper.connect(tone); tone.connect(cab); cab.connect(output);
+    shaper.curve = satCurve('dist', 0); parts.push(leg, mids, gain, gbw, tone, cab);
+    set = a => {
+      const G = 0.5 * Math.pow(600, Math.pow(a, 1.6));               // ×0.5 to ×300 (a touch of grit to 50 dB of gain), the highs more
+      gain.gain.value = G; mids.gain.value = 4 + 10 * a; gbw.frequency.value = Math.min(20000, 3e6 / G);
+      output.gain.value = 0.3 * (1 + 0.35 * Math.pow(1 - a, 4));     // (level matched: clipped, it is about as loud at any amount)
     };
   } else {
     // (the pedal's first-order high pass, 720 Hz: a biquad's second order turned the bass's phase round and cancelled it)
@@ -344,8 +364,8 @@ function reverseOf(ctx, buf) {
 function tracking(ctx, made) {
   const keep = name => (...a) => { const n = ctx[name](...a); made.push(n); return n; };
   return { createGain: keep('createGain'), createBiquadFilter: keep('createBiquadFilter'), createWaveShaper: keep('createWaveShaper'),
-    createOscillator: keep('createOscillator'), createBufferSource: keep('createBufferSource'),
-    createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; } };
+    createOscillator: keep('createOscillator'), createBufferSource: keep('createBufferSource'), createIIRFilter: keep('createIIRFilter'),
+    createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; }, get sampleRate() { return ctx.sampleRate; } };
 }
 
 // Time-stretching a loop, two ways, keeping whichever is closer to the original (by the log-spectral
@@ -587,7 +607,7 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
   }
   const sfx = P.fx?.type, amt = P.fx?.amt ?? 0.5;
   if (sfx === 'fuzz') { const ws = ctx.createWaveShaper(); ws.curve = distortion(sfx, amt); tail.connect(ws); tail = ws; }
-  else if (sfx === 'overdrive' || sfx === 'tape') { const ch = satChain(ctx, sfx, { wow: false }); ch.set(amt); tail.connect(ch.input); tail = ch.output; }
+  else if (sfx === 'overdrive' || sfx === 'distortion' || sfx === 'tape') { const ch = satChain(ctx, sfx, { wow: false }); ch.set(amt); tail.connect(ch.input); tail = ch.output; }
   tail.connect(into || (fx ? eng.padsWet : eng.padsDry));       // into: a Loops column's own volume
   const sendTo = { reverb: eng.reverb, echo: eng.delay, pingpong: eng.ppL, chorus: eng.chSend }[sfx];
   if (sendTo) {                      // reverb, echoes, chorus: a send into the engine's own
