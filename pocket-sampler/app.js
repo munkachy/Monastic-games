@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261025e';
+import * as DZ from './design.js?v=20261025f';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, chroma, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261025f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1989,7 +1989,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025f'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2082,7 +2082,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261025f'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2574,7 +2574,7 @@ async function rapToCell(chop, text, flow, rest, seed, old = null) {
   const name = '🎤 ' + (text.length > 22 ? text.slice(0, 21) + '…' : text);
   const rap = { text, flow, rest, seed, src: old?.rap.src || packSlot(chop) };
   await loopToCell(c, r, buf, name, bars, false, { rap });
-  if (old && !S.grid.cells.flat().some(x => x && x.mine === old.id)) { await idbDel('mine', old.id); await refreshMine(); }
+  if (old && !S.grid.cells.flat().some(x => x && x.mine === old.id)) { await trashMine(old.id); await refreshMine(); }
   status(`${name}: ${FLOWS[flow][0].split(':')[0]}, ${bars} bar${bars > 1 ? 's' : ''} at ${S.bpm} BPM, in ${CHANNELS[c]}, cell ${r + 1}${playing ? ', from the next bar' : ''}. 🎲 New flow for another.`);
 }
 $('rapIt').addEventListener('click', busy($('rapIt'), async () => {
@@ -3527,7 +3527,50 @@ const idbGet = (store, key) => new Promise(ok => {
   try { const r = db.transaction(store).objectStore(store).get(key); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); }
   catch (e) { ok(null); }
 });
-function persist() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
+function persist() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); gridNote(); }
+// ↶ ↷ in the Loops: the grid as it was (its cells and their settings, the column volumes, mutes and
+// effects, Follow the tempo). A quick run of changes (a fader dragged) is one step. A recording of yours
+// that a change let go (a rap or notes made again, robot words said again) is kept aside until the app
+// closes, so Undo can bring it back.
+const gridUndo = [], gridRedo = [], mineTrash = new Map();
+let gridLast = null, gridOpen = false, gridTimer = 0, gridRestoring = false;
+// (a cell's name and key, which the app fills in by itself, are no change of yours)
+const gridNow = () => (S.grid?.cells ? JSON.stringify({ cells: S.grid.cells, colFx: S.grid.colFx, vol: S.grid.vol, mute: S.grid.mute, stretch: S.grid.stretch }, (k, v) => (k === 'name' || k === 'keyOf' ? undefined : v)) : null);
+function gridNote() {
+  if (gridRestoring) return;
+  const now = gridNow(); if (!now) return;
+  if (gridLast == null) { gridLast = now; return; }
+  if (now === gridLast) return;
+  if (!gridOpen) { gridUndo.push(gridLast); if (gridUndo.length > 60) gridUndo.shift(); gridRedo.length = 0; gridOpen = true; }
+  clearTimeout(gridTimer); gridTimer = setTimeout(() => { gridOpen = false; }, 350);      // (a drag sends its changes far closer together than this)
+  gridLast = now; drawGridUndo();
+}
+function drawGridUndo() { if ($('lUndo')) { $('lUndo').disabled = !gridUndo.length; $('lRedo').disabled = !gridRedo.length; } }
+async function trashMine(id) { const m = mine.find(x => x.id === id); if (m) mineTrash.set(id, m); await idbDel('mine', id); }
+async function gridGo(from, to) {
+  if (!from.length) return;
+  clearTimeout(gridTimer); gridOpen = false;
+  const want = from.pop(); to.push(gridNow());
+  const was = S.grid.cells, st = JSON.parse(want);
+  // recordings of yours it needs again, back from where they were kept aside
+  for (const cell of st.cells.flat()) if (cell?.mine && !mine.some(m => m.id === cell.mine) && mineTrash.has(cell.mine)) { await idbPut('mine', mineTrash.get(cell.mine), cell.mine); mineTrash.delete(cell.mine); }
+  await refreshMine();
+  // the names and keys the app had found, back on the same sounds
+  const found = new Map(); for (const x of was.flat()) if (x) found.set(`${x.mine || x.lib}#${x.k}`, { name: x.name, keyOf: x.keyOf });
+  for (const x of st.cells.flat()) if (x) { const f = found.get(`${x.mine || x.lib}#${x.k}`); if (f) { if (f.name && !x.name) x.name = f.name; if (f.keyOf != null && x.keyOf == null) x.keyOf = f.keyOf; } }
+  gridRestoring = true;
+  Object.assign(S.grid, st);
+  // a playing loop whose cell changed stops
+  for (let c = 0; c < 8; c++) for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) {
+    const h = l[k]; if (h && JSON.stringify(S.grid.cells[c][h.r]) !== JSON.stringify(was[c][h.r])) { kill(h); l[k] = null; }
+  }
+  for (let c = 0; c < 8; c++) { setColGain(c); if (eng.cols?.[c]) wireColFx(c); }
+  persist(); gridRestoring = false; gridLast = gridNow();
+  drawLoops(); nameCells(); warmGridSoon(); if (menuCell) drawCellMenu(); if (!$('lsets').hidden) drawSets(); if (view === 'both') lpDraw();
+  drawGridUndo();
+}
+$('lUndo').addEventListener('click', () => { gridGo(gridUndo, gridRedo); status('Undone.'); });
+$('lRedo').addEventListener('click', () => { gridGo(gridRedo, gridUndo); status('Redone.'); });
 function dirty() { persist(); noteChange(); }
 // My Sounds: each one stored whole, its sound included, under its own id.
 const idbAll = store => new Promise(ok => {
@@ -4138,6 +4181,8 @@ async function nameCells() {
 function setView(v) {
   view = v;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  document.querySelectorAll('.vbtn').forEach(b => { b.textContent = { loops: 'Loops', pads: 'Pads', both: 'Loops + Pads' }[v] + ' ▾'; });
+  document.querySelectorAll('.vmenu').forEach(m => { m.hidden = true; });
   if ($('wheel').classList.contains('inloops')) closeWheel();
   $('loops').hidden = v === 'pads';
   $('loops').classList.toggle('split', v === 'both'); $('lpads').hidden = $('lPager').hidden = v !== 'both';
@@ -4398,6 +4443,9 @@ document.querySelectorAll('[data-lp]').forEach(b => {
 const lFlip = () => { lPage = 1 - lPage; drawLoops(); lpDraw(); };
 $('lPrev').addEventListener('click', lFlip); $('lNext').addEventListener('click', lFlip);
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+// one button for the three views: tap it, and they drop down
+document.querySelectorAll('.vbtn').forEach(b => b.addEventListener('click', () => { const m = b.nextElementSibling, open = m.hidden; document.querySelectorAll('.vmenu').forEach(x => { x.hidden = true; }); m.hidden = !open; }));
+addEventListener('pointerdown', ev => { if (!ev.target.closest('.vpick')) document.querySelectorAll('.vmenu').forEach(x => { x.hidden = true; }); }, true);
 $('lPlay').addEventListener('click', () => { ctx.resume(); playing ? stop() : (start(), resumeLoops()); drawLoops(); });
 $('lReset').addEventListener('click', () => {
   for (const col of gcol) for (const k of ['cur', 'next', 'gate']) if (col[k]) { kill(col[k]); col[k] = null; }
@@ -4644,7 +4692,7 @@ async function sayWords() {
     const id = 'm' + Date.now().toString(36), old = cell?.mine;
     await idbPut('mine', { id, name: text, type: 'sound', folder: 'Vox and keys', robot: { text, voice: V }, created: Date.now(), item: packSlot(slot) }, id);
     await refreshMine();
-    if (old && mine.find(m => m.id === old)?.robot && !S.grid.cells.flat().some(x => x && x !== cell && x.mine === old)) { await idbDel('mine', old); await refreshMine(); }   // the words it said before, no longer used
+    if (old && mine.find(m => m.id === old)?.robot && !S.grid.cells.flat().some(x => x && x !== cell && x.mine === old)) { await trashMine(old); await refreshMine(); }   // the words it said before, no longer used
     const { lib, k, keyOf, from, to, ...keep } = cell || {};
     S.grid.cells[c][r] = { ...keep, mode: keep.mode || 'oneshot', mine: id, k: 0, name: text, robot: { text, voice: V }, ...(keep.mode === 'loop' && !keep.beats && { beats: 4 }) };
     lwFor = S.grid.cells[c][r]; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
@@ -5089,7 +5137,7 @@ function rollChange(c, r, notes, undoing = false, bars = null) {
       slices: [{ s: 0, e: buf.duration, name: rec.name, bpm: seq.bpm, bars: seq.bars }] };
     const id = 'm' + Date.now().toString(36);
     await idbPut('mine', { ...rec, id, created: Date.now(), item: packSlot(slot), seq }, id);
-    if (!S.grid.cells.flat().some(x => x && x !== cell && x.mine === rec.id)) await idbDel('mine', rec.id);
+    if (!S.grid.cells.flat().some(x => x && x !== cell && x.mine === rec.id)) await trashMine(rec.id);
     await refreshMine();
     S.grid.cells[c][r] = { ...cell, mine: id };
     if (lp.c === c && lp.r === r) lp.cell = null;
@@ -6002,5 +6050,5 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   colFx: c => { const k = eng.cols?.[c]; return k && { type: k.type, ins: k.ins?.constructor.name, send: !!k.send }; } });
 
 draw();
-load().then(() => { setView('both'); status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
+load().then(() => { setView('both'); gridLast = gridNow(); drawGridUndo(); status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
 requestAnimationFrame(frame);
