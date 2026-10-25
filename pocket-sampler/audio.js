@@ -441,12 +441,12 @@ function slicePoints(x, rate, bpm) {
 // which holds the tail of the loop's last hit, folded round).
 function sliceStretch(x, rate, factor, bpm) {
   const pts = slicePoints(x, rate, bpm), N = Math.round(x.length * factor), out = new Float32Array(N);
-  const fade = Math.round(0.006 * rate), rise = Math.round(0.001 * rate), A = Math.round(0.025 * rate), X = Math.round(0.005 * rate), minLen = Math.round(0.03 * rate);
+  const fade = Math.round(0.006 * rate), rise = Math.round(0.001 * rate), A = Math.round(0.025 * rate), X = Math.round(0.005 * rate), minLen = Math.round(0.03 * rate), gapMin = Math.round(0.012 * rate);
   for (let k = 0; k < pts.length; k++) {
     const a = pts[k], b = k + 1 < pts.length ? pts[k + 1] : x.length, o = Math.round(a * factor), last = k + 1 === pts.length;
     const room = (last ? N : Math.round(b * factor)) - o, len = b - a, want = room + (last ? 0 : fade);
     let piece = x.subarray(a, Math.min(x.length, b + (last ? 0 : fade)));
-    if (want > piece.length + rise && len >= minLen) {
+    if (want - piece.length > gapMin && len >= minLen) {          // (a gap too short to hear is left: stretching a tail costs more than it mends)
       const st = wsola(x.subarray(a, b), want / len, rate, false, want), y = new Float32Array(want);
       for (let i = 0; i < want; i++) { const u = i < A ? 0 : i < A + X ? (i - A) / X : 1; y[i] = (i < piece.length ? piece[i] : 0) * (1 - u) + st[i] * u; }
       piece = y;
