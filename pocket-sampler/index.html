@@ -352,7 +352,7 @@
     border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); white-space: nowrap; }
   .lbar > button.on { background: var(--accent); color: #fff; }
   /* a narrow screen: the top row closes up so it fits */
-  .lbar.tight { gap: 4px; }
+  .lbar.tight { gap: 4px; } .lbar.wrap { flex-wrap: wrap; row-gap: 4px; }
   .lbar.tight > button, .lbar.tight .ltempo button, .lbar.tight .vtabs button { padding: 7px 6px; letter-spacing: .01em; font-size: 10.5px; }
   .lbar.tight #lBpm { padding: 6px 0; letter-spacing: 0; }
   .ltempo { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; flex: none; }
@@ -367,7 +367,6 @@
   /* Loops + Pads: four columns of loops a page (◀ ▶ for the others), the pads on the right */
   #loops.split .lgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   #loops.split .lcol.off { display: none; }
-  #loops.split #lCopy, #loops.split #lPaste { display: none; }
   .lpager { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
   .lpager[hidden] { display: none; }
   .lpager button { font: inherit; border: 0; border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
@@ -645,7 +644,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026f</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026g</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span></div>
 
   <div class="screen" id="screen">
@@ -1199,6 +1198,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261026f"></script>
+<script type="module" src="app.js?v=20261026g"></script>
 </body>
 </html>
