@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026j';
+import * as DZ from './design.js?v=20261026k';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026j';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -217,11 +217,22 @@ const LIBRARY = {
   vigbell: { name: 'Compline Bell', multi: 'vigbell', base: 60 }, vigglass: { name: 'Night Glass', multi: 'vigglass', base: 60 },
   ebbbass: { name: 'EBB Bass', bank: 'ebbbass' }, ebbchords: { name: 'EBB Chords', bank: 'ebbchords' }, ebblead: { name: 'EBB Lead', bank: 'ebblead' },
   ebbsub: { name: 'EBB Sub', bank: 'ebbsub' }, ebbvox: { name: 'EBB Vox & Keys', bank: 'ebbvox' },
+  // Ephesians (tools/ephesians.py, drumlab.py): A minor, 139 BPM, industrial techno, with words of
+  // Ephesians 3 (Good News Translation) said by two robot voices
+  ephkloops: { name: 'Ephesians Kick loops', bank: 'ephkloops' }, ephsloops: { name: 'Ephesians Snare loops', bank: 'ephsloops' },
+  ephtloops: { name: 'Ephesians Tops loops', bank: 'ephtloops' }, ephkit: { name: 'Ephesians Kit', bank: 'ephkit' },
+  ephbass: { name: 'Ephesians Bass', bank: 'ephbass' }, ephchords: { name: 'Ephesians Chords', bank: 'ephchords' }, ephlead: { name: 'Ephesians Lead', bank: 'ephlead' },
+  ephsub: { name: 'Ephesians Sub', bank: 'ephsub' }, ephvox: { name: 'Ephesians Vox', bank: 'ephvox' },
+  // its own instruments, made with Plaits (tools/plaitsinst.py) and played from recordings
+  ephsignal: { name: 'Emergency Signal', multi: 'ephsignal', base: 60 }, ephdrone: { name: 'Strained Drone', multi: 'ephdrone', base: 48 },
+  ephvolt: { name: 'Voltage Bass', multi: 'ephvolt', base: 36 }, ephclang: { name: 'Steel Clang', multi: 'ephclang', base: 60 },
+  ephstab: { name: 'Voltage Stab', multi: 'ephstab', base: 48 },
 };
 // drum loops, beat sliced to the tempo: whole beats (the Beats folder), and the parts of one (kicks, snares, tops)
-const BEAT_PACKS = new Set(['ebbkloops', 'ebbsloops', 'ebbtloops', 'vigkloops', 'vigsloops', 'vigtloops', 'grooves', 'drumloops', 'breaks']);
+const BEAT_PACKS = new Set(['ebbkloops', 'ebbsloops', 'ebbtloops', 'vigkloops', 'vigsloops', 'vigtloops', 'ephkloops', 'ephsloops', 'ephtloops', 'grooves', 'drumloops', 'breaks']);
 const EBB = ['ebbkloops', 'ebbsloops', 'ebbtloops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox', 'ebbkit'];
 const VIG = ['vigkloops', 'vigsloops', 'vigtloops', 'vigbass', 'vigchords', 'viglead', 'vigsub', 'vigvox', 'vigkit'];
+const EPH = ['ephkloops', 'ephsloops', 'ephtloops', 'ephbass', 'ephchords', 'ephlead', 'ephsub', 'ephvox', 'ephkit'];
 // The reverb: a real space, recorded (tools/reverbs.py), for every effect that rings (the FX keys,
 // a sound's own effect, a Loops column's): [id, name, about, credit]. Chosen in Menu › Effects.
 const SPACES = [
@@ -1174,20 +1185,20 @@ for (const f of FAMILIES) $('family').add(new Option(f[0].toUpperCase() + f.slic
 // The browser is in folders by part, in the parts' colours (the Loops columns' and the pads'):
 // [name, contents, colour]. Contents: sound ids, folders, or a list made when opened
 // ('hits:snare': every snare and clap of the kits, one by one).
-const DRUM_BANKS = ['vigkit', 'ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks', 'percussion', 'shakers'];
+const DRUM_BANKS = ['ephkit', 'vigkit', 'ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks', 'percussion', 'shakers'];
 const TREE = ['Sounds', [
-  ['Beats', ['vigkloops', 'ebbkloops', 'grooves', 'drumloops', 'breaks'], 'var(--c-kick)'],
+  ['Beats', ['ephkloops', 'vigkloops', 'ebbkloops', 'grooves', 'drumloops', 'breaks'], 'var(--c-kick)'],
   ['Snares and claps', 'hits:snare', 'var(--c-snare)'],
   ['Tops (hats, cymbals, percussion)', 'hits:tops', 'var(--c-hat)'],
-  ['Drum kits', ['vigkit', 'ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks',
+  ['Drum kits', ['ephkit', 'vigkit', 'ebbkit', 'acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly', 'tr808', 'electro', 'drumtraks',
     'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal', 'percussion', 'shakers', 'bells2'], 'var(--c-kit)'],
-  ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'vigcloister', 'basshits', 'ebbbass', 'vigbass'], 'var(--c-bass)'],
-  ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'vigglass', 'ebbchords', 'vigchords'], 'var(--c-chords)'],
-  ['Lead', ['chip', 'supersaw', 'brass', 'trumpet', 'trombone', 'tenorsax', 'violin', 'viola', 'cello', 'gretsch', 'hofner', 'emily', 'vighowl', 'ebblead', 'viglead'], 'var(--c-lead)'],
-  ['Sub and color', ['subsine', 'ebbsub', 'vigsub', 'glitch', 'machines', 'hits', 'blips', 'lasers', 'coins', 'robots', 'arcade'], 'var(--c-sub)'],   // purple: subs, and the odd, glitchy accents (the video-game sounds)
-  ['Vox and keys', ['choirmen', 'choirwomen', 'choir', 'hype', 'robotvox', 'vocchops', 'ebbvox', 'vigvox'], 'var(--c-vox)'],
-  ['Pads', ['pad', 'strings', 'vigstrings', 'vigswarm', 'vigchant', 'pads'], 'var(--c-pad)'],
-  ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell', 'viglauds', 'vigbell'], 'var(--c-pluck)'],
+  ['Bass', ['bass808', 'wobble', 'growl', 'reese', 'sawbass', 'sqbass', 'fmbass', 'acid', 'uprightbass', 'elecbass', 'contrabass', 'vigcloister', 'ephvolt', 'basshits', 'ebbbass', 'vigbass', 'ephbass'], 'var(--c-bass)'],
+  ['Chords', ['rhodes', 'piano', 'upright', 'epiano', 'harpsichord', 'pipeorgan', 'renorgan', 'organ', 'celeste', 'glass', 'vigglass', 'ephstab', 'ebbchords', 'vigchords', 'ephchords'], 'var(--c-chords)'],
+  ['Lead', ['chip', 'supersaw', 'brass', 'trumpet', 'trombone', 'tenorsax', 'violin', 'viola', 'cello', 'gretsch', 'hofner', 'emily', 'vighowl', 'ephsignal', 'ebblead', 'viglead', 'ephlead'], 'var(--c-lead)'],
+  ['Sub and color', ['subsine', 'ebbsub', 'vigsub', 'ephsub', 'glitch', 'machines', 'hits', 'blips', 'lasers', 'coins', 'robots', 'arcade'], 'var(--c-sub)'],   // purple: subs, and the odd, glitchy accents (the video-game sounds)
+  ['Vox and keys', ['choirmen', 'choirwomen', 'choir', 'hype', 'robotvox', 'vocchops', 'ebbvox', 'vigvox', 'ephvox'], 'var(--c-vox)'],
+  ['Pads', ['pad', 'strings', 'vigstrings', 'vigswarm', 'vigchant', 'ephdrone', 'pads'], 'var(--c-pad)'],
+  ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell', 'viglauds', 'vigbell', 'ephclang'], 'var(--c-pluck)'],
   ['Stabs and FX', ['stabs', 'funkhorns', 'noisefx', 'sirens'], 'var(--c-stab)'],
   ['Ambience and vinyl', ['ambience', 'nature', 'airwater']],
   ['Songs', 'songs'],
@@ -1198,7 +1209,7 @@ const TREE = ['Sounds', [
 ]];
 // Every snare and clap (or every hat, cymbal and percussion hit) of the recorded kits, one by one,
 // after the loops of that part (a pack's snare loops, its tops loops).
-const PART_LOOPS = { snare: ['vigsloops', 'ebbsloops'], tops: ['vigtloops', 'ebbtloops'] };
+const PART_LOOPS = { snare: ['ephsloops', 'vigsloops', 'ebbsloops'], tops: ['ephtloops', 'vigtloops', 'ebbtloops'] };
 function hitItems(which) {
   if (!banks) { bankList().then(() => drawBrowser()); return []; }
   const want = which === 'snare' ? ['snare', 'clap'] : ['hat', 'open', 'cym', 'perc'];
@@ -1389,9 +1400,9 @@ function sideRefuses(c) {
 // What a sound is: SYN played by the synth as you play; REC a recording (a sample) of a real
 // instrument or machine; GEN made in code beforehand, then played as a recording (the 808 and 909
 // kits, rolled sounds, vinyl and risers, the robot voice, the loops written for the app); MINE yours.
-const GEN_BANKS = new Set(['drumloops', 'grooves', 'hype', 'sirens', ...Object.keys(LIBRARY).filter(id => /^(ebb|vig)/.test(id))]);
-const GEN_MULTI = new Set(['nylon', 'steelgtr', 'twelve', 'steeldrum', 'vigstrings', 'vigswarm', 'vigchant', 'vigcloister', 'vighowl', 'viglauds', 'vigbell', 'vigglass']);
-const GEN_SLICES = { ambience: ['Rain', 'Respirator'], airwater: ['Respirator', 'Respirator 2'],
+const GEN_BANKS = new Set(['drumloops', 'grooves', 'hype', 'sirens', ...Object.keys(LIBRARY).filter(id => /^(ebb|vig|eph)/.test(id))]);
+const GEN_MULTI = new Set(['nylon', 'steelgtr', 'twelve', 'steeldrum', 'vigstrings', 'vigswarm', 'vigchant', 'vigcloister', 'vighowl', 'viglauds', 'vigbell', 'vigglass', 'ephsignal', 'ephdrone', 'ephvolt', 'ephclang', 'ephstab']);
+const GEN_SLICES = { ambience: ['Respirator'], airwater: ['Respirator', 'Respirator 2'],
   noisefx: ['Riser', 'Short riser', 'Downlifter'] };
 const TAG_ABOUT = { SYN: 'synthesized as you play', REC: 'a recording', GEN: 'made in code', MINE: 'yours' };
 function libTag(id, name) {
@@ -2012,7 +2023,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2105,7 +2116,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3404,7 +3415,7 @@ function varyBeat() {
 // Drum kit (Beat tab): the kit the beats play on, swapped on its own key
 // (the kit on the keys, or sound 9 if there is none).
 const KITS_MENU = [['Recorded kits', ['acoustic', 'boombap', 'gogodze', 'gogodzelofi', 'bigrusty', 'swirly']],
-  ['Drum machines', ['vigkit', 'ebbkit', 'tr808', 'electro', 'drumtraks', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
+  ['Drum machines', ['ephkit', 'vigkit', 'ebbkit', 'tr808', 'electro', 'drumtraks', 'kit808', 'kit909', 'kitcr78', 'kit606', 'kitminimal']]];
 for (const [g, ids] of KITS_MENU) {
   const og = document.createElement('optgroup'); og.label = g;
   for (const id of ids) og.appendChild(new Option(LIBRARY[id].name, id));
@@ -4873,7 +4884,7 @@ function drawSets() {
 $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
 // Sets: a whole grid at once, with the tempo and key it was made in.
-const SETS = [{ id: 'vigils', name: 'Vigils', about: 'G minor · 144 BPM · night electronica, words of the Rule' }, { id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
+const SETS = [{ id: 'ephesians', name: 'Ephesians', about: 'A minor · 139 BPM · industrial techno, words of Ephesians 3' }, { id: 'vigils', name: 'Vigils', about: 'G minor · 144 BPM · night electronica, words of the Rule' }, { id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
 async function loadSet(id, quiet = false, given = null) {          // quiet: the set again, after an update; tempo and key as they are. given: one of yours
   status('Loading the set…');
   try {
@@ -4899,7 +4910,7 @@ async function loadSet(id, quiet = false, given = null) {          // quiet: the
 $('lsStop').addEventListener('click', () => { stopAllLoops(); status(playing ? 'Every loop stops on the next point; the Pads beat plays on.' : ''); });
 
 // A cell's settings: how it plays, its volume, the key, and its sound (any loop or pack, one sound of it).
-const CELL_PACKS = [['Vigils', VIG], ['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks', 'ambience']],
+const CELL_PACKS = [['Ephesians', EPH], ['Vigils', VIG], ['Electro Boom Bap', EBB], ['Loops', ['drumloops', 'breaks', 'ambience']],
   ['Kits', ['boombap', 'tr808', 'electro', 'drumtraks', 'acoustic', 'percussion', 'shakers']],
   ['Vocals', ['hype', 'robotvox', 'vocchops']], ['Synth and horns', ['stabs', 'basshits', 'pads', 'funkhorns']],
   ['FX', ['noisefx', 'sirens', 'arcade', 'machines', 'nature', 'airwater', 'bells2']]];
@@ -4908,7 +4919,7 @@ let menuCell = null, menuPack = null, menuFolder = null, menuSet = null, choosin
 // The Electro Boom Bap set is its six packs; a kit is its kicks (red), snares and claps (orange), and
 // hats, cymbals and percussion (yellow); any other pack is one colour. Its sounds are in the folders too.
 const folderFor = id => TREE[1].find(f => (Array.isArray(f[1]) ? f[1].includes(id) : f[1] === 'hits:' + Object.keys(PART_LOOPS).find(k => PART_LOOPS[k].includes(id))));
-const SET_PACKS = { 'set:vig': ['Vigils', VIG], 'set:ebb': ['Electro Boom Bap', EBB] };
+const SET_PACKS = { 'set:eph': ['Ephesians', EPH], 'set:vig': ['Vigils', VIG], 'set:ebb': ['Electro Boom Bap', EBB] };
 // Only the sets made for the looper (every loop in one fits every other): for now, Electro Boom Bap.
 // Every other pack is still in the colour folders, and in Menu › Sounds for the Pads.
 function packList() { return Object.keys(SET_PACKS); }
@@ -4935,7 +4946,7 @@ const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.te
 const keyMemo = (() => { try { return JSON.parse(localStorage.getItem('pocketKeys') || '{}'); } catch (e) { return {}; } })();
 // unsure: found by listening to a bass or a sub, which play too few notes to tell major from minor
 const keyWord = (k, low) => (k ? `${(k.minor ? MIN_NAME : MAJ_NAME)[k.root]} ${k.minor ? 'min' : 'maj'}${!k.known && (k.sure < 0.35 || low) ? '?' : ''}` : '');
-const LOW_LIBS = new Set(['basshits', 'ebbbass', 'ebbsub', 'vigbass', 'vigsub']);
+const LOW_LIBS = new Set(['basshits', 'ebbbass', 'ebbsub', 'vigbass', 'vigsub', 'ephbass', 'ephsub']);
 // a pack whose key is known (banks.json "key": [root, scale]), as the Electro Boom Bap loops (F minor)
 const knownKey = lib => { const K = banks?.[LIBRARY[lib]?.bank || lib]?.key; return K ? { root: K[0], minor: K[1] !== 'major', sure: 1, known: true } : null; };
 const drumLib = lib => BEAT_PACKS.has(lib) || DRUM_BANKS.includes(lib) || isKitLib(lib) || !!LIBRARY[lib]?.kit;
