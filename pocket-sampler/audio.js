@@ -534,6 +534,7 @@ function sliceStretch(x, rate, factor, bpm) {
 }
 let stretchWorker, jobSeq = 0;
 const jobs = new Map();
+export const stretchWaiting = () => jobs.size;          // loops still being made ready (the workload meter)
 function runStretch(x, factor, rate, drums) {
   if (stretchWorker === undefined) {
     try {
