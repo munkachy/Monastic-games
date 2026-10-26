@@ -63,6 +63,14 @@ A recording he makes of someone else's music or sounds carries that source's lic
 gives when he sends it. A hit designed with Room on has the Aalto meeting room's recording (CC BY
 4.0, above) baked into it: credit as that reverb.
 
+## The private library (scrambled)
+
+Things kept for Br. Augustine's own use only (sounds licensed for personal use, sounds from his own
+films and shows) live in `sounds/private/`, scrambled with a key made from his passphrase, which is
+never in the repository. Each item's notes, with its source and license, are inside it, scrambled;
+the app shows them once the passphrase is in. None of it is part of the app's own sounds, and none of
+it could stay if the app were ever sold.
+
 ## If it were ever sold
 
 What would have to change: the Rhodes (non-commercial), the Ely reverb (until its license is settled), and the Dirt-Samples packs (no license; the Amen break is copyrighted) would come out or be replaced; the TR-808 and the Sonatina strings and choirs would need their terms confirmed; and the voice engine's GPL would have to be met. Everything else (most of the app) can stay with its credits.

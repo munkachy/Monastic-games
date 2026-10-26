@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026h';
+import * as DZ from './design.js?v=20261026i';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026h';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026i';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2012,7 +2012,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026i'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2105,7 +2105,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026i'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5714,19 +5714,19 @@ async function sharePack(P) {
 $('lsShare').addEventListener('click', () => { const name = prompt('Name the pack:', `My pack ${S.bpm} BPM`); if (name?.trim()) sharePack(packOf({ name: name.trim(), set: gridSet(name.trim()) })); });
 $('lsOpen').addEventListener('click', () => $('importFile').click());
 // a pack file opened: its sounds into My Sounds (new ids, so nothing of yours is overwritten), its set into My sets
-async function importPack(P) {
+async function importPack(P, priv = false) {          // priv: from the private library (never sent out again unscrambled)
   if (P.format !== 'pocket-pack' || !Array.isArray(P.sounds)) throw new Error('not a Pocket Sampler pack file');
   if (!db) throw new Error('saving needs this browser’s storage, which is not available here');
   const map = new Map(), t = Date.now();
   for (const [i, m] of P.sounds.entries()) {
     const id = 'm' + (t + i).toString(36) + 'p'; map.set(m.id, id);
-    await idbPut('mine', { ...recIn(m), id, created: t + i, ...(P.from && { from: P.from }) }, id);
+    await idbPut('mine', { ...recIn(m), id, created: t + i, ...(P.from && { from: P.from }), ...(priv && { private: true }) }, id);
   }
   let setId = null;
   if (P.set) {
     const set = { ...P.set, cells: P.set.cells.map(col => col.map(c => (c?.mine ? { ...c, mine: map.get(c.mine) || c.mine } : c))) };
     setId = 'm' + (t + P.sounds.length).toString(36) + 's';
-    await idbPut('mine', { id: setId, name: P.name, type: 'set', created: t, set }, setId);
+    await idbPut('mine', { id: setId, name: P.name, type: 'set', created: t, set, ...(priv && { private: true }) }, setId);
   }
   await refreshMine(); drawBrowser(); drawSets();
   return { sounds: P.sounds.length, set: setId && mine.find(m => m.id === setId) };
@@ -5746,6 +5746,45 @@ async function openPackFile(f) {
 // device; tap one to add it to My Sounds. tools/inbox.py files the inbox: see CLAUDE.md.
 // ---------------------------------------------------------------------------
 const GH = { owner: 'munkachy', repo: 'Monastic-games', inbox: 'library-inbox' };
+// 🔒 The private library: things for his own use only (sounds from a film or a show, sounds licensed for
+// personal use), kept in the public repository only scrambled. His passphrase is made into the key on the
+// device itself (PBKDF2, SHA-256, 600,000 rounds) and the key is kept there (in this browser's storage, in
+// a form the page cannot read back out); it is never sent anywhere or written in the repository. Each file
+// is scrambled with AES-GCM (a fresh random start each time), which also shows at once if the key is wrong.
+// Forgotten, the passphrase cannot be recovered, and neither can what it locks.
+const VAULT_SALT = new TextEncoder().encode('Pocket Sampler private library · munkachy/Monastic-games · v1');
+let vaultKey = null;
+const b64of = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const u8of = b64 => { const s = atob(b64.trim()), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+async function vaultLoad() { if (db && !vaultKey) vaultKey = (await idbGet('state', 'vaultKey')) || null; return vaultKey; }
+async function vaultMake(pass) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: VAULT_SALT, iterations: 600000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function vaultKeep(key) { vaultKey = key; if (db) await idbPut('state', key, 'vaultKey'); }
+async function vaultForget() { vaultKey = null; if (db) await idbPut('state', null, 'vaultKey'); shared = null; }
+async function vaultLock(text, key = vaultKey) {          // text -> 'PSV1:' + base64(start + scrambled)
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text)));
+  const all = new Uint8Array(12 + ct.length); all.set(iv); all.set(ct, 12); return 'PSV1:' + b64of(all);
+}
+async function vaultUnlock(text, key = vaultKey) {
+  const all = u8of(text.replace(/^PSV1:/, ''));
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.subarray(0, 12) }, key, all.subarray(12)));
+}
+// asked for the passphrase (twice the first time on a device, so a slip of the finger is caught), and
+// checked against a private item already there, if any
+async function vaultAsk() {
+  if (await vaultLoad()) return vaultKey;
+  const pass = prompt('🔒 The passphrase for your private library (long is best: a few words you will remember). It stays on this device; nobody can get it back if it is lost.');
+  if (!pass) return null;
+  status('Making the key…');
+  const key = await vaultMake(pass), test = (await sharedItems(true)).find(x => x.private && x.locked);
+  if (test) {
+    try { await vaultUnlock(test.notesText, key); }
+    catch (e) { status('That passphrase does not open your private library: try again.'); return null; }
+  } else if (prompt('Type it once more, to be sure:') !== pass) { status('The two did not match: nothing was changed.'); return null; }
+  await vaultKeep(key); shared = null; status('🔒 Your private library is open on this device.'); return key;
+}
 const ghTok = () => { try { return localStorage.getItem('pocketGitHub') || ''; } catch (e) { return ''; } };
 async function gh(path, opts = {}, tok = ghTok()) {
   const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { ...opts,
@@ -5781,9 +5820,12 @@ $('sdSend').addEventListener('click', async () => {
   if (!tok) { status('It needs your GitHub token (once on this device).'); return; }
   const P = what === 'file' ? sdFilePack : what === 'grid' ? packOf({ name, set: gridSet(name) }) : what === 'all' ? packOf({ name, ids: mine.filter(m => m.item).map(m => m.id) }) : packOf({ name, ids: [$('sdOne').value] });
   if (!P) { status('Choose the pack file first.'); return; }
+  const priv = $('sdPriv').checked;
+  if (!priv && P.sounds.some(m => mine.find(x => x.id === m.id)?.private)) { status('It holds sounds from your private library: tick 🔒 Private, so it is sent scrambled.'); return; }
+  if (priv && !(await vaultAsk())) return;
   if (!P.sounds.length && !P.set) { status('There is nothing of yours in it to send.'); return; }
   const WHO = { me: 'made by Br. Augustine', recorded: 'recorded by Br. Augustine from another source', other: 'made by someone else' };
-  const sent = new Date().toISOString(), dir = `inbox/${sent.slice(0, 10)}-${slug(name)}-${Date.now().toString(36).slice(-4)}`;
+  const sent = new Date().toISOString(), dir = `inbox/${sent.slice(0, 10)}-${priv ? 'private' : slug(name)}-${Date.now().toString(36).slice(-4)}`;
   const notes = { name, about: $('sdAbout').value.trim(), who, credit: WHO[who], source: who === 'me' ? '' : src, sent, app: BUILD,
     device: /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Mac/.test(navigator.userAgent) ? 'Mac' : 'computer',
     file: 'pack.pocketpack.json', sounds: P.sounds.map(m => ({ name: m.name, type: m.type, ...(m.folder && { folder: m.folder }) })), set: !!P.set, bpm: P.set?.bpm ?? null };
@@ -5801,28 +5843,44 @@ $('sdSend').addEventListener('click', async () => {
     const tree = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha;
     status(`Sending to the library… (${(JSON.stringify(P).length / 1e6).toFixed(1)} MB)`);
     const blob = async text => (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: text, encoding: 'utf-8' }) }, tok)).sha;
-    const files = [[`${dir}/pack.pocketpack.json`, await blob(JSON.stringify({ ...P, from: { name, credit: notes.credit, source: notes.source } }))],
-      [`${dir}/notes.json`, await blob(JSON.stringify(notes, null, 1))], [`${dir}/notes.md`, await blob(md)]];
+    const packText = JSON.stringify({ ...P, from: { name, credit: notes.credit, source: notes.source } });
+    const files = priv
+      ? [[`${dir}/private.json`, await blob(JSON.stringify({ private: true, v: 1, sent }))],         // (all that can be read without the key)
+        [`${dir}/notes.enc`, await blob(await vaultLock(JSON.stringify({ ...notes, file: 'pack.enc', private: true })))], [`${dir}/pack.enc`, await blob(await vaultLock(packText))]]
+      : [[`${dir}/pack.pocketpack.json`, await blob(packText)], [`${dir}/notes.json`, await blob(JSON.stringify(notes, null, 1))], [`${dir}/notes.md`, await blob(md)]];
     const t2 = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: tree, tree: files.map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha })) }) }, tok);
-    const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `Library inbox: ${name} (${notes.credit})`, tree: t2.sha, parents: [head] }) }, tok);
+    const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: priv ? 'Library inbox: a private item (scrambled)' : `Library inbox: ${name} (${notes.credit})`, tree: t2.sha, parents: [head] }) }, tok);
     await gh(`/git/refs/heads/${GH.inbox}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
     try { localStorage.setItem('pocketGitHub', tok); } catch (e) {}
     $('sendBox').hidden = true; shared = null;
-    status(`“${name}” is in the library inbox: on every device in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed in the library with your notes.`);
+    status(priv ? `🔒 “${name}” is in the library inbox, scrambled: on your devices (once the passphrase is in) in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed (still scrambled).`
+      : `“${name}” is in the library inbox: on every device in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed in the library with your notes.`);
   } catch (e) {
     status(`Could not send it: ${e.message}${e.status === 401 || e.status === 403 ? ' (check the token: Contents, read and write, on this repository)' : ''}`); log('error', 'send: ' + e.message);
   } finally { $('sdSend').disabled = false; }
 });
 // ☁ Shared: what Claude has filed (sounds/shared/index.json, on the site) and what waits in the inbox
 let shared = null;
-async function sharedItems() {
-  if (shared) return shared;
+async function sharedItems(fresh = false) {
+  if (shared && !fresh) return shared;
   const out = [];
   try { for (const x of (await (await fetch('sounds/shared/index.json', { cache: 'no-cache' })).json()).items) out.push({ ...x, url: `sounds/shared/${x.file}`, filed: true }); } catch (e) {}
+  // 🔒 private ones: only a date can be read without the key; with it, their notes
+  const priv = async (notesUrl, packUrl, sent, filed) => {
+    try {
+      const notesText = await (await fetch(notesUrl, { cache: 'no-cache' })).text();
+      if (vaultKey) { try { out.push({ ...JSON.parse(await vaultUnlock(notesText)), url: packUrl, filed, private: true }); return; } catch (e) {} }
+      out.push({ name: '🔒 A private item', sent, private: true, locked: true, notesText, url: packUrl, filed });
+    } catch (e) {}
+  };
+  await vaultLoad();
+  try { for (const x of (await (await fetch('sounds/private/index.json', { cache: 'no-cache' })).json()).items) await priv(`sounds/private/${x.id}.notes.enc`, `sounds/private/${x.id}.pack.enc`, x.sent, true); } catch (e) {}
   try {
     const t = await gh(`/git/trees/${GH.inbox}?recursive=1`, {}, ghTok());
     const dirs = [...new Set(t.tree.filter(x => /^inbox\/[^/]+\/notes\.json$/.test(x.path)).map(x => x.path.split('/')[1]))].sort().reverse();
     const raw = p => `https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.inbox}/${p}`;
+    for (const d of [...new Set(t.tree.filter(x => /^inbox\/[^/]+\/private\.json$/.test(x.path)).map(x => x.path.split('/')[1]))].sort().reverse())
+      await priv(raw(`inbox/${d}/notes.enc`), raw(`inbox/${d}/pack.enc`), d.slice(0, 10), false);
     for (const d of dirs) {
       try { const n = await (await fetch(raw(`inbox/${d}/notes.json`))).json(); out.push({ ...n, url: raw(`inbox/${d}/${n.file}`), filed: false }); } catch (e) {}
     }
@@ -5837,17 +5895,24 @@ async function drawShared(list) {
   if (!items.length) { const p = document.createElement('p'); p.className = 'note'; p.textContent = 'Nothing shared yet. In My Sounds, ☁ Send to the library sends a pack (with your notes) here, for every device.'; list.appendChild(p); }
   for (const x of items) {
     const b = document.createElement('button'), small = document.createElement('small');
-    b.textContent = x.name;
-    small.textContent = `${x.filed ? 'in the library' : 'in the inbox'} · ${x.sounds?.length ?? '?'} sound${x.sounds?.length === 1 ? '' : 's'}${x.set ? ' + a set' : ''}${x.about ? ' · ' + x.about : ''} · ${x.credit || ''}`;
-    b.addEventListener('click', () => { if (confirm(`Add “${x.name}” to My Sounds${x.set ? ' (and its set to My sets)' : ''}?\n\n${x.about || ''}\n${x.credit || ''}${x.source ? '\nFrom: ' + x.source : ''}`)) addShared(x); });
+    b.textContent = x.private && !x.locked ? '🔒 ' + x.name : x.name;
+    small.textContent = x.locked ? `${x.filed ? 'in the library' : 'in the inbox'} · sent ${x.sent || ''} · scrambled: tap to put in your passphrase`
+      : `${x.filed ? 'in the library' : 'in the inbox'}${x.private ? ' (private)' : ''} · ${x.sounds?.length ?? '?'} sound${x.sounds?.length === 1 ? '' : 's'}${x.set ? ' + a set' : ''}${x.about ? ' · ' + x.about : ''} · ${x.credit || ''}`;
+    b.addEventListener('click', async () => {
+      if (x.locked) { if (await vaultAsk()) drawBrowser(); return; }
+      if (confirm(`Add “${x.name}” to My Sounds${x.set ? ' (and its set to My sets)' : ''}?\n\n${x.about || ''}\n${x.credit || ''}${x.source ? '\nFrom: ' + x.source : ''}`)) addShared(x);
+    });
     b.appendChild(small); list.appendChild(b);
   }
   const again = document.createElement('button'); again.textContent = '↻ Look again'; again.addEventListener('click', () => { shared = null; drawBrowser(); }); list.appendChild(again);
+  const vb = document.createElement('button'); vb.textContent = vaultKey ? '🔒 Lock the private library on this device' : '🔓 Open the private library (passphrase)';
+  vb.addEventListener('click', async () => { if (vaultKey) { if (confirm('Forget the private library’s key on this device? (Your passphrase opens it again.)')) { await vaultForget(); status('🔒 Locked on this device.'); } } else await vaultAsk(); shared = null; drawBrowser(); });
+  list.appendChild(vb);
 }
 async function addShared(x) {
   status(`Getting “${x.name}”…`);
   try {
-    const P = await (await fetch(x.url)).json(), r = await importPack(P);
+    const P = x.private ? JSON.parse(await vaultUnlock(await (await fetch(x.url)).text())) : await (await fetch(x.url)).json(), r = await importPack(P, !!x.private);
     status(`“${x.name}” is in My Sounds (${r.sounds} sound${r.sounds === 1 ? '' : 's'})${r.set ? ' and My sets (Loops › ⚙)' : ''}.`);
   } catch (e) { status(`Could not get “${x.name}”: ${e.message}`); log('error', 'shared: ' + e.message); }
 }
@@ -6309,7 +6374,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
   openCellMenu: (c, r) => openCellMenu(c, r),
   press: k => press(k), release: k => release(k),
-  state: () => S, mine: () => mine,
+  state: () => S, mine: () => mine, vault: { shared: () => sharedItems(true).then(l => l.map(x => ({ name: x.name, private: !!x.private, locked: !!x.locked, filed: x.filed, source: x.source }))), add: n => sharedItems().then(l => addShared(l.find(x => x.name === n))), ask: () => vaultAsk(), lock: t => vaultLock(t), forget: () => vaultForget(), pack: o => packOf(o), gridSet: n => gridSet(n), key: () => !!vaultKey },
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
   lpSlotInfo: async () => { const sl = await lpSlot(); return sl && { kind: sl.kind, zones: sl.zones?.length, base: sl.base, vol: sl.params?.vol, trig: sl.params?.trig, buf: sl.buf?.length, dur: sl.buf?.duration, z0: sl.zones?.[0] }; },
   masterGain: () => eng.master.gain.value,

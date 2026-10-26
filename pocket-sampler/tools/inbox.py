@@ -1,7 +1,8 @@
 # Usage: python3 -I inbox.py <a checkout of the library-inbox branch> <sounds folder> <SOUNDS.md>
 # Files what was sent to the library from the app (☁ Send to the library): each inbox/<item>/ holds
 # pack.pocketpack.json (the sounds, and a Loops set if one was sent) and notes.json (what it is, who
-# made it, where from and its license). Each is copied to <sounds>/shared/<name>.pocketpack.json,
+# made it, where from and its license); a private one holds only private.json and two scrambled files
+# (see below). Each is copied to <sounds>/shared/<name>.pocketpack.json,
 # listed in <sounds>/shared/index.json (which the app's ☁ Shared folder reads, on every device), and
 # entered in SOUNDS.md with its credit and whether it could stay if the app were sold. Prints the
 # inbox folders filed, to be removed from the inbox branch afterwards (see CLAUDE.md).
@@ -23,6 +24,25 @@ def selling(n):
 
 rows, filed = [], []
 root = os.path.join(INBOX, 'inbox')
+# 🔒 private items: scrambled with his passphrase (which is never here); filed as they are, unread, into
+# <sounds>/private/ with only their date in its index; not entered in SOUNDS.md one by one (their notes,
+# with the source and license, are inside, scrambled), only the standing line about the private library.
+PRIV = os.path.join(SOUNDS, 'private'); PINDEX = os.path.join(PRIV, 'index.json')
+pindex = json.load(open(PINDEX)) if os.path.exists(PINDEX) else {'about': 'The private library: scrambled (AES-GCM, key from his passphrase, never stored here); filed by tools/inbox.py.', 'items': []}
+for d in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+    p = os.path.join(root, d)
+    if not os.path.exists(os.path.join(p, 'private.json')): continue
+    if d not in {x['id'] for x in pindex['items']}:
+        os.makedirs(PRIV, exist_ok=True)
+        for part in ('notes', 'pack'):
+            src = open(os.path.join(p, f'{part}.enc')).read()
+            assert src.startswith('PSV1:'), f'{d}/{part}.enc is not scrambled: not filed'
+            open(os.path.join(PRIV, f'{d}.{part}.enc'), 'w').write(src)
+        pindex['items'].append({'id': d, 'sent': json.load(open(os.path.join(p, 'private.json')))['sent']})
+    filed.append(d)
+if pindex['items']:
+    pindex['items'].sort(key=lambda x: x['sent'], reverse=True)
+    json.dump(pindex, open(PINDEX, 'w'), indent=1)
 for d in sorted(os.listdir(root)) if os.path.isdir(root) else []:
     p = os.path.join(root, d)
     if not os.path.exists(os.path.join(p, 'notes.json')): continue
@@ -45,5 +65,5 @@ if rows:
     a = L.index(H); b = L.index('\n\n## ', a + len(H))
     L = L[:b] + '\n' + '\n'.join(rows) + L[b:]
     open(LEDGER, 'w').write(L)
-print(f'{len(rows)} filed, {len(filed) - len(rows)} already in the library')
+print(f'{len(rows)} filed, {len(pindex["items"])} private in all (scrambled), {len(filed)} inbox folders done')
 for d in filed: print('inbox/' + d)

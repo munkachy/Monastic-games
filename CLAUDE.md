@@ -35,3 +35,15 @@ branch; Menu › Sounds › ☁ Shared shows it on every device at once. When he
 read the notes it filed (and tell him anything unclear, such as a license marked Check), commit the
 new `sounds/shared` files and SOUNDS.md lines, deploy them with the rest, and remove the filed
 folders from the inbox branch. His GitHub token lives only in his browser; never ask for it.
+
+## Pocket Sampler: the private library (scrambled)
+
+A send ticked 🔒 Private arrives as `inbox/<date>-private-<id>/` holding only `private.json` (its date)
+and `notes.enc` / `pack.enc`, scrambled with AES-GCM under a key made from his passphrase on his own
+devices. `tools/inbox.py` files them unread into `pocket-sampler/sounds/private/` (only ids and dates in
+its index; nothing per item in SOUNDS.md), and they deploy like the rest. Never ask for the passphrase,
+never try to open or guess it, and never put anything from the private library in the repo unscrambled
+(or describe it in commits, the ledger or the README). It is for his own use only: what is in it may be
+licensed for personal use or not licensed for sharing at all, so it must never be unscrambled anywhere
+public. Sources found for it still go by the rule above: lawful ones only (personal-use licences such as
+the BBC's RemArc are fine); never copies from places with no right to share them.

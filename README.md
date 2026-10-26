@@ -240,6 +240,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   starship-computer screen in the style of 1980s–90s Star Trek, made from
   scratch (no logos or graphics from the show), lettered in Antonio (SIL
   Open Font License, `pocket-sampler/fonts/`).
+- **🔒 Private library:** a send ticked Private is scrambled on the device
+  (AES-GCM, key from his passphrase, never stored in the repository), filed
+  scrambled in `pocket-sampler/sounds/private/`, and opened only on his
+  devices with the passphrase.
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,
