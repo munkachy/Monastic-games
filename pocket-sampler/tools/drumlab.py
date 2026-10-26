@@ -369,8 +369,60 @@ VIG_LOOPS = {
         ('Chimes', [('Chime', '..o.....x.....o.', '......o...x.....')]),
     ]}
 
+# Ephesians (ephesians.py): A minor, 139 BPM, straight; industrial techno, stark as concrete and steel:
+# deep, rumbling and driven kicks on A, steel clangs and an anvil, claps and noise snares, 909-ish hats
+# and a fluttering roll that make the drums shiver. Every hit is made here (no outside sounds).
+A1, E2 = 33, 40
+def eph_kit():
+    P = plaits
+    rumble = lambda: lp(sat(mix(P('kick', A1, 0.2, 0.3, 0.75, 0.9, 1.6), 0.4 * punch(A1, 0.2, 6)), 2.5), 900)
+    return [
+        ('Rumble kick', lambda: mix(rumble(), 0.5 * lp(sat(P('kick', A1 - 12, 0.15, 0.25, 0.9, 0.7, 1.8), 4), 300)), 0.95),
+        ('Steel kick', lambda: sat(mix(P('kick', A1, 0.35, 0.55, 0.35, 0.95, 0.7, 'aux'), 0.6 * punch(A1, 0.6, 7)), 3.5), 0.95),
+        ('Driven kick', lambda: lp(sat(mix(P('kick', A1, 0.25, 0.45, 0.5, 0.95, 0.9), 0.5 * punch(A1, 0.4, 8)), 6), 5000), 0.95),
+        ('Concrete clap', lambda: sat(clap_of(bp(P('snare', 60, 1.0, 0.7, 0.9, 0.95, 0.6, 'aux'), 900, 6000), hands=4, gap=0.008, tail=0.22, seed=50), 1.5), 0.9),
+        ('Noise snare', lambda: lp(sat(P('snare', 64, 0.85, 0.75, 0.55, 0.95, 0.5, 'aux'), 2.0), 11000), 0.9),
+        ('Steel snare', lambda: mix(lp(P('snare', 62, 0.5, 0.6, 0.35, 0.95, 0.4), 9000), 0.6 * shaped(P('modal', 79, 0.85, 0.8, 0.25, 0.9, 0.5), 0.3)), 0.9),
+        ('Clang', lambda: shaped(P('modal', 69, 0.95, 0.85, 0.45, 0.95, 1.4), 1.0), 0.6),         # A, struck steel
+        ('High clang', lambda: shaped(P('modal', 81, 0.9, 0.9, 0.3, 0.9, 0.9), 0.6), 0.55),
+        ('Anvil', lambda: sat(shaped(P('modal', 76, 0.75, 0.95, 0.2, 0.95, 0.6), 0.35), 1.5), 0.6),   # E
+        ('Pipe', lambda: shaped(P('string', 57, 0.95, 0.75, 0.5, 0.9, 1.0), 0.7), 0.55),
+        ('Hat', lambda: P('hat', 64, 0.6, 0.75, 0.15, 0.85, 0.25), 0.6),
+        ('Open hat', lambda: P('hat', 64, 0.6, 0.7, 0.55, 0.85, 0.9), 0.5),
+        ('Ride', lambda: P('hat', 56, 0.85, 0.6, 0.85, 0.8, 2.0), 0.45),
+        ('Flutter', lambda: shaped(P('particle', 84, 0.7, 0.85, 0.3, 0.9, 0.3), 0.12), 0.5),
+        ('Spark', lambda: hp(shaped(P('noise', 96, 0.9, 0.9, 0.9, 0.9, 0.2), 0.05), 3000), 0.5),
+        ('Low tom', lambda: sat(head(hz(A1 + 12), secs=0.35, strike=0.3, bend=0.2, seed=9), 1.5), 0.8),
+    ]
+EPH_LOOPS = {
+    'kick': [
+        ('Steel four', [('Steel kick', 'x...x...x...x...', 'x...x...x...x...')]),
+        ('Rumble four', [('Rumble kick', 'x...x...x...x...', 'x...x...x...x...')]),
+        ('Driven four', [('Driven kick', 'x...x...x...x...', 'x...x...x...x..o')]),
+        ('Rumble rolls', [('Rumble kick', 'x...x...x...x...', 'x...x...x...x.oo')]),
+        ('Broken steel', [('Steel kick', 'x...x...x..ox...', 'x...x..ox...x...')]),
+        ('Half stomp', [('Driven kick', 'x.......x.......', 'x.......x...x...')]),
+    ],
+    'snare': [
+        ('Concrete claps', [('Concrete clap', '....x.......x...', '....x.......x...')]),
+        ('Noise backbeat', [('Noise snare', '....x.......x...', '....x.......x..o')]),
+        ('Steel backbeat', [('Steel snare', '....x.......x...', '....x.......x...'), ('Concrete clap', '............o...', '....o.......o...')]),
+        ('Clangs', [('Clang', '..x.......x.....', '..x...o...x.....'), ('High clang', '......o.......o.', '.......o......o.')]),
+        ('Anvil and pipe', [('Anvil', '...x......x..x..', '...x.....x....x.'), ('Pipe', 'x.......o.......', 'x.......o.....o.')]),
+        ('Toms and claps', [('Concrete clap', '....x.......x...', '....x.......x...'), ('Low tom', '..o...o...o..o..', '..o...o..o..o.oo')]),
+    ],
+    'tops': [
+        ('Sixteenth hats', [('Hat', 'xoxoxoxoxoxoxoxo', 'xoxoxoxoxoxoxoxo')]),
+        ('Offbeat open hats', [('Open hat', '..x...x...x...x.', '..x...x...x...x.'), ('Hat', 'o...o...o...o...', 'o...o...o...o...')]),
+        ('Ride', [('Ride', 'x.o.x.o.x.o.x.o.', 'x.o.x.o.x.o.x.oo')]),
+        ('Flutter', [('Flutter', '..x...x..x..x.xx', '..x..x.x..x.xxxx'), ('Hat', 'o.o.o.o.o.o.o.o.', 'o.o.o.o.o.o.o.o.')]),
+        ('Sparks', [('Spark', 'x..x..x..x..x.x.', '.x..x..x..x.x..x')]),
+        ('Shivering hats', [('Hat', 'xxxoxxxoxxxoxxxo', 'xxxoxxxoxxxoxoxx'), ('Open hat', '..............x.', '......x.......x.')]),
+    ]}
+
 PACKS = {'ebb': ('EBB', [('kit', 'Kit', ebb_kit)], EBB_LOOPS, 92, 58),
-         'vig': ('Vigils', [('kit', 'Kit', vig_kit)], VIG_LOOPS, 144, 54)}
+         'vig': ('Vigils', [('kit', 'Kit', vig_kit)], VIG_LOOPS, 144, 54),
+         'eph': ('Ephesians', [('kit', 'Kit', eph_kit)], EPH_LOOPS, 139, 50)}
 def loop_cells(pack):            # the set's Kick, Snare and Tops columns: the loops, in order
     _, _, loops, _, _ = PACKS[pack]
     return [[{'lib': f'{pack}{bid}', 'k': k, 'mode': 'loop', 'name': name} for k, (name, _) in enumerate(loops[part])] for part, bid, _ in LOOP_PARTS]
@@ -478,7 +530,7 @@ def draw(rows, path, title):
 def preview(path, x):            # a WAV to listen to (a loop twice over)
     w = wave.open(path, 'wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(RATE)
     w.writeframes((np.clip(x, -1, 1) * 32767).round().astype('<i2').tobytes()); w.close()
-pack_set = lambda pack: {'ebb': 'electroboombap', 'vig': 'vigils'}[pack]
+pack_set = lambda pack: {'ebb': 'electroboombap', 'vig': 'vigils', 'eph': 'ephesians'}[pack]
 def write_bank(sounds, bid, name, hits, loops=None, gap=int(0.02 * RATE)):
     data, slices, names = [], [], []
     for h in hits:

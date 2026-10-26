@@ -37,6 +37,17 @@ INSTRUMENTS = {
     'viglauds': ('Lauds Pluck', 60, 'string', 0.1, 0.7, 0.6, 'out', 'struck', None, None, None),
     'vigbell': ('Compline Bell', 60, 'modal', 0.3, 0.55, 0.7, 'out', 'struck', None, None, None),
     'vigglass': ('Night Glass', 60, 'terrain', 0.5, 0.5, 0.5, 'out', 'keys', (0.004, 1.4), None, (0, 5.0, 0.05, 0, 0.1)),
+    # Ephesians' sounds (A minor, industrial techno, ephesians.py):
+    #   ephsignal  Emergency Signal: an additive tone swung up and down like a siren, a half step each way
+    #   ephdrone   Strained Drone: phase distortion held, its timbre straining slowly back and forth
+    #   ephvolt    Voltage Bass: the analog VCF, resonant and hard, short
+    #   ephclang   Steel Clang: the modal resonator struck hard, inharmonic, like a steel beam
+    #   ephstab    Voltage Stab: the waveshaper, a hard key that fades
+    'ephsignal': ('Emergency Signal', 60, 'additive', 0.15, 0.3, 0.5, 'out', 'held', (0.02, 0.4), 0.6, (0.5, 2.2, 0.0, 0, 0.1)),
+    'ephdrone': ('Strained Drone', 48, 'phasedist', 0.5, 0.45, 0.6, 'out', 'held', (0.6, 1.4), 0.9, (0.0, 0.35, 0.18, 0, 0.1)),
+    'ephvolt': ('Voltage Bass', 36, 'vcf', 0.55, 0.62, 0.95, 'out', 'held', (0.003, 0.12), 0.3, (0, 5.0, 0, 0, 0.1)),
+    'ephclang': ('Steel Clang', 60, 'modal', 0.45, 0.65, 0.45, 'out', 'struck', None, None, None),
+    'ephstab': ('Voltage Stab', 48, 'waveshape', 0.6, 0.7, 0.6, 'out', 'keys', (0.002, 0.5), None, (0, 5.0, 0.0, 0, 0.1)),
 }
 
 def envelope(n, a, hold, rel):

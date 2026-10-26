@@ -262,6 +262,18 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Strings (the string machine), Night Swarm, Chant (the formant voice),
   Cloister Bass, Howl, Lauds Pluck, Compline Bell and Night Glass, each
   checked as it is made to play the note asked.
+- **Ephesians loop set** (Loops › ⚙ › Sets): industrial techno in A minor
+  at 139 BPM, straight, in the line of Remixlive's "Voltage Techno" and
+  borrowing nothing from it: its own steel-and-concrete kit, a rolling
+  voltage bass, stabs and a strained drone, a siren-like signal and steel
+  clangs that fall in threes against the four; and words of Ephesians 3
+  (Good News Translation) in pairs, a low flat robot voice answered by a
+  higher, quicker one. Five new Plaits instruments (Emergency Signal,
+  Strained Drone, Voltage Bass, Steel Clang, Voltage Stab); the stairwell
+  as its room (`pocket-sampler/tools/ephesians.py`).
+- **Real rain:** the made-in-code rain is replaced by a recording,
+  Benjamin Trimoreau's summer rain (Taastrup, 2017; radio aporee, Public
+  Domain Mark), looped seamlessly (`pocket-sampler/tools/rain.py`).
 - **Old records** (`pocket-sampler/tools/records.py`): real record noise in
   place of the made-up vinyl: the run-in and run-out grooves of Edison's
   own discs and cylinders (1888-1925, public domain), looped seamlessly.
