@@ -236,6 +236,10 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   6th overtones, and the sets' sub loops are given them by
   `pocket-sampler/tools/subbass.py` (the missing-fundamental trick bass
   enhancers use), so a sub comes through on small speakers.
+- **Looks:** Dark (the default), Classic (the beige PO-33), and LCARS: a
+  starship-computer screen in the style of 1980s–90s Star Trek, made from
+  scratch (no logos or graphics from the show), lettered in Antonio (SIL
+  Open Font License, `pocket-sampler/fonts/`).
 - **Sets and pack files:** save the Loops grid as a set; share it (or your
   sounds) as one pack file, to open on any device.
 - **☁ Send to the library:** a pack and notes on it (what, who, source,
