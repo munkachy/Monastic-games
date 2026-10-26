@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026i';
+import * as DZ from './design.js?v=20261026j';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026i';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026j';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1563,13 +1563,13 @@ function packSlot(sl) {
   const bufs = [], at = new Map();
   const ref = b => { if (!b) return null; if (!at.has(b)) { at.set(b, bufs.length); bufs.push({ rate: b.sampleRate, data: b.getChannelData(0).slice() }); } return at.get(b); };
   return { kind: sl.kind, params: { ...sl.params }, synth: sl.synth, zones: sl.zones, base: sl.base, contiguous: sl.contiguous, bpm: sl.bpm, credit: sl.credit, drumLoop: sl.drumLoop,
-    ...(sl.holdLoop && { holdLoop: true }), ...(sl.level && { level: sl.level }), ...(sl.made && { made: sl.made }),
+    ...(sl.holdLoop && { holdLoop: true }), ...(sl.level && { level: sl.level }), ...(sl.made && { made: sl.made }), ...(sl.keepLength && { keepLength: true }),
     buf: ref(sl.buf), slices: sl.slices?.map(x => ({ ...x, buf: ref(x.buf) })), bufs };
 }
 function unpackSlot(m) {
   const it = m.item, B = it.bufs.map(b => { const a = ctx.createBuffer(1, b.data.length, b.rate); a.copyToChannel(b.data, 0); return a; });
   return { factory: null, name: m.name, kind: it.kind, params: params(it.params), synth: it.synth, zones: it.zones, base: it.base, bpm: it.bpm, credit: it.credit,
-    ...(it.holdLoop && { holdLoop: true }), ...(it.level && { level: it.level }), ...(it.made && { made: it.made }),
+    ...(it.holdLoop && { holdLoop: true }), ...(it.level && { level: it.level }), ...(it.made && { made: it.made }), ...(it.keepLength && { keepLength: true }),
     ...((it.drumLoop || m.folder === 'Beats') && { drumLoop: true }),
     contiguous: it.contiguous, buf: it.buf != null ? B[it.buf] : null, slices: it.slices?.map(x => ({ ...x, buf: x.buf != null ? B[x.buf] : null })) };
 }
@@ -2012,7 +2012,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026j'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2105,7 +2105,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026j'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4322,10 +4322,19 @@ for (let k = 0; k < 16; k++) {
 // While the beat plays, a tap lands on the next point of the Quantize (1/16, 1/8, 1/4; one just after a
 // point plays at once); Free, or stopped: at once. While ⏺ Rec records, always at once: a recording keeps
 // your timing exactly as played (it can be put on the beat afterwards, in the cell's 🎹 Notes).
+// The pads' notes at every pitch (as long as the 8th pad's, by a stretch: audio.js keepLength), made in the
+// background as soon as the pads have a sound, for the key and octave now
+const lpRatio = (slot, k, root, scale, oct) => Math.pow(2, (slot.base + keySemis(k, scale) + (slot.params.pitch || 0) + root - slot.zones[0].m) / 12 + (oct || 0));
+function lpWarm(slot) {
+  if (!slot?.keepLength) return;
+  const sig = `${S.root}${S.scale}${lp.oct || 0}`; if (slot.warm === sig) return; slot.warm = sig;
+  for (let k = 0; k < 16; k++) { const r = lpRatio(slot, k, S.root, S.scale, lp.oct); if (Math.abs(r - 1) > 0.002) stretchLoop(slot.buf, slot.zones[0].s, slot.zones[0].e, r, -1); }
+}
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
   const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
+  lpWarm(slot);
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
   const trig = lpTrigNow(), held = lp.held ||= {};
@@ -4356,7 +4365,7 @@ $('lpTrig').addEventListener('click', () => {
   S.grid.lpTrig = next; persist(); lpDraw();
   status({ oneshot: 'One shot: each tap plays the whole note.', loop: 'Loop: a tap starts the note going round, another tap stops it.', gate: 'Gate: a pad plays only while held down.' }[next]);
 });
-function lpOct(d) { lp.oct = Math.max(-2, Math.min(2, (lp.oct || 0) + d)); try { localStorage.setItem('pocketLpOct', lp.oct); } catch (e) {} lpDraw(); }
+function lpOct(d) { lp.oct = Math.max(-2, Math.min(2, (lp.oct || 0) + d)); if (lp.slot) lpWarm(lp.slot); try { localStorage.setItem('pocketLpOct', lp.oct); } catch (e) {} lpDraw(); }
 $('lpOctDn').addEventListener('click', () => lpOct(-1));
 $('lpOctUp').addEventListener('click', () => lpOct(1));
 $('lpCrop').addEventListener('click', () => (lpEd.on ? lpEdClose() : lpEdit()));
@@ -4413,7 +4422,7 @@ async function lpSlot() {
     const fo = note.getChannelData(0), F = Math.min(n >> 2, Math.round(0.01 * buf.sampleRate)), Fi = Math.min(n >> 2, Math.round(0.003 * buf.sampleRate));
     for (let j = 0; j < F; j++) fo[n - 1 - j] *= j / F;
     if (cell.lpNote) for (let j = 0; j < Fi; j++) fo[j] *= j / Fi;      // a bit chosen by hand may start mid-wave: a 3 ms fade in
-    slot = { kind: 'multi', name: cell.name, buf: note, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: 0, e: n / buf.sampleRate }], params };
+    slot = { kind: 'multi', name: cell.name, buf: note, base: 60 + shift - S.root - mid, zones: [{ m: 60, s: 0, e: n / buf.sampleRate }], params, keepLength: true };     // (as long at any pitch)
   }
   slot.lpMode = lp.mode; lp.cell = cell; lp.slot = slot;
   return slot;
@@ -4577,6 +4586,9 @@ async function seqRender(seq, slot) {
   const off = new OfflineAudioContext(2, Math.ceil((len + tail) * SR), SR), e = new Engine(off, { live: false });
   if (seq.fx) { e.delay.delayTime.value = Math.min(1.9, sd * 3); e.ppL.delayTime.value = e.ppR.delayTime.value = Math.min(1.9, sd * 3); }
   const strip = seq.fx ? padStrip(off, e, e.bus, seq.fx) : null;      // (recorded with the pads' EQ and effect: as it was heard)
+  if (slot.keepLength)          // each note as long as played: its stretched copy made first
+    await Promise.all([...new Set(seq.notes.map(n => lpRatio(slot, n.k, seq.root, seq.scale, n.o).toFixed(4)))].map(Number).filter(r => Math.abs(r - 1) > 0.002)
+      .map(r => stretchLoop(slot.buf, slot.zones[0].s, slot.zones[0].e, r, -1)));
   let last = null;          // (recorded with Choke on: each note cuts off the one before, as it was heard)
   const at = n => seqAt(seq, n) * sd;
   for (const n of [...seq.notes].sort((a, b) => seqAt(seq, a) - seqAt(seq, b))) { if (seq.choke) last?.stop?.(at(n)); last = playNote(e, slot, -1, n.k, at(n), { scale: seq.scale, bpm: seq.bpm, root: seq.root, rate: 2 ** (n.o || 0), ...(strip && { dest: strip.pre }), ...(seq.trig && { hold: n.d != null, lock: { trig: seq.trig } }) }); if (seq.trig && n.d != null) last?.stop?.(at(n) + n.d * sd); }
@@ -4703,6 +4715,7 @@ $('lpZOut').addEventListener('click', () => { lpEd.view = wvZoom(lpEd.view || [0
 $('lpZL').addEventListener('click', () => { lpEd.view = wvPan(lpEd.view || [0, 1], -1); lpWave(); });
 $('lpZR').addEventListener('click', () => { lpEd.view = wvPan(lpEd.view || [0, 1], 1); lpWave(); });
 function lpDraw() {
+  if (view === 'both' && !lpRec) lpSlot().then(lpWarm).catch(() => {});        // (the notes at every pitch, made ready)
   const gone = !S.grid.cells[lp.c]?.[lp.r] && !!lp.saved;
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
   $('lpRec').textContent = lpRec ? '■ Stop' : '⏺ Rec'; $('lpRec').classList.toggle('open', lprOpen); if (lprOpen) lprDraw();
