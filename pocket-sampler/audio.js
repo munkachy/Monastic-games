@@ -538,21 +538,23 @@ function runStretch(x, factor, rate, drums) {
   if (stretchWorker === undefined) {
     try {
       const src = [wsola, fftIn, pvoc, stretchDistance, stretchBest, slicePoints, sliceStretch].map(f => f.toString()).join('\n')
-        + `\nonmessage = e => { const d = e.data, out = d.drums ? sliceStretch(d.x, d.rate, d.factor, d.drums) : stretchBest(d.x, d.factor, d.rate); postMessage({ id: d.id, out }, [out.buffer]); };`;
+        + `\nonmessage = e => { const d = e.data, out = d.drums < 0 ? wsola(d.x, d.factor, d.rate, false, Math.round(d.x.length * d.factor)) : d.drums ? sliceStretch(d.x, d.rate, d.factor, d.drums) : stretchBest(d.x, d.factor, d.rate); postMessage({ id: d.id, out }, [out.buffer]); };`;
       stretchWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
       stretchWorker.onmessage = e => { jobs.get(e.data.id)?.(e.data.out); jobs.delete(e.data.id); };
     } catch (e) { stretchWorker = null; }
   }
-  if (!stretchWorker) return Promise.resolve(drums ? sliceStretch(x, rate, factor, drums) : stretchBest(x, factor, rate));
+  if (!stretchWorker) return Promise.resolve(drums < 0 ? wsola(x, factor, rate, false, Math.round(x.length * factor)) : drums ? sliceStretch(x, rate, factor, drums) : stretchBest(x, factor, rate));
   return new Promise(ok => { const id = ++jobSeq; jobs.set(id, ok); stretchWorker.postMessage({ id, x, factor, rate, drums }, [x.buffer]); });
 }
 // buf -> Map(key -> AudioBuffer, or a Promise of one while it is being made)
 const stretchCache = new WeakMap();
 // Stretched copies take memory (a few MB each): only the latest so many are kept, of all the loops.
-const stretchOrder = [];
+const stretchOrder = [], noteOrder = [];
 export const stretchLimit = { n: 40 };
-const stretchKey = (s, e, f, drums) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}${drums ? ':d' : ''}`;
-export function stretchLoop(buf, s, e, factor, drums = 0) {     // drums: a drum loop's own tempo; it is beat sliced, not stretched
+const stretchKey = (s, e, f, drums) => `${s.toFixed(4)}:${e.toFixed(4)}:${f.toFixed(4)}${drums ? ':d' + drums : ''}`;
+// drums: a drum loop's own tempo (it is beat sliced, not stretched); -1: one note, not a loop (stretched
+// from its start to its end, not round; the pads' notes, kept as long at any pitch; kept apart, up to 128)
+export function stretchLoop(buf, s, e, factor, drums = 0) {
   let m = stretchCache.get(buf); if (!m) stretchCache.set(buf, m = new Map());
   const key = stretchKey(s, e, factor, drums), had = m.get(key);
   if (had) return had instanceof AudioBuffer ? Promise.resolve(had) : had;
@@ -561,8 +563,10 @@ export function stretchLoop(buf, s, e, factor, drums = 0) {     // drums: a drum
     const b = new AudioBuffer({ length: out.length, numberOfChannels: 1, sampleRate: rate }); b.copyToChannel(out, 0);
     m.set(key, b); return b;
   });
-  m.set(key, p); stretchOrder.push([m, key]);
-  while (stretchOrder.length > stretchLimit.n) { const [mm, kk] = stretchOrder.shift(); mm.delete(kk); }
+  m.set(key, p);
+  const order = drums < 0 ? noteOrder : stretchOrder, lim = drums < 0 ? 128 : stretchLimit.n;
+  order.push([m, key]);
+  while (order.length > lim) { const [mm, kk] = order.shift(); mm.delete(kk); }
   return p;
 }
 // The stretched loop if it is ready (and if not, start making it).
@@ -633,6 +637,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       const midi = slot.base + keySemis(k, scale) + P.pitch + root;
       const z = slot.zones.reduce((a, b) => (Math.abs(b.m - midi) < Math.abs(a.m - midi) ? b : a));
       buf = slot.buf; s = z.s; e = z.e; r = Math.pow(2, (midi - z.m) / 12) * rate;
+      // keepLength (the Loops + Pads pads): as long at any pitch: stretched by the pitch, then sped up by it
+      if (slot.keepLength && Math.abs(r - 1) > 0.002) { const sb = stretchedNow(buf, s, e, r, -1); if (sb) { buf = sb; s = 0; e = sb.duration; } }
       start = P.start || 0; len = P.len;
       if (sustain && z.hs != null && !start) { s = z.hs; e = z.he; len = 1; }     // held: its held take
       if (z.ls != null && !start) zl = [z.ls, z.le];
