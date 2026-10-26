@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026k';
+import * as DZ from './design.js?v=20261026l';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026k';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026l';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1243,7 +1243,7 @@ function itemsOf(node) {
   if (it === 'favs') return favChoices();
   if (typeof it === 'string' && it.startsWith('hits:')) return hitItems(it.slice(5)).filter(c => !doomed(c));
   if (node.contents) return node.contents.filter(c => !doomed(c));
-  return [...mine.filter(m => m.type === 'loop' && folderOf(m) === node[0]).map(m => ({ mine: m })),     // your loops first
+  return [...mine.filter(m => (m.type === 'loop' || m.type === 'pack') && m.item && folderOf(m) === node[0]).map(m => ({ mine: m })),     // your loops and packs first
     ...it.filter(x => Array.isArray(x) || (LIBRARY[x] && !toDelete().has(x))).map(x => (Array.isArray(x) ? x : { lib: x }))];
 }
 // Review the library: every built-in sound, to hear and tick for deleting. The ticks are kept on this
@@ -2023,7 +2023,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026l'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2116,7 +2116,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026l'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4940,7 +4940,7 @@ async function packGroups(id) {
 // The sounds for a cell, in the browser's colour folders (Beats red, Bass green...); the folder for the
 // column comes first, but anything can go anywhere. Instruments play on the Pads (⟳ Loop brings them here).
 const COL_FOLDER = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Bass', 'Chords', 'Lead', 'Sub and color', 'Vox and keys'];
-const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.test(f[1]));
+const cellFolders = () => TREE[1].filter(f => Array.isArray(f[1]) || /^hits:/.test(f[1]) || f[1] === 'mine:pack');
 // A sample's own tempo and key, shown where a cell's sound is chosen and on the grid. The key is found
 // by listening (once, one sound at a time, kept on this device); drums have none.
 const keyMemo = (() => { try { return JSON.parse(localStorage.getItem('pocketKeys') || '{}'); } catch (e) { return {}; } })();
@@ -4978,9 +4978,11 @@ function cellMeta(cell, c) {               // "92 · F min" (a tempo only for dr
   return [t ? Math.round(t) : '', want ? keyWord(keyMemo[id], c === 3 || c === 6 || LOW_LIBS.has(cell.lib)) : ''].filter(Boolean).join(' · ');
 }
 function folderOf(m) { return m.folder === 'Sub' ? 'Sub and color' : m.folder; }       // the purple folder was "Sub"
-function folderSounds(f) {          // what a cell can take from a folder: your loops, packs (a sound of them), single hits
-  if (typeof f[1] === 'string') return hitItems(f[1].slice(5)).filter(c => !doomed(c)).map(c => ({ hit: c }));
-  return [...mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).map(m => ({ mine: m })),
+function folderSounds(f) {          // what a cell can take from a folder: your loops and packs, packs (a sound of them), single hits
+  if (f[1] === 'mine:pack') return mine.filter(m => m.type === 'pack' && m.item).map(m => ({ minePack: m }));
+  const yours = mine.filter(m => m.type === 'pack' && m.item && folderOf(m) === f[0]).map(m => ({ minePack: m }));
+  if (typeof f[1] === 'string') return [...yours, ...hitItems(f[1].slice(5)).filter(c => !doomed(c)).map(c => ({ hit: c }))];
+  return [...mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).map(m => ({ mine: m })), ...yours,
     ...f[1].filter(id => LIBRARY[id] && isPack(id) && !toDelete().has(id)).map(id => ({ pack: id }))];
 }
 // A robot voice in a cell (the Hype Words, the robot's words in Electro Boom Bap, or words typed in
@@ -5127,9 +5129,9 @@ async function drawCellMenu() {
     S.grid.cells[c][r] = { ...x, vol: was?.vol ?? 1 };
     choosing = false; persist(); warmGridSoon(); drawCellMenu(); drawLoops();
   };
-  const putHit = (lib, k, x) => {
+  const putHit = (lib, k, x) => {         // lib: a built-in pack's id, or { mine: id } for one of yours
     const was = S.grid.cells[c][r], hit = HIT_COLS.has(c) && !x.bpm, beats = x.bpm ? 0 : was ? was.beats : hit ? 4 : 0;   // a loop plays whole
-    put({ lib, k, name: x.name, mode: was?.mode || (x.bpm || lib === 'ambience' || hit ? 'loop' : 'oneshot'), ...(beats && { beats }) });
+    put({ ...(typeof lib === 'object' ? lib : { lib }), k, name: x.name, mode: was?.mode || (x.bpm || lib === 'ambience' || hit ? 'loop' : 'oneshot'), ...(beats && { beats }) });
   };
   crumb('Sounds', () => { menuPack = menuFolder = menuSet = null; drawCellMenu(); });
   if (menuSet) {             // a pack, its sounds by colour
@@ -5178,8 +5180,8 @@ async function drawCellMenu() {
     for (const f of [own, ...fs.filter(x => x !== own)].filter(Boolean)) {
       const n = f[1] === 'hits:snare' || f[1] === 'hits:tops' ? (banks ? folderSounds(f).length : '') : folderSounds(f).length;
       if (n === 0) continue;
-      const mineN = Array.isArray(f[1]) ? mine.filter(m => m.type === 'loop' && folderOf(m) === f[0]).length : 0;
-      const what = typeof f[1] === 'string' ? `${n} hits` : `${n - mineN} pack${n - mineN === 1 ? '' : 's'}${mineN ? ` + ${mineN} of your loops` : ''}`;
+      const mineN = f[1] === 'mine:pack' ? n : mine.filter(m => (m.type === 'pack' || (m.type === 'loop' && Array.isArray(f[1]))) && m.item && folderOf(m) === f[0]).length;
+      const what = f[1] === 'mine:pack' ? `${n} of yours` : `${n - mineN} ${typeof f[1] === 'string' ? 'hit' : 'pack'}${n - mineN === 1 ? '' : 's'}${mineN ? ` + ${mineN} of yours` : ''}`;
       btn('▸ ' + f[0].replace(/ \(.*\)$/, ''), `${what}${f === own ? ' · this column' : ''}`,
         () => { menuFolder = f[0]; menuPack = null; drawCellMenu(); }, cell && f === own, f[2] || 'var(--accent)', 'folder');
     }
@@ -5203,6 +5205,7 @@ async function drawCellMenu() {
         const b = btn(it.mine.name, tempo, () => put({ mine: it.mine.id, k: 0, name: it.mine.name, mode: 'loop' }), cell?.mine === it.mine.id, fc);
         if (it.mine.folder !== 'Beats') cellBase({ mine: it.mine.id }).then(sl => sl && sampleKey('mine:' + it.mine.id, sl, 0)).then(kk => { if (b.isConnected && kk) b.querySelector('small').textContent = `${tempo} · in ${keyWord(kk, it.mine.folder === 'Bass' || it.mine.folder === 'Sub')}`; });
       }
+      else if (it.minePack) btn(it.minePack.name + ' ▸', `yours · ${it.minePack.item.slices?.length || 0} sounds`, () => { menuPack = 'mine:' + it.minePack.id; drawCellMenu(); }, cell?.mine === it.minePack.id, fc);
       else if (it.pack) btn(LIBRARY[it.pack].name + ' ▸', `${libTag(it.pack)} · ${banks?.[LIBRARY[it.pack].bank || it.pack]?.from?.length || ''} sounds`, () => { menuPack = it.pack; drawCellMenu(); }, cell?.lib === it.pack, fc);
       else {
         const h = it.hit, x = { name: banks[h.from.lib].from[h.k], bpm: banks[h.from.lib].loops?.[h.k]?.[0] };
@@ -5212,6 +5215,21 @@ async function drawCellMenu() {
     }
     const inst = Array.isArray(F[1]) ? F[1].filter(id => LIBRARY[id] && !isPack(id)) : [];
     if (inst.length) { const p = document.createElement('p'); p.className = 'note lmnote'; p.textContent = `${inst.map(id => LIBRARY[id].name).slice(0, 6).join(', ')}${inst.length > 6 ? '…' : ''}: instruments, played on the Pads. Record a pattern with one and ⟳ Loop it to put it here.`; list.appendChild(p); }
+    return;
+  }
+  if (menuPack.startsWith('mine:')) {      // one of your packs (made, or from a pack file): its sounds
+    const id = menuPack.slice(5), m = mine.find(x => x.id === id);
+    if (!m) { menuPack = null; drawCellMenu(); return; }
+    crumb(m.name, () => drawCellMenu(), fc);
+    const slot = await cellBase({ mine: id });
+    if (menuPack !== 'mine:' + id || !menuCell || !slot) return;
+    slot.slices.forEach((x, k) => {
+      if (!x) return;
+      btn(x.name || `sound ${k + 1}`, x.bpm ? `${Math.round(x.bpm)} BPM · ${x.bars} bar${x.bars > 1 ? 's' : ''}` : '', () => {
+        playNote(eng, slot, -1, k, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root });      // a taste
+        putHit({ mine: id }, k, { ...x, name: x.name || `sound ${k + 1}` });
+      }, cell?.mine === id && cell.k === k, fc);
+    });
     return;
   }
   crumb(LIBRARY[menuPack].name, () => drawCellMenu(), fc);
@@ -5743,7 +5761,9 @@ async function importPack(P, priv = false) {          // priv: from the private 
   if (!db) throw new Error('saving needs this browser’s storage, which is not available here');
   const map = new Map(), t = Date.now();
   for (const [i, m] of P.sounds.entries()) {
-    const id = 'm' + (t + i).toString(36) + 'p'; map.set(m.id, id);
+    const old = P.from && mine.find(x => x.name === m.name && x.type === m.type && x.from?.name === P.from.name && !!x.private === priv);
+    const id = old ? old.id : 'm' + (t + i).toString(36) + 'p'; map.set(m.id, id);
+    if (old) mineSlots.delete(id);
     await idbPut('mine', { ...recIn(m), id, created: t + i, ...(P.from && { from: P.from }), ...(priv && { private: true }) }, id);
   }
   let setId = null;
