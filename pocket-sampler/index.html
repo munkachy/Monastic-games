@@ -251,6 +251,12 @@
   .help b { color: var(--accent); }
   .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
   #status { min-height: 1.3em; margin: 8px 2px 0; }
+  #meter { position: fixed; left: 50%; transform: translateX(-50%); bottom: 2px; z-index: 50; background: rgba(0,0,0,.85); color: #e8e8e8; border: 1px solid #555;
+    border-radius: 8px; padding: 2px 8px; font: 10px/1.35 ui-monospace, Menlo, monospace; max-width: 300px; cursor: pointer; }
+  #meter:not(.full) .mdet, #meter:not(.full) .mbtns { display: none; }
+  #meter b.ok { color: #7c7; } #meter b.warn { color: #fc6; } #meter b.bad { color: #f66; }
+  #meter .mbtns { display: flex; gap: 6px; margin-top: 4px; }
+  #meter .mbtns button { font: inherit; padding: 2px 8px; min-height: 0; background: #333; color: #eee; border: 1px solid #666; border-radius: 5px; }
   /* your own buttons: blue, so they stand apart from the fixed ones */
   .fn button.custom { background: var(--custom); color: var(--custom-ink); box-shadow: 0 3px 0 var(--custom-sh); }
   :root:not(.classic) .fn button.custom { box-shadow: inset 0 0 0 1px #2c6a92, 0 3px 0 var(--custom-sh); }
@@ -702,7 +708,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026l</span><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261026m</span><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span></div>
 
   <div class="screen" id="screen">
@@ -897,6 +903,7 @@
   </div>
  </div>
 </div>
+<div id="meter" hidden><div id="meterText"></div><div class="mbtns"><button id="meterCopy">⧉ Copy</button><button id="meterHide">✕</button></div></div>
 <div id="menu" hidden>
  <div class="sheet">
   <div class="menubar"><b>Menu</b><button id="menuClose">✕ Close</button></div>
@@ -1055,10 +1062,12 @@
   </div>
 
   <div class="panel" id="tLog">
+    <label class="check"><input type="checkbox" id="meterOn"> Show the workload meter: how hard this device is working</label>
     <label class="check"><input type="checkbox" id="verbose"> Verbose: also every note and tap</label>
     <div class="btns" style="margin:0 0 8px"><button id="copyLog" class="go">Copy log</button><button id="clearLog">Clear</button></div>
     <pre id="logView"></pre>
     <p class="note">If the sound misbehaves: turn Verbose on, play until it happens, then Copy log and paste it into a message.</p>
+    <p class="note">The workload meter (a small line at the bottom of the screen, while it is on; tap it for more, and ⧉ Copy and ✕): <b>Sound</b>, how often the sound broke up in the last minute (0 is right); <b>Busy</b>, the longest the app was too busy to answer in the last second (under 50 ms you will not notice; over 100 ms taps and the screen lag); <b>Screen</b>, frames a second (60 is smooth); then how many loops and notes are playing, effects turned on, and loops still being made ready for a new tempo or key. Every 5 seconds it writes a line to this log: play a set the way you usually do, then ⧉ Copy on the meter (or Copy log here) and paste it into a message.</p>
   </div>
 
   <div class="panel help" id="tHelp">
@@ -1259,6 +1268,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261026l"></script>
+<script type="module" src="app.js?v=20261026m"></script>
 </body>
 </html>

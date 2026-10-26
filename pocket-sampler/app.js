@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261026l';
+import * as DZ from './design.js?v=20261026m';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026l';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261026m';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -119,6 +119,7 @@ setInterval(() => {
   if (ctx.state === 'running' && dW > 0.3) {
     if (dA < dW - 0.03) {
       log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+      meterDrops.push(w);
       // the sound breaking up again and again while playing: say what can help, once
       if (playing && !LIGHT) glitches.push(w);
       while (glitches.length && w - glitches[0] > 30000) glitches.shift();
@@ -133,6 +134,52 @@ setInterval(() => {
   if (ol !== outLat) { outLat = ol; log('audio', `output latency ${ol} ms`); }
   clockA = a; clockW = w;
 }, 1000);
+
+// The workload meter (Menu › Log › Show the workload meter): how hard this device is working, to
+// find what to make lighter. Sound: the audio clock falling behind (above) in the last minute. Busy:
+// the longest the page could not answer in the last second (a 100 ms timer firing late). Screen:
+// frames drawn a second. Then what is playing, the effects on, and stretches still waiting. While
+// it is on, a line goes to the log every 5 seconds (with the worst of those 5 seconds).
+let meterOn = false, meterFrames = 0, meterBusy = 0, meterLast = performance.now(), meterSecs = 0, meterW = { busy: 0, fps: 999, drops: 0 };
+const meterDrops = [];
+function meterTick() {           // every 100 ms while shown: how late this timer is, is how busy the page was
+  if (!meterOn) return;
+  const w = performance.now(); meterBusy = Math.max(meterBusy, w - meterLast - 100); meterLast = w;
+  setTimeout(meterTick, 100);
+}
+function meterFrame() { if (!meterOn) return; meterFrames++; requestAnimationFrame(meterFrame); }
+function meterShow(on) {
+  meterOn = on; $('meter').hidden = !on; $('meterOn').checked = on;
+  try { localStorage.setItem('pocketMeter', on ? '1' : ''); } catch (e) {}
+  if (on) { meterLast = performance.now(); meterFrames = 0; meterBusy = 0; meterSecs = 0; setTimeout(meterTick, 100); requestAnimationFrame(meterFrame); log('load', `meter on: ${LIGHT ? 'light' : 'normal'} engine, ${ctx.sampleRate} Hz, ${navigator.hardwareConcurrency || '?'} cores; ${navigator.userAgent}`); }
+}
+function meterNow() {
+  const fx = S.grid?.colFx || [], fxCols = fx.filter(f => fxItems(f).length).length, fxAll = fx.reduce((a, f) => a + fxItems(f).length, 0);
+  const notes = eng.voices.size, loops = [...eng.voices].filter(v => v.end === Infinity).length;
+  return { drops: meterDrops.length, fxCols, fxAll, pads: lpFxOn() ? fxItems(S.grid.lpFx).length : 0, notes, loops, waiting: stretchWaiting() };
+}
+setInterval(() => {
+  if (!meterOn) return;
+  const w = performance.now();
+  while (meterDrops.length && w - meterDrops[0] > 60000) meterDrops.shift();
+  const fps = meterFrames, busy = Math.round(meterBusy), m = meterNow(); meterFrames = 0; meterBusy = 0;
+  const cls = (v, ok, bad) => (v <= ok ? 'ok' : v >= bad ? 'bad' : 'warn');
+  $('meterText').innerHTML = `Sound <b class="${cls(m.drops, 0, 3)}">${m.drops ? m.drops + ' break' + (m.drops > 1 ? 's' : '') : 'clean'}</b> · Busy <b class="${cls(busy, 50, 100)}">${busy} ms</b> · Screen <b class="${cls(-fps, -50, -30)}">${fps} fps</b><span class="mdet"><br>`
+    + `${m.loops} loops, ${m.notes} notes · effects ${m.fxAll} on ${m.fxCols} col${m.fxCols === 1 ? '' : 's'}${m.pads ? ` + ${m.pads} pads` : ''}${m.waiting ? ` · <b class="warn">${m.waiting} loop${m.waiting > 1 ? 's' : ''} getting ready</b>` : ''}</span>`;
+  meterW.busy = Math.max(meterW.busy, busy); meterW.fps = Math.min(meterW.fps, fps); meterW.drops = m.drops;
+  if (++meterSecs % 5 === 0) {
+    log('load', `sound ${m.drops} breaks/min · busy worst ${meterW.busy} ms · screen worst ${meterW.fps} fps · ${playing ? 'playing' : 'stopped'} ${S.bpm} BPM · ${m.loops} loops, ${m.notes} notes · fx ${m.fxAll} on ${m.fxCols} cols${m.pads ? `, pads ${m.pads}` : ''} · waiting ${m.waiting} · ${S.grid?.setId || 'no set'}`);
+    meterW = { busy: 0, fps: 999, drops: 0 };
+  }
+}, 1000);
+$('meterOn').addEventListener('change', e => meterShow(e.target.checked));
+$('meterHide').addEventListener('click', e => { e.stopPropagation(); meterShow(false); });
+$('meter').addEventListener('click', () => $('meter').classList.toggle('full'));
+$('meterCopy').addEventListener('click', async e => {
+  e.stopPropagation();
+  try { await navigator.clipboard.writeText(LOG.join('\n')); status('Log copied. Paste it into a message.'); } catch (e) { status('Could not copy: use Menu › Log › Copy log.'); }
+});
+try { if (localStorage.getItem('pocketMeter')) setTimeout(() => meterShow(true), 0); } catch (e) {}
 
 // ---------------------------------------------------------------------------
 // The built-in sounds
@@ -2023,7 +2070,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026m'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2116,7 +2163,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261026m'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
