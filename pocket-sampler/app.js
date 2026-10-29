@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029m';
+import * as DZ from './design.js?v=20261029n';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029m';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029n';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2079,7 +2079,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029n'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2172,7 +2172,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029n'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2971,7 +2971,7 @@ function draw() {
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
     const away = false;
-    if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : pl ? pl.colour : keyColor(S.cur, k));
+    if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : pl ? pl.colour : padInstColour() || keyColor(S.cur, k));
     el.classList.toggle('tint', tint && !away); el.classList.toggle('away', away);
     el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('kitpad', S.mode === 'sound' && drumSide(k)); el.classList.toggle('steps', steps_);
     if (steps_) {
@@ -3001,6 +3001,8 @@ $('padOctUp').addEventListener('click', () => { if (padShared()) { lpOct(1); dra
 // The Pads play what the Loops + Pads pads play: the loop last tapped (its first note, or the bit chosen),
 // or a sound chosen here (Sound, then a key; or 📂 Library), until another loop is tapped. With neither yet,
 // the sound chosen. (A try: draw() can run before the Loops' code below has been reached.)
+// a designed sound on the pads (its column's colour, as in Loops + Pads); else none (the sound's own)
+function padInstColour() { try { return lpInst && lpTarget ? CHANNEL_COLOR[lpTarget.c] : null; } catch (e) { return null; } }
 function padShared() { try { return !!lpInst || !!lpCellNow(); } catch (e) { return false; } }
 function padLoopInfo() {
   try {
@@ -5011,7 +5013,7 @@ function lpDraw() {
   drawLock();
   if (lpRec && ctx.currentTime < lpRec.t0) setTimeout(lpDraw, Math.max(30, (lpRec.t0 - ctx.currentTime) * 1000));
   const cell = lpCellNow();
-  $('lpads').style.setProperty('--c', lpInst ? (lpTarget ? CHANNEL_COLOR[lpTarget.c] : 'var(--accent)') : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
+  $('lpads').style.setProperty('--c', lpInst ? (lpTarget ? CHANNEL_COLOR[lpTarget.c] : lpInst.cur != null ? soundVar(lpInst.cur) : 'var(--accent)') : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');      // the same colour as on the Pads
   $('lpSrc').textContent = lpInst ? `🎹 ${lpInst.name}${lpTarget ? ` → ${CHANNELS[lpTarget.c]}, cell ${lpTarget.r + 1}` : ''}` : cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}${gone ? ' (its cell emptied: still on the pads)' : ''}` : 'Tap a loop: the pads play it.';
   $('lpKeys').classList.toggle('empty', !cell && !lpInst);
   $('lpCrop').classList.toggle('on', !!lpEd.on || !!cell?.lpNote);
