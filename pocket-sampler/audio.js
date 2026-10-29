@@ -650,7 +650,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
       const semis = P.pitch + (P.keyOf != null ? toKey(root, P.keyOf) : 0);
       r = Math.pow(2, semis / 12) * rate;
       // A loop (made at a known tempo: the loop's own, or its sound's) is stretched to the tempo and
-      // key playing; until that is ready, it is sped up or slowed to keep the beat (the pitch moves a moment).
+      // key playing. Its stretched copy is made before it is launched; if it is still not ready, the loop
+      // waits (nothing plays) rather than being sped up or slowed, which would move its pitch.
       const lb = sl.bpm || slot.bpm;
       if (lb && P.nostretch) {
         // Re-Pitch: sped up or slowed like a record, pitch and all. A change of key (or Transpose) is a pitch
@@ -663,7 +664,8 @@ export function playNote(eng, slot, si, k, t, { rate = 1, reverse = false, uniso
         const f = loopStretch({ bpm: lb }, P, bpm, root);
         if (Math.abs(f - 1) > 0.002) {
           const sb = stretchedNow(buf, s, e, f, slot.drumLoop ? lb : 0);
-          if (sb) { buf = sb; s = 0; e = sb.duration; } else r = rate * bpm / lb;
+          if (!sb) return null;
+          buf = sb; s = 0; e = sb.duration;
         }
       }
       start = lock?.start ?? sl.start ?? 0; len = lock?.len ?? sl.len ?? 1;   // trim is per slice
