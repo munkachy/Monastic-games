@@ -363,6 +363,8 @@
   .vpick { position: relative; flex: none; }
   .vpick .vbtn { flex: none; white-space: nowrap; background: var(--ink); color: var(--body); }
   #padLib, #padLock, #padChoke { flex: none; white-space: nowrap; }
+  .calbox { margin: 4px 0 10px; } .caltap { width: 100%; height: 110px; font: inherit; font-size: 22px; font-weight: 700; letter-spacing: .2em; border: 0; border-radius: 14px; background: var(--accent); color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; } .caltap.down { filter: brightness(1.4); transform: translateY(2px); }
+  #calStart { font: inherit; font-weight: 700; border: 0; border-radius: 7px; padding: 4px 10px; background: var(--btn); color: var(--btn-ink); margin-left: 4px; }
   :root.sidepads .device > .vtabs { gap: 4px; } :root.sidepads .device > .vtabs button { padding: 4px 8px; letter-spacing: .04em; }     /* the four fit a small phone */
   #padLock.on, #lpLock.on, #padChoke.on, #lpChoke.on { background: var(--accent); color: #fff; }
   .vmenu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 9px;
@@ -725,7 +727,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029o</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029p</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for the next screen: Loops, Pads, Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓 Lock</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -969,6 +971,13 @@
 
   <div class="panel" id="tButtons">
     <p class="note" style="margin-top:0" hidden>The coloured buttons from the fourth row down are yours: choose what each one does. Each kind of thing has its colour, and a button takes the colour of what you give it: rhythm red, pitch and key purple, the sound amber, the voice blue, effects pink (in the Dark look; Classic keeps them all blue). Effects work while you hold the button. With the Pads upright, the first four are the small ones beside Copy and Undo, and the next eight are under the keys; the last eight show only sideways.</p>
+    <div class="row"><label for="tapLag">Tap timing</label><input type="range" id="tapLag" min="-50" max="250" step="1"><output id="oTapLag"></output></div>
+    <p class="note" style="margin:-2px 0 6px">How late your taps land after the beat you hear, on this device (the sound and the screen each take a moment). Quantize and ⏺ Rec take each tap that much earlier, so it goes to the beat you meant. <button id="calStart">🎯 Calibrate</button></p>
+    <div id="calBox" class="calbox" hidden>
+      <p class="note" id="calNote"></p>
+      <button id="calTap" class="caltap">TAP</button>
+      <div class="btns"><button id="calUse" class="go" hidden>Use it</button><button id="calCancel">Close</button></div>
+    </div>
     <div class="row"><label for="engineWay">Sound engine</label><select id="engineWay"><option value="full">Full (newer phones and iPads)</option><option value="light">Light (older iPads: steadier sound)</option></select><span></span></div>
     <p class="note" style="margin:-2px 0 6px">If the sound crackles or breaks up, choose Light: it gives the device more time to make the sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, and has a shorter reverb. The page reloads to change it.</p>
     <div class="row"><label for="padsWay">Pads</label><select id="padsWay"><option value="side">Sideways, like the Loops</option><option value="upright">Upright</option></select><span></span></div>
@@ -1102,6 +1111,7 @@
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
     <p><b>The Pads</b> are for playing over the loops: no patterns, no recording, nothing going across the keys. The buttons: <b>Sound</b> (tap it, then a key, to choose which of the 16 sounds the keys play), <b>FX</b> (hold or tap a key for an effect), <b>☰ Menu</b>, <b>▶ Play</b> (the loops' Play), <b>↶ Undo</b> and <b>↷ Redo</b>, and <b>Oct −</b> and <b>Oct +</b> (the keys an octave down or up). <b>📂 Library</b> at the top loads a sound onto the sound chosen; the key (C MIN) on the screen opens the key wheel.</p>
+    <p><b>Tap timing</b> (Menu › Setup): a tap reaches the app a little after your finger lands, and you hear the beat a little after it is played, so taps along with the beat run late, and Quantize, which only moves a tap forward, can push one to the beat after the one you meant. <b>🎯 Calibrate</b> plays 16 clicks: listen to four, then tap the big TAP on each. It measures how late your taps land (the middle of them), and <b>Use it</b> keeps that for this device. From then on Quantize and ⏺ Rec take each tap that much earlier. The slider sets it by hand (0 is none).</p>
     <p><b>The Pads play what Loops + Pads plays.</b> Tap a loop (in Loops or Loops + Pads) and the Pads screen plays it too: its first note, or the bit you chose, down and up the key across the keys (the 8th key is the note as played), with the same octave, Quantize and how it plays (One shot, Loop, Gate). The screen shows its name and · LOOP, and the keys take its column's colour. Choose a sound on the Pads instead (Sound, then a key; or 📂 Library) and it goes on the pads of both screens, until you tap another loop. On a loop, the wave editor shows the whole loop and the bit the pads play (the same as ✂ Crop in Loops + Pads), and Vol is the pads' own volume. <b>🔒 Lock</b> (beside 📂 Library on the Pads, and beside the name above the pads in Loops + Pads; the same lock): the pads keep the sound they have, so you can tap loops on and off without it changing; tap again to unlock. A sound you choose on purpose (Sound, Library, Spread) still goes on. <b>Choke</b> (beside 🔒 Lock on both screens; the same as Loops › ⚙ › Pads choke): tap it on and each note on the pads cuts off the one before, one voice at a time, like a bass or a lead; tap it off and they ring over each other.</p>
     <p><b>The wave editor</b> (under the buttons): the sound the keys play, as the last key played it (a kit's or a loop's: that key's own sound). Drag across it to choose the part that plays; grab either white edge to move just that side; tap it to hear the key. <b>Vol</b> (under it): drag the bar for the sound's volume. <b>Q</b> (Quantize; tap to step through Off, 1/16, 1/8, 1/4 and 1 bar, the same setting as in Loops + Pads): each tap on the keys waits for the next point of that grid, straight, in time with the loops; Off plays at once. <b>Spread</b> makes the bit chosen a sound of its own and spreads it across the pads as notes, down and up the key (pad 8 is the bit as chosen, moved to the key's root unless it is a drum; every note as long as the bit): it goes on the sound chosen (↶ Undo brings back what was there) and on the pads of both screens. <b>▶</b> plays it again; <b>Whole</b> takes all of it again. It is the sound's Start and Length (Menu › Settings), kept with the sound; ↶ Undo takes it back.</p>
     <p><b>Drums never change key.</b> When the key changes, the bass and every other instrument move to it, but the drums (the kits, hand drums, a single drum hit on a key, drum loops, and the Kick, Snare and Tops columns of the Loops) play exactly as they are, in any key.</p>
@@ -1294,6 +1304,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261029o"></script>
+<script type="module" src="app.js?v=20261029p"></script>
 </body>
 </html>
