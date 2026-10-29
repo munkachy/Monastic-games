@@ -313,6 +313,7 @@
   #pedCv { flex: 1; width: 100%; min-height: 0; border-radius: 9px; background: #000; box-shadow: inset 0 0 0 1px var(--edge); touch-action: none; }
   .pedbar { display: flex; gap: 6px; align-items: center; }
   .pedbar span { flex: 1; min-width: 0; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pedbar button.on { background: var(--accent); color: #fff; }
   .pedbar button { font: inherit; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 5px 10px; border: 0; border-radius: 7px; background: var(--btn); color: var(--btn-ink); }
   :root.sidepads .fn { gap: 5px; margin: 0; grid-auto-rows: minmax(0, 1fr); min-height: 0; }
   :root.sidepads .fn .pair { display: contents; }
@@ -720,7 +721,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029e</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029f</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button></div>
 
   <div class="screen" id="screen">
@@ -754,7 +755,7 @@
   <div class="keys robopads" id="robo" hidden></div>     <!-- Robot mode: a word on each pad -->
   <div class="ped" id="ped">        <!-- the wave of what the pads play: drag across it to choose the bit -->
     <canvas id="pedCv" aria-label="The sound the pads play: drag across it to choose the part that plays"></canvas>
-    <div class="pedbar"><span id="pedWhat"></span><button id="pedHear">▶ Hear</button><button id="pedAll">Whole</button></div>
+    <div class="pedbar"><span id="pedWhat"></span><button id="pedQ" title="Quantize: tap for Off, 1/16, 1/8, 1/4, 1 bar">Quantize 1/16</button><button id="pedHear">▶ Hear</button><button id="pedAll">Whole</button></div>
   </div>
   <div class="fn fnbot" hidden>
     <div class="pair"><button class="custom" data-slot="4"></button><button class="custom" data-slot="5"></button></div>
@@ -1091,7 +1092,7 @@
   <div class="panel help" id="tHelp">
     <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
     <p><b>The Pads</b> are for playing over the loops: no patterns, no recording, nothing going across the keys. The buttons: <b>Sound</b> (tap it, then a key, to choose which of the 16 sounds the keys play), <b>FX</b> (hold or tap a key for an effect), <b>☰ Menu</b>, <b>▶ Play</b> (the loops' Play), <b>↶ Undo</b> and <b>↷ Redo</b>, and <b>Oct −</b> and <b>Oct +</b> (the keys an octave down or up). <b>📂 Library</b> at the top loads a sound onto the sound chosen; the key (C MIN) on the screen opens the key wheel.</p>
-    <p><b>The wave editor</b> (under the buttons): the sound the keys play, as the last key played it (a kit's or a loop's: that key's own sound). Drag across it to choose the part that plays; grab either white edge to move just that side; tap it to hear the key. <b>▶ Hear</b> plays it again; <b>Whole</b> takes all of it again. It is the sound's Start and Length (Menu › Settings), kept with the sound; ↶ Undo takes it back.</p>
+    <p><b>The wave editor</b> (under the buttons): the sound the keys play, as the last key played it (a kit's or a loop's: that key's own sound). Drag across it to choose the part that plays; grab either white edge to move just that side; tap it to hear the key. <b>Quantize</b> (under it; tap to step through Off, 1/16, 1/8, 1/4 and 1 bar, the same setting as in Loops + Pads): each tap on the keys waits for the next point of that grid, straight, in time with the loops; Off plays at once. <b>▶ Hear</b> plays it again; <b>Whole</b> takes all of it again. It is the sound's Start and Length (Menu › Settings), kept with the sound; ↶ Undo takes it back.</p>
     <p><b>Drums never change key.</b> When the key changes, the bass and every other instrument move to it, but the drums (the kits, hand drums, a single drum hit on a key, drum loops, and the Kick, Snare and Tops columns of the Loops) play exactly as they are, in any key.</p>
     <p><b>If the sound crackles</b> on an older iPad: Menu › Setup › <b>Sound engine › Light</b>. The app notices when the sound keeps breaking up and suggests it. Light gives the device more time to make each moment of sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, has a shorter reverb and plays fewer notes at once. Sounds only tried in Menu › Sounds are let go when the menu closes, so they don't fill the memory.</p>
     <p><b>Sideways:</b> the Pads lie sideways, like the Loops: the screen and buttons on the left, the keys on the right. Held upright, the whole app is turned a quarter turn, so it reads the right way up with the phone held sideways (turn the phone to the left); if the phone really turns, it simply lies flat. Menu › Setup › Pads › Upright brings back the tall layout.</p>
@@ -1282,6 +1283,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261029e"></script>
+<script type="module" src="app.js?v=20261029f"></script>
 </body>
 </html>

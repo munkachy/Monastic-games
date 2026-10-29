@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029e';
+import * as DZ from './design.js?v=20261029f';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -864,7 +864,7 @@ function trigger(k, pad = k) {
   S.lastKey[S.cur] = k;
   flash = { k: pad, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  const sn = snap(false, S.slots[S.cur]?.params.choke ? `${S.cur}:*` : `${S.cur}:${k}`), h = playHeld(S.cur, k, pad, sn?.when);
+  const sn = snap(true, S.slots[S.cur]?.params.choke ? `${S.cur}:*` : `${S.cur}:${k}`), h = playHeld(S.cur, k, pad, sn?.when);
   if (h && sn) h.tick = sn.j;
   return h;
 }
@@ -2066,7 +2066,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029f'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2159,7 +2159,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029f'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2976,6 +2976,7 @@ function draw() {
   }
   drawRobot(); drawPed();
   $('padOctDn').textContent = octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'; $('padOctDn').classList.toggle('on', octOf(S.cur) < 0);
+  $('pedQ').textContent = `Quantize ${lpQName(S.quantGrid)}`; $('pedQ').classList.toggle('on', !!S.quantGrid);
   $('padOctUp').textContent = octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'; $('padOctUp').classList.toggle('on', octOf(S.cur) > 0);
 }
 $('padOctDn').addEventListener('click', () => shiftOct(-1));
@@ -3047,6 +3048,7 @@ const pedUp = () => {
 };
 pedCv.addEventListener('pointerup', pedUp); pedCv.addEventListener('pointercancel', () => { pedDrag = null; pedSel = null; drawPed(true); });
 $('pedHear').addEventListener('click', pedHear);
+$('pedQ').addEventListener('click', quantStep);       // the same Quantize as Settings and Loops + Pads
 $('pedAll').addEventListener('click', () => { pedSet(0, 1); pedHear(); status('The whole sound plays again.'); });
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
