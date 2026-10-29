@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029g';
+import * as DZ from './design.js?v=20261029h';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029g';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029h';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -802,7 +802,7 @@ function press(k) {
     case 'sound':
       if (copying === 'sound') { copySound(S.cur, k); break; }
 
-      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); break;   // a taste: never left looping
+      S.cur = k; S.lastKey[k] ||= 0; playHeld(k, S.lastKey[k], k, undefined, true); syncPanel(); persist(); padsTake(); break;   // a taste: never left looping
     case 'pattern':
       if (copying === 'pattern') { copyPattern(S.pat, k); break; }
       if (chainEdit) { checkpoint(); if (chainFresh) { S.chain = []; chainFresh = false; } S.chain.push(k); S.pat = k; pendingChain = null; }
@@ -822,6 +822,7 @@ function press(k) {
       break;
     }
     default: {
+      if (view === 'pads' && padShared()) { lpPress(k); break; }      // the Loops + Pads pads' sound
       if (S.write && !playing) { toggleStep(k); break; }
       const key = padKey(k); if (key == null) break;     // a rap's pad with no syllable on its step
       const h = trigger(key, k);
@@ -833,6 +834,7 @@ function press(k) {
 }
 function release(k) {
   if (!down.delete(k)) return;
+  if (view === 'pads' && S.mode !== 'sound' && S.mode !== 'fx' && padShared()) lpRelease(k);
   if (S.mode === 'fx' && !S.fxLatch && activeFx.has(S.fxSlots[k])) releaseFx(S.fxSlots[k]);
   const h = holding[k]; delete holding[k];
   if (h?.voice?.sustain) endHeld(h);           // Gate: lifting the finger stops it
@@ -1576,7 +1578,7 @@ $('bLoad').addEventListener('click', async () => {
     S.slots[S.cur] = await slotOf(bSel); S.lastKey[S.cur] = S.slots[S.cur].kind === 'sample' ? 7 : 0;
     syncPanel(); dirty(); draw(); status(`${S.slots[S.cur].name} → sound ${S.cur + 1}.`);
   }
-  closeMenu(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.01);
+  closeMenu(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime + 0.01); padsTake();
 });
 $('bFav').addEventListener('click', () => { if (bSel) { toggleFav(bSel); drawBrowser(); } });
 $('bSave').addEventListener('click', async () => { if (bSel && !bSel.song) { await saveMine(await slotOf(bSel), selName(bSel).replace(/ \(from .*\)$/, '')); drawBrowser(); } });
@@ -2066,7 +2068,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029h'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2159,7 +2161,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029h'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2927,7 +2929,8 @@ function draw() {
   $('write').textContent = S.replace ? 'Replace' : 'Write';
   const sl = S.slots[S.cur];
   $('screen').style.setProperty('--c', soundVar(S.cur));
-  $('lcdSound').textContent = `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}${sl ? ' · ' + slotTag(sl) : ''}`;
+  const pl = padLoopInfo();
+  $('lcdSound').textContent = pl ? `${pl.name.toUpperCase()} · LOOP` : `${String(S.cur + 1).padStart(2, '0')} ${sl ? sl.name.toUpperCase() : '…'}${sl ? ' · ' + slotTag(sl) : ''}`;
   // in a chain: the pattern on screen, and where the chain is (bar n of all of them)
   const cpos = playing && headTick >= 0 ? (Math.floor(headTick / 16) % S.chain.length) + 1 : 0;
   $('lcdPat').textContent = S.chain.length > 1 ? `PAT ${S.pat + 1} · ${cpos ? cpos + '/' : ''}${S.chain.length}⛓` : `PAT ${S.pat + 1}`;
@@ -2957,7 +2960,7 @@ function draw() {
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
     const away = false;
-    if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : keyColor(S.cur, k));
+    if (tint) el.style.setProperty('--c', S.mode === 'sound' ? (drumSide(k) ? 'var(--c-kit)' : soundVar(k)) : pl ? pl.colour : keyColor(S.cur, k));
     el.classList.toggle('tint', tint && !away); el.classList.toggle('away', away);
     el.classList.toggle('pad', S.mode === 'sound'); el.classList.toggle('kitpad', S.mode === 'sound' && drumSide(k)); el.classList.toggle('steps', steps_);
     if (steps_) {
@@ -2975,35 +2978,66 @@ function draw() {
     el.querySelector('em').textContent = S.mode === 'sound' && !away ? slotTag(S.slots[k]) : '';
   }
   drawRobot(); drawPed();
-  $('padOctDn').textContent = octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'; $('padOctDn').classList.toggle('on', octOf(S.cur) < 0);
-  { const sl = S.slots[S.cur], v = sl ? sl.params.vol : 0; $('pedVol').firstChild.style.width = Math.round(v * 100) + '%'; $('pedVol').lastChild.textContent = sl ? `Vol ${Math.round(v * 100)}` : 'Vol'; $('pedVol').style.setProperty('--c', soundVar(S.cur)); }
+  const oc = padShared() ? lp.oct || 0 : octOf(S.cur);
+  $('padOctDn').textContent = oc < 0 ? `Oct ${oc}` : 'Oct −'; $('padOctDn').classList.toggle('on', oc < 0);
+  $('padOctUp').textContent = oc > 0 ? `Oct +${oc}` : 'Oct +'; $('padOctUp').classList.toggle('on', oc > 0);
+  if (pl) { const v = S.grid.lpVol ?? 1; $('pedVol').firstChild.style.width = Math.round(v * 100) + '%'; $('pedVol').lastChild.textContent = `Vol ${Math.round(v * 100)}`; $('pedVol').style.setProperty('--c', pl.colour); }
+  else { const sl = S.slots[S.cur], v = sl ? sl.params.vol : 0; $('pedVol').firstChild.style.width = Math.round(v * 100) + '%'; $('pedVol').lastChild.textContent = sl ? `Vol ${Math.round(v * 100)}` : 'Vol'; $('pedVol').style.setProperty('--c', soundVar(S.cur)); }
   $('pedQ').textContent = `Q ${lpQName(S.quantGrid)}`; $('pedQ').classList.toggle('on', !!S.quantGrid);
-  $('padOctUp').textContent = octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'; $('padOctUp').classList.toggle('on', octOf(S.cur) > 0);
 }
-$('padOctDn').addEventListener('click', () => shiftOct(-1));
-$('padOctUp').addEventListener('click', () => shiftOct(1));
+$('padOctDn').addEventListener('click', () => { if (padShared()) { lpOct(-1); draw(); } else shiftOct(-1); });
+$('padOctUp').addEventListener('click', () => { if (padShared()) { lpOct(1); draw(); } else shiftOct(1); });
+// The Pads play what the Loops + Pads pads play: the loop last tapped (its first note, or the bit chosen),
+// or a sound chosen here (Sound, then a key; or 📂 Library), until another loop is tapped. With neither yet,
+// the sound chosen. (A try: draw() can run before the Loops' code below has been reached.)
+function padShared() { try { return !!lpInst || !!lpCellNow(); } catch (e) { return false; } }
+function padLoopInfo() {
+  try {
+    if (lpInst || view !== 'pads') return null;
+    const cell = lpCellNow(); if (!cell) return null;
+    return { cell, name: cell.name || `${CHANNELS[lp.c]} ${lp.r + 1}`, colour: CHANNEL_COLOR[lp.c] || 'var(--accent)' };
+  } catch (e) { return null; }
+}
+// a sound chosen on the Pads: on the pads of both screens, until a loop is tapped
+function padsTake() {
+  const sl = S.slots[S.cur]; if (!sl) return;
+  lpInst = { slot: sl, name: sl.name, cur: S.cur }; lp.slot = null; lpLevel();
+  if (view === 'both') lpDraw();
+}
 
 // The Pads' wave editor (under the buttons): the sound the pads play, as the last pad played it. Drag across
 // it to choose the bit that plays (grab an edge to move just that side); tap it to hear the pad. It is the
 // sound's Start and Length (Menu › Settings), for a kit or a loop that pad's own. ▶ Hear; Whole takes it all.
 // (var: draw() can call drawPed before these lines have run)
 var pedCv = $('pedCv'), pedSel = null, pedDrag = null, pedKey = '';
+var pedBase = null;        // the loop on the pads: { cell, buf, a, b, first } (made once a cell)
 function pedView() {
+  const pl = padLoopInfo();
+  if (pl) {
+    if (pedBase?.cell !== pl.cell) {
+      if (pedBase?.wait !== pl.cell) { pedBase = { wait: pl.cell }; cellSlot(pl.cell).then(base => { const one = base?.slices?.[0]; if (!one) return;
+        const buf = one.buf || base.buf, [fa, fe] = lpFirstNote(buf, one), w = one.e - one.s;
+        pedBase = { cell: pl.cell, buf, a: one.s, b: one.e, first: [(fa - one.s) / w, (fe - one.s) / w] }; drawPed(true); }); }
+      return null;
+    }
+    return { buf: pedBase.buf, a: pedBase.a, b: pedBase.b, loop: pl.cell, first: pedBase.first };
+  }
   const sl = S.slots[S.cur]; if (!sl || sl.kind === 'synth') return null;
+  if (padShared() && lpInst && lpInst.slot !== sl) return null;           // a designed sound on the pads: nothing here to crop
   if (sl.kind === 'chop') { const x = sl.slices?.[S.lastKey[S.cur]]; return x ? { buf: x.buf || sl.buf, a: x.s, b: x.e, o: x } : null; }
   const v = waveView(); return v && { buf: v.buf, a: v.a, b: v.b, o: sl.params };
 }
 // start is where it begins; len, how much of what is left after it plays (audio.js): as a part of the whole, 0..1
-const pedPart = o => { const a = o.start || 0; return [a, a + (o.len ?? 1) * (1 - a)]; };
+const pedPart = v => { if (v.loop) return v.loop.lpNote || v.first; const o = v.o, a = o.start || 0; return [a, a + (o.len ?? 1) * (1 - a)]; };
 function drawPed(force = false) {
   const pedCv = $('pedCv'), pg = pedCv.getContext('2d'), dpr = LIGHT ? 1 : window.devicePixelRatio || 1, W = Math.round(pedCv.clientWidth * dpr), H = Math.round(pedCv.clientHeight * dpr);
-  const v = pedView(), [a, b] = pedSel || (v ? pedPart(v.o) : [0, 1]);
-  const key = [W, H, S.cur, S.lastKey[S.cur], v?.buf?.length, v?.a, v?.b, a, b, S.slots[S.cur]?.name].join('|');
+  const v = pedView(), [a, b] = pedSel || (v ? pedPart(v) : [0, 1]), pl = padLoopInfo();
+  const key = [W, H, S.cur, S.lastKey[S.cur], v?.buf?.length, v?.a, v?.b, a, b, S.slots[S.cur]?.name, pl?.name, padShared()].join('|');
   if (!force && key === pedKey) return; pedKey = key;
   if (pedCv.width !== W || pedCv.height !== H) { pedCv.width = W; pedCv.height = H; }
   pg.clearRect(0, 0, W, H); if (!W || !H) return;
-  const ink = cssVar(`--s${S.cur + 1}`) || '#3ddc84', sl = S.slots[S.cur];
-  $('pedWhat').textContent = !sl ? 'Empty: 📂 Library to load a sound' : !v ? `${sl.name}: a synth, nothing to crop` : sl.name;
+  const ink = pl ? cssVar(pl.colour.slice(4, -1)) || '#3ddc84' : cssVar(`--s${S.cur + 1}`) || '#3ddc84', sl = S.slots[S.cur];
+  $('pedWhat').textContent = pl ? (v ? pl.name : `${pl.name}…`) : (lpInst && lpInst.slot !== sl) ? lpInst.name : !sl ? 'Empty: 📂 Library to load a sound' : !v ? `${sl.name}: a synth, nothing to crop` : sl.name;
   if (!v) return;
   const x = v.buf.getChannelData(0), sr = v.buf.sampleRate, i0 = Math.floor(v.a * sr), i1 = Math.max(i0 + 1, Math.floor(v.b * sr)), per = (i1 - i0) / W;
   const X1 = a * W, X2 = b * W;
@@ -3019,9 +3053,14 @@ function drawPed(force = false) {
 }
 addEventListener('resize', () => drawPed(true));
 const pedAt = ev => along(pedCv, ev);
-const pedHear = () => { ctx.resume(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); flash = { k: S.lastKey[S.cur], until: performance.now() + 160 }; };
+const pedHear = () => {
+  ctx.resume();
+  if (padShared()) { lpSlot().then(sl => sl && playNote(eng, sl, -1, 7, ctx.currentTime, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** (lp.oct || 0), dest: lpStripNow().pre })); return; }      // the 8th pad: the note as played
+  noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); flash = { k: S.lastKey[S.cur], until: performance.now() + 160 };
+};
 function pedSet(a, b) {
   const v = pedView(); if (!v) return;
+  if (v.loop) { v.loop.lpNote = [Math.max(0, a), Math.min(1, Math.max(a + 0.005, b))]; lp.slot = null; persist(); lpKeep(); drawPed(true); return; }      // as ✂ Crop
   checkpoint(); a = Math.min(0.98, Math.max(0, a)); b = Math.min(1, Math.max(a + 0.01, b));
   v.o.start = a; v.o.len = a < 1 ? Math.min(1, (b - a) / (1 - a)) : 1;
   syncPanel(); dirty(); drawPed(true);
@@ -3029,7 +3068,7 @@ function pedSet(a, b) {
 pedCv.addEventListener('pointerdown', ev => {
   const v = pedView(); if (!v) return;
   capture(pedCv, ev);
-  const f = pedAt(ev), [a, b] = pedPart(v.o), w = pedCv.offsetWidth, near = X => Math.abs(X - f) * w < 16;
+  const f = pedAt(ev), [a, b] = pedPart(v), w = pedCv.offsetWidth, near = X => Math.abs(X - f) * w < 16;
   pedDrag = { x0: f, moved: false, edge: near(b) ? 'b' : near(a) ? 'a' : null };
   pedSel = [a, b];
 });
@@ -3052,7 +3091,7 @@ $('pedHear').addEventListener('click', pedHear);
 $('pedQ').addEventListener('click', quantStep);
 // the sound's volume, as a bar to drag (the same as Menu › Settings › Volume); one drag is one step for Undo
 $('pedVol').addEventListener('pointerdown', () => checkpoint());
-fader($('pedVol'), v => { const sl = S.slots[S.cur]; if (!sl) return; sl.params.vol = v; $('pVol').value = v; $('oVol').textContent = Math.round(v * 100); dirty(); draw(); });       // the same Quantize as Settings and Loops + Pads
+fader($('pedVol'), v => { if (padLoopInfo()) { S.grid.lpVol = v; lpLevel(); persist(); draw(); return; } const sl = S.slots[S.cur]; if (!sl) return; sl.params.vol = v; $('pVol').value = v; $('oVol').textContent = Math.round(v * 100); dirty(); draw(); });       // the same Quantize as Settings and Loops + Pads
 $('pedAll').addEventListener('click', () => { pedSet(0, 1); pedHear(); status('The whole sound plays again.'); });
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
@@ -4104,8 +4143,8 @@ function lpStripNow() {
 // the pads can play in place of a muted loop). A designed sound: the column it records into.
 function lpLevel() {
   if (!eng.lpLvl) return;
-  const c = lpInst && lpTarget ? lpTarget.c : lp.c;
-  eng.lpLvl.gain.setTargetAtTime(c >= 0 ? S.grid.vol[c] ?? 0.8 : 0.8, ctx.currentTime, 0.02);
+  const c = lpInst ? (lpTarget ? lpTarget.c : -1) : lp.c;
+  eng.lpLvl.gain.setTargetAtTime((c >= 0 ? S.grid.vol[c] ?? 0.8 : 0.8) * (S.grid.lpVol ?? 1), ctx.currentTime, 0.02);
 }
 function lpFxApply() {
   const k = lpStripNow(), f = S.grid.lpFx;
@@ -4457,6 +4496,7 @@ function setView(v) {
   $('loops').classList.toggle('split', v === 'both'); $('lpads').hidden = $('lPager').hidden = v !== 'both';
   if (v !== 'pads') { drawLoops(); nameCells(); warmGridSoon(); }
   if (v === 'both') lpDraw();
+  if (v === 'pads') { lpLevel(); draw(); }
 }
 // Loops + Pads: the loops four columns a page, and the pads, which play the loop last tapped (a drum
 // loop too): its first note (or the bit chosen with ✂ Crop), pitched down and up the key across the
