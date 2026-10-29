@@ -124,7 +124,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   of each part, in shades of its colour: bass (808, Reese, electric, upright),
   keys (Rhodes, grand piano, FM e-piano, organ), lead (supersaw, violin, chip,
   brass) and pads (warm pad, strings, Vigil Strings, Night Swarm). Any
-  instrument from Menu › Sounds can go on any of the 16.
+  sound in the library can go on any of the 16: **📂 Library** (beside the
+  Pads ▾ button) opens the whole of it, the same as a Loops cell's (beats,
+  snares, tops, kits, every colour folder, and the sets as packs).
 - **16 patterns,** chainable, with swing, eight scales and any key. **Write**
   places steps when stopped and records live when playing.
 - **Key wheel:** tap the key on the screen. Majors and minors in

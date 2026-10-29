@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029b';
+import * as DZ from './design.js?v=20261029c';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029b';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029c';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1275,8 +1275,9 @@ const EMPTY = { Songs: 'No songs yet: the songs Claude builds for you will be he
 const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
 // What can be chosen in the browser: { lib: id } a built-in sound, { mine: record } one of yours,
 // { from: chosen pack, k } one sound inside a pack.
-const NOT_PADS = ['Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Drum kits', 'Songs'];
-const PADS_TREE = ['Sounds', TREE[1].filter(f => !NOT_PADS.includes(f[0]))];
+// The Pads get the whole library the Loops have (drums too), and the sets as packs, as a Loops cell lists them.
+const PADS_TREE = ['Sounds', TREE[1].flatMap(f => f[0] === 'Songs' ? [] : f[0] === 'My Sounds'
+  ? [['Packs', [['Ephesians', EPH], ['Vigils', VIG], ['Electro Boom Bap', EBB]], 'var(--accent)'], f] : [f])];
 let bPath = [PADS_TREE], bSel = null, mine = [];
 const previews = new Map();
 const selName = c => c.song ? `${c.song.name} (${c.song.by})` : c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
@@ -1438,11 +1439,6 @@ function drawBrowser() {
 // instruments only on 1-8. Anything else (vocals, FX, stabs, loops) goes on either.
 const isKitLib = id => KITS_MENU.some(([, ids]) => ids.includes(id)) || ['percussion', 'shakers', 'bells2'].includes(id);
 const isInstLib = id => !!(LIBRARY[id]?.synth || LIBRARY[id]?.multi);
-function sideRefuses(c) {
-  if (!c.lib) return '';
-  if (isKitLib(c.lib)) return `${LIBRARY[c.lib].name} is drums: they live in the Loops now (a cell's picker, or 🥁 Design a hit); the Pads are for instruments.`;
-  return '';
-}
 
 // What a sound is: SYN played by the synth as you play; REC a recording (a sample) of a real
 // instrument or machine; GEN made in code beforehand, then played as a recording (the 808 and 909
@@ -1574,8 +1570,6 @@ async function loadLibrary(id) {
 $('bLoad').addEventListener('click', async () => {
   if (!bSel) return;
   if (bSel.song) { closeMenu(); await loadSong(bSel.song.id); return; }
-  const no = sideRefuses(bSel);
-  if (no) { status(no); return; }
   if (bSel.lib) await loadLibrary(bSel.lib);
   else {
     checkpoint();
@@ -1859,6 +1853,8 @@ function openMenu(tab) {
   if (tab) document.querySelector(`[data-tab="${tab}"]`).click();
   drawBrowser(); refreshMine().then(drawBrowser);
 }
+// 📂 Library on the Pads: straight to the sounds, from the top, to load onto the sound chosen.
+$('padLib').addEventListener('click', () => { bPath = [PADS_TREE]; bSel = null; openMenu('tBrowse'); });
 function closeMenu() { $('menu').hidden = true; draw(); setTimeout(freeUnused, 500); }
 // Sounds only tried in the browser are let go (their audio, a few MB each, is freed), keeping
 // those on the pads and in the Loops grid.
@@ -2070,7 +2066,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029c'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2163,7 +2159,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029c'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
