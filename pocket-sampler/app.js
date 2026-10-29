@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029f';
+import * as DZ from './design.js?v=20261029g';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029f';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029g';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2066,7 +2066,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029g'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2159,7 +2159,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029f'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029g'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2976,7 +2976,8 @@ function draw() {
   }
   drawRobot(); drawPed();
   $('padOctDn').textContent = octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'; $('padOctDn').classList.toggle('on', octOf(S.cur) < 0);
-  $('pedQ').textContent = `Quantize ${lpQName(S.quantGrid)}`; $('pedQ').classList.toggle('on', !!S.quantGrid);
+  { const sl = S.slots[S.cur], v = sl ? sl.params.vol : 0; $('pedVol').firstChild.style.width = Math.round(v * 100) + '%'; $('pedVol').lastChild.textContent = sl ? `Vol ${Math.round(v * 100)}` : 'Vol'; $('pedVol').style.setProperty('--c', soundVar(S.cur)); }
+  $('pedQ').textContent = `Q ${lpQName(S.quantGrid)}`; $('pedQ').classList.toggle('on', !!S.quantGrid);
   $('padOctUp').textContent = octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'; $('padOctUp').classList.toggle('on', octOf(S.cur) > 0);
 }
 $('padOctDn').addEventListener('click', () => shiftOct(-1));
@@ -3002,7 +3003,7 @@ function drawPed(force = false) {
   if (pedCv.width !== W || pedCv.height !== H) { pedCv.width = W; pedCv.height = H; }
   pg.clearRect(0, 0, W, H); if (!W || !H) return;
   const ink = cssVar(`--s${S.cur + 1}`) || '#3ddc84', sl = S.slots[S.cur];
-  $('pedWhat').textContent = !sl ? 'Empty: 📂 Library to load a sound' : !v ? `${sl.name}: a synth, nothing to crop` : `${sl.name} · pad ${S.lastKey[S.cur] + 1}`;
+  $('pedWhat').textContent = !sl ? 'Empty: 📂 Library to load a sound' : !v ? `${sl.name}: a synth, nothing to crop` : sl.name;
   if (!v) return;
   const x = v.buf.getChannelData(0), sr = v.buf.sampleRate, i0 = Math.floor(v.a * sr), i1 = Math.max(i0 + 1, Math.floor(v.b * sr)), per = (i1 - i0) / W;
   const X1 = a * W, X2 = b * W;
@@ -3048,7 +3049,10 @@ const pedUp = () => {
 };
 pedCv.addEventListener('pointerup', pedUp); pedCv.addEventListener('pointercancel', () => { pedDrag = null; pedSel = null; drawPed(true); });
 $('pedHear').addEventListener('click', pedHear);
-$('pedQ').addEventListener('click', quantStep);       // the same Quantize as Settings and Loops + Pads
+$('pedQ').addEventListener('click', quantStep);
+// the sound's volume, as a bar to drag (the same as Menu › Settings › Volume); one drag is one step for Undo
+$('pedVol').addEventListener('pointerdown', () => checkpoint());
+fader($('pedVol'), v => { const sl = S.slots[S.cur]; if (!sl) return; sl.params.vol = v; $('pVol').value = v; $('oVol').textContent = Math.round(v * 100); dirty(); draw(); });       // the same Quantize as Settings and Loops + Pads
 $('pedAll').addEventListener('click', () => { pedSet(0, 1); pedHear(); status('The whole sound plays again.'); });
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
