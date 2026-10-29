@@ -142,13 +142,11 @@ Teenage Engineering PO-33, for improvising on top.
   the pattern, so a chain can change key as it plays. A recording or import
   can be told its key (or have it found by listening) and then follows the
   song's key.
-- **Effects on the keys:** in FX mode each key is an effect that stays on
-  until it is tapped again (or only while held, if latching is off). The
-  Effects menu picks the 16 from 26: loops, rolls, scratch, half time,
-  scramble, pitch dive, octaves, reverse, unison, reverb, echo, ping-pong,
-  chorus, low and high pass, bitcrush, and four distortions (overdrive,
-  fuzz, wavefold, tape). Each has an amount on a slider, can be aimed at
-  chosen tracks, and can be written into the pattern.
+- **Effects on the keys:** in FX mode the pads are the effects of a Loops
+  column (low pass, high pass, reverb, echo, ping-pong, chorus, drive,
+  distortion, tape) on what the pads play: tap one on or off (any number at
+  once), hold it to set its amount; the 16th turns them all off. Menu ›
+  Effects has them too, with an EQ.
 - **Quantize** (Settings, and the same button above the pads in Loops +
   Pads; a tap steps Off, 1/16, 1/8, 1/4, 1 bar): each tap waits for the next
   grid point, for what you hear and what is recorded; with nothing playing,

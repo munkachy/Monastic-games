@@ -723,7 +723,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029i</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261029j</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Loops, Pads or Loops + Pads">Loops + Pads ▾</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button></div>
 
   <div class="screen" id="screen">
@@ -953,10 +953,16 @@
   <div class="panel" id="tEffects">
     <div class="row"><label for="spaceSel">Reverb</label><select id="spaceSel"></select><span></span></div>
     <p class="note" id="spaceNote" style="margin:-2px 0 8px"></p>
-    <label class="check"><input type="checkbox" id="fxLatch" checked> Tap an effect on, tap again to turn it off (off: on only while held)</label>
-    <p class="note" style="margin:0 0 6px">Choose the effect on each FX key. Effects saved in a pattern are saved by name, so they stay the same when you move them.</p>
-    <div id="fxSlots"></div>
-    <div class="btns"><button id="fxReset">Back to the standard 16</button></div>
+    <p class="note" style="margin:0 0 6px">The pads' effects: tap each one you want on (as many as you like), and again to turn it off; each has its own amount. The same as the FX keys on the Pads (tap one on or off, hold it for its amount) and FX in Loops + Pads.</p>
+    <div class="lmodes" id="pfxType"></div>
+    <div id="pfxAmts" class="lpfx"></div>
+    <p class="note" style="margin:8px 0 4px">EQ (on everything the pads play)</p>
+    <div class="lpfx">
+      <div class="lrow"><span>Low</span><div class="lfader wide eq" id="pfxEqlo"><i></i></div><output id="pfxEqloOut"></output></div>
+      <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="pfxEqmid"><i></i></div><output id="pfxEqmidOut"></output></div>
+      <div class="lrow"><span>High</span><div class="lfader wide eq" id="pfxEqhi"><i></i></div><output id="pfxEqhiOut"></output></div>
+    </div>
+    <div hidden><input type="checkbox" id="fxLatch" checked><div id="fxSlots"></div><button id="fxReset"></button></div>
   </div>
 
   <div class="panel" id="tButtons">
@@ -1108,7 +1114,7 @@
     <p><b>The tags</b> say what a sound is: <b>GEN</b> made in code and kept as a recording (the synths, the 808, 909, CR-78, 606 and Minimal kits, the modelled guitars, the loops the app played: every one is played from a WAV, which is far easier on the phone than making the sound for each note); <b>REC</b> a recording, a sample of a real instrument or machine (the TR-808 is the real analog drum machine, recorded); <b>GEN</b> made in code beforehand, then played as a recording (the 808 and 909 kits drawn in code, rolled sounds, rain and risers, the robot voice, the loops written for the app); <b>MINE</b> yours (recorded, imported, designed in Menu › Design). They are in Menu › Sounds, on the pads in Sound mode, on the screen and on the Loops cells.</p>
     <p><b>Play:</b> tap the keys: they go up the scale (a sound with slices, such as a chopped recording, has a slice on each key).</p>
     <p><b>Sound</b>: tap it, then a sound (1–16) to choose it; tap Sound again to play. The 16 are instruments, four of each: <b>bass</b> (1–4, greens), <b>keys</b> (5–8, teals), <b>lead</b> (9–12, pinks) and <b>pads</b> (13–16, blues and purples); load any instrument on any of them (Menu › Sounds). <b>Hold</b> a sound there for its own menu: its volume, pitch and how it plays (One shot, Gate or Loop), and its own <b>EQ</b> (low, middle, high, with its curve) and <b>effect</b> (reverb, echo, ping-pong, chorus, drive, distortion, fuzz or tape, with an amount), on every note of it, in the patterns and in the export. <b>Pattern</b> + key: choose one of 16 patterns.</p>
-    <p><b>FX</b>: tap a key to turn an effect on, tap again to turn it off (or hold, if you switch that in Menu › Effects, where you also choose the effect on each key, from 26: loops, rolls, scratch, pitch, reverb, echo, ping-pong, chorus, filters, crush, overdrive, fuzz, wavefold and tape saturation). Loops, rolls, scratch, half time, scramble, pitch dive, octaves, reverse, chorus, crush, low pass, reverb and ping-pong (an echo bouncing between your ears). In FX mode the screen shows <b>Tracks</b> (tap to choose which sounds the FX keys hit) and the <b>amount</b> of the last effect you touched. <b>With Write on while playing</b>, the effect is saved on every step you hold it through. "Clear effects" takes them out again.</p>
+    <p><b>FX</b> (on the Pads): the keys become the pads' effects: low pass, high pass, reverb, echo, ping-pong, chorus, drive, distortion and tape (the same ones as a Loops column, and the same setting as FX in Loops + Pads). <b>Tap</b> one to turn it on, again to turn it off; any number can be on at once, and they stay as you leave them when you go back to playing. <b>Hold</b> one to choose it: its amount is on the screen to slide (held, it is turned on). The 16th key turns them all off. Menu › Effects has them too, with an EQ and the reverb's room. The old FX keys (loops, rolls, scratch, octaves and the rest) are gone: they worked on the patterns, which the Pads no longer play.</p>
     <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). Switch the sound to One shot or Gate and its loops keep going, so you can play over them; come back to Loop and tap a looping key to stop it. In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
     <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
     <p><b>Design</b> (now in the Loops: 🥁 Design a hit and 🎹 Design a sound, in a cell's picker): make your own sounds. <b>🥁 Drum hit</b>: a kick, snare, clap, hat, open hat or ride, tom, percussion (wood, metal or glass: a woodblock, rimshot, cowbell, chime) or shaker, each a model of how that drum makes its sound, with its own knobs (a kick's pitch, how far and fast it drops, its length, click, beater, knock, sub; a snare's tuning, body and wires; drive, tone and Old sampler, a 1980s sampler's grit, on most). Start from one of its starting points, turn the knobs, ▶ Hear it; 🎲 Surprise makes a new one near a starting point, ↻ New strike the same with different noise. Each pitch shows its note (52 Hz A♭1), and ♪ In key tunes the drum to the nearest note of the song's key. <b>Finish</b>, for every drum: Soften the hit (less click), Low cut and High cut (so a layer keeps to its own range), Layer (a second drum under it, from any starting point, lined up so they never flam, at Layer level), Room (a short real room, baked in) and Reverse. ＋ Add puts it in a kit of yours (up to 16 hits; New kit makes one), which loads on a drum sound (9–16) from Menu › Sounds › My packs; ★ Save keeps it alone in My Sounds. <b>🎹 Synth</b>: two waves (sine, triangle, saw, square; the second tuned and detuned), a sub an octave down, noise, unison voices; a filter (low, band or high pass) with resonance and an envelope that opens it; the volume's attack, decay, sustain and release; vibrato, a glide into each note, and drive. Start from Warm pad, Analog bass, Pluck, Supersaw lead, Howl, Bell keys or Organ, in a Bass, Middle or High range. ▶ Hear it plays one note, tapped then held; Put on sound records the whole instrument (a note every 6 half steps, tapped and held, a seamless loop for held notes) onto that sound, to play and record into patterns and loops; ★ Save keeps it in My Sounds. Every sound made here is made once and kept as a recording.</p>
@@ -1286,6 +1292,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261029i"></script>
+<script type="module" src="app.js?v=20261029j"></script>
 </body>
 </html>
