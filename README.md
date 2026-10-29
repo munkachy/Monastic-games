@@ -132,9 +132,11 @@ Teenage Engineering PO-33, for improvising on top.
   of each part, in shades of its colour: bass (808, Reese, electric, upright),
   keys (Rhodes, grand piano, FM e-piano, organ), lead (supersaw, violin, chip,
   brass) and pads (warm pad, strings, Vigil Strings, Night Swarm). Any
-  sound in the library can go on any of the 16: **📂 Library** (beside the
-  Pads ▸ button) opens the whole of it, the same as a Loops cell's (beats,
-  snares, tops, kits, every colour folder, and the sets as packs).
+  instrument can go on any of the 16: **📂 Library** (beside the Pads ▸
+  button) has the instruments in folders by part, about 75 of them from the
+  Musyng Kite soundfont (keys and organs, guitars, strings and choirs, brass
+  and winds, synths, world, more basses), and the drum kits; packs, loops
+  and single hits are left to the Loops.
 - **Key wheel:** tap the key on the screen. Majors and minors in
   circle-of-fifths order, the keys that sit well with yours shaded, and
   **Next** in the middle (up a fifth, then to the relative key). While the

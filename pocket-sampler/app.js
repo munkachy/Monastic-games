@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029w';
+import * as DZ from './design.js?v=20261029x';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029w';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029x';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -275,6 +275,91 @@ const LIBRARY = {
   ephvolt: { name: 'Voltage Bass', multi: 'ephvolt', base: 36 }, ephclang: { name: 'Steel Clang', multi: 'ephclang', base: 60 },
   ephstab: { name: 'Voltage Stab', multi: 'ephstab', base: 48 },
 };
+// More instruments for the pads, from the Musyng Kite General MIDI soundfont (CC BY-SA 3.0), made by
+// tools/gmsound.py into MP3 banks: [id, name, the pads' lowest note, folder].
+const GM = [
+  ['gmbright', 'Bright Piano', 48, 'Keys and organs'],
+  ['gmegrand', 'Electric Grand', 48, 'Keys and organs'],
+  ['gmhonky', 'Honky-tonk Piano', 48, 'Keys and organs'],
+  ['gmep2', 'DX E-Piano', 48, 'Keys and organs'],
+  ['gmclav', 'Clavinet', 48, 'Keys and organs'],
+  ['gmmusicbox', 'Music Box', 72, 'Keys and organs'],
+  ['gmdulcimer', 'Dulcimer', 60, 'Keys and organs'],
+  ['gmdrawbar', 'Drawbar Organ', 48, 'Keys and organs'],
+  ['gmpercorgan', 'Percussive Organ', 48, 'Keys and organs'],
+  ['gmrockorgan', 'Rock Organ', 48, 'Keys and organs'],
+  ['gmreedorgan', 'Reed Organ', 48, 'Keys and organs'],
+  ['gmaccordion', 'Accordion', 48, 'Keys and organs'],
+  ['gmtango', 'Bandoneon', 48, 'Keys and organs'],
+  ['gmharmonica', 'Harmonica', 60, 'Keys and organs'],
+  ['gmjazzgtr', 'Jazz Guitar', 48, 'Guitars'],
+  ['gmcleangtr', 'Clean Guitar', 48, 'Guitars'],
+  ['gmmutedgtr', 'Muted Guitar', 48, 'Guitars'],
+  ['gmodgtr', 'Overdriven Guitar', 48, 'Guitars'],
+  ['gmdistgtr', 'Distortion Guitar', 48, 'Guitars'],
+  ['gmharmonics', 'Guitar Harmonics', 60, 'Guitars'],
+  ['gmbanjo', 'Banjo', 48, 'Guitars'],
+  ['gmfretless', 'Fretless Bass', 36, 'Bass'],
+  ['gmslap', 'Slap Bass', 36, 'Bass'],
+  ['gmpickbass', 'Picked Bass', 36, 'Bass'],
+  ['gmsynbass1', 'Synth Bass 1', 36, 'Bass'],
+  ['gmsynbass2', 'Synth Bass 2', 36, 'Bass'],
+  ['gmstrings', 'String Ensemble', 48, 'Strings and choirs'],
+  ['gmslowstr', 'Slow Strings', 48, 'Strings and choirs'],
+  ['gmtremolo', 'Tremolo Strings', 48, 'Strings and choirs'],
+  ['gmpizzstr', 'Pizzicato Strings', 48, 'Strings and choirs'],
+  ['gmsynstr', 'Synth Strings', 48, 'Strings and choirs'],
+  ['gmaahs', 'Choir Aahs', 48, 'Strings and choirs'],
+  ['gmoohs', 'Voice Oohs', 48, 'Strings and choirs'],
+  ['gmsynchoir', 'Synth Choir', 48, 'Strings and choirs'],
+  ['gmtimpani', 'Timpani', 36, 'Strings and choirs'],
+  ['gmorchhit', 'Orchestra Hit', 48, 'Strings and choirs'],
+  ['gmtrumpet', 'Trumpet', 60, 'Brass and winds'],
+  ['gmmuted', 'Muted Trumpet', 60, 'Brass and winds'],
+  ['gmhorn', 'French Horn', 48, 'Brass and winds'],
+  ['gmbrass', 'Brass Section', 48, 'Brass and winds'],
+  ['gmtuba', 'Tuba', 36, 'Brass and winds'],
+  ['gmsoprano', 'Soprano Sax', 60, 'Brass and winds'],
+  ['gmalto', 'Alto Sax', 60, 'Brass and winds'],
+  ['gmbari', 'Baritone Sax', 48, 'Brass and winds'],
+  ['gmoboe', 'Oboe', 60, 'Brass and winds'],
+  ['gmclarinet', 'Clarinet', 60, 'Brass and winds'],
+  ['gmbassoon', 'Bassoon', 48, 'Brass and winds'],
+  ['gmflute', 'Flute', 72, 'Brass and winds'],
+  ['gmpiccolo', 'Piccolo', 72, 'Brass and winds'],
+  ['gmrecorder', 'Recorder', 72, 'Brass and winds'],
+  ['gmpanflute', 'Pan Flute', 72, 'Brass and winds'],
+  ['gmshaku', 'Shakuhachi', 60, 'Brass and winds'],
+  ['gmocarina', 'Ocarina', 72, 'Brass and winds'],
+  ['gmwhistle', 'Whistle', 72, 'Brass and winds'],
+  ['gmsquare', 'Square Lead', 60, 'Synths'],
+  ['gmsaw', 'Saw Lead', 60, 'Synths'],
+  ['gmcalliope', 'Calliope Lead', 60, 'Synths'],
+  ['gmchiff', 'Chiff Lead', 60, 'Synths'],
+  ['gmcharang', 'Charang', 60, 'Synths'],
+  ['gmfifths', 'Fifths Lead', 60, 'Synths'],
+  ['gmbasslead', 'Bass + Lead', 48, 'Synths'],
+  ['gmsynbrass', 'Synth Brass', 48, 'Synths'],
+  ['gmnewage', 'New Age Pad', 48, 'Synths'],
+  ['gmwarm', 'Warm Pad', 48, 'Synths'],
+  ['gmpoly', 'Polysynth', 48, 'Synths'],
+  ['gmbowed', 'Bowed Pad', 48, 'Synths'],
+  ['gmhalo', 'Halo Pad', 48, 'Synths'],
+  ['gmsweep', 'Sweep Pad', 48, 'Synths'],
+  ['gmcrystal', 'Crystal', 60, 'Synths'],
+  ['gmatmos', 'Atmosphere', 48, 'Synths'],
+  ['gmechoes', 'Echoes', 48, 'Synths'],
+  ['gmsitar', 'Sitar', 48, 'World'],
+  ['gmkoto', 'Koto', 48, 'World'],
+  ['gmshamisen', 'Shamisen', 48, 'World'],
+  ['gmfiddle', 'Fiddle', 60, 'World'],
+  ['gmbagpipe', 'Bagpipe', 60, 'World'],
+  ['gmshanai', 'Shehnai', 60, 'World'],
+  ['gmtinkle', 'Tinkle Bell', 72, 'World'],
+  ['gmagogo', 'Agogo', 60, 'World'],
+  ['gmtaiko', 'Taiko', 36, 'World'],
+  ['gmmelotom', 'Melodic Tom', 48, 'World']];
+for (const [id, name, base] of GM) LIBRARY[id] = { name, multi: id, base };
 // drum loops, beat sliced to the tempo: whole beats (the Beats folder), and the parts of one (kicks, snares, tops)
 const BEAT_PACKS = new Set(['ebbkloops', 'ebbsloops', 'ebbtloops', 'vigkloops', 'vigsloops', 'vigtloops', 'ephkloops', 'ephsloops', 'ephtloops', 'grooves', 'drumloops', 'breaks']);
 const EBB = ['ebbkloops', 'ebbsloops', 'ebbtloops', 'ebbbass', 'ebbchords', 'ebblead', 'ebbsub', 'ebbvox', 'ebbkit'];
@@ -346,14 +431,21 @@ async function factorySlot(id) {
 async function bankOf(id) {
   if (!banks) banks = await (await fetch('sounds/banks.json')).json();
   const B = banks[id];
-  B.buf ||= await decode(await (await fetch(`sounds/${id}.wav`)).arrayBuffer());
+  if (!B.buf) {
+    B.buf = await decode(await (await fetch(`sounds/${id}.${B.ext || 'wav'}`)).arrayBuffer());
+    if (B.lead != null) {          // an MP3 may come out a little late (or early): where its first note really starts, and every zone moved by as much
+      const d = B.buf.getChannelData(0), r = B.buf.sampleRate / B.rate; let i = 0;
+      while (i < d.length && Math.abs(d[i]) <= 0.05) i++;
+      B.shift = Math.abs(i / r - B.lead) < 0.08 * B.rate ? Math.round(i / r - B.lead) : 0;
+    }
+  }
   return B;
 }
 async function multiSlot(slot, F) {
-  const B = await bankOf(F.multi), r = B.rate;
+  const B = await bankOf(F.multi), r = B.rate, sh = B.shift || 0;
   // la, lb: a loop for a held note; ha, hb: a held take of its own (a recorded synth whose note dies away)
   return Object.assign(slot, { kind: 'multi', buf: B.buf, base: F.base, ...(B.level && { level: B.level }), ...(B.synth && { holdLoop: true }),
-    zones: B.zones.map(([m, a, b, la, lb, ha, hb]) => ({ m, s: a / r, e: b / r, ...(la != null && { ls: la / r, le: lb / r }), ...(ha != null && { hs: ha / r, he: hb / r }) })) });
+    zones: B.zones.map(([m, a, b, la, lb, ha, hb]) => ({ m, s: (a + sh) / r, e: (b + sh) / r, ...(la != null && { ls: (la + sh) / r, le: (lb + sh) / r }), ...(ha != null && { hs: (ha + sh) / r, he: (hb + sh) / r }) })) });
 }
 const shortName = s => s.replace(/^sfx_/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 18);
 function decode(ab) { return new Promise((ok, bad) => ctx.decodeAudioData(ab, ok, bad)); }
@@ -1252,6 +1344,8 @@ const TREE = ['Sounds', [
   ['Pads', ['pad', 'strings', 'vigstrings', 'vigswarm', 'vigchant', 'ephdrone', 'pads'], 'var(--c-pad)'],
   ['Plucks, mallets and bells', ['pluck', 'harp', 'pizz', 'nylon', 'steelgtr', 'twelve', 'kalimba', 'vibes', 'marimba', 'xylophone', 'glock', 'bells', 'steeldrum', 'fmbell', 'viglauds', 'vigbell', 'ephclang'], 'var(--c-pluck)'],
   ['Stabs and FX', ['stabs', 'funkhorns', 'noisefx', 'sirens'], 'var(--c-stab)'],
+  ...[['Keys and organs', 'var(--c-chords)'], ['Guitars', 'var(--c-pluck)'], ['Strings and choirs', 'var(--c-pad)'], ['Brass and winds', 'var(--c-lead)'], ['Synths', 'var(--c-sub)'], ['World', 'var(--c-stab)']]
+    .map(([f, c]) => [f, GM.filter(g => g[3] === f).map(g => g[0]), c]),         // (the Musyng Kite instruments)
   ['Ambience and vinyl', ['ambience', 'nature', 'airwater']],
   ['Songs', 'songs'],
   ['My Sounds', 'mine:all'],
@@ -1281,8 +1375,16 @@ const isPack = id => !!(LIBRARY[id].kit || LIBRARY[id].bank);
 // What can be chosen in the browser: { lib: id } a built-in sound, { mine: record } one of yours,
 // { from: chosen pack, k } one sound inside a pack.
 // The Pads get the whole library the Loops have (drums too), and the sets as packs, as a Loops cell lists them.
-const PADS_TREE = ['Sounds', TREE[1].flatMap(f => f[0] === 'Songs' ? [] : f[0] === 'My Sounds'
-  ? [['Packs', [['Ephesians', EPH], ['Vigils', VIG], ['Electro Boom Bap', EBB]], 'var(--accent)'], f] : [f])];
+TREE[1].find(f => f[0] === 'Bass')[1].push(...GM.filter(g => g[3] === 'Bass').map(g => g[0]));
+// The Pads' library: instruments (each a sound played across the keys) and the drum kits, and your own;
+// not the packs (a different sound on every key), loops, single hits, ambience or songs.
+const NOT_PADS = ['Songs', 'Beats', 'Snares and claps', 'Tops (hats, cymbals, percussion)', 'Ambience and vinyl', 'My packs'];
+const PADS_TREE = ['Sounds', TREE[1].flatMap(f => {
+  if (NOT_PADS.includes(f[0])) return [];
+  if (f[0] === 'Drum kits' || typeof f[1] === 'string') return [f];
+  const inst = f[1].filter(x => typeof x === 'string' && LIBRARY[x] && !isPack(x));
+  return inst.length ? [[f[0], inst, f[2]]] : [];
+})];
 let bPath = [PADS_TREE], bSel = null, mine = [];
 const previews = new Map();
 const selName = c => c.song ? `${c.song.name} (${c.song.by})` : c.lib ? LIBRARY[c.lib].name : c.mine ? c.mine.name : `${c.label} (from ${selName(c.from)})`;
@@ -2080,7 +2182,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029w'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029x'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2275,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029w'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029x'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -6943,7 +7045,7 @@ document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => d
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
   grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
-  openCellMenu: (c, r) => openCellMenu(c, r), tap: (c, r) => tapCell(c, r), calInfo: () => cal && { t0: cal.t0, beat: cal.beat, now: ctx.currentTime }, tapLag: () => tapLag,
+  openCellMenu: (c, r) => openCellMenu(c, r), tap: (c, r) => tapCell(c, r), load: id => loadLibrary(id), bank: id => { const B = banks?.[id]; return B && { shift: B.shift, lead: B.lead, ext: B.ext }; }, calInfo: () => cal && { t0: cal.t0, beat: cal.beat, now: ctx.currentTime }, tapLag: () => tapLag,
   press: k => press(k), release: k => release(k),
   state: () => S, mine: () => mine, vault: { shared: () => sharedItems(true).then(l => l.map(x => ({ name: x.name, private: !!x.private, locked: !!x.locked, filed: x.filed, source: x.source }))), add: n => sharedItems().then(l => addShared(l.find(x => x.name === n))), ask: () => vaultAsk(), lock: t => vaultLock(t), forget: () => vaultForget(), pack: o => packOf(o), gridSet: n => gridSet(n), key: () => !!vaultKey },
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
