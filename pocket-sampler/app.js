@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029j';
+import * as DZ from './design.js?v=20261029k';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029j';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2079,7 +2079,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2172,7 +2172,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4560,7 +4560,7 @@ async function nameCells() {
 function setView(v) {
   view = v;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
-  document.querySelectorAll('.vbtn').forEach(b => { b.textContent = { loops: 'Loops', pads: 'Pads', both: 'Loops + Pads' }[v] + ' ▾'; });
+  document.querySelectorAll('.vbtn').forEach(b => { b.textContent = { loops: 'Loops', pads: 'Pads', both: 'Loops + Pads' }[v] + ' ▸'; b.title = `Now ${{ loops: 'Loops', pads: 'Pads', both: 'Loops + Pads' }[v]}: tap for ${{ loops: 'Pads', pads: 'Loops + Pads', both: 'Loops' }[v]}`; });
   document.querySelectorAll('.vmenu').forEach(m => { m.hidden = true; });
   if ($('wheel').classList.contains('inloops')) closeWheel();
   $('loops').hidden = v === 'pads';
@@ -5011,7 +5011,8 @@ const lFlip = () => { lPage = 1 - lPage; drawLoops(); lpDraw(); };
 $('lPrev').addEventListener('click', lFlip); $('lNext').addEventListener('click', lFlip);
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 // one button for the three views: tap it, and they drop down
-document.querySelectorAll('.vbtn').forEach(b => b.addEventListener('click', () => { const m = b.nextElementSibling, open = m.hidden; document.querySelectorAll('.vmenu').forEach(x => { x.hidden = true; }); m.hidden = !open; }));
+// one button for the three screens: each tap goes to the next, Loops → Pads → Loops + Pads → Loops
+document.querySelectorAll('.vbtn').forEach(b => b.addEventListener('click', () => setView({ loops: 'pads', pads: 'both', both: 'loops' }[view])));
 addEventListener('pointerdown', ev => { if (!ev.target.closest('.vpick')) document.querySelectorAll('.vmenu').forEach(x => { x.hidden = true; }); }, true);
 $('lPlay').addEventListener('click', () => { ctx.resume(); playing ? stop() : (start(), resumeLoops()); drawLoops(); });
 $('lReset').addEventListener('click', () => {
