@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029d';
+import * as DZ from './design.js?v=20261029e';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029d';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029e';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2066,7 +2066,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029e'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2159,7 +2159,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029e'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3870,7 +3870,7 @@ const ROWS = 6;
 const QUANTS = [[0, 'Off'], [0.5, '1/32'], [1, '1/16'], [2, '1/8'], [4, '1/4'], [8, '1/2'], [16, '1 bar'], [32, '2 bars'], [64, '4 bars']];
 const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar'], [32, '2 bars'], [48, '3 bars'], [64, '4 bars']];      // in 16ths
 // Repeat, in beats, shown as note values: 1/32 note (an eighth of a beat) up to 8 bars.
-const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars']];
+const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars'], [64, '16 bars'], [128, '32 bars']];
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
   ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['tape', 'Tape']];
 // The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
@@ -5008,6 +5008,7 @@ function drawSets() {
   sv.className = 'lssave'; sv.textContent = cur ? (same ? '💾 Saved' : '💾 Save set') : '💾 Save set'; sv.disabled = !!same;
   sv.title = cur ? `Save the grid into “${cur.name}”` : 'Save the grid as a new set of yours';
   sv.addEventListener('click', () => (cur ? saveSetOver(cur) : saveSetNew())); my.appendChild(sv);
+  drawCloud();
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
   drawCountIn();
@@ -5865,6 +5866,98 @@ function mySetMenu(m) {
   if (/^d$/i.test(a.trim())) { if (confirm(`Delete the set “${m.name}”? (Its sounds stay in My Sounds.)`)) idbDel('mine', m.id).then(refreshMine).then(drawSets); return; }
   if (a.trim()) idbPut('mine', { ...m, name: a.trim(), set: { ...m.set, name: a.trim() } }, m.id).then(refreshMine).then(drawSets);
 }
+// ☁ Sets on GitHub: a set (with every sound of yours its cells use, as a pack file) saved to the repository's
+// pocket-sets branch, a branch holding nothing but sets/<name>.pocketpack.json, so any device can load it
+// (Loops › ⚙ › On GitHub). The same GitHub token as ☁ Send to the library, kept only in this browser. A set
+// holding sounds from the private library is saved scrambled (.enc), as the private library is.
+var SETS_BRANCH = 'pocket-sets';
+var cloudSets = null, cloudBusy = false;      // (var: drawSets can run before this line)
+async function cloudList(fresh = false) {
+  if (cloudSets && !fresh) return cloudSets;
+  cloudBusy = true;
+  try {
+    const t = await gh(`/git/trees/${SETS_BRANCH}?recursive=1`, {}, ghTok());
+    cloudSets = t.tree.filter(x => /^sets\/[^/]+\.(pocketpack\.json|enc)$/.test(x.path))
+      .map(x => ({ path: x.path, sha: x.sha, size: x.size, locked: x.path.endsWith('.enc'), name: decodeURIComponent(x.path.slice(5).replace(/\.(pocketpack\.json|enc)$/, '')) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  } catch (e) { cloudSets = e.status === 404 || e.status === 409 ? [] : (cloudSets || []); if (e.status !== 404 && e.status !== 409) status(`Could not read your sets on GitHub: ${e.message}`); }
+  cloudBusy = false; return cloudSets;
+}
+function drawCloud() {
+  const box = $('lsCloud'); if (!box) return; box.textContent = '';
+  if (!cloudSets) { const n = document.createElement('small'); n.textContent = 'looking…'; box.appendChild(n); if (!cloudBusy) cloudList().then(drawCloud); return; }
+  if (!cloudSets.length) { const n = document.createElement('small'); n.textContent = 'none yet'; box.appendChild(n); }
+  for (const x of cloudSets) {
+    const b = document.createElement('button'); b.innerHTML = `${x.locked ? '🔒 ' : ''}${x.name} <small>${x.size < 1e5 ? Math.ceil(x.size / 1e3) + ' KB' : (x.size / 1e6).toFixed(1) + ' MB'}</small>`;
+    b.title = 'Tap to load it; hold to delete it from GitHub';
+    let held = null;
+    b.addEventListener('pointerdown', () => { held = setTimeout(() => { held = 'long'; cloudDelete(x); }, 600); });
+    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); cloudLoad(x); } held = null; });
+    b.addEventListener('pointerleave', () => { if (held !== 'long') clearTimeout(held); });
+    box.appendChild(b);
+  }
+  const r = document.createElement('button'); r.textContent = '⟳'; r.title = 'Look again';
+  r.addEventListener('click', () => { cloudSets = null; drawCloud(); }); box.appendChild(r);
+}
+function cloudToken() {
+  let tok = ghTok();
+  if (!tok) {
+    tok = (prompt('Your GitHub token (the one ☁ Send to the library uses: Contents, read and write, on this repository). It is kept only on this device.') || '').trim();
+    if (tok) try { localStorage.setItem('pocketGitHub', tok); } catch (e) {}
+  }
+  return tok;
+}
+// one commit on the sets branch: files [[path, text or null (delete)]]; the branch is made, holding only sets, the first time
+async function cloudCommit(files, message, tok) {
+  let head = null, base = null;
+  try { head = (await gh(`/git/ref/heads/${SETS_BRANCH}`, {}, tok)).object.sha; base = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha; }
+  catch (e) { if (e.status !== 404 && e.status !== 409) throw e; }
+  const tree = [];
+  for (const [path, text] of files) tree.push({ path, mode: '100644', type: 'blob', sha: text == null ? null : (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: text, encoding: 'utf-8' }) }, tok)).sha });
+  const t2 = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ ...(base && { base_tree: base }), tree }) }, tok);
+  const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: t2.sha, parents: head ? [head] : [] }) }, tok);
+  if (head) await gh(`/git/refs/heads/${SETS_BRANCH}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
+  else await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${SETS_BRANCH}`, sha: c.sha }) }, tok);
+}
+async function cloudSave() {
+  const cur = mine.find(m => m.id === S.grid.setId) || SETS.find(x => x.id === S.grid.setId);
+  const name = (prompt('Save the grid to GitHub as:', cur?.name || `My set ${S.bpm} BPM`) || '').trim().replace(/[\/]/g, '-'); if (!name) return;
+  const tok = cloudToken(); if (!tok) return;
+  const P = packOf({ name, set: gridSet(name) }), priv = P.sounds.some(m => mine.find(x => x.id === m.id)?.private);
+  if (priv && !(await vaultAsk())) return;
+  const path = `sets/${encodeURIComponent(name)}.${priv ? 'enc' : 'pocketpack.json'}`, list = await cloudList(true);
+  const other = list.find(x => x.name === name);
+  if (other && !confirm(`“${name}” is already on GitHub. Replace it with the grid as it is now?`)) return;
+  try {
+    status(`Saving “${name}” to GitHub… (${(JSON.stringify(P).length / 1e6).toFixed(1)} MB)`);
+    const text = JSON.stringify(P);
+    await cloudCommit([[path, priv ? await vaultLock(text) : text], ...(other && other.path !== path ? [[other.path, null]] : [])], `Pocket Sampler set: ${priv ? '(private)' : name}`, tok);
+    cloudSets = null; drawCloud();
+    status(`“${name}” is saved on GitHub: on any device, Loops › ⚙ › On GitHub.`);
+  } catch (e) { status(`Could not save it to GitHub: ${e.message}${e.status === 401 || e.status === 403 ? ' (check the token: Contents, read and write, on this repository)' : ''}`); log('error', 'cloud save: ' + e.message); }
+}
+async function cloudLoad(x) {
+  try {
+    status(`Loading “${x.name}” from GitHub…`);
+    const blob = await gh(`/git/blobs/${x.sha}`, {}, ghTok());
+    let text = new TextDecoder().decode(u8of(blob.content.replace(/\s/g, '')));
+    if (x.locked) { if (!(await vaultAsk())) return; text = await vaultUnlock(text); }
+    const P = JSON.parse(text);
+    P.from = { name: 'GitHub: ' + x.name, credit: 'yours', source: '' };       // loaded again, its sounds replace the ones it brought last time
+    for (const m of mine.filter(m => m.type === 'set' && m.cloud === x.path)) await idbDel('mine', m.id);
+    const r = await importPack(P, x.locked);
+    if (r.set) { await idbPut('mine', { ...r.set, cloud: x.path }, r.set.id); await refreshMine(); }
+    if (r.set) await loadSet(r.set.id, false, r.set.set);
+    drawSets(); status(`“${x.name}” is loaded from GitHub${r.sounds ? `, with ${r.sounds} sound${r.sounds === 1 ? '' : 's'} of yours` : ''}; it is in My sets too.`);
+  } catch (e) { status(`Could not load it from GitHub: ${e.message}`); log('error', 'cloud load: ' + e.message); }
+}
+async function cloudDelete(x) {
+  if (!confirm(`Delete “${x.name}” from GitHub? (On this device it stays in My sets, if it is there.)`)) return;
+  const tok = cloudToken(); if (!tok) return;
+  try { await cloudCommit([[x.path, null]], `Pocket Sampler set deleted: ${x.locked ? '(private)' : x.name}`, tok); cloudSets = null; drawCloud(); status(`“${x.name}” is deleted from GitHub.`); }
+  catch (e) { status(`Could not delete it: ${e.message}`); }
+}
+$('lsCloudSave').addEventListener('click', cloudSave);
 // 16-bit samples, as text (base64), and back
 function pcm16(f32) {
   const v = new Int16Array(f32.length); for (let i = 0; i < f32.length; i++) v[i] = Math.max(-32767, Math.min(32767, Math.round(f32[i] * 32767)));
