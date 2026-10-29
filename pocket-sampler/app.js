@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029h';
+import * as DZ from './design.js?v=20261029i';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029h';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029i';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2068,7 +2068,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029i'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2161,7 +2161,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029i'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3089,6 +3089,29 @@ const pedUp = () => {
 pedCv.addEventListener('pointerup', pedUp); pedCv.addEventListener('pointercancel', () => { pedDrag = null; pedSel = null; drawPed(true); });
 $('pedHear').addEventListener('click', pedHear);
 $('pedQ').addEventListener('click', quantStep);
+// ⇶ Spread: the bit chosen in the wave made a sound of its own, played down and up the key across the
+// pads (the 8th as chosen, moved to the key's root unless it is a drum), every note as long as the bit.
+// It goes on the sound chosen (↶ Undo brings back what was there) and on the pads of both screens.
+async function pedSpread() {
+  const v = pedView(); if (!v) { status('Nothing to spread: choose a sound with a wave first.'); return; }
+  const [fa, fb] = pedPart(v), a = v.a + fa * (v.b - v.a), e = v.a + fb * (v.b - v.a);
+  const buf = v.buf, rate = buf.sampleRate, i0 = Math.round(a * rate), n = Math.max(1, Math.round((e - a) * rate));
+  const note = ctx.createBuffer(1, n, rate), d = note.getChannelData(0);
+  note.copyToChannel(buf.getChannelData(0).subarray(i0, i0 + n), 0);
+  const fi = Math.min(n >> 2, Math.round(0.003 * rate)), fo = Math.min(n >> 2, Math.round(0.01 * rate));
+  for (let j = 0; j < fi; j++) d[j] *= j / fi;                // no click where it was cut
+  for (let j = 0; j < fo; j++) d[n - 1 - j] *= j / fo;
+  const drum = v.loop ? lp.c <= 2 : isDrum(S.cur);
+  let shift = 0;
+  if (!drum) { const ch = chroma(note, 0, n / rate), pc = ch.indexOf(Math.max(...ch)); shift = ((S.root - pc + 18) % 12) - 6; }
+  const from = (v.loop ? padLoopInfo()?.name : S.slots[S.cur]?.name) || 'Sound', name = `${from.replace(/ \(spread\)$/, '')} (spread)`;
+  checkpoint();
+  S.slots[S.cur] = { factory: null, kind: 'multi', name, buf: note, base: 60 + shift - S.root - keySemis(7, S.scale), zones: [{ m: 60, s: 0, e: n / rate }],
+    params: { ...defParams(), vol: v.loop ? 0.6 : S.slots[S.cur]?.params.vol ?? 0.6 }, keepLength: true };
+  S.lastKey[S.cur] = 7; syncPanel(); dirty(); padsTake(); draw(); pedHear();
+  status(`${name}: the bit you chose, across the pads in ${keyWords(S)} (pad 8 as chosen${drum ? '' : ', moved to the key'}), on sound ${S.cur + 1}. ↶ Undo brings back what was there.`);
+}
+$('pedSpread').addEventListener('click', pedSpread);
 // the sound's volume, as a bar to drag (the same as Menu › Settings › Volume); one drag is one step for Undo
 $('pedVol').addEventListener('pointerdown', () => checkpoint());
 fader($('pedVol'), v => { if (padLoopInfo()) { S.grid.lpVol = v; lpLevel(); persist(); draw(); return; } const sl = S.slots[S.cur]; if (!sl) return; sl.params.vol = v; $('pVol').value = v; $('oVol').textContent = Math.round(v * 100); dirty(); draw(); });       // the same Quantize as Settings and Loops + Pads
@@ -3816,7 +3839,7 @@ function save() {
     const slots = S.slots.map(sl => sl.factory != null ? { factory: sl.factory, params: sl.params, synth: sl.synth,
       trims: sl.slices?.map(x => [x.start ?? 0, x.len ?? 1]) } : {
       kind: sl.kind, name: sl.name, params: sl.params, synth: sl.synth, contiguous: sl.contiguous, buf: ref(sl.buf), zones: sl.zones, base: sl.base, bpm: sl.bpm, credit: sl.credit,
-      made: sl.made, drumLoop: sl.drumLoop, slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
+      made: sl.made, drumLoop: sl.drumLoop, keepLength: sl.keepLength, slices: sl.slices?.map(s => ({ ...s, buf: ref(s.buf) })),
     });
     const { mode, write, replace, ...rest } = S;
     tx.objectStore('state').put({ ...rest, slots }, 'v1');
@@ -3841,7 +3864,7 @@ async function load() {
       const withdrawn = /Good Day/.test(s?.credit || '');     // the song pack taken out: its sounds go, the usual ones come back
       if (withdrawn) gone.add(i);
       if (s && s.factory == null && !withdrawn) {
-        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit, made: s.made, drumLoop: s.drumLoop };
+        const slot = { factory: null, kind: s.kind, name: s.name, params: params(s.params), synth: s.synth, contiguous: s.contiguous, buf: await getBuf(s.buf), zones: s.zones, base: s.base, bpm: s.bpm, credit: s.credit, made: s.made, drumLoop: s.drumLoop, keepLength: s.keepLength };
         if (s.slices) slot.slices = await Promise.all(s.slices.map(async x => ({ ...x, buf: await getBuf(x.buf) })));
         if (slot.kind === 'synth' || slot.buf || slot.slices?.every(x => x.buf || slot.buf)) { S.slots[i] = slot; continue; }
       }
