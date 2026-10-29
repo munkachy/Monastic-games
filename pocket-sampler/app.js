@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029v';
+import * as DZ from './design.js?v=20261029w';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029v';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029w';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2080,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029v'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029w'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029v'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029w'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5489,6 +5489,7 @@ async function drawCellMenu() {
   }
   const F = menuFolder && cellFolders().find(f => f[0] === menuFolder), fc = F?.[2];
   if (!F) {             // the colour folders, the column's own first
+    btn('⬆ Upload a file', 'an MP3, WAV or other sound from this device, into this cell', () => { cellUpFor = { c, r }; $('cellFile').click(); }, false, 'var(--accent)', 'folder');
     btn('🥁 Design a hit', 'make a drum hit, tap its steps: a loop', () => {
       choosing = false; dzEmpty = true; cellDzFor = null; document.querySelector('[data-lpane="design"]').click();
     }, false, 'var(--c-kick)', 'folder');
@@ -5694,6 +5695,54 @@ $('lmDzPut').addEventListener('click', async () => {
   const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`;
   const dzKeep = { lines: cellLines.map(L => ({ st: { ...L.st, p: { ...L.st.p }, f: { ...L.st.f } }, steps: [...L.steps] })), swing: S.swing };   // kept, to play again at another tempo
   dzEmpty = false; await loopToCell(c, r, bar, name, 1, true, { dz: dzKeep });
+});
+// ⬆ Upload a file into a cell: an MP3, WAV, M4A… (or a video's sound) from the device. Its tempo is guessed
+// from its beat and asked (fitted to whole bars, so it loops in time; empty: no beat, played as it is),
+// and it is kept in the library too (My loops), like a loop made here.
+let cellUpFor = null;
+function guessBpm(buf) {
+  const x = buf.getChannelData(0), sr = buf.sampleRate, hop = 512, n = Math.floor(Math.min(x.length, sr * 30) / hop);
+  if (n < 50) return null;
+  const env = new Float32Array(n), on = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let e = 0; for (let j = 0; j < hop; j++) { const v = x[i * hop + j]; e += v * v; } env[i] = Math.sqrt(e / hop); }
+  for (let i = 1; i < n; i++) on[i] = Math.max(0, env[i] - env[i - 1]);           // where the sound jumps up: the hits
+  const fps = sr / hop; let best = 0, bpm = null;
+  for (let b = 70; b <= 180; b += 0.5) {          // the beat its hits repeat at most strongly
+    const lag = fps * 60 / b, L = Math.floor(lag), f = lag - L; let sum = 0;
+    for (let i = 0; i + L + 1 < n; i++) sum += on[i] * (on[i + L] * (1 - f) + on[i + L + 1] * f);
+    sum /= n - L; if (sum > best) { best = sum; bpm = b; }
+  }
+  if (!bpm) return null;
+  const bars = Math.round(buf.duration * bpm / 240), fit = bars ? bars * 240 / buf.duration : 0;     // a loop of whole bars: its exact tempo
+  return Math.abs(fit - bpm) < 3 ? Math.round(fit * 10) / 10 : Math.round(bpm);
+}
+$('cellFile').addEventListener('change', async () => {
+  const f = $('cellFile').files[0]; $('cellFile').value = ''; const at = cellUpFor; cellUpFor = null;
+  if (!f || !at) return;
+  if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  status(`Reading ${f.name}…`);
+  let buf;
+  try {
+    let raw;
+    try { raw = await decode(await f.arrayBuffer()); }
+    catch (e) { raw = await captureMedia(f); }           // a format the browser cannot open directly: played through to capture it
+    buf = prepare(ctx, raw, { trim: false, peak: 0.9 });        // as it is: a loop's quiet end is part of its last bar
+  } catch (e) { status(`Could not read the sound in ${f.name}.`); log('error', 'cell upload: ' + e.message); return; }
+  const guess = guessBpm(buf), name0 = f.name.replace(/\.[^.]+$/, '');
+  const ans = prompt(`${name0}: ${buf.duration.toFixed(1)} s. Its tempo (BPM)${guess ? `: it sounds like ${guess}` : ''}. Leave it empty if it has no beat (it then plays at its own speed, never stretched).`, guess || '');
+  if (ans === null) { status('Nothing was put in the cell.'); return; }
+  const bpm = Math.max(40, Math.min(240, +ans || 0)) || 0, { c, r } = at, was = S.grid.cells[c][r], folder = c < 3 ? 'Beats' : LR_FOLDER[c];
+  let e = buf.duration, bars;
+  if (bpm) { bars = Math.max(1, Math.round(buf.duration * bpm / 240)); e = Math.min(buf.duration, bars * 240 / bpm); }      // whole bars, so it loops in time
+  const slot = { factory: null, kind: 'chop', contiguous: false, name: name0, params: { ...defParams(), trig: 'loop' }, buf, ...(c < 3 && bpm && { drumLoop: true }),
+    slices: [{ s: 0, e, name: name0, ...(bpm && { bpm, bars }) }] };
+  const id = 'm' + Date.now().toString(36);
+  await idbPut('mine', { id, name: name0, type: 'loop', folder, created: Date.now(), item: packSlot(slot), from: { name: f.name, credit: 'uploaded', source: '' } }, id);
+  await refreshMine();
+  for (const l of colLanes(c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === r) { kill(l[k]); l[k] = null; }
+  S.grid.cells[c][r] = { mine: id, k: 0, name: name0, mode: 'loop', vol: was?.vol ?? 1, ...(c >= 3 && { follow: false }) };
+  choosing = false; persist(); drawLoops(); warmGridSoon(); if (menuCell) drawCellMenu();
+  status(`“${name0}” is in ${CHANNELS[c]}, cell ${r + 1}${bpm ? ` (${bpm} BPM, ${bars} bar${bars > 1 ? 's' : ''})` : ' (no tempo: plays as it is)'}, and in the library (${folder}, My loops). Hold the cell to trim it.`);
 });
 // a loop made here (designed, or from the pads) into a cell, kept in the library too (My loops)
 async function loopToCell(c, r, buf, name, bars, drumLoop, extra = {}) {
