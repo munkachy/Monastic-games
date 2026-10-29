@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029q';
+import * as DZ from './design.js?v=20261029r';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029q';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029r';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2080,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029r'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029q'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029r'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -6111,7 +6111,11 @@ function cloudFail(what, e) {
   status(msg.split('\n')[0]); log('error', `cloud ${what}: ${e.status || ''} ${e.message}`); alert(msg);
 }
 // one commit on the sets branch: files [[path, text or null (delete)]]; the branch is made, holding only sets, the first time
-async function cloudCommit(files, message, tok) {
+async function cloudCommit(files, message, tok, again = true) {
+  try { return await cloudCommitOnce(files, message, tok); }
+  catch (e) { if (again && e.status === 422) return cloudCommit(files, message, tok, false); throw e; }     // the branch moved meanwhile: once more, from where it is now
+}
+async function cloudCommitOnce(files, message, tok) {
   let head = null, base = null;
   try { head = (await gh(`/git/ref/heads/${SETS_BRANCH}`, {}, tok)).object.sha; base = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha; }
   catch (e) { if (e.status !== 404 && e.status !== 409) throw e; }
@@ -6268,7 +6272,7 @@ async function vaultAsk() {
 }
 const ghTok = () => { try { return localStorage.getItem('pocketGitHub') || ''; } catch (e) { return ''; } };
 async function gh(path, opts = {}, tok = ghTok()) {
-  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { ...opts,
+  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,      // (never a copy kept from before: a branch moves)
     headers: { Accept: 'application/vnd.github+json', ...(tok && { Authorization: `Bearer ${tok}` }), ...(opts.body && { 'Content-Type': 'application/json' }) } });
   if (!r.ok) { const e = new Error(`GitHub: ${r.status} ${(await r.json().catch(() => ({}))).message || r.statusText}`); e.status = r.status; throw e; }
   return r.status === 204 ? null : r.json();
