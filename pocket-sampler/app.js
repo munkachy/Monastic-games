@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029l';
+import * as DZ from './design.js?v=20261029m';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029l';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029m';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2079,7 +2079,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029m'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2172,7 +2172,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029m'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2988,7 +2988,7 @@ function draw() {
     el.querySelector('span').textContent = keyLabel(k);
     el.querySelector('em').textContent = S.mode === 'sound' && !away ? slotTag(S.slots[k]) : '';
   }
-  drawRobot(); drawPed();
+  drawRobot(); drawPed(); drawLock();
   const oc = padShared() ? lp.oct || 0 : octOf(S.cur);
   $('padOctDn').textContent = oc < 0 ? `Oct ${oc}` : 'Oct −'; $('padOctDn').classList.toggle('on', oc < 0);
   $('padOctUp').textContent = oc > 0 ? `Oct +${oc}` : 'Oct +'; $('padOctUp').classList.toggle('on', oc > 0);
@@ -3046,6 +3046,18 @@ function drawFxPage() {
   EQ_BANDS.forEach(([, , b]) => { const v = f.eq?.[b] || 0; $('pfxEq' + b).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%'; $('pfxEq' + b + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB'; });
 }
 document.querySelector('[data-tab="tEffects"]').addEventListener('click', () => drawFxPage());
+// 🔒 Lock (on the Pads, and in Loops + Pads): the pads keep the sound they have; tapping loops starts and
+// stops them but no longer puts them on the pads. A sound chosen on purpose (Sound, Library, Spread) still goes on.
+function drawLock() {
+  const on = !!S.grid?.lpLock;
+  for (const id of ['padLock', 'lpLock']) { const b = $(id); if (!b) continue; b.textContent = id === 'lpLock' ? (on ? '🔒' : '🔓') : on ? '🔒 Locked' : '🔓 Lock'; b.classList.toggle('on', on); }      // (above the pads in Loops + Pads: the padlock alone, room for the name)
+}
+function toggleLock() {
+  S.grid.lpLock = !S.grid.lpLock; persist(); drawLock(); if (view === 'both') lpDraw();
+  status(S.grid.lpLock ? 'Locked: the pads keep this sound; tap loops as you like.' : 'Unlocked: the next loop you tap goes on the pads.');
+}
+$('padLock').addEventListener('click', toggleLock);
+$('lpLock').addEventListener('click', toggleLock);
 // a sound chosen on the Pads: on the pads of both screens, until a loop is tapped
 function padsTake() {
   const sl = S.slots[S.cur]; if (!sl) return;
@@ -4665,6 +4677,7 @@ $('lpFxDone').addEventListener('click', () => lpFxShow(false));
 EQ_BANDS.forEach(([, , b]) => fader($('lpEq' + b), v => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { ...f.eq, [b]: Math.round((v - 0.5) * 24) }; lpFxApply(); persist(); lpFxDraw(); }));
 $('lpEqFlat').addEventListener('click', () => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { lo: 0, mid: 0, hi: 0 }; lpFxApply(); persist(); lpFxDraw(); });
 function lpPick(c, r) {
+  if (S.grid.lpLock) return;                // 🔒 Lock: the pads keep their sound while the loops are played
   if (!S.grid.cells[c][r] || (!lpInst && lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
   if (lpInst && lpRec) return;                // recording a designed sound: the pads keep it
   lpInst = null; try { localStorage.removeItem('pocketPadSound'); } catch (e) {}
@@ -4995,9 +5008,10 @@ function lpDraw() {
   $('lpRec').classList.toggle('on', !!lpRec && ctx.currentTime >= lpRec.t0); $('lpRec').classList.toggle('armed', !!lpRec && ctx.currentTime < lpRec.t0);
   $('lpRec').textContent = lpRec ? '■ Stop' : '⏺ Rec'; $('lpRec').classList.toggle('open', lprOpen); if (lprOpen) lprDraw();
   $('lpQ').textContent = lpQName(S.quantGrid); $('lpQ').classList.toggle('on', !!S.quantGrid);
+  drawLock();
   if (lpRec && ctx.currentTime < lpRec.t0) setTimeout(lpDraw, Math.max(30, (lpRec.t0 - ctx.currentTime) * 1000));
   const cell = lpCellNow();
-  $('lpads').style.setProperty('--c', lpInst && lpTarget ? CHANNEL_COLOR[lpTarget.c] : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
+  $('lpads').style.setProperty('--c', lpInst ? (lpTarget ? CHANNEL_COLOR[lpTarget.c] : 'var(--accent)') : cell ? CHANNEL_COLOR[lp.c] : 'var(--accent)');
   $('lpSrc').textContent = lpInst ? `🎹 ${lpInst.name}${lpTarget ? ` → ${CHANNELS[lpTarget.c]}, cell ${lpTarget.r + 1}` : ''}` : cell ? `${CHANNELS[lp.c]} · ${cell.name || 'cell ' + (lp.r + 1)}${gone ? ' (its cell emptied: still on the pads)' : ''}` : 'Tap a loop: the pads play it.';
   $('lpKeys').classList.toggle('empty', !cell && !lpInst);
   $('lpCrop').classList.toggle('on', !!lpEd.on || !!cell?.lpNote);
