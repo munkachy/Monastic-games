@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029n';
+import * as DZ from './design.js?v=20261029o';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029n';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029o';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2079,7 +2079,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029n'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029o'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2172,7 +2172,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029n'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029o'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3051,6 +3051,7 @@ document.querySelector('[data-tab="tEffects"]').addEventListener('click', () => 
 // 🔒 Lock (on the Pads, and in Loops + Pads): the pads keep the sound they have; tapping loops starts and
 // stops them but no longer puts them on the pads. A sound chosen on purpose (Sound, Library, Spread) still goes on.
 function drawLock() {
+  for (const id of ['padChoke', 'lpChoke']) $(id)?.classList.toggle('on', !!S.grid?.lpChoke);
   const on = !!S.grid?.lpLock;
   for (const id of ['padLock', 'lpLock']) { const b = $(id); if (!b) continue; b.textContent = id === 'lpLock' ? (on ? '🔒' : '🔓') : on ? '🔒 Locked' : '🔓 Lock'; b.classList.toggle('on', on); }      // (above the pads in Loops + Pads: the padlock alone, room for the name)
 }
@@ -3059,6 +3060,14 @@ function toggleLock() {
   status(S.grid.lpLock ? 'Locked: the pads keep this sound; tap loops as you like.' : 'Unlocked: the next loop you tap goes on the pads.');
 }
 $('padLock').addEventListener('click', toggleLock);
+// Choke (on the Pads and above the pads in Loops + Pads; the same as Loops › ⚙ › Pads choke): on, each
+// note cuts off the one before, one voice at a time; off, they ring over each other
+function toggleChoke() {
+  S.grid.lpChoke = !S.grid.lpChoke; persist(); drawLock(); if (!$('lsets').hidden) drawSets();
+  status(S.grid.lpChoke ? 'Choke on: each note on the pads cuts off the one before.' : 'Choke off: the notes on the pads ring over each other.');
+}
+$('padChoke').addEventListener('click', toggleChoke);
+$('lpChoke').addEventListener('click', toggleChoke);
 $('lpLock').addEventListener('click', toggleLock);
 // a sound chosen on the Pads: on the pads of both screens, until a loop is tapped
 function padsTake() {
@@ -5153,7 +5162,7 @@ function drawSets() {
   choices($('lsQuant'), QUANTS, S.grid.quant, v => { S.grid.quant = v; persist(); drawSets(); });
   choices($('lsFade'), FADES, S.grid.fade, v => { S.grid.fade = v; persist(); drawSets(); });
   drawCountIn();
-  choices($('lsChoke'), [[false, 'Off'], [true, 'On']], !!S.grid.lpChoke, v => { S.grid.lpChoke = v; persist(); drawSets(); status(v ? 'Choke on: each note on the pads cuts off the one before.' : 'Choke off: the notes on the pads ring over each other.'); });
+  choices($('lsChoke'), [[false, 'Off'], [true, 'On']], !!S.grid.lpChoke, v => { S.grid.lpChoke = v; persist(); drawSets(); drawLock(); status(v ? 'Choke on: each note on the pads cuts off the one before.' : 'Choke off: the notes on the pads ring over each other.'); });
   // every loop at once (each can be changed after: hold it)
   S.grid.stretch ??= true;
   choices($('lsStretch'), STRETCHES, S.grid.stretch, v => {
