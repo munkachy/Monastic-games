@@ -116,8 +116,16 @@ The first build: the arena, played with the phone sideways. The name is from the
 
 ### [Pocket Sampler](https://munkachy.github.io/Monastic-games/pocket-sampler/)
 
-A 16-key pocket sampler and step sequencer, played like a Teenage Engineering
-PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
+A pocket looper with 16 keys to play over the loops: the Loops grid (like
+Remixlive) for the song, and the Pads, a 16-key instrument in the spirit of a
+Teenage Engineering PO-33, for improvising on top.
+
+- **The Pads are for playing over the loops:** no patterns, no recording,
+  nothing going across the keys. Eight buttons: Sound, FX, ☰ Menu, ▶ Play,
+  Undo, Redo, Oct − and Oct +. Under them, a **wave editor**: the sound the
+  keys play, as the last key played it; drag across it to choose the part
+  that plays (or move either edge alone), ▶ Hear, Whole. (The patterns and
+  their tools are gone from the screen; what you had is kept, unplayed.)
 
 - **Sixteen instruments.** The Pads are for instruments; the drums, the robot
   voice and the rap live in the Loops (🥁 Design a hit, 🤖 Robot words). Four
@@ -127,8 +135,6 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   sound in the library can go on any of the 16: **📂 Library** (beside the
   Pads ▾ button) opens the whole of it, the same as a Loops cell's (beats,
   snares, tops, kits, every colour folder, and the sets as packs).
-- **16 patterns,** chainable, with swing, eight scales and any key. **Write**
-  places steps when stopped and records live when playing.
 - **Key wheel:** tap the key on the screen. Majors and minors in
   circle-of-fifths order, the keys that sit well with yours shaded, and
   **Next** in the middle (up a fifth, then to the relative key). While the
@@ -148,7 +154,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   grid point, for what you hear and what is recorded; with nothing playing,
   the first tap starts an invisible grid at the tempo. Exports are stereo.
 - **Dark look and colours by part:** a near-black body and display, like
-  Remixlive (the beige PO-33 look stays as Menu › Buttons › Look). Colours
+  Remixlive (the beige PO-33 look stays as Menu › Setup › Look). Colours
   go by part, the same in the Pads and the Loops: kick red, snare orange,
   hats yellow, bass green, chords teal, lead pink, sub purple, vox/keys
   blue. Sounds 1–8 are instruments, one part each (bass, sub, chords,
@@ -161,7 +167,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   kit) for its volume, pitch and how it plays, and its own EQ (three bands,
   with its curve) and effect (reverb, echo, ping-pong, chorus, drive, distortion, fuzz,
   tape), on every note of it, in the beat and in the export.
-- **Light sound engine** (Menu › Buttons › Sound engine), for older iPads
+- **Light sound engine** (Menu › Setup › Sound engine), for older iPads
   whose sound breaks up: a bigger audio buffer, 32 kHz inside, a shorter
   reverb, fewer notes at once, loops made ready only when tapped. The app
   suggests it when it hears the sound breaking up; sounds only previewed
@@ -325,7 +331,7 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   Tempo, key, Play and FX are shared with the Pads tab.
 - **Sideways:** the Pads lie sideways like the Loops (screen and buttons
   left, keys right), turned a quarter turn when the phone is upright;
-  Menu › Buttons › Pads › Upright brings back the tall layout. Effects
+  Menu › Setup › Pads › Upright brings back the tall layout. Effects
   aimed at chosen tracks (FX › Tracks) hit only those, from the FX keys and
   the blue buttons alike, the effects already on included.
 - **One screen for playing:** the keys and the playing buttons fit without
