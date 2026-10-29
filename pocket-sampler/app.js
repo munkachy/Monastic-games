@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029c';
+import * as DZ from './design.js?v=20261029d';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029c';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029d';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -23,7 +23,7 @@ let ctx, eng, engReady, scope;
 // The Light engine, for older iPads: a bigger audio buffer (the phone has longer to make each
 // moment of sound, so it doesn't break up: a little more delay), a lower rate inside (less work
 // for every sound, a third less memory for them), a shorter reverb, fewer notes at once, loops
-// made ready only when tapped, and less drawing. Menu › Buttons › Sound engine.
+// made ready only when tapped, and less drawing. Menu › Setup › Sound engine.
 const LIGHT = (() => { try { return localStorage.getItem('pocketEngine') === 'light'; } catch (e) { return false; } })();
 stretchLimit.n = LIGHT ? 16 : 40;
 function makeAudio() {
@@ -123,7 +123,7 @@ setInterval(() => {
       // the sound breaking up again and again while playing: say what can help, once
       if (playing && !LIGHT) glitches.push(w);
       while (glitches.length && w - glitches[0] > 30000) glitches.shift();
-      if (glitches.length >= 4 && !lightSaid) { lightSaid = true; status('The sound is breaking up: this device is working hard. Menu › Buttons › Sound engine › Light can help.'); }
+      if (glitches.length >= 4 && !lightSaid) { lightSaid = true; status('The sound is breaking up: this device is working hard. Menu › Setup › Sound engine › Light can help.'); }
     }
     // "running" but the clock hasn't moved for two seconds: the engine is dead
     frozen = dA < 0.01 && !document.hidden ? frozen + 1 : 0;
@@ -516,7 +516,7 @@ function playTick(e, t, when, live) {
     : [[src, r, si => seqTo.has(si)], [t, 1, si => !seqTo.has(si)]];
   const shown = seqTo === 'all' ? src ?? t : t;
   if (live) uiQueue.push({ t: when, tick: t, step: shown % 16, pat: patAt(shown) });
-  for (const [from, rr, mine] of groups) {
+  for (const [from, rr, mine] of live ? [] : groups) {      // the Pads play no patterns now: only what you play over the loops
     if (from == null) continue;
     for (const n of S.patterns[patAt(from)][from % 16]) {
       if (!mine(n.s)) continue;
@@ -1872,7 +1872,7 @@ $('menuClose').addEventListener('click', () => stopLine());
 $('menuClose').addEventListener('click', closeMenu);
 
 // ---------------------------------------------------------------------------
-// Custom buttons: four small buttons whose job you choose (Menu › Buttons).
+// Custom buttons: four small buttons whose job you choose (Menu › Setup).
 // An effect works while the button is held, like an FX key.
 // ---------------------------------------------------------------------------
 const THEMES = [['rhythm', 'Rhythm (red)'], ['pitch', 'Pitch and key (purple)'], ['sound', 'The sound (amber)'], ['voice', 'Voice (blue)']];
@@ -2066,7 +2066,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029d'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2159,7 +2159,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029d'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2952,10 +2952,7 @@ function draw() {
       case 'sound': cur = k === S.cur; break;
       case 'pattern': cur = k === S.pat; lit = S.chain.includes(k) && (playing ? k === headPat : true); some = S.patterns[k].some(s => s.length); break;
       case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
-      default: lit = steps.some(n => n.s === S.cur);
-        // the small light: other sounds on the step; in Write, drums not shown in the blocks (the other
-        // kits, with a kit chosen; any kit, with an instrument chosen), so a beat under them still shows
-        some = !lit && steps.some(n => (S.write ? drumSide(n.s) && n.s !== S.cur : true));
+      default: break;            // playing: the pads light only as you touch them (no steps, no beat going across)
     }
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
     const steps_ = S.mode === 'play' && S.write, tint = S.mode === 'sound' || (S.mode === 'play' && !S.write);
@@ -2969,7 +2966,7 @@ function draw() {
     } else if (el.dataset.fill) { el.dataset.fill = ''; el.querySelector('u').innerHTML = ''; el.classList.remove('full'); }
     el.classList.toggle('fxon', S.mode === 'fx' && lit);
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
-    el.classList.toggle('head', playing && k === headStep && S.mode !== 'sound' && S.mode !== 'pattern');
+    el.classList.toggle('head', false);
     const loops = S.mode === 'sound' ? [...looping.keys()].some(id => id.startsWith(k + ':')) : looping.has(`${S.cur}:${k}`);
     el.classList.toggle('down', down.has(k) || loops || (flash?.k === k && performance.now() < flash.until));
     const ci = S.mode === 'pattern' && S.chain.length > 1 ? S.chain.indexOf(k) : -1;
@@ -2977,8 +2974,80 @@ function draw() {
     el.querySelector('span').textContent = keyLabel(k);
     el.querySelector('em').textContent = S.mode === 'sound' && !away ? slotTag(S.slots[k]) : '';
   }
-  drawRobot();
+  drawRobot(); drawPed();
+  $('padOctDn').textContent = octOf(S.cur) < 0 ? `Oct ${octOf(S.cur)}` : 'Oct −'; $('padOctDn').classList.toggle('on', octOf(S.cur) < 0);
+  $('padOctUp').textContent = octOf(S.cur) > 0 ? `Oct +${octOf(S.cur)}` : 'Oct +'; $('padOctUp').classList.toggle('on', octOf(S.cur) > 0);
 }
+$('padOctDn').addEventListener('click', () => shiftOct(-1));
+$('padOctUp').addEventListener('click', () => shiftOct(1));
+
+// The Pads' wave editor (under the buttons): the sound the pads play, as the last pad played it. Drag across
+// it to choose the bit that plays (grab an edge to move just that side); tap it to hear the pad. It is the
+// sound's Start and Length (Menu › Settings), for a kit or a loop that pad's own. ▶ Hear; Whole takes it all.
+// (var: draw() can call drawPed before these lines have run)
+var pedCv = $('pedCv'), pedSel = null, pedDrag = null, pedKey = '';
+function pedView() {
+  const sl = S.slots[S.cur]; if (!sl || sl.kind === 'synth') return null;
+  if (sl.kind === 'chop') { const x = sl.slices?.[S.lastKey[S.cur]]; return x ? { buf: x.buf || sl.buf, a: x.s, b: x.e, o: x } : null; }
+  const v = waveView(); return v && { buf: v.buf, a: v.a, b: v.b, o: sl.params };
+}
+// start is where it begins; len, how much of what is left after it plays (audio.js): as a part of the whole, 0..1
+const pedPart = o => { const a = o.start || 0; return [a, a + (o.len ?? 1) * (1 - a)]; };
+function drawPed(force = false) {
+  const pedCv = $('pedCv'), pg = pedCv.getContext('2d'), dpr = LIGHT ? 1 : window.devicePixelRatio || 1, W = Math.round(pedCv.clientWidth * dpr), H = Math.round(pedCv.clientHeight * dpr);
+  const v = pedView(), [a, b] = pedSel || (v ? pedPart(v.o) : [0, 1]);
+  const key = [W, H, S.cur, S.lastKey[S.cur], v?.buf?.length, v?.a, v?.b, a, b, S.slots[S.cur]?.name].join('|');
+  if (!force && key === pedKey) return; pedKey = key;
+  if (pedCv.width !== W || pedCv.height !== H) { pedCv.width = W; pedCv.height = H; }
+  pg.clearRect(0, 0, W, H); if (!W || !H) return;
+  const ink = cssVar(`--s${S.cur + 1}`) || '#3ddc84', sl = S.slots[S.cur];
+  $('pedWhat').textContent = !sl ? 'Empty: 📂 Library to load a sound' : !v ? `${sl.name}: a synth, nothing to crop` : `${sl.name} · pad ${S.lastKey[S.cur] + 1}`;
+  if (!v) return;
+  const x = v.buf.getChannelData(0), sr = v.buf.sampleRate, i0 = Math.floor(v.a * sr), i1 = Math.max(i0 + 1, Math.floor(v.b * sr)), per = (i1 - i0) / W;
+  const X1 = a * W, X2 = b * W;
+  for (let px = 0; px < W; px++) {
+    let lo = 0, hi = 0; const s0 = i0 + Math.floor(px * per), s1 = Math.min(i1, s0 + Math.max(1, Math.ceil(per)));
+    for (let i = s0; i < s1; i += Math.max(1, (per / 32) | 0)) { const y = x[i] || 0; if (y < lo) lo = y; if (y > hi) hi = y; }
+    pg.fillStyle = px >= X1 && px <= X2 ? ink : '#ffffff40';
+    pg.fillRect(px, H / 2 - hi * H * 0.46, 1, Math.max(1, (hi - lo) * H * 0.46));
+  }
+  pg.fillStyle = '#ffffff12'; pg.fillRect(X1, 0, X2 - X1, H);
+  pg.fillStyle = '#fff';
+  for (const X of [X1, X2]) { pg.fillRect(Math.min(W - 2 * dpr, Math.max(0, X - dpr)), 0, 2 * dpr, H); pg.fillRect(Math.min(W - 10 * dpr, Math.max(0, X - 5 * dpr)), H / 2 - 12 * dpr, 10 * dpr, 24 * dpr); }
+}
+addEventListener('resize', () => drawPed(true));
+const pedAt = ev => along(pedCv, ev);
+const pedHear = () => { ctx.resume(); noteOn(eng, S.cur, S.lastKey[S.cur], ctx.currentTime); flash = { k: S.lastKey[S.cur], until: performance.now() + 160 }; };
+function pedSet(a, b) {
+  const v = pedView(); if (!v) return;
+  checkpoint(); a = Math.min(0.98, Math.max(0, a)); b = Math.min(1, Math.max(a + 0.01, b));
+  v.o.start = a; v.o.len = a < 1 ? Math.min(1, (b - a) / (1 - a)) : 1;
+  syncPanel(); dirty(); drawPed(true);
+}
+pedCv.addEventListener('pointerdown', ev => {
+  const v = pedView(); if (!v) return;
+  capture(pedCv, ev);
+  const f = pedAt(ev), [a, b] = pedPart(v.o), w = pedCv.offsetWidth, near = X => Math.abs(X - f) * w < 16;
+  pedDrag = { x0: f, moved: false, edge: near(b) ? 'b' : near(a) ? 'a' : null };
+  pedSel = [a, b];
+});
+pedCv.addEventListener('pointermove', ev => {
+  if (!pedDrag) return;
+  const f = pedAt(ev); if (Math.abs(f - pedDrag.x0) * pedCv.offsetWidth > 4) pedDrag.moved = true;
+  if (!pedDrag.moved) return;
+  const [a, b] = pedSel;
+  pedSel = pedDrag.edge === 'a' ? [Math.min(f, b - 0.01), b] : pedDrag.edge === 'b' ? [a, Math.max(f, a + 0.01)] : [Math.min(f, pedDrag.x0), Math.max(f, pedDrag.x0)];
+  drawPed();
+});
+const pedUp = () => {
+  if (!pedDrag) return;
+  const d = pedDrag, sel = pedSel; pedDrag = null; pedSel = null;
+  if (d.moved) pedSet(...sel); else drawPed(true);
+  pedHear();
+};
+pedCv.addEventListener('pointerup', pedUp); pedCv.addEventListener('pointercancel', () => { pedDrag = null; pedSel = null; drawPed(true); });
+$('pedHear').addEventListener('click', pedHear);
+$('pedAll').addEventListener('click', () => { pedSet(0, 1); pedHear(); status('The whole sound plays again.'); });
 
 // Waveform: the current sound, with its slice markers; synths show the scope.
 function drawWave() {
