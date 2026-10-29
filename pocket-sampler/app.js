@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029r';
+import * as DZ from './design.js?v=20261029s';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029r';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029s';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2080,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029s'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029s'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5189,7 +5189,8 @@ function drawSets() {
     const b = document.createElement('button'); b.innerHTML = `${m.name} <small>${m.set.bpm} BPM</small>`; b.classList.toggle('on', S.grid.setId === m.id);
     let held = null;
     b.addEventListener('pointerdown', () => { held = setTimeout(() => { held = 'long'; mySetMenu(m); }, 550); });
-    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); loadSet(m.id, false, m.set); } held = null; });
+    b.classList.toggle('del', setDel);
+    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); if (setDel) setDelete(m.name, m.cloud); else loadSet(m.id, false, m.set); } held = null; });
     b.addEventListener('pointerleave', () => { if (held !== 'long') clearTimeout(held); });
     my.appendChild(b);
   }
@@ -6082,7 +6083,8 @@ function drawCloud() {
     b.title = 'Tap to load it; hold to delete it from GitHub';
     let held = null;
     b.addEventListener('pointerdown', () => { held = setTimeout(() => { held = 'long'; cloudDelete(x); }, 600); });
-    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); cloudLoad(x); } held = null; });
+    b.classList.toggle('del', setDel);
+    b.addEventListener('pointerup', () => { if (held !== 'long') { clearTimeout(held); if (setDel) setDelete(x.name, x.path); else cloudLoad(x); } held = null; });
     b.addEventListener('pointerleave', () => { if (held !== 'long') clearTimeout(held); });
     box.appendChild(b);
   }
@@ -6166,6 +6168,29 @@ async function cloudDelete(x) {
   catch (e) { cloudFail('delete it from GitHub', e); }
 }
 $('lsCloudSave').addEventListener('click', cloudSave);
+// 🗑 Delete a set: tap it, then a set (in My sets or On GitHub): it goes from this device and from GitHub,
+// both copies, matched by name (or by where it was loaded from). The sounds it brought stay in My Sounds.
+var setDel = false;
+$('lsDel').addEventListener('click', () => {
+  setDel = !setDel; $('lsDel').classList.toggle('on', setDel); $('lsDel').textContent = setDel ? '✕ Cancel delete' : '🗑 Delete a set';
+  drawSets(); status(setDel ? 'Tap the set to delete (in My sets or On GitHub). The built-in sets cannot be deleted.' : '');
+});
+async function setDelete(name, path = null) {
+  const local = mine.filter(m => m.type === 'set' && (m.name === name || (path && m.cloud === path)));
+  const paths = new Set([path, ...local.map(m => m.cloud)].filter(Boolean));
+  const cloud = (cloudSets || []).filter(x => x.name === name || paths.has(x.path));
+  const where = [local.length && 'this device', cloud.length && 'GitHub'].filter(Boolean).join(' and ');
+  if (!confirm(`Delete the set “${name}” from ${where}? (Its sounds stay in My Sounds.) This cannot be undone.`)) return;
+  if (cloud.length) {
+    const tok = cloudToken(); if (!tok) return;
+    try { status(`Deleting “${name}” from GitHub…`); await cloudCheck(tok); await cloudCommit(cloud.map(x => [x.path, null]), `Pocket Sampler set deleted: ${cloud.some(x => x.locked) ? '(private)' : name}`, tok); }
+    catch (e) { cloudFail('delete it from GitHub', e); return; }
+  }
+  for (const m of local) { await idbDel('mine', m.id); if (S.grid.setId === m.id) { S.grid.setId = null; persist(); } }
+  await refreshMine(); cloudSets = null;
+  setDel = false; $('lsDel').classList.remove('on'); $('lsDel').textContent = '🗑 Delete a set';
+  drawSets(); status(`“${name}” is deleted from ${where}.`);
+}
 // 16-bit samples, as text (base64), and back
 function pcm16(f32) {
   const v = new Int16Array(f32.length); for (let i = 0; i < f32.length; i++) v[i] = Math.max(-32767, Math.min(32767, Math.round(f32[i] * 32767)));
