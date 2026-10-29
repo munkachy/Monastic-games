@@ -189,6 +189,9 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   it starts. Loops made in the app from notes (pads,
   designed beats, raps) are played again at a new tempo, never stretched. 🔁 in Review
   the library loops a sound at the tempo playing, as the Loops would.
+- **New builds:** ⟳ beside the build number on the Pads checks the site for a
+  newer build (and it looks by itself on opening); ⬆ saves everything and
+  loads the new build, the work coming back as it was.
 - **A cell's sounds by colour:** choosing a sound for a Loops cell shows the
   browser's colour folders, the column's own first; anything can go anywhere.
 - **Tempo and key on every cell** (and when choosing a sound): the tempo it
