@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029o';
+import * as DZ from './design.js?v=20261029p';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029o';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029p';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -886,10 +886,10 @@ let freeGrid = null;
 const snapQ = new Map();           // who -> { j, t }: the last point booked for that pad
 function snap(straight = false, who = null) {           // straight: no swing (Loops + Pads: the loops' own bar grid)
   const g = +S.quantGrid; if (!g) return null;
-  const now = ctx.currentTime, sd = stepDur(), EXACT = 0.002;
+  let now = ctx.currentTime; const sd = stepDur(), EXACT = 0.002;
   const queue = (j, at) => {
     const q = who != null && snapQ.get(who);
-    if (q && q.t > now + EXACT && q.j >= j) j = q.j + g;           // its own point still to come: the next one after it
+    if (q && q.t > ctx.currentTime + EXACT && q.j >= j) j = q.j + g;           // its own point still to come: the next one after it
     if (who != null) snapQ.set(who, { j, t: at(j) });
     return j;
   };
@@ -900,12 +900,13 @@ function snap(straight = false, who = null) {           // straight: no swing (L
     return { j: null, when, on };
   }
   freeGrid = null;
+  const real = now; now = real - tapLag;        // the tap as you meant it: as long before as your taps run late (Menu › Setup › Tap timing)
   const sw = straight ? 0 : (2 * S.swing / 100 - 1) * sd;
   const at = j => nextT - (tick - j) * sd + (j % 2 ? sw : 0);
   let prev = Math.floor((tick - (nextT - now) / sd) / g) * g;
   while (prev > 0 && at(prev) > now) prev -= g;
   const jj = queue(now - at(prev) <= EXACT ? Math.max(0, prev) : prev + g, at);
-  return { j: jj, when: Math.max(now, at(jj)), on: at(jj) };      // on: the grid point (what is recorded)
+  return { j: jj, when: Math.max(real, at(jj)), on: at(jj) };      // on: the grid point (what is recorded)
 }
 // Play key `key` of sound `si` from the pad under the finger, as One shot,
 // Gate (until the pad is let go) or Loop (until it is tapped again). A loop
@@ -2079,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029p'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2172,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029o'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029p'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2883,6 +2884,45 @@ function layPads(first) {
 }
 tallQ.addEventListener?.('change', () => { layPads(); draw(); });
 $('engineWay').value = LIGHT ? 'light' : 'full';
+// Tap timing: how late a tap lands after the beat you hear (the sound's own delay on the way out, and the
+// screen's in taking the touch), on this device. Quantize and ⏺ Rec take each tap that much earlier, so it
+// goes to the beat you meant. 🎯 Calibrate measures it: 16 clicks, the first four to listen, then tap along.
+var tapLag = 0;
+try { tapLag = Math.max(-0.05, Math.min(0.25, +localStorage.getItem('pocketTapLag') || 0)); } catch (e) {}
+function setTapLag(s) { tapLag = s; try { localStorage.setItem('pocketTapLag', s); } catch (e) {} $('tapLag').value = Math.round(s * 1000); $('oTapLag').textContent = `${Math.round(s * 1000)} ms`; }
+setTapLag(tapLag);
+$('tapLag').addEventListener('input', () => setTapLag(+$('tapLag').value / 1000));
+let cal = null;
+function calClick(t, hi) {
+  const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hi ? 1760 : 1320;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.002); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.06);
+}
+$('calStart').addEventListener('click', () => {
+  ctx.resume(); if (playing) stop();
+  const beat = 0.6, t0 = ctx.currentTime + 0.4, N = 16;
+  cal = { t0, beat, N, taps: [] };
+  for (let i = 0; i < N; i++) calClick(t0 + i * beat, i % 4 === 0);
+  $('calBox').hidden = false; $('calUse').hidden = true; $('calNote').textContent = 'Listen to the first four clicks, then tap TAP on every click until they stop.';
+  clearTimeout(cal.timer); cal.timer = setTimeout(calDone, (0.4 + N * beat + 0.3) * 1000);
+});
+$('calTap').addEventListener('pointerdown', ev => {
+  ev.preventDefault(); if (!cal) return;
+  const t = ctx.currentTime, i = Math.round((t - cal.t0) / cal.beat), d = t - (cal.t0 + i * cal.beat);
+  if (i >= 4 && i < cal.N && Math.abs(d) < 0.25) cal.taps.push(d);
+  $('calTap').classList.add('down'); setTimeout(() => $('calTap').classList.remove('down'), 90);
+});
+function calDone() {
+  if (!cal) return;
+  const d = [...cal.taps].sort((a, b) => a - b);
+  if (d.length < 6) { $('calNote').textContent = `Only ${d.length} taps were heard on the clicks: try again, a tap on every click after the first four.`; cal = null; return; }
+  const mid = d[d.length >> 1], spread = d[Math.floor(d.length * 0.8)] - d[Math.floor(d.length * 0.2)];
+  cal.result = Math.max(-0.05, Math.min(0.25, mid));
+  $('calNote').textContent = `Your taps land ${Math.round(mid * 1000)} ms ${mid >= 0 ? 'after' : 'before'} the click (${d.length} taps, within about ${Math.round(spread * 500)} ms of each other). Use it?`;
+  $('calUse').hidden = false;
+}
+$('calUse').addEventListener('click', () => { if (cal?.result != null) { setTapLag(cal.result); status(`Tap timing: ${Math.round(cal.result * 1000)} ms, on this device.`); } $('calBox').hidden = true; cal = null; });
+$('calCancel').addEventListener('click', () => { if (cal) clearTimeout(cal.timer); cal = null; $('calBox').hidden = true; });
 $('engineWay').addEventListener('change', e => {
   try { localStorage.setItem('pocketEngine', e.target.value); } catch (er) {}
   if (playing) stop();
@@ -4642,7 +4682,7 @@ async function lpPress(k) {
   const prevVoice = lp.voice;
   lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
   lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
-  const note = lpRec ? lpNote(k, snapped ? snapped.on : at, slot, oct, snapped ? +S.quantGrid : 0) : null;
+  const note = lpRec ? lpNote(k, snapped ? snapped.on : at - (playing ? tapLag : 0), slot, oct, snapped ? +S.quantGrid : 0) : null;      // (as you meant it: Tap timing)
   if (trig !== 'oneshot') { held[k] = { voice: lp.voice, at: when, note }; lpDraw(); }
   if (trig === 'gate' && !lpKeys[k].classList.contains('down')) lpLetGo(k);       // let go before the sound was ready
 }
@@ -6799,7 +6839,7 @@ document.querySelector('[data-tab="tDesign"]').addEventListener('click', () => d
 Object.assign(window.pocketDebug, {     // for testing the grid from the browser console
   grid: () => gcol.map((col, i) => ({ c: Math.floor(i / ROWS), cur: col.cur && { r: col.cur.r, at: col.cur.at, j: col.cur.j, stopAt: col.cur.stopAt ?? null, synced: col.cur.synced, gain: col.cur.g.gain.value },
     next: col.next && { r: col.next.r, at: col.next.at, j: col.next.j }, gate: col.gate && { r: col.gate.r } })).filter(x => x.cur || x.next || x.gate),
-  openCellMenu: (c, r) => openCellMenu(c, r), tap: (c, r) => tapCell(c, r),
+  openCellMenu: (c, r) => openCellMenu(c, r), tap: (c, r) => tapCell(c, r), calInfo: () => cal && { t0: cal.t0, beat: cal.beat, now: ctx.currentTime }, tapLag: () => tapLag,
   press: k => press(k), release: k => release(k),
   state: () => S, mine: () => mine, vault: { shared: () => sharedItems(true).then(l => l.map(x => ({ name: x.name, private: !!x.private, locked: !!x.locked, filed: x.filed, source: x.source }))), add: n => sharedItems().then(l => addShared(l.find(x => x.name === n))), ask: () => vaultAsk(), lock: t => vaultLock(t), forget: () => vaultForget(), pack: o => packOf(o), gridSet: n => gridSet(n), key: () => !!vaultKey },
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
