@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029u';
+import * as DZ from './design.js?v=20261029v';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029u';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029v';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2080,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029u'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029v'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029u'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029v'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4003,6 +4003,7 @@ async function load() {
   }
   // Sounds still at the old default of 80% go to the new 20%, once (any you set yourself stay).
   if (saved && !saved.quiet20) for (const sl of S.slots) if (sl?.params && Math.abs(sl.params.vol - 0.8) < 1e-6) sl.params.vol = 0.2;
+  if (!saved?.grid) gridNew = 'electroboombap';         // a new device: a set to start with
   if (saved) { for (const k of ['patterns', 'fx', 'patKeys', 'pat', 'chain', 'bpm', 'swing', 'scale', 'root', 'vol', 'quantGrid', 'fxTarget', 'fxAmt', 'fxSlots', 'fxLatch', 'muteBeat', 'custom', 'cur', 'lastKey', 'oct', 'grid']) if (saved[k] != null) S[k] = saved[k];
   if (!(S.grid?.cells?.length === 8 && S.grid.cells.every(c => c.length === ROWS))) S.grid = defaultGrid();
   if (S.grid.cells.flat().some(x => /^ebb(kick|snare|tops)$/.test(x?.lib || ''))) gridAgain = 'electroboombap';
@@ -4061,16 +4062,9 @@ const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar'], [32, '2
 const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars'], [64, '16 bars'], [128, '32 bars']];
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
   ['pingpong', 'Ping-pong'], ['chorus', 'Chorus'], ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['tape', 'Tape']];
-// The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
-// and Tops columns hold single hits (a snare, a clap, a hat), each a loop that plays it again every 4 beats.
+// An empty grid (a new device then loads Electro Boom Bap into it).
 function defaultGrid() {
-  const c = (lib, k, mode = 'loop', vol) => ({ lib, k, mode, ...(vol && { vol }) }), hit = (lib, k, vol = 0.6) => c(lib, k, 'oneshot', vol);
   const cells = Array.from({ length: 8 }, () => new Array(ROWS).fill(null));
-  cells[0] = [c('grooves', 0), c('grooves', 1), c('grooves', 2), c('grooves', 4), c('grooves', 12), c('breaks', 0)];      // beats played by people
-  cells[1] = [hit('boombap', 3), hit('boombap', 4), hit('boombap', 6), hit('tr808', 5), hit('boombap', 10), hit('boombap', 14)];
-  cells[2] = [hit('boombap', 7, 0.5), hit('boombap', 8, 0.5), hit('tr808', 7, 0.5), hit('tr808', 10, 0.5), hit('shakers', 4, 0.5), hit('boombap', 15, 0.45)];
-  cells[7] = [0, 3, 5, 12, 13, 14].map(k => c('hype', k, 'oneshot'));
-  hitsRepeat(cells);
   return { cells, hits4: true, vol: new Array(8).fill(0.8), mute: new Array(8).fill(false), quant: 16, fade: 0, colFx: newColFx() };
 }
 // The single hits in Kick, Snare and Tops start as a loop that plays the hit again every 4 beats (a bar),
@@ -4079,7 +4073,7 @@ const HIT_COLS = new Set([0, 1, 2]);
 function hitsRepeat(cells) { for (const c of HIT_COLS) for (const x of cells[c]) if (x && x.mode === 'oneshot' && !x.beats) { x.mode = 'loop'; x.beats = 4; } }
 function newColFx() { return Array.from({ length: 8 }, () => ({ type: 'none', amt: 0.5 })); }
 S.grid = defaultGrid();
-let view = 'pads', lEdit = false, gridAgain = null;
+let view = 'pads', lEdit = false, gridAgain = null, gridNew = null;
 // What each column is doing: cur (sounding, or about to stop at stopAt), next (waiting for its point), gate (held).
 // What plays, in lanes: a lane plays one cell at a time (cur), with the one waiting to take over
 // (next) and a held Gate (gate). Each column is one lane; in Multi every cell is a lane of its own,
@@ -5225,11 +5219,11 @@ function drawSets() {
 $('lSet').addEventListener('click', () => { $('lmenu').hidden = true; $('lsets').hidden = !$('lsets').hidden; drawSets(); drawLoops(); });
 $('lsClose').addEventListener('click', () => { $('lsets').hidden = true; drawLoops(); });
 // Sets: a whole grid at once, with the tempo and key it was made in.
-const SETS = [{ id: 'ephesians', name: 'Ephesians', about: 'A minor · 139 BPM · industrial techno, words of Ephesians 3' }, { id: 'vigils', name: 'Vigils', about: 'G minor · 144 BPM · night electronica, words of the Rule' }, { id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }, { id: 'first', name: 'The first set', about: 'drum loops, breaks, vinyl, hype words' }];
+const SETS = [{ id: 'ephesians', name: 'Ephesians', about: 'A minor · 139 BPM · industrial techno, words of Ephesians 3' }, { id: 'vigils', name: 'Vigils', about: 'G minor · 144 BPM · night electronica, words of the Rule' }, { id: 'electroboombap', name: 'Electro Boom Bap', about: 'F minor · 92 BPM' }];      // (The first set, taken out: a new device starts with Electro Boom Bap)
 async function loadSet(id, quiet = false, given = null) {          // quiet: the set again, after an update; tempo and key as they are. given: one of yours
   status('Loading the set…');
   try {
-    const set = given || (id === 'first' ? { cells: defaultGrid().cells } : await (await fetch(`sounds/sets/${id}.json`)).json());
+    const set = given || await (await fetch(`sounds/sets/${id}.json`)).json();
     stopGrid();
     S.grid.cells = set.cells.map(col => col.map(c => (c ? { ...c } : null))); hitsRepeat(S.grid.cells);
     // a set's column effects (Vigils: reverb on the pads and words, echoes on the lead), and its room
@@ -5245,7 +5239,7 @@ async function loadSet(id, quiet = false, given = null) {          // quiet: the
     }
     persist(); draw(); drawLoops(); drawSets(); nameCells(); warmGrid();
     status(quiet ? `The ${set.name} set has new drums: kick, snare and tops loops, any of them together, made of its own kit.`
-      : `${set.name || 'The first set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
+      : `${set.name || 'The set'}${set.bpm ? `: ${set.bpm} BPM, ${keyWords({ root: set.root, scale: set.scale })}` : ''}. Tap a cell to start.`);
   } catch (e) { status('Could not load the set: ' + e.message); }
 }
 $('lsStop').addEventListener('click', () => { stopAllLoops(); status(playing ? 'Every loop stops on the next point; the Pads beat plays on.' : ''); });
@@ -6981,5 +6975,5 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   colFx: c => { const k = eng.cols?.[c]; return k && { sig: k.sig, ins: Object.keys(k.ins || {}), sends: Object.keys(k.sends || {}) }; } });
 
 draw();
-load().then(() => { padsRestore(); setView('both'); gridLast = gridNow(); drawGridUndo(); status('Ready. Press ▶ Play, or tap the keys.'); if (gridAgain) loadSet(gridAgain, true); });
+load().then(() => { padsRestore(); setView('both'); gridLast = gridNow(); drawGridUndo(); status('Ready. Press ▶ Play, or tap the keys.'); if (gridNew) loadSet(gridNew); else if (gridAgain) loadSet(gridAgain, true); });
 requestAnimationFrame(frame);
