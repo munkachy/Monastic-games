@@ -182,8 +182,11 @@ PO-33: pick a sound, tap out a beat, hold a key to punch in an effect.
   hit's ringing is stretched to fill the space after it (no gap, no rasp).
   Other loops are stretched by WSOLA or a phase vocoder, whichever comes out
   closer to the original. **Follow the tempo** (Loops › ⚙, for every loop at
-  once, or each loop's own): Stretch, or Re-Pitch (like a record: no grit,
-  the pitch moving with the tempo). Loops made in the app from notes (pads,
+  once, or each loop's own): Stretch, Re-Pitch (like a record: no grit,
+  the pitch moving with the tempo), or Off (as recorded: its own speed and
+  key, nothing made for it, so only in time at its own tempo). Stretch
+  never re-pitches while it waits: a loop's stretched copy is made before
+  it starts. Loops made in the app from notes (pads,
   designed beats, raps) are played again at a new tempo, never stretched. 🔁 in Review
   the library loops a sound at the tempo playing, as the Loops would.
 - **A cell's sounds by colour:** choosing a sound for a Loops cell shows the
