@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029i';
+import * as DZ from './design.js?v=20261029j';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029i';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029j';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -816,13 +816,14 @@ function press(k) {
       else { S.pat = k; if (playing) pendingChain = [k]; else { S.chain = [k]; if (S.patKeys[k]) quietKey(S.patKeys[k]); } persist(); break; }
       dirty(); break;
     case 'fx': {
+      if (view === 'pads') { padFxDown(k); break; }
       const id = S.fxSlots[k];
       if (S.fxLatch && activeFx.has(id)) releaseFx(id);           // tap on, tap again off
       else engageFx(id, aimNow());
       break;
     }
     default: {
-      if (view === 'pads' && padShared()) { lpPress(k); break; }      // the Loops + Pads pads' sound
+      if (view === 'pads') { if (!padShared()) padsTake(); if (padShared()) { lpPress(k); break; } }      // the Loops + Pads pads' sound (and their effects)
       if (S.write && !playing) { toggleStep(k); break; }
       const key = padKey(k); if (key == null) break;     // a rap's pad with no syllable on its step
       const h = trigger(key, k);
@@ -835,7 +836,8 @@ function press(k) {
 function release(k) {
   if (!down.delete(k)) return;
   if (view === 'pads' && S.mode !== 'sound' && S.mode !== 'fx' && padShared()) lpRelease(k);
-  if (S.mode === 'fx' && !S.fxLatch && activeFx.has(S.fxSlots[k])) releaseFx(S.fxSlots[k]);
+  if (S.mode === 'fx' && view === 'pads') padFxUp(k);
+  else if (S.mode === 'fx' && !S.fxLatch && activeFx.has(S.fxSlots[k])) releaseFx(S.fxSlots[k]);
   const h = holding[k]; delete holding[k];
   if (h?.voice?.sustain) endHeld(h);           // Gate: lifting the finger stops it
   draw();
@@ -1960,6 +1962,7 @@ $('quantGrid').addEventListener('click', quantStep);
 // FX panel (on the screen in FX mode): which tracks the FX keys hit, and how
 // much of the last effect touched.
 $('fxAmt').addEventListener('input', () => {
+  if (view === 'pads' && S.mode === 'fx') { padFxAmt(+$('fxAmt').value); return; }
   if (lastFx == null) return;
   const v = +$('fxAmt').value; S.fxAmt[lastFx] = v; $('oFxAmt').textContent = Math.round(v * 100) + '%';
   const f = FX[lastFx][1];
@@ -1990,6 +1993,14 @@ function drawFxPanel() {
   const on = S.mode === 'fx';
   $('wave').hidden = on; $('fxPanel').hidden = !on;
   if (!on) return;
+  if (view === 'pads') {           // the pads' effects: the one held last, and its Amount
+    $('fxAimBtn').hidden = true;
+    const f = S.grid.lpFx ||= LP_FX0(), t = padFxSel, isOn = !!t && t in fxOn(f), a = t ? (isOn ? fxOn(f)[t] : f.mem?.[t] ?? 0.5) : 0;
+    $('fxName').textContent = t ? `${fxName(t)}${isOn ? '' : ' (off)'}` : 'Tap: on or off · hold: its amount';
+    $('fxAmt').disabled = !t; $('fxAmt').value = a; $('oFxAmt').textContent = t ? Math.round(a * 100) + '%' : '';
+    return;
+  }
+  $('fxAimBtn').hidden = false;
   $('fxAimBtn').textContent = 'Tracks: ' + (S.fxTarget === 'all' ? 'All' : S.fxTarget.map(i => i + 1).join(', ')) + ' ▾';
   const k = lastFx;
   $('fxName').textContent = k == null ? (S.fxLatch ? 'Tap a key' : 'Hold a key') : FX[k][0];
@@ -2068,7 +2079,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029j'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2161,7 +2172,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029j'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2828,7 +2839,7 @@ function keyLabel(k) {
   switch (S.mode) {
     case 'sound': return `${PART[k]} · ${S.slots[k]?.name || ''}`;
     case 'pattern': return S.patterns[k].some(st => st.length) ? '●' : '';
-    case 'fx': return FX[S.fxSlots[k]][0];
+    case 'fx': return view === 'pads' ? (k === 15 ? 'All off' : PAD_FX[k] ? fxName(PAD_FX[k]) : '') : FX[S.fxSlots[k]][0];
     case 'play': if (S.write && !playing) {
       // the colours show which sounds are on the step; the words, what the current sound plays there
       // (a syllable, "Kick") and any effect
@@ -2937,7 +2948,7 @@ function draw() {
   $('lcdMode').textContent = copying ? `COPY ${copying.toUpperCase()}: TAP WHERE` : {
     play: S.write ? (playing ? (S.replace ? 'WRITE: LIVE, REPLACE' : S.quantGrid ? 'WRITE: LIVE RECORD' : 'WRITE: LIVE, NOT QUANTIZED') : 'WRITE: TAP STEPS') : 'PLAY', sound: 'SOUND: PICK ONE',
     pattern: chainEdit ? 'CHAIN: TAP IN ORDER' : 'PATTERN: PICK ONE',
-    fx: S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY', robot: 'ROBOT: TYPE ON THE PADS' }[S.mode];
+    fx: view === 'pads' ? 'FX: TAP ON/OFF · HOLD: AMOUNT' : S.write && playing ? 'FX: HOLD TO RECORD IT' : 'FX: HOLD A KEY', robot: 'ROBOT: TYPE ON THE PADS' }[S.mode];
   $('vol').value = S.vol; $('oVol2').textContent = Math.round(S.vol * 100);
   $('lcdInfo').textContent = `${octOf(S.cur) ? `OCT${octOf(S.cur) > 0 ? '+' : ''}${octOf(S.cur)} ` : ''}${S.bpm} BPM${S.swing > 50 ? ' SW' + S.swing : ''}`;
   const kb = $('keyBtn'), kn = k => `${(isMinor(k.scale) ? MIN_NAME : MAJ_NAME)[k.root]} ${SCALE_SHORT[k.scale] || k.scale.toUpperCase()}`;
@@ -2954,7 +2965,7 @@ function draw() {
     switch (S.mode) {
       case 'sound': cur = k === S.cur; break;
       case 'pattern': cur = k === S.pat; lit = S.chain.includes(k) && (playing ? k === headPat : true); some = S.patterns[k].some(s => s.length); break;
-      case 'fx': lit = activeFx.has(S.fxSlots[k]); break;
+      case 'fx': if (view === 'pads') { lit = !!PAD_FX[k] && PAD_FX[k] in fxOn(S.grid.lpFx); cur = !!padFxSel && PAD_FX[k] === padFxSel; } else lit = activeFx.has(S.fxSlots[k]); break;
       default: break;            // playing: the pads light only as you touch them (no steps, no beat going across)
     }
     // Colour: Sound mode, each pad its own sound's; Play, the current sound's; Write, every sound on the step.
@@ -2998,6 +3009,43 @@ function padLoopInfo() {
     return { cell, name: cell.name || `${CHANNELS[lp.c]} ${lp.r + 1}`, colour: CHANNEL_COLOR[lp.c] || 'var(--accent)' };
   } catch (e) { return null; }
 }
+// FX on the Pads: the pads' own effects, the same ones as a Loops column and Loops + Pads' FX (they are
+// the same setting): a key each. Tap one: on or off (any number on at once, kept as you leave them);
+// hold one: it is chosen, its Amount on the screen (turned on, if it was off); the 16th: all off.
+// Menu › Effects has them too, with the EQ.
+var PAD_FX = ['lowpass', 'highpass', 'reverb', 'echo', 'pingpong', 'chorus', 'overdrive', 'distortion', 'tape'], padFxSel = null, padFxHold = null;
+function padFxDown(k) {
+  if (k === 15) { fxNone(S.grid.lpFx ||= LP_FX0()); padFxSel = null; lpFxApply(); persist(); status('Every effect on the pads is off.'); return; }
+  const t = PAD_FX[k]; if (!t) return;
+  clearTimeout(padFxHold?.timer);
+  padFxHold = { k, t, timer: setTimeout(() => {
+    if (padFxHold?.k !== k) return; padFxHold.long = true; padFxSel = t;
+    const f = S.grid.lpFx ||= LP_FX0(); if (!(t in fxOn(f))) fxToggle(f, t);
+    lpFxApply(); persist(); draw(); status(`${fxName(t)}: slide its amount on the screen.`);
+  }, 500) };
+}
+function padFxUp(k) {
+  const h = padFxHold; if (!h || h.k !== k) return; clearTimeout(h.timer); padFxHold = null;
+  if (h.long) return;
+  const f = S.grid.lpFx ||= LP_FX0(); fxToggle(f, h.t);
+  const on = h.t in fxOn(f); padFxSel = h.t; lpFxApply(); persist(); lpFxDraw(); drawFxPage();
+  status(`${fxName(h.t)} ${on ? 'on' : 'off'}${on ? ' (hold it for its amount)' : ''}.`);
+}
+function padFxAmt(v) {
+  const f = S.grid.lpFx ||= LP_FX0(), t = padFxSel; if (!t) return;
+  if (t in fxOn(f)) f.on = { ...fxOn(f), [t]: v }; else f.mem = { ...f.mem, [t]: v };
+  $('oFxAmt').textContent = Math.round(v * 100) + '%'; lpFxApply(); persist(); lpFxDraw();
+}
+// Menu › Effects: the pads' effects and EQ, as the FX keys and Loops + Pads' FX
+var pfxWired = false;
+function drawFxPage() {
+  if (!pfxWired) { pfxWired = true;       // (wired on first use: EQ_BANDS is defined further down)
+    EQ_BANDS.forEach(([, , b]) => fader($('pfxEq' + b), v => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { ...f.eq, [b]: Math.round((v - 0.5) * 24) }; lpFxApply(); persist(); drawFxPage(); })); }
+  const f = S.grid.lpFx ||= LP_FX0();
+  fxPicker($('pfxType'), $('pfxAmts'), f, () => { lpFxApply(); persist(); lpFxDraw(); drawFxPage(); draw(); });
+  EQ_BANDS.forEach(([, , b]) => { const v = f.eq?.[b] || 0; $('pfxEq' + b).firstChild.style.width = Math.round((v + 12) / 24 * 100) + '%'; $('pfxEq' + b + 'Out').textContent = (v > 0 ? '+' : '') + v + ' dB'; });
+}
+document.querySelector('[data-tab="tEffects"]').addEventListener('click', () => drawFxPage());
 // a sound chosen on the Pads: on the pads of both screens, until a loop is tapped
 function padsTake() {
   const sl = S.slots[S.cur]; if (!sl) return;
@@ -3940,7 +3988,7 @@ const FADES = [[0, 'Off'], ['q', 'Quick'], [4, '1 beat'], [16, '1 bar'], [32, '2
 // Repeat, in beats, shown as note values: 1/32 note (an eighth of a beat) up to 8 bars.
 const REPEATS = [[0, 'Whole'], [0.125, '1/32'], [0.25, '1/16'], [0.5, '1/8'], [1, '1/4'], [2, '1/2'], [4, '1 bar'], [6, '1½ bars'], [8, '2 bars'], [16, '4 bars'], [32, '8 bars'], [64, '16 bars'], [128, '32 bars']];
 const COL_FX = [['none', 'None'], ['lowpass', 'Low pass'], ['highpass', 'High pass'], ['reverb', 'Reverb'], ['echo', 'Echo'],
-  ['pingpong', 'Ping-pong'], ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['tape', 'Tape']];
+  ['pingpong', 'Ping-pong'], ['chorus', 'Chorus'], ['overdrive', 'Drive'], ['distortion', 'Distortion'], ['tape', 'Tape']];
 // The first set, from the app's own loops and kits. Whole beats go in the red Kick column; the Snare
 // and Tops columns hold single hits (a snare, a clap, a hat), each a loop that plays it again every 4 beats.
 function defaultGrid() {
@@ -4086,8 +4134,8 @@ const setColGain = c => { const k = colChain(c); for (const g of [k.out, k.dout]
 // kept as { on: { drive: 0.5, reverb: 0.3 } } (an older { type, amt } is read as one). They always run in
 // one order, as a guitarist chains pedals: high pass, the drives, the low pass, in turn on the sound
 // (inp -> ... -> out); then the echoes and the reverb, sent from out, side by side.
-const FX_ORDER = ['highpass', 'overdrive', 'distortion', 'tape', 'lowpass', 'echo', 'pingpong', 'reverb'];
-const FX_SENDS = ['echo', 'pingpong', 'reverb'];
+const FX_ORDER = ['highpass', 'overdrive', 'distortion', 'tape', 'lowpass', 'chorus', 'echo', 'pingpong', 'reverb'];
+const FX_SENDS = ['chorus', 'echo', 'pingpong', 'reverb'];
 const fxOn = fx => fx?.on || (fx?.type && fx.type !== 'none' ? { [fx.type]: fx.amt ?? 0.5 } : {});
 const fxItems = fx => { const on = fxOn(fx); return FX_ORDER.filter(t => t in on).map(t => ({ type: t, amt: on[t] })); };
 function fxToggle(fx, t) {                 // on or off (an effect turned off keeps its amount, for next time)
@@ -4112,7 +4160,7 @@ function wireFx(k, fx, c = ctx, e = eng) {
   }
   at.connect(k.out);
   for (const { type } of items) if (FX_SENDS.includes(type)) {
-    const g = c.createGain(); k.out.connect(g); g.connect(type === 'reverb' ? e.reverb : type === 'echo' ? e.delay : e.ppL); k.sends[type] = g;
+    const g = c.createGain(); k.out.connect(g); g.connect(type === 'reverb' ? e.reverb : type === 'echo' ? e.delay : type === 'chorus' ? e.chSend : e.ppL); k.sends[type] = g;
   }
   fxAmount(k, fx, c, e);
 }
@@ -4123,7 +4171,7 @@ function fxAmount(k, fx, c = ctx, e = eng) {
     if (type === 'lowpass') { n.frequency.setTargetAtTime(6000 * Math.pow(0.03, a), t, 0.03); n.Q.value = 1 + a * 6; }
     if (type === 'highpass') { n.frequency.setTargetAtTime(80 * Math.pow(40, a), t, 0.03); n.Q.value = 1 + a * 4; }
     if (type === 'overdrive' || type === 'distortion' || type === 'tape') n.set(a);
-    if (g) g.gain.setTargetAtTime(a * (type === 'reverb' ? 1.3 : 0.9), t, 0.03);
+    if (g) g.gain.setTargetAtTime(a * (type === 'reverb' ? 1.3 : type === 'chorus' ? 1.1 : 0.9), t, 0.03);
     if (type === 'echo') e.delay.delayTime.setValueAtTime(echo, t);
     if (type === 'pingpong') { e.ppL.delayTime.setValueAtTime(echo, t); e.ppR.delayTime.setValueAtTime(echo, t); }
   }
@@ -4519,7 +4567,7 @@ function setView(v) {
   $('loops').classList.toggle('split', v === 'both'); $('lpads').hidden = $('lPager').hidden = v !== 'both';
   if (v !== 'pads') { drawLoops(); nameCells(); warmGridSoon(); }
   if (v === 'both') lpDraw();
-  if (v === 'pads') { lpLevel(); draw(); }
+  if (v === 'pads') { if (!padShared()) padsTake(); lpLevel(); draw(); }
 }
 // Loops + Pads: the loops four columns a page, and the pads, which play the loop last tapped (a drum
 // loop too): its first note (or the bit chosen with ✂ Crop), pitched down and up the key across the
