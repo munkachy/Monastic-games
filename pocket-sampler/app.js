@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029t';
+import * as DZ from './design.js?v=20261029u';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029t';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029u';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2080,7 +2080,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029u'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2173,7 +2173,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029u'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5180,9 +5180,16 @@ function choices(box, list, now, pick) {
 }
 function drawSets() {
   const box = $('lsSets'); box.textContent = '';
+  const hidden = hiddenSets();
   for (const st of SETS) {
+    if (hidden.includes(st.id)) continue;
     const b = document.createElement('button'); b.innerHTML = `${st.name} <small>${st.about}</small>`; b.classList.toggle('on', S.grid.setId === st.id);
-    b.addEventListener('click', () => loadSet(st.id)); box.appendChild(b);
+    b.classList.toggle('del', setDel);
+    b.addEventListener('click', () => (setDel ? hideSet(st) : loadSet(st.id))); box.appendChild(b);
+  }
+  if (hidden.length) {
+    const b = document.createElement('button'); b.textContent = `↺ Show ${hidden.length} hidden`; b.title = 'Bring back the built-in sets you deleted';
+    b.addEventListener('click', () => { saveHidden([]); drawSets(); status('The built-in sets are all back.'); }); box.appendChild(b);
   }
   const my = $('lsMine'); my.textContent = '';
   const sets = mine.filter(m => m.type === 'set');
@@ -6173,9 +6180,18 @@ $('lsCloudSave').addEventListener('click', cloudSave);
 // 🗑 Delete a set: tap it, then a set (in My sets or On GitHub): it goes from this device and from GitHub,
 // both copies, matched by name (or by where it was loaded from). The sounds it brought stay in My Sounds.
 var setDel = false;
+// The built-in sets are part of the app: deleted, one is hidden on this device (↺ Show hidden brings it back).
+function hiddenSets() { try { return JSON.parse(localStorage.getItem('pocketHiddenSets') || '[]'); } catch (e) { return []; } }
+function saveHidden(l) { try { localStorage.setItem('pocketHiddenSets', JSON.stringify(l)); } catch (e) {} }
+function hideSet(st) {
+  if (!confirm(`Delete the built-in set “${st.name}” from your list? It is part of the app, so it is only hidden on this device: ↺ Show hidden brings it back. What is on the grid now stays.`)) return;
+  saveHidden([...new Set([...hiddenSets(), st.id])]);
+  setDel = false; $('lsDel').classList.remove('on'); $('lsDel').textContent = '🗑 Delete a set';
+  drawSets(); status(`“${st.name}” is hidden. ↺ Show hidden (in Sets) brings it back.`);
+}
 $('lsDel').addEventListener('click', () => {
   setDel = !setDel; $('lsDel').classList.toggle('on', setDel); $('lsDel').textContent = setDel ? '✕ Cancel delete' : '🗑 Delete a set';
-  drawSets(); status(setDel ? 'Tap the set to delete (in My sets or On GitHub). The built-in sets cannot be deleted.' : '');
+  drawSets(); status(setDel ? 'Tap the set to delete: in Sets (hidden on this device), My sets or On GitHub.' : '');
 });
 async function setDelete(name, path = null) {
   const local = mine.filter(m => m.type === 'set' && (m.name === name || (path && m.cloud === path)));
