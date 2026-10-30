@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029y';
+import * as DZ from './design.js?v=20261029z';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029y';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029z';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -960,7 +960,8 @@ function trigger(k, pad = k) {
   S.lastKey[S.cur] = k;
   flash = { k: pad, until: performance.now() + 160 };
   if (S.slots[S.cur]?.kind === 'chop') syncPanel();    // trim follows the last slice played
-  const sn = snap(true, S.slots[S.cur]?.params.choke ? `${S.cur}:*` : `${S.cur}:${k}`), h = playHeld(S.cur, k, pad, sn?.when);
+  const sn = snap(true, S.slots[S.cur]?.params.choke ? `${S.cur}:*` : `${S.cur}:${k}`); if (sn?.skip) return null;
+  const h = playHeld(S.cur, k, pad, sn?.when);
   if (h && sn) h.tick = sn.j;
   return h;
 }
@@ -979,9 +980,12 @@ const snapQ = new Map();           // who -> { j, t }: the last point booked for
 function snap(straight = false, who = null) {           // straight: no swing (Loops + Pads: the loops' own bar grid)
   const g = +S.quantGrid; if (!g) return null;
   let now = ctx.currentTime; const sd = stepDur(), EXACT = 0.002;
+  // No queue: a tap whose point is already taken (by the same pad, or with Choke by any pad) is dropped,
+  // never put on a later point; other pads on the same point land together, as a chord.
+  let taken = false;
   const queue = (j, at) => {
     const q = who != null && snapQ.get(who);
-    if (q && q.t > ctx.currentTime + EXACT && q.j >= j) j = q.j + g;           // its own point still to come: the next one after it
+    if (q && q.t > ctx.currentTime + EXACT && q.j >= j) { taken = true; return q.j; }
     if (who != null) snapQ.set(who, { j, t: at(j) });
     return j;
   };
@@ -989,7 +993,7 @@ function snap(straight = false, who = null) {           // straight: no swing (L
     if (!freeGrid || now - freeGrid.last > 32 * sd || freeGrid.sd !== sd) { freeGrid = { t0: now, last: now, sd }; snapQ.clear(); if (who != null) snapQ.set(who, { j: 0, t: now }); return { j: null, when: now, on: now }; }
     const at = j => freeGrid.t0 + j * sd, prev = Math.floor((now - freeGrid.t0) / sd / g) * g;
     const jj = queue(now - at(prev) <= EXACT ? prev : prev + g, at), on = at(jj), when = Math.max(now, on); freeGrid.last = when;
-    return { j: null, when, on };
+    return taken ? { skip: true } : { j: null, when, on };
   }
   freeGrid = null;
   const real = now; now = real - tapLag;        // the tap as you meant it: as long before as your taps run late (Menu › Setup › Tap timing)
@@ -998,7 +1002,7 @@ function snap(straight = false, who = null) {           // straight: no swing (L
   let prev = Math.floor((tick - (nextT - now) / sd) / g) * g;
   while (prev > 0 && at(prev) > now) prev -= g;
   const jj = queue(now - at(prev) <= EXACT ? Math.max(0, prev) : prev + g, at);
-  return { j: jj, when: Math.max(real, at(jj)), on: at(jj) };      // on: the grid point (what is recorded)
+  return taken ? { skip: true } : { j: jj, when: Math.max(real, at(jj)), on: at(jj) };      // on: the grid point (what is recorded); skip: dropped
 }
 // Play key `key` of sound `si` from the pad under the finger, as One shot,
 // Gate (until the pad is let go) or Loop (until it is tapped again). A loop
@@ -2190,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029z'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2283,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029y'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029z'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4776,7 +4780,8 @@ function lpWarm(slot) {
 }
 async function lpPress(k) {
   ctx.resume(); lpKeys[k].classList.add('down');
-  const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k), at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
+  const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k); if (snapped?.skip) return;      // its point is taken already: dropped
+  const at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
   lpWarm(slot);
   const when = Math.max(at, ctx.currentTime);
@@ -7061,6 +7066,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   masterGain: () => eng.master.gain.value,
   lpLast: () => lp.last && { ...lp.last, sd: stepDur(), nextT, tick },
   lpVoiceEnd: () => lp.voice?.end,
+  lpRecNotes: () => lpRec && { notes: lpRec.notes.map(n => ({ k: n.k, t: n.t, cyc: n.cyc })), L: lpRec.L, m: lpRec.m, t0: lpRec.t0, now: ctx.currentTime, sd: lpRec.sd, origin: lpRec.origin },
   lpRecInfo: () => lpRec && { booked: lpRec.voices.length, m: lpRec.m, clicks: lpRec.ci?.clicks?.length || 0, wait: lpRec.ci.c0 - lpRec.tapped, len: lpRec.t0 - lpRec.ci.c0, startBeat: ((((lpRec.t0 - nextT) / stepDur() + tick) % 16) + 16) % 16 / 4 + 1, originOff: (lpRec.t0 - lpRec.origin) / stepDur() },
   cellPeak: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]); if (!sl) return null; const x = sl.slices[0], d = x.buf.getChannelData(0); let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); return m; },
   cellData: async (c, r) => { const sl = await cellSlot(S.grid.cells[c][r]), x = sl.slices[0], d = x.buf.getChannelData(0).slice(Math.round(x.s * x.buf.sampleRate), Math.round(x.e * x.buf.sampleRate)), u = new Uint8Array(d.buffer); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: x.buf.sampleRate }; }, lr: () => lrTake && { t0: lrTake.t0, t1: lrTake.t1, notes: lrTake.notes.length, chunks: lrTake.chunks.length }, lrMade: () => lrMade && { dur: lrMade.buf.duration, col: lrMade.col, rate: lrMade.buf.sampleRate, hits: (() => {      // where each note starts (10 ms frames, a jump of 8 dB)
