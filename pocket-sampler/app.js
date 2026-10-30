@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261030d';
+import * as DZ from './design.js?v=20261030e';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030d';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030e';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030e'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030d'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030e'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4918,6 +4918,7 @@ function lpRecPlayOne(R, n, m) {
     ...(R.trig !== 'oneshot' && n.d != null && { hold: true, lock: { trig: R.trig } }) });
   if (R.trig !== 'oneshot' && n.d != null) v?.stop?.(when + n.d * R.sd);
   R.voices.push(v); if (R.voices.length > 200) R.voices.splice(0, 100);
+  if (v) (n.vs ||= []).push(v);            // (its own, so ↶ can silence it)
 }
 function lpRecPlay() {                // book the next time round, a moment ahead
   const R = lpRec; if (!R) return;
@@ -5008,6 +5009,16 @@ function lpRecBarNote(n, old = false) {
 }
 // ↺ Reset (at the end of the bar): what you have played in this recording goes (a layered loop's own notes
 // stay), and the recording goes on round, empty, for another try.
+// ↶ (beside ↺ Reset): the last note played in this recording taken back, and the one before it on the next
+// tap, until none are left (a layered loop's own notes stay)
+$('lrUndo').addEventListener('click', () => {
+  const R = lpRec; if (!R) return;
+  const n = R.notes.pop();
+  if (!n) { status('Nothing more to take back.'); return; }
+  for (const v of n.vs || []) try { v?.stop?.(ctx.currentTime); } catch (e) {}
+  n.el?.remove();
+  status(R.notes.length ? `Took back the last note (${R.notes.length} left).` : 'Took back the last note: none left. Play again.');
+});
 $('lrReset').addEventListener('click', () => {
   const R = lpRec; if (!R) return;
   for (const v of R.voices) try { v?.stop?.(ctx.currentTime); } catch (e) {}
