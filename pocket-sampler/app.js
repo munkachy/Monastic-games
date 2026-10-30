@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261030c';
+import * as DZ from './design.js?v=20261030d';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030c';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030d';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030d'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030d'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5899,7 +5899,7 @@ const ROLL_BARS = [1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32];
 const barsName = n => (n < 1 ? `1/${Math.round(1 / n)} bar` : `${n} bar${n > 1 ? 's' : ''}`);
 const ROLL_ZOOM = [['bar', 'Bar', 16, 16], ['4', '1/4', 4, 8], ['8', '1/8', 2, 4], ['16', '1/16', 1, 2]];       // [id, label, steps a line, bars a row]
 let rollZoom = (() => { try { return localStorage.getItem('pocketRollZoom') || 'bar'; } catch (e) { return 'bar'; } })();
-let rollUndo = [];
+let rollUndo = [], rollTap = 'delete';          // what a tap on a block does: delete it, or copy it into the next slot
 function drawRoll(c, r) {
   const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), seq = rec?.seq, box = $('lmRoll');
   box.textContent = ''; $('lmRollUndo').disabled = !rollUndo.length; if (!seq) return;
@@ -5928,6 +5928,13 @@ function drawRoll(c, r) {
     const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', (seq.q || 0) === q);
     b.addEventListener('click', () => { if ((seq.q || 0) !== q) rollChange(c, r, seq.notes, false, null, q).then(() => status(q ? `Quantized to ${label}: the notes keep how you played them, so As played brings that back.` : 'As played: the timing exactly as you played it.')); });
     qz.appendChild(b);
+  }
+  const tapRow = document.createElement('div'); tapRow.className = 'lmodes rlen';
+  tapRow.append(Object.assign(document.createElement('span'), { textContent: 'Tap' }));
+  for (const [id, label] of [['delete', '🗑 Delete'], ['copy', '⧉ Copy']]) {
+    const b = document.createElement('button'); b.textContent = label; b.classList.toggle('on', id === rollTap);
+    b.addEventListener('click', () => { rollTap = id; drawRoll(c, r); status(id === 'copy' ? 'Copy: tap a note and a copy goes in the space right after it.' : 'Delete: tap a note to delete it.'); });
+    tapRow.appendChild(b);
   }
   const Z = ROLL_ZOOM.find(z => z[0] === rollZoom) || ROLL_ZOOM[0], unit = Z[2];
   const steps = seq.bars * 16, per = Math.min(steps, Z[3] * 16), mid = keySemis(7, seq.scale);       // a row: as many bars as the zoom shows
@@ -5978,7 +5985,11 @@ function drawRoll(c, r) {
     b.addEventListener('pointerup', () => {
       b.classList.remove('drag'); b.style.transform = '';
       let notes;
-      if (!moved) notes = seq.notes.filter((n, i) => !list.includes(i));
+      if (!moved && rollTap === 'copy') {          // ⧉ Copy: the block again, in the next slot of the zoom
+        if (t0 + unit >= steps) { status('No room after it: the loop ends there.'); return; }
+        notes = [...seq.notes, ...list.map(i => ({ ...seq.notes[i], t: Math.min(steps - 0.01, seq.notes[i].t + unit) }))];
+      }
+      else if (!moved) notes = seq.notes.filter((n, i) => !list.includes(i));
       else if (shift || lo !== t0) {
         // dropped on a line of the zoom: the first note of the block exactly on it, the rest kept as far after it
         const d = t0 + shift * unit - lo;
@@ -5990,7 +6001,7 @@ function drawRoll(c, r) {
     b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.transform = ''; b.style.left = (t0 - x0t) * st + 1 + 'px'; });
     row.appendChild(b);
   }
-  box.append(lens, qz, zoom, wrap);
+  box.append(lens, qz, zoom, tapRow, wrap);
 }
 let rollBusy = Promise.resolve();
 function rollChange(c, r, notes, undoing = false, bars = null, q = null) {
