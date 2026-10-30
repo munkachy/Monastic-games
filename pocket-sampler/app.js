@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261029z';
+import * as DZ from './design.js?v=20261030a';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261029z';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261029z'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4465,7 +4465,12 @@ function stopAt(h, b, fade = true) {
 const kill = h => { if (h) { h.voice.stop(ctx.currentTime); unplugAt(h, ctx.currentTime); } };
 async function tapCell(c, r) {
   const col = lane(c, r), cell = S.grid.cells[c][r];
-  if (!cell) { openCellMenu(c, r); return; }
+  if (!cell) {
+    if (lprOpen && view === 'both' && !lpRec) {          // ⏺ Rec open: this empty cell is where it records
+      lprAt = { c, r }; lprInto = 'new'; lprDraw(); drawLoops(); status(`It records into ${CHANNELS[c]}, cell ${r + 1}. ⏺ Start when ready.`); return;
+    }
+    openCellMenu(c, r); return;
+  }
   lpPick(c, r);
   ctx.resume();
   if (cell.mode === 'oneshot') {      // a hit: on the next 16th (at once if stopped, or quantize off), again on every tap
@@ -4700,7 +4705,7 @@ function drawLoops() {
       const on = has('cur', r, h => h.stopAt == null) || has('gate', r);
       el.b.classList.toggle('filled', !!cell);
       el.b.classList.toggle('picked', view === 'both' && c === lp.c && r === lp.r && !!cell);
-      const tg = lpRec || (view === 'both' && lpTarget); el.b.classList.toggle('rectarget', !!tg && tg.c === c && tg.r === r);
+      const tg = lpRec || (view === 'both' && (lpTarget || (lprOpen && lpTargetCell()))); el.b.classList.toggle('rectarget', !!tg && tg.c === c && tg.r === r);
       el.b.classList.toggle('playing', !!on);
       el.b.classList.toggle('queued', has('next', r));
       el.b.classList.toggle('resume', !playing && !!S.grid.resume?.some(([cc, rr]) => cc === c && rr === r));
@@ -4882,10 +4887,11 @@ async function lpSlot() {
 // to count in, if the beat was stopped); tap again to stop: whole bars, 1, 2, 4 or 8. The notes keep the
 // timing played, unless 1/16 is on (the pads' Quantize): then each lands on its 16th. Made once into a
 // recording (the sound is kept with it, so the notes can be moved and deleted later, and made again).
-let lpRec = null, lpTarget = null, lpInst = null;      // lpInst: a sound designed in a cell, on the pads until another loop is tapped
+let lpRec = null, lpTarget = null, lpInst = null, lprAt = null;      // lpInst: a sound designed in a cell, on the pads until another loop is tapped
 function lpTargetCell() {
   if (lpTarget && (lpTarget.replace || !S.grid.cells[lpTarget.c][lpTarget.r])) return lpTarget;
-  const c0 = lp.c; if (c0 < 0) return null;
+  if (lprAt && !S.grid.cells[lprAt.c][lprAt.r]) return lprAt;          // the empty cell tapped while ⏺ Rec was open
+  const c0 = lp.c >= 0 && !lpInst ? lp.c : 3;          // no loop on the pads (a sound of the Pads, or nothing tapped yet): the instrument columns first
   // the loop's own column; if it is full, a column of its kind (the drums, or the rest), then any
   const kind = c => c < 3, order = [c0, ...[0, 1, 2, 3, 4, 5, 6, 7].filter(c => c !== c0 && kind(c) === kind(c0)), ...[0, 1, 2, 3, 4, 5, 6, 7].filter(c => kind(c) !== kind(c0))];
   for (const c of order) { const r = S.grid.cells[c].findIndex(x => !x); if (r >= 0) return { c, r }; }
@@ -4936,21 +4942,22 @@ function lprShow(open) {
   lprOpen = open;
   if (open) { if (lpEd.on) lpEdClose(); if (lpFxOpen) lpFxShow(false); }
   $('lpRecBox').hidden = !open; $('lpKeys').hidden = open || lpEd.on || lpFxOpen;
-  if (open) lprDraw();
+  if (open) lprDraw(); else if (!lpRec) lprAt = null;
+  drawLoops();          // (the red edge on the cell it will record into)
 }
 function lprDraw() {
   const L = lpLoopCell(), at = lpTargetCell();
   if (lprInto === 'layer' && !L?.same) lprInto = L ? 'replace' : 'new';
   if (lprInto === 'replace' && !L) lprInto = 'new';
   const into = [['new', at ? `New: ${CHANNELS[at.c]}, cell ${at.r + 1}` : 'New (no empty cell)'], ...(L ? [['layer', 'Layer'], ['replace', 'Replace']] : [])];
-  choices($('lprInto'), into, lprInto, v => { lprInto = v; lprDraw(); });
+  choices($('lprInto'), into, lprInto, v => { if (v === 'new' && lprInto === 'new') status('Tap any empty cell on the grid to record into it instead.'); lprInto = v; lprDraw(); });
   if (L && !L.same) $('lprInto').querySelector('button:nth-child(2)').disabled = true;
   const layer = lprInto === 'layer', len = layer ? L.rec.seq.bars : lprLen;
   choices($('lprLen'), LPR_LENS, len, v => { lprLen = v; try { localStorage.setItem('pocketLpRecLen', v); } catch (e) {} lprDraw(); });
   $('lprLen').querySelectorAll('button').forEach(b => { b.disabled = layer; });
   $('lprNote').textContent = layer ? `Layer: what you play is added to the notes of ${CHANNELS[L.c]}, cell ${L.r + 1} (its length, ${barsName(len)}), which play round as you go.`
     : lprInto === 'replace' ? `Replace: ${CHANNELS[L.c]}, cell ${L.r + 1} is recorded again from nothing, ${barsName(len)} long.`
-    : L && !L.same ? 'To layer onto a loop, play its own sound on the pads (tap that loop, without ✂ Crop).' : `A new loop, ${barsName(len)} long, going round until you stop.`;
+    : L && !L.same ? 'To layer onto a loop, play its own sound on the pads (tap that loop, without ✂ Crop).' : `A new loop, ${barsName(len)} long, going round until you stop.${at ? ' Tap any empty cell on the grid to record there instead (a red edge shows where).' : ' Empty a cell (hold it, Empty this cell) to record into it.'}`;
   $('lprGo').disabled = lprInto === 'new' && !at;
 }
 async function lpRecTap() {
@@ -4964,7 +4971,7 @@ $('lprCancel').addEventListener('click', () => lprShow(false));
 $('lprGo').addEventListener('click', async () => {
   const L = lpLoopCell(), mode = lprInto, at = mode === 'new' ? lpTargetCell() : L && { c: L.c, r: L.r };
   if (!at) { status('Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
-  lprShow(false);
+  lprShow(false); lprAt = null;
   const bars = mode === 'layer' ? L.rec.seq.bars : lprLen, old = mode === 'layer' ? L.rec.seq.notes.map(n => ({ ...n, cyc: -1 })) : [];
   const src = mode === 'layer' ? await lpSlot() : null;
   if (mode !== 'new') for (const l of colLanes(at.c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === at.r) { kill(l[k]); l[k] = null; }     // (it plays from the pads now)
