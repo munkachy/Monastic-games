@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031c';
+import * as DZ from './design.js?v=20261031d';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031c';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031d';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031d'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031c'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031d'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -6307,11 +6307,44 @@ function drawCloud() {
   r.addEventListener('click', () => { cloudSets = null; drawCloud(); }); box.appendChild(r);
 }
 const TOKEN_HOW = 'To make one: on github.com, Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token. Repository access: Only select repositories › Monastic-games. Permissions › Repository permissions › Contents: Read and write. Generate, copy it (it starts github_pat_), and paste it here.';
-function cloudToken() {
+async function cloudToken() {
   let tok = ghTok();
-  if (!tok) tok = (prompt(`Your GitHub token, to save sets to GitHub (kept only on this device). ${TOKEN_HOW}`) || '').trim();
+  if (!tok) tok = await tokenFromGitHub();          // kept on GitHub, scrambled: the passphrase brings it
+  if (!tok) tok = (prompt(`Your GitHub token, to save sets to GitHub (kept on this device). ${TOKEN_HOW}`) || '').trim();
   return tok;
 }
+// The token on GitHub, scrambled with your passphrase (the 🔒 private library's: PBKDF2 and AES-GCM, as
+// there), in keys/token.enc on the pocket-sets branch: another device then needs only the passphrase. Reading
+// it needs no token (the repository is public); anyone can see the scrambled file, and only the passphrase
+// opens it. Offered once a token has worked on a device; Menu › Setup can put it there too.
+var TOKEN_FILE = 'keys/token.enc', tokFresh = false;
+async function tokenFromGitHub() {
+  let enc;
+  try { const r = await gh(`/contents/${TOKEN_FILE}?ref=${SETS_BRANCH}`, {}, ''); enc = new TextDecoder().decode(u8of(r.content.replace(/\s/g, ''))); }
+  catch (e) { return ''; }          // none there (or no connection): asked for as before
+  for (let i = 0; i < 3; i++) {
+    let key = await vaultLoad();
+    if (!key) {
+      const pass = prompt('Your GitHub token is kept on GitHub, scrambled. Type your passphrase (the private library’s) to bring it to this device:');
+      if (!pass) return '';
+      status('Opening it…'); key = await vaultMake(pass);
+    }
+    try { const tok = (await vaultUnlock(enc, key)).trim(); await vaultKeep(key); saveTok(tok); status('Your GitHub token is on this device now.'); return tok; }
+    catch (e) { if (vaultKey) await vaultForget(); status('That passphrase does not open it: try again.'); }
+  }
+  return '';
+}
+async function tokenToGitHub(tok, asked = false) {
+  if (!tok) return;
+  let up = ''; try { up = localStorage.getItem('pocketTokUp') || ''; } catch (e) {}
+  if (!asked && up === tok.slice(-6)) return;                       // this token is there already (or you said no to it)
+  try { localStorage.setItem('pocketTokUp', tok.slice(-6)); } catch (e) {}
+  if (!asked && !(await vaultLoad()) && !confirm('Keep this token on GitHub too, scrambled with your passphrase, so on your other devices you only type the passphrase? Anyone can see the scrambled file, and only the passphrase opens it, so use a long one (a few words).')) return;
+  if (!(await vaultAsk())) return;
+  try { await cloudCommit([[TOKEN_FILE, await vaultLock(tok)]], 'Pocket Sampler: the GitHub token, scrambled', tok); drawTok(); status('Your token is on GitHub, scrambled: on another device, your passphrase brings it.'); }
+  catch (e) { log('error', 'token to GitHub: ' + e.message); status(`The token could not be put on GitHub: ${e.message}`); }
+}
+const afterCloud = tok => { if (tokFresh) { tokFresh = false; tokenToGitHub(tok); } };
 // the token checked before anything is sent: it must open the repository and be allowed to write to it
 async function cloudCheck(tok) {
   let repo;
@@ -6322,6 +6355,7 @@ async function cloudCheck(tok) {
     throw e;
   }
   if (repo.permissions && !repo.permissions.push) throw Object.assign(new Error('That token can read the repository but not write to it: it needs Contents: Read and write.'), { auth: true });
+  if (ghTok() !== tok) tokFresh = true;          // a new token here: offered to GitHub (scrambled) once this has worked
   saveTok(tok);        // kept only once GitHub has said yes
 }
 // a failure, said where it cannot be missed; a refused token is forgotten, so the next try asks for a new one
@@ -6351,7 +6385,7 @@ async function cloudCommitOnce(files, message, tok, branch = SETS_BRANCH) {
 async function cloudSave() {
   const cur = mine.find(m => m.id === S.grid.setId) || SETS.find(x => x.id === S.grid.setId);
   const name = (prompt('Save the grid to GitHub as:', cur?.name || `My set ${S.bpm} BPM`) || '').trim().replace(/[\/]/g, '-'); if (!name) return;
-  const tok = cloudToken(); if (!tok) return;
+  const tok = await cloudToken(); if (!tok) return;
   try { status('Checking the token with GitHub…'); await cloudCheck(tok); } catch (e) { cloudFail('save it to GitHub', e); return; }
   const P = packOf({ name, set: gridSet(name) }), priv = P.sounds.some(m => mine.find(x => x.id === m.id)?.private);
   if (priv && !(await vaultAsk())) return;
@@ -6363,7 +6397,7 @@ async function cloudSave() {
     const text = JSON.stringify(P);
     await cloudCommit([[path, priv ? await vaultLock(text) : text], ...(other && other.path !== path ? [[other.path, null]] : [])], `Pocket Sampler set: ${priv ? '(private)' : name}`, tok);
     cloudSets = null; drawCloud();
-    status(`“${name}” is saved on GitHub: on any device, Loops › ⚙ › On GitHub.`);
+    status(`“${name}” is saved on GitHub: on any device, Loops › ⚙ › On GitHub.`); afterCloud(tok);
   } catch (e) { cloudFail('save it to GitHub', e); }
 }
 async function cloudLoad(x) {
@@ -6383,11 +6417,12 @@ async function cloudLoad(x) {
 }
 async function cloudDelete(x) {
   if (!confirm(`Delete “${x.name}” from GitHub? (On this device it stays in My sets, if it is there.)`)) return;
-  const tok = cloudToken(); if (!tok) return;
+  const tok = await cloudToken(); if (!tok) return;
   try { await cloudCheck(tok); await cloudCommit([[x.path, null]], `Pocket Sampler set deleted: ${x.locked ? '(private)' : x.name}`, tok); cloudSets = null; drawCloud(); status(`“${x.name}” is deleted from GitHub.`); }
   catch (e) { cloudFail('delete it from GitHub', e); }
 }
 $('lsCloudSave').addEventListener('click', cloudSave);
+$('tokUp').addEventListener('click', () => tokenToGitHub(ghTok(), true));
 $('tokForget').addEventListener('click', () => { if (confirm('Forget the GitHub token on this device? You will be asked for it again the next time you save a set or send.')) { forgetTok(); status('The GitHub token is forgotten on this device.'); } });
 // ☁ Send to Claude (Menu › Log): what happened (in your words), the log, what the pads, the recorder and the
 // grid are doing, and any screenshots added, to the repository's pocket-reports branch (reports/<when>/),
@@ -6405,7 +6440,7 @@ function stateNow() {
 $('sendLog').addEventListener('click', async () => {
   const what = $('logNote').value.trim();
   if (!what && !confirm('Send it without a note? (A few words in the box above help: what you did, what you expected, what it did.)')) { $('logNote').focus(); return; }
-  const tok = cloudToken(); if (!tok) return;
+  const tok = await cloudToken(); if (!tok) return;
   try {
     status('Sending to Claude…'); await cloudCheck(tok);
     const dir = `reports/${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -6413,7 +6448,7 @@ $('sendLog').addEventListener('click', async () => {
     for (const [i, f] of logShots.entries()) files.push([`${dir}/shot${i + 1}.${(f.name.split('.').pop() || 'png').toLowerCase()}`, { b64: b64of(new Uint8Array(await f.arrayBuffer())) }]);
     await cloudCommit(files, `Pocket Sampler report${logShots.length ? ` with ${logShots.length} screenshot(s)` : ''}`, tok, true, 'pocket-reports');
     logShots = []; $('logShots').value = ''; $('logShotsBtn').textContent = '📷 Add screenshots'; $('logNote').value = '';
-    status('Sent. Tell Claude in the chat that you sent a report.'); alert('Sent to Claude. Now tell Claude in the chat that you sent a report.');
+    status('Sent. Tell Claude in the chat that you sent a report.'); alert('Sent to Claude. Now tell Claude in the chat that you sent a report.'); afterCloud(tok);
   } catch (e) { cloudFail('send it', e); }
 });
 // 🗑 Delete a set: tap it, then a set (in My sets or On GitHub): it goes from this device and from GitHub,
@@ -6439,7 +6474,7 @@ async function setDelete(name, path = null) {
   const where = [local.length && 'this device', cloud.length && 'GitHub'].filter(Boolean).join(' and ');
   if (!confirm(`Delete the set “${name}” from ${where}? (Its sounds stay in My Sounds.) This cannot be undone.`)) return;
   if (cloud.length) {
-    const tok = cloudToken(); if (!tok) return;
+    const tok = await cloudToken(); if (!tok) return;
     try { status(`Deleting “${name}” from GitHub…`); await cloudCheck(tok); await cloudCommit(cloud.map(x => [x.path, null]), `Pocket Sampler set deleted: ${cloud.some(x => x.locked) ? '(private)' : name}`, tok); }
     catch (e) { cloudFail('delete it from GitHub', e); return; }
   }
@@ -6565,7 +6600,12 @@ async function loadTok() {
   if (ls && !tokSaved) saveTok(ls);
   drawTok();
 }
-function drawTok() { const el = $('tokState'); if (!el) return; const t = ghTok(); el.textContent = t ? `saved on this device (…${t.slice(-4)})` : 'not saved yet: asked for the first time you save a set or send'; $('tokForget').hidden = !t; }
+function drawTok() {
+  const el = $('tokState'); if (!el) return; const t = ghTok();
+  let up = ''; try { up = localStorage.getItem('pocketTokUp') || ''; } catch (e) {}
+  el.textContent = t ? `saved on this device (…${t.slice(-4)})${up === t.slice(-6) ? '' : ''}` : 'not saved yet: asked for the first time you save a set or send (or brought from GitHub with your passphrase, if it is kept there)';
+  $('tokForget').hidden = !t; $('tokUp').hidden = !t;
+}
 async function gh(path, opts = {}, tok = ghTok()) {
   const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,      // (never a copy kept from before: a branch moves)
     headers: { Accept: 'application/vnd.github+json', ...(tok && { Authorization: `Bearer ${tok}` }), ...(opts.body && { 'Content-Type': 'application/json' }) } });

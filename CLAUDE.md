@@ -24,6 +24,10 @@ change. Prefer sources that allow commercial use (CC0, CC BY, MIT); say so plain
 
 A Freesound key was once pasted in a chat; it must never go in the repo.
 
+His GitHub token lives on his devices; the app may also keep it on the `pocket-sets` branch as
+`keys/token.enc`, scrambled (AES-GCM) with his private-library passphrase, so a new device needs only the
+passphrase. Never try to open it, copy it elsewhere, or ask for the passphrase or the token.
+
 ## Pocket Sampler: what Br. Augustine sends to the library
 
 The app's ☁ Send to the library (Menu › Sounds › My Sounds) puts a pack file and his notes on it
