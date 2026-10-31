@@ -1,0 +1,42 @@
+{
+ "build": "20261031e",
+ "when": "Sat Oct 31 2026 16:13:45 GMT-0500 (Central Daylight Time)",
+ "device": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15",
+ "screen": "1024x748",
+ "view": "pads",
+ "playing": true,
+ "bpm": 100,
+ "key": "9 minor",
+ "quantize": 1,
+ "tapLag": 0.12800000000004275,
+ "set": "mmvwvooxes",
+ "cur": 0,
+ "curSound": "Electro Kit",
+ "pads": {
+  "lpInst": {
+   "name": "Electro Kit",
+   "cur": 0,
+   "designed": false
+  },
+  "loop": {
+   "c": 6,
+   "r": 0,
+   "cell": "Distortion 2"
+  },
+  "oct": 0,
+  "lock": true,
+  "choke": true,
+  "trig": "oneshot"
+ },
+ "rec": null,
+ "grid": [
+  "Kick: Electro Kit, played | · | · | · | · | ·",
+  "Snare: Electro Kit, played | · | · | · | · | ·",
+  "Tops: Electro Kit, played | · | · | · | · | ·",
+  "Bass: Voltage Bass, played | Sub Bass, played | · | · | · | ·",
+  "Chords: Rock Organ, played | · | · | · | · | ·",
+  "Lead: Fifths Lead, played | · | · | · | · | ·",
+  "Sub/Color: Distortion 2 | · | · | · | · | ·",
+  "Vox/Keys: · | · | · | · | · | ·"
+ ]
+}
