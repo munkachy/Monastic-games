@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031g';
+import * as DZ from './design.js?v=20261031h';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031g';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031h';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -25,6 +25,11 @@ let ctx, eng, engReady, scope;
 // for every sound, a third less memory for them), a shorter reverb, fewer notes at once, loops
 // made ready only when tapped, and less drawing. Menu › Setup › Sound engine.
 const LIGHT = (() => { try { return localStorage.getItem('pocketEngine') === 'light'; } catch (e) { return false; } })();
+// Animations (Menu › Buttons): off, nothing moves or blinks and the screen is brought up to date 10 times a
+// second, not 60, leaving an older iPad more time for the sound. Off at first with the Light engine.
+let ANIM = (() => { try { const v = localStorage.getItem('pocketAnim'); return v ? v === 'on' : !LIGHT; } catch (e) { return !LIGHT; } })();
+document.documentElement.classList.toggle('noanim', !ANIM);
+const nextFrame = f => (ANIM ? requestAnimationFrame(f) : setTimeout(f, 100));
 stretchLimit.n = LIGHT ? 16 : 40;
 function makeAudio() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -2196,7 +2201,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031h'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2289,7 +2294,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031g'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031h'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -2755,7 +2760,7 @@ function drawRobot() {
     d.classList.toggle('spill', q.spill); d.classList.toggle('has', q.syl.length > 0);
     minus.disabled = q.syl.length <= 1; plus.disabled = !q.syl.length || q.syl.length >= q.avail;
     d.classList.toggle('down', down.has(k));
-    d.classList.toggle('head', playing && k === headStep);
+    d.classList.toggle('head', playing && ANIM && k === headStep);
   });
 }
 // 🎤 Rap (a Loops cell's tab, or 🎤 Rap a verse in its picker): the words (typed, or a psalm's verses)
@@ -3433,7 +3438,7 @@ function frame() {
   let changed = false;
   while (uiQueue.length && uiQueue[0].t <= now) {
     const q = uiQueue.shift();
-    if (q.step !== headStep || q.pat !== headPat) changed = true;
+    if ((ANIM && q.step !== headStep) || q.pat !== headPat) changed = true;      // (Animations off: no step lights)
     headTick = q.tick; headStep = q.step; headPat = q.pat;
     if (followPlay && !chainEdit && q.pat !== S.pat && S.chain.length > 1) { S.pat = q.pat; changed = true; }
   }
@@ -3444,9 +3449,9 @@ function frame() {
   // Redraw the screen only when what it shows has changed (or the scope is
   // moving), so the phone has its time free to answer the keys.
   const sl = S.slots[S.cur], seen = [sl, S.cur, S.lastKey[S.cur], sl?.slices?.[S.lastKey[S.cur]], cv.clientWidth];
-  const scopeLive = sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5) && (!LIGHT || (frameN++ & 3) === 0);   // Light: the scope a quarter as often
+  const scopeLive = ANIM && sl?.kind === 'synth' && (playing || ctx.currentTime < lastNoteAt + 1.5) && (!LIGHT || (frameN++ & 3) === 0);   // Light: the scope a quarter as often
   if (drag != null || scopeLive || seen.some((v, i) => v !== lastSeen[i])) { drawWave(); lastSeen = seen; }
-  requestAnimationFrame(frame);
+  nextFrame(frame);
 }
 
 let statusTimer = 0;
@@ -4589,7 +4594,7 @@ function tickGrid(now) {
     if (col.next && now >= col.next.at) { col.cur = col.next; col.next = null; changed = true; }
   }
   if (changed) drawLoops();
-  if (view !== 'loops') return;
+  if (view !== 'loops' || !ANIM) return;
   const pos = beatPos() / 16;           // bars since the beat began
   for (const [i, col] of gcol.entries()) {
     const c = Math.floor(i / ROWS);
@@ -5003,9 +5008,9 @@ function lpRecBarShow() {
     if (lpRec !== R) return;
     const now = ctx.currentTime, f = (((now - R.origin) / R.sd) % R.L + R.L) % R.L / R.L;
     head.style.left = (f * 100) + '%'; head.classList.toggle('wait', now < R.t0);
-    requestAnimationFrame(tick);
+    nextFrame(tick);
   };
-  requestAnimationFrame(tick);
+  nextFrame(tick);
 }
 function lpRecBarNote(n, old = false) {
   const R = lpRec; if (!R) return;
@@ -7294,6 +7299,11 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   }),
   colFx: c => { const k = eng.cols?.[c]; return k && { sig: k.sig, ins: Object.keys(k.ins || {}), sends: Object.keys(k.sends || {}) }; } });
 
+$('animWay').value = ANIM ? 'on' : 'off';
+$('animWay').addEventListener('change', e => {
+  ANIM = e.target.value === 'on'; try { localStorage.setItem('pocketAnim', e.target.value); } catch (er) {}
+  document.documentElement.classList.toggle('noanim', !ANIM); drawLoops();
+});
 draw();
 load().then(() => { padsRestore(); setView('both'); gridLast = gridNow(); drawGridUndo(); status('Ready. Press ▶ Play, or tap the keys.'); if (gridNew) loadSet(gridNew); else if (gridAgain) loadSet(gridAgain, true); });
 requestAnimationFrame(frame);
