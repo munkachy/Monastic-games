@@ -610,6 +610,7 @@
   .dzlname { width: 62px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dzline.sel .dzlname { background: var(--accent); color: #000; } .dzlx { width: 28px; flex: none; } .dzlx:disabled { opacity: .3; }
   .dzladd { margin: 4px 0 8px; padding: 8px 12px; }
+  .dzsound select { font: inherit; font-size: 12px; max-width: 42%; padding: 6px 4px; border-radius: 6px; background: var(--btn); color: var(--btn-ink); border: 0; }
   .dzsteps button { font: inherit; font-size: 10px; border: 0; border-radius: 4px; padding: 9px 0; background: var(--btn); color: var(--btn-ink); }
   .dzsteps button:nth-child(4n+1) { box-shadow: inset 0 -2px 0 rgba(255,255,255,.25); }
   .dzsteps button.on { background: var(--c, var(--accent)); color: #000; }
@@ -735,7 +736,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031h</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031i</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -858,8 +859,8 @@
       </div>
       <div class="lpane" data-pane="design" hidden>     <!-- a hit designed here, on the steps of a bar, into this cell -->
         <div id="lmSteps"></div>
-        <div class="lmodes"><button id="lmDzBar">▶ Hear the bar</button><button id="lmDzPut" class="on">✓ Put in this cell</button><span class="grow"></span><button id="lmDzSave">★ Save the hit</button></div>
-        <small class="lsub">The steps of one bar, a line for each drum (up to 6): tap a step for on, again for soft, again for off. Tap a line's name to shape that drum below; ＋ Add a line for another, ✕ to take one away. It plays at the song's tempo and swing, and keeps time if the tempo changes.</small>
+        <div class="lmodes"><button id="lmDzBar">▶ Hear it</button><button id="lmDzPut" class="on">✓ Put in this cell</button><span class="grow"></span><button id="lmDzSave">★ Save the hit</button></div>
+        <small class="lsub">One drum on its steps, 1 to 8 bars long (Length; a row a bar): tap a step for on, again for soft, again for off; drag a lit step to move it, to another bar too. Sound: a drum of your own, shaped below, or any hit of any drum kit (the app's and yours). For a beat of several drums, put each in its own Loops column. It plays at the song's tempo and swing, and keeps time if the tempo changes.</small>
         <div id="lmDz" class="lmdz"></div>
       </div>
       <div class="lpane two" data-pane="set">
@@ -1150,7 +1151,7 @@
     
     
     <p><b>🎹 Design a sound</b> (in the Loops: hold a cell, and choose it at the top of the picker, or the cell's <b>🎹 Sound</b> tab): make a bass, keys, a lead or a pad of your own, for that cell. It starts from a sound that suits the column (Analog bass in Bass, Bell keys in Chords, Supersaw lead in Lead…); choose another under Start from, set its Range, turn the knobs (Basic shows the few that matter most: wave, sub, cutoff, resonance, attack, release, vibrato, drive; Advanced, all of them), ▶ Hear it, or 🎲 Surprise. <b>🎹 Play it on the pads</b> records the whole instrument once (a note every 6 half steps, as every sound made in code is kept) and opens Loops + Pads with the pads playing it and the cell marked in red; play, and <b>⏺ Rec</b> puts what you play in that cell (replacing what it held). Afterwards, tapping that cell puts the same instrument back on the pads, so you can play along with it or record more. ★ Save to My Sounds keeps the instrument.</p>
-    <p><b>🥁 Design in the Loops</b>: hold a cell for its settings, and its third tab, 🥁 Design, makes a hit and puts it straight in: tap the steps of one bar (on, soft, off; drag a lit step along its line to move it; the column suggests a start: kicks on 1 and 3, snares on 2 and 4, hats in eighths), make the hit below (the same designer as Menu › Design), ＋ Add a line for another drum on its own steps (up to 6 lines: kick, snare, hat, clap and so on; tap a line's name to shape that one's drum, ✕ takes it away), ▶ Hear the bar, and ✓ Put in this cell: a one-bar loop at the song's tempo and swing, playing from the next bar, also kept in the library (My loops). An empty cell has 🥁 Design a hit at the top of its picker.</p>
+    <p><b>🥁 Design in the Loops</b>: hold a cell for its settings, and its third tab, 🥁 Design, makes a hit and puts it straight in: choose its <b>Length</b> (1, 2, 4 or 8 bars, a row of steps each; made longer, the bars there are repeat, ready to change), tap the steps (on, soft, off; drag a lit step to move it, to another bar too; the column suggests a start: kicks on 1 and 3, snares on 2 and 4, hats in eighths), choose its <b>Sound</b>: Design your own (shaped below, the same designer as Menu › Design) or any drum kit, the app's or yours (packs in My Sounds), and one of its hits (▶ to hear it), then ▶ Hear it, and ✓ Put in this cell: a loop of that many bars at the song's tempo and swing, playing from the next bar, also kept in the library (My loops). An empty cell has 🥁 Design a hit at the top of its picker.</p>
     <p><b>🎹 From the pads</b> (at the top of a cell's picker: an empty cell, or Change the sound): opens Loops + Pads with that cell ready to record into (a red edge). Tap a loop for the pads' sound, then <b>⏺ Rec</b>.</p>
     <p><b>Basic and Advanced</b> (at the top of Menu › Design and of a cell's 🥁 Design): Basic shows the few knobs that shape each sound most (a kick's pitch, pitch drop, length, click and drive; a snare's tune, body, wires and snap; a synth's wave, sub, cutoff, resonance, attack, release, vibrato and drive) and the Room; Advanced shows every knob, the layer, and the whole finish (soften, low and high cut, reverse). The choice holds for every designer on this device, and what you set in Advanced stays when you go back to Basic.</p>
     <p><b>⬆ Upload a file</b> (at the top of a cell's picker: tap an empty cell, or hold one and Change the sound): an MP3, WAV, M4A or other sound (or a video's sound) from your phone goes straight into that cell. It asks the tempo, with a guess from its beat (fitted so a loop of whole bars stays exactly in time); leave it empty for a sound with no beat, which then plays at its own speed. It is cut to whole bars, kept in the library (My loops, in the column's folder), and plays like any loop: hold the cell to trim it, Follow the tempo, Repeat and the rest. A drum loop put in Kick, Snare or Tops is beat sliced to the tempo; anything else does not follow the key until you turn Follow the key on.</p>
@@ -1323,6 +1324,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031h"></script>
+<script type="module" src="app.js?v=20261031i"></script>
 </body>
 </html>
