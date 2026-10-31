@@ -1,0 +1,89 @@
+   0.00s start  build 20261031e; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+   0.00s audio  sample rate 32000 Hz, base latency 4.0 ms, state suspended
+   0.00s audio  audio session: auto
+   1.45s audio  output latency 0 ms
+   2.17s wake   tap: suspended -> running
+   2.17s state  running
+   2.45s glitch audio clock fell 712 ms behind in 1.0 s (the phone dropped sound)
+  20.49s glitch audio clock fell 65 ms behind in 1.0 s (the phone dropped sound)
+  25.94s state  suspended
+  34.51s wake   tap: suspended -> running
+  34.51s state  running
+  35.46s glitch audio clock fell 67 ms behind in 1.0 s (the phone dropped sound)
+  36.81s pads   loop on the pads: Kick 1 (Electro Kit, played)
+  37.31s late   beat engine woke 38 ms late: notes in that gap are cut short
+  37.52s glitch audio clock fell 78 ms behind in 1.1 s (the phone dropped sound)
+  39.08s pads   loop on the pads: Kick 1 (Electro Kit, played)
+  41.26s pads   loop on the pads: Snare 1 (Electro Kit, played)
+  47.53s pads   loop on the pads: Tops 1 (Electro Kit, played)
+  52.44s pads   loop on the pads: Snare 1 (Electro Kit, played)
+  58.84s pads   loop on the pads: Tops 1 (Electro Kit, played)
+  60.34s pads   loop on the pads: Bass 1 (Voltage Bass, played)
+  68.68s pads   loop on the pads: Chords 1 (Rock Organ, played)
+  78.70s pads   loop on the pads: Lead 1 (Fifths Lead, played)
+  89.05s pads   loop on the pads: Sub/Color 1 (Distortion 2)
+ 171.15s pads   sound of the Pads on the pads: Electro Kit (sound 1)
+ 265.92s rec    start: new into Tops 1, 8 bars, quantize 1, choke true
+ 316.34s rec    stop: 80 notes into Tops 1 (new), 8 bars; pads: Electro Kit (Pads sound)
+ 316.73s pads   loop on the pads: Tops 1 (Electro Kit, played)
+ 352.68s pads   sound of the Pads on the pads: Electro Kit (sound 1)
+ 366.34s rec    start: new into Tops 1, 4 bars, quantize 1, choke true
+ 411.35s glitch audio clock fell 69 ms behind in 1.0 s (the phone dropped sound)
+ 441.35s rec    start: new into Tops 1, 4 bars, quantize 1, choke true
+ 459.96s rec    stop: 41 notes into Tops 1 (new), 4 bars; pads: Electro Kit (Pads sound), locked
+ 496.56s glitch audio clock fell 41 ms behind in 1.0 s (the phone dropped sound)
+ 637.61s late   beat engine woke 558 ms late: notes in that gap are cut short
+ 637.79s glitch audio clock fell 53 ms behind in 1.0 s (the phone dropped sound)
+ 706.22s pads   sound of the Pads on the pads: Boom Bap Kit (sound 1)
+ 742.42s pads   sound of the Pads on the pads: Electro Kit (sound 1)
+ 796.63s rec    start: new into Snare 1, 8 bars, quantize 1, choke true
+ 822.15s rec    stop: 21 notes into Snare 1 (new), 8 bars; pads: Electro Kit (Pads sound), locked
+ 823.16s glitch audio clock fell 33 ms behind in 1.0 s (the phone dropped sound)
+ 872.28s glitch audio clock fell 58 ms behind in 1.0 s (the phone dropped sound)
+ 881.27s late   beat engine woke 28 ms late: notes in that gap are cut short
+ 882.32s glitch audio clock fell 45 ms behind in 1.0 s (the phone dropped sound)
+ 884.33s glitch audio clock fell 58 ms behind in 1.0 s (the phone dropped sound)
+ 885.33s glitch audio clock fell 49 ms behind in 1.0 s (the phone dropped sound)
+ 890.45s glitch audio clock fell 345 ms behind in 1.1 s (the phone dropped sound)
+ 891.46s glitch audio clock fell 83 ms behind in 1.0 s (the phone dropped sound)
+ 894.48s glitch audio clock fell 32 ms behind in 1.0 s (the phone dropped sound)
+ 895.48s glitch audio clock fell 110 ms behind in 1.0 s (the phone dropped sound)
+ 901.94s late   beat engine woke 74 ms late: notes in that gap are cut short
+ 902.50s glitch audio clock fell 123 ms behind in 1.0 s (the phone dropped sound)
+ 906.52s glitch audio clock fell 49 ms behind in 1.0 s (the phone dropped sound)
+ 911.30s late   beat engine woke 160 ms late: notes in that gap are cut short
+ 915.61s glitch audio clock fell 42 ms behind in 1.0 s (the phone dropped sound)
+ 931.98s late   beat engine woke 260 ms late: notes in that gap are cut short
+ 932.99s glitch audio clock fell 64 ms behind in 1.0 s (the phone dropped sound)
+ 933.54s late   beat engine woke 106 ms late: notes in that gap are cut short
+ 934.99s glitch audio clock fell 34 ms behind in 1.0 s (the phone dropped sound)
+ 954.01s glitch audio clock fell 53 ms behind in 1.0 s (the phone dropped sound)
+ 955.52s load   meter on: light engine, 32000 Hz, 4 cores; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+ 959.61s load   sound 6 breaks/min · busy worst 32 ms · screen worst 1 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 960.88s log    verbose on
+ 961.01s glitch audio clock fell 34 ms behind in 1.0 s (the phone dropped sound)
+ 964.64s load   sound 6 breaks/min · busy worst 105 ms · screen worst 2 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 965.02s glitch audio clock fell 36 ms behind in 1.0 s (the phone dropped sound)
+ 969.65s load   sound 6 breaks/min · busy worst 48 ms · screen worst 24 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 974.02s glitch audio clock fell 37 ms behind in 1.0 s (the phone dropped sound)
+ 974.67s load   sound 7 breaks/min · busy worst 66 ms · screen worst 14 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 975.03s glitch audio clock fell 53 ms behind in 1.0 s (the phone dropped sound)
+ 976.02s glitch audio clock fell 40 ms behind in 1.0 s (the phone dropped sound)
+ 977.03s glitch audio clock fell 49 ms behind in 1.0 s (the phone dropped sound)
+ 979.67s load   sound 9 breaks/min · busy worst 4 ms · screen worst 26 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 981.03s glitch audio clock fell 180 ms behind in 1.0 s (the phone dropped sound)
+ 982.03s glitch audio clock fell 81 ms behind in 1.0 s (the phone dropped sound)
+ 984.78s load   sound 11 breaks/min · busy worst 111 ms · screen worst 23 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 988.16s glitch audio clock fell 33 ms behind in 1.0 s (the phone dropped sound)
+ 989.79s load   sound 12 breaks/min · busy worst 95 ms · screen worst 28 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 990.16s glitch audio clock fell 32 ms behind in 1.0 s (the phone dropped sound)
+ 994.16s glitch audio clock fell 34 ms behind in 1.0 s (the phone dropped sound)
+ 994.78s load   sound 13 breaks/min · busy worst 27 ms · screen worst 39 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+ 996.16s glitch audio clock fell 45 ms behind in 1.0 s (the phone dropped sound)
+ 997.17s glitch audio clock fell 61 ms behind in 1.0 s (the phone dropped sound)
+ 998.02s late   beat engine woke 14 ms late: notes in that gap are cut short
+ 998.22s glitch audio clock fell 104 ms behind in 1.1 s (the phone dropped sound)
+ 999.22s late   beat engine woke 128 ms late: notes in that gap are cut short
+ 999.23s glitch audio clock fell 30 ms behind in 1.0 s (the phone dropped sound)
+1000.23s load   sound 16 breaks/min · busy worst 248 ms · screen worst 3 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
+1005.23s load   sound 16 breaks/min · busy worst 13 ms · screen worst 46 fps · playing 100 BPM · 6 loops, 6 notes · fx 8 on 7 cols, pads 2 · waiting 0 · mmvwvooxes
