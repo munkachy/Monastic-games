@@ -152,8 +152,13 @@ function satCurve(kind, a) {
   for (let i = 0; i < c.length; i++) { const x = i / (c.length - 1) * 2 - 1; c[i] = f(x) * norm; }
   satCurves.set(key, c); return c;
 }
+// Light engine (older iPads): the shaping run at the plain rate, not 4x over (a quarter of the work, the
+// edges a little rougher), the hard-clipping RAT at 2x; recordings made offline (exports, loops made from
+// notes) keep the full 4x.
+let lightFx = false;
 export function satChain(ctx, kind, { wow = true } = {}) {
-  const input = ctx.createGain(), output = ctx.createGain(), shaper = ctx.createWaveShaper(); shaper.oversample = '4x';
+  const input = ctx.createGain(), output = ctx.createGain(), shaper = ctx.createWaveShaper();
+  shaper.oversample = !lightFx || ctx instanceof OfflineAudioContext || ctx.offline ? '4x' : kind === 'distortion' ? '2x' : 'none';
   const filt = (type, f, q = 0.707) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
   const oscs = [], parts = [input, output, shaper];
   let set;
@@ -234,7 +239,7 @@ export class Engine {
   // light: for older devices (a shorter reverb, fewer notes at once).
   constructor(ctx, { live = true, light = false } = {}) {
     this.maxVoices = light ? 24 : 64;
-    this.ctx = ctx; this.live = live; this.light = light;
+    this.ctx = ctx; this.live = live; this.light = light; if (live && light) lightFx = true;
     // Two ways in: `bus` runs through the effects, `dry` skips them (sounds
     // that an effect aimed at other tracks should leave alone).
     this.bus = ctx.createGain(); this.dry = ctx.createGain();
@@ -365,7 +370,8 @@ function tracking(ctx, made) {
   const keep = name => (...a) => { const n = ctx[name](...a); made.push(n); return n; };
   return { createGain: keep('createGain'), createBiquadFilter: keep('createBiquadFilter'), createWaveShaper: keep('createWaveShaper'),
     createOscillator: keep('createOscillator'), createBufferSource: keep('createBufferSource'), createIIRFilter: keep('createIIRFilter'),
-    createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; }, get sampleRate() { return ctx.sampleRate; } };
+    createBuffer: (...a) => ctx.createBuffer(...a), get currentTime() { return ctx.currentTime; }, get sampleRate() { return ctx.sampleRate; },
+    get offline() { return ctx instanceof OfflineAudioContext; } };
 }
 
 // Time-stretching a loop, two ways, keeping whichever is closer to the original (by the log-spectral
