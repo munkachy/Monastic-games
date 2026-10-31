@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031i';
+import * as DZ from './design.js?v=20261031j';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031i';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031j';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -922,12 +922,13 @@ function press(k) {
       break;
     }
     default: {
-      if (view === 'pads') { if (!padShared()) padsTake(); if (padShared()) { lpPress(k); break; } }      // the Loops + Pads pads' sound (and their effects)
+      if (view === 'pads') { if (!padShared()) padsTake(); if (padShared()) { lpPress(k); if (!ANIM) return; break; } }      // the Loops + Pads pads' sound (and their effects)
       if (S.write && !playing) { toggleStep(k); break; }
       const key = padKey(k); if (key == null) break;     // a rap's pad with no syllable on its step
       const h = trigger(key, k);
       if (S.write && h) h.note = recordLive(key, h.tick);
       if (lrTake && h) lrNote(key, h);
+      if (!ANIM && !S.write) return;          // Animations off: a pad doesn't light, so nothing to redraw
     }
   }
   draw();
@@ -939,7 +940,7 @@ function release(k) {
   else if (S.mode === 'fx' && !S.fxLatch && activeFx.has(S.fxSlots[k])) releaseFx(S.fxSlots[k]);
   const h = holding[k]; delete holding[k];
   if (h?.voice?.sustain) endHeld(h);           // Gate: lifting the finger stops it
-  draw();
+  if (ANIM || S.write || S.mode === 'sound' || S.mode === 'fx' || recBtn.classList.contains('held')) draw();
 }
 // Stop a held or looping note; if it was recorded live, keep how long it
 // sounded, in steps, as the note's length.
@@ -2201,7 +2202,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031j'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2294,7 +2295,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031i'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031j'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3143,7 +3144,7 @@ function draw() {
     el.classList.toggle('lit', lit); el.classList.toggle('some', some); el.classList.toggle('cur', cur);
     el.classList.toggle('head', false);
     const loops = S.mode === 'sound' ? [...looping.keys()].some(id => id.startsWith(k + ':')) : looping.has(`${S.cur}:${k}`);
-    el.classList.toggle('down', down.has(k) || loops || (flash?.k === k && performance.now() < flash.until));
+    el.classList.toggle('down', loops || (ANIM && (down.has(k) || (flash?.k === k && performance.now() < flash.until))));      // (Animations off: only a pad left looping shows)
     const ci = S.mode === 'pattern' && S.chain.length > 1 ? S.chain.indexOf(k) : -1;
     el.classList.toggle('chain', ci >= 0); el.dataset.chain = ci >= 0 ? S.chain.map((p, i) => p === k ? i + 1 : null).filter(Boolean).join(',') : '';
     el.querySelector('span').textContent = keyLabel(k);
@@ -4794,7 +4795,7 @@ function lpWarm(slot) {
   for (let k = 0; k < 16; k++) { const r = lpRatio(slot, k, S.root, S.scale, lp.oct); if (Math.abs(r - 1) > 0.002) stretchLoop(slot.buf, slot.zones[0].s, slot.zones[0].e, r, -1); }
 }
 async function lpPress(k) {
-  ctx.resume(); lpKeys[k].classList.add('down');
+  ctx.resume(); if (ANIM) lpKeys[k].classList.add('down');      // (Animations off: the pads don't light)
   const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k); if (snapped?.skip) return;      // its point is taken already: dropped
   const at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
   const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
