@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031k';
+import * as DZ from './design.js?v=20261031l';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031k';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031l';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -914,12 +914,17 @@ for (let k = 0; k < 16; k++) {
   b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i><em class="tag"></em>`;
   let hold = 0;
   b.addEventListener('pointerdown', ev => {
-    ev.preventDefault(); capture(b, ev); press(k);
+    ev.preventDefault(); capture(b, ev);
+    // a new touch always plays: if the last one's lifting never came (the iPad can drop it when fingers move
+    // fast or overlap), the pad would seem still held and every tap on it be ignored
+    if (down.has(k)) { if (verbose) log('tap', `key ${k + 1}: touched again before its let-go came; let go first`); release(k); }
+    press(k);
     clearTimeout(hold);
     if (S.mode === 'sound' && !copying) hold = setTimeout(() => { if (S.cur === k) openSoundSheet(k); }, 550);   // hold: the sound's own menu
   });
   const up = () => { clearTimeout(hold); release(k); };
-  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('pointerup', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('pointercancel', () => { if (verbose) log('tap', `key ${k + 1}: the iPad cancelled the touch`); up(); });
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   $('keys').appendChild(b); keyEls.push(b);
 }
@@ -2236,7 +2241,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031l'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2329,7 +2334,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031k'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031l'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4810,9 +4815,10 @@ function lpKeep() { const cell = S.grid.cells[lp.c]?.[lp.r]; if (cell) lp.saved 
 const lpKeys = [];
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button');
-  b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); lpPress(k); });
+  b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); });
   const up = () => lpRelease(k);
-  b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('pointerup', up); b.addEventListener('lostpointercapture', up);
+  b.addEventListener('pointercancel', () => { if (verbose) log('tap', `pad ${k + 1}: the iPad cancelled the touch`); up(); });
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   lpKeys.push(b); $('lpKeys').appendChild(b);
 }
@@ -4830,9 +4836,10 @@ function lpWarm(slot) {
 }
 async function lpPress(k) {
   ctx.resume(); if (ANIM) lpKeys[k].classList.add('down');      // (Animations off: the pads don't light)
-  const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k); if (snapped?.skip) return;      // its point is taken already: dropped
+  const snapped = snap(true, S.grid.lpChoke ? 'lp*' : 'lp' + k);
+  if (snapped?.skip) { if (verbose) log('note', `pad ${k + 1}: dropped (Quantize: its point was taken${S.grid.lpChoke ? ', Choke on' : ''})`); return; }      // its point is taken already: dropped
   const at = snapped ? snapped.when : ctx.currentTime, oct = lp.oct || 0;
-  const slot = await lpSlot(); if (!slot) { status('Tap a loop first: the pads play the loop last tapped.'); return; }
+  const t0 = ctx.currentTime, slot = await lpSlot(); if (!slot) { if (verbose) log('note', `pad ${k + 1}: no sound (no loop on the pads)`); status('Tap a loop first: the pads play the loop last tapped.'); return; }
   lpWarm(slot);
   const when = Math.max(at, ctx.currentTime);
   if (S.grid.lpChoke) lp.voice?.stop?.(when);           // Choke (Loops › ⚙): a new note cuts off the last
@@ -4843,6 +4850,7 @@ async function lpPress(k) {
   const prevVoice = lp.voice;
   lp.voice = playNote(eng, slot, -1, k, when, { scale: S.scale, bpm: S.bpm, root: S.root, rate: 2 ** oct, dest: lpStripNow().pre, hold: trig !== 'oneshot', lock: { trig } });
   lp.last = { at, tapped: ctx.currentTime, oct, prevEnd: prevVoice?.end };
+  if (verbose) log('note', `pad ${k + 1}: plays${when > t0 + 0.005 ? ` ${Math.round((when - t0) * 1000)} ms after the tap` : ''}${lp.voice ? '' : ' (no voice!)'}`);
   const note = lpRec ? lpNote(k, snapped ? snapped.on : at - (playing ? tapLag : 0), slot, oct, snapped ? +S.quantGrid : 0) : null;      // (as you meant it: Tap timing)
   if (trig !== 'oneshot') { held[k] = { voice: lp.voice, at: when, note }; lpDraw(); }
   if (trig === 'gate' && !lpKeys[k].classList.contains('down')) lpLetGo(k);       // let go before the sound was ready
