@@ -731,7 +731,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031a</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031b</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -1108,10 +1108,12 @@
   <div class="panel" id="tLog">
     <label class="check"><input type="checkbox" id="meterOn"> Show the workload meter: how hard this device is working</label>
     <label class="check"><input type="checkbox" id="verbose"> Verbose: also every note and tap</label>
+    <label for="logNote" style="display:block;font-size:12px;margin:4px 0">A note for Claude: what you did, what you expected, what it did</label>
+    <textarea id="logNote" rows="4" placeholder="e.g. I recorded the choir on the pads, let it go round, and the pads changed to the snare." style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;border-radius:8px;padding:8px;margin:0 0 6px;background:var(--btn);color:var(--btn-ink);border:1px solid var(--edge)"></textarea>
     <div class="btns" style="margin:0 0 8px"><button id="logShotsBtn">📷 Add screenshots</button><button id="sendLog" class="go">☁ Send to Claude</button><button id="copyLog">Copy log</button><button id="clearLog">Clear</button></div>
     <input type="file" id="logShots" accept="image/*" multiple hidden>
     <pre id="logView"></pre>
-    <p class="note">If something misbehaves: turn Verbose on, do it again until it happens, then <b>☁ Send to Claude</b>: it asks what happened, and sends that, this log, what the pads, the recorder and the grid are doing, and any screenshots you add (📷 Add screenshots, first), to the repository on GitHub (with the same token as the sets; anyone could read it there), for Claude to read. Then say in the chat that you sent one. (Copy log puts the log on the clipboard instead.)</p>
+    <p class="note">If something misbehaves: turn Verbose on, do it again until it happens, then write a note in the box (what you did, what you expected, what it did) and <b>☁ Send to Claude</b>: it sends your note, this log, what the pads, the recorder and the grid are doing, and any screenshots you add (📷 Add screenshots, first), to the repository on GitHub (with the same token as the sets; anyone could read it there), for Claude to read. Then say in the chat that you sent one. (Copy log puts the log on the clipboard instead.)</p>
     <p class="note">The workload meter (a small line at the bottom of the screen, while it is on; tap it for more, and ⧉ Copy and ✕): <b>Sound</b>, how often the sound broke up in the last minute (0 is right); <b>Busy</b>, the longest the app was too busy to answer in the last second (under 50 ms you will not notice; over 100 ms taps and the screen lag); <b>Screen</b>, frames a second (60 is smooth); then how many loops and notes are playing, effects turned on, and loops still being made ready for a new tempo or key. Every 5 seconds it writes a line to this log: play a set the way you usually do, then ⧉ Copy on the meter (or Copy log here) and paste it into a message.</p>
   </div>
 
@@ -1313,6 +1315,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031a"></script>
+<script type="module" src="app.js?v=20261031b"></script>
 </body>
 </html>
