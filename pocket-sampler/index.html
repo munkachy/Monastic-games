@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<script>try { const l = localStorage.getItem('pocketLook'); if (l === 'classic' || l === 'lcars') document.documentElement.classList.add(l); } catch (e) {}
+  // the Pads sideways (the default), as the Loops: turned a quarter turn while the phone is upright
+  try { const side = localStorage.getItem('pocketPads') !== 'upright', tall = matchMedia('(orientation: portrait)').matches;
+    document.documentElement.classList.toggle('sidepads', side || !tall); document.documentElement.classList.toggle('turned', side && tall); } catch (e) {}</script>
+<title>Pocket Sampler</title>
+<style>
+  /* No double-tap zoom, in Safari or Chrome: two quick taps (− and + on the tempo) are two taps. The pads,
+     faders and waves keep their own touch-action (none), set below. maximum-scale above stops iOS zooming
+     in on a menu or text box it focuses. */
+  *, *::before, *::after { touch-action: manipulation; }
+  /* The colours, by part, the same everywhere: a kick is always red, a bass always green. Defined
+     here only; app.js reads them from here. The Loops columns are Remixlive's eight: kick, snare,
+     tops (hats), bass, chords, lead, sub, vox/keys; the other eight are the other drum hits and parts. */
+  :root {
+    --c-kick: #ff3b4e; --c-snare: #ff8a1f; --c-hat: #ffd60a; --c-bass: #2fd35b; --c-chords: #14c8b4; --c-lead: #ff5fa8; --c-sub: #a45cff; --c-vox: #2f7dff;
+    --c-open: #b2ea1e; --c-cym: #22d6f2; --c-stab: #e443f5; --c-clap: #ffb31a; --c-pad: #6366ff; --c-tom: #ff7b69; --c-perc: #7cf2c3; --c-pluck: #cbb0ff;
+    /* the 16 sounds: four of each part, in shades of its colour: bass green, keys teal, lead pink, pads indigo */
+    --s1: var(--c-bass); --s2: #7cf2c3; --s3: #b2ea1e; --s4: #1e9e4a; --s5: var(--c-chords); --s6: #22d6f2; --s7: #0f9688; --s8: #7fe3d8;
+    --c-kit: #c9cbd6;          /* a kit, in Sound › Drums: silver, its hits have the colours */
+    --s9: var(--c-lead); --s10: #e443f5; --s11: #ff7b69; --s12: #ffa3cf; --s13: var(--c-pad); --s14: #cbb0ff; --s15: #a45cff; --s16: #4a7dff;
+  }
+  /* The dark look (the default), like Remixlive. */
+  :root {
+    --bg: #000; --body: #0e0e11; --body-dark: #000; --edge: #26262d; --ink: #ececf1; --muted: #a3a3ad;
+    --btn: #25252c; --btn-ink: #ececf1; --btn-sh: #000;
+    --lcd: #050507; --lcd-ink: #e9e9ef; --lcd-shade: #ffffff22; --lcd-mode: #ffb340; --lcd-line: #2a2a31;
+    --key: #1c1c22; --key-2: #2a2a32; --key-sh: #000; --key-ink: #f4f4f7; --key-dim: #b3b3bd; --lamp: #000; --friend: #6b3b17;
+    --panel: #151519; --tab: #26262d; --field: #0b0b0e; --field-ink: #ececf1; --field-line: #3b3b45;
+    --custom: #163c55; --custom-ink: #cfe9ff; --custom-sh: #071722;
+    --key-down: #fff; --accent: #ff6a1a; --lit: #fff; --dim: #8a8475; --head: #ff7a1a;
+  }
+  /* The classic look: the beige PO-33 body (Menu › Setup). */
+  :root.classic {
+    --bg: #1b1a17; --body: #d9d4c7; --body-dark: #bdb6a4; --edge: #bdb6a4; --ink: #1b1a17; --muted: #555;
+    --btn: #1b1a17; --btn-ink: #d9d4c7; --btn-sh: #000;
+    --lcd: #9fb18c; --lcd-ink: #1f2a17; --lcd-shade: #1f2a1726; --lcd-mode: #1f2a17; --lcd-line: transparent;
+    --key: #ece8dc; --key-2: #d6d0c1; --key-sh: #bdb6a4; --key-ink: #1b1a17; --key-dim: #555; --lamp: #111; --friend: #f6c79f;
+    --panel: #ece8dc; --tab: #bdb6a4; --field: #fff; --field-ink: #1b1a17; --field-line: #b7b09e;
+    --custom: #22546a; --custom-ink: #e4eff3; --custom-sh: #0d2833;
+    --key-down: #fff; --accent: #e8572a; --lit: #1f7ae0; --head: #ff6a1a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.35 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  body { min-height: 100vh; display: flex; justify-content: center; padding: 8px 8px 16px; }
+  .device { position: relative; width: 100%; max-width: 440px; background: var(--body); border-radius: 18px; padding: 10px 12px 12px;
+    box-shadow: inset 0 -4px 0 var(--body-dark), 0 0 0 1px var(--edge), 0 10px 40px #000a; }
+  .brand { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; margin: 0 2px 6px; white-space: nowrap; gap: 8px; }
+  .brand span { opacity: .6; font-size: 9px; }
+  .brand b { font-size: 13px; letter-spacing: .2em; }
+  .brand a { color: var(--ink); }
+  #upd { font: inherit; font-size: 10px; letter-spacing: 0; padding: 1px 6px; margin-right: auto; border: 1px solid var(--edge); border-radius: 6px; background: none; color: var(--ink); opacity: .7; }
+  #upd.new { opacity: 1; background: #1e8f4e; border-color: #1e8f4e; color: #fff; }
+
+  /* LCD */
+  .screen { background: var(--lcd); border-radius: 6px; padding: 6px 8px; box-shadow: inset 0 2px 6px #0005;
+    color: var(--lcd-ink); user-select: none; touch-action: none; border: 1px solid var(--lcd-line); }
+  #lcdSound { color: var(--c, var(--lcd-ink)); }
+  #lcdMode { color: var(--lcd-mode); }
+  :root.classic #lcdSound { color: var(--lcd-ink); }
+  .lcdtop, .lcdbot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lcdtop span:first-child { overflow: hidden; text-overflow: ellipsis; }
+  .lcdbot { font-weight: 400; font-size: 11px; opacity: .85; }
+  canvas#wave { width: 100%; height: 64px; display: block; margin: 3px 0; }
+  #fxPanel { height: 64px; margin: 3px 0; display: flex; flex-direction: column; justify-content: space-between; }
+  #fxPanel[hidden] { display: none; }
+  #fxAimBtn { font: inherit; font-size: 12px; font-weight: 700; text-align: left; border: 2px solid var(--lcd-ink); border-radius: 5px;
+    background: transparent; color: var(--lcd-ink); padding: 4px 8px; }
+  .fxamt { display: grid; grid-template-columns: 1fr 1.4fr 38px; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; }
+  .fxamt input { accent-color: var(--lcd-ink); }
+  .fxamt output { text-align: right; }
+  #editor { position: fixed; inset: 0; z-index: 11; background: #000b; display: flex; justify-content: center; padding: 8px; }
+  #editor[hidden] { display: none; }
+  #editor .sheet { max-width: 440px; display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; height: 100%; }
+  .edbody { overflow: auto; flex: 1; padding: 4px 12px 16px; }
+  #edWave { width: 100%; height: 170px; display: block; background: var(--lcd); border-radius: 6px; touch-action: none; }
+  .aims { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; max-height: 50vh; overflow: auto; }
+
+  /* function buttons */
+  .fn { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 9px 0 9px; }
+  .fn button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    border: 0; border-radius: 7px; padding: 9px 2px; background: var(--btn); color: var(--btn-ink);
+    box-shadow: 0 3px 0 var(--btn-sh); touch-action: manipulation; }
+  .fn button.on { background: var(--accent); color: #fff; }
+  .fn button.on.replace { background: #c21b1b; }
+  .fn button:disabled { opacity: .45; }
+  .fn .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .fn .pair button { padding-left: 0; padding-right: 0; font-size: 10px; letter-spacing: .02em; }
+  .overlay { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .overlay[hidden] { display: none; }
+  .sheet { background: var(--panel); color: var(--ink); border-radius: 12px; padding: 16px; width: 100%; max-width: 400px; display: grid; gap: 8px; }
+  .sheet b { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+  /* Holding a key or button should play, not start selecting or copying text. */
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  input, textarea, select { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+  .fn button:active, .fn button.held { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  #rec.held { background: #c21b1b; color: #fff; }
+
+  /* the key on the screen, and the key wheel over the keys */
+  .lcdbot { align-items: center; }
+  #keyBtn { font: inherit; font-size: 11px; font-weight: 700; color: var(--lcd-ink); background: transparent; border: 1.5px solid var(--lcd-ink);
+    border-radius: 4px; padding: 0 6px; line-height: 16px; white-space: nowrap; }
+  #keyBtn.saved { background: var(--lcd-shade); }
+  #keyBtn.waiting { animation: blink .5s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  #wheel { position: absolute; left: 8px; right: 8px; z-index: 5; background: var(--body); border-radius: 12px; padding: 6px 4px 8px;
+    box-shadow: 0 0 0 2px var(--edge), 0 8px 24px #0009; }
+  #wheel[hidden] { display: none; }
+  /* on the Loops: over the right of the grid */
+  #lview #wheel.inloops { position: absolute; left: 50%; right: auto; transform: translateX(-50%); top: 52px; bottom: 10px; width: auto; aspect-ratio: .9; max-width: 94%;
+    z-index: 20; display: flex; flex-direction: column; min-height: 0; container-type: size; }
+  #lview #wheel.inloops[hidden] { display: none; }
+  #lview #wheel.inloops .wheelwrap { flex: none; margin: auto; width: min(100cqw - 12px, 100cqh - 48px); height: min(100cqw - 12px, 100cqh - 48px); }
+  #lview #wheel.inloops .note { display: none; }
+  .wheelbar { display: flex; gap: 6px; align-items: center; padding: 0 6px; }
+  .wheelbar b { flex: 1; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+  .wheelbar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
+  .wheelbar button[hidden] { display: none; }
+  .wheelwrap { position: relative; width: min(100%, 330px); margin: 0 auto; aspect-ratio: 1; }
+  #wheelSvg { width: 100%; height: 100%; display: block; touch-action: manipulation; }
+  #wheelSvg .seg path { fill: var(--key); stroke: var(--body); stroke-width: 2.5; }
+  #wheelSvg .seg[data-minor="1"] path { fill: var(--key-2); }
+  #wheelSvg .seg text { font: 700 14px ui-monospace, Menlo, monospace; text-anchor: middle; fill: var(--key-ink); pointer-events: none; }
+  #wheelSvg .seg[data-minor="1"] text { font-size: 12px; }
+  #wheelSvg .seg.friend path { fill: var(--friend); }
+  #wheelSvg .seg.now path { fill: var(--accent); }
+  #wheelSvg .seg.now text { fill: #fff; }
+  #wheelSvg .seg.next path { stroke: var(--head); stroke-width: 5; }
+  #wheelNext { position: absolute; left: 50%; top: 50%; width: 36%; height: 36%; transform: translate(-50%, -50%); border-radius: 50%;
+    border: 0; background: var(--btn); color: var(--btn-ink); font: inherit; font-weight: 700; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 #000; }
+  #wheelNext:active { transform: translate(-50%, calc(-50% + 2px)); box-shadow: 0 1px 0 #000; }
+  #wheelNext small { font-size: 10px; letter-spacing: .12em; opacity: .7; }
+  #wheelNext span { font-size: 18px; }
+  #wheel .note { margin: 4px 8px 0; }
+
+  /* keys */
+  .keys[hidden] { display: none; }
+  /* Robot pads: a box for the word, its syllables, and how many stay on the pad (− and +); the
+     syllables spilled on from the pad before are dimmer */
+  .rpad { position: relative; border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow: hidden;
+    background: color-mix(in srgb, var(--c-vox) 14%, #121318); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c-vox) 70%, transparent), 0 3px 0 #000; color: #dce8ff; }
+  .rpad b { font-size: 12px; color: color-mix(in srgb, var(--c-vox) 60%, #fff); position: absolute; top: 5px; right: 8px; }
+  .rpad input { font: inherit; font-size: 13px; width: calc(100% - 22px); min-width: 0; padding: 3px 5px; border-radius: 5px; border: 1px solid #3a4a6a; background: #0b0d12; color: #fff; }
+  .rpad .rsyl { flex: 1; min-height: 0; font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; overflow: hidden; word-break: break-word; line-height: 1.2; }
+  .rpad.spill { background: color-mix(in srgb, var(--c-vox) 7%, #121318); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-vox) 40%, transparent), 0 3px 0 #000; }
+  .rpad.spill .rsyl { color: #8fa6cc; font-style: italic; }
+  .rpad.down, .rpad.head { background: color-mix(in srgb, var(--c-vox) 35%, #121318); }
+  .rpad .rcnt { display: flex; align-items: center; gap: 4px; }
+  .rpad .rcnt output { flex: 1; text-align: center; font-size: 13px; font-weight: 700; color: #a9bbd9; }
+  .rpad .rcnt button { font: inherit; font-size: 15px; font-weight: 700; width: 30px; height: 24px; padding: 0; border: 0; border-radius: 5px; background: #24304a; color: #fff; }
+  .rpad .rcnt button:disabled { opacity: .3; }
+  .rpad .rcnt button.rv { font-size: 13px; background: #1a2236; }
+  .rpad .rcnt button.rv.on { background: var(--c-vox); color: #fff; }
+  #roboBox .sheet { max-height: 100%; overflow: auto; }
+  :root.sidepads #roboBox .sheet { max-width: 760px; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 4px; padding: 12px 16px; }
+  :root.sidepads #roboBox .sheet > b, :root.sidepads #roboBox .sheet > .note, :root.sidepads #roboBox .sheet > .btns { grid-column: 1 / -1; }
+  :root.sidepads #roboBox .sheet > .note:last-child { display: none; }
+  :root.sidepads #roboBox .row label { width: 92px; flex: none; }
+  .rpad:not(.has) .rcnt { visibility: hidden; }
+  .keys.robopads { touch-action: manipulation; }
+  :root:not(.sidepads) .rpad { padding: 4px; gap: 2px; }
+  :root:not(.sidepads) .rpad input { font-size: 11px; padding: 2px 4px; }
+  :root:not(.sidepads) .rpad .rsyl { font-size: 10.5px; }
+  :root:not(.sidepads) .rpad .rcnt button { width: 24px; height: 20px; font-size: 13px; }
+  .rpad .rsyl { min-height: 1.2em; flex-shrink: 0; }
+  .robopads .rpad { aspect-ratio: 1.12; }
+  :root.sidepads .robopads .rpad { aspect-ratio: auto; }
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .key { position: relative; aspect-ratio: 1.12; border-radius: 10px; background: var(--key); border: 0; padding: 6px;
+    box-shadow: 0 4px 0 var(--key-sh), 0 5px 4px #0003; text-align: left; display: flex; flex-direction: column;
+    justify-content: space-between; font: inherit; color: var(--key-ink); overflow: hidden; }
+  .key b { font-size: 15px; }
+  .key span { font-size: 9.5px; line-height: 1.15; color: var(--key-dim); overflow: hidden; max-height: 3.5em; word-break: break-word; }
+  .key b, .key span, .key i { position: relative; z-index: 1; }
+  .key i { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--lamp); }
+  .key.lit i { background: var(--lit); box-shadow: 0 0 0 2px #000, 0 0 8px var(--lit); }
+  .key.some i { background: #7fb0ec; }
+  /* The colour on a key: a sound's colour (u.fill), dim on the keys you play, full on a step. */
+  .key u.fill { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: none; pointer-events: none; }
+  .key.tint u.fill { display: block; background: var(--c); opacity: .3; }
+  .key.tint.pad u.fill { opacity: .42; }
+  .key.tint { box-shadow: inset 0 0 0 2px var(--c), 0 4px 0 var(--key-sh); }
+  .key.tint b { color: var(--c); }
+  :root.classic .key.tint b { color: var(--key-ink); }
+  .key.tint.down u.fill { opacity: .75; }
+  .key.tint.cur u.fill { opacity: 1; }
+  /* A step: each sound on it a dark, see-through block of its colour with a neon edge, as on the pads. */
+  .key.steps.full u.fill { display: grid; gap: 3px; }
+  .key.steps u.fill s { position: relative; display: block; border-radius: 6px; box-shadow: inset 0 0 0 2px var(--c); }
+  .key.steps u.fill s:only-child { border-radius: inherit; }
+  .key.steps u.fill.many s { border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--c); }
+  .key.steps u.fill s::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .3; }
+  /* the current sound's block: brighter, and glowing */
+  .key.steps u.fill s.me { box-shadow: inset 0 0 0 2px var(--c), inset 0 0 10px var(--c); }
+  .key.steps u.fill s.me::before { opacity: .5; }
+  .key.cur { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .key.tint.cur { outline-color: var(--key-ink); }
+  /* Text over a colour: white, with a dark edge so it reads on yellow as on blue. */
+  .key.steps.full b, .key.steps.full span, .key.tint.cur b, .key.tint.cur span, .key.tint.down b, .key.tint.down span {
+    color: #fff; text-shadow: 0 0 3px #000, 0 1px 2px #000, 0 0 1px #000; }
+  .key.steps.full span:not(:empty) { align-self: flex-start; background: #000b; border-radius: 4px; padding: 1px 4px; text-shadow: none; }
+  /* The step now playing: an orange ring, inside and out, so it shows over any colour. */
+  .key.head { outline: 3px solid var(--head); outline-offset: 2px; }
+  .key.head::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 2; pointer-events: none;
+    box-shadow: inset 0 0 0 3px var(--head), inset 0 0 0 5px #000; }
+  .key.head i { background: var(--head); box-shadow: 0 0 0 2px #000, 0 0 8px var(--head); }
+  .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--key-sh); background: var(--key-down); }
+  :root:not(.classic) .key.down { background: #3a3a44; }
+  .key.tint.down { box-shadow: inset 0 0 0 2px var(--c), 0 1px 0 var(--key-sh); }
+  .key.chain::after { content: attr(data-chain); position: absolute; bottom: 6px; right: 8px; font-size: 10px; color: var(--accent); font-weight: 700; z-index: 1; }
+  /* Sound: the other side's pads (drums while choosing an instrument, and the other way round) are dim */
+  .key.away { opacity: .28; }
+  .key.away b { color: var(--key-dim); }
+  /* a kit's pad: silver, with a strip of its hits' colours along the bottom */
+  .key.kitpad::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 2px; z-index: 1;
+    background: linear-gradient(90deg, var(--c-kick) 0 20%, var(--c-snare) 20% 40%, var(--c-hat) 40% 60%, var(--c-clap) 60% 80%, var(--c-tom) 80%); }
+  .key.fxon u.fill { display: block; background: var(--accent); opacity: .55; }
+
+  /* panels */
+  .tabs { display: flex; gap: 6px; margin: 14px 0 0; }
+  .tabs button { flex: 1; font: inherit; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border: 0;
+    background: var(--tab); border-radius: 7px 7px 0 0; padding: 8px 0; color: var(--ink); }
+  .tabs button.on { background: var(--accent); color: #fff; font-weight: 700; }
+  :root.classic .tabs button.on { background: var(--panel); color: var(--ink); }
+  .panel { background: var(--panel); border-radius: 0 0 10px 10px; padding: 10px 12px 12px; display: none; }
+  .panel.on { display: block; }
+  .row { display: grid; grid-template-columns: 92px 1fr 46px; gap: 8px; align-items: center; margin: 6px 0; }
+  .row label { font-size: 12px; }
+  .row output { font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select, textarea, input[type=text] { font: inherit; font-size: 14px; width: 100%; border: 1px solid var(--field-line); border-radius: 6px;
+    background: var(--field); padding: 6px; color: var(--field-ink); }
+  textarea { min-height: 60px; resize: vertical; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .btns button, .btns label.file { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 8px 10px;
+    background: var(--btn); color: var(--btn-ink); }
+  :root:not(.classic) .btns button, :root:not(.classic) .btns label.file { box-shadow: inset 0 0 0 1px #3a3a44; }
+  .btns button.go { background: var(--accent); color: #fff; font-weight: 700; }
+  .btns label.file input { display: none; }
+  .note { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; }
+  #logView { font-size: 10px; line-height: 1.35; background: #1b1a17; color: #c8e6b0; padding: 8px; border-radius: 6px;
+    height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; -webkit-user-select: text; user-select: text; }
+  .help p { margin: 6px 0; font-size: 12.5px; }
+  .help b { color: var(--accent); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 12px; margin: 6px 0; }
+  #status { min-height: 1.3em; margin: 8px 2px 0; }
+  #meter { position: fixed; left: 50%; transform: translateX(-50%); bottom: 2px; z-index: 50; background: rgba(0,0,0,.85); color: #e8e8e8; border: 1px solid #555;
+    border-radius: 8px; padding: 2px 8px; font: 10px/1.35 ui-monospace, Menlo, monospace; max-width: 300px; cursor: pointer; }
+  #meter:not(.full) .mdet, #meter:not(.full) .mbtns { display: none; }
+  #meter b.ok { color: #7c7; } #meter b.warn { color: #fc6; } #meter b.bad { color: #f66; }
+  #meter .mbtns { display: flex; gap: 6px; margin-top: 4px; }
+  #meter .mbtns button { font: inherit; padding: 2px 8px; min-height: 0; background: #333; color: #eee; border: 1px solid #666; border-radius: 5px; }
+  /* your own buttons: blue, so they stand apart from the fixed ones */
+  .fn button.custom { background: var(--custom); color: var(--custom-ink); box-shadow: 0 3px 0 var(--custom-sh); }
+  :root:not(.classic) .fn button.custom { box-shadow: inset 0 0 0 1px #2c6a92, 0 3px 0 var(--custom-sh); }
+  .fn button.custom.on { background: var(--accent); color: #fff; }
+  .fnbot { margin: 10px 0 0; }
+  .fnbot button { padding: 11px 0; }
+  .fn button.menu { background: var(--accent); color: #fff; }
+  /* buttons coloured by what they do: dark, tinted, with a bright edge (the colours as the Pads' parts where they
+     match: rhythm red like the kick, the voice blue like Vox) */
+  .fn button[data-th=play] { --th: #3ddc84; }
+  .fn button[data-th=edit] { --th: #aab3c2; }
+  .fn button[data-th=rhythm] { --th: #ff4d5e; }
+  .fn button[data-th=pitch] { --th: #b57bff; }
+  .fn button[data-th=sound] { --th: #ffc24d; }
+  .fn button[data-th=voice] { --th: #4da3ff; }
+  .fn button[data-th=fx] { --th: #ff5fc8; }
+  :root:not(.classic) .fn button[data-th]:not(.on) { background: color-mix(in srgb, var(--th) 15%, #121318);
+    color: color-mix(in srgb, var(--th) 72%, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--th) 75%, transparent), 0 2px 0 #000; }
+  :root:not(.classic) .fn button[data-th].on { background: var(--th); color: #111; }
+  :root:not(.classic) .fn button[data-th=edit]:not(.on) { color: #d9dde4; }
+  :root:not(.classic) .fn button[data-th].on.replace { background: #c21b1b; color: #fff; }
+
+  /* Sideways: the whole app is turned a quarter turn while the phone is upright (it reads the
+     right way up with the phone held sideways), or lies as it is when the phone really is sideways.
+     Then the Pads are two halves: the screen and buttons on the left, the keys on the right. */
+  :root.sidepads #app { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; }
+  :root.turned #app { width: 100vh; width: 100dvh; height: 100vw; transform-origin: 0 0; transform: translateX(100vw) rotate(90deg); }
+  :root.sidepads body { padding: 0; }
+  :root.sidepads .device { max-width: none; height: 100%; border-radius: 0; display: grid; gap: 0 14px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto auto auto auto auto 1fr;
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+  :root.turned .device { padding: 6px max(10px, env(safe-area-inset-bottom)) 6px max(10px, env(safe-area-inset-top)); }
+  :root.sidepads .device > * { grid-column: 1; min-width: 0; }
+  :root.sidepads .brand { margin: 0; font-size: 10px; }
+  :root.sidepads .brand b { font-size: 11px; }
+  :root.sidepads .device > .vtabs { margin: 0; }
+  :root.sidepads .vtabs button { padding: 4px 10px; }
+  :root.sidepads .screen { padding: 4px 8px; }
+  :root.sidepads canvas#wave { height: 34px; }
+  :root.sidepads #fxPanel { height: 40px; }
+  /* sideways: every button full size (the pairs come apart), and eight more of yours; the rows share
+     the height left under the screen */
+  .fn [hidden], .tabs [hidden], .panel [hidden], .panel .row[hidden], .panel .btns[hidden] { display: none !important; }
+  .fnmore { display: none; }
+  :root.sidepads .fnmore { display: grid; }
+  :root.sidepads .device { grid-template-rows: auto auto auto minmax(0, 2fr) minmax(0, 5fr) auto; row-gap: 5px; }
+  .fnbot[hidden], .fn .pair[hidden], .lcdtop [hidden] { display: none !important; }
+  .device canvas#wave { display: none; }       /* the wave is in the editor under the buttons */
+  /* the Pads' wave editor */
+  .ped { display: flex; flex-direction: column; gap: 5px; min-height: 120px; margin: 9px 0; }
+  :root.sidepads .ped { margin: 0; min-height: 0; }
+  #pedCv { flex: 1; width: 100%; min-height: 0; border-radius: 9px; background: #000; box-shadow: inset 0 0 0 1px var(--edge); touch-action: none; }
+  .pedbar { display: flex; gap: 5px; align-items: center; }
+  #pedVol { flex: 1; min-width: 56px; height: 26px; }
+  #pedVol b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; pointer-events: none; }
+  .pedbar span { flex: 0 1 auto; max-width: 24%; min-width: 0; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pedbar button.on { background: var(--accent); color: #fff; }
+  .pedbar button { font: inherit; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 5px 8px; border: 0; border-radius: 7px; background: var(--btn); color: var(--btn-ink); white-space: nowrap; flex: none; }
+  :root.sidepads .fn { gap: 5px; margin: 0; grid-auto-rows: minmax(0, 1fr); min-height: 0; }
+  :root.sidepads .fn .pair { display: contents; }
+  :root.sidepads .fn button, :root.sidepads .fn .pair button { padding: 0 2px; min-height: 0; font-size: 10.5px; letter-spacing: .04em; box-shadow: 0 2px 0 var(--btn-sh); }
+  :root.sidepads .fn button.custom { box-shadow: inset 0 0 0 1px #2c6a92, 0 2px 0 var(--custom-sh); }
+  :root.sidepads #status { grid-column: 1; margin: 0 2px; font-size: 10px; line-height: 1.25; height: 2.5em; overflow: hidden; }
+  :root.sidepads .keys { grid-column: 2; grid-row: 1 / -1; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 6px; min-height: 0; }
+  :root.sidepads .key { aspect-ratio: auto; min-height: 0; padding: 5px 6px; }
+  :root.sidepads .key b { font-size: 13px; }
+  :root.sidepads #wheel { left: auto; right: 10px; top: 6px; bottom: 6px; width: 54%; display: flex; flex-direction: column; }
+  :root.sidepads #wheel[hidden] { display: none; }
+  :root.sidepads .wheelwrap { width: auto; max-width: 100%; height: 100%; min-height: 0; flex: 1; }
+  :root.sidepads #wheel .note { display: none; }
+  /* the menus and the editor, sideways: as wide as they need, the full height */
+  :root.sidepads #menu .sheet, :root.sidepads #editor .sheet { max-width: 640px; }
+  :root.sidepads #edWave { height: 120px; }
+  :root.sidepads #menu .tabs button { flex: 1 0 10%; padding: 6px 0; }
+  :root.sidepads .blist { grid-template-columns: 1fr 1fr; }
+  :root.sidepads .blist button { padding: 8px 10px; }
+  :root.sidepads .blist > .note { grid-column: 1 / -1; }
+  /* the Loops, when the whole app is already turned: they lie as they are inside it */
+  :root.turned .lview { width: 100%; height: 100%; transform: none; padding: 6px max(10px, env(safe-area-inset-bottom)) 6px max(10px, env(safe-area-inset-top)); }
+
+  /* the Pads / Loops tabs */
+  .vtabs { display: flex; gap: 6px; }
+  .vtabs button { flex: 1; font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; border: 0;
+    border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--muted); }
+  .vtabs button.on { background: var(--ink); color: var(--body); }
+  .device > .vtabs { margin: 0 0 8px; }
+
+  /* The Loops tab: always laid out sideways. Held upright, the grid is turned a
+     quarter turn, so it reads the right way up with the phone held sideways. */
+  #loops { position: fixed; inset: 0; z-index: 8; background: var(--bg); overflow: hidden; }
+  #loops[hidden] { display: none; }
+  .lview { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; display: flex; flex-direction: column; gap: 6px;
+    padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    color: var(--ink); }
+  @media (orientation: portrait) {
+    .lview { width: 100vh; width: 100dvh; height: 100vw; transform-origin: 0 0; transform: translateX(100vw) rotate(90deg);
+      padding: 8px max(10px, env(safe-area-inset-bottom)) 8px max(10px, env(safe-area-inset-top)); }
+  }
+  .lbar { display: flex; gap: 6px; align-items: center; flex: none; min-width: 0; }
+  .lbar .vtabs { flex: none; }
+  /* the view: one button, its three choices dropping down */
+  .vpick { position: relative; flex: none; }
+  .vpick .vbtn { flex: none; white-space: nowrap; background: var(--ink); color: var(--body); }
+  .vpick { display: flex; gap: 4px; } .vloops { flex: none; white-space: nowrap; } .vloops.on { background: var(--accent) !important; color: #fff !important; } .vbtn.dim { opacity: .75; }
+  #padLib, #padLock, #padChoke { flex: none; white-space: nowrap; }
+  .lupd { background: #1e8f4e !important; color: #fff !important; }
+  .calbox { margin: 4px 0 10px; } .caltap { width: 100%; height: 110px; font: inherit; font-size: 22px; font-weight: 700; letter-spacing: .2em; border: 0; border-radius: 14px; background: var(--accent); color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; } .caltap.down { filter: brightness(1.4); transform: translateY(2px); }
+  #calStart { font: inherit; font-weight: 700; border: 0; border-radius: 7px; padding: 4px 10px; background: var(--btn); color: var(--btn-ink); margin-left: 4px; }
+  :root.sidepads .device > .vtabs { gap: 4px; } :root.sidepads .device > .vtabs button { padding: 4px 8px; letter-spacing: .04em; font-size: 10.5px; }     /* the four fit a small phone */
+  #padLock.on, #lpLock.on, #padChoke.on, #lpChoke.on { background: var(--accent); color: #fff; }
+  .vmenu { position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 9px;
+    background: var(--panel, #16161c); box-shadow: 0 0 0 1px #ffffff22, 0 8px 24px #000b; }
+  .vmenu[hidden] { display: none; }
+  .vmenu button { white-space: nowrap; text-align: left; }
+  .lbar > #lUndo, .lbar > #lRedo { padding: 7px 9px; font-size: 13px; letter-spacing: 0; }
+  .lbar .vtabs button { flex: none; padding: 7px 12px; }
+  .lbar > button, .ltempo button { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border: 0;
+    border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); white-space: nowrap; }
+  .lbar > button.on { background: var(--accent); color: #fff; }
+  /* a narrow screen: the top row closes up so it fits */
+  .lbar.tight { gap: 4px; } .lbar.wrap { flex-wrap: wrap; row-gap: 4px; }
+  .lbar.tight > button, .lbar.tight .ltempo button, .lbar.tight .vtabs button { padding: 7px 6px; letter-spacing: .01em; font-size: 10.5px; }
+  .lbar.tight #lBpm { padding: 6px 0; letter-spacing: 0; }
+  .ltempo { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; flex: none; }
+  .ltempo button { padding: 7px 9px; }
+  .ltempo button.on { background: var(--accent); color: #fff; }
+  #lBpm { font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--btn-ink); background: transparent; border: 0; padding: 6px 2px;
+    -webkit-appearance: none; appearance: none; text-align: center; text-align-last: center; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  #lBpm option, #lBpm optgroup { color: #111; background: #fff; }
+  #lStatus { flex: 1; min-width: 0; font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lbody { flex: 1; min-height: 0; display: flex; gap: 10px; }
+  .lgrid { flex: 1; min-width: 0; min-height: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  /* Loops + Pads: four columns of loops a page (◀ ▶ for the others), the pads on the right */
+  #loops.split .lgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #loops.split .lcol.off { display: none; }
+  .lpager { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .lpager[hidden] { display: none; }
+  .lpager button { font: inherit; border: 0; border-radius: 7px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
+  .lpads { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; --c: var(--accent); }
+  .lpads[hidden] { display: none; }
+  .lphead { display: flex; align-items: center; gap: 5px; font-size: 11px; min-width: 0; }
+  #lpSrc { flex: 1; min-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c); font-weight: 700; }
+  .lphead .lmodes { margin: 0; flex: none; }
+  .qbtn { font: inherit; font-weight: 700; border: 0; border-radius: 7px; padding: 6px 12px; background: var(--btn); color: var(--btn-ink); justify-self: start; } .qbtn.on { background: var(--accent); color: #fff; }
+  .lphead.tight { gap: 3px; flex-wrap: wrap; row-gap: 4px; } .lphead.tight > button, .lphead.tight #lpQ { padding: 6px 3px; font-size: 10px; letter-spacing: 0; } .lphead.tight #lpSrc { min-width: 0; }
+  .lphead .lmodes button { padding: 6px 10px; }
+  .lped { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+  .lped[hidden], .lpkeys[hidden] { display: none; }
+  /* ⏺ Rec: the loop being recorded, in place of the column volumes */
+  .lrecbar { order: 99; grid-column: 1 / -1; display: flex; gap: 6px; height: 30px; }
+  .lrtrack { flex: 1; position: relative; border-radius: 7px; background: var(--key); overflow: hidden; box-shadow: inset 0 0 0 1.5px #e5484d; }
+  #lrUndo { font-size: 16px !important; padding: 0 14px !important; }
+  #lrUndo, #lrReset { flex: none; font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 7px; padding: 0 10px; background: var(--btn); color: var(--btn-ink); }
+  .lrecbar[hidden], #loops.recbar .lfoot { display: none; }
+  #loops.recbar .lgrid { grid-template-rows: minmax(0, 1fr) auto; }
+  .lrlines i { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff22; } .lrlines i.bar { background: #ffffff55; }
+  .lrnotes i { position: absolute; height: 4px; border-radius: 2px; background: #ff6b6b; } .lrnotes i.old { background: #ffffff88; }
+  .lrhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; } .lrhead.wait { opacity: .3; }
+  .lprtitle { font-size: 12px; }
+  #lsSets button.on small, #lsMine button.on small, #lsCloud button.on small { color: #ffffffd0; }
+  #lsSets button.del, #lsMine button.del, #lsCloud button.del { box-shadow: inset 0 0 0 2px #e5484d; color: #ff8a8d; } #lsDel.on { background: #c21b1b; color: #fff; }
+  .wzoom { display: inline-flex; gap: 3px; } .wzoom button { min-width: 30px; padding-left: 7px !important; padding-right: 7px !important; } .wzoom button[hidden] { display: none; }
+  #lpEd .lmodes { flex-wrap: wrap; row-gap: 4px; }
+  .fxamts { display: flex; flex-direction: column; gap: 4px; } .fxamts:empty { display: none; }
+  .lpfx { overflow: auto; gap: 4px; --c: var(--accent); } .lpfx > * { flex-shrink: 0; }
+  #lpEq { width: 100%; height: 40px; border-radius: 7px; display: block; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  .lpfx .lrow { display: flex; align-items: center; gap: 8px; font-size: 11px; } .lpfx .lrow > span { width: 66px; flex: none; color: var(--muted); font-size: 10.5px; }
+  .lpfx .lrow .lfader { flex: 1; } .lpfx .lrow output { width: 48px; text-align: right; font-size: 11px; }
+  .lpfx .lmodes.wrap { flex-wrap: wrap; } .lpfx .lmodes button { padding: 5px 8px; } .lpfx .lmodes.wrap { gap: 4px; } .lpfx .lfader.wide { height: 22px; }
+  #lpWave { flex: 1; min-height: 60px; width: 100%; border-radius: 8px; display: block; touch-action: none; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  .lped .lmodes { margin: 0; } .lped .lmodes button { padding: 7px 12px; }
+  .lpkeys { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; }
+  .lpkeys button { position: relative; border: 0; border-radius: 10px; font: inherit; font-size: 11px; font-weight: 700; color: var(--key-ink);
+    background: color-mix(in srgb, var(--c) 22%, var(--key)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent);
+    touch-action: none; display: flex; align-items: flex-start; justify-content: flex-start; padding: 6px 8px; }
+  .lpkeys button.root { background: color-mix(in srgb, var(--c) 38%, var(--key)); }
+  .lpkeys button.down { background: var(--c); color: #000; }
+  .lpkeys button.held { box-shadow: inset 0 0 0 3px var(--c); }
+  .lpkeys.empty button { opacity: .35; }
+  #lpQ, #lpRec, #lpCrop, #lpOctDn, #lpOctUp, #lpFx, #lpTrig, #lpLock, #lpChoke { flex: none; font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 7px; padding: 6px 7px; background: var(--btn); color: var(--btn-ink); }
+  #lpQ.on, #lpCrop.on, #lpOctDn.on, #lpOctUp.on, #lpFx.on, #lpTrig.on { background: var(--accent); color: #fff; }
+  #lpRec.armed { background: #7a1010; color: #fff; animation: lwait .5s steps(2, start) infinite; } #lpRec.on { background: #e01b1b; color: #fff; }
+  .lcell.rectarget { outline: 2px solid #e01b1b; outline-offset: -3px; }
+  .lpane[data-pane="notes"] > * { flex-shrink: 0; }
+  .lroll { margin: 4px 0; display: flex; flex-direction: column; gap: 6px; }
+  .lroll .rlen { margin: 0; align-items: center; flex-wrap: wrap; } .lroll .rlen span { font-size: 11px; color: var(--muted); margin-right: 4px; }
+  .lroll .rlen button { padding: 5px 9px; }
+  .lroll .rwrap { display: flex; flex-direction: column; gap: 4px; }
+  .lroll .rbars { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .lroll .rr { position: relative; height: 52px; flex: none; border-radius: 6px; touch-action: manipulation;
+    background: repeating-linear-gradient(90deg, #ffffff14 0 1px, transparent 1px var(--st)), repeating-linear-gradient(90deg, #ffffff44 0 1.5px, transparent 1.5px var(--bar)), var(--btn); }
+  .lroll .rn { position: absolute; border-radius: 4px; background: var(--c); touch-action: none; color: #000; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; box-shadow: inset 0 0 0 1px #0006; }
+  .lroll .rn.drag { outline: 2px solid #fff; z-index: 5; }
+  .lroll .rn.many { background: color-mix(in srgb, var(--c) 70%, #fff); }
+  .lcell.picked::after { content: ''; position: absolute; left: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #fff; }
+  .lcol { display: grid; grid-template-rows: auto repeat(6, minmax(0, 1fr)) auto; gap: 4px; min-height: 0; min-width: 0; }
+  .lhead { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c); text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lcell { position: relative; min-height: 0; min-width: 0; border-radius: 8px; background: var(--key); border: 0; padding: 0 5px; display: flex;
+    align-items: center; gap: 4px; font: inherit; color: var(--key-dim); text-align: left; overflow: hidden; touch-action: none;
+    box-shadow: inset 0 0 0 1px #ffffff12; }
+  .lcell::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: 0; pointer-events: none; }
+  .lcell.filled { color: var(--key-ink); box-shadow: inset 0 0 0 1.5px var(--c); }
+  .lcell.filled::before { opacity: .22; }
+  .lcell.playing { box-shadow: inset 0 0 0 2px var(--c), 0 0 10px var(--c); }
+  .lcell.playing::before { opacity: .5; }
+  .lcell.queued, .lcell.stopping { animation: lwait .5s steps(2, start) infinite; }
+  @keyframes lwait { to { box-shadow: inset 0 0 0 2px #fff; } }
+  .lcell svg { position: relative; flex: none; width: 22px; height: 22px; transform: rotate(-90deg); }
+  .lcell:not(.filled) svg { visibility: hidden; }
+  /* a One shot or a Gate: its progress a straight line where the ring would be, there while idle too */
+  .lcell .lline { display: none; position: relative; flex: none; width: 22px; height: 3px; border-radius: 2px; background: #ffffff2e; overflow: hidden; }
+  .lcell.lineprog svg { display: none; }
+  .lcell.lineprog .lline { display: block; }
+  .lcell .lline b { position: absolute; inset: 0; background: var(--c); transform-origin: left center; transform: scaleX(0); }
+  .lcell.playing .lline b { background: #fff; }
+  .lcell .rbg { fill: none; stroke: #ffffff22; stroke-width: 3; }
+  .lcell .rfg { fill: none; stroke: var(--c); stroke-width: 3; stroke-dasharray: 100; stroke-dashoffset: 100; stroke-linecap: round; }
+  .lcell.playing .rfg { stroke: #fff; }
+  .lcell:not(.playing):not(.stopping) .rfg { visibility: hidden; }
+  .lcell span { position: relative; font-size: 10px; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; word-break: break-word; }
+  .lcell em { position: absolute; right: 4px; top: 2px; font-size: 8px; font-style: normal; font-weight: 700; color: var(--c); }
+  .lcell.playing em { color: #fff; }
+  /* its own tempo and key, bottom right */
+  .lcell .lmeta { position: absolute; right: 4px; bottom: 2px; font-size: 8px; font-weight: 700; letter-spacing: .02em; color: var(--c); opacity: .9; white-space: nowrap; }
+  .lcell.playing .lmeta { color: #fff; }
+  .lfoot { display: grid; grid-template-columns: 1fr auto; gap: 4px; align-items: center; }
+  .lfader { position: relative; height: 22px; border-radius: 6px; background: var(--key); box-shadow: inset 0 0 0 1px #ffffff1c; overflow: hidden; touch-action: none; }
+  .lfader i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c); opacity: .55; }
+  .lmute { font: inherit; font-size: 10px; font-weight: 700; border: 0; border-radius: 6px; width: 24px; height: 22px; padding: 0; background: var(--btn); color: var(--muted); }
+  .lmute.on { background: #c21b1b; color: #fff; }
+  .lcol.muted .lcell { opacity: .45; }
+  /* stopped: the loops that ▶ Play brings back */
+  .lcell.resume { outline: 2px dashed var(--c); outline-offset: -5px; }
+  .lbar > button[hidden] { display: none; }
+  .lbar > button:disabled { opacity: .4; }
+  .lgrid.clipping .lcell { cursor: copy; }
+  /* editing: the grid in shades of amber; empty cells outlined, a cell being dragged dimmed, where it will go lit */
+  .lgrid.editing .lcell { box-shadow: inset 0 0 0 1.5px var(--c); }
+  .lgrid.editing .lcell::before { opacity: .3; }
+  .lgrid.editing .lcell:not(.filled)::before { opacity: .08; }
+  .lgrid.editing .lcell:not(.filled) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent); color: var(--c); }
+  .lgrid.editing .lcell.playing { box-shadow: inset 0 0 0 2px var(--c), 0 0 10px var(--c); }
+  .lgrid.editing .lcell.dragging { opacity: .35; }
+  .lgrid.editing .lcell.droptarget { box-shadow: inset 0 0 0 3px #fff, 0 0 12px var(--c); }
+  .lgrid.editing .lcell.droptarget::before { opacity: .6; }
+  .lmenu { position: absolute; inset: 8% 10%; z-index: 2; background: var(--panel); border-radius: 12px; box-shadow: 0 0 0 1.5px var(--c), 0 10px 40px #000c;
+    display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; min-height: 0; }
+  .lmenu[hidden], .lsetbody[hidden] { display: none; }
+  #lsets { --c: var(--accent); }
+  .lsetbody { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; overflow: auto; }
+  .lsetbody > *, .lsetbody > .lpane > * { flex-shrink: 0; }      /* (a long page scrolls; nothing is squashed into the line below) */
+  .lsetbody .note { margin: -2px 0 2px; }
+  .lrow { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .lrow > span { flex: none; width: 110px; }
+  .lrow small { color: var(--muted); font-size: 11px; }
+  .lrow output { width: 30px; text-align: right; font-size: 12px; }
+  .lfader.wide { flex: 1; max-width: 320px; height: 26px; }
+  #lmenu { inset: 6px 8px; }
+  .lpane { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .lpane.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; align-content: start; }
+  .lpane[hidden] { display: none; }
+  .lcolumn { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+  .ltabs button { padding: 6px 12px !important; }
+  .lwavebox { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 5px; }
+  .lwavebox #lmWave { height: 96px; }
+  .lwavehint { flex: 1; min-width: 0; color: var(--muted); font-size: 10px; text-align: right; }
+  /* a short screen (a phone held sideways): a lower wave, no hint, the rows closer, so all of it fits */
+  @media (max-height: 500px) {
+    .lwavebox #lmWave { height: 58px; }
+    .lwavehint, .lpane .lnote { display: none; }
+    .lpane.two { gap: 4px 16px; }
+    .lmenu .lrow { min-height: 0; }
+    #lmenu .lmodes button { padding-top: 3px; padding-bottom: 3px; }
+    .lmenu .lfader { height: 22px; }
+  }
+  :root.turned .lwavebox #lmWave { height: 58px; }
+  :root.turned .lwavehint, :root.turned .lpane .lnote { display: none; }
+  .lnote { grid-column: 1 / -1; }
+  #lmenu .lrow { gap: 8px; font-size: 11px; }
+  #lmenu .lrow > span { width: 92px; }
+  #lmenu .lmodes { gap: 4px; }
+  #lmenu .lmodes button { padding: 5px 8px; font-size: 10.5px; }
+  #lmStretch, #lmKey, #lmSkip, #lmenu .lrow > .lmodes:has(#lmDown) { flex: none; flex-wrap: nowrap; }
+  #lmenu .lrow small { min-width: 0; }
+  #lsSets small { opacity: .7; font-weight: 400; margin-left: 4px; }
+  .lval { min-width: 26px; text-align: center; font-size: 12px; }
+  #lmEq { width: 100%; height: 64px; border-radius: 7px; display: block; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  .lfader.eq::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #ffffff55; }
+  #lmenu .lrow output { width: 52px; }
+  .lmodes.wrap { flex-wrap: wrap; }
+  .lsub { color: var(--muted); font-size: 10.5px; margin: -4px 0 0 100px; }
+  .lsub:empty { display: none; }
+  #lmWave { width: 100%; height: 84px; border-radius: 7px; display: block; touch-action: none; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  .lwide { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 7px; padding: 9px 12px; background: var(--btn); color: var(--btn-ink); }
+  .lmhead { display: flex; align-items: center; gap: 8px; }
+  .lmhead b { flex: 1; font-size: 12px; letter-spacing: .06em; color: var(--c); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lmhead button, .lmodes button { font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 6px; padding: 7px 10px; background: var(--btn); color: var(--btn-ink); }
+  .lmodes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .lmodes button.on { background: var(--accent); color: #fff; }
+  .lmodes button:disabled { opacity: .4; }
+  .lmodes .grow { flex: 1; }
+  #lmCrumbs { font-size: 11px; display: flex; gap: 4px; align-items: center; }
+  #lmCrumbs button { font: inherit; font-size: 11px; font-weight: 700; border: 0; background: none; color: var(--accent); padding: 2px; }
+  .lmlist { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 5px; align-content: start;
+    -webkit-overflow-scrolling: touch; }
+  .lmlist button { font: inherit; font-size: 12px; text-align: left; border: 1px solid var(--field-line); border-radius: 7px; background: var(--field);
+    color: var(--field-ink); padding: 7px 9px; display: flex; flex-direction: column; gap: 1px; }
+  .lmlist button small { color: var(--muted); font-size: 10px; }
+  .lmlist button.sel { border-color: var(--c); box-shadow: inset 0 0 0 1.5px var(--c); }
+  /* the sounds for a cell, in the browser's colour folders */
+  .lmlist button.folder { position: relative; font-weight: 700; border-color: var(--f); box-shadow: inset 4px 0 0 var(--f); }
+  .lmlist button.folder::before, .lmlist button.tint::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--f); opacity: .14; pointer-events: none; }
+  .lmlist button.tint { position: relative; border-color: color-mix(in srgb, var(--f) 55%, transparent); box-shadow: inset 3px 0 0 var(--f); }
+  .lmlist button.tint::before { opacity: .07; }
+  .lmlist button.folder.sel, .lmlist button.tint.sel { box-shadow: inset 4px 0 0 var(--f), 0 0 0 1.5px var(--f); }
+  #lmenu input.ltext { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--field-line); background: var(--field); color: var(--ink); }
+  #lmenu .lrow input[type=range] { flex: 1; min-width: 0; }
+  .lrobot { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; padding: 8px; border: 1px solid var(--c); border-radius: 8px; }
+  .lrobot[hidden] { display: none; }
+  .lrobot .lfull { grid-column: 1 / -1; }
+  #lmenu select.lsel { font: inherit; font-size: 11px; font-weight: 700; padding: 6px 8px; border-radius: 6px; border: 0; background: var(--btn); color: var(--btn-ink); min-width: 0; max-width: 100%; }
+  .lmlist .lmnote { grid-column: 1 / -1; margin: 6px 2px 0; }
+  .lmlist .lmhead4 { grid-column: 1 / -1; margin: 8px 2px 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--f, var(--muted)); }
+
+  /* the Menu: everything to set up before playing, over the keys */
+  #menu { position: fixed; inset: 0; z-index: 9; background: #000b; display: flex; justify-content: center; padding: 8px; }
+  #menu[hidden] { display: none; }
+  #menu .sheet { max-width: 440px; display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; height: 100%; }
+  .menubar { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 6px; }
+  .menubar button { font: inherit; font-size: 12px; font-weight: 700; border: 0; border-radius: 6px; padding: 8px 12px; background: var(--btn); color: var(--btn-ink); }
+  #menu .tabs { flex-wrap: wrap; margin: 0; padding: 0 10px; gap: 4px; }
+  #menu .tabs button { flex: 1 0 18%; border-radius: 7px; padding: 8px 0; }
+  .dzmodes { margin: 0 0 8px; flex: 1; } .dzmodes button { flex: 1; }
+  .dzhead { display: flex; gap: 10px; align-items: flex-start; } .dzmodeset { margin: 0 0 8px; } .dzmodeset button { padding-left: 10px; padding-right: 10px; }
+  #tDesign .row { grid-template-columns: 110px 1fr 84px; }
+  .dzpresets { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 8px; }
+  .dzpresets button { font: inherit; font-size: 11px; border: 0; border-radius: 6px; padding: 6px 9px; background: var(--btn); color: var(--btn-ink); }
+  .lmrap textarea { min-height: 70px; }
+  .lmsynth .row { grid-template-columns: 110px 1fr 84px; }
+  .dzsteps { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; margin: 4px 0; flex: 1; }
+  .dzline { display: flex; gap: 4px; align-items: center; } .dzline + .dzline { margin-top: -2px; }
+  .dzlname, .dzlx, .dzladd { font: inherit; font-size: 12px; border: 0; border-radius: 6px; padding: 8px 4px; background: var(--btn); color: var(--btn-ink); }
+  .dzlname { width: 62px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dzline.sel .dzlname { background: var(--accent); color: #000; } .dzlx { width: 28px; flex: none; } .dzlx:disabled { opacity: .3; }
+  .dzladd { margin: 4px 0 8px; padding: 8px 12px; }
+  .dzsteps button { font: inherit; font-size: 10px; border: 0; border-radius: 4px; padding: 9px 0; background: var(--btn); color: var(--btn-ink); }
+  .dzsteps button:nth-child(4n+1) { box-shadow: inset 0 -2px 0 rgba(255,255,255,.25); }
+  .dzsteps button.on { background: var(--c, var(--accent)); color: #000; }
+  .dzsteps button.soft { background: color-mix(in srgb, var(--c, var(--accent)) 45%, var(--btn)); }
+  .lmdz .row { grid-template-columns: 110px 1fr 84px; }
+  .dzgroup { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; opacity: .7; margin: 10px 0 2px; }
+  .menubody { overflow: auto; flex: 1; padding: 8px 10px 16px; -webkit-overflow-scrolling: touch; }
+  .menubody .panel { border-radius: 10px; }
+
+  /* sound browser */
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 12px; margin-bottom: 8px; }
+  .crumbs button { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); padding: 4px 2px; font-weight: 700; }
+  .blist { display: grid; gap: 6px; }
+  /* Review the library: a row for each sound (▶, its name, Delete), folders in their colours */
+  .revsheet { max-width: 640px; height: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .revlist { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 3px; -webkit-user-select: none; user-select: none; }
+  .revlist h4 { margin: 10px 0 2px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--c, var(--accent)); }
+  .revrow { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 6px; background: #ffffff08; font-size: 12.5px; }
+  .revrow.sub { margin-left: 26px; background: #ffffff05; font-size: 12px; }
+  .revrow.marked { background: #c21b1b33; }
+  .revrow.marked .rn { text-decoration: line-through; opacity: .7; }
+  .revrow .rn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .revrow small { color: var(--muted); font-size: 10px; }
+  .revrow button { font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 5px; border: 0; background: var(--btn); color: var(--btn-ink); }
+  .revrow label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #ffb3b3; }
+  .revrow input { width: 18px; height: 18px; accent-color: #e5484d; }
+  .revrow button.on { background: var(--accent); color: #fff; }
+  .revbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .revbar span { flex: 1; font-size: 12px; color: var(--muted); }
+  .revbar button { font: inherit; font-size: 12px; padding: 7px 10px; border-radius: 6px; border: 0; background: var(--btn); color: var(--btn-ink); }
+  .revbar button.go { background: var(--accent); color: #fff; }
+  .revbar button:disabled { opacity: .4; }
+  .blist button { font: inherit; font-size: 13px; text-align: left; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field);
+    padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; color: var(--field-ink); }
+  /* a folder in its part's colour: dark and see-through, with a neon edge, like the pads */
+  .blist button.folder { position: relative; border-color: var(--c); box-shadow: inset 4px 0 0 var(--c); font-weight: 700; }
+  .blist button.folder::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c); opacity: .14; pointer-events: none; }
+  .blist button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .blist small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .bfoot { position: sticky; bottom: -16px; background: var(--panel); padding: 10px 0 4px; display: flex; gap: 6px; align-items: center; }
+  .bfoot { flex-wrap: wrap; }
+  /* a sound's own menu: hold a pad in Sound mode */
+  .sndsheet { max-width: 680px !important; --c: var(--accent); max-height: 100%; overflow: auto; }
+  .sndsheet .lmhead b { color: var(--c); }
+  .snpane { display: flex; flex-direction: column; gap: 7px; }
+  .snpane.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; align-content: start; }
+  .snpane[hidden] { display: none; }
+  .sndsheet .lrow { gap: 8px; font-size: 11px; }
+  .sndsheet .lrow > span { width: 64px; }
+  .sndsheet .lmodes button { padding: 6px 9px; font-size: 11px; }
+  .sndsheet .lrow output { width: 52px; text-align: right; font-size: 11px; }
+  #snEq { width: 100%; height: 70px; border-radius: 7px; display: block; box-shadow: inset 0 0 0 1px #ffffff1c; }
+  :root:not(.sidepads) .snpane.two { grid-template-columns: 1fr; }
+  .bfoot button { flex: 1; }
+  .bfoot2 { flex: 1 0 100%; display: flex; gap: 6px; }
+  .bfoot2 button.on { box-shadow: inset 0 0 0 1.5px var(--c-hat); color: var(--c-hat); }
+  /* what a sound is: SYN, REC, GEN, MINE (on the keys in Sound mode) */
+  .key em.tag { position: absolute; top: 7px; right: 24px; z-index: 1; font: 700 8px/1 ui-monospace, Menlo, monospace; font-style: normal;
+    letter-spacing: .06em; color: var(--key-dim); border: 1px solid currentColor; border-radius: 3px; padding: 1px 3px; opacity: .85; }
+  .key em.tag:empty { display: none; }
+  .key.tint.cur em.tag { color: #000; }
+  .key.away.cur { outline: none; }
+
+  /* The LCARS look (Menu › Setup › Look): after the Star Trek computer screens of the 1980s and 90s, made from
+     scratch: black, rounded bars and pill buttons in peach, lilac, gold and blue, and tall narrow capitals
+     (Antonio, SIL Open Font License, kept here in fonts/). No logos or graphics from the show. */
+  @font-face { font-family: 'Antonio'; font-weight: 100 700; font-display: swap; src: url(fonts/antonio-latin.woff2) format('woff2'); }
+  :root.lcars {
+    --lc-orange: #ff9900; --lc-peach: #ffaa77; --lc-sand: #ffcc99; --lc-gold: #ffcc66; --lc-lilac: #cc99cc; --lc-violet: #9999ff;
+    --lc-blue: #6688cc; --lc-sky: #99ccff; --lc-red: #cc6666; --lc-tan: #cc9966;
+    --bg: #000; --body: #000; --body-dark: #000; --edge: #000; --ink: var(--lc-sand); --muted: var(--lc-lilac);
+    --btn: var(--lc-peach); --btn-ink: #000; --btn-sh: #000;
+    --lcd: #000; --lcd-ink: var(--lc-gold); --lcd-shade: #ffcc6622; --lcd-mode: var(--lc-orange); --lcd-line: var(--lc-blue);
+    --key: #1d1a24; --key-2: #2a2433; --key-sh: #000; --key-ink: var(--lc-sand); --key-dim: var(--lc-lilac); --lamp: #000; --friend: #553322;
+    --panel: #000; --tab: var(--lc-lilac); --field: #0b0a10; --field-ink: var(--lc-sand); --field-line: var(--lc-blue);
+    --custom: var(--lc-violet); --custom-ink: #000; --custom-sh: #000;
+    --key-down: #fff; --accent: var(--lc-orange); --lit: var(--lc-gold); --dim: #776655; --head: var(--lc-orange);
+  }
+  :root.lcars, :root.lcars body, :root.lcars button, :root.lcars select, :root.lcars input, :root.lcars .lcell, :root.lcars .lpkeys button {
+    font-family: 'Antonio', 'Arial Narrow', 'Roboto Condensed', sans-serif-condensed, sans-serif; }
+  :root.lcars body { font-size: 15px; letter-spacing: .03em; }
+  /* every button a pill, in the palette, black letters; the lit ones gold or orange */
+  :root.lcars button, :root.lcars .btns label.file { border-radius: 999px !important; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; box-shadow: none !important; }
+  :root.lcars .lbar > button:nth-of-type(3n+1), :root.lcars .ltempo button { background: var(--lc-peach); }
+  :root.lcars .lbar > button:nth-of-type(3n+2) { background: var(--lc-lilac); }
+  :root.lcars .lbar > button:nth-of-type(3n) { background: var(--lc-sky); }
+  :root.lcars .lbar > button.on, :root.lcars .lmodes button.on, :root.lcars .tabs button.on, :root.lcars .lphead button.on,
+  :root.lcars .fn button.on { background: var(--lc-orange) !important; color: #000 !important; }
+  :root.lcars .lmodes button, :root.lcars .menubar button, :root.lcars .lmhead button { background: var(--lc-lilac); color: #000; }
+  :root.lcars .lphead > button { background: var(--lc-violet); color: #000; }
+  :root.lcars button:disabled { opacity: .35; }
+  :root.lcars .vbtn { background: var(--lc-gold) !important; color: #000 !important; }
+  /* readable: black letters on every coloured button (the view picker's choices, the columns' M, the tabs) */
+  :root.lcars .vtabs button, :root.lcars .vmenu button { background: var(--lc-lilac); color: #000; }
+  :root.lcars .vtabs button.on, :root.lcars .vmenu button.on { background: var(--lc-orange); color: #000; }
+  :root.lcars .vmenu { background: #000; box-shadow: 0 0 0 2px var(--lc-blue), 0 6px 20px #000a; }
+  :root.lcars .lmute { background: var(--lc-sand); color: #000; font-weight: 700; } :root.lcars .lmute.on { background: var(--lc-red); color: #000; }
+  :root.lcars #lBpm { color: var(--lc-gold); } :root.lcars #lKey { color: #000; }
+  :root.lcars #lStatus, :root.lcars #lpSrc { color: var(--lc-sky); text-transform: uppercase; letter-spacing: .08em; }
+  /* the frame: an elbow down the left of the screen, the top bar its arm */
+  :root.lcars .lview { padding-left: max(8px, env(safe-area-inset-left)); }
+  :root.lcars .lbar { border-left: 26px solid var(--lc-orange); border-top-left-radius: 26px; padding-left: 8px; min-height: 34px;
+    box-shadow: inset 0 3px 0 0 transparent; }
+  :root.lcars .lbody { border-left: 26px solid var(--lc-lilac); border-bottom-left-radius: 26px; padding-left: 8px; }
+  :root.lcars .lgrid { border-top: 4px solid var(--lc-blue); padding-top: 6px; }
+  :root.lcars .lpads { border-top: 4px solid var(--lc-gold); padding-top: 6px; }
+  /* the cells and pads: rounded blocks, the part colour kept (it means something), the name in tall capitals */
+  :root.lcars .lcell { border-radius: 4px 14px 14px 4px !important; text-transform: uppercase; letter-spacing: .04em; }
+  :root.lcars .lhead { font-size: 12px; letter-spacing: .14em; }
+  :root.lcars .lpkeys button { border-radius: 4px 18px 18px 4px !important; font-size: 14px; }
+  :root.lcars .lfader { border-radius: 999px; } :root.lcars .lfader i { border-radius: 999px; }
+  /* sheets and menus: black panels edged in the palette */
+  :root.lcars .sheet, :root.lcars .lmenu { background: #000; box-shadow: 0 0 0 2px var(--lc-blue), 0 10px 40px #000c; border-left: 22px solid var(--c, var(--lc-lilac)); border-radius: 22px; }
+  :root.lcars .lmhead b, :root.lcars .menubar b { text-transform: uppercase; letter-spacing: .12em; color: var(--lc-orange); }
+  :root.lcars .tabs button { background: var(--lc-tan); color: #000; }
+  /* the Pads screen */
+  :root.lcars .device { border-radius: 30px; box-shadow: 0 0 0 2px var(--lc-blue); border-left: 24px solid var(--lc-orange); }
+  :root.lcars .key { border-radius: 4px 16px 16px 4px !important; }
+  :root.lcars .fn button { border-radius: 4px 26px 26px 4px !important; }
+  :root.lcars .brand b { color: var(--lc-orange); letter-spacing: .3em; }
+</style>
+</head>
+<body>
+<div id="app">
+<div class="device">
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031e</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
+
+  <div class="screen" id="screen">
+    <div class="lcdtop"><span id="lcdSound">--</span><span id="lcdPat" hidden>PAT 1</span></div>
+    <canvas id="wave"></canvas>
+    <div id="fxPanel" hidden>
+      <button id="fxAimBtn">Tracks: All ▾</button>
+      <div class="fxamt"><span id="fxName">Hold a key for an effect</span><input type="range" id="fxAmt" min="0" max="1" step="0.01" aria-label="Effect amount"><output id="oFxAmt"></output></div>
+    </div>
+    <div class="lcdbot"><span id="lcdMode">PLAY</span><button id="keyBtn" title="The key: tap for the key wheel">C MIN</button><span id="lcdInfo">120 BPM</span></div>
+  </div>
+
+  <div class="fn">
+    <!-- the Pads are for playing over the loops: the sound, its effects and octave; no patterns, no recording -->
+    <button data-mode="sound">Sound</button>
+    <button data-mode="pattern" hidden>Pattern</button>
+    <button data-mode="fx">FX</button>
+    <button id="menuBtn" class="menu">☰ Menu</button>
+    <button id="play" data-th="play">▶ Play</button>
+    <button id="rec" data-th="play" hidden>● Rec</button>
+    <button id="write" data-th="play" hidden>Write</button>
+    <button id="trigBtn" data-th="play" title="How a key plays: One shot, Gate or Loop" hidden>1 Shot</button>
+    <div class="pair" hidden><button id="copy" data-th="edit" title="Copy this pattern">Copy</button><button id="paste" data-th="edit" title="Paste into this pattern" disabled>Paste</button></div>
+    <button id="undo" data-th="edit" disabled title="Undo">↶ Undo</button><button id="redo" data-th="edit" disabled title="Redo">↷ Redo</button>
+    <button id="padOctDn" data-th="pitch" title="The pads an octave down">Oct −</button><button id="padOctUp" data-th="pitch" title="The pads an octave up">Oct +</button>
+    <div class="pair" hidden><button class="custom" data-slot="0"></button><button class="custom" data-slot="1"></button></div>
+    <div class="pair" hidden><button class="custom" data-slot="2"></button><button class="custom" data-slot="3"></button></div>
+  </div>
+
+  <div class="keys" id="keys"></div>
+  <div class="keys robopads" id="robo" hidden></div>     <!-- Robot mode: a word on each pad -->
+  <div class="ped" id="ped">        <!-- the wave of what the pads play: drag across it to choose the bit -->
+    <canvas id="pedCv" aria-label="The sound the pads play: drag across it to choose the part that plays"></canvas>
+    <div class="pedbar"><span id="pedWhat"></span><div class="lfader" id="pedVol" title="The sound's volume: drag"><i></i><b>Vol</b></div><button id="pedSpread" title="Spread: the bit chosen, as notes across the pads">Spread</button><button id="pedQ" title="Quantize: tap for Off, 1/16, 1/8, 1/4, 1 bar">Q 1/16</button><button id="pedHear" title="Hear it">▶</button><button id="pedAll">Whole</button></div>
+  </div>
+  <div class="fn fnbot" hidden>
+    <div class="pair"><button class="custom" data-slot="4"></button><button class="custom" data-slot="5"></button></div>
+    <div class="pair"><button class="custom" data-slot="6"></button><button class="custom" data-slot="7"></button></div>
+    <div class="pair"><button class="custom" data-slot="8"></button><button class="custom" data-slot="9"></button></div>
+    <div class="pair"><button class="custom" data-slot="10"></button><button class="custom" data-slot="11"></button></div>
+  </div>
+  <div id="wheel" hidden>
+    <div class="wheelbar"><b>Key</b><button id="wheelRand" title="A key that sits well with this one">🎲</button><button id="wheelForget">Forget pattern key</button><button id="wheelClose">✕</button></div>
+    <div class="wheelwrap">
+      <svg id="wheelSvg" viewBox="-150 -150 300 300" aria-label="Key wheel"></svg>
+      <button id="wheelNext"><small>NEXT</small><span id="wheelNextTo"></span></button>
+    </div>
+    <p class="note" id="wheelNote"></p>
+  </div>
+
+  <p class="note" id="status"></p>
+</div>
+
+<div id="loops" hidden>
+ <div class="lview" id="lview">
+  <div class="lbar">
+    <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button></div>
+    <button id="lPlay">▶ Play</button>
+    <button id="lUpd" class="lupd" title="A new build is out: tap to update (your work is saved and comes back)" hidden>⬆ New build</button>
+    <button id="lUndo" title="Undo (the Loops grid)" disabled>↶</button><button id="lRedo" title="Redo" disabled>↷</button>
+    <div class="ltempo"><button id="lSlower" aria-label="Slower">−</button><select id="lBpm" aria-label="Tempo: common tempos"></select><button id="lFaster" aria-label="Faster">+</button></div>
+    <div class="ltempo"><button id="lKey" title="The key wheel">C MIN</button><button id="lNextKey" title="The next key (on the next bar)" aria-label="Next key">▸</button></div>
+    <button id="lReset" title="Stop the loops and forget the ones Play brings back" hidden>↺ Reset</button>
+    <button id="lCopy" title="Copy a cell: tap this, then the cell">Copy</button>
+    <button id="lPaste" title="Paste: tap this, then the cells to put it in" disabled>Paste</button>
+    <button id="lMulti" title="Let the cells of one column play together">Multi</button>
+    <button id="lEdit" title="Tap cells to set them up">✎ Edit</button>
+    <button id="lClearAll" title="Empty every cell (✎ Edit only)" hidden>🗑 Clear all</button>
+    <button id="lSet" title="Settings for all the loops">⚙</button>
+    <span class="lpager" id="lPager" hidden><button id="lPrev" aria-label="The other page of loops">◀</button><b id="lPage">1/2</b><button id="lNext" aria-label="The other page of loops">▶</button></span>
+    <span id="lStatus"></span>
+  </div>
+  <div class="lbody">
+  <div class="lgrid" id="lgrid"><div class="lrecbar" id="lrecBar" hidden aria-label="The loop being recorded"><div class="lrtrack"><div class="lrlines"></div><div class="lrnotes"></div><i class="lrhead"></i></div><button id="lrUndo" title="Take back the last note (again: the one before)">↶</button><button id="lrReset" title="Clear what you have played in this recording, and go on">↺ Reset</button></div></div>
+  <div class="lpads" id="lpads" hidden>       <!-- Loops + Pads: the pads play the loop last tapped -->
+    <div class="lphead"><span id="lpSrc">Tap a loop: the pads play it.</span><button id="lpLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="lpChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button><button id="lpFx" title="The pads' own EQ and effect">FX</button><button id="lpTrig" title="How a pad plays: One shot, Loop (tap on, tap off) or Gate (while held); tap to switch">One shot</button><button id="lpCrop" title="Choose the bit of the loop the pads play">✂ Crop</button><button id="lpOctDn" title="Octave down">Oct −</button><button id="lpOctUp" title="Octave up">Oct +</button><button id="lpQ" title="Quantize: tap for Off, 1/16, 1/8, 1/4, 1 bar">1/16</button><button id="lpRec" title="Record what you play on the pads into a loop cell">⏺ Rec</button></div>
+    <div class="lpkeys" id="lpKeys"></div>
+    <div class="lped lpfx" id="lpFxBox" hidden>      <!-- FX: the pads' own EQ and effect, as a Loops cell's -->
+      <canvas id="lpEq" aria-label="The pads' EQ curve"></canvas>
+      <div class="lrow"><span>Low</span><div class="lfader wide eq" id="lpEqlo"><i></i></div><output id="lpEqloOut"></output></div>
+      <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="lpEqmid"><i></i></div><output id="lpEqmidOut"></output></div>
+      <div class="lrow"><span>High</span><div class="lfader wide eq" id="lpEqhi"><i></i></div><output id="lpEqhiOut"></output></div>
+      <div class="lrow"><span>Effect</span><div class="lmodes wrap" id="lpFxType"></div></div>
+      <div class="fxamts" id="lpFxAmts"></div>
+      <div class="lmodes"><button id="lpEqFlat">Flat EQ</button><span class="grow"></span><button id="lpFxDone" class="on">✓ Done</button></div>
+    </div>
+    <div class="lped lpfx" id="lpRecBox" hidden>      <!-- ⏺ Rec: how long, and where it goes -->
+      <b class="lprtitle">⏺ Record what you play on the pads</b>
+      <div class="lrow"><span>Length</span><div class="lmodes wrap" id="lprLen"></div></div>
+      <div class="lrow"><span>Into</span><div class="lmodes wrap" id="lprInto"></div></div>
+      <small class="lsub" id="lprNote"></small>
+      <div class="lmodes"><button id="lprGo" class="on">⏺ Start</button><span class="grow"></span><button id="lprCancel">Cancel</button></div>
+    </div>
+    <div class="lped" id="lpEd" hidden>      <!-- hold Notes: choose the bit of the loop the pads play as notes -->
+      <canvas id="lpWave" aria-label="The loop: drag across the bit to play as notes"></canvas>
+      <div class="lmodes"><button id="lpEdHear">▶ Hear</button><button id="lpEdAuto" title="Back to the first note, found by itself">Auto</button><button id="lpEdAll" title="The whole loop">Select all</button><button id="lpEdNone" title="Clear the selection, to drag a new one">Select none</button><span class="wzoom"><button id="lpZOut" title="Zoom out" aria-label="Zoom out">−</button><button id="lpZIn" title="Zoom in (around where you last touched)" aria-label="Zoom in">+</button><button id="lpZL" title="Move left" aria-label="Move left" hidden>◀</button><button id="lpZR" title="Move right" aria-label="Move right" hidden>▶</button></span><span class="grow"></span><button id="lpEdDone" class="on">✓ Done</button></div>
+      <small class="lsub" id="lpEdInfo">Drag across the bit you want: it becomes the note on the pads (the 8th pad as it is). Tap the wave to hear from there.</small>
+    </div>
+  </div>
+  </div>
+  <div class="lmenu" id="lmenu" hidden>
+    <div class="lmhead"><b id="lmTitle"></b><button id="lmClose">✕ Done</button></div>
+    <div class="lmodes"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="grow"></span><button id="lmEmpty">Empty this cell</button></div>
+    <div id="lmSets" class="lsetbody">
+      <div class="lmodes ltabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="eq">EQ &amp; Effect</button><button data-lpane="design">🥁 Design</button><button data-lpane="synth">🎹 Sound</button><button data-lpane="rap" hidden>🎤 Rap</button><button data-lpane="mic" hidden>🎙 Rec</button><button data-lpane="notes" hidden>🎹 Notes</button></div>
+      <div class="lpane lmsynth lmrap" data-pane="rap" hidden></div>
+      <div class="lpane" data-pane="mic" hidden>     <!-- the microphone, recorded in time into this cell -->
+        <div class="lmodes" id="micBars"><span class="lsub" style="margin-right:6px">Record</span><button data-mb="1">1 bar</button><button data-mb="2">2 bars</button><button data-mb="4">4 bars</button></div>
+        <div class="lmodes" id="micCount"></div>
+        <div class="btns"><button id="micGo" class="go">🎙 Record</button></div>
+        <small class="lsub" id="micInfo">Sing, speak, play or beatbox into the phone. It counts in (Off, 1 or 2 bars, the second row: everything goes silent but the clicks), then records exactly the bars chosen, in time, into this cell (replacing what it held); tap again to stop early and throw the take away. Headphones keep the beat out of the recording.</small>
+      </div>     <!-- a verse rapped on the beat into this cell (the Voice page's words, voice and flow move in) -->
+      <div class="lpane lmsynth" data-pane="synth" hidden>     <!-- a sound designed here (the synth designer moves in), played on the pads, recorded into this cell -->
+        <div id="lmSynthHead"></div>
+      </div>
+      <div class="lpane" data-pane="notes" hidden>     <!-- a loop recorded on the pads: its notes, to move (left, right) or delete (tap) -->
+        <div class="lroll" id="lmRoll"></div>
+        <div class="lmodes"><button id="lmRollUndo" disabled>↶ Undo</button><span class="grow"></span></div>
+        <small class="lsub">The notes you played, kept as you played them (Quantize puts them on the beat; As played takes it off). Zoom: Bar shows a block a bar (tap it: all of that bar's notes go); 1/16 shows every note on its own. Tap a block to delete what is in it; drag it left or right to move it (by 16ths). Length: 1/8 of a bar to 32 bars; made shorter, the notes past the end are deleted. ↶ Undo takes back the last change. The loop is made again each time.</small>
+      </div>
+      <div class="lpane" data-pane="design" hidden>     <!-- a hit designed here, on the steps of a bar, into this cell -->
+        <div id="lmSteps"></div>
+        <div class="lmodes"><button id="lmDzBar">▶ Hear the bar</button><button id="lmDzPut" class="on">✓ Put in this cell</button><span class="grow"></span><button id="lmDzSave">★ Save the hit</button></div>
+        <small class="lsub">The steps of one bar, a line for each drum (up to 6): tap a step for on, again for soft, again for off. Tap a line's name to shape that drum below; ＋ Add a line for another, ✕ to take one away. It plays at the song's tempo and swing, and keeps time if the tempo changes.</small>
+        <div id="lmDz" class="lmdz"></div>
+      </div>
+      <div class="lpane two" data-pane="set">
+        <div class="lrobot" id="lwBox" hidden>     <!-- a robot voice: what it says, and its voice -->
+          <div class="lrow lfull"><span>🤖 It says</span><input type="text" id="lwText" autocomplete="off" enterkeyhint="done" class="ltext"><span class="lmodes"><button id="lwSay" class="on">🔄 Update</button></span></div>
+          <div class="lcolumn">
+            <div class="lrow"><span>Voice</span><select id="lwVariant" class="lsel"></select></div>
+            <div class="lrow"><span>Pitch</span><input type="range" id="lwPitch" min="0" max="99" step="1"><output id="oLwPitch"></output></div>
+            <div class="lrow"><span>Tone variation</span><input type="range" id="lwRange" min="0" max="99" step="1"><output id="oLwRange"></output></div>
+          </div>
+          <div class="lcolumn">
+            <div class="lrow"><span>Speed</span><input type="range" id="lwSpeed" min="80" max="320" step="5"><output id="oLwSpeed"></output></div>
+            <div class="lrow"><span>Word gap</span><input type="range" id="lwGap" min="0" max="60" step="1"><output id="oLwGap"></output></div>
+            <div class="lrow"><span>Vowel length</span><input type="range" id="lwVowel" min="1" max="3" step="0.05"><output id="oLwVowel"></output></div>
+          </div>
+          <small class="lsub lfull" id="lwNote">Change the words or the voice, then 🔄 Update: the robot says it again (kept as a recording in this cell); a playing loop changes on the next bar.</small>
+        </div>
+        <div class="lwavebox">     <!-- the wave first: drag across it to choose the part that plays -->
+          <canvas id="lmWave" aria-label="The wave: drag to choose the part that plays"></canvas>
+          <div class="lrow"><div class="lmodes"><button id="lmHear">▶ Hear it</button><button id="lmWhole">Whole sound</button><span class="wzoom"><button id="lmZOut" title="Zoom out" aria-label="Zoom out">−</button><button id="lmZIn" title="Zoom in (around where you last touched)" aria-label="Zoom in">+</button><button id="lmZL" title="Move left" aria-label="Move left" hidden>◀</button><button id="lmZR" title="Move right" aria-label="Move right" hidden>▶</button></span></div><small id="lmSel"></small><small class="lwavehint">Drag across the wave to choose the part that plays (a loop with a tempo snaps to 16ths); tap it to hear from there.</small></div>
+        </div>
+        <div class="lcolumn">
+          <div class="lrow"><span>Volume</span><div class="lfader wide" id="lmVolBar"><i></i></div><output id="lmVolOut"></output></div>
+          <div class="lrow"><span>Transpose</span><div class="lmodes"><button id="lmDown" aria-label="Down a half step">−</button><b id="lmPitch" class="lval">0</b><button id="lmUp" aria-label="Up a half step">+</button><button id="lmZero">0</button></div><small>half steps</small></div>
+          <div class="lrow"><span>Repeat every</span><div class="lmodes" id="lmRepeat"></div></div>
+          <div class="lrow"><span>Follow the tempo</span><div class="lmodes" id="lmStretch"></div><small id="lmStretchNote"></small></div>
+        </div>
+        <div class="lcolumn">
+          <div class="lrow"><span>Follow the key</span><div class="lmodes" id="lmKey"></div><small id="lmKeyOf"></small></div>
+          <div class="lrow"><span>Quantize</span><div class="lmodes wrap" id="lmQuant"></div></div>
+          <small class="lsub" id="lmQuantNote"></small>
+          <div class="lrow"><span>Fade in and out</span><div class="lmodes wrap" id="lmFade"></div></div>
+          <div class="lrow"><button id="lmSound" class="lwide"></button></div>
+        </div>
+        <p class="note lnote">Repeat: the sound plays again every so many beats (a short one waits for the beat; a long one is cut there). Follow the tempo: Stretch keeps its pitch at any tempo (a little grit, even a few BPM off); Re-Pitch speeds it up and slows it down with the tempo, pitch and all, like a record (no grit at all). Loops › ⚙ sets every loop at once. Quantize: when this loop's tap lands, or As all (the default for every loop, in ⚙); Gate always plays free, at once. Loop: round and round until tapped again; One shot: once; Gate: only while held (set a Gate cell up with ✎ Edit). Changes to a playing cell come in on the next bar.</p>
+      </div>
+      <div class="lpane two" data-pane="eq" hidden>
+        <div class="lcolumn">
+          <canvas id="lmEq" aria-label="The EQ curve"></canvas>
+          <div class="lrow"><span>Low</span><div class="lfader wide eq" id="lmEqlo"><i></i></div><output id="lmEqloOut"></output></div>
+          <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="lmEqmid"><i></i></div><output id="lmEqmidOut"></output></div>
+          <div class="lrow"><span>High</span><div class="lfader wide eq" id="lmEqhi"><i></i></div><output id="lmEqhiOut"></output></div>
+          <div class="lrow"><span></span><div class="lmodes"><button id="lmEqFlat">Flat</button></div><small>150 Hz · 1 kHz · 5 kHz</small></div>
+        </div>
+        <div class="lcolumn">
+          <div class="lrow"><span>Effect</span><div class="lmodes wrap" id="lmFx"></div></div>
+          <div class="fxamts" id="lmFxAmts"></div>
+          <small class="lsub" id="lmFxCol"></small>
+          <div class="lrow" id="lmSkipRow"><span>This loop</span><div class="lmodes" id="lmSkip"></div></div>
+          <div class="lrow"><span>Reverb space</span><select id="lmSpace" class="lsel"></select></div>
+          <small class="lsub">The room every reverb rings in, for the whole song (also in Menu › Effects).</small>
+        </div>
+        <p class="note lnote">EQ (this loop only): drag a bar right to raise that band, left to cut it, up to 12 dB; the curve shows what it does. Effect: on the whole column; any loop can skip it.</p>
+      </div>
+    </div>
+    <div id="lmPick" class="lsetbody">
+      <div id="lmCrumbs"></div>
+      <div class="lmlist" id="lmList"></div>
+    </div>
+  </div>
+  <div class="lmenu" id="lsets" hidden>
+    <div class="lmhead"><b>Loop settings</b><button id="lsClose">✕ Done</button></div>
+    <div class="lsetbody">
+      <div class="lrow"><span>Sets</span><div class="lmodes" id="lsSets"></div></div>
+      <div class="lrow"><span>My sets</span><div class="lmodes" id="lsMine"></div></div>
+      <div class="lrow"><span>On GitHub</span><div class="lmodes" id="lsCloud"></div></div>
+      <div class="lrow"><span></span><div class="lmodes"><button id="lsSave">💾 Save the grid as a set</button><button id="lsCloudSave">☁ Save the grid to GitHub</button><button id="lsDel">🗑 Delete a set</button><button id="lsShare">⬆ Share as a pack file</button><button id="lsOpen">⬇ Open a pack file</button></div></div>
+      <div class="lrow"><span>Quantize (all)</span><div class="lmodes" id="lsQuant"></div></div>
+      <div class="lrow"><span>Pads choke</span><div class="lmodes" id="lsChoke"></div></div>
+      <div class="lrow"><span>Count in</span><div class="lmodes" id="lsCount"></div></div>
+      <div class="lrow"><span>Follow the tempo</span><div class="lmodes" id="lsStretch"></div></div>
+      <div class="lrow"><span>Fade in and out</span><div class="lmodes" id="lsFade"></div></div>
+      <div class="lrow"><button id="lsStop" class="lwide">■ Stop all loops</button></div>
+    </div>
+  </div>
+ </div>
+</div>
+<div id="meter" hidden><div id="meterText"></div><div class="mbtns"><button id="meterCopy">⧉ Copy</button><button id="meterHide">✕</button></div></div>
+<div id="menu" hidden>
+ <div class="sheet">
+  <div class="menubar"><b>Menu</b><button id="menuClose">✕ Close</button></div>
+  <div class="tabs">
+    <button data-tab="tBrowse" class="on">Sounds</button>
+    <button data-tab="tSound">Settings</button>
+    <button data-tab="tBeat">Song</button>
+    <button data-tab="tEffects">Effects</button>
+    <button data-tab="tVoice" hidden>Voice</button>
+    <button data-tab="tDesign" hidden>Design</button>
+    <button data-tab="tButtons">Setup</button>
+    <button data-tab="tHelp">Help</button>
+    <button data-tab="tLog">Log</button>
+  </div>
+  <div class="menubody">
+
+  <div class="panel on" id="tBrowse">
+    <div class="crumbs" id="crumbs"></div>
+    <div class="blist" id="blist"></div>
+    <div class="btns" id="bTools" style="margin:0 0 8px"></div>
+    <div class="bfoot btns"><button id="bLoad" class="go" disabled>Load</button><button id="bMore" hidden></button>
+      <div class="bfoot2"><button id="bFav" disabled>☆ Favorite</button><button id="bSave" disabled>★ Save to My Sounds</button></div></div>
+    <input type="file" id="importFile" accept="audio/*,video/*,.json,application/json" hidden>
+    <input type="file" id="cellFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.aif,.aiff,.ogg,.flac" hidden>
+  </div>
+
+  <div class="panel" id="tEffects">
+    <div class="row"><label for="spaceSel">Reverb</label><select id="spaceSel"></select><span></span></div>
+    <p class="note" id="spaceNote" style="margin:-2px 0 8px"></p>
+    <p class="note" style="margin:0 0 6px">The pads' effects: tap each one you want on (as many as you like), and again to turn it off; each has its own amount. The same as the FX keys on the Pads (tap one on or off, hold it for its amount) and FX in Loops + Pads.</p>
+    <div class="lmodes" id="pfxType"></div>
+    <div id="pfxAmts" class="lpfx"></div>
+    <p class="note" style="margin:8px 0 4px">EQ (on everything the pads play)</p>
+    <div class="lpfx">
+      <div class="lrow"><span>Low</span><div class="lfader wide eq" id="pfxEqlo"><i></i></div><output id="pfxEqloOut"></output></div>
+      <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="pfxEqmid"><i></i></div><output id="pfxEqmidOut"></output></div>
+      <div class="lrow"><span>High</span><div class="lfader wide eq" id="pfxEqhi"><i></i></div><output id="pfxEqhiOut"></output></div>
+    </div>
+    <div hidden><input type="checkbox" id="fxLatch" checked><div id="fxSlots"></div><button id="fxReset"></button></div>
+  </div>
+
+  <div class="panel" id="tButtons">
+    <p class="note" style="margin-top:0" hidden>The coloured buttons from the fourth row down are yours: choose what each one does. Each kind of thing has its colour, and a button takes the colour of what you give it: rhythm red, pitch and key purple, the sound amber, the voice blue, effects pink (in the Dark look; Classic keeps them all blue). Effects work while you hold the button. With the Pads upright, the first four are the small ones beside Copy and Undo, and the next eight are under the keys; the last eight show only sideways.</p>
+    <div class="row"><label>GitHub token</label><span id="tokState" style="flex:1;font-size:12px"></span><button id="tokUp" hidden title="Keep the token on GitHub, scrambled with your passphrase, for your other devices">☁ Keep on GitHub</button><button id="tokForget" hidden>Forget</button></div>
+    <p class="note" style="margin:-2px 0 6px">☁ Keep on GitHub puts the token on GitHub scrambled with your passphrase (your 🔒 private library's): on another device, when the token is needed, you type the passphrase instead and it is brought over. Anyone can see the scrambled file; only the passphrase opens it, so make it long (a few words).</p>
+    <div class="row"><label for="tapLag">Tap timing</label><input type="range" id="tapLag" min="-50" max="250" step="1"><output id="oTapLag"></output></div>
+    <p class="note" style="margin:-2px 0 6px">How late your taps land after the beat you hear, on this device (the sound and the screen each take a moment). Quantize and ⏺ Rec take each tap that much earlier, so it goes to the beat you meant. <button id="calStart">🎯 Calibrate</button></p>
+    <div id="calBox" class="calbox" hidden>
+      <p class="note" id="calNote"></p>
+      <button id="calTap" class="caltap">TAP</button>
+      <div class="btns"><button id="calUse" class="go" hidden>Use it</button><button id="calCancel">Close</button></div>
+    </div>
+    <div class="row"><label for="engineWay">Sound engine</label><select id="engineWay"><option value="full">Full (newer phones and iPads)</option><option value="light">Light (older iPads: steadier sound)</option></select><span></span></div>
+    <p class="note" style="margin:-2px 0 6px">If the sound crackles or breaks up, choose Light: it gives the device more time to make the sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, and has a shorter reverb. The page reloads to change it.</p>
+    <div class="row"><label for="padsWay">Pads</label><select id="padsWay"><option value="side">Sideways, like the Loops</option><option value="upright">Upright</option></select><span></span></div>
+    <div class="row"><label for="look">Look</label><select id="look"><option value="dark">Dark</option><option value="classic">Classic: the beige PO-33</option><option value="lcars">LCARS: a starship computer</option></select><span></span></div>
+    <div class="row" hidden><label for="cb0">Row 4 · 1</label><select id="cb0"></select><span></span></div>
+    <div class="row" hidden><label for="cb1">Row 4 · 2</label><select id="cb1"></select><span></span></div>
+    <div class="row" hidden><label for="cb2">Row 4 · 3</label><select id="cb2"></select><span></span></div>
+    <div class="row" hidden><label for="cb3">Row 4 · 4</label><select id="cb3"></select><span></span></div>
+    <div class="row" hidden><label for="cb4">Row 5 · 1</label><select id="cb4"></select><span></span></div>
+    <div class="row" hidden><label for="cb5">Row 5 · 2</label><select id="cb5"></select><span></span></div>
+    <div class="row" hidden><label for="cb6">Row 5 · 3</label><select id="cb6"></select><span></span></div>
+    <div class="row" hidden><label for="cb7">Row 5 · 4</label><select id="cb7"></select><span></span></div>
+    <div class="row" hidden><label for="cb8">Row 6 · 1</label><select id="cb8"></select><span></span></div>
+    <div class="row" hidden><label for="cb9">Row 6 · 2</label><select id="cb9"></select><span></span></div>
+    <div class="row" hidden><label for="cb10">Row 6 · 3</label><select id="cb10"></select><span></span></div>
+    <div class="row" hidden><label for="cb11">Row 6 · 4</label><select id="cb11"></select><span></span></div>
+  </div>
+
+  <div class="panel" id="tSound">
+    <div class="row"><label for="pVol">Volume</label><input type="range" id="pVol" min="0" max="1" step="0.01"><output id="oVol"></output></div>
+    <div class="row"><label for="pPitch">Pitch</label><input type="range" id="pPitch" min="-24" max="24" step="1"><output id="oPitch"></output></div>
+    <div class="row"><label for="pFilter">Filter</label><input type="range" id="pFilter" min="-1" max="1" step="0.01"><output id="oFilter"></output></div>
+    <div class="row"><label for="pRes">Resonance</label><input type="range" id="pRes" min="0" max="1" step="0.01"><output id="oRes"></output></div>
+    <div class="row" id="startRow"><label for="pStart">Start</label><input type="range" id="pStart" min="0" max="0.95" step="0.01"><output id="oStart"></output></div>
+    <div class="row"><label for="pLen">Length</label><input type="range" id="pLen" min="0.02" max="1" step="0.01"><output id="oLen"></output></div>
+    <div class="row" id="wobRow"><label for="pWob">Wobble</label><input type="range" id="pWob" min="0" max="4" step="1"><output id="oWob"></output></div>
+    <div class="row"><label for="quantGrid">Quantize</label>
+      <button id="quantGrid" class="qbtn" title="Tap: Off, 1/16, 1/8, 1/4, 1 bar">1/16</button><span></span></div>
+    <p class="note" style="margin:-2px 0 6px">Tap to step through Off, 1/16, 1/8, 1/4 and 1 bar (the same setting as the button above the pads in Loops + Pads). What you play waits for the next point of the grid, always forward (a quick double tap on one pad: two points in a row; with the sound's Choke on, any of its pads tapped quickly: one point each, in turn), both what you hear and what Write records; with nothing playing, the grid starts at your first tap. All sounds.</p>
+    <div class="row"><label for="pTrig">Play as</label>
+      <select id="pTrig"><option value="oneshot">One shot: the whole sound</option><option value="gate">Gate: only while held</option><option value="loop">Loop: tap on, tap again off</option></select><span></span></div>
+    <div class="row" id="keyOfRow"><label for="pKeyOf">Its key</label>
+      <select id="pKeyOf"><option value="">Plays as recorded</option></select><button id="findKey" title="Find its key by listening">🔍</button></div>
+    <label class="check"><input type="checkbox" id="pChoke"> Choke: a new hit cuts the last one off</label>
+    <div class="row" hidden><label for="recSrc">Rec from</label>
+      <select id="recSrc"><option value="mic">Microphone</option><option value="beat">The beat (resample)</option></select><span></span></div>
+    <div class="row"><label for="family">Roll makes</label>
+      <select id="family"><option value="">Anything</option></select><span></span></div>
+    <div class="btns">
+      <label class="file">Load file…<input type="file" id="file" accept="audio/*"></label>
+      <button id="rollAll">🎲 Roll all 16</button>
+      <button id="copySound">Copy sound to…</button>
+      <button id="editSound" class="go">✂ Edit this sound</button>
+      <button id="saveMine">★ Save to My Sounds</button>
+      <button id="reset">Reset sound</button>
+    </div>
+    <p class="note" id="soundNote"></p>
+  </div>
+
+  <div class="panel" id="tBeat">
+    <div class="row" hidden><label for="kitSel">Drum kit</label><select id="kitSel"></select><span></span></div>
+    <div class="row" hidden><label for="style">Drum beat</label><select id="style"></select><span></span></div>
+    <p class="note" id="beatKind" style="margin:-2px 0 6px" hidden></p>
+    <div class="btns" style="margin:0 0 10px" hidden><button id="hearBeat">▶ Hear it</button><button id="putBeat">Put this beat in</button><button id="genBeat" class="go">🎲 Make a new one</button></div>
+    <div class="row" hidden><label for="bassSel">Bass</label><select id="bassSel"></select><span></span></div>
+    <div class="row" hidden><label for="lineSel">Bassline</label><select id="lineSel"></select><span></span></div>
+    <p class="note" id="lineKind" style="margin:-2px 0 6px" hidden></p>
+    <div class="btns" style="margin:0 0 10px" hidden><button id="hearLine">▶ Hear it</button><button id="putLine">Put this bassline in</button><button id="genLine" class="go">🎲 Another</button></div>
+    <div class="row"><label for="bpm">Tempo</label><input type="range" id="bpm" min="60" max="240" step="1"><output id="oBpm"></output></div>
+    <div class="btns" style="margin:0 0 4px"><button data-bpm="80">Hip hop 80</button><button data-bpm="120">Disco 120</button><button data-bpm="140">Techno 140</button></div>
+    <div class="row" hidden><label for="swing">Swing</label><input type="range" id="swing" min="50" max="75" step="1"><output id="oSwing"></output></div>
+    <div class="row"><label for="vol">Volume</label><input type="range" id="vol" min="0" max="1" step="0.01"><output id="oVol2"></output></div>
+    <div class="row"><label for="scale">Scale</label>
+      <select id="scale"></select><span></span></div>
+    <div class="row"><label for="root">Key</label>
+      <select id="root"></select><span></span></div>
+    <div class="btns">
+      <button id="chainBtn" hidden>Chain patterns</button>
+      <button id="clearPat" hidden>Clear pattern</button>
+      <button id="clearSound">Clear this sound</button>
+      <button id="copyPat" hidden>Copy pattern to…</button>
+      <button id="clearFx" hidden>Clear effects</button>
+      <button id="export" class="go" hidden>⬆ Export loop WAV</button>
+    </div>
+    <p class="note" id="beatNote" hidden>The export is the pattern (or the chain) as one seamless loop, ready for Remixlive.</p>
+  </div>
+
+  <div class="panel" id="tVoice">
+    <div class="row"><label for="psSrc">Psalter</label>
+      <select id="psSrc"><option value="douay">Douay-Rheims (built in)</option><option value="grail" disabled>Grail: import your file</option></select>
+      <button id="psImport" title="Import your Grail file (a psalter pack)">⬆</button></div>
+    <div class="row"><label for="psNum">Psalm</label><select id="psNum"></select><button id="psRand" title="A random verse">🎲</button></div>
+    <div class="row"><label for="psFrom">Verse</label><select id="psFrom"></select><span></span></div>
+    <div class="row"><label for="psTo">To verse</label><select id="psTo"></select><span></span></div>
+    <p class="note" id="psCount" style="margin:0 0 4px"></p>
+    <input type="file" id="psFile" accept=".json,application/json" hidden>
+    <textarea id="voxText" aria-label="Words to speak">In the beginning was the Word</textarea>
+    <div class="row"><label for="voxVariant">Voice</label><select id="voxVariant"></select><span></span></div>
+    <div class="row"><label for="voxPitch">Pitch</label><input type="range" id="voxPitch" min="0" max="99" step="1" value="40"><output id="oVoxPitch"></output></div>
+    <div class="row"><label for="voxRange">Tone variation</label><input type="range" id="voxRange" min="0" max="99" step="1" value="0"><output id="oVoxRange"></output></div>
+    <div class="row"><label for="voxSpeed">Speed</label><input type="range" id="voxSpeed" min="80" max="320" step="5" value="150"><output id="oVoxSpeed"></output></div>
+    <div class="row"><label for="voxGap">Word gap</label><input type="range" id="voxGap" min="0" max="60" step="1" value="0"><output id="oVoxGap"></output></div>
+    <div class="row"><label for="voxVowel">Vowel length</label><input type="range" id="voxVowel" min="1" max="3" step="0.05" value="1.5"><output id="oVoxVowel"></output></div>
+    <div class="btns"><button id="voxMake" class="go" hidden>Make voice → this sound</button><button id="voxHear">Hear the words</button></div>
+    <div class="row"><label for="rapCut">Cut</label>
+      <select id="rapCut"><option value="natural">Natural: spoken as a line</option><option value="robot">Robot-precise: each syllable alone</option></select><span></span></div>
+    <div class="row"><label for="rapFlow">Flow</label><select id="rapFlow"></select><span></span></div>
+    <label class="check"><input type="checkbox" id="rapRest"> A rest between words</label>
+    <div class="btns"><button id="rapIt" class="go">🎤 Rap it into this cell</button><button id="rapNew">🎲 New flow</button><button id="rapHear">▶ Hear the rap</button></div>
+    <p class="note" id="psNote"></p>
+    <p class="note">Pick a psalm and verse and its words go into the box, a line for each half-verse (each new line is a breath in the rap); or type your own. ⬆ adds your Grail file (the psalter pack Selah takes); it stays in this browser on this device and is never sent anywhere. Choose the robot's voice, pitch, tone variation (0: a dead flat monotone), speed, word gap and vowel length; Hear the words says them plainly. <b>🎤 Rap it into this cell</b> says the words once, cuts them into syllables and lays them on the beat in the Flow chosen, made into a loop at the song's tempo, 1, 2, 4 or 8 bars as the words need, in this cell (it keeps time if the tempo changes). Stressed syllables land on the beat; a comma rests to the next beat, a full stop or new line to the next half bar (old school: the next bar). <b>🎲 New flow</b> (or another Flow, or a rest between words) lays the same syllables out again, without speaking again. ▶ Hear the rap plays the cell's rap. Hold the cell again and it opens here, with its words.</p>
+  </div>
+
+  <div class="panel" id="tDesign">     <!-- make your own drum hits and synths (design.js) -->
+    <div class="dzhead"><div class="lmodes dzmodes"><button data-dz="drum" class="on">🥁 Drum hit</button><button data-dz="synth">🎹 Synth</button></div><div id="dzModeBox"></div></div>
+    <div id="dzDrum">
+      <div id="dzDrumUI"></div>
+      <div class="row"><label for="dzKit">Kit</label><select id="dzKit"></select><button id="dzAdd">＋ Add</button></div>
+      <div class="btns"><button id="dzSave">★ Save to My Sounds</button></div>
+      <p class="note">Turn the knobs and ▶ Hear it. Finish: soften the hit (less click), low and high cut, a second drum layered under it (Layer), a short real room (Room), reversed; ♪ In key tunes it to the nearest note of the song's key. ＋ Add puts the hit in a kit of yours (up to 16; a new one if you choose New kit), which loads on the drum sounds (9–16) like any kit and goes in the Loops' colour folders. Each hit is made once and kept as a recording, so the phone only plays it back.</p>
+    </div>
+    <div id="dzSynth" hidden>
+      <div class="row"><label for="dzSPreset">Start from</label><select id="dzSPreset"></select><span></span></div>
+      <div class="row"><label for="dzReg">Range</label><select id="dzReg"></select><span></span></div>
+      <div id="dzSKnobs"></div>
+      <div class="btns"><button id="dzSHear" class="go">▶ Hear it</button><button id="dzSDice">🎲 Surprise</button></div>
+      <div class="btns"><button id="dzSLoad" class="go">🎹 Play it on the pads</button><button id="dzSSave">★ Save to My Sounds</button></div>
+      <p class="note" id="dzSNote">▶ Hear it plays one note, tapped, then held. 🎹 Play it on the pads records the whole instrument once (a note every 6 half steps) and opens Loops + Pads with the pads playing it; ⏺ Rec puts what you play in this cell. ★ Save keeps it in My Sounds.</p>
+    </div>
+  </div>
+
+  <div class="panel" id="tLog">
+    <label class="check"><input type="checkbox" id="meterOn"> Show the workload meter: how hard this device is working</label>
+    <label class="check"><input type="checkbox" id="verbose"> Verbose: also every note and tap</label>
+    <label for="logNote" style="display:block;font-size:12px;margin:4px 0">A note for Claude: what you did, what you expected, what it did</label>
+    <textarea id="logNote" rows="4" placeholder="e.g. I recorded the choir on the pads, let it go round, and the pads changed to the snare." style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;border-radius:8px;padding:8px;margin:0 0 6px;background:var(--btn);color:var(--btn-ink);border:1px solid var(--edge)"></textarea>
+    <div class="btns" style="margin:0 0 8px"><button id="logShotsBtn">📷 Add screenshots</button><button id="sendLog" class="go">☁ Send to Claude</button><button id="copyLog">Copy log</button><button id="clearLog">Clear</button></div>
+    <input type="file" id="logShots" accept="image/*" multiple hidden>
+    <pre id="logView"></pre>
+    <p class="note">If something misbehaves: turn Verbose on, do it again until it happens, then write a note in the box (what you did, what you expected, what it did) and <b>☁ Send to Claude</b>: it sends your note, this log, what the pads, the recorder and the grid are doing, and any screenshots you add (📷 Add screenshots, first), to the repository on GitHub (with the same token as the sets; anyone could read it there), for Claude to read. Then say in the chat that you sent one. (Copy log puts the log on the clipboard instead.)</p>
+    <p class="note">The workload meter (a small line at the bottom of the screen, while it is on; tap it for more, and ⧉ Copy and ✕): <b>Sound</b>, how often the sound broke up in the last minute (0 is right); <b>Busy</b>, the longest the app was too busy to answer in the last second (under 50 ms you will not notice; over 100 ms taps and the screen lag); <b>Screen</b>, frames a second (60 is smooth); then how many loops and notes are playing, effects turned on, and loops still being made ready for a new tempo or key. Every 5 seconds it writes a line to this log: play a set the way you usually do, then ⧉ Copy on the meter (or Copy log here) and paste it into a message.</p>
+  </div>
+
+  <div class="panel help" id="tHelp">
+    <p><b>The screen</b> holds what you need while playing. <b>☰ Menu</b> holds the rest: Sounds (load a sound onto the current key), Settings for that sound, Beat and tempo, Voice, your Buttons, Help and the Log.</p>
+    <p><b>The Pads</b> are for playing over the loops: no patterns, no recording, nothing going across the keys. The buttons: <b>Sound</b> (tap it, then a key, to choose which of the 16 sounds the keys play), <b>FX</b> (hold or tap a key for an effect), <b>☰ Menu</b>, <b>▶ Play</b> (the loops' Play), <b>↶ Undo</b> and <b>↷ Redo</b>, and <b>Oct −</b> and <b>Oct +</b> (the keys an octave down or up). <b>📂 Library</b> at the top loads a sound onto the sound chosen; the key (C MIN) on the screen opens the key wheel.</p>
+    <p><b>Tap timing</b> (Menu › Setup): a tap reaches the app a little after your finger lands, and you hear the beat a little after it is played, so taps along with the beat run late, and Quantize, which only moves a tap forward, can push one to the beat after the one you meant. <b>🎯 Calibrate</b> plays 16 clicks: listen to four, then tap the big TAP on each. It measures how late your taps land (the middle of them), and <b>Use it</b> keeps that for this device. From then on Quantize and ⏺ Rec take each tap that much earlier. The slider sets it by hand (0 is none).</p>
+    <p><b>The Pads play what Loops + Pads plays.</b> Tap a loop (in Loops or Loops + Pads) and the Pads screen plays it too: its first note, or the bit you chose, down and up the key across the keys (the 8th key is the note as played), with the same octave, Quantize and how it plays (One shot, Loop, Gate). The screen shows its name and · LOOP, and the keys take its column's colour. Choose a sound on the Pads instead (Sound, then a key; or 📂 Library) and it goes on the pads of both screens, until you tap another loop. On a loop, the wave editor shows the whole loop and the bit the pads play (the same as ✂ Crop in Loops + Pads), and Vol is the pads' own volume. <b>🔒 Lock</b> (the padlock beside 📂 Library on the Pads, and beside the name above the pads in Loops + Pads; the same lock; it turns orange, closed, while on): the pads keep the sound they have, so you can tap loops on and off without it changing; tap again to unlock. A sound you choose on purpose (Sound, Library, Spread) still goes on. <b>Choke</b> (beside 🔒 Lock on both screens; the same as Loops › ⚙ › Pads choke): tap it on and each note on the pads cuts off the one before, one voice at a time, like a bass or a lead; tap it off and they ring over each other.</p>
+    <p><b>The wave editor</b> (under the buttons): the sound the keys play, as the last key played it (a kit's or a loop's: that key's own sound). Drag across it to choose the part that plays; grab either white edge to move just that side; tap it to hear the key. <b>Vol</b> (under it): drag the bar for the sound's volume. <b>Q</b> (Quantize; tap to step through Off, 1/16, 1/8, 1/4 and 1 bar, the same setting as in Loops + Pads): each tap on the keys waits for the next point of that grid, straight, in time with the loops; Off plays at once. <b>Spread</b> makes the bit chosen a sound of its own and spreads it across the pads as notes, down and up the key (pad 8 is the bit as chosen, moved to the key's root unless it is a drum; every note as long as the bit): it goes on the sound chosen (↶ Undo brings back what was there) and on the pads of both screens. <b>▶</b> plays it again; <b>Whole</b> takes all of it again. It is the sound's Start and Length (Menu › Settings), kept with the sound; ↶ Undo takes it back.</p>
+    <p><b>Drums never change key.</b> When the key changes, the bass and every other instrument move to it, but the drums (the kits, hand drums, a single drum hit on a key, drum loops, and the Kick, Snare and Tops columns of the Loops) play exactly as they are, in any key.</p>
+    <p><b>If the sound crackles</b> on an older iPad: Menu › Setup › <b>Sound engine › Light</b>. The app notices when the sound keeps breaking up and suggests it. Light gives the device more time to make each moment of sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, has a shorter reverb and plays fewer notes at once. Sounds only tried in Menu › Sounds are let go when the menu closes, so they don't fill the memory.</p>
+    <p><b>Sideways:</b> the Pads lie sideways, like the Loops: the screen and buttons on the left, the keys on the right. Held upright, the whole app is turned a quarter turn, so it reads the right way up with the phone held sideways (turn the phone to the left); if the phone really turns, it simply lies flat. Menu › Setup › Pads › Upright brings back the tall layout.</p>
+    <p><b>Loops + Pads</b> (the third tab at the top, where the app opens): the loops on the left, four columns a page (◀ ▶ flips to the other four), the 16 pads on the right, held sideways. The pads play the loop you tapped last (a drum loop too; a white dot marks its cell), in its colour: its first note, played down and up the key across the pads (the 8th pad, marked •, is the note as played; a melody's first note is moved to the key's root first, a drum's is left as it is). <b>FX</b> gives the pads their own EQ and effect, as a loop cell has: the panel takes the pads' place, with the EQ (low, middle and high, ±12 dB, with its curve; Flat EQ to start again) and effects (low pass, high pass, reverb, echo, ping-pong, drive, distortion, tape), as many at once as you like, each with its own amount; ✓ Done brings the pads back. It goes on everything the pads play, and on what ⏺ Rec records from them; FX stays lit while any of it is on. <b>Drive</b> works like a Tube Screamer pedal: the bass passes clean and only the middle and highs are pushed into soft clipping, then softened, so it grows warm and gritty without going muddy. <b>Distortion</b> works like a ProCo RAT pedal, the classic distortion: much more gain (up to about 50 dB, the highs more than the bass), two diodes clipping it hard into a buzzing, nearly square wave, then a low pass to take off the fizz; none of the clean sound is kept. Low, it is a light grit; turned up, it is fully saturated and holds every note out, the quiet ends of the notes brought up too, and the top grows darker, as on the pedal. <b>Tape</b> works like a tape machine (after ChowTape's model): the highs are boosted going on and cut coming off, so loud highs squash first; a soft, slightly lopsided saturation adds warmth; the low end gets tape's little bump; the top rolls off more as you turn it up; and on the loops it wobbles a touch, as tape does. Both stay at about the same loudness as you turn them up, so you hear the colour, not just more volume. <b>One shot / Loop / Gate</b> (the button beside FX; tap it to switch): One shot plays the whole note however short the tap; Loop sets the note going round from a tap until you tap that pad again (a ring marks it); Gate plays only while the pad is held down. What you record keeps it, with how long each note was held. <b>Choke</b> (Loops › ⚙ › Pads choke): on, each note you play cuts off the one before, one voice, like a bass or a lead (what you record keeps it); off, they ring over each other. <b>Oct −</b> and <b>Oct +</b> move the pads down or up an octave (two at most; what you record keeps the octave you played). <b>Quantize</b> (the button beside ⏺ Rec; tap it to step through Off, 1/16, 1/8, 1/4 and 1 bar; it is remembered, and it is the same setting as the Pads' Quantize): Off, each tap plays the moment you touch the pad and is recorded just there; otherwise each tap waits for the next point of that grid and plays, and is recorded, exactly on it: always forward, never pulled back (only a tap right on a point plays at once). Taps never queue up: tap the same pad again before its point has come and the extra tap is dropped; different pads tapped before the point land together on it, as a chord. With <b>Choke</b> on (Loops › ⚙ › Pads choke, or Choke above the pads), one note a point: the first tap takes it and any more before it are dropped. So with Quantize at 1 bar, Choke on records one hit a bar; Choke off, a chord. The grid here is straight, never swung, like the loops' bars. With nothing playing, your first tap plays at once and starts an invisible grid at the tempo, which the taps after it wait for; after two bars with no tap it lets go. Recorded with Quantize off, the notes can still be put on the beat afterwards, in the cell's 🎹 Notes. <b>✂ Crop</b> to choose the bit yourself: the loop's wave takes the pads' place; drag across the bit you want (it is heard at once, as the 8th pad); drag either edge (the white lines with handles) to move just that side; tap the wave to hear from there; ▶ Hear for the bit chosen; <b>Auto</b> to go back to the first note found by itself; <b>Select all</b> for the whole loop; <b>Select none</b> to clear it and drag a new bit (the pads keep the last one until you do); <b>− and +</b> zoom out and in (×2 a tap, down to 20 ms across), keeping the spot you last touched in place, so you can set an edge exactly; zoomed in, ◀ ▶ move along the wave; ✓ Done for the pads. Each cell keeps its own bit. The pads are as loud as the column of the loop they play: its volume under the grid turns them up and down too (its M doesn't silence them, so they can play in place of a muted loop). Every pad lasts as long as the 8th, whatever its pitch: a higher note is not shorter (each pitch is a stretched copy, made in the background as soon as the pads have a sound; the very first tap of a pitch may be a moment early for it). The pads keep the loop last tapped even when its cell is emptied (the screen says so), until another loop is tapped. The pads here only play: to write patterns or choose their sounds, go to Pads. <b>⏺ Rec</b> (beside them) records what you play on the pads, as a looper does. It first asks two things, in place of the pads: the <b>Length</b> (1/2 bar, 1, 2, 4, 8, 16 or 32 bars; kept for next time) and <b>Into</b>: <b>New</b>, a new cell (below), or, when the pads are playing a loop you recorded on them, <b>Layer</b> (what you play is added to its notes; it keeps its length, and its notes play round as you go) or <b>Replace</b> (it is recorded again from nothing). Then ⏺ Start. While it records, the column volumes under the grid give way to a red bar, the loop being recorded: its beats (or bars), the notes as you play them (the lower the note, the lower it sits; a layered loop's notes in white) and a line going round; <b>↶</b>, at its end, takes back the last note you played, and each tap after that the one before, until none are left; <b>↺ Reset</b> beside it clears all you have played in this recording (a layered loop keeps its own notes) and it goes on round for another try. The loop goes round and round until you tap ■ Stop: what you played on earlier times round plays again each time, so you can build it up a part at a time. A new cell is the one chosen with 🎹 From the pads, or <b>any empty cell you tap while the ⏺ Rec choices are open</b>; or else the next empty cell in the column of the loop the pads are playing (with a sound of the Pads on them, or no loop tapped yet, the instrument columns first); if that column is full, the next empty cell of its kind (the drum columns, or the others), then any (a red edge shows which, and the screen says). It counts in first (Loops › ⚙ › Count in: Off, 1 or 2 bars): four clicks a bar, from the next beat (at once if you tap on one), wherever the song is, with no waiting for a bar and everything silent but the clicks; the recording starts on the beat after the last click, and it all comes back then; what you play keeps its place in the bar, so the loop plays in step (if the beat was stopped, Play starts); tap ■ Stop when done (before it begins, it is called off). The loop is made once as a recording, playing from the next bar and kept in the library (My loops). It follows the song's key like the other loops (its Follow the key can turn that off), and its Transpose moves it too: either way it is made again from your notes in the new key, clean, never stretched, in Stretch and Re-Pitch alike. <b>Hold a recorded cell</b> and it opens on <b>🎹 Notes</b>: the notes you played, along its bars, each named, in rows one under the other. <b>Quantize</b>: As played (the first time: your timing exactly), or 1/16, 1/8 or 1/4 to put the notes on the beat; the notes keep how you played them, so As played brings it back. <b>Zoom</b>: <b>Bar</b> (the least room: 16 bars a row, a line a bar; the first time), 1/4 (8 bars a row, a line a beat), 1/8 (4 bars), 1/16 (2 bars, a line every 16th). At each zoom a slot (a bar, a beat, an 8th, a 16th) with anything in it shows one block, filling it: the note's name when it holds one note, ×3 and so on when more. <b>Tap</b>: 🗑 Delete (a tapped block and everything in it is deleted; zoom in to pick out single notes) or ⧉ Copy (a tapped block is copied into the space right after it, a slot of the zoom on: a 16th at 1/16, a beat at 1/4; tap again to keep copying along); drag it left or right and everything in it moves together, a slot of the zoom at a time, and lands flush: the first note in it exactly on the line where you drop it (a 16th, an 8th, a beat or a bar line, by the zoom), the others kept as far after it as they were. A block dragged past the end of its row goes into the next; drag it <b>up or down</b> onto another row and it moves to the same place in those bars (bars 1–2 to bars 3–4, and back).  <b>Length</b>: 1/8, 1/4 or 1/2 of a bar, or 1, 2, 4, 8, 16 or 32 bars (a short one repeats in time, a 1/8 every two 16ths); made shorter, any notes past the new end are deleted (the screen says how many). ↶ Undo takes back the last change. You can't add notes there or change which note a note is. Each change makes the loop again, a moment after you let go.</p>
+    <p><b>📂 Library</b> (beside the Pads ▸ button): the instruments, each played across the 16 keys, in folders by part: Bass, Chords, Lead, Sub and color, Vox and keys, Pads, Plucks, mallets and bells, and Keys and organs, Guitars, Strings and choirs, Brass and winds, Synths and World (about 75 instruments from the Musyng Kite soundfont); the Drum kits (a hit on each key); <b>Packs</b>: for each set (Electro Boom Bap, Vigils, Ephesians), the instruments its loops were played on and its own drum kit, so you can play along in its sound; and your own sounds, favourites and ☁ Shared. Choose one and Load puts it on the sound chosen. The packs themselves (a different sound on every key), loops and single hits are for the Loops: a cell's picker has them all.</p>
+    <p><b>New builds</b>: beside the build number at the top of the Pads, ⟳ checks the site for a newer build (it also looks by itself when the app opens and when you come back to it; when there is one, a green ⬆ New build shows on the Loops screens too). The browser's own refresh may show the page as it was up to 10 minutes before; ⬆ always gets the newest. When there is one, the button turns green and shows it: tap ⬆ and everything you have is saved and the new build loads, with your sounds, patterns and Loops grid just as they were (the loops playing stop; tap Play again).</p>
+    <p><b>Loops, Pads and Loops + Pads</b> (at the top left: the first button shows Loops + Pads or Pads, and a tap switches between the two; <b>▦ Loops</b> beside it opens the Loops alone, the whole grid, and lit, takes you back to Loops + Pads): <b>↶ ↷</b> in the Loops' top row undo and redo changes to the grid: a sound put in or emptied, Clear all, cells moved or pasted, a cell's settings, column volumes, mutes and effects, Follow the tempo, and what you make or record into a cell (a quick run of changes, a fader dragged, is one step). Pads is the sampler; <b>Loops</b> is a grid like Remixlive's, always laid out sideways (held upright, it is turned so it reads right with the phone held sideways). Eight columns in their parts' colours (Kick, Snare, Tops, Bass, Chords, Lead, Sub/Color, Vox/Keys), six cells each. Tap a cell and it starts on the next bar, in time and in key, and ▶ Play starts if it wasn't playing. One cell plays in a column: tap another and it takes over on the bar; tap the playing one and it stops on the bar; tap a waiting (blinking) one to take it back. The ring shows how far through its loop it is (a One shot or a Gate shows a straight line instead, filling as it plays). <b>Hold</b> a cell (or use <b>✎ Edit</b>) for its settings. In <b>✎ Edit</b> the grid turns shades of amber, so you can see you are editing, and you can <b>drag a cell</b> to another place: onto an empty cell it moves, onto a full one the two swap (in its own column a playing loop plays on; moved to another column it stops). <b>🗑 Clear all</b> (there only while ✎ Edit is on) empties every cell and stops the loops, for a fresh start; the sounds stay in the library, and ↶ Undo clear brings the grid back until you leave ✎ Edit. (To keep a grid first: Loops › ⚙ › 💾 Save the grid as a set.) Its settings, in two tabs (Settings, with the wave at the top, and EQ &amp; Effect): Loop, One shot or Gate (only while held, and always free: at once, no quantize); its own <b>Quantize</b> (1/32, 1/16, 1/8, 1/4, 1/2 note, 1, 2 or 4 bars, Off, or As all: the default for every loop, in ⚙) (Off or under a bar, a tapped loop starts from its beginning right away, on that point, and repeats from the moment you tapped; a bar or more, it lines up with the bar like the other loops); its own <b>Fade in and out</b> (Off, Quick, 1 beat, 1 to 4 bars, or As all: a shaker can fade in over 2 bars while the kick comes straight in); its own volume; an <b>EQ</b> (low, middle and high, ±12 dB, with its curve); <b>Transpose</b> in half steps; <b>Repeat</b> every 1/32, 1/16, 1/8 or 1/4 note (a beat), 1/2 note, 1 bar, 1½, 2, 4, 8, 16 or 32 bars (the sound plays again that often, so a short repeat stutters it: a short one waits, silent, for the beat to come round; a longer one is cut there); <b>Follow the tempo</b> (Loops › ⚙ › Follow the tempo sets every loop at once; each loop can then be set its own way; a loop made in the app from notes, played on the pads, a designed beat or a rap, needs none of them: at a new tempo it is played again at that tempo, clean): <b>Off</b> plays it exactly as recorded, at its own speed and in its own key, and nothing is made for it (the lightest for the phone), so it keeps time only when the song's tempo is the loop's own (shown on the cell); with another tempo it drifts. <b>Re-Pitch</b> speeds it up and slows it down with the tempo, like a record: perfectly clean, but its pitch moves with the tempo (1 BPM off at 92 BPM: a fifth of a half step; 10 BPM: about two half steps), which drums hardly mind and chords and bass may. When the song's key is changed (or the loop transposed), a Re-Pitch loop is moved to the new key without changing its length (a little of the stretching's grit, on that loop only), so it stays in time with the rest. <b>Stretch</b> (it keeps its pitch at any tempo, with a little grit, even a few BPM off; drum loops, the Beats and anything in Kick, Snare and Tops, are beat sliced instead: cut at every hit and each hit put at its new time, as recorded, so they stay crisp; slowed down a lot, each hit's ringing is stretched to fill the space after it, so there is no gap). Other loops are stretched two ways (WSOLA, and a phase vocoder, better on strings and pads), and the one closer to the original is kept; a loop takes a moment to be made ready at a new tempo, and starts once it is, never sped up or slowed meanwhile); Follow the key (on for every loop but the drums, ♪ on the cell; its key is found by listening, so turn it off for a loop that sounds wrong moved; the Kick, Snare and Tops columns never change key, so they have no such setting); <b>Effects</b> (low pass, high pass, reverb, echo, ping-pong, drive, distortion, tape: tap each one you want on, as many as you like, and again to turn it off; None turns them all off; each has its own Amount, kept for next time when it is turned off). They always run in the same order, the way a guitarist chains pedals: high pass, then drive, distortion and tape, then low pass, with the echoes and reverb on what comes out (so a reverb is never distorted). Each one costs the phone a little work, so many at once on many columns can make an older phone struggle. They go on the whole column, which any loop can be set to skip; the <b>Reverb space</b> (the room every reverb in the song rings in, the same choice as Menu › Effects); for a robot voice (the Hype words, the robot's lines in Electro Boom Bap, or 🤖 Robot words, at the top of the folders when choosing a sound), its <b>words and voice</b> at the top of Settings: type what it says, choose its voice, pitch, tone variation, speed, word gap and vowel length, and <b>🔄 Update</b> (it is said once and kept as a recording, one of My Sounds; the cell keeps its other settings, and a playing loop changes on the next bar); its sound, chosen from the same colour folders as Menu › Sounds (Beats red, Snares orange, Tops yellow, Bass green, Chords teal, Lead pink, Sub purple, Vox and keys blue…), the column's own folder first, though anything can go in any cell; below them, <b>Packs</b>: the Electro Boom Bap set, each kit and every pack, opened to all its sounds under a heading for each colour (a kit: kicks red, snares and claps orange, hats and percussion yellow); inside a folder, your own loops for that folder, its packs (open one for its sounds), or the single hits; and its <b>wave</b>: drag across it to choose the part that plays (it snaps to 16th notes on a loop with a tempo), tap it to hear from there, ▶ Hear it plays the part chosen; − and + zoom out and in around the spot last touched, and zoomed in, ◀ ▶ move along it. <b>The sub basses</b> (the Sub Bass instrument and the sub loops in Electro Boom Bap, Vigils and Ephesians) carry their overtones as well as the deep sine: a phone's or iPad's speakers play almost nothing under about 150 Hz, where a sub lives, but hearing its overtones the ear fills in the low note, so the sub comes through on small speakers and stays deep on big ones. <b>Each cell shows its own tempo and key</b> (bottom right, as 92 · F min), and so do the sounds when you choose one: the tempo it was made at, and its key, found by listening (once, then kept on this device) or known (the Electro Boom Bap loops are all F minor). Drums show a tempo only. A ? means a guess: basses and subs play too few notes to tell major from minor for sure. <b>The top row</b>: tap the tempo for common tempos (slow, middle, fast, with the styles they suit), then − and + to fine-tune; tap the key (C MIN) for the key wheel, or ▸ for the next key. <b>Copy</b>, then a cell, copies it with all its settings; <b>Paste</b>, then any cells, puts it in each (tap Paste again when done). <b>Stop remembers the loops playing</b> (they show a dashed edge), and ▶ Play brings them back with your timing: each where it sat against the beat (one started off the beat comes back off the beat, just as it was); <b>↺ Reset</b> stops the loops and forgets them. <b>Multi</b> (beside ✎ Edit): the cells of one column play together instead of taking turns; tap a playing cell to stop just that one. Turned off, each column keeps the cell started last. <b>⚙</b> holds the settings for all the loops: <b>Quantize</b> for all the loops (when a tap lands: the next 1/32, 1/16, 1/8, 1/4 (a beat) or 1/2 note, the next bar, 2 bars or 4 bars, or Off: at once, still in time; a loop can have its own), <b>Fade in and out</b> (Quick, 1 beat, or 1 to 4 bars), and <b>Stop all loops</b> (on the next point, the Pads beat playing on). Under each column: its volume (drag) and M to mute it. Tempo, key, Play and the effects are the same in both tabs, and ■ Stop stops everything. <b>Kick, Snare and Tops</b> (the red, orange and yellow columns) hold drum loops, a part each (kicks only, snares only, tops only), or whole beats in Kick. A single hit put there starts as a loop that plays it again every 4 beats (once a bar), so it needs no setting up; set it to One shot, or another Repeat, in its settings. As a One shot a hit plays on the next 16th note, and again on every tap. <b>Effects go on the whole column</b>: put them on any cell and every cell of that colour has them (the column's name shows it), unless a cell is set to skip it. <b>Sets</b> (in ⚙) fill the whole grid at once, at the tempo and key they were made in (a set can bring its own column effects and reverb space too). <b>Ephesians</b>: A minor, 139 BPM, straight; industrial techno: its own kit (rumbling, steel and driven kicks, concrete claps, noise and steel snares, clangs, an anvil, a pipe, hats, a ride, flutters, sparks, a low tom) and kick, snare and tops loops of it; a rolling voltage bass, offbeat voltage, an acid wire, Reese pressure, a gallop and an 808 drop; a strained drone, voltage stabs, an iron organ, the men's choir, a brass alarm and glass offbeats; an emergency signal, steel clangs falling in threes against the four, a supersaw climb, a bell call, plucks in threes and a low signal (most of it on its own instruments, made with Plaits: Emergency Signal, Strained Drone, Voltage Bass, Steel Clang and Voltage Stab, also in Menu › Sounds for the pads); sub roots and offbeats, rain, two risers and a downlifter; and in Vox, words of Ephesians 3 (Good News Translation) in pairs, a low flat voice answered by a higher, quicker one (God revealed his secret plan… / …and made it known to me; The Good News… / …the infinite riches of Christ; The angelic rulers and powers… / …might learn of his wisdom in all its different forms), each a robot cell whose words you can change. Its harmony sits on A minor for four bars, then Fmaj7 and Em7 for two each; it sets tape on the kick, drive on the bass, tape and reverb on the chords, ping-pong on the lead, distortion and reverb on the words, and the stairwell as its room. <b>Vigils</b>: G minor, 144 BPM, broken beats; night electronica for the office sung in the dark before dawn: its own kit (deep soft kicks, crisp snares, shuffled hats, glass ticks, a chime) and kick, snare and tops loops of it; Cloister pulse, two-step, Reese, FM, Cloister octaves and wobble bass; Vigil strings, night glass, the abbey organ, the women's choir, a chant and a night swarm; celestial arpeggios, bells, a howling lead, glockenspiel, vibraphone, a night violin (most of it on Vigils' own instruments, made with Plaits: Vigil Strings, Night Swarm, Chant, Cloister Bass, Howl, Lauds Pluck, Compline Bell and Night Glass, also in Menu › Sounds for the pads); sub, glitch ticks, night rain, a riser and a downlifter; and in Vox, words of the Rule of St Benedict in pairs that answer each other (A little rule… / …for beginners; Listen… / …with the ear of your heart; Prefer nothing… / …to the love of Christ), said by the robot voice like a chant, each a robot cell whose words you can change. Its harmony runs Gm9, E♭maj7, Cm9, Dm7, two bars each; it sets reverb on the chords, sub and words, ping-pong echoes on the lead, and the Aachen chapel as its room. <b>Electro Boom Bap</b>: F minor, 92 BPM, swung; its own kit (16 hits: kicks tuned to the key, snares, a clap, a rimshot, hats, a shaker, a cowbell, a ride), and six kick loops, six snare loops and six tops loops of it, right on the beat, any three together; the kit is in its pack, for making your own; 808, electric, Reese and upright bass; Rhodes, pad, choir and organ chords; Juno stabs, pluck, chip, trumpet and bell leads; sub bass; the robot's words, the women's choir, an old record, Alleluia and Selah. Every loop in it fits every other: the harmony runs Fm7, D♭maj7, B♭m7, Cm7, a bar each.</p>
+    <p><b>Colours</b> go by part, the same everywhere, in the Pads and the Loops: a kick is always red, a snare orange, hi-hats yellow, a bass green. The 16 sounds of the Pads are instruments, four of each part in shades of its colour: 1–4 bass (greens), 5–8 keys (teals), 9–12 lead (pinks), 13–16 pads (blues and purples).</p>
+    <p><b>Looks:</b> Menu › Setup › Look brings back the classic beige look, or gives the <b>LCARS</b> look: a starship computer screen in the style of the 1980s and 90s Star Trek computers (black, rounded bars down the side, pill buttons in peach, lilac, gold and blue, tall narrow capitals), made from scratch for this app, with no logos or pictures from the show.</p>
+    <p><b>The tags</b> say what a sound is: <b>GEN</b> made in code and kept as a recording (the synths, the 808, 909, CR-78, 606 and Minimal kits, the modelled guitars, the loops the app played: every one is played from a WAV, which is far easier on the phone than making the sound for each note); <b>REC</b> a recording, a sample of a real instrument or machine (the TR-808 is the real analog drum machine, recorded); <b>GEN</b> made in code beforehand, then played as a recording (the 808 and 909 kits drawn in code, rolled sounds, rain and risers, the robot voice, the loops written for the app); <b>MINE</b> yours (recorded, imported, designed in Menu › Design). They are in Menu › Sounds, on the pads in Sound mode, on the screen and on the Loops cells.</p>
+    <p><b>Play:</b> tap the keys: they go up the scale (a sound with slices, such as a chopped recording, has a slice on each key).</p>
+    <p><b>Sound</b>: tap it, then a sound (1–16) to choose it; tap Sound again to play. The 16 are instruments, four of each: <b>bass</b> (1–4, greens), <b>keys</b> (5–8, teals), <b>lead</b> (9–12, pinks) and <b>pads</b> (13–16, blues and purples); load any instrument on any of them (Menu › Sounds). <b>Hold</b> a sound there for its own menu: its volume, pitch and how it plays (One shot, Gate or Loop), and its own <b>EQ</b> (low, middle, high, with its curve) and <b>effect</b> (reverb, echo, ping-pong, chorus, drive, distortion, fuzz or tape, with an amount), on every note of it, in the patterns and in the export. <b>Pattern</b> + key: choose one of 16 patterns.</p>
+    <p><b>FX</b> (on the Pads): the keys become the pads' effects: low pass, high pass, reverb, echo, ping-pong, chorus, drive, distortion and tape (the same ones as a Loops column, and the same setting as FX in Loops + Pads). <b>Tap</b> one to turn it on, again to turn it off; any number can be on at once, and they stay as you leave them when you go back to playing. <b>Hold</b> one to choose it: its amount is on the screen to slide (held, it is turned on). The 16th key turns them all off. Menu › Effects has them too, with an EQ and the reverb's room. The old FX keys (loops, rolls, scratch, octaves and the rest) are gone: they worked on the patterns, which the Pads no longer play.</p>
+    <p><b>Play as</b> (Sound tab): <b>One shot</b> plays the whole sound however short the tap; <b>Gate</b> plays only while your finger is down; <b>Loop</b> starts repeating the sound, or the slice, when you tap it and keeps going until you tap that key again (the key stays lit). Switch the sound to One shot or Gate and its loops keep going, so you can play over them; come back to Loop and tap a looping key to stop it. In the beat, Gate and Loop notes last as long as they sounded when you recorded them live, or one step if you tapped them in.</p>
+    <p><b>✂ Editor</b> (Settings › Edit this sound, or after an import): select part of a sound, crop it or cut it out, place the cut points that split it across keys 9–16, then put it on any sound or save it to <b>My Sounds</b>. Instruments, kits and synths open as a recording of the last note played.</p>
+    <p><b>Design</b> (now in the Loops: 🥁 Design a hit and 🎹 Design a sound, in a cell's picker): make your own sounds. <b>🥁 Drum hit</b>: a kick, snare, clap, hat, open hat or ride, tom, percussion (wood, metal or glass: a woodblock, rimshot, cowbell, chime) or shaker, each a model of how that drum makes its sound, with its own knobs (a kick's pitch, how far and fast it drops, its length, click, beater, knock, sub; a snare's tuning, body and wires; drive, tone and Old sampler, a 1980s sampler's grit, on most). Start from one of its starting points, turn the knobs, ▶ Hear it; 🎲 Surprise makes a new one near a starting point, ↻ New strike the same with different noise. Each pitch shows its note (52 Hz A♭1), and ♪ In key tunes the drum to the nearest note of the song's key. <b>Finish</b>, for every drum: Soften the hit (less click), Low cut and High cut (so a layer keeps to its own range), Layer (a second drum under it, from any starting point, lined up so they never flam, at Layer level), Room (a short real room, baked in) and Reverse. ＋ Add puts it in a kit of yours (up to 16 hits; New kit makes one), which loads on a drum sound (9–16) from Menu › Sounds › My packs; ★ Save keeps it alone in My Sounds. <b>🎹 Synth</b>: two waves (sine, triangle, saw, square; the second tuned and detuned), a sub an octave down, noise, unison voices; a filter (low, band or high pass) with resonance and an envelope that opens it; the volume's attack, decay, sustain and release; vibrato, a glide into each note, and drive. Start from Warm pad, Analog bass, Pluck, Supersaw lead, Howl, Bell keys or Organ, in a Bass, Middle or High range. ▶ Hear it plays one note, tapped then held; Put on sound records the whole instrument (a note every 6 half steps, tapped and held, a seamless loop for held notes) onto that sound, to play and record into patterns and loops; ★ Save keeps it in My Sounds. Every sound made here is made once and kept as a recording.</p>
+    
+    
+    <p><b>🎹 Design a sound</b> (in the Loops: hold a cell, and choose it at the top of the picker, or the cell's <b>🎹 Sound</b> tab): make a bass, keys, a lead or a pad of your own, for that cell. It starts from a sound that suits the column (Analog bass in Bass, Bell keys in Chords, Supersaw lead in Lead…); choose another under Start from, set its Range, turn the knobs (Basic shows the few that matter most: wave, sub, cutoff, resonance, attack, release, vibrato, drive; Advanced, all of them), ▶ Hear it, or 🎲 Surprise. <b>🎹 Play it on the pads</b> records the whole instrument once (a note every 6 half steps, as every sound made in code is kept) and opens Loops + Pads with the pads playing it and the cell marked in red; play, and <b>⏺ Rec</b> puts what you play in that cell (replacing what it held). Afterwards, tapping that cell puts the same instrument back on the pads, so you can play along with it or record more. ★ Save to My Sounds keeps the instrument.</p>
+    <p><b>🥁 Design in the Loops</b>: hold a cell for its settings, and its third tab, 🥁 Design, makes a hit and puts it straight in: tap the steps of one bar (on, soft, off; drag a lit step along its line to move it; the column suggests a start: kicks on 1 and 3, snares on 2 and 4, hats in eighths), make the hit below (the same designer as Menu › Design), ＋ Add a line for another drum on its own steps (up to 6 lines: kick, snare, hat, clap and so on; tap a line's name to shape that one's drum, ✕ takes it away), ▶ Hear the bar, and ✓ Put in this cell: a one-bar loop at the song's tempo and swing, playing from the next bar, also kept in the library (My loops). An empty cell has 🥁 Design a hit at the top of its picker.</p>
+    <p><b>🎹 From the pads</b> (at the top of a cell's picker: an empty cell, or Change the sound): opens Loops + Pads with that cell ready to record into (a red edge). Tap a loop for the pads' sound, then <b>⏺ Rec</b>.</p>
+    <p><b>Basic and Advanced</b> (at the top of Menu › Design and of a cell's 🥁 Design): Basic shows the few knobs that shape each sound most (a kick's pitch, pitch drop, length, click and drive; a snare's tune, body, wires and snap; a synth's wave, sub, cutoff, resonance, attack, release, vibrato and drive) and the Room; Advanced shows every knob, the layer, and the whole finish (soften, low and high cut, reverse). The choice holds for every designer on this device, and what you set in Advanced stays when you go back to Basic.</p>
+    <p><b>⬆ Upload a file</b> (at the top of a cell's picker: tap an empty cell, or hold one and Change the sound): an MP3, WAV, M4A or other sound (or a video's sound) from your phone goes straight into that cell. It asks the tempo, with a guess from its beat (fitted so a loop of whole bars stays exactly in time); leave it empty for a sound with no beat, which then plays at its own speed. It is cut to whole bars, kept in the library (My loops, in the column's folder), and plays like any loop: hold the cell to trim it, Follow the tempo, Repeat and the rest. A drum loop put in Kick, Snare or Tops is beat sliced to the tempo; anything else does not follow the key until you turn Follow the key on.</p>
+    <p><b>☁ Sets on GitHub</b> (Loops › ⚙): <b>☁ Save the grid to GitHub</b> saves the grid as a set, with every sound of yours its cells use, to the repository on GitHub (a branch of its own, pocket-sets, holding only your sets); <b>On GitHub</b> lists them on any device: tap one to load it (it goes into My sets too, and its sounds into My Sounds; loaded again later, it replaces them rather than making copies); hold one to delete it from GitHub; ⟳ looks again. Saved under a name already there, it replaces that set. It uses the same GitHub token as ☁ Send to the library (asked once on each device, kept only there). The repository is public, so a set and your sounds in it can be seen by anyone who looks; a set holding sounds from your 🔒 private library is saved scrambled, and only your passphrase opens it. <b>🗑 Delete a set</b>: tap it (the sets you can delete get a red edge), then tap the set, in My sets or On GitHub: it is deleted from this device and from GitHub, both copies, after you say yes. Its sounds stay in My Sounds. A built-in set (in Sets) is part of the app, so deleting it hides it on this device; <b>↺ Show hidden</b> at the end of Sets brings them back. ✕ Cancel delete if you change your mind.</p>
+    <p><b>Sets and pack files</b> (Loops › ⚙): the set on the grid is lit (the one last loaded or saved). <b>💾 Save set</b> (at the end of My sets) saves your changes into it, if it is one of yours (its volumes, mutes and Follow the tempo too); with a built-in set lit, it saves the grid as a new set of yours, named after it. It reads 💾 Saved when there is nothing new to save. 💾 Save the grid as a set keeps the whole grid (every cell and its settings, the column effects, tempo, key and reverb) in My sets, to load again in one tap (hold one to share, rename or delete it). ⬆ Share as a pack file makes one file with the grid and every sound of yours in it, to keep in Files or iCloud Drive; ⬇ Open a pack file (or My Sounds › ⬆ Import) opens one on any device: its sounds go into My Sounds and its set into My sets. Its packs are in My packs (in Menu › Sounds and in a Loops cell's picker), and in their colour folder too when the file names one (Drum kits, Tops, Stabs and FX…). Opening the same pack file again replaces the sounds it brought the first time instead of adding them twice. My Sounds › ⬆ Share as a pack file puts all your sounds in one file (a backup, too).</p>
+    <p><b>🔒 The private library</b>: for things for your own use only (a film's or a show's sounds, sounds licensed for personal use, such as the BBC's sound effects). In ☁ Send to the library, tick <b>🔒 Private</b>: what you send is scrambled on this device with a key made from your passphrase (asked the first time, twice), so on GitHub it is only noise, even its name. In ☁ Shared it shows as 🔒 A private item until the passphrase is in on that device; then it shows its name and notes, and tapping it adds it to My Sounds, marked private (a pack with private sounds in it can then only be sent to the library ticked Private). The device keeps the key; ☁ Shared › 🔒 Lock forgets it there. Use a long passphrase (a few words), and keep it safe: if it is forgotten, nobody can get it back, nor what it locks.</p>
+    <p><b>☁ Send to the library</b> (Menu › Sounds › My Sounds): sends a pack (the Loops grid, all your sounds, one sound, or a pack file) with notes on it (what it is; who made it: you, a recording you made of something else, or someone else, with where it is from and its license) to the repository, so it is kept for good and shows on every device in Menu › Sounds › <b>☁ Shared</b> at once (tap one to add it to My Sounds). It needs a GitHub token, once on each device: a fine-grained token for munkachy/Monastic-games only, with Contents: Read and write; it is kept only in that browser (Forget my token clears it). Tell Claude, and what you sent is filed in the library and in the list of every sound and its license.</p>
+    <p><b>🗑 Review the library</b> (Menu › Sounds, at the top): every built-in sound, folder by folder, with ▶ to hear it and a <b>Delete</b> box. Packs and kits open (▸) so single sounds in them can be ticked. Ticked sounds leave the menus on this device at once; <b>Send to Claude</b> opens a GitHub issue listing them (tap Submit), or <b>Copy the list</b> to paste in a chat, and Claude deletes them from the app for good, so they are gone wherever Pocket Sampler is opened.</p>
+    <p><b>Menu › Sounds</b> is in folders by part, in the parts' colours: <b>Beats</b> (red: whole beats: Human Grooves played by drummers, drum loops, breakbeats; and the Electro Boom Bap kick loops), <b>Snares and claps</b> (orange: every one of the kits', one by one), <b>Tops</b> (yellow: hats, cymbals, percussion, one by one), <b>Drum kits</b>, <b>Bass</b> (green), <b>Chords</b> (teal), <b>Lead</b> (pink), <b>Sub and color</b> (purple: subs, and the odd, glitchy accents: the video-game sounds, glitch and machines), <b>Vox and keys</b> (blue), <b>Pads</b>, <b>Plucks, mallets and bells</b>, <b>Stabs and FX</b>, ambience, songs and yours.</p>
+    <p><b>Favorites and My Sounds</b> (Menu › Sounds): choose any sound, then <b>☆ Favorite</b> (under Load) keeps it in ★ Favorites, and <b>★ Save to My Sounds</b> keeps a copy of your own. My Sounds: your saved sounds, ⬆ Import (WAV, MP3, or a screen recording: record with the iPhone's Screen Recording, then pick the video, and its sound opens in the editor), and Make a pack from up to 16 of them. Any pack can be opened to load one of its sounds alone.</p>
+    <p><b>Key</b>: tap the key on the screen (C MIN) for the key wheel, over the keys. Majors are round the outside, minors inside, in circle-of-fifths order; the shaded keys sit well with the one you're in. Tap any key, or the <b>Next</b> button in the middle (up a fifth, then across to the relative key, by turns); 🎲 picks one of the shaded ones. While the beat plays, the change waits for the top of the next bar (the key blinks until then). <b>With Write on</b>, the key is saved in the pattern, and that pattern always plays in it (the key box is shaded); <b>with Write off</b>, the key changes for now and patterns keep their saved keys. "Forget pattern key" takes it out.</p>
+    <p><b>Its key</b> (Settings, for recordings and imports): say what key a sound is in, or tap 🔍 to have it found by listening, and it moves to the song's key (never more than six semitones). Left on "Plays as recorded", drums and other recordings stay as they are.</p>
+    <p><b>Trim:</b> Start and Length cut the sound down (on a sound with slices, only the slice you played last).</p>
+    <p>Keyboard: 1234 / QWER / ASDF / ZXCV are the keys, space is play. In Loops + Pads the same keys play its pads (and ⏺ Rec records them); on the Loops alone they play nothing.</p>
+    <p class="note">The LCARS look's lettering: Antonio, by Vernon Adams and the Antonio Project Authors (SIL Open Font License 1.1; its licence is in fonts/OFL.txt).</p>
+    <p class="note">Keys and organs, Guitars, Strings and choirs, Brass and winds, Synths and World, and the Fretless, Slap, Picked and Synth basses: the Musyng Kite soundfont, as rendered for MIDI.js by Benjamin Gleitzman (github.com/gleitz/midi-js-soundfonts), CC BY-SA 3.0.</p>
+    <p class="note">Pianos, organs, harpsichord, mallets, harp and bells: the Versilian Community Sample Library (CC0). Upright and electric bass, Gogodze, Lo-fi, Big Rusty and Brush kits: Karoryfer Samples (CC0). Acoustic Kit and Percussion: Karoryfer Samples' "Virtuosity Drums" (CC0), played by Austin McMahon. Video-game sounds: Juhani Junkala's "Essential Retro Video Game Sound Effects Collection" and Deva's "8-bit Sound Effect Pack", both CC0, from OpenGameArt. The synths, the 808, 909, CR-78, 606 and Minimal kits and the rolled sounds are made in code, and played from recordings of them (a note every few half steps, held notes on a seamless loop). Violin, viola, cello, double bass, choirs and celeste: Sonatina Symphonic Orchestra (CC Sampling Plus 1.0; the celeste CC0). Trumpet and trombone: VSCO 2 Community Edition (CC0). Gretsch, Hofner and Epiphone guitars: Karoryfer Samples (CC0). Rhodes: jRhodes3d by Jeff Learman (CC BY-NC 4.0). Tenor sax, xylophone, bells, tambourines, shakers, siren whistles and ocean drum: VCSL (CC0). TR-808: recorded from the machine by Michael Fischer. Breakbeats (the Amen and others), electro and Drumtraks hits, synth stabs, bass hits, pads, horns, robot voices, nature, arcade and machine sounds: TidalCycles' Dirt-Samples. Drum loops: played by the app on these kits. Nylon, acoustic and 12-string guitars, steel drum, risers, sirens and the respirator: made in code. Rain: Benjamin Trimoreau's "Summer rain and thunder" (Taastrup, Denmark, 2017), on radio aporee, Public Domain Mark. Hype words: spoken by Vox Machina's eSpeak voices. The Electro Boom Bap loops: written by Claude and played by the app on these sounds. The Electro Boom Bap kit and its kick, snare and tops loops: made with Mutable Instruments Plaits' drum engines (Emilie Gillet, MIT License), shaped and checked against the recorded kits in Claude's drum lab, the shaker from Perry Cook's PhISEM model. The Vigils loops: written by Claude and played by the app on these sounds, its kit made with Plaits like Electro Boom Bap's; its words are from the Rule of St Benedict (6th century), in Claude's own English from the Latin. Vigils' instruments (Vigil Strings, Night Swarm, Chant, Cloister Bass, Howl, Lauds Pluck, Compline Bell, Night Glass): made with Plaits' engines and kept as recordings. The Ephesians loops, its kit and its instruments (Emergency Signal, Strained Drone, Voltage Bass, Steel Clang, Voltage Stab): written and made by Claude the same way; its words are from Ephesians 3:3, 3:8 and 3:10 in the Good News Translation, © 1992 American Bible Society, used by permission within its quotation allowance. The old records (Records &amp; Ambience): the quiet grooves of Thomas Edison's own discs and cylinders, 1888 to 1925, public domain, from the Thomas Edison National Historical Park's transfers at the Internet Archive. Human Grooves: drummers' own playing from the Groove MIDI Dataset (Jon Gillick, Adam Roberts, Jesse Engel, Douglas Eck and David Bamman, Magenta, 2019), CC BY 4.0, played by the app on its kits. The reverbs are recordings of real spaces (impulse responses): the Lady Chapel of St Albans Cathedral (OpenAIR, University of York, CC BY 4.0); the Lady Chapel of Ely Cathedral (L. Alvarez-Morales, M. Lopez, A. Alvarez-Corbacho and P. Bustamante, CC BY 4.0 / CC BY-NC-SA 4.0); the St. Nicholas Chapel of Aachen Cathedral (M. Zerwas and S. Kayku, CC BY 4.0); a church in Cremona (R. Giampiccolo, S. Parrinelli and F. Antonacci, ChurchIR, CC BY 4.0); a stairwell and a meeting room at Aalto University (T. McKenzie, S. Schlecht and V. Pulkki, CC BY 4.0); each trimmed, its direct sound taken out, made stereo and evened in level. Basslines played by bassists: the FiloBass dataset (Xavier Riley and Simon Dixon, Queen Mary University of London, 2023), MIT License.</p>
+  </div>
+  </div>
+ </div>
+</div>
+<div id="editor" hidden>
+ <div class="sheet">
+  <div class="menubar"><b id="edTitle">Editor</b><button id="edClose">✕ Close</button></div>
+  <div class="edbody">
+    <canvas id="edWave"></canvas>
+    <p class="note" id="edInfo"></p>
+    <div class="btns">
+      <button id="edPlay" class="go">▶ Play</button><button id="edStop">■</button>
+      <button id="edZoom">Zoom in</button><button id="edAll">Show all</button><button id="edUndo">↶</button>
+    </div>
+    <div class="btns">
+      <button id="edCrop">Crop</button><button id="edCut">Cut</button>
+      <button id="edAddCut">+ Cut point</button><button id="edDelCut">− Cut point</button>
+      <button id="edAuto">Auto-chop</button><button id="edClearCuts">No cut points</button>
+    </div>
+    <div class="row"><label for="edTarget">Put on</label><select id="edTarget"></select><span></span></div>
+    <div class="btns"><button id="edPut" class="go">Put on sound</button><button id="edSave">★ Save to My Sounds</button></div>
+    <p class="note">Drag across the wave to select (it plays as you drag). Tap to set a point and hear from there. Crop keeps the selection; Cut takes it out. Cut points are where the keys split on sounds 9–16. With a selection, Put and Save use just that part.</p>
+  </div>
+ </div>
+</div>
+<div id="packBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Make a pack</b>
+    <input type="text" id="packName" aria-label="Pack name" value="My pack" autocomplete="off">
+    <p class="note">Choose up to 16 of your sounds; each goes on its own key, in this order.</p>
+    <div class="aims" id="packList"></div>
+    <div class="btns"><button id="packMake" class="go">Make it</button><button id="packCancel">Cancel</button></div>
+  </div>
+</div>
+<div id="revBox" class="overlay" hidden>
+  <div class="sheet revsheet">
+    <div class="lmhead"><b>Review the library</b><button id="revClose">✕ Done</button></div>
+    <p class="note" style="margin:0">▶ plays a sound; 🔁 loops it at the tempo playing, just as the Loops would (■ stops it). Tick <b>Delete</b> on any you don't want; packs and kits open (▸) to tick single sounds in them. Ticked sounds leave the menus on this device at once. <b>Send to Claude</b> asks Claude to delete them for good, everywhere.</p>
+    <div class="revlist" id="revList"></div>
+    <div class="revbar"><span id="revCount"></span><button id="revCopy">Copy the list</button><button id="revClear">Untick all</button><button id="revSend" class="go">Send to Claude</button></div>
+  </div>
+</div>
+<div id="sndBox" class="overlay" hidden>
+  <div class="sheet sndsheet">
+    <div class="lmhead"><b id="snTitle"></b><button id="snClose">✕ Done</button></div>
+    <div class="lmodes ltabs"><button data-snpane="snd" class="on">Sound</button><button data-snpane="eq">EQ &amp; Effect</button></div>
+    <div class="snpane two" data-snp="snd">
+      <div class="lcolumn">
+        <div class="lrow"><span>Volume</span><div class="lfader wide" id="snVol"><i></i></div><output id="snVolOut"></output></div>
+        <div class="lrow"><span>Pitch</span><div class="lmodes"><button id="snDown" aria-label="Down a half step">−</button><b id="snPitch" class="lval">0</b><button id="snUp" aria-label="Up a half step">+</button><button id="snZero">0</button></div><small>half steps</small></div>
+        <div class="lrow"><span>Play as</span><div class="lmodes" id="snTrig"></div></div>
+      </div>
+      <div class="lcolumn">
+        <div class="lmodes wrap"><button id="snChange">Change sound…</button><button id="snEdit">✂ Edit</button><button id="snMore">More settings…</button></div>
+        <p class="note" id="snNote"></p>
+      </div>
+    </div>
+    <div class="snpane two" data-snp="eq" hidden>
+      <div class="lcolumn">
+        <canvas id="snEq" aria-label="The EQ curve"></canvas>
+        <div class="lrow"><span>Low</span><div class="lfader wide eq" id="snEqlo"><i></i></div><output id="snEqloOut"></output></div>
+        <div class="lrow"><span>Middle</span><div class="lfader wide eq" id="snEqmid"><i></i></div><output id="snEqmidOut"></output></div>
+        <div class="lrow"><span>High</span><div class="lfader wide eq" id="snEqhi"><i></i></div><output id="snEqhiOut"></output></div>
+        <div class="lrow"><span></span><div class="lmodes"><button id="snEqFlat">Flat</button></div><small>150 Hz · 1 kHz · 5 kHz</small></div>
+      </div>
+      <div class="lcolumn">
+        <div class="lrow"><span>Effect</span><div class="lmodes wrap" id="snFx"></div></div>
+        <div class="lrow"><span>Amount</span><div class="lfader wide" id="snFxAmt"><i></i></div><output id="snFxOut"></output></div>
+        <p class="note">On this sound only, always: every note of it, in the beat and in the export. (The FX keys are effects you punch in while playing.)</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="roboBox" class="overlay" hidden>
+  <div class="sheet">
+    <b id="rvTitle">The voice</b>
+    <p class="note" id="rvWord" style="margin:0"></p>
+    <div class="row"><label for="rvVariant">Voice</label><select id="rvVariant"></select><span></span></div>
+    <div class="row"><label for="rvPitch">Pitch</label><input type="range" id="rvPitch" min="0" max="99" step="1"><output id="oRvPitch"></output></div>
+    <div class="row"><label for="rvRange">Tone variation</label><input type="range" id="rvRange" min="0" max="99" step="1"><output id="oRvRange"></output></div>
+    <div class="row"><label for="rvSpeed">Speed</label><input type="range" id="rvSpeed" min="80" max="320" step="5"><output id="oRvSpeed"></output></div>
+    <div class="row"><label for="rvGap">Word gap</label><input type="range" id="rvGap" min="0" max="60" step="1"><output id="oRvGap"></output></div>
+    <div class="row"><label for="rvVowel">Vowel length</label><input type="range" id="rvVowel" min="1" max="3" step="0.05"><output id="oRvVowel"></output></div>
+    <div class="row"><label for="rvCut">Cut</label><select id="rvCut"><option value="natural">Natural: spoken as a line</option><option value="robot">Robot-precise: each syllable alone</option></select><span></span></div>
+    <div class="btns"><button id="rvHear">▶ Hear it</button><button id="rvReset">As the Voice page</button><button id="rvDone" class="go">Done</button></div>
+    <p class="note">Each change is said again at once (a moment) and played. Each word can have a voice of its own, so one pattern can hold many voices. "As the Voice page" gives it the Voice page's voice again, at the normal pitch.</p>
+  </div>
+</div>
+<div id="aimBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Effects on which tracks?</b>
+    <label class="check"><input type="checkbox" id="aimAll"> All tracks</label>
+    <div class="aims" id="aimList"></div>
+    <div class="btns"><button id="aimDone" class="go">Done</button></div>
+    <p class="note">The effects hit only these sounds, from the FX keys and the pink effect buttons alike, the ones already on too; the others play on untouched. While they are aimed at chosen sounds, the Loops grid plays on untouched too (its columns keep their own effects).</p>
+  </div>
+</div>
+<div id="mkBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Make a loop</b>
+    <p class="note" id="mkInfo" style="margin:0"></p>
+    <div class="row"><label for="mkName">Name</label><input type="text" id="mkName" autocomplete="off"><span></span></div>
+    <div class="row"><label for="mkPart">Goes in</label><select id="mkPart"></select><span></span></div>
+    <div class="row"><label for="mkWhat">What plays</label><select id="mkWhat"><option value="all">Everything</option><option value="nodrums">Everything but the drums</option><option value="drums">Only the drums</option></select><span></span></div>
+    <div class="btns"><button id="mkHear" disabled>▶ Hear it</button><button id="mkSave" class="go" disabled>Save to the library</button><button id="mkCancel">Cancel</button></div>
+    <p class="note">The pattern, or the chain of patterns as one long loop. It goes in the folder you choose (Menu › Sounds), in My Sounds, and in the Loops (My loops), and keeps time at any tempo. It is kept on this device.</p>
+  </div>
+</div>
+<div id="sendBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>☁ Send to the library</b>
+    <div class="row"><label for="sdWhat">What</label><select id="sdWhat"><option value="grid">The Loops grid, with its sounds</option><option value="all">All my sounds</option><option value="one">One of my sounds…</option><option value="file">A pack file…</option></select><span></span></div>
+    <div class="row" id="sdOneRow" hidden><label for="sdOne">Sound</label><select id="sdOne"></select><span></span></div>
+    <input type="file" id="sdFile" accept=".json,application/json" hidden>
+    <div class="row"><label for="sdName">Name</label><input type="text" id="sdName" autocomplete="off"><span></span></div>
+    <div class="row"><label for="sdAbout">What it is</label><input type="text" id="sdAbout" autocomplete="off" placeholder="a dusty kit for boom bap; a loop for Vigils…"><span></span></div>
+    <div class="row"><label for="sdWho">Who made it</label><select id="sdWho"><option value="me">I made it (designed, played or recorded by me)</option><option value="recorded">I recorded it from something else</option><option value="other">Someone else made it</option></select><span></span></div>
+    <div class="row" id="sdSrcRow" hidden><label for="sdSrc">From, license</label><input type="text" id="sdSrc" autocomplete="off" placeholder="where it's from, and its license (freesound.org/s/123, CC0)"><span></span></div>
+    <label class="check"><input type="checkbox" id="sdPriv"> 🔒 Private: scrambled with your passphrase, for your own use only (a film's or a show's sounds, sounds licensed for personal use). Only your devices, with the passphrase, can open it; on GitHub it is noise.</label>
+    <div id="sdTokRow">
+      <div class="row"><label for="sdTok">GitHub token</label><input type="password" id="sdTok" autocomplete="off" placeholder="github_pat_…"><span></span></div>
+      <p class="note">Once on each device: a fine-grained token for munkachy/Monastic-games only, with Contents: Read and write (github.com › Settings › Developer settings › Fine-grained tokens). It is kept only in this browser and sent only to GitHub; it never goes in the repository.</p>
+    </div>
+    <div class="btns"><button id="sdSend" class="go">☁ Send</button><button id="sdForget">Forget my token</button><button id="sdCancel">Cancel</button></div>
+    <p class="note" id="sdInfo">It goes to the repository's library-inbox branch with your notes, and shows at once in Menu › Sounds › ☁ Shared on every device. Claude files it in the library (and the list of every sound and its license) next time you ask.</p>
+  </div>
+</div>
+<div id="lrBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>⏺ Loop rec</b>
+    <div id="lrSet">
+      <div class="row"><label for="lrMode">How</label><select id="lrMode"><option value="notes">Notes: what I play, fixable before I keep it</option><option value="sound">Sound: exactly what I hear, like a looper pedal</option></select><span></span></div>
+      <div class="row"><label for="lrBars">Bars</label><select id="lrBars"><option value="1">1 bar</option><option value="2" selected>2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option></select><span></span></div>
+      <div class="row" id="lrWhatRow"><label for="lrWhat">Records</label><select id="lrWhat"><option value="pads">The pads only (not the Loops)</option><option value="all">Everything I hear</option></select><span></span></div>
+      <div class="row"><label for="lrCol">Goes in</label><select id="lrCol"></select><span></span></div>
+      <div class="btns"><button id="lrStart" class="go">⏺ Start on the next bar</button><button id="lrCancel">Cancel</button></div>
+      <p class="note">It starts on the next bar (with a bar to count in if the beat isn't playing), records that many bars and stops by itself. Play over the beat or the Loops on the pads. Notes: your taps, on the beat as Quantize puts them; afterwards you can hear it, keep it, or open it as patterns to fix a note first. Sound: the sound itself, from the pads alone or everything (the pads alone leave out the effects on the whole mix). Kept, it goes in the Loops (the column chosen, the first empty cell, playing on the next bar) and in the library (My Sounds and its folder), and keeps time at any tempo.</p>
+    </div>
+    <div id="lrAfter" hidden>
+      <p class="note" id="lrInfo" style="margin:0"></p>
+      <div class="row"><label for="lrName">Name</label><input type="text" id="lrName" autocomplete="off"><span></span></div>
+      <div class="btns"><button id="lrHear">▶ Hear it</button><button id="lrKeep" class="go">✓ Keep it</button><button id="lrEdit">✎ Fix it as patterns</button><button id="lrDrop">✕ Throw away</button></div>
+    </div>
+  </div>
+</div>
+<div id="exportBox" class="overlay" hidden>
+  <div class="sheet">
+    <b>Export loop</b>
+    <input type="text" id="expName" aria-label="File name" autocomplete="off">
+    <p class="note" id="expInfo"></p>
+    <div class="btns"><button id="expShare" class="go" disabled>⬆ Save / Share</button><button id="expDownload" disabled>⬇ Download</button><button id="expCancel">Cancel</button></div>
+    <p class="note">⬆ opens the share sheet: choose "Save to Files", or send it straight to Remixlive. The file is named as you typed it.</p>
+  </div>
+</div>
+</div>
+<script type="module" src="app.js?v=20261031e"></script>
+</body>
+</html>
