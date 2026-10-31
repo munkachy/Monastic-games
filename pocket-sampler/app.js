@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031j';
+import * as DZ from './design.js?v=20261031k';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031j';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031k';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -124,6 +124,7 @@ setInterval(() => {
   if (ctx.state === 'running' && dW > 0.3) {
     if (dA < dW - 0.03) {
       log('glitch', `audio clock fell ${((dW - dA) * 1000).toFixed(0)} ms behind in ${dW.toFixed(1)} s (the phone dropped sound)`);
+      if (testing) { testing.drops++; testing.lost += (dW - dA) * 1000; }
       meterDrops.push(w);
       // the sound breaking up again and again while playing: say what can help, once
       if (playing && !LIGHT) glitches.push(w);
@@ -187,6 +188,38 @@ $('meterCopy').addEventListener('click', async e => {
   try { await navigator.clipboard.writeText(LOG.join('\n')); status('Log copied. Paste it into a message.'); } catch (e) { status('Could not copy: use Menu › Log › Copy log.'); }
 });
 try { if (localStorage.getItem('pocketMeter')) setTimeout(() => meterShow(true), 0); } catch (e) {}
+
+// 🔬 Test this device (Menu › Log): the set on the grid played in stages, 15 seconds each, counting the
+// sound breaking up in each: nothing playing; 1, 2, 4 and all of its loops (the first cell of each column
+// in turn); then all of them with the reverb, echoes and chorus, which run waiting even unused, unplugged.
+// The results go in the log, for ☁ Send to Claude.
+let testing = null;
+async function deviceTest() {
+  if (testing) return;
+  const cells = []; for (let c = 0; c < 8; c++) { const r = S.grid.cells[c].findIndex(x => x); if (r >= 0) cells.push([c, r]); }
+  if (!cells.length) { status('Put a set on the grid first: the test plays its loops.'); return; }
+  const was = playing, btn = $('testBtn'), wait = ms => new Promise(ok => setTimeout(ok, ms));
+  btn.disabled = true; ctx.resume(); stopAllLoops(); await wait(300);
+  if (!playing) start();
+  const counts = [0, 1, 2, 4].filter(n => n < cells.length);
+  const stages = [...counts.map(n => [n ? `${n} loop${n > 1 ? 's' : ''}` : 'nothing playing', n, false]), [`all ${cells.length} loops`, cells.length, false], [`all ${cells.length} loops, reverb, echoes and chorus unplugged`, cells.length, true]];
+  log('test', `start: ${LIGHT ? 'light' : 'full'} engine, ${ctx.sampleRate} Hz, animations ${ANIM ? 'on' : 'off'}, ${S.bpm} BPM; loops: ${cells.map(([c, r]) => S.grid.cells[c][r].name || '?').join(', ')}; column effects on: ${S.grid.colFx.reduce((a, f) => a + fxItems(f).length, 0)}`);
+  let on = 0;
+  for (const [i, [name, n, unplug]] of stages.entries()) {
+    while (on < n) { await tapCell(...cells[on]); on++; }
+    eng.unplugWaiting(unplug);
+    btn.textContent = `🔬 Testing ${i + 1} of ${stages.length}…`; status(`Testing this device, ${i + 1} of ${stages.length}: ${name}. About ${(stages.length - i) * 18} seconds to go; leave it be.`);
+    await wait(3000);                       // (the loops coming in on the bar)
+    testing = { drops: 0, lost: 0, late: 0 };
+    await wait(15000);
+    const T = testing; testing = null;
+    log('test', `${name}: ${T.drops} break${T.drops === 1 ? '' : 's'} in 15 s, ${Math.round(T.lost)} ms of sound lost, beat engine late ${T.late} time${T.late === 1 ? '' : 's'}`);
+  }
+  eng.unplugWaiting(false); stopAllLoops(); if (!was) setTimeout(() => { if (playing) stop(); }, 3000);
+  btn.disabled = false; btn.textContent = '🔬 Test this device';
+  status('Test done. Write "test" in the note box and ☁ Send to Claude.');
+}
+$('testBtn').addEventListener('click', deviceTest);
 
 // ---------------------------------------------------------------------------
 // The built-in sounds
@@ -535,6 +568,7 @@ async function resumeLoops() {
 let lateLogged = 0;
 function schedule() {
   if (nextT < ctx.currentTime - 0.01 && performance.now() - lateLogged > 1000) {
+    if (testing) testing.late++;
     lateLogged = performance.now(); log('late', `beat engine woke ${((ctx.currentTime - nextT) * 1000).toFixed(0)} ms late: notes in that gap are cut short`);
   }
   while (nextT < ctx.currentTime + 0.12) {
@@ -2202,7 +2236,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031k'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2295,7 +2329,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031j'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031k'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
