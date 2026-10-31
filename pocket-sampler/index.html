@@ -731,7 +731,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031b</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031c</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -977,6 +977,7 @@
 
   <div class="panel" id="tButtons">
     <p class="note" style="margin-top:0" hidden>The coloured buttons from the fourth row down are yours: choose what each one does. Each kind of thing has its colour, and a button takes the colour of what you give it: rhythm red, pitch and key purple, the sound amber, the voice blue, effects pink (in the Dark look; Classic keeps them all blue). Effects work while you hold the button. With the Pads upright, the first four are the small ones beside Copy and Undo, and the next eight are under the keys; the last eight show only sideways.</p>
+    <div class="row"><label>GitHub token</label><span id="tokState" style="flex:1;font-size:12px"></span><button id="tokForget" hidden>Forget</button></div>
     <div class="row"><label for="tapLag">Tap timing</label><input type="range" id="tapLag" min="-50" max="250" step="1"><output id="oTapLag"></output></div>
     <p class="note" style="margin:-2px 0 6px">How late your taps land after the beat you hear, on this device (the sound and the screen each take a moment). Quantize and ⏺ Rec take each tap that much earlier, so it goes to the beat you meant. <button id="calStart">🎯 Calibrate</button></p>
     <div id="calBox" class="calbox" hidden>
@@ -1315,6 +1316,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031b"></script>
+<script type="module" src="app.js?v=20261031c"></script>
 </body>
 </html>

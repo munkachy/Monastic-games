@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031b';
+import * as DZ from './design.js?v=20261031c';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031b';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031c';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031c'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031b'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031c'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4084,6 +4084,8 @@ function save() {
 }
 async function load() {
   db = await openDb();
+  try { await loadTok(); } catch (e) {}
+  try { navigator.storage?.persist?.(); } catch (e) {}          // ask the browser to keep this site's storage (sounds, sets, the token) when space is short
   try { await refreshMine(); } catch (e) { console.warn('My Sounds not read:', e); }   // the Loops' own loops (designed, recorded) need them from the start
   const saved = db && await idbGet('state', 'v1');
   const getBuf = async id => {
@@ -6314,15 +6316,20 @@ function cloudToken() {
 async function cloudCheck(tok) {
   let repo;
   try { repo = await gh('', {}, tok); }
-  catch (e) { if (e.status === 401) throw Object.assign(new Error('GitHub did not accept that token (it may be mistyped, expired or deleted).'), { auth: true }); throw e; }
+  catch (e) {
+    if (e.status === 401) throw Object.assign(new Error('GitHub did not accept that token (it may be mistyped, expired or deleted).'), { auth: true });
+    if (e.status === 404) throw Object.assign(new Error('That token does not open this repository (Repository access must include Monastic-games).'), { auth: true });
+    throw e;
+  }
   if (repo.permissions && !repo.permissions.push) throw Object.assign(new Error('That token can read the repository but not write to it: it needs Contents: Read and write.'), { auth: true });
-  try { localStorage.setItem('pocketGitHub', tok); } catch (e) {}        // kept only once GitHub has said yes
+  saveTok(tok);        // kept only once GitHub has said yes
 }
 // a failure, said where it cannot be missed; a refused token is forgotten, so the next try asks for a new one
 function cloudFail(what, e) {
-  const auth = e.auth || e.status === 401 || e.status === 403 || e.status === 404;
-  if (auth) try { localStorage.removeItem('pocketGitHub'); } catch (er) {}
-  const msg = `Could not ${what}: ${e.message}${auth ? `\n\nThe token is forgotten on this device, so the next try asks for one. ${e.auth ? '' : '(GitHub answers 404 or 403 when a token may not write to the repository.) '}${TOKEN_HOW}` : ''}`;
+  // forgotten only when it is the token GitHub refuses (not for a busy moment, a rate limit or a lost connection)
+  const auth = e.auth || e.status === 401 || (e.status === 403 && /personal access token|credential|not accessible/i.test(e.message));
+  if (auth) forgetTok();
+  const msg = `Could not ${what}: ${e.message}${auth ? `\n\nThe token is forgotten on this device, so the next try asks for one. ${TOKEN_HOW}` : '\n\nYour token is still saved: try again in a moment.'}`;
   status(msg.split('\n')[0]); log('error', `cloud ${what}: ${e.status || ''} ${e.message}`); alert(msg);
 }
 // one commit on the sets branch: files [[path, text or null (delete)]]; the branch is made, holding only sets, the first time
@@ -6381,6 +6388,7 @@ async function cloudDelete(x) {
   catch (e) { cloudFail('delete it from GitHub', e); }
 }
 $('lsCloudSave').addEventListener('click', cloudSave);
+$('tokForget').addEventListener('click', () => { if (confirm('Forget the GitHub token on this device? You will be asked for it again the next time you save a set or send.')) { forgetTok(); status('The GitHub token is forgotten on this device.'); } });
 // ☁ Send to Claude (Menu › Log): what happened (in your words), the log, what the pads, the recorder and the
 // grid are doing, and any screenshots added, to the repository's pocket-reports branch (reports/<when>/),
 // where Claude reads them. The same token as the sets.
@@ -6544,7 +6552,20 @@ async function vaultAsk() {
   } else if (prompt('Type it once more, to be sure:') !== pass) { status('The two did not match: nothing was changed.'); return null; }
   await vaultKeep(key); shared = null; status('🔒 Your private library is open on this device.'); return key;
 }
-const ghTok = () => { try { return localStorage.getItem('pocketGitHub') || ''; } catch (e) { return ''; } };
+// The GitHub token, kept on this device in two places (this browser's storage and its database), so a
+// clearing of one leaves the other; asked for once, kept until GitHub refuses it or you Forget it.
+var tokSaved = '';
+const ghTok = () => { try { return localStorage.getItem('pocketGitHub') || tokSaved || ''; } catch (e) { return tokSaved || ''; } };
+function saveTok(tok) { tokSaved = tok; try { localStorage.setItem('pocketGitHub', tok); } catch (e) {} if (db) idbPut('state', tok, 'ghToken').catch(() => {}); drawTok(); }
+function forgetTok() { tokSaved = ''; try { localStorage.removeItem('pocketGitHub'); } catch (e) {} if (db) idbPut('state', '', 'ghToken').catch(() => {}); drawTok(); }
+async function loadTok() {
+  try { tokSaved = (db && await idbGet('state', 'ghToken')) || ''; } catch (e) {}
+  let ls = ''; try { ls = localStorage.getItem('pocketGitHub') || ''; } catch (e) {}
+  if (tokSaved && !ls) try { localStorage.setItem('pocketGitHub', tokSaved); } catch (e) {}       // one was cleared: back from the other
+  if (ls && !tokSaved) saveTok(ls);
+  drawTok();
+}
+function drawTok() { const el = $('tokState'); if (!el) return; const t = ghTok(); el.textContent = t ? `saved on this device (…${t.slice(-4)})` : 'not saved yet: asked for the first time you save a set or send'; $('tokForget').hidden = !t; }
 async function gh(path, opts = {}, tok = ghTok()) {
   const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,      // (never a copy kept from before: a branch moves)
     headers: { Accept: 'application/vnd.github+json', ...(tok && { Authorization: `Bearer ${tok}` }), ...(opts.body && { 'Content-Type': 'application/json' }) } });
@@ -6569,7 +6590,7 @@ $('sdFile').addEventListener('change', async () => {
   catch (e) { sdFilePack = null; status(`Could not read ${f.name}: ${e.message}`); }
 });
 $('sdCancel').addEventListener('click', () => { $('sendBox').hidden = true; });
-$('sdForget').addEventListener('click', () => { try { localStorage.removeItem('pocketGitHub'); } catch (e) {} $('sdTokRow').hidden = false; $('sdForget').hidden = true; status('The GitHub token is forgotten on this device.'); });
+$('sdForget').addEventListener('click', () => { forgetTok(); $('sdTokRow').hidden = false; $('sdForget').hidden = true; status('The GitHub token is forgotten on this device.'); });
 const slug = s => s.toLowerCase().normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'pack';
 $('sdSend').addEventListener('click', async () => {
   const name = $('sdName').value.trim(), what = $('sdWhat').value, who = $('sdWho').value, src = $('sdSrc').value.trim();
@@ -6610,7 +6631,7 @@ $('sdSend').addEventListener('click', async () => {
     const t2 = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: tree, tree: files.map(([path, sha]) => ({ path, mode: '100644', type: 'blob', sha })) }) }, tok);
     const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: priv ? 'Library inbox: a private item (scrambled)' : `Library inbox: ${name} (${notes.credit})`, tree: t2.sha, parents: [head] }) }, tok);
     await gh(`/git/refs/heads/${GH.inbox}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
-    try { localStorage.setItem('pocketGitHub', tok); } catch (e) {}
+    saveTok(tok);
     $('sendBox').hidden = true; shared = null;
     status(priv ? `🔒 “${name}” is in the library inbox, scrambled: on your devices (once the passphrase is in) in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed (still scrambled).`
       : `“${name}” is in the library inbox: on every device in Menu › Sounds › ☁ Shared. Tell Claude, and it will be filed in the library with your notes.`);
