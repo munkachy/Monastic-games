@@ -417,6 +417,10 @@
   .lrlines i { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff22; } .lrlines i.bar { background: #ffffff55; }
   .lrnotes i { position: absolute; height: 4px; border-radius: 2px; background: #ff6b6b; } .lrnotes i.old { background: #ffffff88; }
   .lrhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; } .lrhead.wait { opacity: .3; }
+  /* Animations off (Menu › Buttons): nothing moves or blinks; a waiting cell or button is marked instead */
+  :root.noanim *, :root.noanim *::before, :root.noanim *::after { animation: none !important; transition: none !important; }
+  :root.noanim .lcell.queued, :root.noanim .lcell.stopping { box-shadow: inset 0 0 0 2px #fff; }
+  :root.noanim #lpRec.armed, :root.noanim #keyBtn.waiting { outline: 2px dashed #fff; outline-offset: -3px; }
   .lprtitle { font-size: 12px; }
   #lsSets button.on small, #lsMine button.on small, #lsCloud button.on small { color: #ffffffd0; }
   #lsSets button.del, #lsMine button.del, #lsCloud button.del { box-shadow: inset 0 0 0 2px #e5484d; color: #ff8a8d; } #lsDel.on { background: #c21b1b; color: #fff; }
@@ -731,7 +735,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031g</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031h</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -988,6 +992,8 @@
     </div>
     <div class="row"><label for="engineWay">Sound engine</label><select id="engineWay"><option value="full">Full (newer phones and iPads)</option><option value="light">Light (older iPads: steadier sound)</option></select><span></span></div>
     <p class="note" style="margin:-2px 0 6px">If the sound crackles or breaks up, choose Light: it gives the device more time to make the sound (a little more delay between tap and sound), works at a lower rate inside, uses less memory, has a shorter reverb, and does Drive, Distortion and Tape with less work (their edges a little rougher; exports keep them at full quality). The page reloads to change it.</p>
+    <div class="row"><label for="animWay">Animations</label><select id="animWay"><option value="on">On</option><option value="off">Off (older iPads: more time for the sound)</option></select><span></span></div>
+    <p class="note" style="margin:-2px 0 6px">Off: the rings and blinking on the cells, the moving wave on the Pads and the step lights stop, and the screen is brought up to date 10 times a second instead of 60, leaving the device more time for the sound. The recording bar still shows where it is. Off at first with the Light engine.</p>
     <div class="row"><label for="padsWay">Pads</label><select id="padsWay"><option value="side">Sideways, like the Loops</option><option value="upright">Upright</option></select><span></span></div>
     <div class="row"><label for="look">Look</label><select id="look"><option value="dark">Dark</option><option value="classic">Classic: the beige PO-33</option><option value="lcars">LCARS: a starship computer</option></select><span></span></div>
     <div class="row" hidden><label for="cb0">Row 4 · 1</label><select id="cb0"></select><span></span></div>
@@ -1317,6 +1323,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031g"></script>
+<script type="module" src="app.js?v=20261031h"></script>
 </body>
 </html>
