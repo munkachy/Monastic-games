@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031e';
+import * as DZ from './design.js?v=20261031f';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031f';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031f'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031f'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5919,8 +5919,14 @@ const barsName = n => (n < 1 ? `1/${Math.round(1 / n)} bar` : `${n} bar${n > 1 ?
 const ROLL_ZOOM = [['bar', 'Bar', 16, 16], ['4', '1/4', 4, 8], ['8', '1/8', 2, 4], ['16', '1/16', 1, 2]];       // [id, label, steps a line, bars a row]
 let rollZoom = (() => { try { return localStorage.getItem('pocketRollZoom') || 'bar'; } catch (e) { return 'bar'; } })();
 let rollUndo = [], rollTap = 'delete';          // what a tap on a block does: delete it, or copy it into the next slot
+// A change shows at once (rollPend: the notes as changed, not yet made into the loop); the loop is made
+// again a moment after the last change, once, however many changes came quickly. While a finger is on a
+// block (rollDrag) nothing is redrawn under it: that waits for the finger to come up.
+let rollPend = null, rollTimer = 0, rollDrag = false, rollLate = false;
+const rollSeq = (c, r, rec) => (rollPend && rollPend.c === c && rollPend.r === r ? rollPend.seq : rec?.seq);
 function drawRoll(c, r) {
-  const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), seq = rec?.seq, box = $('lmRoll');
+  if (rollDrag) { rollLate = true; return; }
+  const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), seq = rollSeq(c, r, rec), box = $('lmRoll');
   box.textContent = ''; $('lmRollUndo').disabled = !rollUndo.length; if (!seq) return;
   const lens = document.createElement('div'); lens.className = 'lmodes rlen';
   lens.append(Object.assign(document.createElement('span'), { textContent: 'Length' }));
@@ -5983,7 +5989,7 @@ function drawRoll(c, r) {
     const perRow = per / unit;              // slots of the zoom in a row
     const lo = Math.min(...list.map(i => seq.notes[i].t)), hi = Math.max(...list.map(i => seq.notes[i].t));
     b.addEventListener('pointerdown', ev => {
-      ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId);
+      ev.preventDefault(); ev.stopPropagation(); b.setPointerCapture(ev.pointerId); rollDrag = true;
       const rc = row.getBoundingClientRect(); turned = rc.height > rc.width;     // held upright: the line runs down the glass
       x0 = along(ev); y0 = across(ev); moved = false; shift = 0; dRows = 0; b.classList.add('drag');
       // a row's step on the glass, from one row to the next (signed: which way the next row lies)
@@ -6002,7 +6008,8 @@ function drawRoll(c, r) {
       b.style.transform = dRows ? `translateY(${dRows * (rows[ri + 1] ? rows[ri + 1].offsetTop - row.offsetTop : row.offsetTop - rows[ri - 1].offsetTop)}px)` : '';      // shown on the row it goes to
     });
     b.addEventListener('pointerup', () => {
-      b.classList.remove('drag'); b.style.transform = '';
+      b.classList.remove('drag'); b.style.transform = ''; rollDrag = false;
+      const late = rollLate; rollLate = false;
       let notes;
       if (!moved && rollTap === 'copy') {          // ⧉ Copy: the block again, in the next slot of the zoom
         if (t0 + unit >= steps) { status('No room after it: the loop ends there.'); return; }
@@ -6014,28 +6021,40 @@ function drawRoll(c, r) {
         const d = t0 + shift * unit - lo;
         notes = seq.notes.map((n, i) => (list.includes(i) ? { ...n, t: Math.max(0, Math.min(steps - 0.01, n.t + d)) } : n));
       }
-      else return;
+      else { if (late) drawRoll(c, r); else b.style.left = (t0 - x0t) * st + 1 + 'px'; return; }
       rollChange(c, r, notes);
     });
-    b.addEventListener('pointercancel', () => { b.classList.remove('drag'); b.style.transform = ''; b.style.left = (t0 - x0t) * st + 1 + 'px'; });
+    b.addEventListener('pointercancel', () => {
+      b.classList.remove('drag'); b.style.transform = ''; b.style.left = (t0 - x0t) * st + 1 + 'px'; rollDrag = false;
+      if (rollLate) { rollLate = false; drawRoll(c, r); }
+    });
     row.appendChild(b);
   }
   box.append(lens, qz, zoom, tapRow, wrap);
 }
 let rollBusy = Promise.resolve();
 function rollChange(c, r, notes, undoing = false, bars = null, q = null) {
+  const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), now = rollSeq(c, r, rec); if (!now) return Promise.resolve();
+  if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return Promise.resolve(); }
+  if (!undoing) rollUndo.push({ notes: now.notes, bars: now.bars, q: now.q || 0 });
+  rollPend = { c, r, seq: { ...now, notes, bars: bars ?? now.bars, q: q ?? now.q ?? 0 } };
+  if (menuCell?.c === c && menuCell?.r === r && lPane === 'notes') drawRoll(c, r);      // seen at once
+  clearTimeout(rollTimer); rollTimer = setTimeout(rollMake, 400);
+  return Promise.resolve();
+}
+function rollMake() {          // the notes as they are now, made into the loop (once, for any number of quick changes)
   rollBusy = rollBusy.then(async () => {
-    const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine); if (!rec?.seq) return;
-    if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return; }
-    if (!undoing) rollUndo.push({ notes: rec.seq.notes, bars: rec.seq.bars, q: rec.seq.q || 0 });
-    const seq = { ...rec.seq, notes, bars: bars ?? rec.seq.bars, q: q ?? rec.seq.q ?? 0 }, src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
+    const P = rollPend; if (!P) return;
+    const { c, r, seq } = P, cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine); if (!rec?.seq) { if (rollPend === P) rollPend = null; return; }
+    const src = unpackSlot({ name: rec.name, item: rec.seq.src }), buf = await seqRender(seq, src);
     const slot = { factory: null, kind: 'chop', contiguous: false, name: rec.name, params: { ...defParams(), trig: 'loop' }, buf, ...(c < 3 && { drumLoop: true }),
       slices: [{ s: 0, e: buf.duration, name: rec.name, bpm: seq.bpm, bars: seq.bars }] };
     const id = 'm' + Date.now().toString(36);
     await idbPut('mine', { ...rec, id, created: Date.now(), item: packSlot(slot), seq }, id);
     if (!S.grid.cells.flat().some(x => x && x !== cell && x.mine === rec.id)) await trashMine(rec.id);
     await refreshMine();
-    S.grid.cells[c][r] = { ...cell, mine: id };
+    S.grid.cells[c][r] = { ...S.grid.cells[c][r], mine: id };
+    if (rollPend === P) rollPend = null;          // (changed again meanwhile: that is made next, and shown till then)
     if (lp.c === c && lp.r === r) lp.cell = null;
     changed(c, r);
   });
