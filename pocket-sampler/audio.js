@@ -276,16 +276,22 @@ export class Engine {
       lfo.connect(depth); depth.connect(d.delayTime); lfo.start();
       this.chSend.connect(d); d.connect(merge, 0, ch);
     });
-    this.hp.connect(this.chSend); merge.connect(this.comp);
+    this.hp.connect(this.chSend); merge.connect(this.comp); this.chMerge = merge;
     // Ping-pong: an echo that bounces from the left ear to the right and back.
     this.ppSend = ctx.createGain(); this.ppSend.gain.value = 0;
     this.ppL = ctx.createDelay(2); this.ppR = ctx.createDelay(2); this.ppFb = ctx.createGain(); this.ppFb.gain.value = 0.45;
     const pm = ctx.createChannelMerger(2);
     this.hp.connect(this.ppSend); this.ppSend.connect(this.ppL);
     this.ppL.connect(pm, 0, 0); this.ppL.connect(this.ppR); this.ppR.connect(pm, 0, 1);
-    this.ppR.connect(this.ppFb); this.ppFb.connect(this.ppL); pm.connect(this.comp);
+    this.ppR.connect(this.ppFb); this.ppFb.connect(this.ppL); pm.connect(this.comp); this.ppMerge = pm;
     this.voices = new Set();       // sounding voices
     this.choke = new Map();        // slot -> its last voice
+  }
+
+  // The self-test (Menu › Log): the reverb, echoes and chorus, which run waiting even when nothing is sent
+  // to them, taken out of the sound (so the device does none of their work), or put back.
+  unplugWaiting(off) {
+    for (const n of [this.reverb, this.chMerge, this.ppMerge, this.delay]) { try { if (off) n.disconnect(this.comp); else n.connect(this.comp); } catch (e) {} }
   }
 
   // Load the crusher (live only). It is put between the bus and the filters
