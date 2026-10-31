@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031h';
+import * as DZ from './design.js?v=20261031i';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031h';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031i';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2201,7 +2201,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031i'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2294,7 +2294,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031h'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031i'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4234,7 +4234,7 @@ function remakeAt(m, bpm, kk = null) {
     remade.set(key, (async () => {
       const base = unpackSlot(m); let buf, bars;
       if (m.seq) { buf = await seqRender({ ...m.seq, bpm, ...(kk && { root: kk.root, scale: kk.scale }) }, unpackSlot({ name: m.name, item: m.seq.src })); bars = m.seq.bars; }
-      else if (m.dz) { buf = (await cellBar(m.dz.lines, m.dz.swing)).bar; bars = 1; }
+      else if (m.dz) { const d = await cellBar(m.dz.lines, m.dz.swing); buf = d.bar; bars = d.bars; }
       else { const r = await rapRender(unpackSlot({ name: m.rap.text, item: m.rap.src }), m.rap.flow, m.rap.rest, m.rap.seed); buf = r.buf; bars = r.bars; }
       return { ...base, buf, slices: [{ ...base.slices[0], s: 0, e: buf.duration, bpm, bars, buf: null }] };
     })().catch(e => { remade.delete(key); console.warn('remake', e); return unpackSlot(m); }));
@@ -5746,15 +5746,17 @@ fader($('lmVolBar'), v => {
   drawCellMenu();
 });
 $('lmSound').addEventListener('click', () => { choosing = true; drawCellMenu(); });
-// 🥁 Design (a cell's third tab): a hit made in the drum designer, on the steps of a bar, baked into a
-// one-bar loop at the song's tempo and swing, into this cell (and the library's Beats, My loops). An
+// 🥁 Design (a cell's third tab): a hit made in the drum designer, or a kit's, on its steps (1 to 8 bars),
+// baked into a loop at the song's tempo and swing, into this cell (and the library's Beats, My loops). An
 // empty cell gets it from its picker (🥁 Design a hit).
 let cellDz = null, cellDzFor = null, dzEmpty = false;
 // 🎤 Rap a verse and 🎙 Record, in a cell: set aside for now (true brings their tabs and picker buttons back)
 const CELL_EXTRAS = false;
-// The sequencer: up to 6 lines, each its own drum (all its knobs) on its own 16 steps. Tap a line's
-// name to shape its drum below; ＋ adds a line, ✕ takes one away.
-const DZ_LINES = 6, DZ_ORDER = ['kick', 'snare', 'hat', 'clap', 'open', 'tom', 'perc', 'shaker'];
+// The sequencer: one line, a drum on its steps, 1 to 8 bars long (a row a bar). Its sound: a drum made in
+// the designer below (its knobs), or any hit of a drum kit, the app's or yours (packs in My Sounds). A
+// beat of several drums is made in the Loops, a column each. (A design made before, with more lines, comes
+// back with them all, and plays them all.)
+const DZ_BARS = [1, 2, 4, 8], DZ_ORDER = ['kick', 'snare', 'hat', 'clap', 'open', 'tom', 'perc', 'shaker'];
 const DZ_STEPS = { kick: [0, 8], snare: [4, 12], clap: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14], open: [2, 6, 10, 14], tom: [14], perc: [3, 11], shaker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] };
 const DZ_COLKIND = ['kick', 'snare', 'hat'];
 let cellLines = [], cellLine = 0;
@@ -5763,73 +5765,140 @@ function dzLine(kind) {
   for (const i of DZ_STEPS[kind]) steps[i] = soft && i % 4 ? 0.55 : 1;
   return { st: dzState(kind), steps };
 }
+const copyLine = L => ({ st: { ...L.st, p: { ...L.st.p }, f: { ...L.st.f } }, steps: [...L.steps], ...(L.hit && { hit: { ...L.hit } }) });
+// the kits a line can play: the Drum kits folder, then yours
+const dzKitList = () => [
+  ...TREE[1].find(f => f[0] === 'Drum kits')[1].filter(id => LIBRARY[id] && !toDelete().has(id)).map(id => ({ key: id, name: LIBRARY[id].name, src: { lib: id } })),
+  ...mine.filter(m => m.type === 'pack' && m.item).map(m => ({ key: 'mine:' + m.id, name: `${m.name} (yours)`, src: { mine: m.id } }))];
+const hitKey = h => (h.lib || 'mine:' + h.mine);
+const hitSlotOf = h => (h.lib ? slotOf({ lib: h.lib }) : cellBase({ mine: h.mine }));
+// a kit's hit, mono at the designer's rate (its first 4 seconds at most)
+const hitPcms = new Map();
+function hitPcm(h) {
+  const key = `${hitKey(h)}#${h.k}`;
+  if (!hitPcms.has(key)) hitPcms.set(key, (async () => {
+    const slot = await hitSlotOf(h), x = slot?.slices?.[h.k], b = x && (x.buf || slot.buf); if (!b) return new Float32Array(1);
+    const sr = b.sampleRate, a = Math.round(x.s * sr), e = Math.min(Math.round(x.e * sr), a + 4 * sr, b.length), ch = b.numberOfChannels;
+    const src = new Float32Array(Math.max(1, e - a));
+    for (let c = 0; c < ch; c++) { const d = b.getChannelData(c); for (let i = 0; i < src.length; i++) src[i] += (d[a + i] || 0) / ch; }
+    const f = sr / DZ.SR, n = Math.max(1, Math.floor(src.length / f)), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const q = i * f, j = Math.floor(q), t = q - j; out[i] = src[j] * (1 - t) + (src[j + 1] || 0) * t; }
+    return out;
+  })());
+  return hitPcms.get(key);
+}
+const linePcm = async L => (L.hit ? hitPcm(L.hit) : (await dzHit(L.st)).getChannelData(0));
+const lineName = L => (L.hit ? L.hit.name : dzName(L.st));
+async function hearDzLine(L) { const x = await linePcm(L), b = ctx.createBuffer(1, x.length, DZ.SR); b.copyToChannel(x, 0); dzPlay(b); }
 function cellDesign(c, r) {
   cellDz ||= drumDesigner($('lmDz'), () => drawLines(), true);
   const at = `${c}:${r}`;
-  if (cellDzFor !== at) {          // a cell new to it: the drum and steps its column suggests
-    cellDzFor = at; cellLines = [dzLine(DZ_COLKIND[c] || 'perc')]; cellLine = 0;
-    if (c > 2) cellLines[0].steps = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+  if (cellDzFor !== at) {          // a cell new to it: what it was made with, or the drum and steps its column suggests
+    cellDzFor = at; cellLine = 0;
+    const cell = S.grid.cells[c][r], rec = cell?.mine && mine.find(m => m.id === cell.mine);
+    if (rec?.dz?.lines?.length) cellLines = rec.dz.lines.map(copyLine);
+    else {
+      cellLines = [dzLine(DZ_COLKIND[c] || 'perc')];
+      if (c > 2) cellLines[0].steps = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+    }
     cellDz.use(cellLines[0].st);
   }
   drawLines();
 }
 function drawLines() {
-  const box = $('lmSteps'); box.textContent = '';
-  cellLines.forEach((L, li) => {
-    const row = document.createElement('div'); row.className = 'dzline' + (li === cellLine ? ' sel' : '');
-    const nm = document.createElement('button'); nm.className = 'dzlname'; nm.textContent = DZ.DRUMS[L.st.kind].name;
-    nm.title = dzName(L.st) + ': tap to shape it below';
-    nm.addEventListener('click', () => { cellLine = li; cellDz.use(L.st); drawLines(); });
-    const g = document.createElement('div'); g.className = 'dzsteps';
-    // tap a step: on, soft, off; drag a lit step along the line: it moves (on or soft as it was)
-    L.steps.forEach((v, i) => {
-      const b = document.createElement('button'); b.textContent = i % 4 ? '·' : String(i / 4 + 1); b.style.touchAction = 'none';
-      b.classList.toggle('on', v === 1); b.classList.toggle('soft', v > 0 && v < 1);
-      let at = i, moved = false;
-      b.addEventListener('pointerdown', ev => { ev.preventDefault(); b.setPointerCapture(ev.pointerId); at = i; moved = false; });
-      b.addEventListener('pointermove', ev => {
-        if (!b.hasPointerCapture?.(ev.pointerId) || !L.steps[at]) return;
-        const t = document.elementFromPoint(ev.clientX, ev.clientY), j = t && t.parentNode === g ? [...g.children].indexOf(t) : -1;
-        if (j < 0 || j === at || L.steps[j]) return;
-        L.steps[j] = L.steps[at]; L.steps[at] = 0; moved = true;
-        const kids = g.children; for (const [x, w] of [[at, 0], [j, L.steps[j]]]) { kids[x].classList.toggle('on', w === 1); kids[x].classList.toggle('soft', w > 0 && w < 1); }
-        at = j;
-      });
-      b.addEventListener('pointerup', () => { if (!moved) L.steps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; drawLines(); });
-      g.appendChild(b);
-    });
-    const x = document.createElement('button'); x.className = 'dzlx'; x.textContent = '✕'; x.title = 'Take this line away';
-    x.disabled = cellLines.length < 2;
-    x.addEventListener('click', () => {
-      cellLines.splice(li, 1); cellLine = Math.min(cellLine > li ? cellLine - 1 : cellLine, cellLines.length - 1);
-      cellDz.use(cellLines[cellLine].st); drawLines();
-    });
-    row.append(nm, g, x); box.appendChild(row);
-  });
-  if (cellLines.length < DZ_LINES) {
-    const add = document.createElement('button'); add.className = 'dzladd'; add.textContent = '＋ Add a line';
-    add.addEventListener('click', () => {
-      const used = cellLines.map(L => L.st.kind), k = DZ_ORDER.find(k => !used.includes(k)) || 'perc';
-      cellLines.push(dzLine(k)); cellLine = cellLines.length - 1; cellDz.use(cellLines[cellLine].st); drawLines();
-      dzHit(cellLines[cellLine].st).then(b => dzPlay(b));
-    });
-    box.appendChild(add);
+  const box = $('lmSteps'); box.textContent = ''; if (!cellLines.length) return;      // (the designer, being made, before a cell's lines)
+  const L0 = cellLines[cellLine], bars = cellLines[0].steps.length / 16;
+  // Length: 1 to 8 bars (longer: the bars there are, repeated; shorter: the bars past the end go)
+  const lens = document.createElement('div'); lens.className = 'lmodes rlen';
+  lens.append(Object.assign(document.createElement('span'), { textContent: 'Length' }));
+  for (const n of DZ_BARS) {
+    const b = document.createElement('button'); b.textContent = n === 1 ? '1 bar' : `${n} bars`; b.classList.toggle('on', n === bars);
+    b.addEventListener('click', () => { for (const L of cellLines) L.steps = Array.from({ length: n * 16 }, (_, i) => L.steps[i % L.steps.length]); drawLines(); });
+    lens.appendChild(b);
   }
+  // Sound: a drum designed below, or a kit's hit
+  const snd = document.createElement('div'); snd.className = 'lmodes rlen dzsound';
+  const kit = document.createElement('select'), hit = document.createElement('select');
+  kit.add(new Option('Design your own (below)', ''));
+  for (const k of dzKitList()) kit.add(new Option(k.name, k.key));
+  kit.value = L0.hit ? hitKey(L0.hit) : ''; if (kit.selectedIndex < 0) kit.value = '';
+  hit.hidden = !L0.hit;
+  const hear = document.createElement('button'); hear.textContent = '▶'; hear.title = 'Hear it'; hear.addEventListener('click', () => hearDzLine(L0));
+  snd.append(Object.assign(document.createElement('span'), { textContent: 'Sound' }), kit, hit, hear);
+  const fillHits = async (pick) => {
+    const h = L0.hit; if (!h) return;
+    const slot = await hitSlotOf(h); if (L0.hit !== h || !slot?.slices) return;
+    hit.textContent = ''; slot.slices.forEach((x, k) => x && hit.add(new Option(x.name || `sound ${k + 1}`, k)));
+    if (pick) {         // a kit just chosen: the first hit of the kind the column holds, or its first
+      const want = DZ_COLKIND[cellDzFor ? +cellDzFor.split(':')[0] : 0];
+      const k = Math.max(0, want ? slot.slices.findIndex(x => x && hitPart(x.name) === want) : 0);
+      h.k = k; h.name = slot.slices[k]?.name || `sound ${k + 1}`;
+    }
+    hit.value = h.k; if (pick) { hearDzLine(L0); }
+  };
+  kit.addEventListener('change', () => {
+    if (!kit.value) { delete L0.hit; cellDz.use(L0.st); drawLines(); return; }
+    const k = dzKitList().find(x => x.key === kit.value); L0.hit = { ...k.src, k: 0, name: '' };
+    drawLines(); fillHits(true).then(() => drawLines());
+  });
+  hit.addEventListener('change', () => { L0.hit = { ...L0.hit, k: +hit.value, name: hit.selectedOptions[0].textContent }; hearDzLine(L0); drawLines(); });
+  fillHits(false);
+  box.append(lens, snd);
+  $('lmDz').hidden = !!L0.hit; $('lmDzSave').hidden = !!L0.hit;
+  // the steps: a row a bar (a line each, if a design from before has more)
+  cellLines.forEach((L, li) => {
+    for (let bar = 0; bar < L.steps.length / 16; bar++) {
+      const row = document.createElement('div'); row.className = 'dzline' + (li === cellLine ? ' sel' : '');
+      const nm = document.createElement('button'); nm.className = 'dzlname';
+      nm.textContent = cellLines.length > 1 ? (bar ? '' : lineName(L)) : bars > 1 ? `Bar ${bar + 1}` : lineName(L);
+      nm.title = lineName(L);
+      nm.addEventListener('click', () => { cellLine = li; if (!L.hit) cellDz.use(L.st); drawLines(); });
+      const g = document.createElement('div'); g.className = 'dzsteps'; g.dataset.line = li;
+      // tap a step: on, soft, off; drag a lit step along the line (to another bar too): it moves, on or soft as it was
+      for (let j = 0; j < 16; j++) {
+        const i = bar * 16 + j, v = L.steps[i], b = document.createElement('button');
+        b.textContent = j % 4 ? '·' : String(j / 4 + 1); b.style.touchAction = 'none'; b.dataset.i = i;
+        b.classList.toggle('on', v === 1); b.classList.toggle('soft', v > 0 && v < 1);
+        let at = i, moved = false, atEl = b;
+        b.addEventListener('pointerdown', ev => { ev.preventDefault(); b.setPointerCapture(ev.pointerId); at = i; atEl = b; moved = false; });
+        b.addEventListener('pointermove', ev => {
+          if (!b.hasPointerCapture?.(ev.pointerId) || !L.steps[at]) return;
+          const t = document.elementFromPoint(ev.clientX, ev.clientY), j2 = t && t.parentNode?.dataset?.line === String(li) ? +t.dataset.i : -1;
+          if (j2 < 0 || j2 === at || L.steps[j2]) return;
+          L.steps[j2] = L.steps[at]; L.steps[at] = 0; moved = true;
+          for (const [el, w] of [[atEl, 0], [t, L.steps[j2]]]) { el.classList.toggle('on', w === 1); el.classList.toggle('soft', w > 0 && w < 1); }
+          at = j2; atEl = t;
+        });
+        b.addEventListener('pointerup', () => { if (!moved) L.steps[i] = v === 0 ? 1 : v === 1 ? 0.55 : 0; drawLines(); });
+        g.appendChild(b);
+      }
+      row.append(nm, g);
+      if (cellLines.length > 1 && !bar) {
+        const x = document.createElement('button'); x.className = 'dzlx'; x.textContent = '✕'; x.title = 'Take this line away';
+        x.addEventListener('click', () => {
+          cellLines.splice(li, 1); cellLine = Math.min(cellLine > li ? cellLine - 1 : cellLine, cellLines.length - 1);
+          if (!cellLines[cellLine].hit) cellDz.use(cellLines[cellLine].st); drawLines();
+        });
+        row.appendChild(x);
+      }
+      box.appendChild(row);
+    }
+  });
 }
 const cellHits = () => cellLines.reduce((n, L) => n + L.steps.filter(v => v).length, 0);
-// the bar: each line's hit on its steps (soft at 55%), at the tempo and swing now; a hit ringing past
-// the bar comes round to its start, so the loop is seamless
+// the bars: each line's hit on its steps (soft at 55%), at the tempo and swing now; a hit ringing past
+// the end comes round to the start, so the loop is seamless
 async function cellBar(lines = cellLines, swing = S.swing) {
-  const sd = stepDur(), sw = (2 * swing / 100 - 1) * sd, rate = DZ.SR;
-  const n = Math.round(16 * sd * rate), out = new Float32Array(n);
+  const sd = stepDur(), sw = (2 * swing / 100 - 1) * sd, rate = DZ.SR, steps = Math.max(16, ...lines.map(L => L.steps.length));
+  const n = Math.round(steps * sd * rate), out = new Float32Array(n);
   for (const L of lines) {
     if (!L.steps.some(v => v)) continue;
-    const x = (await dzHit(L.st)).getChannelData(0);
+    const x = await linePcm(L);
     L.steps.forEach((v, i) => { if (!v) return; const a = Math.round((i * sd + (i % 2 ? sw : 0)) * rate); for (let j = 0; j < x.length; j++) out[(a + j) % n] += x[j] * v; });
   }
   let top = 0; for (const v of out) top = Math.max(top, Math.abs(v));
   if (top > 0.95) for (let i = 0; i < n; i++) out[i] *= 0.95 / top;
-  const bar = ctx.createBuffer(1, n, rate); bar.copyToChannel(out, 0); return { bar };
+  const bar = ctx.createBuffer(1, n, rate); bar.copyToChannel(out, 0); return { bar, bars: steps / 16 };
 }
 $('lmDzBar').addEventListener('click', async () => {
   if (!cellHits()) { status('Tap a step or two first.'); return; }
@@ -5840,11 +5909,11 @@ $('lmDzPut').addEventListener('click', async () => {
   if (!menuCell || !cellDz) return;
   if (!cellHits()) { status('Tap a step or two first.'); return; }
   if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
-  const { c, r } = menuCell, { bar } = await cellBar();
+  const { c, r } = menuCell, { bar, bars } = await cellBar();
   const used = cellLines.filter(L => L.steps.some(v => v));
-  const name = used.length === 1 ? `${dzName(used[0].st)}, ${cellHits()} steps` : `My beat: ${used.map(L => DZ.DRUMS[L.st.kind].name.toLowerCase()).join(', ')}`;
-  const dzKeep = { lines: cellLines.map(L => ({ st: { ...L.st, p: { ...L.st.p }, f: { ...L.st.f } }, steps: [...L.steps] })), swing: S.swing };   // kept, to play again at another tempo
-  dzEmpty = false; await loopToCell(c, r, bar, name, 1, true, { dz: dzKeep });
+  const name = used.length === 1 ? `${lineName(used[0])}, ${cellHits()} steps${bars > 1 ? `, ${bars} bars` : ''}` : `My beat: ${used.map(L => (L.hit ? L.hit.name : DZ.DRUMS[L.st.kind].name).toLowerCase()).join(', ')}`;
+  const dzKeep = { lines: cellLines.map(copyLine), swing: S.swing };   // kept, to play again at another tempo
+  dzEmpty = false; cellDzFor = null; await loopToCell(c, r, bar, name, bars, true, { dz: dzKeep });
 });
 // ⬆ Upload a file into a cell: an MP3, WAV, M4A… (or a video's sound) from the device. Its tempo is guessed
 // from its beat and asked (fitted to whole bars, so it loops in time; empty: no beat, played as it is),
