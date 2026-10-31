@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261030e';
+import * as DZ from './design.js?v=20261031a';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261030e';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2194,7 +2194,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2287,7 +2287,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261030e'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -3226,7 +3226,7 @@ $('lpLock').addEventListener('click', toggleLock);
 // a sound chosen on the Pads: on the pads of both screens, until a loop is tapped
 function padsTake() {
   const sl = S.slots[S.cur]; if (!sl) return;
-  lpInst = { slot: sl, name: sl.name, cur: S.cur }; lp.slot = null; lpLevel();
+  lpInst = { slot: sl, name: sl.name, cur: S.cur }; lp.slot = null; lpLevel(); log('pads', `sound of the Pads on the pads: ${sl.name} (sound ${S.cur + 1})`);
   try { localStorage.setItem('pocketPadSound', S.cur); } catch (e) {}       // kept over a reload (and an update)
   if (view === 'both') lpDraw();
 }
@@ -4845,11 +4845,11 @@ $('lpFxDone').addEventListener('click', () => lpFxShow(false));
 EQ_BANDS.forEach(([, , b]) => fader($('lpEq' + b), v => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { ...f.eq, [b]: Math.round((v - 0.5) * 24) }; lpFxApply(); persist(); lpFxDraw(); }));
 $('lpEqFlat').addEventListener('click', () => { const f = S.grid.lpFx ||= LP_FX0(); f.eq = { lo: 0, mid: 0, hi: 0 }; lpFxApply(); persist(); lpFxDraw(); });
 function lpPick(c, r) {
-  if (S.grid.lpLock) return;                // 🔒 Lock: the pads keep their sound while the loops are played
+  if (S.grid.lpLock) { if (verbose) log('pads', `locked: ${CHANNELS[c]} ${r + 1} not put on the pads`); return; }                // 🔒 Lock: the pads keep their sound while the loops are played
   if (!S.grid.cells[c][r] || (!lpInst && lp.c === c && lp.r === r && lp.cell === S.grid.cells[c][r])) return;
   if (lpInst && lpRec) return;                // recording a designed sound: the pads keep it
   lpInst = null; try { localStorage.removeItem('pocketPadSound'); } catch (e) {}
-  lp.c = c; lp.r = r; lp.cell = null; lp.slot = null; lpKeep();
+  lp.c = c; lp.r = r; lp.cell = null; lp.slot = null; lpKeep(); log('pads', `loop on the pads: ${CHANNELS[c]} ${r + 1} (${S.grid.cells[c][r]?.name || '?'})`);
   if (view === 'both') { lpDraw(); lpSlot(); drawLoops(); if (lpEd.on) lpEdit(); }
 }
 // the pads' sound, made from the cell's loop (again when the cell, or its crop, changes)
@@ -4904,7 +4904,9 @@ function lpTargetCell() {
 function lpNote(k, t, slot, oct = 0, g = 0) {
   const R = lpRec; if (t < R.t0 - R.sd / 2) return;           // still counting in
   if (!R.src) R.src = slot;
-  if (slot !== R.src) return;                                      // one sound a recording
+  if (slot !== R.src && slot.buf !== R.src.buf) {                  // one sound a recording
+    log('rec', `a note on another sound (${slot.name}, not ${R.src.name}): not recorded`); status(`The pads are on ${slot.name} now, but this take is ${R.src.name}: that note was not recorded.`); return;
+  }
   let p = Math.max(0, (t - R.origin) / R.sd);
   if (g) p = Math.round(p / g) * g;                                // quantized: exactly on its grid point
   const cyc = Math.floor(p / R.L + 1e-9);
@@ -4973,7 +4975,7 @@ $('lprCancel').addEventListener('click', () => lprShow(false));
 $('lprGo').addEventListener('click', async () => {
   const L = lpLoopCell(), mode = lprInto, at = mode === 'new' ? lpTargetCell() : L && { c: L.c, r: L.r };
   if (!at) { status('Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
-  lprShow(false); lprAt = null;
+  lprShow(false); lprAt = null; log('rec', `start: ${mode} into ${CHANNELS[at.c]} ${at.r + 1}, ${mode === 'layer' ? L.rec.seq.bars : lprLen} bars, quantize ${S.quantGrid}, choke ${!!S.grid.lpChoke}`);
   const bars = mode === 'layer' ? L.rec.seq.bars : lprLen, old = mode === 'layer' ? L.rec.seq.notes.map(n => ({ ...n, cyc: -1 })) : [];
   const src = mode === 'layer' ? await lpSlot() : null;
   if (mode !== 'new') for (const l of colLanes(at.c)) for (const k of ['cur', 'next', 'gate']) if (l[k]?.r === at.r) { kill(l[k]); l[k] = null; }     // (it plays from the pads now)
@@ -5034,12 +5036,16 @@ async function lpRecStop() {
   lpDraw(); drawLoops();
   if (ctx.currentTime < R.t0) { R.ci?.undo?.(); status('Stopped before it began: nothing was recorded.'); return; }
   if (!R.notes.length) { status(R.mode === 'layer' ? 'Nothing was played, so the loop is as it was.' : 'Nothing was played, so nothing was recorded.'); return; }
-  const bars = R.bars, notes = [...R.old, ...R.notes].map(({ cyc, el, ...n }) => ({ ...n, t: Math.min(n.t, bars * 16 - 0.01) }));
+  const bars = R.bars, notes = [...R.old, ...R.notes].map(({ cyc, el, vs, ...n }) => ({ ...n, t: Math.min(n.t, bars * 16 - 0.01) }));      // (vs: its sounds playing, for ↶; never saved)
   const seq = { notes, bars, ...(R.q && { q: R.q }), bpm: R.bpm, root: R.root, scale: R.scale, src: packSlot(R.src), ...(S.grid.lpChoke && { choke: true }), ...(lpTrigNow() !== 'oneshot' && { trig: lpTrigNow() }), ...(lpFxOn() && { fx: JSON.parse(JSON.stringify(S.grid.lpFx)) }) };
   const name = `${(lpInst?.name || lp.cell?.name || 'Pads').replace(/, played$/, '')}, played`;
   status('Making the loop…');
-  const buf = await seqRender(seq, R.src), keep = { ...lp }, designed = !!lpInst;
-  await loopToCell(R.c, R.r, buf, name, bars, R.c < 3, { seq });
+  try { await lpRecSave(R, seq, name, bars); } catch (e) { log('error', 'rec save: ' + e.message); status(`The take could not be kept: ${e.message}`); alert(`The take could not be kept (${e.message}). Please ☁ Send to Claude from Menu › Log.`); }
+}
+async function lpRecSave(R, seq, name, bars) {
+  const buf = await seqRender(seq, R.src), keep = { ...lp }, designed = !!lpInst && lpInst.cur == null && !S.grid.lpLock;      // (a sound chosen on the Pads has cur: it stays on the pads)
+  log('rec', `stop: ${R.notes.length} notes into ${CHANNELS[R.c]} ${R.r + 1} (${R.mode}), ${bars} bars; pads: ${lpInst ? lpInst.name + (lpInst.cur != null ? ' (Pads sound)' : ' (designed)') : 'loop ' + lp.c + ',' + lp.r}${S.grid.lpLock ? ', locked' : ''}`);
+  await loopToCell(R.c, R.r, buf, name, bars, R.c < 3 && R.src?.kind === 'chop', { seq });      // (an instrument recorded into a drum column is not beat sliced)
   if (R.was && !S.grid.cells.flat().some(x => x?.mine === R.was)) { await trashMine(R.was); await refreshMine(); }         // (Layer, Replace: the old take goes, as an edit)
   if (designed) { lpInst = null; try { localStorage.removeItem('pocketPadSound'); } catch (e) {} Object.assign(lp, { c: R.c, r: R.r, cell: null, slot: null, mode: 'notes' }); }     // a designed sound: the pads follow its loop (the same instrument)
   else Object.assign(lp, keep);                              // the pads keep the sound they were playing
@@ -6320,20 +6326,20 @@ function cloudFail(what, e) {
   status(msg.split('\n')[0]); log('error', `cloud ${what}: ${e.status || ''} ${e.message}`); alert(msg);
 }
 // one commit on the sets branch: files [[path, text or null (delete)]]; the branch is made, holding only sets, the first time
-async function cloudCommit(files, message, tok, again = true) {
-  try { return await cloudCommitOnce(files, message, tok); }
-  catch (e) { if (again && e.status === 422) return cloudCommit(files, message, tok, false); throw e; }     // the branch moved meanwhile: once more, from where it is now
+async function cloudCommit(files, message, tok, again = true, branch = SETS_BRANCH) {
+  try { return await cloudCommitOnce(files, message, tok, branch); }
+  catch (e) { if (again && e.status === 422) return cloudCommit(files, message, tok, false, branch); throw e; }     // the branch moved meanwhile: once more, from where it is now
 }
-async function cloudCommitOnce(files, message, tok) {
+async function cloudCommitOnce(files, message, tok, branch = SETS_BRANCH) {
   let head = null, base = null;
-  try { head = (await gh(`/git/ref/heads/${SETS_BRANCH}`, {}, tok)).object.sha; base = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha; }
+  try { head = (await gh(`/git/ref/heads/${branch}`, {}, tok)).object.sha; base = (await gh(`/git/commits/${head}`, {}, tok)).tree.sha; }
   catch (e) { if (e.status !== 404 && e.status !== 409) throw e; }
   const tree = [];
-  for (const [path, text] of files) tree.push({ path, mode: '100644', type: 'blob', sha: text == null ? null : (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: text, encoding: 'utf-8' }) }, tok)).sha });
+  for (const [path, text] of files) tree.push({ path, mode: '100644', type: 'blob', sha: text == null ? null : (await gh('/git/blobs', { method: 'POST', body: JSON.stringify(text?.b64 != null ? { content: text.b64, encoding: 'base64' } : { content: text, encoding: 'utf-8' }) }, tok)).sha });
   const t2 = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ ...(base && { base_tree: base }), tree }) }, tok);
   const c = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: t2.sha, parents: head ? [head] : [] }) }, tok);
-  if (head) await gh(`/git/refs/heads/${SETS_BRANCH}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
-  else await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${SETS_BRANCH}`, sha: c.sha }) }, tok);
+  if (head) await gh(`/git/refs/heads/${branch}`, { method: 'PATCH', body: JSON.stringify({ sha: c.sha }) }, tok);
+  else await gh('/git/refs', { method: 'POST', body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: c.sha }) }, tok);
 }
 async function cloudSave() {
   const cur = mine.find(m => m.id === S.grid.setId) || SETS.find(x => x.id === S.grid.setId);
@@ -6375,6 +6381,32 @@ async function cloudDelete(x) {
   catch (e) { cloudFail('delete it from GitHub', e); }
 }
 $('lsCloudSave').addEventListener('click', cloudSave);
+// ☁ Send to Claude (Menu › Log): what happened (in your words), the log, what the pads, the recorder and the
+// grid are doing, and any screenshots added, to the repository's pocket-reports branch (reports/<when>/),
+// where Claude reads them. The same token as the sets.
+let logShots = [];
+$('logShots').addEventListener('change', () => { logShots = [...$('logShots').files]; $('logShotsBtn').textContent = logShots.length ? `📷 ${logShots.length} screenshot${logShots.length > 1 ? 's' : ''}` : '📷 Add screenshots'; });
+$('logShotsBtn').addEventListener('click', () => $('logShots').click());
+function stateNow() {
+  const cellName = x => x && (x.name || x.lib || x.mine);
+  let pads = null; try { pads = { lpInst: lpInst && { name: lpInst.name, cur: lpInst.cur ?? null, designed: lpInst.cur == null }, loop: { c: lp.c, r: lp.r, cell: cellName(lpCellNow()) }, oct: lp.oct || 0, lock: !!S.grid.lpLock, choke: !!S.grid.lpChoke, trig: S.grid.lpTrig || 'oneshot' }; } catch (e) {}
+  let rec = null; try { rec = lpRec && { c: lpRec.c, r: lpRec.r, mode: lpRec.mode, bars: lpRec.bars, notes: lpRec.notes.length, src: lpRec.src?.name, round: lpRec.m }; } catch (e) {}
+  return { build: BUILD, when: new Date().toString(), device: navigator.userAgent, screen: `${innerWidth}x${innerHeight}`, view, playing, bpm: S.bpm, key: `${S.root} ${S.scale}`, quantize: S.quantGrid,
+    tapLag, set: S.grid.setId || null, cur: S.cur, curSound: S.slots[S.cur]?.name, pads, rec, grid: S.grid.cells.map((col, c) => `${CHANNELS[c]}: ${col.map(cellName).map(n => n || '·').join(' | ')}`) };
+}
+$('sendLog').addEventListener('click', async () => {
+  const what = prompt('What happened? (In your own words: what you did, what you expected, what it did.)', ''); if (what === null) return;
+  const tok = cloudToken(); if (!tok) return;
+  try {
+    status('Sending to Claude…'); await cloudCheck(tok);
+    const dir = `reports/${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}`;
+    const files = [[`${dir}/what.txt`, what || '(nothing written)'], [`${dir}/log.txt`, LOG.join('\n')], [`${dir}/state.json`, JSON.stringify(stateNow(), null, 1)]];
+    for (const [i, f] of logShots.entries()) files.push([`${dir}/shot${i + 1}.${(f.name.split('.').pop() || 'png').toLowerCase()}`, { b64: b64of(new Uint8Array(await f.arrayBuffer())) }]);
+    await cloudCommit(files, `Pocket Sampler report${logShots.length ? ` with ${logShots.length} screenshot(s)` : ''}`, tok, true, 'pocket-reports');
+    logShots = []; $('logShots').value = ''; $('logShotsBtn').textContent = '📷 Add screenshots';
+    status('Sent. Tell Claude in the chat that you sent a report.'); alert('Sent to Claude. Now tell Claude in the chat that you sent a report.');
+  } catch (e) { cloudFail('send it', e); }
+});
 // 🗑 Delete a set: tap it, then a set (in My sets or On GitHub): it goes from this device and from GitHub,
 // both copies, matched by name (or by where it was loaded from). The sounds it brought stay in My Sounds.
 var setDel = false;
