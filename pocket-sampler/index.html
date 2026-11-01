@@ -736,7 +736,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031n</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031o</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -1124,7 +1124,7 @@
     <input type="file" id="logShots" accept="image/*" multiple hidden>
     <pre id="logView"></pre>
     <p class="note">If something misbehaves: turn Verbose on, do it again until it happens, then write a note in the box (what you did, what you expected, what it did) and <b>☁ Send to Claude</b>: it sends your note, this log, what the pads, the recorder and the grid are doing, and any screenshots you add (📷 Add screenshots, first), to the repository on GitHub (with the same token as the sets; anyone could read it there), for Claude to read. Then say in the chat that you sent one. (Copy log puts the log on the clipboard instead.)</p>
-    <p class="note"><b>🎙 Record what it plays</b>: tap it, play the way that loses notes (up to a minute), tap it again, then ☁ Send to Claude. It records what the app sends to the speaker (not the microphone) and logs every tap with its time, so Claude can match each tap to the sound and see which made none, which came late, and which never arrived.</p>
+    <p class="note"><b>🎙 Record what it plays</b>: tap it, play the way that loses notes (up to two minutes; it says when it stops by itself), tap it again, then ☁ Send to Claude. It records what the app sends to the speaker (not the microphone) and logs every tap with its time, so Claude can match each tap to the sound and see which made none, which came late, and which never arrived.</p>
     <p class="note"><b>🔬 Test this device</b> (about a minute and a half): with a set on the grid, it plays the set in stages, 15 seconds each, and counts how often the sound breaks up in each: nothing playing, then 1, 2, 4 and all of its loops, then all of them with the reverb, echoes and chorus (which run, waiting, even when nothing uses them) unplugged. Then ☁ Send to Claude: the log shows what makes this device struggle.</p>
     <p class="note">The workload meter (a small line at the bottom of the screen, while it is on; tap it for more, and ⧉ Copy and ✕): <b>Sound</b>, how often the sound broke up in the last minute (0 is right); <b>Busy</b>, the longest the app was too busy to answer in the last second (under 50 ms you will not notice; over 100 ms taps and the screen lag); <b>Screen</b>, frames a second (60 is smooth); then how many loops and notes are playing, effects turned on, and loops still being made ready for a new tempo or key. Every 5 seconds it writes a line to this log: play a set the way you usually do, then ⧉ Copy on the meter (or Copy log here) and paste it into a message.</p>
   </div>
@@ -1327,6 +1327,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031n"></script>
+<script type="module" src="app.js?v=20261031o"></script>
 </body>
 </html>
