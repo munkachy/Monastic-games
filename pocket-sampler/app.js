@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031t';
+import * as DZ from './design.js?v=20261101a';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031t';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261101a';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2359,7 +2359,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101a'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2452,7 +2452,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031t'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101a'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5708,7 +5708,7 @@ function openCellMenu(c, r) {
   if (!S.grid.cells[c][r] && lPane !== 'set') document.querySelector('[data-lpane="set"]').click();
   $('lsets').hidden = true; $('lmenu').hidden = false; drawCellMenu();
 }
-function closeCellMenu() { $('lmenu').hidden = true; menuCell = null; drawLoops(); }
+function closeCellMenu() { dzLoopStop(); $('lmenu').hidden = true; menuCell = null; drawLoops(); }
 // A setting that changes the sound itself: saved, and a playing cell carries on, changed, from the next bar.
 function changed(c, r) { persist(); retake(c, r); warmGridSoon(); drawCellMenu(); drawLoops(); }
 // A cell's settings changed while it plays: it carries on, changed, from the next bar.
@@ -5979,7 +5979,7 @@ function cellDesign(c, r) {
   cellDz ||= drumDesigner($('lmDz'), () => drawLines(), true);
   const at = `${c}:${r}`;
   if (cellDzFor !== at) {          // a cell new to it: what it was made with, or the drum and steps its column suggests
-    cellDzFor = at; cellLine = 0;
+    dzLoopStop(); cellDzFor = at; cellLine = 0;
     const cell = S.grid.cells[c][r], rec = cell?.mine && mine.find(m => m.id === cell.mine);
     if (rec?.dz?.lines?.length) cellLines = rec.dz.lines.map(copyLine);
     else {
@@ -6085,15 +6085,39 @@ async function cellBar(lines = cellLines, swing = S.swing) {
   if (top > 0.95) for (let i = 0; i < n; i++) out[i] *= 0.95 / top;
   const bar = ctx.createBuffer(1, n, rate); bar.copyToChannel(out, 0); return { bar, bars: steps / 16 };
 }
-$('lmDzBar').addEventListener('click', async () => {
-  if (!cellHits()) { status('Tap a step or two first.'); return; }
-  const { bar } = await cellBar(); dzPlay(bar, playing ? nextBar().when : ctx.currentTime + 0.02);
-});
+// ▶ Hear it: round and round until ■ Stop, each time round as the steps, sound and length are then (a change
+// is heard the next time round, made a quarter second before it comes); on the next bar if the song plays.
+let dzLoop = null;
+function dzLoopStop() {
+  const L = dzLoop; dzLoop = null; if (!L) return;
+  clearTimeout(L.timer); for (const s of L.srcs) try { s.stop(); s.disconnect(); } catch (e) {}
+  $('lmDzBar').textContent = '▶ Hear it'; $('lmDzBar').classList.remove('on');
+}
+async function dzLoopStart() {
+  ctx.resume();
+  const me = dzLoop = { srcs: [], sig: null, bar: null, timer: 0 };
+  $('lmDzBar').textContent = '■ Stop'; $('lmDzBar').classList.add('on');
+  const sig = () => JSON.stringify([cellLines.map(L => [L.hit, L.st, L.steps]), S.swing, stepDur()]);
+  let at = playing ? nextBar().when : ctx.currentTime + 0.05;
+  const pass = async () => {
+    if (dzLoop !== me) return;
+    const s = sig(); if (s !== me.sig) { me.bar = (await cellBar()).bar; me.sig = s; }       // changed: made again
+    if (dzLoop !== me) return;
+    if (at < ctx.currentTime + 0.01) at = ctx.currentTime + 0.02;          // (it fell behind: on again at once)
+    const src = ctx.createBufferSource(), g = ctx.createGain(); g.gain.value = 0.6; src.buffer = me.bar; src.connect(g); g.connect(eng.bus);
+    src.start(at); me.srcs = [...me.srcs.slice(-1), src];
+    at += me.bar.duration;
+    me.timer = setTimeout(pass, Math.max(0, (at - ctx.currentTime - 0.25) * 1000));
+  };
+  await pass();
+}
+$('lmDzBar').addEventListener('click', () => { if (dzLoop) dzLoopStop(); else dzLoopStart(); });
 $('lmDzSave').addEventListener('click', async () => { if (cellDz) await saveMine(hitSlot(await cellDz.buffer(), cellDz.name()), cellDz.name()); });
 $('lmDzPut').addEventListener('click', async () => {
   if (!menuCell || !cellDz) return;
   if (!cellHits()) { status('Tap a step or two first.'); return; }
   if (!db) { status('Saving needs this browser’s storage, which is not available here.'); return; }
+  dzLoopStop();
   const { c, r } = menuCell, { bar, bars } = await cellBar();
   const used = cellLines.filter(L => L.steps.some(v => v));
   const name = used.length === 1 ? `${lineName(used[0])}, ${cellHits()} steps${bars > 1 ? `, ${bars} bars` : ''}` : `My beat: ${used.map(L => (L.hit ? L.hit.name : DZ.DRUMS[L.st.kind].name).toLowerCase()).join(', ')}`;
@@ -6329,6 +6353,7 @@ $('lmRollUndo').addEventListener('click', () => {
 let lPane = 'set';
 document.querySelectorAll('[data-lpane]').forEach(b => b.addEventListener('click', () => {
   lPane = b.dataset.lpane;
+  if (lPane !== 'design') dzLoopStop();
   if (lPane === 'rap') openPsalter();          // the psalms, the first time
   if (lPane === 'mic') { micDraw(); drawCountIn(); }
   document.querySelectorAll('[data-lpane]').forEach(x => x.classList.toggle('on', x === b));
