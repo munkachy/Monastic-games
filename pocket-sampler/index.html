@@ -537,6 +537,10 @@
   .lmdz .dzrow select { font: inherit; font-size: 11px; max-width: 120px; padding: 6px 4px; border-radius: 6px; background: var(--btn); color: var(--btn-ink); border: 0; }
   .lmdz .dzrow button { font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 6px; padding: 6px 9px; background: var(--btn); color: var(--btn-ink); }
   .lmdz .dzrow .dzmodeset { margin: 0; }
+  .dzbottom { display: flex; gap: 10px; align-items: stretch; } .dzbottom .lmdz { flex: 1; min-width: 0; }
+  .dzpad { flex: none; width: 104px; min-height: 84px; border: 0; border-radius: 12px; background: color-mix(in srgb, var(--c, var(--accent)) 35%, var(--btn)); color: var(--btn-ink);
+    font: inherit; font-weight: 800; letter-spacing: .12em; touch-action: none; -webkit-user-select: none; user-select: none; }
+  .dzpad.down { background: var(--c, var(--accent)); color: #000; }
   .lmdz .dzgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; }
   .lmdz .dzgrid > div { display: contents; }
   .lmdz .dzgrid .row { grid-template-columns: 68px 1fr 44px; margin: 2px 0; gap: 5px; font-size: 11px; }
@@ -750,7 +754,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261101b</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261101c</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -873,7 +877,7 @@
       <div class="lpane" data-pane="design" hidden>     <!-- a hit designed here, on the steps of a bar, into this cell -->
         <div class="lmodes dztop"><button id="lmDzBar">▶ Hear it</button><button id="lmDzPut" class="on">✓ Put in cell</button><span id="lmDzOpts" class="dzopts"></span><span class="grow"></span><button id="lmDzSave" title="Save the hit to My Sounds">★ Save</button></div>
         <div id="lmSteps"></div>
-        <div id="lmDz" class="lmdz"></div>
+        <div class="dzbottom"><div id="lmDz" class="lmdz"></div><button id="lmDzPad" class="dzpad" title="Tap: the sound; with ▶ Hear it going round, a hit on the nearest step">TAP</button></div>
       </div>
       <div class="lpane two" data-pane="set">
         <div class="lrobot" id="lwBox" hidden>     <!-- a robot voice: what it says, and its voice -->
@@ -1339,6 +1343,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261101b"></script>
+<script type="module" src="app.js?v=20261101c"></script>
 </body>
 </html>
