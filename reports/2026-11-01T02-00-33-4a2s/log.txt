@@ -1,0 +1,295 @@
+   0.00s start  build 20261031n; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+   0.00s audio  sample rate 32000 Hz, base latency 4.0 ms, state suspended
+   0.00s audio  audio session: auto
+   0.12s load   meter on: light engine, 32000 Hz, 4 cores; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+   1.23s audio  output latency 0 ms
+   5.26s load   sound 0 breaks/min · busy worst 713 ms · screen worst 18 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 15 · mmvwxcp5us
+   8.89s heard  recording what the app plays: start (left: everything; right: the pads alone; taps are logged)
+   9.05s state  running
+   9.05s wake   tap: suspended -> running
+   9.25s glitch audio clock fell 892 ms behind in 1.0 s (the phone dropped sound)
+  10.25s glitch audio clock fell 80 ms behind in 1.0 s (the phone dropped sound)
+  10.25s load   sound 2 breaks/min · busy worst 7 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  15.25s load   sound 2 breaks/min · busy worst 34 ms · screen worst 47 fps · playing 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 5 · mmvwxcp5us
+  15.45s pads   loop on the pads: Kick 1 (Electro Kit, played)
+  15.47s loops  column 1 cell 1 from tick 16.0
+  15.98s pads   loop on the pads: Snare 1 (Dusty snare, 2 steps)
+  16.00s loops  column 2 cell 1 from tick 16.0
+  16.34s pads   loop on the pads: Tops 1 (Dusty hat, 16 steps)
+  16.35s loops  column 3 cell 1 from tick 32.0
+  20.25s load   sound 2 breaks/min · busy worst 24 ms · screen worst 51 fps · playing 100 BPM · 10 loops, 10 notes · fx 0 on 0 cols · waiting 12 · mmvwxcp5us
+  22.80s pads   loop on the pads: Lead 2 (Chip lead, played)
+  23.31s loops  column 6 cell 2 from tick 64.0
+  25.25s load   sound 2 breaks/min · busy worst 2 ms · screen worst 52 fps · playing 100 BPM · 10 loops, 10 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  25.72s tap    pad 10
+  25.74s note   pad 10: plays
+  26.08s tap    pad 7
+  26.08s note   pad 7: plays
+  26.70s tap    pad 6
+  26.75s note   pad 6: plays
+  27.04s tap    pad 5
+  27.05s note   pad 5: plays
+  28.46s tap    pad 10
+  28.47s note   pad 10: plays
+  28.60s tap    pad 7
+  28.61s note   pad 7: plays
+  28.76s tap    pad 6
+  28.76s note   pad 6: plays
+  29.14s tap    pad 7
+  29.15s note   pad 7: plays
+  29.40s tap    pad 6
+  29.41s note   pad 6: plays
+  29.68s tap    pad 5
+  29.69s note   pad 5: plays
+  30.26s load   sound 2 breaks/min · busy worst 8 ms · screen worst 53 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  30.55s tap    pad 8
+  30.56s note   pad 8: plays
+  30.71s tap    pad 7
+  30.71s note   pad 7: plays
+  30.84s tap    pad 8
+  30.84s note   pad 8: plays
+  30.95s tap    pad 7
+  30.95s note   pad 7: plays
+  31.08s tap    pad 8
+  31.08s note   pad 8: plays
+  31.24s tap    pad 7
+  31.25s note   pad 7: plays
+  31.53s tap    pad 6
+  31.54s note   pad 6: plays
+  31.83s tap    pad 5
+  31.83s note   pad 5: plays
+  32.48s tap    pad 8
+  32.48s note   pad 8: plays
+  32.58s tap    pad 7
+  32.58s note   pad 7: plays
+  32.76s tap    pad 10
+  32.77s note   pad 10: plays
+  33.35s tap    pad 8
+  33.36s note   pad 8: plays
+  33.45s tap    pad 7
+  33.45s note   pad 7: plays
+  33.67s tap    pad 6
+  33.67s note   pad 6: plays
+  34.08s tap    pad 8
+  34.10s note   pad 8: plays
+  34.18s tap    pad 7
+  34.19s note   pad 7: plays
+  34.30s tap    pad 8
+  34.31s note   pad 8: plays
+  34.53s tap    pad 6
+  34.54s note   pad 6: plays
+  35.26s load   sound 2 breaks/min · busy worst 2 ms · screen worst 54 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  35.36s tap    pad 8
+  35.36s note   pad 8: plays
+  35.70s tap    pad 6
+  35.71s note   pad 6: plays
+  36.47s tap    pad 8
+  36.48s note   pad 8: plays
+  36.77s tap    pad 6
+  36.78s note   pad 6: plays
+  37.77s tap    pad 8
+  37.78s note   pad 8: plays
+  38.08s tap    pad 6
+  38.08s note   pad 6: plays
+  38.98s tap    pad 8
+  39.01s note   pad 8: plays
+  39.10s tap    pad 7
+  39.10s note   pad 7: plays
+  39.36s tap    pad 6
+  39.36s note   pad 6: plays
+  40.16s tap    pad 8
+  40.17s note   pad 8: plays
+  40.26s load   sound 2 breaks/min · busy worst 37 ms · screen worst 55 fps · playing 100 BPM · 9 loops, 10 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  40.37s tap    pad 8
+  40.38s note   pad 8: plays
+  40.54s tap    pad 8
+  40.54s note   pad 8: plays
+  40.73s tap    pad 8
+  40.73s note   pad 8: plays
+  40.92s tap    pad 8
+  40.93s note   pad 8: plays
+  41.11s tap    pad 8
+  41.11s note   pad 8: plays
+  41.28s tap    pad 8
+  41.28s note   pad 8: plays
+  41.46s tap    pad 8
+  41.47s note   pad 8: plays
+  41.65s tap    pad 8
+  41.65s note   pad 8: plays
+  41.83s tap    pad 8
+  41.83s note   pad 8: plays
+  42.00s tap    pad 8
+  42.00s note   pad 8: plays
+  42.18s tap    pad 8
+  42.19s note   pad 8: plays
+  42.35s tap    pad 8
+  42.36s note   pad 8: plays
+  42.52s tap    pad 8
+  42.53s note   pad 8: plays
+  42.89s tap    pad 8
+  42.90s note   pad 8: plays
+  43.07s tap    pad 8
+  43.07s note   pad 8: plays
+  43.15s tap    pad 8
+  43.16s note   pad 8: plays
+  43.27s tap    pad 8
+  43.27s note   pad 8: plays
+  43.36s tap    pad 8
+  43.36s note   pad 8: plays
+  43.48s tap    pad 8
+  43.49s note   pad 8: plays
+  43.54s tap    pad 8
+  43.54s note   pad 8: plays
+  43.66s tap    pad 8
+  43.66s note   pad 8: plays
+  43.74s tap    pad 8
+  43.74s note   pad 8: plays
+  43.89s tap    pad 8
+  43.90s note   pad 8: plays
+  43.97s tap    pad 8
+  43.97s note   pad 8: plays
+  44.08s tap    pad 8
+  44.08s note   pad 8: plays
+  44.27s tap    pad 8
+  44.28s note   pad 8: plays
+  44.40s tap    pad 8
+  44.41s note   pad 8: plays
+  44.70s tap    pad 8
+  44.70s note   pad 8: plays
+  44.87s tap    pad 8
+  44.88s note   pad 8: plays
+  44.98s tap    pad 8
+  44.99s note   pad 8: plays
+  45.10s tap    pad 8
+  45.11s note   pad 8: plays
+  45.19s tap    pad 8
+  45.19s note   pad 8: plays
+  45.26s load   sound 2 breaks/min · busy worst 2 ms · screen worst 52 fps · playing 100 BPM · 9 loops, 12 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  45.30s tap    pad 8
+  45.31s note   pad 8: plays
+  45.38s tap    pad 8
+  45.38s note   pad 8: plays
+  45.49s tap    pad 8
+  45.49s note   pad 8: plays
+  45.58s tap    pad 8
+  45.58s note   pad 8: plays
+  45.68s tap    pad 8
+  45.68s note   pad 8: plays
+  45.95s tap    pad 7
+  45.95s note   pad 7: plays
+  46.28s tap    pad 7
+  46.29s note   pad 7: plays
+  46.55s tap    pad 5
+  46.56s note   pad 5: plays
+  47.32s tap    pad 8
+  47.33s note   pad 8: plays
+  47.50s tap    pad 8
+  47.51s note   pad 8: plays
+  47.60s tap    pad 8
+  47.60s note   pad 8: plays
+  47.69s tap    pad 8
+  47.69s note   pad 8: plays
+  47.79s tap    pad 8
+  47.79s note   pad 8: plays
+  47.98s tap    pad 8
+  47.99s note   pad 8: plays
+  48.33s tap    pad 7
+  48.33s note   pad 7: plays
+  48.69s tap    pad 6
+  48.69s note   pad 6: plays
+  49.20s tap    pad 7
+  49.21s note   pad 7: plays
+  49.37s tap    pad 7
+  49.38s note   pad 7: plays
+  49.46s tap    pad 7
+  49.46s note   pad 7: plays
+  49.56s tap    pad 7
+  49.57s note   pad 7: plays
+  49.66s tap    pad 7
+  49.66s note   pad 7: plays
+  49.76s tap    pad 7
+  49.76s note   pad 7: plays
+  50.15s tap    pad 6
+  50.16s note   pad 6: plays
+  50.27s load   sound 2 breaks/min · busy worst 29 ms · screen worst 54 fps · playing 100 BPM · 9 loops, 10 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  50.52s tap    pad 5
+  50.52s note   pad 5: plays
+  50.97s tap    pad 10
+  50.99s note   pad 10: plays
+  51.12s tap    pad 6
+  51.12s note   pad 6: plays
+  51.20s tap    pad 10
+  51.21s note   pad 10: plays
+  51.34s tap    pad 6
+  51.34s note   pad 6: plays
+  51.46s tap    pad 10
+  51.47s note   pad 10: plays
+  51.62s tap    pad 6
+  51.62s note   pad 6: plays
+  51.71s tap    pad 10
+  51.72s note   pad 10: plays
+  51.88s tap    pad 6
+  51.89s note   pad 6: plays
+  52.02s tap    pad 10
+  52.03s note   pad 10: plays
+  52.19s tap    pad 6
+  52.19s note   pad 6: plays
+  52.39s tap    pad 6
+  52.40s note   pad 6: plays
+  52.48s tap    pad 10
+  52.48s note   pad 10: plays
+  52.60s tap    pad 6
+  52.60s note   pad 6: plays
+  52.81s tap    pad 10
+  52.81s note   pad 10: plays
+  53.52s tap    pad 8
+  53.53s note   pad 8: plays
+  53.60s tap    pad 7
+  53.61s note   pad 7: plays
+  53.75s tap    pad 6
+  53.76s note   pad 6: plays
+  54.18s tap    pad 8
+  54.21s note   pad 8: plays
+  54.24s tap    pad 7
+  54.25s note   pad 7: plays
+  54.32s tap    pad 6
+  54.33s note   pad 6: plays
+  54.91s tap    pad 8
+  54.93s note   pad 8: plays
+  55.15s tap    pad 7
+  55.15s note   pad 7: plays
+  55.27s load   sound 2 breaks/min · busy worst 21 ms · screen worst 53 fps · playing 100 BPM · 9 loops, 11 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  55.32s tap    pad 6
+  55.33s note   pad 6: plays
+  55.53s tap    pad 8
+  55.54s note   pad 8: plays
+  55.70s tap    pad 7
+  55.70s note   pad 7: plays
+  55.87s tap    pad 6
+  55.88s note   pad 6: plays
+  56.06s tap    pad 8
+  56.07s note   pad 8: plays
+  56.22s tap    pad 7
+  56.22s note   pad 7: plays
+  56.38s tap    pad 6
+  56.38s note   pad 6: plays
+  56.56s tap    pad 8
+  56.56s note   pad 8: plays
+  56.81s tap    pad 6
+  56.81s note   pad 6: plays
+  56.93s tap    pad 8
+  56.93s note   pad 8: plays
+  57.01s tap    pad 7
+  57.02s note   pad 7: plays
+  57.11s tap    pad 6
+  57.11s note   pad 6: plays
+  60.27s load   sound 2 breaks/min · busy worst 5 ms · screen worst 55 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  65.27s load   sound 2 breaks/min · busy worst 2 ms · screen worst 57 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  68.97s heard  recording stopped: 60.1 s, 1.39 MB (audio/mp4)
+  69.22s heard  recording what the app plays: start (left: everything; right: the pads alone; taps are logged)
+  70.28s load   sound 0 breaks/min · busy worst 31 ms · screen worst 53 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  70.56s heard  recording stopped: 1.3 s, 0.03 MB (audio/mp4)
+  75.28s load   sound 0 breaks/min · busy worst 20 ms · screen worst 28 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  80.28s load   sound 0 breaks/min · busy worst 4 ms · screen worst 53 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  85.29s load   sound 0 breaks/min · busy worst 5 ms · screen worst 58 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  90.30s load   sound 0 breaks/min · busy worst 22 ms · screen worst 54 fps · playing 100 BPM · 9 loops, 9 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
