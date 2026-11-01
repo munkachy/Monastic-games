@@ -213,6 +213,7 @@
   .key.head::before { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 2; pointer-events: none;
     box-shadow: inset 0 0 0 3px var(--head), inset 0 0 0 5px #000; }
   .key.head i { background: var(--head); box-shadow: 0 0 0 2px #000, 0 0 8px var(--head); }
+  .keys .key, .lpkeys button { touch-action: none; }     /* (the pads: no gesture of Safari's at all, not even the double tap) */
   .key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--key-sh); background: var(--key-down); }
   :root:not(.classic) .key.down { background: #3a3a44; }
   .key.tint.down { box-shadow: inset 0 0 0 2px var(--c), 0 1px 0 var(--key-sh); }
@@ -434,7 +435,7 @@
   .lpfx .lmodes.wrap { flex-wrap: wrap; } .lpfx .lmodes button { padding: 5px 8px; } .lpfx .lmodes.wrap { gap: 4px; } .lpfx .lfader.wide { height: 22px; }
   #lpWave { flex: 1; min-height: 60px; width: 100%; border-radius: 8px; display: block; touch-action: none; box-shadow: inset 0 0 0 1px #ffffff1c; }
   .lped .lmodes { margin: 0; } .lped .lmodes button { padding: 7px 12px; }
-  .lpkeys { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; }
+  .lpkeys { touch-action: none; flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); gap: 6px; }
   .lpkeys button { position: relative; border: 0; border-radius: 10px; font: inherit; font-size: 11px; font-weight: 700; color: var(--key-ink);
     background: color-mix(in srgb, var(--c) 22%, var(--key)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 70%, transparent);
     touch-action: none; display: flex; align-items: flex-start; justify-content: flex-start; padding: 6px 8px; }
@@ -736,7 +737,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031r</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261031s</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -1327,6 +1328,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261031r"></script>
+<script type="module" src="app.js?v=20261031s"></script>
 </body>
 </html>
