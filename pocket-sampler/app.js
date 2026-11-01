@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031l';
+import * as DZ from './design.js?v=20261031m';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031l';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031m';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -928,6 +928,26 @@ for (let k = 0; k < 16; k++) {
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   $('keys').appendChild(b); keyEls.push(b);
 }
+// A finger landing in the gap between two pads (fast drumming lands on edges) plays the pad nearest it,
+// instead of nothing; within 24 px of one.
+function gapTouches(box, els, press1, release1) {
+  box.addEventListener('pointerdown', ev => {
+    if (els.some(e => e.contains(ev.target))) return;          // on a pad: its own
+    let best = -1, bd = 25;
+    els.forEach((e, k) => {
+      if (!e.offsetParent) return;
+      const r = e.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - ev.clientX, 0, ev.clientX - r.right), Math.max(r.top - ev.clientY, 0, ev.clientY - r.bottom));
+      if (d < bd) { bd = d; best = k; }
+    });
+    if (best < 0) return;
+    ev.preventDefault(); capture(box, ev); const k = best, id = ev.pointerId;
+    if (verbose) log('tap', `between pads: pad ${k + 1}, the nearest`);
+    press1(k);
+    const end = e2 => { if (e2.pointerId !== id) return; for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) box.removeEventListener(t, end); release1(k); };
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) box.addEventListener(t, end);
+  });
+}
+gapTouches($('keys'), keyEls, k => { if (down.has(k)) release(k); press(k); }, k => release(k));
 let copying = null;           // 'sound' or 'pattern': the next key is where it goes
 function press(k) {
   if (down.has(k)) return;
@@ -2241,7 +2261,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031m'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2334,7 +2354,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031l'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031m'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4822,6 +4842,7 @@ for (let k = 0; k < 16; k++) {
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   lpKeys.push(b); $('lpKeys').appendChild(b);
 }
+gapTouches($('lpKeys'), lpKeys, k => { if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); }, k => lpRelease(k));
 // a pad played (a finger, or the computer's keys: 1234 / QWER / ASDF / ZXCV)
 // While the beat plays, a tap lands on the next point of the Quantize (1/16, 1/8, 1/4; one just after a
 // point plays at once); Free, or stopped: at once. While ⏺ Rec records, always at once: a recording keeps
