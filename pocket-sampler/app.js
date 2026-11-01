@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031p';
+import * as DZ from './design.js?v=20261031q';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031p';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031q';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -948,27 +948,53 @@ let robotTarget = -1;          // the sound the Robot pads are on
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button'); b.className = 'key';
   b.innerHTML = `<u class="fill"></u><b>${k + 1}</b><span></span><i></i><em class="tag"></em>`;
-  let hold = 0;
-  b.addEventListener('pointerdown', ev => {
-    ev.preventDefault(); capture(b, ev);
-    // a new touch always plays: if the last one's lifting never came (the iPad can drop it when fingers move
-    // fast or overlap), the pad would seem still held and every tap on it be ignored
-    if (down.has(k)) { if (verbose) log('tap', `key ${k + 1}: touched again before its let-go came; let go first`); release(k); }
-    press(k);
-    clearTimeout(hold);
-    if (S.mode === 'sound' && !copying) hold = setTimeout(() => { if (S.cur === k) openSoundSheet(k); }, 550);   // hold: the sound's own menu
-  });
-  const up = () => { clearTimeout(hold); release(k); };
+  // a finger: touchPads below; the mouse or a pen: here
+  b.addEventListener('pointerdown', ev => { if (ev.pointerType === 'touch') return; ev.preventDefault(); capture(b, ev); keyDown(k); });
+  const up = ev => { if (ev.pointerType !== 'touch') keyUp(k); };
   b.addEventListener('pointerup', up); b.addEventListener('lostpointercapture', up);
-  b.addEventListener('pointercancel', () => { if (verbose) log('tap', `key ${k + 1}: the iPad cancelled the touch`); up(); });
+  b.addEventListener('pointercancel', ev => { if (ev.pointerType === 'touch') return; if (verbose) log('tap', `key ${k + 1}: cancelled`); keyUp(k); });
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   $('keys').appendChild(b); keyEls.push(b);
 }
-// A finger landing in the gap between two pads (fast drumming lands on edges) plays the pad nearest it,
-// instead of nothing; within 24 px of one.
+const keyHolds = [];
+function keyDown(k) {
+  // a new touch always plays: if the last one's lifting never came, the pad would seem still held and be ignored
+  if (down.has(k)) { if (verbose) log('tap', `key ${k + 1}: touched again before its let-go came; let go first`); release(k); }
+  press(k);
+  clearTimeout(keyHolds[k]);
+  if (S.mode === 'sound' && !copying) keyHolds[k] = setTimeout(() => { if (S.cur === k) openSoundSheet(k); }, 550);   // hold: the sound's own menu
+}
+function keyUp(k) { clearTimeout(keyHolds[k]); release(k); }
+// The pads under a finger: taken the moment it lands (touchstart), with Safari told to leave the touch
+// alone (no scroll, zoom or double-tap check first). Safari's own checks let some quick taps on the iPad
+// never reach the page at all, where an app (GarageBand) gets every one. Each finger is its own pad;
+// one landing in a gap plays the nearest pad (within 24 px).
+function padAt(els, x, y) {
+  let best = -1, bd = 25;
+  els.forEach((e, k) => {
+    if (!e.offsetParent) return;
+    const r = e.getBoundingClientRect(), d = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    if (d < bd) { bd = d; best = k; }
+  });
+  return best;
+}
+function touchPads(box, els, press1, release1) {
+  const held = new Map();          // finger -> pad
+  box.addEventListener('touchstart', ev => {
+    ev.preventDefault();
+    for (const t of ev.changedTouches) {
+      const k = padAt(els, t.clientX, t.clientY); if (k < 0) continue;
+      held.set(t.identifier, k); press1(k);
+    }
+  }, { passive: false });
+  const end = ev => { for (const t of ev.changedTouches) { const k = held.get(t.identifier); if (k == null) continue; held.delete(t.identifier); release1(k); } };
+  box.addEventListener('touchend', end); box.addEventListener('touchcancel', end);
+}
+touchPads($('keys'), keyEls, keyDown, keyUp);
+// The mouse in the gap between two pads plays the pad nearest it (a finger: touchPads)
 function gapTouches(box, els, press1, release1) {
   box.addEventListener('pointerdown', ev => {
-    if (els.some(e => e.contains(ev.target))) return;          // on a pad: its own
+    if (ev.pointerType === 'touch' || els.some(e => e.contains(ev.target))) return;          // on a pad: its own
     let best = -1, bd = 25;
     els.forEach((e, k) => {
       if (!e.offsetParent) return;
@@ -983,7 +1009,7 @@ function gapTouches(box, els, press1, release1) {
     for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) box.addEventListener(t, end);
   });
 }
-gapTouches($('keys'), keyEls, k => { if (down.has(k)) release(k); press(k); }, k => release(k));
+gapTouches($('keys'), keyEls, keyDown, keyUp);
 // Verbose: every finger on the glass, as the iPad reports it (touchstart / touchend, before the app does
 // anything), and every press the browser makes of it (pointerdown), with what it landed on and how long
 // it took to reach the app; so a tap that never lit a pad shows where it went.
@@ -2315,7 +2341,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031q'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2408,7 +2434,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031p'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031q'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -4889,14 +4915,14 @@ function lpKeep() { const cell = S.grid.cells[lp.c]?.[lp.r]; if (cell) lp.saved 
 const lpKeys = [];
 for (let k = 0; k < 16; k++) {
   const b = document.createElement('button');
-  b.addEventListener('pointerdown', ev => { ev.preventDefault(); capture(b, ev); if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); });
-  const up = () => lpRelease(k);
-  b.addEventListener('pointerup', up); b.addEventListener('lostpointercapture', up);
-  b.addEventListener('pointercancel', () => { if (verbose) log('tap', `pad ${k + 1}: the iPad cancelled the touch`); up(); });
+  b.addEventListener('pointerdown', ev => { if (ev.pointerType === 'touch') return; ev.preventDefault(); capture(b, ev); if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); });
+  const up = ev => { if (ev.pointerType !== 'touch') lpRelease(k); };
+  b.addEventListener('pointerup', up); b.addEventListener('lostpointercapture', up); b.addEventListener('pointercancel', up);
   b.addEventListener('contextmenu', ev => ev.preventDefault());
   lpKeys.push(b); $('lpKeys').appendChild(b);
 }
 gapTouches($('lpKeys'), lpKeys, k => { if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); }, k => lpRelease(k));
+touchPads($('lpKeys'), lpKeys, k => { if (verbose && view === 'both') log('tap', `pad ${k + 1}`); lpPress(k); }, k => lpRelease(k));
 // a pad played (a finger, or the computer's keys: 1234 / QWER / ASDF / ZXCV)
 // While the beat plays, a tap lands on the next point of the Quantize (1/16, 1/8, 1/4; one just after a
 // point plays at once); Free, or stopped: at once. While ⏺ Rec records, always at once: a recording keeps
