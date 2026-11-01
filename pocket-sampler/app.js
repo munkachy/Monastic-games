@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031m';
+import * as DZ from './design.js?v=20261031n';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031m';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031n';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -220,6 +220,40 @@ async function deviceTest() {
   status('Test done. Write "test" in the note box and ☁ Send to Claude.');
 }
 $('testBtn').addEventListener('click', deviceTest);
+// 🎙 Record what it plays (Menu › Log): the app's own output (what goes to the speaker), up to a minute,
+// with every tap logged (Verbose), sent with ☁ Send to Claude: each tap can then be matched to the sound.
+// Plugged into the output only while it records.
+let heard = null, heardFile = null;
+function heardStop() {
+  if (!heard) return; const h = heard; heard = null; clearTimeout(h.timer);
+  try { h.mr.stop(); } catch (e) {}
+}
+$('heardBtn').addEventListener('click', () => {
+  if (heard) { heardStop(); return; }
+  if (!window.MediaRecorder || !ctx.createMediaStreamDestination) { status('This browser cannot record what it plays.'); return; }
+  ctx.resume();
+  // left: everything (as heard, made mono); right: the pads alone
+  const dest = ctx.createMediaStreamDestination(), mix = ctx.createChannelMerger(2), mono = () => Object.assign(ctx.createGain(), { channelCount: 1, channelCountMode: 'explicit' });
+  const all = mono(), pads = mono(); lpStripNow(); const padsOut = eng.lpLvl;
+  eng.master.connect(all); all.connect(mix, 0, 0); if (padsOut) { padsOut.connect(pads); pads.connect(mix, 0, 1); } mix.connect(dest);
+  const type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported?.(t)) || '';
+  const mr = new MediaRecorder(dest.stream, type ? { mimeType: type } : {}), chunks = [];
+  verbose = true; $('verbose').checked = true;
+  mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  mr.onstop = () => {
+    try { eng.master.disconnect(all); } catch (e) {} try { padsOut?.disconnect(pads); } catch (e) {} try { mix.disconnect(); } catch (e) {}
+    const blob = new Blob(chunks, { type: mr.mimeType || type || 'audio/webm' }), secs = (performance.now() - t1) / 1000;
+    heardFile = { blob, ext: /mp4|aac|m4a/.test(blob.type) ? 'm4a' : 'webm' };
+    log('heard', `recording stopped: ${secs.toFixed(1)} s, ${(blob.size / 1e6).toFixed(2)} MB (${blob.type})`);
+    $('heardBtn').textContent = `🎙 Recorded ${Math.round(secs)} s: goes with ☁ Send to Claude`; $('heardBtn').classList.remove('on');
+    status('Recorded. Write a note and ☁ Send to Claude.');
+  };
+  const t1 = performance.now();
+  mr.start(1000); log('heard', 'recording what the app plays: start (left: everything; right: the pads alone; taps are logged)');
+  heard = { mr, timer: setTimeout(heardStop, 60000) };
+  $('heardBtn').textContent = '■ Stop recording'; $('heardBtn').classList.add('on');
+  status('Recording what the app plays (up to a minute): play the way that loses notes, then ■ Stop recording.');
+});
 
 // ---------------------------------------------------------------------------
 // The built-in sounds
@@ -2261,7 +2295,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031n'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2354,7 +2388,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031m'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031n'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -6605,7 +6639,9 @@ $('sendLog').addEventListener('click', async () => {
     const dir = `reports/${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${Math.random().toString(36).slice(2, 6)}`;
     const files = [[`${dir}/what.txt`, what || '(nothing written)'], [`${dir}/log.txt`, LOG.join('\n')], [`${dir}/state.json`, JSON.stringify(stateNow(), null, 1)]];
     for (const [i, f] of logShots.entries()) files.push([`${dir}/shot${i + 1}.${(f.name.split('.').pop() || 'png').toLowerCase()}`, { b64: b64of(new Uint8Array(await f.arrayBuffer())) }]);
+    if (heardFile) files.push([`${dir}/heard.${heardFile.ext}`, { b64: b64of(new Uint8Array(await heardFile.blob.arrayBuffer())) }]);
     await cloudCommit(files, `Pocket Sampler report${logShots.length ? ` with ${logShots.length} screenshot(s)` : ''}`, tok, true, 'pocket-reports');
+    heardFile = null; $('heardBtn').textContent = '🎙 Record what it plays';
     logShots = []; $('logShots').value = ''; $('logShotsBtn').textContent = '📷 Add screenshots'; $('logNote').value = '';
     status('Sent. Tell Claude in the chat that you sent a report.'); alert('Sent to Claude. Now tell Claude in the chat that you sent a report.'); afterCloud(tok);
   } catch (e) { cloudFail('send it', e); }
@@ -7357,6 +7393,7 @@ Object.assign(window.pocketDebug, {     // for testing the grid from the browser
   lrData: () => { if (!lrMade) return null; const d = lrMade.buf.getChannelData(0), u = new Uint8Array(d.buffer.slice(0)); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return { b64: btoa(s), sr: lrMade.buf.sampleRate }; },
   lpSlotInfo: async () => { const sl = await lpSlot(); return sl && { kind: sl.kind, zones: sl.zones?.length, base: sl.base, vol: sl.params?.vol, trig: sl.params?.trig, buf: sl.buf?.length, dur: sl.buf?.duration, z0: sl.zones?.[0] }; },
   masterGain: () => eng.master.gain.value,
+  heard: async () => heardFile && { type: heardFile.blob.type, b64: b64of(new Uint8Array(await heardFile.blob.arrayBuffer())) },
   lpLast: () => lp.last && { ...lp.last, sd: stepDur(), nextT, tick },
   lpVoiceEnd: () => lp.voice?.end,
   lpRecNotes: () => lpRec && { notes: lpRec.notes.map(n => ({ k: n.k, t: n.t, cyc: n.cyc })), L: lpRec.L, m: lpRec.m, t0: lpRec.t0, now: ctx.currentTime, sd: lpRec.sd, origin: lpRec.origin },
