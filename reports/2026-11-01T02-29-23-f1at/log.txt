@@ -1,0 +1,340 @@
+   0.00s start  build 20261031q; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Mobile/15E148 Safari/604.1
+   0.00s audio  sample rate 44100 Hz, base latency 2.9 ms, state suspended
+   0.00s audio  audio session: auto
+   0.06s load   meter on: normal engine, 44100 Hz, 4 cores; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Mobile/15E148 Safari/604.1
+   1.59s audio  output latency 0 ms
+   2.04s wake   tap: suspended -> running
+   2.05s state  running
+   2.59s glitch audio clock fell 698 ms behind in 1.0 s (the phone dropped sound)
+   5.60s load   sound 1 breaks/min · busy worst 1037 ms · screen worst 26 fps · stopped 100 BPM · 0 loops, 1 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  10.61s load   sound 1 breaks/min · busy worst 28 ms · screen worst 51 fps · stopped 100 BPM · 0 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  15.61s load   sound 1 breaks/min · busy worst 22 ms · screen worst 52 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  20.62s load   sound 1 breaks/min · busy worst 25 ms · screen worst 47 fps · stopped 100 BPM · 0 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  25.63s load   sound 1 breaks/min · busy worst 12 ms · screen worst 50 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  30.63s load   sound 1 breaks/min · busy worst 2 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  35.63s load   sound 1 breaks/min · busy worst 2 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  40.64s load   sound 1 breaks/min · busy worst 2 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  45.64s load   sound 1 breaks/min · busy worst 4 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  50.65s load   sound 1 breaks/min · busy worst 5 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  55.65s load   sound 1 breaks/min · busy worst 2 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  60.65s load   sound 1 breaks/min · busy worst 25 ms · screen worst 50 fps · stopped 100 BPM · 0 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  65.65s load   sound 0 breaks/min · busy worst 9 ms · screen worst 47 fps · stopped 100 BPM · 0 loops, 1 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  70.66s load   sound 0 breaks/min · busy worst 8 ms · screen worst 47 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  75.66s load   sound 0 breaks/min · busy worst 3 ms · screen worst 60 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  80.67s load   sound 0 breaks/min · busy worst 26 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  85.22s log    verbose on
+  85.67s load   sound 0 breaks/min · busy worst 39 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  86.02s press  touch -1240635369 on button#heardBtn; 54 ms after
+  86.02s touch  finger down at 538,150 on button#heardBtn; 1 on the glass; reached the app 54 ms after
+  86.08s touch  1 finger up; 0 left
+  86.12s heard  recording what the app plays: start (left: everything; right: the pads alone; taps are logged)
+  87.34s press  touch -1240635368 on button#menuClose; 42 ms after
+  87.34s touch  finger down at 791,34 on button#menuClose; 1 on the glass; reached the app 42 ms after
+  87.40s touch  1 finger up; 0 left
+  88.09s press  touch -1240635367 on pad 2 (Pads); 58 ms after
+  88.09s touch  finger down at 682,114 on pad 2 (Pads); 1 on the glass; reached the app 59 ms after
+  88.09s tap    key 2 (play)
+  88.12s note   pad 2: plays
+  88.12s touch  1 finger up; 0 left
+  88.17s press  touch -1240635366 on pad 5 (Pads); 13 ms after
+  88.17s touch  finger down at 488,257 on pad 5 (Pads); 1 on the glass; reached the app 13 ms after
+  88.17s tap    key 5 (play)
+  88.19s note   pad 5: plays
+  88.22s touch  1 finger up; 0 left
+  88.25s press  touch -1240635365 on pad 2 (Pads); 19 ms after
+  88.25s touch  finger down at 695,110 on pad 2 (Pads); 1 on the glass; reached the app 19 ms after
+  88.25s tap    key 2 (play)
+  88.27s note   pad 2: plays
+  88.32s touch  1 finger up; 0 left
+  88.37s press  touch -1240635364 on pad 5 (Pads); 12 ms after
+  88.37s touch  finger down at 529,240 on pad 5 (Pads); 1 on the glass; reached the app 12 ms after
+  88.37s tap    key 5 (play)
+  88.38s note   pad 5: plays
+  88.44s touch  1 finger up; 0 left
+  88.46s press  touch -1240635363 on pad 2 (Pads); 18 ms after
+  88.46s touch  finger down at 695,127 on pad 2 (Pads); 1 on the glass; reached the app 18 ms after
+  88.46s tap    key 2 (play)
+  88.47s note   pad 2: plays
+  88.52s touch  1 finger up; 0 left
+  88.57s press  touch -1240635362 on pad 5 (Pads); 14 ms after
+  88.57s touch  finger down at 558,257 on pad 5 (Pads); 1 on the glass; reached the app 14 ms after
+  88.57s tap    key 5 (play)
+  88.57s note   pad 5: plays
+  88.62s touch  1 finger up; 0 left
+  88.65s press  touch -1240635361 on pad 2 (Pads); 15 ms after
+  88.65s touch  finger down at 670,133 on pad 2 (Pads); 1 on the glass; reached the app 15 ms after
+  88.65s tap    key 2 (play)
+  88.66s note   pad 2: plays
+  88.72s touch  1 finger up; 0 left
+  88.83s press  touch -1240635360 on pad 2 (Pads); 10 ms after
+  88.83s touch  finger down at 665,136 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  88.83s tap    key 2 (play)
+  88.83s note   pad 2: plays
+  88.89s touch  1 finger up; 0 left
+  89.01s press  touch -1240635359 on pad 2 (Pads); 9 ms after
+  89.01s touch  finger down at 663,137 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  89.01s tap    key 2 (play)
+  89.02s note   pad 2: plays
+  89.07s touch  1 finger up; 0 left
+  89.19s press  touch -1240635358 on pad 2 (Pads); 9 ms after
+  89.19s touch  finger down at 675,125 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  89.19s tap    key 2 (play)
+  89.19s note   pad 2: plays
+  89.24s press  touch -1240635357 on pad 5 (Pads); 66 ms after
+  89.24s touch  finger down at 539,250 on pad 5 (Pads); 2 on the glass; reached the app 66 ms after
+  89.24s tap    key 5 (play)
+  89.25s note   pad 5: plays
+  89.25s touch  1 finger up; 1 left
+  89.30s touch  1 finger up; 0 left
+  89.36s press  touch -1240635356 on pad 2 (Pads); 10 ms after
+  89.36s touch  finger down at 673,121 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  89.36s tap    key 2 (play)
+  89.37s note   pad 2: plays
+  89.44s touch  1 finger up; 0 left
+  89.55s press  touch -1240635355 on pad 2 (Pads); 10 ms after
+  89.55s touch  finger down at 671,128 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  89.55s tap    key 2 (play)
+  89.55s note   pad 2: plays
+  89.61s touch  1 finger up; 0 left
+  89.74s press  touch -1240635354 on pad 2 (Pads); 10 ms after
+  89.74s touch  finger down at 669,131 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  89.74s tap    key 2 (play)
+  89.74s note   pad 2: plays
+  89.81s touch  1 finger up; 0 left
+  89.92s press  touch -1240635353 on pad 2 (Pads); 11 ms after
+  89.92s touch  finger down at 663,135 on pad 2 (Pads); 1 on the glass; reached the app 11 ms after
+  89.92s tap    key 2 (play)
+  89.93s note   pad 2: plays
+  89.99s touch  1 finger up; 0 left
+  90.11s press  touch -1240635352 on pad 2 (Pads); 9 ms after
+  90.11s touch  finger down at 660,141 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  90.11s tap    key 2 (play)
+  90.12s note   pad 2: plays
+  90.18s touch  1 finger up; 0 left
+  90.30s press  touch -1240635351 on pad 2 (Pads); 9 ms after
+  90.30s touch  finger down at 661,142 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  90.30s tap    key 2 (play)
+  90.30s note   pad 2: plays
+  90.37s touch  1 finger up; 0 left
+  90.49s press  touch -1240635350 on pad 2 (Pads); 9 ms after
+  90.49s touch  finger down at 668,136 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  90.49s tap    key 2 (play)
+  90.49s note   pad 2: plays
+  90.56s touch  1 finger up; 0 left
+  90.67s load   sound 0 breaks/min · busy worst 23 ms · screen worst 46 fps · stopped 100 BPM · 0 loops, 1 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  90.68s press  touch -1240635349 on pad 2 (Pads); 12 ms after
+  90.68s touch  finger down at 667,138 on pad 2 (Pads); 1 on the glass; reached the app 12 ms after
+  90.68s tap    key 2 (play)
+  90.69s note   pad 2: plays
+  90.76s touch  1 finger up; 0 left
+  90.87s press  touch -1240635348 on pad 2 (Pads); 9 ms after
+  90.87s touch  finger down at 670,138 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  90.87s tap    key 2 (play)
+  90.88s note   pad 2: plays
+  90.94s touch  1 finger up; 0 left
+  91.06s press  touch -1240635347 on pad 2 (Pads); 10 ms after
+  91.06s touch  finger down at 668,146 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  91.06s tap    key 2 (play)
+  91.07s note   pad 2: plays
+  91.12s touch  1 finger up; 0 left
+  91.25s press  touch -1240635346 on pad 2 (Pads); 9 ms after
+  91.25s touch  finger down at 667,154 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  91.25s tap    key 2 (play)
+  91.25s note   pad 2: plays
+  91.31s touch  1 finger up; 0 left
+  91.44s press  touch -1240635345 on pad 2 (Pads); 8 ms after
+  91.44s touch  finger down at 662,142 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  91.44s tap    key 2 (play)
+  91.44s note   pad 2: plays
+  91.51s touch  1 finger up; 0 left
+  91.63s press  touch -1240635344 on pad 2 (Pads); 9 ms after
+  91.63s touch  finger down at 664,146 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  91.63s tap    key 2 (play)
+  91.63s note   pad 2: plays
+  91.70s touch  1 finger up; 0 left
+  91.82s press  touch -1240635343 on pad 2 (Pads); 9 ms after
+  91.82s touch  finger down at 678,137 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  91.82s tap    key 2 (play)
+  91.83s note   pad 2: plays
+  91.89s touch  1 finger up; 0 left
+  91.92s press  touch -1240635342 on pad 5 (Pads); 15 ms after
+  91.92s touch  finger down at 550,279 on pad 5 (Pads); 1 on the glass; reached the app 15 ms after
+  91.92s tap    key 5 (play)
+  91.93s note   pad 5: plays
+  91.97s touch  1 finger up; 0 left
+  92.02s press  touch -1240635341 on pad 1 (Pads); 15 ms after
+  92.02s touch  finger down at 578,150 on pad 1 (Pads); 2 on the glass; reached the app 15 ms after
+  92.02s tap    key 1 (play)
+  92.02s note   pad 1: plays
+  92.02s press  touch -1240635340 on pad 2 (Pads); 21 ms after
+  92.02s touch  finger down at 662,151 on pad 2 (Pads); 2 on the glass; reached the app 21 ms after
+  92.03s tap    key 2 (play)
+  92.03s note   pad 2: plays
+  92.03s touch  1 finger up; 1 left
+  92.08s touch  1 finger up; 0 left
+  92.10s press  touch -1240635339 on pad 5 (Pads); 10 ms after
+  92.10s touch  finger down at 554,275 on pad 5 (Pads); 1 on the glass; reached the app 10 ms after
+  92.10s tap    key 5 (play)
+  92.10s note   pad 5: plays
+  92.16s touch  1 finger up; 0 left
+  92.20s press  touch -1240635338 on pad 2 (Pads); 11 ms after
+  92.20s touch  finger down at 653,160 on pad 2 (Pads); 1 on the glass; reached the app 11 ms after
+  92.20s tap    key 2 (play)
+  92.21s note   pad 2: plays
+  92.27s touch  1 finger up; 0 left
+  92.38s press  touch -1240635337 on pad 1 (Pads); 10 ms after
+  92.38s touch  finger down at 575,150 on pad 1 (Pads); 2 on the glass; reached the app 10 ms after
+  92.38s tap    key 1 (play)
+  92.39s note   pad 1: plays
+  92.39s press  touch -1240635336 on pad 2 (Pads); 18 ms after
+  92.39s touch  finger down at 659,150 on pad 2 (Pads); 2 on the glass; reached the app 18 ms after
+  92.39s tap    key 2 (play)
+  92.39s note   pad 2: plays
+  92.39s touch  1 finger up; 1 left
+  92.45s touch  1 finger up; 0 left
+  92.46s press  touch -1240635335 on pad 5 (Pads); 14 ms after
+  92.46s touch  finger down at 553,281 on pad 5 (Pads); 1 on the glass; reached the app 14 ms after
+  92.46s tap    key 5 (play)
+  92.47s note   pad 5: plays
+  92.52s touch  1 finger up; 0 left
+  92.57s press  touch -1240635334 on pad 2 (Pads); 12 ms after
+  92.57s touch  finger down at 656,148 on pad 2 (Pads); 1 on the glass; reached the app 12 ms after
+  92.57s tap    key 2 (play)
+  92.58s note   pad 2: plays
+  92.64s touch  1 finger up; 0 left
+  92.74s press  touch -1240635333 on pad 2 (Pads); 15 ms after
+  92.74s touch  finger down at 656,145 on pad 2 (Pads); 2 on the glass; reached the app 15 ms after
+  92.74s tap    key 2 (play)
+  92.75s note   pad 2: plays
+  92.75s press  touch -1240635332 on pad 1 (Pads); 20 ms after
+  92.75s touch  finger down at 572,145 on pad 1 (Pads); 2 on the glass; reached the app 20 ms after
+  92.75s tap    key 1 (play)
+  92.75s note   pad 1: plays
+  92.75s touch  1 finger up; 1 left
+  92.81s touch  1 finger up; 0 left
+  92.82s press  touch -1240635331 on pad 5 (Pads); 11 ms after
+  92.82s touch  finger down at 555,277 on pad 5 (Pads); 1 on the glass; reached the app 11 ms after
+  92.82s tap    key 5 (play)
+  92.83s note   pad 5: plays
+  92.88s touch  1 finger up; 0 left
+  92.93s press  touch -1240635330 on pad 2 (Pads); 12 ms after
+  92.93s touch  finger down at 661,134 on pad 2 (Pads); 1 on the glass; reached the app 12 ms after
+  92.93s tap    key 2 (play)
+  92.94s note   pad 2: plays
+  92.99s touch  1 finger up; 0 left
+  93.01s press  touch -1240635329 on pad 5 (Pads); 17 ms after
+  93.01s touch  finger down at 548,276 on pad 5 (Pads); 1 on the glass; reached the app 17 ms after
+  93.01s tap    key 5 (play)
+  93.02s note   pad 5: plays
+  93.07s touch  1 finger up; 0 left
+  93.11s press  touch -1240635328 on pad 2 (Pads); 13 ms after
+  93.11s touch  finger down at 665,141 on pad 2 (Pads); 1 on the glass; reached the app 13 ms after
+  93.11s tap    key 2 (play)
+  93.11s note   pad 2: plays
+  93.18s touch  1 finger up; 0 left
+  93.28s press  touch -1240635327 on pad 2 (Pads); 10 ms after
+  93.28s touch  finger down at 672,133 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  93.28s tap    key 2 (play)
+  93.29s note   pad 2: plays
+  93.35s touch  1 finger up; 0 left
+  93.46s press  touch -1240635326 on pad 2 (Pads); 9 ms after
+  93.46s touch  finger down at 683,118 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  93.46s tap    key 2 (play)
+  93.47s note   pad 2: plays
+  93.54s touch  1 finger up; 0 left
+  93.64s press  touch -1240635325 on pad 2 (Pads); 9 ms after
+  93.64s touch  finger down at 679,125 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  93.64s tap    key 2 (play)
+  93.65s note   pad 2: plays
+  93.71s touch  1 finger up; 0 left
+  93.73s press  touch -1240635324 on pad 5 (Pads); 10 ms after
+  93.73s touch  finger down at 549,276 on pad 5 (Pads); 1 on the glass; reached the app 10 ms after
+  93.73s tap    key 5 (play)
+  93.74s note   pad 5: plays
+  93.79s touch  1 finger up; 0 left
+  93.84s press  touch -1240635323 on pad 2 (Pads); 23 ms after
+  93.84s touch  finger down at 672,120 on pad 2 (Pads); 1 on the glass; reached the app 23 ms after
+  93.84s tap    key 2 (play)
+  93.85s note   pad 2: plays
+  93.91s touch  1 finger up; 0 left
+  94.01s press  touch -1240635322 on pad 2 (Pads); 9 ms after
+  94.01s touch  finger down at 690,119 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  94.01s tap    key 2 (play)
+  94.02s note   pad 2: plays
+  94.08s press  touch -1240635321 on pad 5 (Pads); 82 ms after
+  94.08s touch  finger down at 547,291 on pad 5 (Pads); 2 on the glass; reached the app 82 ms after
+  94.08s tap    key 5 (play)
+  94.09s note   pad 5: plays
+  94.09s touch  1 finger up; 1 left
+  94.16s touch  1 finger up; 0 left
+  94.21s press  touch -1240635320 on pad 2 (Pads); 11 ms after
+  94.21s touch  finger down at 691,131 on pad 2 (Pads); 1 on the glass; reached the app 11 ms after
+  94.21s tap    key 2 (play)
+  94.21s note   pad 2: plays
+  94.27s press  touch -1240635319 on pad 5 (Pads); 8 ms after
+  94.27s touch  finger down at 555,276 on pad 5 (Pads); 2 on the glass; reached the app 8 ms after
+  94.27s tap    key 5 (play)
+  94.28s note   pad 5: plays
+  94.28s touch  1 finger up; 1 left
+  94.33s touch  1 finger up; 0 left
+  94.39s press  touch -1240635318 on pad 2 (Pads); 13 ms after
+  94.39s touch  finger down at 674,125 on pad 2 (Pads); 1 on the glass; reached the app 13 ms after
+  94.39s tap    key 2 (play)
+  94.40s note   pad 2: plays
+  94.46s touch  1 finger up; 0 left
+  94.47s press  touch -1240635317 on pad 5 (Pads); 17 ms after
+  94.47s touch  finger down at 575,274 on pad 5 (Pads); 1 on the glass; reached the app 17 ms after
+  94.47s tap    key 5 (play)
+  94.48s note   pad 5: plays
+  94.53s touch  1 finger up; 0 left
+  94.58s press  touch -1240635316 on pad 2 (Pads); 15 ms after
+  94.58s touch  finger down at 685,118 on pad 2 (Pads); 1 on the glass; reached the app 15 ms after
+  94.58s tap    key 2 (play)
+  94.59s note   pad 2: plays
+  94.65s touch  1 finger up; 0 left
+  94.77s press  touch -1240635315 on pad 2 (Pads); 9 ms after
+  94.77s touch  finger down at 683,116 on pad 2 (Pads); 1 on the glass; reached the app 9 ms after
+  94.77s tap    key 2 (play)
+  94.78s note   pad 2: plays
+  94.85s touch  1 finger up; 0 left
+  94.96s press  touch -1240635314 on pad 2 (Pads); 11 ms after
+  94.96s touch  finger down at 681,118 on pad 2 (Pads); 1 on the glass; reached the app 11 ms after
+  94.96s tap    key 2 (play)
+  94.96s note   pad 2: plays
+  95.03s touch  1 finger up; 0 left
+  95.15s press  touch -1240635313 on pad 2 (Pads); 10 ms after
+  95.15s touch  finger down at 687,118 on pad 2 (Pads); 1 on the glass; reached the app 10 ms after
+  95.15s tap    key 2 (play)
+  95.15s note   pad 2: plays
+  95.21s press  touch -1240635312 on pad 5 (Pads); 7 ms after
+  95.21s touch  finger down at 569,264 on pad 5 (Pads); 2 on the glass; reached the app 7 ms after
+  95.21s tap    key 5 (play)
+  95.22s note   pad 5: plays
+  95.22s touch  1 finger up; 1 left
+  95.28s touch  1 finger up; 0 left
+  95.68s load   sound 0 breaks/min · busy worst 15 ms · screen worst 48 fps · stopped 100 BPM · 0 loops, 1 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  98.67s press  touch -1240635311 on button#menuBtn.menu; 46 ms after
+  98.68s touch  finger down at 309,145 on button#menuBtn.menu; 1 on the glass; reached the app 47 ms after
+  98.72s touch  1 finger up; 0 left
+ 100.32s press  touch -1240635310 on button#heardBtn.on; 60 ms after
+ 100.32s touch  finger down at 492,152 on button#heardBtn.on; 1 on the glass; reached the app 60 ms after
+ 100.38s touch  1 finger up; 0 left
+ 100.43s heard  recording stopped: 14.3 s, 0.17 MB (audio/mp4)
+ 100.68s load   sound 0 breaks/min · busy worst 1 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 101.33s press  touch -1240635309 on textarea#logNote; 64 ms after
+ 101.33s touch  finger down at 482,256 on textarea#logNote; 1 on the glass; reached the app 64 ms after
+ 101.38s touch  1 finger up; 0 left
+ 105.69s load   sound 0 breaks/min · busy worst 39 ms · screen worst 30 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 110.69s load   sound 0 breaks/min · busy worst 7 ms · screen worst 57 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 115.69s load   sound 0 breaks/min · busy worst 7 ms · screen worst 54 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 120.70s load   sound 0 breaks/min · busy worst 4 ms · screen worst 52 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 125.70s load   sound 0 breaks/min · busy worst 42 ms · screen worst 52 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 130.71s load   sound 0 breaks/min · busy worst 4 ms · screen worst 58 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 135.71s load   sound 0 breaks/min · busy worst 13 ms · screen worst 59 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 140.72s load   sound 0 breaks/min · busy worst 2 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 145.72s load   sound 0 breaks/min · busy worst 27 ms · screen worst 47 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 150.72s load   sound 0 breaks/min · busy worst 8 ms · screen worst 57 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 155.72s load   sound 0 breaks/min · busy worst 15 ms · screen worst 58 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 157.11s press  touch -1240635308 on button#sendLog.go; 60 ms after
+ 157.11s touch  finger down at 484,332 on button#sendLog.go; 1 on the glass; reached the app 61 ms after
+ 157.19s touch  1 finger up; 0 left
