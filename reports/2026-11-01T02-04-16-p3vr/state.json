@@ -1,0 +1,42 @@
+{
+ "build": "20261031n",
+ "when": "Sat Oct 31 2026 21:04:16 GMT-0500 (Central Daylight Time)",
+ "device": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15",
+ "screen": "1024x748",
+ "view": "pads",
+ "playing": true,
+ "bpm": 100,
+ "key": "9 minor",
+ "quantize": 0,
+ "tapLag": 0,
+ "set": "mmvwxcp5us",
+ "cur": 0,
+ "curSound": "Trombone Stab",
+ "pads": {
+  "lpInst": {
+   "name": "Trombone Stab",
+   "cur": 0,
+   "designed": false
+  },
+  "loop": {
+   "c": 2,
+   "r": 0,
+   "cell": "Dusty hat, 16 steps"
+  },
+  "oct": 1,
+  "lock": false,
+  "choke": false,
+  "trig": "oneshot"
+ },
+ "rec": null,
+ "grid": [
+  "Kick: Electro Kit, played | · | · | · | · | ·",
+  "Snare: Dusty snare, 2 steps | · | · | · | · | ·",
+  "Tops: Dusty hat, 16 steps | · | · | · | · | ·",
+  "Bass: Voltage Bass, played | Sub Bass, played | · | · | · | ·",
+  "Chords: Rock Organ, played | · | · | · | · | ·",
+  "Lead: Fifths Lead, played | Chip lead, played | · | · | · | ·",
+  "Sub/Color: Distortion 2 | · | · | · | · | ·",
+  "Vox/Keys: Against wisdom | Evil does not prevail | · | · | · | ·"
+ ]
+}
