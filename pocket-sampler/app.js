@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261101a';
+import * as DZ from './design.js?v=20261101b';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261101a';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261101b';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -2359,7 +2359,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101b'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2452,7 +2452,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101a'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261101b'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
@@ -5155,7 +5155,7 @@ function lprDraw() {
   $('lprLen').querySelectorAll('button').forEach(b => { b.disabled = layer; });
   $('lprNote').textContent = layer ? `Layer: what you play is added to the notes of ${CHANNELS[L.c]}, cell ${L.r + 1} (its length, ${barsName(len)}), which play round as you go.`
     : lprInto === 'replace' ? `Replace: ${CHANNELS[L.c]}, cell ${L.r + 1} is recorded again from nothing, ${barsName(len)} long.`
-    : L && !L.same ? 'To layer onto a loop, play its own sound on the pads (tap that loop, without ✂ Crop).' : `A new loop, ${barsName(len)} long, going round until you stop.${at ? ' Tap any empty cell on the grid to record there instead (a red edge shows where).' : ' Empty a cell (hold it, Empty this cell) to record into it.'}`;
+    : L && !L.same ? 'To layer onto a loop, play its own sound on the pads (tap that loop, without ✂ Crop).' : `A new loop, ${barsName(len)} long, going round until you stop.${at ? ' Tap any empty cell on the grid to record there instead (a red edge shows where).' : ' Empty a cell (hold it, 🗑 Empty) to record into it.'}`;
   $('lprGo').disabled = lprInto === 'new' && !at;
 }
 async function lpRecTap() {
@@ -5168,7 +5168,7 @@ async function lpRecTap() {
 $('lprCancel').addEventListener('click', () => lprShow(false));
 $('lprGo').addEventListener('click', async () => {
   const L = lpLoopCell(), mode = lprInto, at = mode === 'new' ? lpTargetCell() : L && { c: L.c, r: L.r };
-  if (!at) { status('Every cell is full: empty one (hold it, Empty this cell) to record into it.'); return; }
+  if (!at) { status('Every cell is full: empty one (hold it, 🗑 Empty) to record into it.'); return; }
   lprShow(false); lprAt = null; log('rec', `start: ${mode} into ${CHANNELS[at.c]} ${at.r + 1}, ${mode === 'layer' ? L.rec.seq.bars : lprLen} bars, quantize ${S.quantGrid}, choke ${!!S.grid.lpChoke}`);
   const bars = mode === 'layer' ? L.rec.seq.bars : lprLen, old = mode === 'layer' ? L.rec.seq.notes.map(n => ({ ...n, cyc: -1 })) : [];
   const src = mode === 'layer' ? await lpSlot() : null;
@@ -5728,7 +5728,7 @@ async function drawCellMenu() {
   const robo = isRobotCell(cell);
   $('lwBox').hidden = !robo;
   if (robo) fillWords(cell);
-  $('lmSets').hidden = (!cell && !dzEmpty) || choosing;
+  $('lmSets').hidden = (!cell && !dzEmpty) || choosing; $('lmTabs').hidden = $('lmSets').hidden;
   document.querySelectorAll('[data-lpane="set"], [data-lpane="eq"]').forEach(b => { b.hidden = !cell; });
   const seqOf = cell && mine.find(m => m.id === cell.mine)?.seq;
   document.querySelector('[data-lpane="notes"]').hidden = !seqOf;
@@ -5993,23 +5993,25 @@ function cellDesign(c, r) {
 function drawLines() {
   const box = $('lmSteps'); box.textContent = ''; if (!cellLines.length) return;      // (the designer, being made, before a cell's lines)
   const L0 = cellLines[cellLine], bars = cellLines[0].steps.length / 16;
-  // Length: 1 to 8 bars (longer: the bars there are, repeated; shorter: the bars past the end go)
-  const lens = document.createElement('div'); lens.className = 'lmodes rlen';
-  lens.append(Object.assign(document.createElement('span'), { textContent: 'Length' }));
+  // Length: 1 to 8 bars (longer: the bars there are, repeated; shorter: the bars past the end go); in the
+  // actions row (▶ Hear it, ✓ Put in cell), with the sound
+  const opts = $('lmDzOpts'); opts.textContent = '';
+  const lens = document.createElement('span'); lens.className = 'dzopts';
+  lens.append(Object.assign(document.createElement('span'), { className: 'dzlab', textContent: 'Bars' }));
   for (const n of DZ_BARS) {
-    const b = document.createElement('button'); b.textContent = n === 1 ? '1 bar' : `${n} bars`; b.classList.toggle('on', n === bars);
+    const b = document.createElement('button'); b.textContent = String(n); b.title = n === 1 ? '1 bar' : `${n} bars`; b.classList.toggle('on', n === bars);
     b.addEventListener('click', () => { for (const L of cellLines) L.steps = Array.from({ length: n * 16 }, (_, i) => L.steps[i % L.steps.length]); drawLines(); });
     lens.appendChild(b);
   }
   // Sound: a drum designed below, or a kit's hit
-  const snd = document.createElement('div'); snd.className = 'lmodes rlen dzsound';
+  const snd = document.createElement('span'); snd.className = 'dzopts';
   const kit = document.createElement('select'), hit = document.createElement('select');
-  kit.add(new Option('Design your own (below)', ''));
+  kit.add(new Option('My own (below)', ''));
   for (const k of dzKitList()) kit.add(new Option(k.name, k.key));
   kit.value = L0.hit ? hitKey(L0.hit) : ''; if (kit.selectedIndex < 0) kit.value = '';
   hit.hidden = !L0.hit;
   const hear = document.createElement('button'); hear.textContent = '▶'; hear.title = 'Hear it'; hear.addEventListener('click', () => hearDzLine(L0));
-  snd.append(Object.assign(document.createElement('span'), { textContent: 'Sound' }), kit, hit, hear);
+  snd.append(Object.assign(document.createElement('span'), { className: 'dzlab', textContent: 'Sound' }), kit, hit, hear);
   const fillHits = async (pick) => {
     const h = L0.hit; if (!h) return;
     const slot = await hitSlotOf(h); if (L0.hit !== h || !slot?.slices) return;
@@ -6028,7 +6030,7 @@ function drawLines() {
   });
   hit.addEventListener('change', () => { L0.hit = { ...L0.hit, k: +hit.value, name: hit.selectedOptions[0].textContent }; hearDzLine(L0); drawLines(); });
   fillHits(false);
-  box.append(lens, snd);
+  opts.append(lens, snd);
   $('lmDz').hidden = !!L0.hit; $('lmDzSave').hidden = !!L0.hit;
   // the steps: a row a bar (a line each, if a design from before has more)
   cellLines.forEach((L, li) => {
@@ -6320,7 +6322,7 @@ function drawRoll(c, r) {
 let rollBusy = Promise.resolve();
 function rollChange(c, r, notes, undoing = false, bars = null, q = null) {
   const cell = S.grid.cells[c][r], rec = mine.find(m => m.id === cell?.mine), now = rollSeq(c, r, rec); if (!now) return Promise.resolve();
-  if (!notes.length) { status('That was the last note: to empty the cell, use Empty this cell.'); drawRoll(c, r); return Promise.resolve(); }
+  if (!notes.length) { status('That was the last note: to empty the cell, use 🗑 Empty.'); drawRoll(c, r); return Promise.resolve(); }
   if (!undoing) rollUndo.push({ notes: now.notes, bars: now.bars, q: now.q || 0 });
   rollPend = { c, r, seq: { ...now, notes, bars: bars ?? now.bars, q: q ?? now.q ?? 0 } };
   if (menuCell?.c === c && menuCell?.r === r && lPane === 'notes') drawRoll(c, r);      // seen at once
@@ -7377,16 +7379,25 @@ function drumDesigner(box, onChange = () => {}, withMode = false) {
   btns.append(hear, dice, strike, key);
   box.textContent = '';
   const layerRow = row('Layer', layer);
-  if (withMode) box.append(dzModeButtons());
-  box.append(row('Drum', kind), pre, knobs, el('div', 'dzgroup', 'Finish'), layerRow, fin, btns);
+  const preset = document.createElement('select'); preset.title = 'Preset: a starting point, to change with the knobs';
+  if (withMode) {          // in a Loops cell (compact, for a phone held sideways): one row of choices, the knobs three across
+    kind.title = 'Drum';
+    dice.textContent = '🎲'; dice.title = 'Surprise: a new drum of this kind'; strike.textContent = '↻ Strike'; key.textContent = '♪ Key';
+    const top = el('div', 'dzrow'), grid = el('div', 'dzgrid');
+    top.append(dzModeButtons(), kind, preset, dice, strike, key); grid.append(knobs, fin);
+    box.append(top, layerRow, grid);
+  } else box.append(row('Drum', kind), pre, knobs, el('div', 'dzgroup', 'Finish'), layerRow, fin, btns);
   const draw = () => {
-    const D = DZ.DRUMS[st.kind], basic = dzMode === 'basic'; pre.textContent = ''; knobs.textContent = ''; fin.textContent = '';
+    const D = DZ.DRUMS[st.kind], basic = dzMode === 'basic'; pre.textContent = ''; knobs.textContent = ''; fin.textContent = ''; preset.textContent = '';
     for (const [name, v] of Object.entries(D.presets)) {
       const b = el('button', null, name); b.addEventListener('click', () => { st.p = { ...v }; st.name = name; draw(); api.hear(); }); pre.appendChild(b);
+      preset.add(new Option(name, name));
     }
+    if (!D.presets[st.name]) preset.add(new Option(st.name === 'Surprise' ? '🎲 Surprise' : 'Changed', ''), 0);
+    preset.value = D.presets[st.name] ? st.name : '';
     dzKnobs(knobs, basic ? D.knobs.filter(k => DZ_BASIC[st.kind].includes(k.key)) : D.knobs, st.p, onChange);
     dzKnobs(fin, basic ? DZ.FINISH.filter(k => DZ_BASIC.finish.includes(k.key)) : DZ.FINISH, st.f, onChange);
-    kind.value = st.kind; layer.value = st.layer; key.hidden = !DZ_PITCH[st.kind]; layerRow.hidden = basic;
+    kind.value = st.kind; layer.value = st.layer; key.hidden = !DZ_PITCH[st.kind]; layerRow.hidden = basic; layerRow.style.display = basic ? 'none' : '';
   };
   dzRedraws.add(draw);
   const api = {
@@ -7398,6 +7409,7 @@ function drumDesigner(box, onChange = () => {}, withMode = false) {
     name: () => dzName(st),
   };
   kind.addEventListener('change', () => { api.setKind(kind.value); api.hear(); onChange(); });
+  preset.addEventListener('change', () => { const v = DZ.DRUMS[st.kind].presets[preset.value]; if (!v) return; st.p = { ...v }; st.name = preset.value; draw(); api.hear(); onChange(); });
   layer.addEventListener('change', () => { st.layer = layer.value; if (st.layer && st.f.layermix === 0) st.f.layermix = 0.5; draw(); api.hear(); onChange(); });
   hear.addEventListener('click', () => api.hear());
   dice.addEventListener('click', () => { st.seed = (Math.random() * 1e9) | 0; st.p = DZ.surprise(st.kind, st.seed); st.name = 'Surprise'; draw(); api.hear(); onChange(); });

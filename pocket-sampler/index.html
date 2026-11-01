@@ -529,6 +529,19 @@
   .lpane[hidden] { display: none; }
   .lcolumn { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
   .ltabs button { padding: 6px 12px !important; }
+  .lmtop .ltabs { display: contents; } .lmtop .ltabs[hidden] { display: none; } .lmsep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--edge, #444); }
+  /* 🥁 Design in a cell: everything in a few rows (no scrolling on a phone held sideways) */
+  .dzopts { display: contents; } .dzopts .dzlab { font-size: 11px; color: var(--muted); margin: 0 0 0 6px; }
+  .dzopts select { font: inherit; font-size: 11px; max-width: 130px; padding: 6px 4px; border-radius: 6px; background: var(--btn); color: var(--btn-ink); border: 0; }
+  .lmdz .dzrow { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: 2px 0 4px; }
+  .lmdz .dzrow select { font: inherit; font-size: 11px; max-width: 120px; padding: 6px 4px; border-radius: 6px; background: var(--btn); color: var(--btn-ink); border: 0; }
+  .lmdz .dzrow button { font: inherit; font-size: 11px; font-weight: 700; border: 0; border-radius: 6px; padding: 6px 9px; background: var(--btn); color: var(--btn-ink); }
+  .lmdz .dzrow .dzmodeset { margin: 0; }
+  .lmdz .dzgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; }
+  .lmdz .dzgrid > div { display: contents; }
+  .lmdz .dzgrid .row { grid-template-columns: 68px 1fr 44px; margin: 2px 0; gap: 5px; font-size: 11px; }
+  .lmdz .dzgrid .row output { font-size: 10px; }
+  @media (max-width: 640px) { .lmdz .dzgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .lwavebox { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 5px; }
   .lwavebox #lmWave { height: 96px; }
   .lwavehint { flex: 1; min-width: 0; color: var(--muted); font-size: 10px; text-align: right; }
@@ -612,7 +625,7 @@
   .dzline.sel .dzlname { background: var(--accent); color: #000; } .dzlx { width: 28px; flex: none; } .dzlx:disabled { opacity: .3; }
   .dzladd { margin: 4px 0 8px; padding: 8px 12px; }
   .dzsound select { font: inherit; font-size: 12px; max-width: 42%; padding: 6px 4px; border-radius: 6px; background: var(--btn); color: var(--btn-ink); border: 0; }
-  .dzsteps button { font: inherit; font-size: 10px; border: 0; border-radius: 4px; padding: 9px 0; background: var(--btn); color: var(--btn-ink); }
+  .dzsteps button { font: inherit; font-size: 10px; border: 0; border-radius: 4px; padding: 7px 0; background: var(--btn); color: var(--btn-ink); }
   .dzsteps button:nth-child(4n+1) { box-shadow: inset 0 -2px 0 rgba(255,255,255,.25); }
   .dzsteps button.on { background: var(--c, var(--accent)); color: #000; }
   .dzsteps button.soft { background: color-mix(in srgb, var(--c, var(--accent)) 45%, var(--btn)); }
@@ -737,7 +750,7 @@
 <body>
 <div id="app">
 <div class="device">
-  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261101a</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
+  <div class="brand"><b>Pocket Sampler</b><span style="opacity:.6">build 20261101b</span><button id="upd" title="Check for a new build">⟳</button><a href="../" title="Monastic Games">◂ Games</a></div>
   <div class="vtabs vpick"><button class="vbtn" title="Tap for Pads, and again for Loops + Pads">Loops + Pads ▸</button><span class="vmenu" hidden><button data-view="loops">Loops</button><button data-view="pads">Pads</button><button data-view="both">Loops + Pads</button></span><button class="vloops" title="The Loops alone: the whole grid">▦ Loops</button><button id="padLib" title="The sound library: load a sound onto the sound chosen">📂 Library</button><button id="padLock" title="Lock: the pads keep their sound while you tap loops">🔓</button><button id="padChoke" title="Choke: each note cuts off the one before (tap on or off)">Choke</button></div>
 
   <div class="screen" id="screen">
@@ -840,9 +853,8 @@
   </div>
   <div class="lmenu" id="lmenu" hidden>
     <div class="lmhead"><b id="lmTitle"></b><button id="lmClose">✕ Done</button></div>
-    <div class="lmodes"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="grow"></span><button id="lmEmpty">Empty this cell</button></div>
+    <div class="lmodes lmtop"><button data-lmode="loop">Loop</button><button data-lmode="oneshot">One shot</button><button data-lmode="gate">Gate</button><span class="lmsep"></span><span class="ltabs" id="lmTabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="eq" title="EQ and effects">EQ &amp; FX</button><button data-lpane="design">🥁 Design</button><button data-lpane="synth">🎹 Sound</button><button data-lpane="rap" hidden>🎤 Rap</button><button data-lpane="mic" hidden>🎙 Rec</button><button data-lpane="notes" hidden>🎹 Notes</button></span><span class="grow"></span><button id="lmEmpty" title="Empty this cell">🗑 Empty</button></div>
     <div id="lmSets" class="lsetbody">
-      <div class="lmodes ltabs"><button data-lpane="set" class="on">Settings</button><button data-lpane="eq">EQ &amp; Effect</button><button data-lpane="design">🥁 Design</button><button data-lpane="synth">🎹 Sound</button><button data-lpane="rap" hidden>🎤 Rap</button><button data-lpane="mic" hidden>🎙 Rec</button><button data-lpane="notes" hidden>🎹 Notes</button></div>
       <div class="lpane lmsynth lmrap" data-pane="rap" hidden></div>
       <div class="lpane" data-pane="mic" hidden>     <!-- the microphone, recorded in time into this cell -->
         <div class="lmodes" id="micBars"><span class="lsub" style="margin-right:6px">Record</span><button data-mb="1">1 bar</button><button data-mb="2">2 bars</button><button data-mb="4">4 bars</button></div>
@@ -859,9 +871,8 @@
         <small class="lsub">The notes you played, kept as you played them (Quantize puts them on the beat; As played takes it off). Zoom: Bar shows a block a bar (tap it: all of that bar's notes go); 1/16 shows every note on its own. Tap a block to delete what is in it; drag it left or right to move it (by 16ths). Length: 1/8 of a bar to 32 bars; made shorter, the notes past the end are deleted. ↶ Undo takes back the last change. The loop is made again each time.</small>
       </div>
       <div class="lpane" data-pane="design" hidden>     <!-- a hit designed here, on the steps of a bar, into this cell -->
+        <div class="lmodes dztop"><button id="lmDzBar">▶ Hear it</button><button id="lmDzPut" class="on">✓ Put in cell</button><span id="lmDzOpts" class="dzopts"></span><span class="grow"></span><button id="lmDzSave" title="Save the hit to My Sounds">★ Save</button></div>
         <div id="lmSteps"></div>
-        <div class="lmodes"><button id="lmDzBar">▶ Hear it</button><button id="lmDzPut" class="on">✓ Put in this cell</button><span class="grow"></span><button id="lmDzSave">★ Save the hit</button></div>
-        <small class="lsub">One drum on its steps, 1 to 8 bars long (Length; a row a bar): tap a step for on, again for soft, again for off; drag a lit step to move it, to another bar too. Sound: a drum of your own, shaped below, or any hit of any drum kit (the app's and yours). For a beat of several drums, put each in its own Loops column. It plays at the song's tempo and swing, and keeps time if the tempo changes.</small>
         <div id="lmDz" class="lmdz"></div>
       </div>
       <div class="lpane two" data-pane="set">
@@ -1328,6 +1339,6 @@
   </div>
 </div>
 </div>
-<script type="module" src="app.js?v=20261101a"></script>
+<script type="module" src="app.js?v=20261101b"></script>
 </body>
 </html>
