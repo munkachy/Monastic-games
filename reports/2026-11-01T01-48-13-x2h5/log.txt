@@ -1,0 +1,164 @@
+   0.00s start  build 20261031l; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+   0.01s audio  sample rate 32000 Hz, base latency 4.0 ms, state suspended
+   0.01s audio  audio session: auto
+   0.09s load   meter on: light engine, 32000 Hz, 4 cores; Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.14 Safari/605.1.15
+   1.59s audio  output latency 0 ms
+   2.00s state  running
+   2.00s wake   tap: suspended -> running
+   2.59s glitch audio clock fell 417 ms behind in 1.0 s (the phone dropped sound)
+   5.59s load   sound 1 breaks/min · busy worst 1093 ms · screen worst 16 fps · playing 120 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · no set
+  10.59s load   sound 1 breaks/min · busy worst 6 ms · screen worst 52 fps · playing 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  13.91s pads   loop on the pads: Kick 1 (Electro Kit, played)
+  14.70s pads   loop on the pads: Snare 1 (Dusty snare, 2 steps)
+  15.65s load   sound 1 breaks/min · busy worst 7 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  20.66s load   sound 1 breaks/min · busy worst 2 ms · screen worst 57 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  22.37s pads   loop on the pads: Lead 2 (Chip lead, played)
+  25.66s load   sound 1 breaks/min · busy worst 48 ms · screen worst 50 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  30.66s load   sound 1 breaks/min · busy worst 2 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  35.67s load   sound 1 breaks/min · busy worst 5 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  40.67s load   sound 1 breaks/min · busy worst 9 ms · screen worst 54 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  45.68s load   sound 1 breaks/min · busy worst 3 ms · screen worst 56 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  50.68s load   sound 1 breaks/min · busy worst 7 ms · screen worst 54 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  55.68s load   sound 1 breaks/min · busy worst 5 ms · screen worst 55 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  60.68s load   sound 1 breaks/min · busy worst 15 ms · screen worst 51 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  65.68s load   sound 0 breaks/min · busy worst 5 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  70.69s load   sound 0 breaks/min · busy worst 2 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  75.69s load   sound 0 breaks/min · busy worst 5 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  80.69s load   sound 0 breaks/min · busy worst 2 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  85.70s load   sound 0 breaks/min · busy worst 3 ms · screen worst 55 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  90.70s load   sound 0 breaks/min · busy worst 9 ms · screen worst 50 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+  95.70s load   sound 0 breaks/min · busy worst 19 ms · screen worst 49 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 100.70s load   sound 0 breaks/min · busy worst 5 ms · screen worst 48 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 105.71s load   sound 0 breaks/min · busy worst 4 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 110.71s load   sound 0 breaks/min · busy worst 4 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 115.71s load   sound 0 breaks/min · busy worst 3 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 120.72s load   sound 0 breaks/min · busy worst 23 ms · screen worst 51 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 125.73s load   sound 0 breaks/min · busy worst 23 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 130.73s load   sound 0 breaks/min · busy worst 6 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 135.74s load   sound 0 breaks/min · busy worst 2 ms · screen worst 49 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 140.74s load   sound 0 breaks/min · busy worst 3 ms · screen worst 48 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 145.74s load   sound 0 breaks/min · busy worst 7 ms · screen worst 54 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 150.75s load   sound 0 breaks/min · busy worst 25 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 155.75s load   sound 0 breaks/min · busy worst 2 ms · screen worst 51 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 160.76s load   sound 0 breaks/min · busy worst 5 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 165.76s load   sound 0 breaks/min · busy worst 7 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 170.78s load   sound 0 breaks/min · busy worst 5 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 175.78s load   sound 0 breaks/min · busy worst 4 ms · screen worst 50 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 180.79s load   sound 0 breaks/min · busy worst 10 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 185.79s load   sound 0 breaks/min · busy worst 6 ms · screen worst 49 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 190.80s load   sound 0 breaks/min · busy worst 4 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 195.81s load   sound 0 breaks/min · busy worst 7 ms · screen worst 50 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 200.81s load   sound 0 breaks/min · busy worst 6 ms · screen worst 50 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 205.81s load   sound 0 breaks/min · busy worst 3 ms · screen worst 49 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 210.82s load   sound 0 breaks/min · busy worst 24 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 3 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 215.84s load   sound 0 breaks/min · busy worst 9 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 5 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 220.84s load   sound 0 breaks/min · busy worst 7 ms · screen worst 54 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 225.85s load   sound 0 breaks/min · busy worst 58 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 230.85s load   sound 0 breaks/min · busy worst 2 ms · screen worst 60 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 235.85s load   sound 0 breaks/min · busy worst 4 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 240.86s load   sound 0 breaks/min · busy worst 8 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 245.86s load   sound 0 breaks/min · busy worst 3 ms · screen worst 55 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 250.87s load   sound 0 breaks/min · busy worst 8 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 252.11s late   beat engine woke 70 ms late: notes in that gap are cut short
+ 253.80s log    verbose on
+ 256.11s load   sound 0 breaks/min · busy worst 216 ms · screen worst 53 fps · playing 100 BPM · 2 loops, 2 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 257.65s tap    key 4 (play, playing)
+ 257.65s note   pad 4: plays
+ 257.89s tap    key 9 (play, playing)
+ 257.90s note   pad 9: plays
+ 258.21s tap    key 4 (play, playing)
+ 258.22s note   pad 4: plays
+ 258.54s tap    key 9 (play, playing)
+ 258.55s note   pad 9: plays
+ 258.85s tap    key 11 (play, playing)
+ 258.86s note   pad 11: plays
+ 259.15s tap    key 4 (play, playing)
+ 259.15s note   pad 4: plays
+ 259.15s tap    key 4: touched again before its let-go came; let go first
+ 259.15s tap    key 4 (play, playing)
+ 259.16s note   pad 4: plays
+ 259.42s tap    key 9 (play, playing)
+ 259.43s note   pad 9: plays
+ 259.58s tap    key 11 (play, playing)
+ 259.59s note   pad 11: plays
+ 259.71s tap    key 4 (play, playing)
+ 259.71s note   pad 4: plays
+ 259.83s tap    key 9 (play, playing)
+ 259.83s note   pad 9: plays
+ 259.99s tap    key 11 (play, playing)
+ 259.99s note   pad 11: plays
+ 260.13s tap    key 4 (play, playing)
+ 260.13s note   pad 4: plays
+ 260.43s tap    key 11 (play, playing)
+ 260.43s note   pad 11: plays
+ 260.56s tap    key 4 (play, playing)
+ 260.56s note   pad 4: plays
+ 260.67s tap    key 9 (play, playing)
+ 260.68s note   pad 9: plays
+ 260.83s tap    key 11 (play, playing)
+ 260.84s note   pad 11: plays
+ 260.98s tap    key 4 (play, playing)
+ 260.98s note   pad 4: plays
+ 261.11s load   sound 0 breaks/min · busy worst 16 ms · screen worst 51 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 261.14s tap    key 9 (play, playing)
+ 261.15s note   pad 9: plays
+ 261.25s tap    key 11 (play, playing)
+ 261.26s note   pad 11: plays
+ 261.85s tap    key 4 (play, playing)
+ 261.86s note   pad 4: plays
+ 262.10s tap    key 11 (play, playing)
+ 262.10s note   pad 11: plays
+ 262.25s tap    key 4 (play, playing)
+ 262.25s note   pad 4: plays
+ 262.36s tap    key 9 (play, playing)
+ 262.37s note   pad 9: plays
+ 262.52s tap    key 11 (play, playing)
+ 262.52s note   pad 11: plays
+ 262.78s tap    key 9 (play, playing)
+ 262.79s note   pad 9: plays
+ 262.90s tap    key 11 (play, playing)
+ 262.91s note   pad 11: plays
+ 263.19s tap    key 9 (play, playing)
+ 263.19s note   pad 9: plays
+ 263.34s tap    key 11 (play, playing)
+ 263.34s note   pad 11: plays
+ 263.64s tap    key 9 (play, playing)
+ 263.64s note   pad 9: plays
+ 263.83s tap    key 11 (play, playing)
+ 263.84s note   pad 11: plays
+ 264.02s tap    key 4 (play, playing)
+ 264.03s note   pad 4: plays
+ 264.15s tap    key 9 (play, playing)
+ 264.16s note   pad 9: plays
+ 264.31s tap    key 11 (play, playing)
+ 264.32s note   pad 11: plays
+ 264.44s tap    key 4 (play, playing)
+ 264.45s note   pad 4: plays
+ 264.59s tap    key 9 (play, playing)
+ 264.60s note   pad 9: plays
+ 264.74s tap    key 11 (play, playing)
+ 264.74s note   pad 11: plays
+ 264.87s tap    key 4 (play, playing)
+ 264.87s note   pad 4: plays
+ 265.18s tap    key 11 (play, playing)
+ 265.18s note   pad 11: plays
+ 265.32s tap    key 4 (play, playing)
+ 265.33s note   pad 4: plays
+ 265.47s tap    key 9 (play, playing)
+ 265.48s note   pad 9: plays
+ 265.64s tap    key 11 (play, playing)
+ 265.65s note   pad 11: plays
+ 265.82s tap    key 4 (play, playing)
+ 265.82s note   pad 4: plays
+ 265.94s tap    key 9 (play, playing)
+ 265.95s note   pad 9: plays
+ 266.11s load   sound 0 breaks/min · busy worst 7 ms · screen worst 52 fps · playing 100 BPM · 2 loops, 4 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 271.12s load   sound 0 breaks/min · busy worst 9 ms · screen worst 53 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 273.12s glitch audio clock fell 32 ms behind in 1.0 s (the phone dropped sound)
+ 276.12s load   sound 1 breaks/min · busy worst 48 ms · screen worst 15 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 281.13s load   sound 1 breaks/min · busy worst 5 ms · screen worst 58 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 286.13s load   sound 1 breaks/min · busy worst 2 ms · screen worst 56 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 291.13s load   sound 1 breaks/min · busy worst 4 ms · screen worst 57 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 296.14s load   sound 1 breaks/min · busy worst 9 ms · screen worst 57 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 301.14s load   sound 1 breaks/min · busy worst 6 ms · screen worst 56 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
+ 306.15s load   sound 1 breaks/min · busy worst 59 ms · screen worst 51 fps · stopped 100 BPM · 0 loops, 0 notes · fx 0 on 0 cols · waiting 0 · mmvwxcp5us
