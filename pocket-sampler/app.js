@@ -3,9 +3,9 @@
 // State is saved in IndexedDB, so recordings and patterns survive a reload.
 // Bump ?v= on app.js (index.html), audio.js (here) and the front-page link
 // with each release, so phones fetch the new files instead of cached ones.
-import * as DZ from './design.js?v=20261031r';
+import * as DZ from './design.js?v=20261031s';
 const BUILD = new URL(import.meta.url).searchParams.get('v') || 'dev';      // this build, as the page loaded it
-import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031r';
+import { Engine, setSpace, playNote, distortion, stretchLimit, makeKit, blessMe, prepare, onsets, keySemis, findKey, toKey, syllables, stretchLoop, loopStretch, keyStretch, chroma, satChain, stretchWaiting, SCALES, FAMILIES, WOBBLE_RATES, SR } from './audio.js?v=20261031s';
 
 const $ = id => document.getElementById(id);
 const NOTE = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -1000,9 +1000,14 @@ function touchPads(box, els, press1, release1) {
       release1(was); held.set(t.identifier, k); press1(k);
     }
   }, { passive: false });
-  const end = ev => { for (const t of ev.changedTouches) { const k = held.get(t.identifier); if (k == null) continue; held.delete(t.identifier); release1(k); } };
-  box.addEventListener('touchend', end); box.addEventListener('touchcancel', end);
+  // (a lifted finger: no click made of it, so Safari isn't busy with one as the next finger lands)
+  const end = ev => { if (ev.cancelable) ev.preventDefault(); for (const t of ev.changedTouches) { const k = held.get(t.identifier); if (k == null) continue; held.delete(t.identifier); release1(k); } };
+  box.addEventListener('touchend', end, { passive: false }); box.addEventListener('touchcancel', end);
 }
+// Safari's own gestures, off everywhere in the app: two fingers pinching or turning (Safari starts one
+// whenever two fingers are on the glass) and the double tap.
+for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, ev => ev.preventDefault(), { passive: false });
+document.addEventListener('dblclick', ev => ev.preventDefault(), { passive: false });
 touchPads($('keys'), keyEls, keyDown, keyUp);
 // The mouse in the gap between two pads plays the pad nearest it (a finger: touchPads)
 function gapTouches(box, els, press1, release1) {
@@ -2354,7 +2359,7 @@ let vox = null;
 // vo: a voice of its own ({ variant, range, speed, vowel }, as a Robot pad's), else the Voice page's.
 async function makeVoice(text = $('voxText').value.trim(), gap = +$('voxGap').value, pitch = +$('voxPitch').value, vo = null) {
   if (!text) throw new Error('Type something first.');
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031s'); }
   status('Speaking…');
   let v = await vox.speak(text, { voice: 'en-us', variant: vo?.variant ?? $('voxVariant').value, pitch,
     pitchRange: vo?.range ?? +$('voxRange').value, speed: vo?.speed ?? +$('voxSpeed').value, wordGap: gap });
@@ -2447,7 +2452,7 @@ function nameParts(t, n) {
 // every cut falls in silence. Returns the buffer and [{ s, e, name, w,
 // stress, first, punct }].
 async function voiceSyllables(text, cut = $('rapCut').value, pitch = +$('voxPitch').value, vo = null) {
-  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031r'); }
+  if (!vox) { status('Loading the voice engine (about 18 MB the first time)…'); vox = await import('../vox-machina/engine.js?v=20261031s'); }
   status('Listening for the syllables…');
   const words = await phonetics(text), counts = words.map(w => Math.max(1, w.syl.length));
   const all = words.flatMap((w, wi) => (w.syl.length ? w.syl : [{ ph: null, stress: 0 }]).map((y, k, arr) => ({ ...y, w: wi, first: k === 0, punct: k === arr.length - 1 ? w.punct : '' })));
