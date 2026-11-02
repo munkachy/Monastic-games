@@ -56,6 +56,24 @@ export async function speak(text, { voice = 'en-us', variant = '', pitch = 50,
   return parseWav(mod.FS.readFile('/out.wav'));
 }
 
+// The phonemes eSpeak would say for `text`, in its own letters, one phoneme
+// per "_" and one word per space (a line per clause), with ' and , before
+// stressed syllables: "b_I_g_'I_n_I_N". Pocket Sampler uses this to find
+// syllables and stress.
+export async function phonemes(text, { voice = 'en-us' } = {}) {
+  const wasm = await loadWasm(), out = [];
+  await ESpeakNG({
+    instantiateWasm(imports, done) {
+      WebAssembly.instantiate(wasm, imports).then(inst => done(inst, wasm));
+      return {};
+    },
+    preRun: [m => m.FS.writeFile('/in.txt', text)],
+    arguments: ['-q', '-x', '--sep=_', '-v', voice, '-f', '/in.txt'],
+    print: line => out.push(line), printErr: () => {},
+  });
+  return out.join('\n');
+}
+
 // Minimal reader for the 16-bit PCM WAV that eSpeak writes.
 function parseWav(bytes) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

@@ -4,3 +4,6 @@
 *Grail*.json
 *.private.json
 selah/local/
+
+# Python byte-code caches made when the build tools run
+__pycache__/
