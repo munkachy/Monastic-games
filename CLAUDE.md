@@ -51,3 +51,39 @@ never try to open or guess it, and never put anything from the private library i
 licensed for personal use or not licensed for sharing at all, so it must never be unscrambled anywhere
 public. Sources found for it still go by the rule above: lawful ones only (personal-use licences such as
 the BBC's RemArc are fine); never copies from places with no right to share them.
+
+## Pocket Sampler: working on it (for any session, on any account)
+
+Br. Augustine works on Pocket Sampler from more than one Claude account, so read this first and
+leave it true. He is a Benedictine monk; write to him plainly (Good News Translation clarity), and
+say straight out when something is wrong.
+
+- **Where**: `pocket-sampler/` (app.js, audio.js, design.js, index.html, sounds/, tools/). Work on
+  the branch `claude/amazing-dijkstra-bxwozt`; `git pull` it first: another account may have pushed.
+- **Live**: https://munkachy.github.io/Monastic-games/pocket-sampler/ is the `gh-pages` branch. Deploy
+  by copying the changed files onto it (a worktree of `origin/gh-pages`; `cp index.html
+  pocket-sampler/index.html pocket-sampler/app.js …` and any new sounds), committing "Deploy Pocket Sampler
+  build <stamp>" and pushing. gh-pages has no `tools/` or SOUNDS.md, and its README leaves out the
+  `pocket-sampler/tools/` mentions: apply README changes with `git diff … -- README.md | git -C <worktree> apply`.
+- **Build stamp**: every release bumps it (e.g. 20261102b → 20261102c) everywhere it appears:
+  `grep -rl <old> index.html pocket-sampler/index.html pocket-sampler/app.js | xargs sed -i s/<old>/<new>/g`
+  (the ?v= on app.js, audio.js, design.js, the voice engine, and the build shown on the Pads). The app's
+  ⟳ / ⬆ New build button finds a newer stamp on the site and reloads into it, keeping his work.
+- **Check before pushing**: `cp pocket-sampler/app.js x.mjs && node --check x.mjs` (a plain
+  `node --check app.js` misses module errors), then a Playwright test against a local
+  `npx http-server -p 8765 -c-1` (Chromium is preinstalled; `window.pocketDebug` has hooks: state, tap,
+  press/release, openCellMenu, cellSlot, load, peak, lpRecNotes, report…). Test sideways (844×390) and
+  upright (390×844; the app is turned a quarter turn, so touches run along the other axis).
+- **His reports**: Menu › Log › ☁ Send to Claude commits `reports/<when>/` (what.txt in his words,
+  log.txt, state.json, screenshots, sometimes heard.m4a) to the `pocket-reports` branch. When he says
+  he sent one, `git fetch origin pocket-reports` and read the newest.
+- **His sets on GitHub**: `pocket-sets` branch, `sets/<name>.pocketpack.json` (and `keys/token.enc`, above).
+- **Order of the screens**: Loops + Pads (where it opens), Pads, and ▦ Loops alone. The Pads screen
+  plays what the Loops + Pads pads play (`lpPress`, `lpSlot`, `lpInst` for a sound chosen on the Pads,
+  `S.grid.lpLock` 🔒); its old patterns are kept but never played. Recording (⏺ Rec) lives in Loops + Pads.
+- **Instruments**: banks in `sounds/banks.json` + `sounds/<id>.wav` (or `.mp3` with `ext`/`lead` for the
+  Musyng Kite ones made by tools/gmsound.py); `LIBRARY` and `TREE` in app.js; the Pads' library is
+  `PADS_TREE` (instruments, drum kits, and Packs: each set's own instruments, `SET_INSTRUMENTS`).
+- **His iPad** is a 6th-generation iPad on iOS 17.7, and he also uses an iPhone (Chrome): keep things light
+  (the Light engine, recordings not live synthesis), and remember Safari may clear site storage after a week
+  away unless the app is on the Home Screen.
