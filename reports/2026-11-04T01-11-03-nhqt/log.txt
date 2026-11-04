@@ -1,0 +1,15 @@
+   0.00s start  build 20261102b; Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1
+   0.00s audio  sample rate 44100 Hz, base latency 2.9 ms, state suspended
+   0.00s audio  audio session: auto
+   0.02s state  interrupted
+   0.02s load   meter on: normal engine, 44100 Hz, 4 cores; Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1
+   1.00s audio  output latency 0 ms
+   5.01s load   sound 0 breaks/min · busy worst 140 ms · screen worst 47 fps · stopped 120 BPM · 0 loops, 0 notes · fx 6 on 6 cols (reverb×5 echo) · waiting 0 · mmvzatt6as
+  10.02s load   sound 0 breaks/min · busy worst 9 ms · screen worst 59 fps · stopped 120 BPM · 0 loops, 0 notes · fx 6 on 6 cols (reverb×5 echo) · waiting 0 · mmvzatt6as
+  15.04s load   sound 0 breaks/min · busy worst 16 ms · screen worst 43 fps · stopped 120 BPM · 0 loops, 0 notes · fx 6 on 6 cols (reverb×5 echo) · waiting 0 · mmvzatt6as
+  20.06s load   sound 0 breaks/min · busy worst 5 ms · screen worst 58 fps · stopped 120 BPM · 0 loops, 0 notes · fx 6 on 6 cols (reverb×5 echo) · waiting 0 · mmvzatt6as
+  24.96s log    verbose on
+  25.08s load   sound 0 breaks/min · busy worst 5 ms · screen worst 59 fps · stopped 120 BPM · 0 loops, 0 notes · fx 6 on 6 cols (reverb×5 echo) · waiting 0 · mmvzatt6as
+  27.27s press  touch -1937001120 on button#sendLog.go; 19 ms after
+  27.27s touch  finger down at 79,406 on button#sendLog.go; 1 on the glass; reached the app 19 ms after
+  27.33s touch  1 finger up; 0 left

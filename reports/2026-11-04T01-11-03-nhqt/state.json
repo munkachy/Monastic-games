@@ -1,0 +1,42 @@
+{
+ "build": "20261102b",
+ "when": "Tue Nov 03 2026 19:11:03 GMT-0600 (Central Standard Time)",
+ "device": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+ "screen": "428x879",
+ "view": "pads",
+ "playing": false,
+ "bpm": 120,
+ "key": "9 minor",
+ "quantize": 1,
+ "tapLag": 0,
+ "set": "mmvzatt6as",
+ "cur": 3,
+ "curSound": "Upright Bass",
+ "pads": {
+  "lpInst": {
+   "name": "Upright Bass",
+   "cur": 3,
+   "designed": false
+  },
+  "loop": {
+   "c": 3,
+   "r": 2,
+   "cell": "Upright Bass, played"
+  },
+  "oct": -1,
+  "lock": true,
+  "choke": true,
+  "trig": "oneshot"
+ },
+ "rec": null,
+ "grid": [
+  "Kick: Boom bap kick, 34 steps, 4 bars | · | · | · | · | ·",
+  "Snare: Dusty snare, 9 steps, 4 bars | · | · | · | · | ·",
+  "Tops: 808 hat, 8 steps | Pedal hat, 14 steps | · | · | · | ·",
+  "Bass: Sub Bass, played | Sub Bass, played | Upright Bass, played | · | · | ·",
+  "Chords: · | · | · | · | · | ·",
+  "Lead: · | Emergency Signal, 13 notes, 2 bars | Marimba, 11 notes, 4 bars | · | · | ·",
+  "Sub/Color: · | · | · | · | · | ·",
+  "Vox/Keys: · | · | · | · | · | ·"
+ ]
+}
